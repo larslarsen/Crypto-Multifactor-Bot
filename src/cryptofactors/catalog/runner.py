@@ -67,22 +67,80 @@ def _discover_migrations(migrations_dir: Path) -> list[tuple[int, Path]]:
     return results
 
 
-def _split_statements(sql: str) -> list[str]:
-    """Split a SQL script into complete statements using sqlite3.complete_statement().
 
-    This respects string literals, comments (including inside strings), and
-    multi-statement constructs such as triggers. No regex stripping of comments
-    or blind semicolon splitting is performed.
+def _first_significant_keyword(text: str) -> str:
+    """Return the first significant SQL keyword after skipping leading whitespace,
+    UTF-8 BOM, -- line comments, and /* */ block comments.
+
+    Used *only* for preflight classification of transaction controls.
+    The original statement text (with comments) is passed unchanged to SQLite.
+    """
+    i = 0
+    n = len(text)
+
+    # Skip UTF-8 BOM if present
+    if n > 0 and text[0] == '\ufeff':
+        i = 1
+
+    while i < n:
+        # Skip whitespace
+        while i < n and text[i].isspace():
+            i += 1
+        if i >= n:
+            break
+
+        # Line comment -- ...
+        if i + 1 < n and text[i:i+2] == '--':
+            i += 2
+            while i < n and text[i] != '\n':
+                i += 1
+            continue
+
+        # Block comment /* ... */
+        if i + 1 < n and text[i:i+2] == '/*':
+            i += 2
+            while i + 1 < n and text[i:i+2] != '*/':
+                i += 1
+            if i + 1 < n:
+                i += 2
+            else:
+                i += 1
+            continue
+
+        # At significant content
+        break
+
+    if i >= n:
+        return ""
+
+    # Extract first token until whitespace or ; or ,
+    j = i
+    while j < n and not text[j].isspace() and text[j] not in ';,)':
+        j += 1
+
+    token = text[i:j].strip().upper()
+    return token
+
+def _split_statements(sql: str) -> list[str]:
+    """Split a SQL script into complete statements.
+
+    Accumulates character-by-character and checks sqlite3.complete_statement()
+    only at semicolon candidates. This correctly splits multiple statements
+    on the same line while preserving semicolons inside strings, comments,
+    and multiline constructs such as triggers.
     """
     statements: list[str] = []
     current = ""
-    for line in sql.splitlines(keepends=True):
-        current += line
-        if sqlite3.complete_statement(current):
+    i = 0
+    length = len(sql)
+    while i < length:
+        current += sql[i]
+        if sql[i] == ';' and sqlite3.complete_statement(current):
             stmt = current.strip()
             if stmt:
                 statements.append(stmt)
             current = ""
+        i += 1
     if current.strip():
         statements.append(current.strip())
     return statements
@@ -91,21 +149,16 @@ def _split_statements(sql: str) -> list[str]:
 def _reject_transaction_controls(filename: str, statements: list[str]) -> None:
     """Reject any top-level transaction-control statement.
 
-    This must be called before any execution of the migration so that
-    the migration file cannot commit or roll back the runner's transaction.
+    Uses _first_significant_keyword to skip leading whitespace, BOM,
+    -- comments, and /* */ comments. The original statement (including
+    comments) is passed unchanged to SQLite.
     """
     for stmt in statements:
-        # Get the first significant token (uppercased)
-        # We look at the leading non-whitespace text
-        leading = stmt.strip().upper()
-        # Take first word
-        token = leading.split(maxsplit=1)[0] if leading else ""
-        first_word = token.rstrip(";, ").strip()
-        # Also catch BEGIN TRANSACTION etc.
-        if first_word in TRANSACTION_KEYWORDS or first_word.startswith("BEGIN"):
+        first = _first_significant_keyword(stmt)
+        if first in TRANSACTION_KEYWORDS or first.startswith("BEGIN"):
             raise RuntimeError(
-                f"Transaction-control statement '{first_word}' in migration "
-                f"{filename}. Offending statement starts with: {stmt[:80]}"
+                f"Transaction-control statement '{first}' in migration "
+                f"{filename}. Offending statement starts with: {stmt[:120]}"
             )
 
 

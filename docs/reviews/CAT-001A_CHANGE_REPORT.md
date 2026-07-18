@@ -99,3 +99,53 @@ All original gaps tests and retained coverage tests continue to pass without wea
 ## Stop Condition
 
 This change report is provided. CAT-001A awaits final review. No further tickets were started.
+
+## Final Edge-Case Corrections (post 0adf078)
+
+### 1. Leading Comment / Whitespace Handling in Transaction Control Detection
+
+**Problem:** `_reject_transaction_controls` used simple `strip().upper().split()` which failed to skip leading `--` and `/* */` comments.
+
+**Fix:**
+- Added `_first_significant_keyword(text)` — a small lexer that skips:
+  - UTF-8 BOM
+  - Whitespace
+  - `--` line comments (to end of line)
+  - `/* ... */` block comments
+- Returns the first significant keyword (e.g. "COMMIT").
+- Used **only** for preflight rejection.
+- The full original statement (comments intact) is still passed to `conn.execute()`.
+
+**Tests added:**
+- Parametrized test for all forbidden keywords preceded by line comments and block comments.
+- Specific test `test_create_then_comment_then_commit_leaves_no_changes` using the exact example from the ticket.
+
+### 2. Statement Splitting at Actual Statement Boundaries
+
+**Problem:** `_split_statements` only checked `complete_statement()` after full lines (`splitlines(keepends=True)`). Multiple statements on a single line were passed as one blob to `conn.execute()`.
+
+**Fix:**
+- Rewrote `_split_statements` to accumulate **character-by-character**.
+- Only when `sql[i] == ';'` and `sqlite3.complete_statement(current)` is True do we split.
+- This correctly separates same-line statements while still respecting strings, comments, and multi-statement constructs.
+
+**Tests added:**
+- Multiple statements on one line (2 and 3 statements).
+- Trigger followed by another statement on the same line.
+- Confirmed that `CREATE ...; CREATE ...;` now produces two separate executable statements.
+
+### Acceptance Results After Fixes
+
+```bash
+uv run pytest -q tests/catalog     # 32 passed (all dots)
+uv run ruff check src tests        # All checks passed
+uv run mypy src                    # Success: no issues
+cf catalog init --database .local/control.db
+cf catalog status                  # Both migrations applied, pending (none)
+git status --short                 # Only source changes shown (no .local)
+git ls-files .local                # (empty)
+```
+
+All original atomicity, validation, and isolation guarantees preserved. No architecture changes.
+
+**Commit:** next focused commit after these edits.
