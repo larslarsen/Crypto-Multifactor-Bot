@@ -1,0 +1,63 @@
+{
+  "audit": "storage_statistics",
+  "config": {
+    "basis": "extracted",
+    "projection_assumptions": {
+      "basis": "extracted",
+      "overhead_multiplier": "1.2",
+      "replication_factor": "1",
+      "retention_periods": 365,
+      "rows_per_asset_per_period": 1000000,
+      "safety_multiplier": "1.5",
+      "u100_universe_size": 100,
+      "u25_universe_size": 25,
+      "u50_universe_size": 50
+    },
+    "stress_case_bytes_per_row": "200",
+    "upper_quantile": "0.9"
+  },
+  "result": {
+    "basis": "extracted",
+    "bytes_per_row_by_sample": {
+      "BTCUSDT-aggTrades-2024-12-31.zip": "83.50775216067368697522099198",
+      "BTCUSDT-aggTrades-2025-01-01.zip": "86.48378769214289539928230946",
+      "BTCUSDT-aggTrades-perp-2025-01-01.zip": "66.40430518626171877150391130",
+      "BTCUSDT-funding-monthly-2025-01.zip": "27.23404255319148936170212766",
+      "BTCUSDT-klines-1m-2025-01-01.zip": "154.5090277777777777777777778",
+      "BTCUSDT-trades-perp-2025-01-01.zip": "53.45610495904090146040620475"
+    },
+    "max_observed_bytes_per_row": "154.5090277777777777777777778",
+    "median_bytes_per_row": "74.95602867346770287336245165",
+    "projection_assumptions": {
+      "basis": "extracted",
+      "overhead_multiplier": "1.2",
+      "replication_factor": "1",
+      "retention_periods": 365,
+      "rows_per_asset_per_period": 1000000,
+      "safety_multiplier": "1.5",
+      "u100_universe_size": 100,
+      "u25_universe_size": 25,
+      "u50_universe_size": 50
+    },
+    "projections": {
+      "U100": "7916613988186.894113866423864",
+      "U100_stress": "13140000000000.00",
+      "U25": "1979153497046.723528466605967",
+      "U50": "3958306994093.447056933211932"
+    },
+    "samples_used": [
+      "BTCUSDT-aggTrades-2024-12-31.zip",
+      "BTCUSDT-aggTrades-2025-01-01.zip",
+      "BTCUSDT-aggTrades-perp-2025-01-01.zip",
+      "BTCUSDT-funding-monthly-2025-01.zip",
+      "BTCUSDT-klines-1m-2025-01-01.zip",
+      "BTCUSDT-trades-perp-2025-01-01.zip"
+    ],
+    "stress_case_bytes_per_row": "200",
+    "upper_quantile": "0.9",
+    "upper_quantile_bytes_per_row": "120.4964077349603365885300436"
+  },
+  "sample_count": 6,
+  "status": "completed",
+  "tool": "source_audit.compute_storage_stats"
+}

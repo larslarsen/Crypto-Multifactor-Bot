@@ -1,0 +1,10 @@
+{
+  "audit": "bar_reconstruction_comparison",
+  "overlap_candidates": {
+    "candles": "binance/BTCUSDT-klines-1m-2025-01-01.zip",
+    "trades": "binance/BTCUSDT-aggTrades-2025-01-01.zip"
+  },
+  "reason": "Requires overlapping trade-level and provider-candle samples on the same interval. Staged klines (1m 2025-01-01) and spot aggTrades (2025-01-01) overlap in date, but full reconstruction over the day is a heavy compute not required for feasibility evidence; deferred. No synthetic bars produced (no fabrication).",
+  "status": "not_executed",
+  "tool": "source_audit.reconstruct_bars + compare_bars"
+}

@@ -1,0 +1,318 @@
+{
+  "audit": "csv_schema_timestamp",
+  "note": "audit_csv_safe requires has_header=True; the daily Binance data dumps (aggTrades/klines) are headerless, so units are inferred from the declared timestamp column via infer_timestamp_unit. Header presence is auto-detected per archive.",
+  "results": [
+    {
+      "config": {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": false,
+        "sample_rows": 20
+      },
+      "detected_has_header": false,
+      "input": "BTCUSDT-aggTrades-2024-12-31.csv",
+      "input_sha256": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
+      "kind": "spot_aggTrades",
+      "provider": "binance",
+      "schema": [
+        "agg_trade_id",
+        "price",
+        "quantity",
+        "first_trade_id",
+        "last_trade_id",
+        "transact_time",
+        "is_buyer_maker",
+        "is_best_match"
+      ],
+      "status": "inspected",
+      "timestamp_column_index": 5,
+      "timestamp_sample": {
+        "examples": [
+          {
+            "raw": "1735603200213",
+            "unit": "ms",
+            "utc": "2024-12-31T00:00:00.213000+00:00"
+          },
+          {
+            "raw": "1735603200248",
+            "unit": "ms",
+            "utc": "2024-12-31T00:00:00.248000+00:00"
+          },
+          {
+            "raw": "1735603200297",
+            "unit": "ms",
+            "utc": "2024-12-31T00:00:00.297000+00:00"
+          }
+        ],
+        "malformed": 0,
+        "unit_distribution": {
+          "ms": 20
+        }
+      },
+      "tool": "source_audit.infer_timestamp_unit (header-auto-detected sampling)",
+      "utc_bounds": [
+        "2017-01-01T00:00:00+00:00",
+        "2027-01-01T00:00:00+00:00"
+      ]
+    },
+    {
+      "config": {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": false,
+        "sample_rows": 20
+      },
+      "detected_has_header": false,
+      "input": "BTCUSDT-aggTrades-2025-01-01.csv",
+      "input_sha256": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
+      "kind": "spot_aggTrades",
+      "provider": "binance",
+      "schema": [
+        "agg_trade_id",
+        "price",
+        "quantity",
+        "first_trade_id",
+        "last_trade_id",
+        "transact_time",
+        "is_buyer_maker",
+        "is_best_match"
+      ],
+      "status": "inspected",
+      "timestamp_column_index": 5,
+      "timestamp_sample": {
+        "examples": [
+          {
+            "raw": "1735689600010866",
+            "unit": "us",
+            "utc": "2025-01-01T00:00:00.010866+00:00"
+          },
+          {
+            "raw": "1735689600074095",
+            "unit": "us",
+            "utc": "2025-01-01T00:00:00.074095+00:00"
+          },
+          {
+            "raw": "1735689600091046",
+            "unit": "us",
+            "utc": "2025-01-01T00:00:00.091046+00:00"
+          }
+        ],
+        "malformed": 0,
+        "unit_distribution": {
+          "us": 20
+        }
+      },
+      "tool": "source_audit.infer_timestamp_unit (header-auto-detected sampling)",
+      "utc_bounds": [
+        "2017-01-01T00:00:00+00:00",
+        "2027-01-01T00:00:00+00:00"
+      ]
+    },
+    {
+      "config": {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": true,
+        "sample_rows": 20
+      },
+      "detected_has_header": true,
+      "input": "BTCUSDT-aggTrades-2025-01-01.csv",
+      "input_sha256": "b0e75563f195609cc12369dca095f3dcb26ed84fc4e1234c9b91a807a5d51202",
+      "kind": "spot_aggTrades",
+      "provider": "binance",
+      "schema": [
+        "agg_trade_id",
+        "price",
+        "quantity",
+        "first_trade_id",
+        "last_trade_id",
+        "transact_time",
+        "is_buyer_maker",
+        "is_best_match"
+      ],
+      "status": "inspected",
+      "timestamp_column_index": 5,
+      "timestamp_sample": {
+        "examples": [
+          {
+            "raw": "1735689600051",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:00.051000+00:00"
+          },
+          {
+            "raw": "1735689605048",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:05.048000+00:00"
+          },
+          {
+            "raw": "1735689605057",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:05.057000+00:00"
+          }
+        ],
+        "malformed": 0,
+        "unit_distribution": {
+          "ms": 20
+        }
+      },
+      "tool": "source_audit.infer_timestamp_unit (header-auto-detected sampling)",
+      "utc_bounds": [
+        "2017-01-01T00:00:00+00:00",
+        "2027-01-01T00:00:00+00:00"
+      ]
+    },
+    {
+      "config": {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": true,
+        "sample_rows": 20
+      },
+      "detected_has_header": true,
+      "input": "BTCUSDT-fundingRate-2025-01.csv",
+      "input_sha256": "df725010d55458866eb5a47e9ee708c6796c9d7e77b14c38342cea11f381815e",
+      "kind": "funding",
+      "provider": "binance",
+      "schema": [
+        "calc_time",
+        "funding_interval_hours",
+        "last_funding_rate"
+      ],
+      "status": "inspected",
+      "timestamp_column_index": 0,
+      "timestamp_sample": {
+        "examples": [
+          {
+            "raw": "1735689600015",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:00.015000+00:00"
+          },
+          {
+            "raw": "1735718400000",
+            "unit": "ms",
+            "utc": "2025-01-01T08:00:00+00:00"
+          },
+          {
+            "raw": "1735747200001",
+            "unit": "ms",
+            "utc": "2025-01-01T16:00:00.001000+00:00"
+          }
+        ],
+        "malformed": 0,
+        "unit_distribution": {
+          "ms": 20
+        }
+      },
+      "tool": "source_audit.infer_timestamp_unit (header-auto-detected sampling)",
+      "utc_bounds": [
+        "2017-01-01T00:00:00+00:00",
+        "2027-01-01T00:00:00+00:00"
+      ]
+    },
+    {
+      "config": {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": false,
+        "sample_rows": 20
+      },
+      "detected_has_header": false,
+      "input": "BTCUSDT-1m-2025-01-01.csv",
+      "input_sha256": "10a12909f1b0e3fcc6b7f502e5ea9be5d1ba3455dd8ab16cc61c8650640ba7c0",
+      "kind": "klines",
+      "provider": "binance",
+      "schema": [
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "close_time",
+        "quote_volume"
+      ],
+      "status": "inspected",
+      "timestamp_column_index": 0,
+      "timestamp_sample": {
+        "examples": [
+          {
+            "raw": "1735689600000000",
+            "unit": "us",
+            "utc": "2025-01-01T00:00:00+00:00"
+          },
+          {
+            "raw": "1735689660000000",
+            "unit": "us",
+            "utc": "2025-01-01T00:01:00+00:00"
+          },
+          {
+            "raw": "1735689720000000",
+            "unit": "us",
+            "utc": "2025-01-01T00:02:00+00:00"
+          }
+        ],
+        "malformed": 0,
+        "unit_distribution": {
+          "us": 20
+        }
+      },
+      "tool": "source_audit.infer_timestamp_unit (header-auto-detected sampling)",
+      "utc_bounds": [
+        "2017-01-01T00:00:00+00:00",
+        "2027-01-01T00:00:00+00:00"
+      ]
+    },
+    {
+      "config": {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": true,
+        "sample_rows": 20
+      },
+      "detected_has_header": true,
+      "input": "BTCUSDT-trades-2025-01-01.csv",
+      "input_sha256": "0b82a0c8e8fd0289dc8da654d7923535b623801569291902e66df1be6ce9b96a",
+      "kind": "perp_trades",
+      "provider": "binance",
+      "schema": [
+        "id",
+        "price",
+        "qty",
+        "quote_qty",
+        "time",
+        "is_buyer_maker"
+      ],
+      "status": "inspected",
+      "timestamp_column_index": 4,
+      "timestamp_sample": {
+        "examples": [
+          {
+            "raw": "1735689600051",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:00.051000+00:00"
+          },
+          {
+            "raw": "1735689600051",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:00.051000+00:00"
+          },
+          {
+            "raw": "1735689605048",
+            "unit": "ms",
+            "utc": "2025-01-01T00:00:05.048000+00:00"
+          }
+        ],
+        "malformed": 0,
+        "unit_distribution": {
+          "ms": 20
+        }
+      },
+      "tool": "source_audit.infer_timestamp_unit (header-auto-detected sampling)",
+      "utc_bounds": [
+        "2017-01-01T00:00:00+00:00",
+        "2027-01-01T00:00:00+00:00"
+      ]
+    }
+  ],
+  "tool": "source_audit.infer_timestamp_unit / audit_csv_safe"
+}

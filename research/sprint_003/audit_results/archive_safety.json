@@ -1,0 +1,119 @@
+{
+  "audit": "archive_safety",
+  "gzip_not_zip_out_of_scope": [
+    "bybit/BTCUSD2019-10-01.csv.gz",
+    "bybit/BTCUSDT2020-03-25.csv.gz"
+  ],
+  "results": [
+    {
+      "config": {
+        "max_members": 1000,
+        "max_ratio": "100.0",
+        "max_total_extracted": 2147483648
+      },
+      "input": "binance/BTCUSDT-aggTrades-2024-12-31.zip",
+      "max_ratio_observed": "6.0392",
+      "member_count": 1,
+      "members": [
+        "BTCUSDT-aggTrades-2024-12-31.csv"
+      ],
+      "sha256": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
+      "status": "safe",
+      "tool": "source_audit.audit_zip_safe",
+      "total_compressed": 16847025,
+      "total_extracted": 101743340
+    },
+    {
+      "config": {
+        "max_members": 1000,
+        "max_ratio": "100.0",
+        "max_total_extracted": 2147483648
+      },
+      "input": "binance/BTCUSDT-aggTrades-2025-01-01.zip",
+      "max_ratio_observed": "5.7568",
+      "member_count": 1,
+      "members": [
+        "BTCUSDT-aggTrades-2025-01-01.csv"
+      ],
+      "sha256": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
+      "status": "safe",
+      "tool": "source_audit.audit_zip_safe",
+      "total_compressed": 9817210,
+      "total_extracted": 56515858
+    },
+    {
+      "config": {
+        "max_members": 1000,
+        "max_ratio": "100.0",
+        "max_total_extracted": 2147483648
+      },
+      "input": "binance/BTCUSDT-aggTrades-perp-2025-01-01.zip",
+      "max_ratio_observed": "5.1566",
+      "member_count": 1,
+      "members": [
+        "BTCUSDT-aggTrades-2025-01-01.csv"
+      ],
+      "sha256": "b0e75563f195609cc12369dca095f3dcb26ed84fc4e1234c9b91a807a5d51202",
+      "status": "safe",
+      "tool": "source_audit.audit_zip_safe",
+      "total_compressed": 9356944,
+      "total_extracted": 48250165
+    },
+    {
+      "config": {
+        "max_members": 1000,
+        "max_ratio": "100.0",
+        "max_total_extracted": 2147483648
+      },
+      "input": "binance/BTCUSDT-funding-monthly-2025-01.zip",
+      "max_ratio_observed": "4.1762",
+      "member_count": 1,
+      "members": [
+        "BTCUSDT-fundingRate-2025-01.csv"
+      ],
+      "sha256": "df725010d55458866eb5a47e9ee708c6796c9d7e77b14c38342cea11f381815e",
+      "status": "safe",
+      "tool": "source_audit.audit_zip_safe",
+      "total_compressed": 613,
+      "total_extracted": 2560
+    },
+    {
+      "config": {
+        "max_members": 1000,
+        "max_ratio": "100.0",
+        "max_total_extracted": 2147483648
+      },
+      "input": "binance/BTCUSDT-klines-1m-2025-01-01.zip",
+      "max_ratio_observed": "3.2286",
+      "member_count": 1,
+      "members": [
+        "BTCUSDT-1m-2025-01-01.csv"
+      ],
+      "sha256": "10a12909f1b0e3fcc6b7f502e5ea9be5d1ba3455dd8ab16cc61c8650640ba7c0",
+      "status": "safe",
+      "tool": "source_audit.audit_zip_safe",
+      "total_compressed": 68914,
+      "total_extracted": 222493
+    },
+    {
+      "config": {
+        "max_members": 1000,
+        "max_ratio": "100.0",
+        "max_total_extracted": 2147483648
+      },
+      "input": "binance/BTCUSDT-trades-perp-2025-01-01.zip",
+      "max_ratio_observed": "6.3857",
+      "member_count": 1,
+      "members": [
+        "BTCUSDT-trades-2025-01-01.csv"
+      ],
+      "sha256": "0b82a0c8e8fd0289dc8da654d7923535b623801569291902e66df1be6ce9b96a",
+      "status": "safe",
+      "tool": "source_audit.audit_zip_safe",
+      "total_compressed": 15104814,
+      "total_extracted": 96454111
+    }
+  ],
+  "tool": "source_audit.audit_zip_safe",
+  "zip_inspected": 6
+}

@@ -1,10 +1,12 @@
-Ticket: AUD-002
+Ticket: AUD-003
 State: AWAITING_REVIEW
-Governing documents:
-- docs/architecture/02_DATA_SOURCE_PLAN.md
-- research/sprint_003/10_REVIEW_AND_ERRATA.md
-- docs/reviews/REVIEW-0005_AUD-001_TOOLKIT_CHANGES_REQUIRED.md
-Authorized scope: Complete the reusable source-audit toolkit and focused test code only.
-Required outcome: AUD-002 implementation is ready for senior review.
-Stop condition: Commit the implementation handoff state and stop.
+Authorized scope: Execute Sprint 003 source-feasibility audits and produce reproducible evidence outputs.
+Required outcome: Research Lead can evaluate provider feasibility from traceable machine-readable evidence.
+Stop condition: Commit and push the complete audit handoff, then stop.
 Next ticket authorized: NONE
+Governing documents:
+- research/sprint_003/12_AUDIT_EXECUTION.md
+- docs/reviews/REVIEW-0007_AUD-002_FINAL.md
+Authorized scope: Execute Sprint 003 source-feasibility audits with the accepted source_audit toolkit.
+Required outcome: Reproducible machine-readable audit outputs for Research Lead evaluation.
+Stop condition: Commit and push the complete audit handoff, then stop.

@@ -1,0 +1,21 @@
+{
+  "archive_a": "binance/BTCUSDT-aggTrades-2024-12-31.zip",
+  "archive_b": "binance/BTCUSDT-aggTrades-2025-01-01.zip",
+  "audit": "binance_precision_comparison",
+  "config": {
+    "has_header": false,
+    "max_ambiguous_rate": "0.05",
+    "max_malformed_rate": "0.1",
+    "max_sample_rows": 50,
+    "member_suffix": ".csv",
+    "min_valid_inferences": 5,
+    "timestamp_column": 5,
+    "timestamp_max_utc": "2027-01-01T00:00:00+00:00",
+    "timestamp_min_utc": "2017-01-01T00:00:00+00:00"
+  },
+  "failure": "PrecisionComparisonError: Headerless Binance archive comparison is not supported; provide has_header=True",
+  "sha256_a": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
+  "sha256_b": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
+  "status": "failed",
+  "tool": "source_audit.compare_binance_archive_precision"
+}

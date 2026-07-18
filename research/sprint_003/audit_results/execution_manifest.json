@@ -1,0 +1,78 @@
+{
+  "audit": "execution_manifest",
+  "generated_by": "scripts/audit/run_sprint003_audit.py",
+  "manifest_records": 43,
+  "reconciliation_counts": {
+    "corrupt": 0,
+    "duplicated": 1,
+    "inaccessible": 1,
+    "missing": 1,
+    "present": 40,
+    "superseded": 0
+  },
+  "reports": [
+    {
+      "output_file": "evidence_reconciliation.json",
+      "output_sha256": "bbc2cebed33cc67b3779ea5d4c55deeefc743be1ae30c7a88d06c30c137a289c",
+      "report": "evidence_reconciliation",
+      "status": "produced",
+      "tool": "source_audit.compute_sha256 + manifest cross-check"
+    },
+    {
+      "output_file": "hash_verification.json",
+      "output_sha256": "e9b958886b51c062e7d119d90f6fb1c2e160e27dcb7ea07e2a6804044f9e5c3b",
+      "report": "hash_verification",
+      "status": "produced",
+      "tool": "source_audit.compute_sha256 (SHA-256, immutable object)"
+    },
+    {
+      "output_file": "archive_safety.json",
+      "output_sha256": "6eec1da0e30756e89e56b68f95105171a5d7b34200ca76d9a69ff6fa1f148252",
+      "report": "archive_safety",
+      "status": "produced",
+      "tool": "source_audit.audit_zip_safe"
+    },
+    {
+      "output_file": "csv_schema_timestamp.json",
+      "output_sha256": "ad70a82abe3099624a3a9ae9c2af16d562c64ef12064681ae65c85bf481ceef8",
+      "report": "csv_schema_timestamp",
+      "status": "produced",
+      "tool": "source_audit.infer_timestamp_unit / audit_csv_safe"
+    },
+    {
+      "output_file": "binance_precision_comparison.json",
+      "output_sha256": "e81189ec1768dd2b911634b583dc4913c86204c3e50dc3f7d83fbb799b168ebc",
+      "report": "binance_precision_comparison",
+      "status": "failed",
+      "tool": "source_audit.compare_binance_archive_precision"
+    },
+    {
+      "output_file": "pagination.json",
+      "output_sha256": "65d96716d8058feb1abe88753b0c4677c420f2a3b1e532df6cfdad94d8cd722f",
+      "report": "pagination",
+      "status": "not_executed",
+      "tool": "source_audit.paginate (PaginationCallbacks)"
+    },
+    {
+      "output_file": "bar_reconstruction_comparison.json",
+      "output_sha256": "7eca40256415b40c8a1b8b970bf0565d983323163d349ad388c45e77988ffe43",
+      "report": "bar_reconstruction_comparison",
+      "status": "not_executed",
+      "tool": "source_audit.reconstruct_bars + compare_bars"
+    },
+    {
+      "output_file": "storage_statistics.json",
+      "output_sha256": "c23fc67fe79fa03785ea41fc1c3100b6c9bb9e4073ba7d0fd39e0efa77253724",
+      "report": "storage_statistics",
+      "status": "completed",
+      "tool": "source_audit.compute_storage_stats"
+    }
+  ],
+  "staging_area": "/tmp/crypto_source_audit (external, not committed)",
+  "ticket": "AUD-003",
+  "toolkit_commit": "899fb7c802dc4ba9b951118598417aef6d22cdcb",
+  "utc_bounds": [
+    "2017-01-01T00:00:00+00:00",
+    "2027-01-01T00:00:00+00:00"
+  ]
+}

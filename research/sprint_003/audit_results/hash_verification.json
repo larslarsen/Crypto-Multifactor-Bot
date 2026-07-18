@@ -1,0 +1,306 @@
+{
+  "audit": "hash_verification",
+  "results": [
+    {
+      "byte_size": 16847187,
+      "evidence_id": "EV-001",
+      "local_path": "binance/BTCUSDT-aggTrades-2024-12-31.zip",
+      "sha256": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
+      "status": "verified"
+    },
+    {
+      "byte_size": 9817372,
+      "evidence_id": "EV-002",
+      "local_path": "binance/BTCUSDT-aggTrades-2025-01-01.zip",
+      "sha256": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
+      "status": "verified"
+    },
+    {
+      "byte_size": 69062,
+      "evidence_id": "EV-003",
+      "local_path": "binance/BTCUSDT-klines-1m-2025-01-01.zip",
+      "sha256": "10a12909f1b0e3fcc6b7f502e5ea9be5d1ba3455dd8ab16cc61c8650640ba7c0",
+      "status": "verified"
+    },
+    {
+      "byte_size": 9357158,
+      "evidence_id": "EV-004",
+      "local_path": "binance/BTCUSDT-aggTrades-perp-2025-01-01.zip",
+      "sha256": "b0e75563f195609cc12369dca095f3dcb26ed84fc4e1234c9b91a807a5d51202",
+      "status": "verified"
+    },
+    {
+      "byte_size": 15105022,
+      "evidence_id": "EV-005",
+      "local_path": "binance/BTCUSDT-trades-perp-2025-01-01.zip",
+      "sha256": "0b82a0c8e8fd0289dc8da654d7923535b623801569291902e66df1be6ce9b96a",
+      "status": "verified"
+    },
+    {
+      "byte_size": 825,
+      "evidence_id": "EV-006",
+      "local_path": "binance/BTCUSDT-funding-monthly-2025-01.zip",
+      "sha256": "df725010d55458866eb5a47e9ee708c6796c9d7e77b14c38342cea11f381815e",
+      "status": "verified"
+    },
+    {
+      "byte_size": 98,
+      "evidence_id": "EV-007",
+      "local_path": "binance/BTCUSDT-aggTrades-2024-12-31.zip.CHECKSUM",
+      "sha256": "e4df58922f0c107f8ae6b8b096e8c96629183442d5f1acf57b42e72d6de6f80a",
+      "status": "verified"
+    },
+    {
+      "byte_size": 98,
+      "evidence_id": "EV-008",
+      "local_path": "binance/BTCUSDT-aggTrades-2025-01-01.zip.CHECKSUM",
+      "sha256": "2aaa77ee30df7d2a629ab282138ff4057bbe43f44754082e4d9db3529c55967e",
+      "status": "verified"
+    },
+    {
+      "byte_size": 99,
+      "evidence_id": "EV-009",
+      "local_path": "binance/BTCUSDT-aggTrades-perp-2025-01-01.zip.CHECKSUM",
+      "sha256": "5b53ff6270e146cf3d595cd917f005e097fb23fa2e85ca5c33a95168402d7744",
+      "status": "verified"
+    },
+    {
+      "byte_size": 98,
+      "evidence_id": "EV-010",
+      "local_path": "binance/BTCUSDT-fundingRate-2025-01.zip.CHECKSUM",
+      "sha256": "c22e5703d426e3c3dbb2352109a6912c4ee41f0f7026c201202e5939f784c246",
+      "status": "verified"
+    },
+    {
+      "byte_size": 28558,
+      "evidence_id": "EV-011",
+      "local_path": "binance/replacement_register_2022-10-04.csv",
+      "sha256": "7d2ff0915c472b4860d034daa02ee2cb30a764c428bd397cd23b325a5256ce90",
+      "status": "verified"
+    },
+    {
+      "byte_size": 5144,
+      "evidence_id": "EV-012",
+      "local_path": "binance/binance_public_data_README.md",
+      "sha256": "085ab91377aa9325d44f4c7ad27cce4ab381e158403e1d7df2bad39d1a66f7c6",
+      "status": "verified"
+    },
+    {
+      "byte_size": 5709,
+      "evidence_id": "EV-013",
+      "local_path": "kraken/kraken_bulk_docs.html",
+      "sha256": "4feb4039e09fe469208cf41465835e9c4f83f43059da9759da6daabddfbbf331",
+      "status": "verified"
+    },
+    {
+      "byte_size": 255751,
+      "evidence_id": "EV-014",
+      "local_path": "kraken/kraken_rest_ohlc_docs.html",
+      "sha256": "4e49e2b8691448208893f824ab63fd481e03f1c2489c12f9d6320d500c065d6d",
+      "status": "verified"
+    },
+    {
+      "byte_size": 5709,
+      "evidence_id": "EV-015",
+      "local_path": "kraken/kraken_marketdata_section.html",
+      "sha256": "4feb4039e09fe469208cf41465835e9c4f83f43059da9759da6daabddfbbf331",
+      "status": "verified"
+    },
+    {
+      "byte_size": 5140514,
+      "evidence_id": "EV-016",
+      "local_path": "okx/okx_docs_orderbook.html",
+      "sha256": "6d6c6bb7dc66dbcae5f69d70d9aa7cc1d9500162d00eaae385ebf0c9c2738f1e",
+      "status": "verified"
+    },
+    {
+      "byte_size": 1013,
+      "evidence_id": "EV-017",
+      "local_path": "okx/okx_funding_live.json",
+      "sha256": "c8b15b7b0deb4afcb71ee1ff505dcfbbfe3b189625d44cc61a949a428ee302c8",
+      "status": "verified"
+    },
+    {
+      "byte_size": 1279,
+      "evidence_id": "EV-018",
+      "local_path": "okx/okx_trades_live.json",
+      "sha256": "ba5ca1ad19c6f1f06c3e34f26f4b4e95a68cd1d2106f9ddc270008729e2b735c",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "EV-019",
+      "local_path": "",
+      "sha256": null,
+      "status": "skipped:inaccessible"
+    },
+    {
+      "byte_size": 4009459,
+      "evidence_id": "EV-020",
+      "local_path": "bybit/BTCUSD2019-10-01.csv.gz",
+      "sha256": "61bb5a9f9f5378f4732b3f895dd6cecc87c243321c1ca192dfd567446684831c",
+      "status": "verified"
+    },
+    {
+      "byte_size": 121118,
+      "evidence_id": "EV-021",
+      "local_path": "bybit/BTCUSDT2020-03-25.csv.gz",
+      "sha256": "cbca6933a8f0a11429661cfa93b04056055d776ee199209e8af9719ad2060a33",
+      "status": "verified"
+    },
+    {
+      "byte_size": 975,
+      "evidence_id": "EV-022",
+      "local_path": "bybit/bybit_linear_BTCUSDT.json",
+      "sha256": "a3eed7a49468a0f41760608f32dee0ff1ac78eefdee81e32db7b676538c23c44",
+      "status": "verified"
+    },
+    {
+      "byte_size": 966,
+      "evidence_id": "EV-023",
+      "local_path": "bybit/bybit_inverse_BTCUSD.json",
+      "sha256": "ac7f6e78e60d27226d21b786dcf0370ce784e49966923e1790b3bee8b429cb7b",
+      "status": "verified"
+    },
+    {
+      "byte_size": 969,
+      "evidence_id": "EV-024",
+      "local_path": "bybit/bybit_funding_p1.json",
+      "sha256": "87e058ecfc3f470f19178dc4097791da775ff85ff7da639aeb806a670948d0b2",
+      "status": "verified"
+    },
+    {
+      "byte_size": 8791,
+      "evidence_id": "EV-025",
+      "local_path": "bybit/inst_p1.json",
+      "sha256": "b17fbe98fd2d6b54d81de1408e003d97129306a07fc76658713bce3ebb3da77b",
+      "status": "verified"
+    },
+    {
+      "byte_size": 8770,
+      "evidence_id": "EV-026",
+      "local_path": "bybit/inst_p2.json",
+      "sha256": "19e29af387667ded57d79ee4af14191ebae27ce997232a83da18c058821ffce1",
+      "status": "verified"
+    },
+    {
+      "byte_size": 974,
+      "evidence_id": "EV-027",
+      "local_path": "bybit/bybit_delivered_BTCUSDU26.json",
+      "sha256": "d52e941e365ac1f6a9eab92f4b6d092eb626be7b13acbd49c5b8494fb45358ce",
+      "status": "verified"
+    },
+    {
+      "byte_size": 6564727,
+      "evidence_id": "EV-028",
+      "local_path": "coin_metrics/cm_catalog.json",
+      "sha256": "79f4d94617ce412adcb4d234a8a0e3c681b972f8a1eecd6d77a8a97eec69f615",
+      "status": "verified"
+    },
+    {
+      "byte_size": 182,
+      "evidence_id": "EV-029",
+      "local_path": "coin_metrics/cm_btc_SplyCur.json",
+      "sha256": "11cce8d8bf49ab6f90a42635ee58d81d433f44c04ce81b6124a64435329c7785",
+      "status": "verified"
+    },
+    {
+      "byte_size": 1318,
+      "evidence_id": "EV-030",
+      "local_path": "coin_metrics/final.json",
+      "sha256": "2cfec632898079b958f125936a8fbadc7a8851226ba0ac299b78b85a1e8311e2",
+      "status": "verified"
+    },
+    {
+      "byte_size": 147,
+      "evidence_id": "EV-031",
+      "local_path": "coin_metrics/cm_bonk_SplyCur.json",
+      "sha256": "487be49cb50f5fcde3b0593818c663d07065ba7630682562598d51b8efddc503",
+      "status": "verified"
+    },
+    {
+      "byte_size": 108,
+      "evidence_id": "EV-032",
+      "local_path": "coin_metrics/cm_error_SplyIssued.json",
+      "sha256": "0db43df3cf7f02aadd67fb723237eba9e73e56903fc9dab82bdffcd6250039df",
+      "status": "verified"
+    },
+    {
+      "byte_size": 658,
+      "evidence_id": "EV-033",
+      "local_path": "coin_metrics/cm_catalog_headers.txt",
+      "sha256": "013fda601d39e3330186c43a0394210bc2c19097ecad3346be2f7d6e0344023a",
+      "status": "verified"
+    },
+    {
+      "byte_size": 488301,
+      "evidence_id": "EV-034",
+      "local_path": "coin_metrics/cm_docs.html",
+      "sha256": "d795c853c4be6d1da8cbcb376dbccc4decb44bb4560bcda9f50ff6c7d67a0623",
+      "status": "verified"
+    },
+    {
+      "byte_size": 66,
+      "evidence_id": "EV-035",
+      "local_path": "defillama/dl_emissions_arb.json",
+      "sha256": "77af6ecfa9bf69c017f1d642d816fa1db0e8bdb8a5dd77009c8454b6441c0f2a",
+      "status": "verified"
+    },
+    {
+      "byte_size": 7125,
+      "evidence_id": "EV-036",
+      "local_path": "defillama/gh_DefiLlama_defillama-adapters.json",
+      "sha256": "79a6f793c2eb2d351f43980eb33e3fa55d9a8a93e7b1451dde6ee85d386d18ef",
+      "status": "verified"
+    },
+    {
+      "byte_size": 235,
+      "evidence_id": "EV-037",
+      "local_path": "defillama/adapters/projects_unlockd_index.js",
+      "sha256": "7bc75ddf31e90f5e9e7ef36144553581e037d008f6fd394c2c64f3afe9f50358",
+      "status": "verified"
+    },
+    {
+      "byte_size": 883,
+      "evidence_id": "EV-038",
+      "local_path": "defillama/adapters/projects_unlockd-v2_index.js",
+      "sha256": "edb9a6a6ba72dba1a9ee8a8e6931461ac420d8065cedcb0b5ecbc7fbaff2a792",
+      "status": "verified"
+    },
+    {
+      "byte_size": 1177,
+      "evidence_id": "EV-039",
+      "local_path": "defillama/adapters/projects_optimism_index.js",
+      "sha256": "11eb15e87c0fcf4186c5a0bef8131780a9c90d7454e90ed93dd2181c8bfb7e6b",
+      "status": "verified"
+    },
+    {
+      "byte_size": 249,
+      "evidence_id": "EV-040",
+      "local_path": "defillama/adapters/projects_unlockd_helper_addresses.js",
+      "sha256": "4de4c1161557b11f3d8088aef30423ea4746f5d0fec14e7244ea3f8184415d0f",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "EV-041",
+      "local_path": "token_unlocks/tokenomist_arb.json",
+      "sha256": null,
+      "status": "skipped:missing"
+    },
+    {
+      "byte_size": 0,
+      "evidence_id": "EV-042",
+      "local_path": "token_unlocks/messari_arb.json",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "verified"
+    },
+    {
+      "byte_size": 732740,
+      "evidence_id": "EV-043",
+      "local_path": "token_unlocks/unlocks_app.html",
+      "sha256": "f6dd299f4f87c4a12ec4c4428f83e30fc3115594c0b19bcb8d53834befd5a778",
+      "status": "verified"
+    }
+  ],
+  "tool": "source_audit.compute_sha256 (SHA-256, immutable object)",
+  "verified": 41
+}

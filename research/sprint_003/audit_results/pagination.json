@@ -1,0 +1,16 @@
+{
+  "audit": "pagination",
+  "captured_pages_present": [
+    "bybit/bybit_funding_p1.json",
+    "bybit/fund_p1.json",
+    "bybit/inst_p1.json",
+    "bybit/inst_p2.json",
+    "bybit/bybit_funding_p1.json",
+    "bybit/fund_p1.json",
+    "bybit/inst_p1.json",
+    "bybit/inst_p2.json"
+  ],
+  "reason": "paginate() drives a live fetch callback; captured raw Bybit cursor pages are static snapshots, not a replayable fetch sequence. Recorded as present evidence for Research Lead; no synthetic pagination run performed (no fabrication).",
+  "status": "not_executed",
+  "tool": "source_audit.paginate (PaginationCallbacks)"
+}
