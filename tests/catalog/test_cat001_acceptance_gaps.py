@@ -107,3 +107,103 @@ def test_malformed_sql_migration_filenames_are_rejected(
         apply_migrations(database, migrations_dir=migrations)
 
     assert not database.exists()
+
+
+def test_transaction_control_commit_is_rejected_before_any_change(tmp_path: Path) -> None:
+    """CREATE ...; COMMIT; INVALID must be rejected with no partial changes."""
+    migrations = tmp_path / "migrations"
+    database = tmp_path / "control.db"
+
+    _write_migration(
+        migrations,
+        "0001_bad.sql",
+        """
+        CREATE TABLE escaped (id INTEGER NOT NULL);
+        COMMIT;
+        THIS IS NOT VALID SQL;
+        """,
+    )
+
+    with pytest.raises(RuntimeError, match=r"(?i)transaction-control|COMMIT"):
+        apply_migrations(database, migrations_dir=migrations)
+
+    assert not _table_exists(database, "escaped")
+
+    with sqlite3.connect(database) as connection:
+        applied = connection.execute(
+            "SELECT filename FROM migration_history ORDER BY filename"
+        ).fetchall()
+
+    assert applied == []
+
+
+def test_semicolon_inside_string_literal_is_preserved(tmp_path: Path) -> None:
+    """Semicolon inside a string literal must not be treated as statement separator."""
+    migrations = tmp_path / "migrations"
+    database = tmp_path / "control.db"
+
+    _write_migration(
+        migrations,
+        "0001_string.sql",
+        """
+        CREATE TABLE t (s TEXT);
+        INSERT INTO t (s) VALUES ('hello; world');
+        """,
+    )
+
+    apply_migrations(database, migrations_dir=migrations)
+
+    with sqlite3.connect(database) as connection:
+        row = connection.execute("SELECT s FROM t").fetchone()
+        assert row is not None
+        assert row[0] == "hello; world"
+
+
+def test_comments_inside_string_literals_are_preserved(tmp_path: Path) -> None:
+    """-- and /* */ inside string literals must be preserved."""
+    migrations = tmp_path / "migrations"
+    database = tmp_path / "control.db"
+
+    _write_migration(
+        migrations,
+        "0001_comments_in_string.sql",
+        """
+        CREATE TABLE t (s TEXT);
+        INSERT INTO t (s) VALUES ('-- not a comment /* still not */');
+        """,
+    )
+
+    apply_migrations(database, migrations_dir=migrations)
+
+    with sqlite3.connect(database) as connection:
+        row = connection.execute("SELECT s FROM t").fetchone()
+        assert row is not None
+        assert "-- not a comment" in row[0]
+
+
+def test_trigger_with_multiple_semicolons_is_handled(tmp_path: Path) -> None:
+    """A trigger containing multiple semicolons in its body must be treated as one statement."""
+    migrations = tmp_path / "migrations"
+    database = tmp_path / "control.db"
+
+    _write_migration(
+        migrations,
+        "0001_trigger.sql",
+        """
+        CREATE TABLE t (id INTEGER);
+        CREATE TRIGGER trig AFTER INSERT ON t
+        BEGIN
+            INSERT INTO t (id) VALUES (1);
+            INSERT INTO t (id) VALUES (2);
+        END;
+        """,
+    )
+
+    apply_migrations(database, migrations_dir=migrations)
+
+    # If we reach here without error, the multi-; trigger was handled as single statement.
+    with sqlite3.connect(database) as connection:
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+        assert any("t" in str(t) for t in tables)

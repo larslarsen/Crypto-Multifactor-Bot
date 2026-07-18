@@ -79,8 +79,5 @@ not be committed.
 
 ## Current review gate
 
-CAT-001 is not accepted until [`CAT-001A`](tickets/CAT-001A.md) passes. The current
-migration runner can leave partial schema changes after a failed migration, and its
-migration discovery does not yet enforce duplicate-version and gap rejection.
-
+CAT-001A remediation has been implemented. CAT-001A is awaiting final review.
 Do not begin raw-data ingestion tickets until the remediation is reviewed and accepted.

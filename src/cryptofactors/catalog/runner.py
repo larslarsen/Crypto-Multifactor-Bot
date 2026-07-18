@@ -11,11 +11,11 @@ MIGRATIONS_DIR = Path("sql/migrations")
 MIGRATION_HISTORY_TABLE = "migration_history"
 
 # Strict convention: NNNN_descriptive_name.sql
-# - exactly 4 digits
-# - underscore
-# - non-empty descriptive name (letters, digits, underscores)
-# - .sql
 MIGRATION_FILENAME_RE = re.compile(r"^(?P<version>\d{4})_(?P<name>[A-Za-z0-9_]+)\.sql$")
+
+TRANSACTION_KEYWORDS = {
+    "BEGIN", "COMMIT", "END", "ROLLBACK", "SAVEPOINT", "RELEASE"
+}
 
 
 def _compute_checksum(path: Path) -> str:
@@ -25,16 +25,12 @@ def _compute_checksum(path: Path) -> str:
 def _discover_migrations(migrations_dir: Path) -> list[tuple[int, Path]]:
     """Discover, validate, and return ordered migrations.
 
-    Validation happens before any database is touched:
-    - Filename must match NNNN_name.sql
-    - No duplicate versions
-    - Versions must be contiguous (no gaps)
-    - Deterministic sort by version
+    Validation happens before any database is touched.
     """
     results: list[tuple[int, Path]] = []
     seen: dict[int, str] = {}
 
-    for p in sorted(migrations_dir.glob("*.sql")):  # sorted for determinism
+    for p in sorted(migrations_dir.glob("*.sql")):
         match = MIGRATION_FILENAME_RE.match(p.name)
         if not match:
             raise RuntimeError(
@@ -72,18 +68,45 @@ def _discover_migrations(migrations_dir: Path) -> list[tuple[int, Path]]:
 
 
 def _split_statements(sql: str) -> list[str]:
-    """Split SQL script into executable statements.
+    """Split a SQL script into complete statements using sqlite3.complete_statement().
 
-    Handles basic line comments and block comments for catalog migrations.
-    Does not support ; inside string literals (migrations are controlled DDL).
+    This respects string literals, comments (including inside strings), and
+    multi-statement constructs such as triggers. No regex stripping of comments
+    or blind semicolon splitting is performed.
     """
-    # Remove block comments /* ... */
-    sql = re.sub(r"/\*.*?\*/", "", sql, flags=re.DOTALL)
-    # Remove line comments --
-    sql = re.sub(r"--.*", "", sql)
-    # Split on ; and strip
-    parts = re.split(r";\s*", sql)
-    return [p.strip() for p in parts if p.strip()]
+    statements: list[str] = []
+    current = ""
+    for line in sql.splitlines(keepends=True):
+        current += line
+        if sqlite3.complete_statement(current):
+            stmt = current.strip()
+            if stmt:
+                statements.append(stmt)
+            current = ""
+    if current.strip():
+        statements.append(current.strip())
+    return statements
+
+
+def _reject_transaction_controls(filename: str, statements: list[str]) -> None:
+    """Reject any top-level transaction-control statement.
+
+    This must be called before any execution of the migration so that
+    the migration file cannot commit or roll back the runner's transaction.
+    """
+    for stmt in statements:
+        # Get the first significant token (uppercased)
+        # We look at the leading non-whitespace text
+        leading = stmt.strip().upper()
+        # Take first word
+        token = leading.split(maxsplit=1)[0] if leading else ""
+        first_word = token.rstrip(";, ").strip()
+        # Also catch BEGIN TRANSACTION etc.
+        if first_word in TRANSACTION_KEYWORDS or first_word.startswith("BEGIN"):
+            raise RuntimeError(
+                f"Transaction-control statement '{first_word}' in migration "
+                f"{filename}. Offending statement starts with: {stmt[:80]}"
+            )
 
 
 def _get_connection(db_path: Path, busy_timeout_ms: int = 5000) -> sqlite3.Connection:
@@ -115,8 +138,8 @@ def apply_migrations(
 
     - Strict validation of migration directory happens BEFORE any database access.
     - Each migration + its history record commit in one explicit transaction.
-    - On any failure (including inside the migration SQL), no changes from that
-      migration remain (no partial schema or data, no history row).
+    - Migration files are forbidden from containing top-level transaction control.
+    - On any failure, no changes from that migration remain.
     """
     if not migrations_dir.exists():
         raise FileNotFoundError(f"Migrations directory not found: {migrations_dir}")
@@ -150,6 +173,9 @@ def apply_migrations(
 
             sql = mig_path.read_text(encoding="utf-8")
             statements = _split_statements(sql)
+
+            # Reject transaction controls BEFORE starting any execution for this migration
+            _reject_transaction_controls(filename, statements)
 
             try:
                 conn.execute("BEGIN IMMEDIATE")
@@ -191,7 +217,6 @@ def get_status(
         )
         applied = {row[0]: {"checksum": row[1], "applied_at": row[2]} for row in applied_rows}
 
-        # Pending computed from dir (may raise on bad dir, which is acceptable)
         pending: list[str] = []
         for _, mig_path in _discover_migrations(migrations_dir):
             if mig_path.name not in applied:

@@ -44,3 +44,7 @@ secrets.*
 # Logs
 *.log
 logs/
+
+
+# Local control databases and scratch dirs
+.local/
