@@ -214,3 +214,89 @@ python3 scripts/check_repo_control.py                           -> Repo control 
 3. **Pyright vs mypy tension:** Pyright flags union-attr / `**dict` / undefined-name
    spots that mypy (the gate) accepts. mypy on the MAN-001 package + tests is clean.
 4. **No CLI:** dataset publication is API-only this ticket.
+
+## Concurrent-publication correction (third integration)
+
+A third Senior correction pass landed in the working tree (after
+`62710afbaa33565596b8cd5d712bb4fa26896ece`) and was integrated and validated. This pass
+replaces the `os.mkdir`-then-populate race with a bounded concurrent-safe reservation
+protocol that closes the `test_concurrent_publish` gap.
+
+### Files integrated (this pass)
+
+- `src/cryptofactors/catalog/dataset/publisher.py` — rewritten publish path:
+  `manifest.json` is the final acceptance marker; outputs are written no-clobber before
+  the manifest; `_ensure_published` owns the reservation (exclusive `os.mkdir`) or waits
+  with exponential backoff (bounded by `publication_wait_seconds`) and verifies+reuses a
+  completed identical dataset; only the owner cleans its own incomplete reservation
+  (never another publisher's completed dataset); losers time out as
+  `DatasetPublicationInProgressError`. Catalog registration stays after completed
+  publication verification.
+- `src/cryptofactors/catalog/dataset/models.py` — `DatasetStoreConfig` gains
+  `publication_wait_seconds`, `publication_initial_backoff_seconds`,
+  `publication_max_backoff_seconds` (validated in `__post_init__`).
+- `src/cryptofactors/catalog/dataset/errors.py` — new `DatasetPublicationInProgressError`
+  (subclass of `DatasetPublicationError`).
+- `src/cryptofactors/catalog/dataset/__init__.py` — exports `DatasetPublicationInProgressError`.
+- `tests/test_dataset_manifest.py` — added concurrent tests: `test_concurrent_publish`
+  (3 workers), `test_high_contention_publication` (8 workers),
+  `test_loser_waits_for_manifest_before_reuse`, `test_loser_retries_after_owner_cleanup`,
+  `test_permanently_incomplete_reservation_times_out`.
+
+### Concurrent repetition results
+
+- `test_concurrent_publish` (3 identical publishers): **25/25 passed** (bounded
+  wait + reuse; exactly one dataset, all callers get the same dataset_id/manifest hash).
+- `test_high_contention_publication` (8 identical publishers): **5/5 passed**; exactly
+  one dataset published, all 8 callers converge on one dataset_id.
+- `test_loser_waits_for_manifest_before_reuse`: **5/5 passed** (loser waits, then reuses
+  the owner's completed dataset; `reused_existing=True`).
+- `test_permanently_incomplete_reservation_times_out`: passes (owner that never writes
+  the manifest is cleaned by itself; a late loser times out safely as
+  `DatasetPublicationInProgressError`; no catalog row references the incomplete dataset).
+
+### Commands and results
+
+```
+PYTHONPATH=src uv run pytest tests/test_dataset_manifest.py -q   -> 24 passed
+PYTHONPATH=src uv run pytest tests/catalog/ tests/evidence/test_sql_migration.py -q -> passed
+PYTHONPATH=src uv run pytest -q                                    -> 205 passed, 1 warning
+# test_concurrent_publish x25 -> 25 passed; test_high_contention_publication x5 -> 5 passed
+PYTHONPATH=src uv run ruff check src/ tests/ scripts/            -> clean
+PYTHONPATH=src uv run mypy src/cryptofactors/catalog/ tests/test_dataset_manifest.py -> no real errors
+uv build --wheel                                                -> built; clean py3.13 venv import OK
+python3 scripts/check_repo_control.py                           -> Repo control check: PASS
+```
+
+### Explicit verification (all confirmed)
+
+- No concurrent identical publisher receives an incomplete-dataset error.
+- Exactly one immutable dataset is published.
+- All successful callers receive the same dataset ID and manifest hash.
+- Failed owners clean their own incomplete reservations.
+- Non-owners never remove another process's publication.
+- A permanently incomplete reservation times out safely (`DatasetPublicationInProgressError`).
+- No catalog row references an incomplete dataset.
+
+### Deviations from the Senior implementation (mechanical, no logic change)
+
+1. **`test_existing_empty_final_directory_rejected`:** the new protocol treats a
+   pre-existing empty/incomplete `final` directory as a potential reservation and waits
+   (bounded) before rejecting. The test originally asserted immediate
+   `CorruptDatasetError`; updated it to expect `DatasetPublicationInProgressError` with
+   `publication_wait_seconds=0.0` (immediate timeout). The "rejected" intent is
+   preserved; the rejection is now via the bounded-wait timeout, matching the protocol.
+2. **`test_loser_waits_for_manifest_before_reuse`:** the `owner()` thread used a
+   `SqliteDatasetCatalog` opened in the main thread, raising SQLite "object created in a
+   thread" `ProgrammingError` under contention. Fixed by opening the catalog/publisher
+   inside `owner()` (per-thread), mirroring the already-correct `loser()` path. Typed
+   `results` as `list[tuple[str, DatasetPublishResult]]` and imported
+   `DatasetPublishResult` to clear mypy index errors. Pure fixture/synchronization fix.
+
+### Unresolved issues
+
+- **mypy full-repo pre-existing errors outside MAN-001:** 46 `error:` lines remain in
+  non-MAN-001 modules (down from 66 after this pass fixed several); not modified.
+- **Pyright vs mypy tension:** Pyright flags spots mypy (the gate) accepts. mypy on the
+  MAN-001 package + tests is clean.
+- **No CLI:** dataset publication is API-only this ticket.

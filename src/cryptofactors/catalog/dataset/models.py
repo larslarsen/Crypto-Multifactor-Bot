@@ -156,11 +156,23 @@ class DatasetStoreConfig:
     root: Path
     temp_dirname: str = "datasets_tmp"
     object_prefix: str = "datasets/sha256"
+    # Concurrent-publication wait: losers poll until manifest.json appears.
+    publication_wait_seconds: float = 30.0
+    publication_initial_backoff_seconds: float = 0.01
+    publication_max_backoff_seconds: float = 0.5
 
     def __post_init__(self) -> None:
         from cryptofactors.catalog.dataset.paths import validate_dataset_store_config
 
         validate_dataset_store_config(self)
+        if self.publication_wait_seconds < 0:
+            raise ValueError("publication_wait_seconds must be >= 0")
+        if self.publication_initial_backoff_seconds <= 0:
+            raise ValueError("publication_initial_backoff_seconds must be > 0")
+        if self.publication_max_backoff_seconds < self.publication_initial_backoff_seconds:
+            raise ValueError(
+                "publication_max_backoff_seconds must be >= publication_initial_backoff_seconds"
+            )
 
     def temp_dir(self) -> Path:
         return self.root / self.temp_dirname

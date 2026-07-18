@@ -50,6 +50,10 @@ class DatasetPublicationError(DatasetError):
     """Atomic publication failed or is unsupported."""
 
 
+class DatasetPublicationInProgressError(DatasetPublicationError):
+    """Timed out waiting for another publisher to finish an incomplete reservation."""
+
+
 class DatasetDurabilityError(DatasetPublicationError):
     """Required fsync failed."""
 

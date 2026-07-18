@@ -1,4 +1,4 @@
-"""Immutable dataset publication with verified receipts (MAN-001)."""
+"""Immutable dataset publication with concurrent-safe reservation protocol (MAN-001)."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import os
 import shutil
 import stat as statmod
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.errors import (
     CorruptDatasetError,
     DatasetPublicationError,
+    DatasetPublicationInProgressError,
     RecoverableDatasetCatalogError,
     UnsafePathError,
 )
@@ -47,28 +49,108 @@ from cryptofactors.catalog.dataset.paths import (
 )
 
 
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
 # Deterministic bookkeeping timestamp when plan.created_at is omitted.
 _DETERMINISTIC_CREATED_AT = datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 
-def _copy_file_streaming(src: Path, dest: Path, *, chunk_size: int = 1024 * 1024) -> None:
+class _ReservationLost(Exception):
+    """Internal: exclusive mkdir lost to a concurrent publisher."""
+
+
+def _copy_file_streaming_exclusive(
+    src: Path, dest: Path, *, chunk_size: int = 1024 * 1024
+) -> None:
+    """Create dest exclusively (no overwrite) and stream content."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with src.open("rb") as rin, dest.open("wb") as rout:
-        while True:
-            chunk = rin.read(chunk_size)
-            if not chunk:
-                break
-            rout.write(chunk)
-        rout.flush()
-        os.fsync(rout.fileno())
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    try:
+        fd = os.open(str(dest), flags, 0o644)
+    except FileExistsError as exc:
+        raise DatasetPublicationError(
+            "output child already exists (no-clobber violation)",
+            context={"path": str(dest)},
+        ) from exc
+    try:
+        with os.fdopen(fd, "wb") as rout, src.open("rb") as rin:
+            while True:
+                chunk = rin.read(chunk_size)
+                if not chunk:
+                    break
+                rout.write(chunk)
+            rout.flush()
+            os.fsync(rout.fileno())
+    except Exception:
+        # Remove our exclusive create if incomplete.
+        try:
+            dest.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def _link_or_copy_exclusive(src: Path, dest: Path, *, chunk_size: int) -> None:
+    """No-clobber child file creation via hardlink, else exclusive copy."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.link(str(src), str(dest))
+        fsync_file(dest)
+        return
+    except FileExistsError as exc:
+        raise DatasetPublicationError(
+            "output child already exists (no-clobber violation)",
+            context={"path": str(dest)},
+        ) from exc
+    except OSError:
+        _copy_file_streaming_exclusive(src, dest, chunk_size=chunk_size)
+
+
+def _publish_manifest_atomic(final_dir: Path, manifest_bytes: bytes) -> None:
+    """Write canonical manifest last as the final acceptance marker (no overwrite)."""
+    final_man = final_dir / "manifest.json"
+    st = lstat_path(final_man)
+    if st is not None:
+        raise DatasetPublicationError(
+            "manifest.json already exists during owner publication",
+            context={"path": str(final_man)},
+        )
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=".manifest-",
+        suffix=".partial",
+        dir=str(final_dir),
+    )
+    tmp_path = Path(tmp_name)
+    published = False
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(manifest_bytes)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(str(tmp_path), str(final_man))
+            published = True
+        except FileExistsError as exc:
+            raise DatasetPublicationError(
+                "manifest.json appeared during exclusive publish (no-clobber)",
+                context={"path": str(final_man)},
+            ) from exc
+        except OSError:
+            # Same-directory rename is atomic; refuse if dest exists.
+            if lstat_path(final_man) is not None:
+                raise DatasetPublicationError(
+                    "manifest.json already exists (no-clobber)",
+                    context={"path": str(final_man)},
+                )
+            os.rename(str(tmp_path), str(final_man))
+            published = True
+        fsync_file(final_man)
+    finally:
+        if tmp_path.exists():
+            # Drop partial name (hardlink leaves both names until unlink).
+            tmp_path.unlink(missing_ok=True)
 
 
 class DatasetPublisher:
-    """Publish immutable datasets with verified outputs and catalog registration."""
+    """Publish immutable datasets with concurrent-safe directory reservation."""
 
     def __init__(
         self,
@@ -153,7 +235,6 @@ class DatasetPublisher:
             supersedes_dataset_id=plan.supersedes_dataset_id,
         )
         dataset_id, _ = compute_dataset_id(identity)
-        # Deterministic created_at when not supplied — catalog bookkeeping only.
         created_at = plan.created_at or _DETERMINISTIC_CREATED_AT
 
         for f in verified_files:
@@ -202,23 +283,13 @@ class DatasetPublisher:
         manifest_uri = (rel_dir / "manifest.json").as_posix()
         publication_uri = rel_dir.as_posix()
 
-        reused = False
-        st_final = lstat_path(final_dir)
-        if st_final is not None:
-            if statmod.S_ISLNK(st_final.st_mode):
-                raise CorruptDatasetError(
-                    "final dataset path is a symlink",
-                    context={"path": str(final_dir)},
-                )
-            # Existing entry — verify exact agreement; reuse canonical on-disk manifest.
-            on_disk = self._verify_existing_dataset_strict(final_dir, manifest)
-            manifest = on_disk
-            reused = True
-        else:
-            self._publish_new_no_clobber(
-                final_dir, dict(plan.output_sources), manifest, root
-            )
-            self._verify_existing_dataset_strict(final_dir, manifest)
+        on_disk, reused = self._ensure_published(
+            final_dir,
+            sources=dict(plan.output_sources),
+            manifest=manifest,
+            root=root,
+        )
+        manifest = on_disk
 
         receipt = DatasetPublicationReceipt(
             dataset_id=dataset_id,
@@ -272,94 +343,131 @@ class DatasetPublisher:
             receipt=receipt,
         )
 
-    def _publish_new_no_clobber(
+    def _ensure_published(
         self,
         final_dir: Path,
+        *,
         sources: dict[str, Path],
         manifest: DatasetManifest,
         root: Path,
-    ) -> None:
-        """Create final dataset only if it does not exist (including empty dirs)."""
-        temp_parent = self._config.temp_dir()
-        if not temp_parent.is_absolute():
-            temp_parent = root / self._config.temp_dirname
-        temp_parent.mkdir(parents=True, exist_ok=True)
-        assert_no_symlink_components(temp_parent, stop_at=root)
+    ) -> tuple[DatasetManifest, bool]:
+        """Own reservation or wait for concurrent owner; return verified manifest."""
+        deadline = time.monotonic() + self._config.publication_wait_seconds
+        backoff = self._config.publication_initial_backoff_seconds
+        max_backoff = self._config.publication_max_backoff_seconds
 
-        stage = Path(tempfile.mkdtemp(prefix=".partial-ds-", dir=str(temp_parent)))
+        while True:
+            st = lstat_path(final_dir)
+            if st is None:
+                # Path free — try to become owner.
+                try:
+                    loaded = self._publish_as_owner(
+                        final_dir, sources=sources, manifest=manifest, root=root
+                    )
+                    return loaded, False
+                except _ReservationLost:
+                    # Concurrent owner won the mkdir; loop and wait/reuse.
+                    continue
+
+            if statmod.S_ISLNK(st.st_mode):
+                raise CorruptDatasetError(
+                    "final dataset path is a symlink",
+                    context={"path": str(final_dir)},
+                )
+            if not statmod.S_ISDIR(st.st_mode):
+                raise CorruptDatasetError(
+                    "final dataset path is not a directory",
+                    context={"path": str(final_dir)},
+                )
+
+            man = final_dir / "manifest.json"
+            st_m = lstat_path(man)
+            if (
+                st_m is not None
+                and not statmod.S_ISLNK(st_m.st_mode)
+                and statmod.S_ISREG(st_m.st_mode)
+            ):
+                # Accepted immutable dataset — verify and reuse.
+                loaded = self._verify_existing_dataset_strict(final_dir, manifest)
+                return loaded, True
+
+            # Incomplete reservation (no acceptance marker yet).
+            if time.monotonic() >= deadline:
+                raise DatasetPublicationInProgressError(
+                    "timed out waiting for concurrent publisher to finish",
+                    context={
+                        "path": str(final_dir),
+                        "wait_seconds": self._config.publication_wait_seconds,
+                    },
+                )
+            time.sleep(backoff)
+            backoff = min(backoff * 2.0, max_backoff)
+            # If the incomplete reservation disappeared, loop to retry ownership.
+            continue
+
+    def _publish_as_owner(
+        self,
+        final_dir: Path,
+        *,
+        sources: dict[str, Path],
+        manifest: DatasetManifest,
+        root: Path,
+    ) -> DatasetManifest:
+        """Exclusive mkdir owner: populate outputs, then publish manifest last."""
+        final_dir.parent.mkdir(parents=True, exist_ok=True)
+        assert_no_symlink_components(final_dir.parent, stop_at=root)
+        assert_parents_are_directories(final_dir, stop_at=root)
+
         try:
+            os.mkdir(str(final_dir))
+        except FileExistsError as exc:
+            raise _ReservationLost() from exc
+        except OSError as exc:
+            raise DatasetPublicationError(
+                f"cannot create final dataset directory: {exc}",
+                context={"path": str(final_dir)},
+            ) from exc
+
+        owned_incomplete = True
+        try:
+            # 1) Populate all declared outputs with no-clobber creation.
             for fspec in manifest.files:
                 src = sources[fspec.relative_path]
-                dest = stage / fspec.relative_path
+                dest = final_dir / fspec.relative_path
                 assert_relative_safe(fspec.relative_path, label="output path")
-                _copy_file_streaming(src, dest, chunk_size=self._chunk_size)
+                _link_or_copy_exclusive(src, dest, chunk_size=self._chunk_size)
                 h, sz = stream_sha256_and_size(dest, chunk_size=self._chunk_size)
                 if h != fspec.sha256 or sz != fspec.bytes:
                     raise DatasetPublicationError(
-                        "staged output content mismatch",
+                        "published output content mismatch",
                         context={"path": fspec.relative_path},
                     )
-            man_path = stage / "manifest.json"
-            text = dumps_canonical(full_manifest_dict(manifest)) + "\n"
-            man_path.write_bytes(text.encode("utf-8"))
-            fsync_file(man_path)
-            fsync_dir(stage)
+                fsync_file(dest)
 
-            final_dir.parent.mkdir(parents=True, exist_ok=True)
-            assert_no_symlink_components(final_dir.parent, stop_at=root)
-            assert_parents_are_directories(final_dir, stop_at=root)
+            # 2) Manifest is the final acceptance marker (only after all outputs).
+            man_bytes = (dumps_canonical(full_manifest_dict(manifest)) + "\n").encode(
+                "utf-8"
+            )
+            _publish_manifest_atomic(final_dir, man_bytes)
+            fsync_dir(final_dir)
+            fsync_parents(final_dir, stop_at=root)
+            owned_incomplete = False  # accepted
 
-            # Exclusive create of final directory — fails if any entry exists
-            # (including empty directory).
-            try:
-                os.mkdir(str(final_dir))
-            except FileExistsError:
-                # Concurrent winner or pre-existing — verify when complete.
+            return self._verify_existing_dataset_strict(final_dir, manifest)
+        except Exception:
+            # Owner failure before acceptance: clean only our incomplete reservation.
+            if owned_incomplete:
                 man = final_dir / "manifest.json"
-                if not man.is_file():
-                    raise DatasetPublicationError(
-                        "final dataset path exists but is incomplete (concurrent race)",
-                        context={"path": str(final_dir)},
-                    )
-                self._verify_existing_dataset_strict(final_dir, manifest)
-                return
-            except OSError as exc:
-                raise DatasetPublicationError(
-                    f"cannot create final dataset directory: {exc}",
-                    context={"path": str(final_dir)},
-                ) from exc
-
-            # Populate final from stage via hardlink when possible, else copy.
-            try:
-                for dirpath, _dirnames, filenames in os.walk(stage):
-                    rel_dir = os.path.relpath(dirpath, stage)
-                    target_dir = (
-                        final_dir if rel_dir == "." else final_dir / rel_dir
-                    )
-                    if rel_dir != ".":
-                        target_dir.mkdir(parents=True, exist_ok=True)
-                    for name in filenames:
-                        src_f = Path(dirpath) / name
-                        dst_f = target_dir / name
-                        try:
-                            os.link(str(src_f), str(dst_f))
-                        except OSError:
-                            _copy_file_streaming(
-                                src_f, dst_f, chunk_size=self._chunk_size
-                            )
-                        fsync_file(dst_f)
-                fsync_dir(final_dir)
-                fsync_parents(final_dir, stop_at=root)
-            except Exception:
-                # Incomplete final we created — remove only if incomplete (no valid
-                # manifest or verification would fail). Never remove pre-existing.
-                man = final_dir / "manifest.json"
-                if not man.is_file():
+                st_m = lstat_path(man)
+                accepted = (
+                    st_m is not None
+                    and not statmod.S_ISLNK(st_m.st_mode)
+                    and statmod.S_ISREG(st_m.st_mode)
+                )
+                if not accepted:
+                    # Never delete another publisher's completed dataset.
                     shutil.rmtree(final_dir, ignore_errors=True)
-                raise
-        finally:
-            if stage.exists():
-                shutil.rmtree(stage, ignore_errors=True)
+            raise
 
     def _verify_existing_dataset_strict(
         self, dataset_dir: Path, expected: DatasetManifest
@@ -392,10 +500,6 @@ class DatasetPublisher:
             )
 
         on_disk_bytes = man_path.read_bytes()
-        expected_bytes = (dumps_canonical(full_manifest_dict(expected)) + "\n").encode(
-            "utf-8"
-        )
-        # Prefer loading on-disk as authority for retry; identity must still match.
         try:
             loaded = load_manifest_file(man_path)
         except Exception as exc:
@@ -420,8 +524,6 @@ class DatasetPublisher:
                     "observed": loaded.manifest_sha256,
                 },
             )
-        # Exact bytes: must match canonical serialization of the loaded manifest
-        # (no strip). This rejects trailing-whitespace tampering.
         loaded_bytes = (dumps_canonical(full_manifest_dict(loaded)) + "\n").encode(
             "utf-8"
         )
@@ -431,7 +533,6 @@ class DatasetPublisher:
                 context={"path": str(man_path)},
             )
 
-        # Exact membership: only manifest.json + declared outputs.
         declared = {"manifest.json"} | {f.relative_path for f in loaded.files}
         found: set[str] = set()
         for path in dataset_dir.rglob("*"):

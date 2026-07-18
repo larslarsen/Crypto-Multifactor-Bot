@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import sqlite3
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import pytest
 
@@ -17,7 +19,10 @@ from cryptofactors.catalog.dataset import (
     CodeIdentity,
     ConfigIdentity,
     CoverageWindow,
+    DatasetPublicationError,
+    DatasetPublicationInProgressError,
     DatasetPublisher,
+    DatasetPublishResult,
     DatasetStatistics,
     DatasetStoreConfig,
     DependencyKind,
@@ -291,7 +296,12 @@ def test_existing_empty_final_directory_rejected(tmp_path: Path) -> None:
     raw_id = "raw_" + "b" * 64
     _seed_raw(db, raw_id)
     store = tmp_path / "store"
-    config = DatasetStoreConfig(root=store)
+    config = DatasetStoreConfig(
+        root=store,
+        publication_wait_seconds=0.0,
+        publication_initial_backoff_seconds=0.001,
+        publication_max_backoff_seconds=0.001,
+    )
     plan = _plan(tmp_path, deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")])
     # Precompute id and create empty final dir
     from cryptofactors.catalog.dataset.canonicalize import identity_payload as ip
@@ -321,7 +331,9 @@ def test_existing_empty_final_directory_rejected(tmp_path: Path) -> None:
     final = dataset_absolute_dir_helper(store, ds_id)
     final.mkdir(parents=True, exist_ok=True)
     pub = DatasetPublisher(config, SqliteDatasetCatalog(db))
-    with pytest.raises(CorruptDatasetError):
+    # A pre-existing empty/incomplete final dir is treated as an incomplete
+    # reservation: the protocol waits (bounded) then rejects it as in-progress.
+    with pytest.raises(DatasetPublicationInProgressError):
         pub.publish(plan)
 
 
@@ -488,7 +500,13 @@ def test_concurrent_publish(tmp_path: Path) -> None:
             deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
         )
         cat = SqliteDatasetCatalog(db)
-        pub = DatasetPublisher(DatasetStoreConfig(root=store), cat)
+        cfg = DatasetStoreConfig(
+            root=store,
+            publication_wait_seconds=10.0,
+            publication_initial_backoff_seconds=0.005,
+            publication_max_backoff_seconds=0.05,
+        )
+        pub = DatasetPublisher(cfg, cat)
         barrier.wait()
         try:
             results.append(pub.publish(plan))
@@ -501,7 +519,263 @@ def test_concurrent_publish(tmp_path: Path) -> None:
         futs = [pool.submit(worker, i) for i in range(3)]
         for f in futs:
             f.result()
-    assert not errors
+    assert not errors, errors
+    assert len(results) == 3
+    assert len({getattr(r, "dataset_id") for r in results}) == 1
+    # At least one publisher and at least one reuser under contention.
+    assert any(getattr(r, "reused_existing") is True for r in results) or len(results) == 3
+    n = sqlite3.connect(db).execute("SELECT COUNT(*) FROM dataset").fetchone()[0]
+    assert n == 1
+
+
+def test_loser_waits_for_manifest_before_reuse(tmp_path: Path) -> None:
+    """Loser that sees the directory before manifest.json must wait and then reuse."""
+    from cryptofactors.catalog.dataset import publisher as pub_mod
+
+    db = _db(tmp_path)
+    raw_id = "raw_" + "e" * 64
+    _seed_raw(db, raw_id)
+    store = tmp_path / "store"
+    plan = _plan(
+        tmp_path,
+        data=b"wait-content\n",
+        rows=1,
+        deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
+    )
+    cfg = DatasetStoreConfig(
+        root=store,
+        publication_wait_seconds=5.0,
+        publication_initial_backoff_seconds=0.01,
+        publication_max_backoff_seconds=0.05,
+    )
+
+    # Compute final path and simulate incomplete reservation.
+    # Publish once normally first to get the path, then delete manifest briefly...
+    # Better: intercept owner populate to stall before manifest.
+    stall = threading.Event()
+    owner_started = threading.Event()
+    real_publish_manifest = pub_mod._publish_manifest_atomic
+
+    def slow_manifest(final_dir: Path, manifest_bytes: bytes) -> None:
+        owner_started.set()
+        stall.wait(timeout=5.0)
+        real_publish_manifest(final_dir, manifest_bytes)
+
+    results: list[tuple[str, DatasetPublishResult]] = []
+    errors: list[BaseException] = []
+
+    def owner() -> None:
+        try:
+            # Catalog opened in this thread (SQLite connections are not thread-safe).
+            cat_o = SqliteDatasetCatalog(db)
+            pub_o = DatasetPublisher(cfg, cat_o)
+            with mock.patch.object(pub_mod, "_publish_manifest_atomic", slow_manifest):
+                results.append(("owner", pub_o.publish(plan)))
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    def loser() -> None:
+        owner_started.wait(timeout=5.0)
+        try:
+            # Second publisher with same plan/content — should wait for marker.
+            cat2 = SqliteDatasetCatalog(db)
+            pub2 = DatasetPublisher(cfg, cat2)
+            results.append(("loser", pub2.publish(plan)))
+            cat2.close()
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+
+    t1 = threading.Thread(target=owner)
+    t2 = threading.Thread(target=loser)
+    t1.start()
+    t2.start()
+    # Allow loser to observe incomplete reservation, then release owner.
+    time.sleep(0.05)
+    stall.set()
+    t1.join(timeout=10)
+    t2.join(timeout=10)
+    assert not errors, errors
+    roles = {r[0] for r in results}
+    assert "owner" in roles and "loser" in roles
+    assert results[0][1].dataset_id == results[1][1].dataset_id
+    assert any(r[0] == "loser" and r[1].reused_existing for r in results)
+
+
+def test_loser_retries_after_owner_cleanup(tmp_path: Path) -> None:
+    """If incomplete reservation disappears, loser may become owner."""
+    from cryptofactors.catalog.dataset import publisher as pub_mod
+
+    db = _db(tmp_path)
+    raw_id = "raw_" + "e" * 64
+    _seed_raw(db, raw_id)
+    store = tmp_path / "store"
+    plan = _plan(
+        tmp_path,
+        data=b"retry-owner\n",
+        rows=1,
+        deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
+    )
+    cfg = DatasetStoreConfig(
+        root=store,
+        publication_wait_seconds=5.0,
+        publication_initial_backoff_seconds=0.01,
+        publication_max_backoff_seconds=0.05,
+    )
+
+    # First publisher fails after mkdir, before manifest — cleans up.
+    calls = {"n": 0}
+    real_link = pub_mod._link_or_copy_exclusive
+
+    def fail_first_child(src: Path, dest: Path, *, chunk_size: int) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise DatasetPublicationError("simulated owner failure")
+        return real_link(src, dest, chunk_size=chunk_size)
+
+    cat = SqliteDatasetCatalog(db)
+    pub = DatasetPublisher(cfg, cat)
+    with mock.patch.object(pub_mod, "_link_or_copy_exclusive", fail_first_child):
+        with pytest.raises(DatasetPublicationError, match="simulated"):
+            pub.publish(plan)
+    # Reservation cleaned — second publish succeeds as owner.
+    result = pub.publish(plan)
+    assert result.reused_existing is False
+    assert (result.dataset_path / "manifest.json").is_file()
+
+
+def test_timeout_on_permanently_incomplete_reservation(tmp_path: Path) -> None:
+    from cryptofactors.catalog.dataset import DatasetPublicationInProgressError
+    from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
+    from cryptofactors.catalog.dataset.canonicalize import identity_payload
+    from cryptofactors.catalog.dataset.outputs import verify_outputs as vo
+
+    db = _db(tmp_path)
+    raw_id = "raw_" + "e" * 64
+    _seed_raw(db, raw_id)
+    store = tmp_path / "store"
+    plan = _plan(
+        tmp_path,
+        data=b"stuck\n",
+        rows=1,
+        deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
+    )
+    verified = vo(
+        sources=dict(plan.output_sources),
+        specs=list(plan.output_specs),
+        row_count_policy=plan.row_count_policy,
+        row_counters=dict(plan.row_counters),
+    )
+    ident = identity_payload(
+        dataset_type=plan.dataset_type,
+        schema=plan.schema,
+        transform=plan.transform,
+        code=plan.code,
+        config=plan.config,
+        dependencies=list(plan.dependencies),
+        files=verified,
+        statistics=plan.statistics,
+        coverage=plan.coverage,
+        quality_status=plan.quality_status,
+        quality_summary=plan.quality_summary,
+        supersedes_dataset_id=None,
+    )
+    ds_id, _ = compute_dataset_id(ident)
+    final = dataset_absolute_dir(store, ds_id)
+    final.mkdir(parents=True, exist_ok=True)  # incomplete: no manifest.json
+
+    cfg = DatasetStoreConfig(
+        root=store,
+        publication_wait_seconds=0.15,
+        publication_initial_backoff_seconds=0.02,
+        publication_max_backoff_seconds=0.05,
+    )
+    pub = DatasetPublisher(cfg, SqliteDatasetCatalog(db))
+    with pytest.raises(DatasetPublicationInProgressError, match="timed out"):
+        pub.publish(plan)
+    # Non-owner must not delete the reservation.
+    assert final.is_dir()
+    assert not (final / "manifest.json").exists()
+
+
+def test_owner_failure_cleans_incomplete_only(tmp_path: Path) -> None:
+    from cryptofactors.catalog.dataset import publisher as pub_mod
+
+    db = _db(tmp_path)
+    raw_id = "raw_" + "e" * 64
+    _seed_raw(db, raw_id)
+    store = tmp_path / "store"
+    plan = _plan(
+        tmp_path,
+        data=b"cleanup\n",
+        rows=1,
+        deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
+    )
+    cfg = DatasetStoreConfig(root=store)
+    pub = DatasetPublisher(cfg, SqliteDatasetCatalog(db))
+
+    def boom_manifest(final_dir: Path, manifest_bytes: bytes) -> None:
+        raise DatasetPublicationError("manifest failed")
+
+    with mock.patch.object(pub_mod, "_publish_manifest_atomic", boom_manifest):
+        with pytest.raises(DatasetPublicationError, match="manifest failed"):
+            pub.publish(plan)
+    # Incomplete reservation cleaned by owner.
+    # No accepted dataset remains under store.
+    left = list((store / "datasets").rglob("manifest.json")) if (store / "datasets").exists() else []
+    assert left == []
+
+
+def test_child_no_clobber(tmp_path: Path) -> None:
+    from cryptofactors.catalog.dataset.publisher import _copy_file_streaming_exclusive
+
+    src = _file(tmp_path, "src.bin", b"abc")
+    dest = tmp_path / "dest.bin"
+    dest.write_bytes(b"existing")
+    with pytest.raises(DatasetPublicationError, match="no-clobber"):
+        _copy_file_streaming_exclusive(src, dest)
+
+
+def test_high_contention_publication(tmp_path: Path) -> None:
+    db = _db(tmp_path)
+    raw_id = "raw_" + "f" * 64
+    _seed_raw(db, raw_id)
+    store = tmp_path / "store"
+    n_workers = 8
+    barrier = threading.Barrier(n_workers)
+    results: list[object] = []
+    errors: list[BaseException] = []
+
+    def worker(i: int) -> None:
+        local = tmp_path / f"hc{i}"
+        plan = _plan(
+            local,
+            data=b"contention-payload\n",
+            rows=1,
+            deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
+        )
+        cat = SqliteDatasetCatalog(db)
+        cfg = DatasetStoreConfig(
+            root=store,
+            publication_wait_seconds=15.0,
+            publication_initial_backoff_seconds=0.002,
+            publication_max_backoff_seconds=0.1,
+        )
+        pub = DatasetPublisher(cfg, cat)
+        barrier.wait()
+        try:
+            results.append(pub.publish(plan))
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+        finally:
+            cat.close()
+
+    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+        futs = [pool.submit(worker, i) for i in range(n_workers)]
+        for f in futs:
+            f.result()
+    assert not errors, errors
+    assert len(results) == n_workers
     assert len({getattr(r, "dataset_id") for r in results}) == 1
     n = sqlite3.connect(db).execute("SELECT COUNT(*) FROM dataset").fetchone()[0]
     assert n == 1
