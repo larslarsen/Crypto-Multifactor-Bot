@@ -186,7 +186,7 @@ def _common_payload(
     code: str = "c" * 8,
 ) -> dict[str, Any]:
     """Typed wrapper around identity_payload (explicit args; mypy-clean)."""
-    return identity_payload(
+    result: dict[str, Any] = identity_payload(
         dataset_type="x",
         schema=SchemaIdentity("s", "1"),
         transform=TransformSpec("t", "1"),
@@ -200,6 +200,7 @@ def _common_payload(
         supersedes_dataset_id=None,
         files=files,
     )
+    return result
 
 
 def test_reversed_output_order_stable() -> None:
@@ -340,7 +341,8 @@ def test_existing_empty_final_directory_rejected(tmp_path: Path) -> None:
 def dataset_absolute_dir_helper(root: Path, dataset_id: str) -> Path:
     from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
 
-    return dataset_absolute_dir(root, dataset_id)
+    result: Path = dataset_absolute_dir(root, dataset_id)
+    return result
 
 
 def test_publish_roundtrip_and_verify_without_expected(tmp_path: Path) -> None:
@@ -631,7 +633,7 @@ def test_loser_retries_after_owner_cleanup(tmp_path: Path) -> None:
         calls["n"] += 1
         if calls["n"] == 1:
             raise DatasetPublicationError("simulated owner failure")
-        return real_link(src, dest, chunk_size=chunk_size)
+        real_link(src, dest, chunk_size=chunk_size)
 
     cat = SqliteDatasetCatalog(db)
     pub = DatasetPublisher(cfg, cat)
