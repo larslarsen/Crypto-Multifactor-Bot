@@ -1,8 +1,9 @@
-"""Conservative, candidate-based timestamp unit inference."""
+"""Conservative, candidate-based timestamp unit inference (AUD-002)."""
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Union
+from typing import Union, Dict, Any
+
 from .errors import AmbiguousTimestampError, AuditError
 
 
@@ -26,8 +27,13 @@ def infer_timestamp_unit(
     value: Union[int, float, str, Decimal],
     min_date: datetime = datetime(2010, 1, 1, tzinfo=timezone.utc),
     max_date: datetime = datetime(2030, 1, 1, tzinfo=timezone.utc),
-) -> dict:
-    """Candidate validation. Exactly one plausible → return it. Multiple → ambiguous error."""
+) -> Dict[str, Any]:
+    """
+    Candidate validation.
+    Exactly one plausible unit → return it.
+    Multiple plausible units → AmbiguousTimestampError.
+    No plausible units → OutOfRangeTimestampError.
+    """
     # Normalize input
     if isinstance(value, float):
         if not value.is_integer():
