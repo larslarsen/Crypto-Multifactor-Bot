@@ -300,3 +300,73 @@ python3 scripts/check_repo_control.py                           -> Repo control 
 - **Pyright vs mypy tension:** Pyright flags spots mypy (the gate) accepts. mypy on the
   MAN-001 package + tests is clean.
 - **No CLI:** dataset publication is API-only this ticket.
+
+## dataset_file PK correction (fourth integration — MAN001_fix_patch.zip)
+
+The Senior's MAN-001 duplicate-content schema correction was delivered out-of-band as
+`/home/lars/Downloads/MAN001_fix_patch.zip` (after the Engineer noted the correction was
+missing from `69e856c…`). Integrated and validated.
+
+### Delivered artifacts vs repo
+
+The zip contained four files. Two were real and two were illustrative stubs for a
+fictional API that does not exist in this repo:
+
+- `sql/migrations/0005_fix_dataset_file_pk.sql` — REAL migration; adopted with one
+  correction (see deviations): it must preserve the live `partition_json` column, which
+  the Senior's stub DDL silently dropped.
+- `sql/control_schema.sql` — Senior's copy was a partial stub (only the `dataset_file`
+  table). The real `sql/control_schema.sql` was edited in place: PK flipped to
+  `(dataset_id, storage_uri)`, `partition_json` preserved, redundant `UNIQUE
+  (dataset_id, storage_uri)` removed (now the PK), and `idx_dataset_file_sha256` added.
+- `src/catalog/registration.py` — STUB referencing a fictional `catalog.control` /
+  `register_dataset_file` API. NOT integrated. The real registration path is
+  `SqliteDatasetCatalog.register_from_receipt` (via `DatasetPublisher.publish`), which
+  already writes `storage_uri` and is unchanged; the PK flip is carried entirely by the
+  schema/migration.
+- `tests/catalog/test_man001_duplicate_content.py` — STUB using the fictional
+  `Catalog.register_dataset_file` / `list_dataset_files`. NOT integrated as-is. Rewritten
+  as a real regression test against the shipped API (see below).
+
+### Files integrated (this pass)
+
+- `sql/migrations/0005_fix_dataset_file_pk.sql` (NEW) — copy `dataset_file` into
+  `dataset_file_new` with `PRIMARY KEY (dataset_id, storage_uri)`, preserving
+  `partition_json`; swap; re-add `idx_dataset_file_sha256`. Auto-discovered by the glob
+  migration runner (no registration edit).
+- `sql/control_schema.sql` — `dataset_file` PK → `(dataset_id, storage_uri)`.
+- `tests/catalog/test_man001_duplicate_content.py` (NEW) — three regression tests:
+  duplicate content at two logical paths → 2 rows retained; identical re-register
+  idempotent (no extra rows); schema-level proof that identity is `(dataset_id,
+  storage_uri)` (same content different path allowed; same uri + different content → PK
+  violation).
+
+### Commands and results
+
+```
+PYTHONPATH=src uv run pytest tests/catalog/test_man001_duplicate_content.py -q -> 3 passed
+PYTHONPATH=src uv run pytest tests/catalog/ tests/evidence/test_sql_migration.py tests/test_dataset_manifest.py -q -> passed
+PYTHONPATH=src uv run pytest -q                                    -> 208 passed, 1 warning
+PYTHONPATH=src uv run ruff check src/ tests/ scripts/            -> clean
+PYTHONPATH=src uv run mypy src/cryptofactors/catalog/ tests/catalog/test_man001_duplicate_content.py tests/test_dataset_manifest.py -> no real errors
+python3 scripts/check_repo_control.py                           -> Repo control check: PASS
+```
+
+### Deviations from the Senior patch (mechanical, no logic change)
+
+1. **Preserved `partition_json`.** The Senior's `0005` DDL and `control_schema.sql` stub
+   dropped `partition_json`, which the live `dataset_file` (0001_baseline) carries. The
+   integrated migration and schema keep `partition_json` so no column/data is lost on
+   upgrade.
+2. **`control_schema.sql` edited in place** rather than overwritten with the partial stub
+   (which omitted every other table). Only the `dataset_file` block changed.
+3. **`src/catalog/registration.py` and the fictional-API test were not integrated** — they
+   target a `catalog.control.Catalog` module that does not exist. The equivalent behavior
+   is covered by the real regression test using `SqliteDatasetCatalog.register_from_receipt`.
+   `catalog_store.py` required no change (its `INSERT` already includes `storage_uri` and
+   `partition_json`; re-registration idempotence already rides the `IntegrityError` path).
+
+### Unresolved issues
+
+- Same as prior passes: mypy full-repo pre-existing errors outside MAN-001 (46);
+  Pyright vs mypy tension; no CLI.

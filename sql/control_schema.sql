@@ -68,14 +68,15 @@ CREATE TABLE IF NOT EXISTS dataset_input_raw_object (
 
 CREATE TABLE IF NOT EXISTS dataset_file (
     dataset_id TEXT NOT NULL REFERENCES dataset(dataset_id),
-    file_sha256 TEXT NOT NULL,
     storage_uri TEXT NOT NULL,
-    row_count INTEGER NOT NULL CHECK (row_count >= 0),
+    file_sha256 TEXT NOT NULL,
     byte_size INTEGER NOT NULL CHECK (byte_size >= 0),
+    row_count INTEGER NOT NULL CHECK (row_count >= 0),
     partition_json TEXT,
-    PRIMARY KEY (dataset_id, file_sha256),
-    UNIQUE (dataset_id, storage_uri)
+    PRIMARY KEY (dataset_id, storage_uri)
 );
+
+CREATE INDEX IF NOT EXISTS idx_dataset_file_sha256 ON dataset_file(file_sha256);
 
 CREATE TABLE IF NOT EXISTS watermark (
     source_id TEXT NOT NULL REFERENCES source(source_id),
