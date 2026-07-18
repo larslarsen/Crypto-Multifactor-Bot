@@ -55,6 +55,8 @@ Dependency direction is enforced by the repository's layer-contract checks.
 - [Current developer task](docs/handoff/CURRENT_TASK.md)
 - [Implementation tickets](tickets/)
 - [Research sprint](crypto_multifactor_research_sprint_v1_1/)
+- [Evidence registry](research/evidence/)
+- [Research Sprint 002 (2025-2026 literature refresh)](research/sprint_002/)
 
 ## Development setup
 
