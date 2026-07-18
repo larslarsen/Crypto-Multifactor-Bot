@@ -2,13 +2,29 @@
 
 Cross-sectional cryptocurrency multifactor research program.
 
-This repository currently holds the **Sprint 1 research specification package**
-(located in [`crypto_multifactor_research_sprint_v1_1/`](crypto_multifactor_research_sprint_v1_1/README.md)).
-The package supplies the research contracts that should precede architecture and
-implementation: a research charter, falsifiable hypotheses, a legacy-repo audit,
-point-in-time data / universe / validation contracts, canonical factor cards, a
-transaction-cost and portfolio-construction protocol, a volume-bar replication
-protocol, a literature synthesis, and preregistered experiments.
+## Architecture is frozen (RFC-001)
+
+The v1 system architecture is **frozen as RFC-001** and any change to it
+requires a new Architecture Decision Record. See
+[`docs/ARCHITECTURE_RFC.md`](docs/ARCHITECTURE_RFC.md) and the ADR set under
+[`docs/architecture/adr/`](docs/architecture/adr/) (indexed in
+[`adr/README.md`](docs/architecture/adr/README.md)). Implementation proceeds
+against the frozen architecture; an architecture-doc change without a
+corresponding ADR is rejected in review.
+
+## Layout
+
+- `src/cryptofactors/` — installable package (ids, contracts, cli); `cf` command.
+- `docs/architecture/` — the v1 system architecture (11 docs) + `adr/` (ADRs
+  0001–0007, including the freeze ADR-0007).
+- `research/sprint_001/` — the Sprint 1 research specification package
+  (charter, legacy audit, PIT/universe/validation contracts, factor cards,
+  volume-bar replication protocol, literature synthesis, experiment registry,
+  architecture handoff). See
+  [`research/sprint_001/README.md`](research/sprint_001/README.md).
+- `schemas/`, `configs/`, `sql/` — typed manifests, example configs, SQLite
+  control schema + analytics views.
+- `tests/` — scaffold tests (run with `uv run pytest`).
 
 ## Evidence status — READ THIS
 
@@ -36,12 +52,8 @@ Per the sprint README, the following holds and is **intentionally** so:
 Documenting these caveats does **not** fix the underlying evaluation defects.
 It means the repository is not misleading readers into treating the artifacts
 as production-ready. Architecture and implementation should begin only after
-the Tier-0 data acceptance gates pass (see `crypto_multifactor_research_sprint_v1_1/02_DATA_AUDIT_PLAN.md`).
-
-## Layout
-
-- `crypto_multifactor_research_sprint_v1_1/` — the full Sprint 1 specification package.
-- `crypto_multifactor_research_sprint_v1_1/README.md` — detailed package README and recommended reading order.
+the Tier-0 data acceptance gates pass (see
+`research/sprint_001/02_DATA_AUDIT_PLAN.md`).
 
 ## Legacy context
 
