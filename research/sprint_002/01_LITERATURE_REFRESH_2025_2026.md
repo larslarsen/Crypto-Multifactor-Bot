@@ -2,7 +2,7 @@
 
 **Sprint:** 002
 **Research cutoff:** 2026-07-18
-**Sources added:** LIT-024 … LIT-037 (14 verified)
+**Sources added:** LIT-024 … LIT-038 (15 verified)
 
 This document summarizes the 2025–2026 evidence refresh. It is a research-design note, not
 an empirical result. No factor is claimed validated. Every source was verified against its
@@ -12,6 +12,18 @@ primary page; the machine-readable ledger is `02_LITERATURE_LEDGER.csv`.
 
 ### Momentum (Tier A reinforcement, later challengers)
 
+- **Realistic-assumptions momentum implementation (LIT-038, Han/Kang/Ryu, SSRN 4675565,
+  current version revised 26 Mar 2026).** This is the *primary* source for momentum
+  implementation design in this sprint. It shows that, under daily price fluctuations, many
+  momentum portfolios are liquidated before they realize their terminal backtest returns, and
+  portfolios with statistically significant mean returns often earn negative profits; mean
+  return significance is therefore not sufficient evidence of realizable profitability. It
+  finds time-series momentum strong but cross-sectional momentum almost non-existent. **Decision
+  (RD-01):** time-series and cross-sectional momentum must be evaluated separately; report
+  transaction costs and daily mark-to-market wealth paths; treat portfolios as liquidatable
+  before terminal backtest returns; attribute long and short legs separately; and make margin,
+  futures mechanics, and liquidation assumptions explicit. Numerical results were not
+  independently re-verified here; only the abstract's qualitative conclusions are recorded.
 - **CTREND (LIT-024, Fieberg et al. 2025, JFQA).** A price-and-volume trend factor that
   aggregates information across horizons and is not subsumed by known factors; survives
   transaction costs and persists in large/liquid coins. This is the canonical "complex
@@ -99,6 +111,19 @@ primary page; the machine-readable ledger is `02_LITERATURE_LEDGER.csv`.
   cost modeling of derivative legs.
 - LIT-026, LIT-029, and LIT-037 all confirm that trading frictions materially narrow the set
   of exploitable crypto factors; costs/capacity/shortability enter every promotion gate.
+
+### Survivorship and delisting (anchor retained, no new Sprint 002 ID)
+
+- **Ammann, Burdorf, Liebi & Stöckl (SSRN 4287573; posted 7 Dec 2022; current on primary
+  page at 2026-07-18).** "Survivorship and Delisting Bias in Cryptocurrency Markets" uses
+  3,904 cryptocurrencies over 2014–2021 and estimates an annualized survivorship/delisting
+  bias of 0.93% (value-weighted) / 62.19% (equal-weighted); after controlling for it, the
+  one-week momentum relation becomes insignificant. It remains an anchor (pre-2025) rather
+  than a new Sprint 002 source. **No newer study was located in this targeted 2025–2026
+  search that supersedes it.** Its estimate remains a governing motivation for retaining
+  inactive and delisted assets, survivorship-free universe construction is a Tier-0 data
+  requirement (see `06_DATA_FEASIBILITY_BACKLOG.csv`, DF-08), and the absence of a newer
+  paper is not evidence that the problem has diminished.
 
 ## What was NOT found or not settled
 

@@ -43,7 +43,7 @@ research/sprint_002/
 
 ## Source ID convention
 
-Sprint 002 continues the Sprint 001 ledger. New sources are `LIT-024` … `LIT-037`.
+Sprint 002 continues the Sprint 001 ledger. New sources are `LIT-024` … `LIT-038`.
 Sprint 001 sources `LIT-001` … `LIT-023` are not duplicated here; they are cited by
 reference where relevant.
 

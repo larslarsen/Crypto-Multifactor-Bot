@@ -10,6 +10,11 @@ validated.
 ## MOM-01 — Medium-term momentum (retained, specified stricter)
 
 - Keep the primary simple momentum test (time-series and cross-sectional, weekly).
+- **Primary momentum-implementation evidence: LIT-038** (Han/Kang/Ryu, SSRN 4675565,
+  revised 26 Mar 2026). Under daily price fluctuations many momentum portfolios are
+  liquidated before terminal backtest returns and significant mean returns often turn
+  negative; mean-return significance is insufficient; time-series momentum is strong,
+  cross-sectional momentum almost non-existent.
 - **New required reporting dimensions** (see RD-01):
   - time-series vs cross-sectional;
   - long-leg vs short-leg contribution;
@@ -17,7 +22,13 @@ validated.
   - spot long-only vs realistically shortable perpetual implementations;
   - raw vs volatility-managed exposure;
   - ordinary return accounting vs margin/liquidation-aware wealth paths;
-  - asset-level concentration and crash attribution.
+  - asset-level concentration and crash attribution;
+  - transaction costs and daily mark-to-market wealth paths;
+  - explicit margin, futures mechanics, and liquidation assumptions;
+  - portfolios treated as liquidatable before terminal backtest returns;
+  - separate long/short leg attribution (LIT-038).
+- The crypto-carry paper (LIT-025) is NOT used as the principal momentum evidence; it stays
+  with CARRY-01 (below).
 - **Challengers (after freeze):** CTREND (LIT-024), market-state conditioning, complex
   price-volume combinations (RD-02). Volatility management is a later challenger, not the
   primary test, because LIT-026 and LIT-027 disagree on whether crypto momentum crashes
