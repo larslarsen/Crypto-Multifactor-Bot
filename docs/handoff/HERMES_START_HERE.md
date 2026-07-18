@@ -68,6 +68,8 @@ This repository uses a control plane, not an autonomous workflow:
 - Development agents commit locally and stop; only the owner or a designated reviewer
   accepts work or authorizes the next ticket.
 - Chat instructions are not durable state until recorded in the repository.
+- The owner is the acceptance and publication authority only, and does not act as a relay
+  between agents and seniors/reviewers. Seniors and reviewers prompt the agent directly.
 
 ## First assignment
 

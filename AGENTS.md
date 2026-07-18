@@ -33,6 +33,10 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 - When a senior engineer says files must be created, create them in a focused commit.
 - Chat instructions are not durable state until they are recorded in the repository
   (a ticket, ADR, or control document).
+- The owner is the acceptance and publication authority only. The owner does not act as a
+  relay or messenger between agents and other stakeholders (seniors, reviewers). Seniors and
+  reviewers prompt the agent directly; the agent executes and stops for the owner's review.
+  Do not draft relay/prompt blocks for the owner to forward on the owner's behalf.
 
 ## Enforcement
 
