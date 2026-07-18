@@ -1,9 +1,10 @@
-Ticket: GOV-001
-State: AWAITING_REVIEW
+Ticket: AUD-002
+State: IN_PROGRESS
 Governing documents:
-- docs/adr/0011-repo-governance-and-agent-instructions.md
-- docs/reviews/REVIEW-0003_GOV-001.md
-Authorized scope: Complete GOV-001 only.
-Required outcome: GOV-001 acceptance checks pass.
-Stop condition: Commit and stop for review.
+- docs/architecture/02_DATA_SOURCE_PLAN.md
+- research/sprint_003/10_REVIEW_AND_ERRATA.md
+- docs/reviews/REVIEW-0005_AUD-001_TOOLKIT_CHANGES_REQUIRED.md
+Authorized scope: Complete the reusable source-audit toolkit and focused test code only.
+Required outcome: AUD-002 implementation is ready for senior review.
+Stop condition: Commit the implementation handoff state and stop.
 Next ticket authorized: NONE
