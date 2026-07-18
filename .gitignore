@@ -17,15 +17,18 @@ ENV/
 .ruff_cache/
 .ipynb_checkpoints/
 
-# Research data (large / proprietary / regenerable) — keep specs, not raw obs
+# Research data (large / proprietary / regenerable) — keep specs + registries,
+# not raw observations. Ignore actual data directories; do NOT blanket-ignore
+# *.csv/*.parquet because the research package legitimately commits registry
+# CSVs and small fixtures (per architecture: registries are publishable).
 data/
-*.csv
-*.parquet
+raw_*/
+cache/
 *.pkl
 *.joblib
 *.h5
-raw_*/ 
-cache/
+
+# Local data root lives OUTSIDE the repo (e.g. ~/cryptofactors_data)
 
 # Editor / OS
 .vscode/
