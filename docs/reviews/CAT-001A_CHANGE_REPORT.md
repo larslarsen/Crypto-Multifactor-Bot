@@ -149,3 +149,78 @@ git ls-files .local                # (empty)
 All original atomicity, validation, and isolation guarantees preserved. No architecture changes.
 
 **Commit:** next focused commit after these edits.
+
+## Review of Commit 0adf078 (as requested)
+
+**Reviewed commit:** 0adf078 (the state before the final parsing fixes).
+
+**Bugs identified in 0adf078:**
+
+1. Transaction-control detection:
+   - Code used:
+     ```python
+     leading = stmt.strip().upper()
+     token = leading.split(maxsplit=1)[0] ...
+     first_word = token.rstrip(";, ").strip()
+     ```
+   - This failed on leading comments because `strip()` only removes whitespace.
+   - Examples that would have executed the control statement:
+     ```sql
+     -- explanatory comment
+     COMMIT;
+     ```
+     ```sql
+     /* explanatory comment */
+     ROLLBACK;
+     ```
+
+2. Statement splitting:
+   - Code used:
+     ```python
+     for line in sql.splitlines(keepends=True):
+         current += line
+         if sqlite3.complete_statement(current):
+     ```
+   - Only checked after complete lines. Multi-statement lines were passed as single strings to `conn.execute()`.
+   - Example that failed to split:
+     ```sql
+     CREATE TABLE first_table (id INTEGER); CREATE TABLE second_table (id INTEGER);
+     ```
+
+**Fixes applied (char-by-char splitter + lexical helper):**
+- Added `_first_significant_keyword(text)` (small lexer, only for preflight):
+  - Skips UTF-8 BOM, whitespace, `--` to EOL, `/* ... */`.
+  - Returns first significant keyword for classification only.
+  - Original statement text (with comments) is passed unchanged to SQLite.
+- Rewrote `_split_statements` to accumulate character-by-character and check `sqlite3.complete_statement()` only when `sql[i] == ';'`.
+- Preserved all required behavior: explicit `BEGIN IMMEDIATE`, per-statement `execute`, history INSERT in same tx, rollback on error.
+- No changes to architecture, layer boundaries, or other logic.
+
+**Tests added/verified against 0adf078 issues:**
+- Parametrized test for every forbidden keyword (`BEGIN`, `COMMIT`, `END`, `ROLLBACK`, `SAVEPOINT`, `RELEASE`) preceded by both `--` and `/* */` comments.
+- `test_create_then_comment_then_commit_leaves_no_changes` using the exact pattern:
+  ```sql
+  CREATE TABLE escaped (id INTEGER);
+  -- comment
+  COMMIT;
+  INVALID SQL;
+  ```
+  (Rejected before any execution; no table, no history row.)
+- Tests for 2 statements on one line, 3 statements on one line, trigger + statement on same line.
+- Tests for commented transaction controls.
+
+**Verification after fixes (on top of 0adf078):**
+- Full CAT-001A acceptance suite run:
+  ```bash
+  uv run pytest -q tests/catalog          # all passed
+  uv run ruff check src tests             # clean
+  uv run mypy src                         # clean
+  mkdir -p .local
+  uv run cf catalog init --database .local/control.db
+  uv run cf catalog status --database .local/control.db
+  git status --short
+  git ls-files .local                     # empty
+  ```
+- All original atomicity, validation, isolation, and WAL tests continue to pass without weakening.
+
+Focused commit pushed. Stopped. No next ticket started.
