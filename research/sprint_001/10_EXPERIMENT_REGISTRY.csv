@@ -1,0 +1,19 @@
+experiment_id,family,title,universe,horizon,research_mode,status,primary_metrics,advance_rule
+EXP-2026-001,Data,Tier-0 manifest and checksum audit,N/A,N/A,CONFIRMATORY,PREREGISTERED,All research inputs have hashes/schema/source/time coverage,No unresolved missing provenance
+EXP-2026-002,Universe,Quantify survivor bias: PIT U50 vs current survivors,N/A,7d,DIAGNOSTIC,PREREGISTERED,Return/coverage/membership differences,Report only; no promotion
+EXP-2026-003,MOM-01,30-7 momentum,U50,7d,CONFIRMATORY,PREREGISTERED,Net long-short return; IC; monotonicity,"Positive net, robust, incremental"
+EXP-2026-004,MOM-01,90-7 momentum,U50,7d,CONFIRMATORY,PREREGISTERED,Net long-short return; IC; monotonicity,"Positive net, robust, incremental"
+EXP-2026-005,REV-01,1-day reversal,U50,1d,CONFIRMATORY,PREREGISTERED,Net long-short return; turnover/capacity,Pass base and 2x costs
+EXP-2026-006,REV-01,3-day reversal,U50,1d,CONFIRMATORY,PREREGISTERED,Net long-short return; turnover/capacity,Pass base and 2x costs
+EXP-2026-007,DEF-01,Low realized volatility/downside risk,U50,7d,CONFIRMATORY,PREREGISTERED,Net alpha and risk contribution,Separate alpha from beta reduction
+EXP-2026-008,CARRY-01,Funding carry cross-section,Perpetual short-eligible U50 subset,1d/7d,CONFIRMATORY,PREREGISTERED,Price+funding net return,Positive after exact funding and costs
+EXP-2026-009,LIQ-01,Illiquidity as alpha versus implementation cost,U50/U100,7d,CONFIRMATORY,PREREGISTERED,Gross/net spread and capacity,Net positive and not size-only
+EXP-2026-010,SIZE-01,Point-in-time market-cap size,U50/U100,7d,CONFIRMATORY,BLOCKED_DATA,Net spread with liquidity controls,Only after supply PIT audit
+EXP-2026-011,Composite,Equal-factor composite,U50,7d,CONFIRMATORY,PREREGISTERED,Net utility vs components,Diversification and incremental gain
+EXP-2026-012,Composite,Volatility-scaled factor composite,U50,7d,CONFIRMATORY,PREREGISTERED,Net utility vs equal-factor,Must beat equal-factor robustly
+EXP-2026-013,Model,Regularized linear cross-sectional model,U50,7d,CONFIRMATORY,PREREGISTERED,Net utility vs equal-factor,Nested OOS improvement
+EXP-2026-014,Model,Shallow tree nonlinear model,U50,7d,CONFIRMATORY,BLOCKED_BASELINE,Net utility vs linear/equal-factor,Only after baselines frozen
+EXP-2026-015,Bars,Matched volume-bar representation,Audited liquid subset,1d/7d,CONFIRMATORY,PREREGISTERED,Paired net return difference,Positive paired net result and 2x costs
+EXP-2026-016,Network,Network activity factor,Audited mapped assets,7d/30d,EXPLORATORY,BLOCKED_DATA,Incremental net return,PIT on-chain audit required
+EXP-2026-017,Prospective,Frozen v1 composite holdout,Frozen U50 rules,7d,CONFIRMATORY,SEALED,Prospective net performance,No retuning; declared minimum duration
+EXP-2026-018,TREND-01,Volatility-adaptive trend replication (Karassavidis et al.),BTC/ETH first; audited U50 only after pilot,6h/daily variants matched to source and baseline,EXPLORATORY,BLOCKED_BASELINE,Net Sharpe; drawdown; turnover; capacity; incremental utility versus simple trend,Survive base and 2x costs; beat preregistered simple trend baseline; stable periods; prospective confirmation

@@ -1,0 +1,20 @@
+runtime:
+  timezone: UTC
+  duckdb_threads: 6
+  duckdb_memory_limit: 20GB
+  process_workers: 3
+  http_concurrency: 4
+  model_threads: 6
+  fail_on_unknown_config: true
+  deterministic_seed: 20260717
+
+limits:
+  max_uncompressed_batch_mb: 1024
+  max_model_matrix_gb: 6
+  min_free_disk_gb_before_job: 30
+  job_lock_timeout_seconds: 1
+
+logging:
+  format: json
+  level: INFO
+  include_run_id: true

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Raw Source Object",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "raw_object_id",
+    "source_id",
+    "sha256",
+    "bytes",
+    "storage_uri",
+    "acquired_at",
+    "request",
+    "status"
+  ],
+  "properties": {
+    "raw_object_id": {
+      "type": "string",
+      "pattern": "^raw_[a-f0-9]{64}$"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "storage_uri": {
+      "type": "string"
+    },
+    "original_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "request": {
+      "type": "object"
+    },
+    "response_metadata": {
+      "type": "object"
+    },
+    "source_checksum": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "acquired_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_start": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "event_end": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "ACQUIRED",
+        "VERIFIED",
+        "QUARANTINED",
+        "REJECTED"
+      ]
+    }
+  }
+}

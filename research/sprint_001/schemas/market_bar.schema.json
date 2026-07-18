@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Canonical Market Bar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "venue_id",
+    "timeframe",
+    "period_start",
+    "period_end",
+    "availability_time",
+    "open",
+    "high",
+    "low",
+    "close",
+    "base_volume",
+    "quote_volume",
+    "source_dataset_id",
+    "quality_flags"
+  ],
+  "properties": {
+    "instrument_id": {
+      "type": "integer"
+    },
+    "venue_id": {
+      "type": "string"
+    },
+    "timeframe": {
+      "type": "string"
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "availability_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "open": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "high": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "low": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "close": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "base_volume": {
+      "type": "number",
+      "minimum": 0
+    },
+    "quote_volume": {
+      "type": "number",
+      "minimum": 0
+    },
+    "trade_count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "vwap": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "taker_buy_base_volume": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "taker_buy_quote_volume": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "source_dataset_id": {
+      "type": "string"
+    },
+    "quality_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

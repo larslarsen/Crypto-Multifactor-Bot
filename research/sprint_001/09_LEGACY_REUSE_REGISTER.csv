@@ -1,0 +1,13 @@
+component,disposition,reuse_confidence,rationale,acceptance_work
+Collectors/backfills,CANDIDATE_TRANSPLANT,Medium,Potentially valuable source-specific knowledge,"Audit timestamps, pagination, deduplication, licensing, raw immutability"
+reliability.py / atomic IO,CANDIDATE_TRANSPLANT,High,Operational utility largely independent of alpha,"Unit tests, API cleanup, dependency review"
+Portfolio/accounting engine,CONCEPT_AND_TEST_FIXTURES,Medium,Shared accounting is valuable but assumptions need revalidation,Golden cash/funding/fill tests; no same-bar fills
+Execution simulator,CANDIDATE_TRANSPLANT,Medium,Could accelerate costed research,"Audit fill timing, slippage, partial fills, funding, delistings"
+Data manifest,REWRITE,Low,Current inventory lacks hashes and PIT semantics,Implement research data contract
+quality_gate.py,REWRITE,Low,"Current gate is current-state, not historical as-of",Point-in-time universe service
+canonical_features.py,ARCHIVE_MECHANICS_ONLY,Low,Feature-contract idea useful; 113-column ontology and zero-fill are not,Generate frozen serving schema only after research freeze
+pipeline.py labels/splits,REWRITE,Low,Purge and intrabar ambiguity defects,Event-interval labels and splits
+model_trainer.py,REWRITE,Low,Objective and metrics are classification-centric,Cross-sectional net-return baselines first
+Rule/regime experiments,ARCHIVE,Low,Large selection history and unstable splits,Graveyard unless new mechanism
+Research summaries,ARCHIVE_AS_EVIDENCE,Medium,Useful chronology and negative results,Do not use claimed metrics as priors
+Tests,SELECTIVE_TRANSPLANT,Medium,Execution/reliability tests may be valuable,Classify unit vs assumption tests; port fixtures

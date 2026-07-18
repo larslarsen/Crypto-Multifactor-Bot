@@ -1,0 +1,15 @@
+decision_id,date,topic,decision,status,reason
+D-001,2026-07-17,Research problem,Cross-sectional expected net return ranking,ACCEPTED,Aligns with multifactor asset pricing and portfolio decisions
+D-002,2026-07-17,Primary frequency,Weekly; daily secondary,ACCEPTED,Reduces microstructure dependence and establishes a clean baseline
+D-003,2026-07-17,Primary universe,Point-in-time U50 by lagged volume with absolute floor,ACCEPTED,Implementation-aware and survivorship safe
+D-004,2026-07-17,Missingness,Preserve nulls and reason codes; no zero fill,ACCEPTED,Prevents semantic conflation
+D-005,2026-07-17,Historical evidence,Treat through-freeze history as contaminated,ACCEPTED,Prior extensive experimentation
+D-006,2026-07-17,Final evidence,Prospective holdout begins after 2026-07-17 freeze,ACCEPTED,Restores untouched evaluation
+D-007,2026-07-17,Baseline,Equal weight and equal-factor before optimization/ML,ACCEPTED,Controls estimation error and complexity
+D-008,2026-07-17,Performance objective,Net portfolio outcomes; accuracy diagnostic only,ACCEPTED,Economic alignment
+D-009,2026-07-17,Volume bars,"Replication candidate, not architecture premise",ACCEPTED,Current comparison not economically matched
+D-010,2026-07-17,On-chain/DEX,Phase 2,ACCEPTED,PIT and taxonomy complexity
+D-011,2026-07-18,Information-bar deployment,Do not deploy committed _info models or flip the serving filename,BINDING,Serving remains time-bar and validation/causality defects are unresolved
+D-012,2026-07-18,Event-bar threshold,Estimate thresholds from training history only and freeze per fold or update causally,BINDING,Complete-sample targets leak future volume into historical bar boundaries
+D-013,2026-07-18,Karassavidis replication,Schedule as exploratory trend challenger after transparent baselines,BINDING,Implementable but recent working-paper evidence
+D-014,2026-07-18,Nguyen mapping study,Use as literature taxonomy; do not represent it as a trading model,BINDING,Systematic mapping study is a review rather than strategy specification

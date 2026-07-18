@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Canonical Funding Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "venue_id",
+    "funding_time",
+    "availability_time",
+    "funding_rate",
+    "interval_seconds",
+    "long_cashflow_sign",
+    "source_dataset_id"
+  ],
+  "properties": {
+    "instrument_id": {
+      "type": "integer"
+    },
+    "venue_id": {
+      "type": "string"
+    },
+    "funding_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "availability_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "funding_rate": {
+      "type": "number"
+    },
+    "interval_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "long_cashflow_sign": {
+      "enum": [
+        -1,
+        1
+      ]
+    },
+    "mark_price": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "index_price": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "source_dataset_id": {
+      "type": "string"
+    },
+    "quality_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

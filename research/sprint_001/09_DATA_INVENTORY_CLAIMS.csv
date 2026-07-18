@@ -1,0 +1,10 @@
+dataset_family,sources_or_venues,frequency,legacy_claim,evidence_status,legacy_location,sprint_action
+CEX 5m OHLCV,Binance/Kraken/OKX/Bybit/MEXC and possibly others,5m,469 files claimed; BTC consolidated 1.4M bars 2012-2026,CLAIMED_LOCAL,RESEARCH_SUMMARY.md,Generate hashed local manifest; verify venue/instrument uniqueness
+CEX daily,Multiple,1d,Used by pooled daily XGBoost,CLAIMED_LOCAL,RESEARCH_SUMMARY.md; cex_ml_xgb_1d.py,Audit native vs resampled bars
+Perpetual funding,Bybit/MEXC/others,venue interval,Funding histories claimed and wired,CLAIMED_LOCAL,RESEARCH_SUMMARY.md; backfill funding scripts,"Verify sign, interval, cash-flow timing, completeness"
+DEX OHLCV,GeckoTerminal/DEX sources,1m/MTF,DEX history and forward collectors claimed,CLAIMED_LOCAL,RESEARCH_SUMMARY.md; DEX scripts,Defer until pool identity/migrations pass
+DEX microstructure,DexScreener/other,event/snapshot,Liquidity and micro pollers present,CLAIMED_LOCAL,quality_gate.py; DEX scripts,Audit snapshots and first availability
+On-chain,BTC/ETH plus additional chains,daily/other,Multiple chain series claimed,CLAIMED_LOCAL,RESEARCH_SUMMARY.md; backfill_onchain.py,Audit provider revisions and publication lag
+Equities/macro,Robinhood and macro symbols,various,Used as cross-asset context,CLAIMED_LOCAL,RESEARCH_SUMMARY.md; equities_collector.py,Treat as optional; audit calendars and availability
+Order flow,CEX aggregate/Blofin candidate,5m,Original intended feature file absent; earlier result void,VERIFIED_REPO,RESEARCH_SUMMARY.md,Do not treat as tested; rebuild wiring with non-null gate
+Volume/information bars,Derived,event time,Large accuracy advantage claimed,CLAIMED_LOCAL,RESEARCH_SUMMARY.md; eval_infobars_paper2.py,Run matched replication

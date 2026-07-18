@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Realized Return Label",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_id",
+    "target_version",
+    "decision_time",
+    "asset_id",
+    "event_start",
+    "event_end",
+    "entry_time",
+    "exit_time",
+    "gross_return",
+    "fee_return",
+    "spread_impact_return",
+    "funding_borrow_return",
+    "net_return",
+    "source_dataset_ids"
+  ],
+  "properties": {
+    "target_id": {
+      "type": "string"
+    },
+    "target_version": {
+      "type": "string"
+    },
+    "decision_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "asset_id": {
+      "type": "integer"
+    },
+    "event_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entry_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "exit_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "execution_route_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "gross_return": {
+      "type": "number"
+    },
+    "fee_return": {
+      "type": "number"
+    },
+    "spread_impact_return": {
+      "type": "number"
+    },
+    "funding_borrow_return": {
+      "type": "number"
+    },
+    "net_return": {
+      "type": "number"
+    },
+    "censored": {
+      "type": "boolean"
+    },
+    "delisting_treatment": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ambiguity_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

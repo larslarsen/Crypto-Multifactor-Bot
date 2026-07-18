@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Point-in-Time Universe Row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "universe_version",
+    "decision_time",
+    "asset_id",
+    "eligible",
+    "rejection_reasons",
+    "listing_age_days",
+    "valid_days_30",
+    "median_quote_volume_usd_30d",
+    "volume_rank",
+    "source_dataset_ids"
+  ],
+  "properties": {
+    "universe_version": {
+      "type": "string"
+    },
+    "decision_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "asset_id": {
+      "type": "integer"
+    },
+    "eligible": {
+      "type": "boolean"
+    },
+    "rejection_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "listing_age_days": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "valid_days_30": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "median_quote_volume_usd_30d": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "volume_rank": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "spot_executable": {
+      "type": "boolean"
+    },
+    "shortable": {
+      "type": "boolean"
+    },
+    "execution_route_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

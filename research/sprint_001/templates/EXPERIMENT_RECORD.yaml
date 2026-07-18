@@ -1,0 +1,33 @@
+experiment_id: EXP-YYYY-NNN
+title: ""
+status: PREREGISTERED
+research_mode: CONFIRMATORY
+hypothesis_id: ""
+created_at: ""
+owner: ""
+code_commit: ""
+environment_lock: ""
+dataset_ids: []
+universe_version: ""
+factor_versions: []
+decision_schedule: ""
+target:
+  kind: forward_net_return
+  horizon: 7d
+  event_end_rule: ""
+splits:
+  outer: ""
+  inner: ""
+  purge_rule: event_interval
+  embargo: ""
+preprocessing: {}
+model: {}
+portfolio: {}
+cost_model: ""
+primary_metrics: []
+secondary_metrics: []
+multiple_testing_family: ""
+acceptance_rule: ""
+result_artifacts: []
+decision: PENDING
+decision_reason: ""

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Point-in-Time Instrument Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "asset_id",
+    "venue_id",
+    "market_type",
+    "source_symbol",
+    "valid_from",
+    "known_from",
+    "mapping_confidence"
+  ],
+  "properties": {
+    "instrument_id": {
+      "type": "integer"
+    },
+    "asset_id": {
+      "type": "integer"
+    },
+    "venue_id": {
+      "type": "string"
+    },
+    "market_type": {
+      "enum": [
+        "SPOT",
+        "PERPETUAL",
+        "FUTURE",
+        "INDEX",
+        "FX"
+      ]
+    },
+    "base_asset_id": {
+      "type": "integer"
+    },
+    "quote_asset_id": {
+      "type": "integer"
+    },
+    "source_symbol": {
+      "type": "string"
+    },
+    "contract_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "contract_multiplier": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "margin_asset_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "settlement_asset_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_to": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "known_from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "known_to": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "mapping_confidence": {
+      "enum": [
+        "OFFICIAL_EVENT",
+        "OFFICIAL_ARCHIVE",
+        "MULTI_SOURCE_CONFIRMED",
+        "INFERRED",
+        "AMBIGUOUS"
+      ]
+    },
+    "source_dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+sources:
+  binance_public:
+    enabled: true
+    roles: [BACKFILL_PRIMARY, CROSSCHECK]
+    adapter: binance_public_archive
+    preserve_source_checksum: true
+    notes: Version timestamp unit at 2025-01-01 for spot archives.
+
+  kraken_bulk:
+    enabled: true
+    roles: [BACKFILL_PRIMARY, CROSSCHECK]
+    adapter: kraken_ohlcvt_bulk
+    notes: Missing intervals may mean no trades; do not invent source bars during normalization.
+
+  okx_bulk:
+    enabled: true
+    roles: [BACKFILL_PRIMARY, ROBUSTNESS_ONLY, COST_CALIBRATION]
+    adapter: okx_historical_download
+    include_l2: false
+
+  bybit_public:
+    enabled: true
+    roles: [INCREMENTAL_PRIMARY, ROBUSTNESS_ONLY]
+    adapter: bybit_v5_public
+    pagination:
+      kline_page_limit: 1000
+      funding_page_limit: 200
+
+  coingecko_demo:
+    enabled: false
+    roles: [REFERENCE_METADATA]
+    adapter: coingecko_demo
+    prohibition: Do not use the Demo API as a long-history point-in-time size dataset.
+
+  coinmetrics_community:
+    enabled: false
+    phase: 2
+    roles: [EXPLORATORY_PHASE2]
+
+  defillama_free:
+    enabled: false
+    phase: 2
+    roles: [EXPLORATORY_PHASE2]
+
+  legacy_local:
+    enabled: true
+    roles: [LEGACY_AUDIT]
+    adapter: legacy_local_registrar

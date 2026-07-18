@@ -1,0 +1,18 @@
+source_id,name,url,use,status
+SRC-REPO-001,Legacy repository root,https://github.com/larslarsen/Trading-Bot,README and file tree,VERIFIED_REPO
+SRC-REPO-002,Legacy research summary,https://github.com/larslarsen/Trading-Bot/blob/main/RESEARCH_SUMMARY.md,"Claims, negative results, local data inventory",VERIFIED_REPO/CLAIMED_LOCAL
+SRC-REPO-003,Legacy roadmap,https://github.com/larslarsen/Trading-Bot/blob/main/ROADMAP.md,Current production focus and rule research,VERIFIED_REPO
+SRC-REPO-004,Legacy pipeline,https://github.com/larslarsen/Trading-Bot/blob/main/pipeline.py,Labels and walk-forward split,VERIFIED_REPO
+SRC-REPO-005,Legacy quality gate,https://github.com/larslarsen/Trading-Bot/blob/main/quality_gate.py,Universe gating logic,VERIFIED_REPO
+SRC-REPO-006,Legacy feature contract,https://github.com/larslarsen/Trading-Bot/blob/main/canonical_features.py,113-feature contract and missing-value behavior,VERIFIED_REPO
+SRC-REPO-007,Legacy gitignore,https://github.com/larslarsen/Trading-Bot/blob/main/.gitignore,Unversioned data/results/experiment patterns,VERIFIED_REPO
+SRC-REPO-008,Legacy data manifest,https://github.com/larslarsen/Trading-Bot/blob/main/data_manifest.py,Inventory implementation,VERIFIED_REPO
+SRC-REPO-009,Paper 1/2 architecture,https://github.com/larslarsen/Trading-Bot/blob/main/PAPER12_ARCHITECTURE.md,Order-flow and information-bar methodology,VERIFIED_REPO
+SRC-REPO-010,Legacy live candidates,https://github.com/larslarsen/Trading-Bot/blob/main/live_candidates.md,Split-sensitivity admission and scorecards,VERIFIED_REPO
+SRC-REPO-011,Legacy commit 581aed2,https://github.com/larslarsen/Trading-Bot/commit/581aed2,Information-bar source/evaluator changes,VERIFIED_REPO
+SRC-REPO-012,Legacy commit fb737ae,https://github.com/larslarsen/Trading-Bot/commit/fb737ae,Committed information-bar model artifacts,VERIFIED_REPO
+SRC-REPO-013,Paper 2 v2 evaluator,https://github.com/larslarsen/Trading-Bot/blob/main/eval_paper2_v2.py,Information-bar comparison implementation,VERIFIED_REPO
+SRC-REPO-014,Legacy model trainer,https://github.com/larslarsen/Trading-Bot/blob/main/model_trainer.py,Information-bar artifact training path,VERIFIED_REPO
+SRC-REPO-015,Legacy CEX serving bot,https://github.com/larslarsen/Trading-Bot/blob/main/cex_ml_xgb_5m.py,Serving representation and model discovery,VERIFIED_REPO
+SRC-REPO-016,Latest information model metadata,https://github.com/larslarsen/Trading-Bot/blob/main/models/latest_info_meta.json,Representative artifact dimensions and accuracy,VERIFIED_REPO
+SRC-REPO-017,Serving screener list,https://github.com/larslarsen/Trading-Bot/blob/main/screener_ml_multi.txt,Current protection against info artifact auto-discovery,VERIFIED_REPO

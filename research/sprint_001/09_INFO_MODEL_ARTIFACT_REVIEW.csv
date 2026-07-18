@@ -1,0 +1,3 @@
+artifact,source_commit,train_bars,validation_bars,test_bars,features,trees,reported_accuracy,research_status,review_note
+latest_info,fb737ae,496,5000,14976,113,200,0.566372863,NOT_VALIDATED,Small high-dimensional fit; incomplete provenance; evaluation defects prevent promotion
+AAVE_info,fb737ae,25484,5000,14976,113,200,0.64676816,NOT_VALIDATED,Illustrates heterogeneous training sizes; accuracy is not costed economic evidence

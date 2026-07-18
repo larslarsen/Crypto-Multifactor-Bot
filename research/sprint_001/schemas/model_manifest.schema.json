@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Promotable Model Artifact Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model_artifact_id",
+    "model_type",
+    "model_version",
+    "training_fingerprint",
+    "artifact_sha256",
+    "representation",
+    "features",
+    "preprocessing_artifacts",
+    "dataset_ids",
+    "code_commit",
+    "lock_sha256",
+    "date_ranges",
+    "metrics",
+    "promotion_status",
+    "created_at"
+  ],
+  "properties": {
+    "model_artifact_id": {
+      "type": "string"
+    },
+    "model_type": {
+      "type": "string"
+    },
+    "model_version": {
+      "type": "string"
+    },
+    "training_fingerprint": {
+      "type": "string"
+    },
+    "artifact_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "representation": {
+      "type": "object",
+      "required": [
+        "type",
+        "version"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "TIME_BAR",
+            "EVENT_BAR",
+            "CROSS_SECTIONAL_SNAPSHOT"
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "dtype",
+          "version",
+          "position"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dtype": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "preprocessing_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "code_commit": {
+      "type": "string"
+    },
+    "lock_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "date_ranges": {
+      "type": "object"
+    },
+    "metrics": {
+      "type": "object"
+    },
+    "promotion_status": {
+      "enum": [
+        "QUARANTINED_LEGACY",
+        "RESEARCH_ONLY",
+        "PAPER_APPROVED",
+        "LIVE_APPROVED",
+        "RETIRED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

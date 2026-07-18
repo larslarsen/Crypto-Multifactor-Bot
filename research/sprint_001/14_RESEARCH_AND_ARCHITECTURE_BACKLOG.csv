@@ -1,0 +1,29 @@
+task_id,priority,domain,task,dependencies,deliverable,status
+R-001,P0,Data,Generate immutable local dataset manifest,None,dataset_manifest + SHA256,BLOCKED_LOCAL
+R-002,P0,Data,Create schema registry and timestamp convention report,R-001,schema_registry.json; timestamp_report.md,BLOCKED_LOCAL
+R-003,P0,Reference,Build point-in-time instrument/listing/delisting master,R-001,instrument_master.parquet,BLOCKED_LOCAL
+R-004,P0,Quality,"Audit duplicates, gaps, OHLC validity, units, stale runs","R-001,R-002",data_exceptions.csv,BLOCKED_LOCAL
+R-005,P0,Derivatives,"Normalize funding signs, intervals and cash flows","R-001,R-002",funding_contract.md; normalized funding table,BLOCKED_LOCAL
+R-006,P0,Universe,Generate historical U25/U50/U100 snapshots,"R-003,R-004",universe_snapshots.parquet,BLOCKED_LOCAL
+R-007,P0,Costs,Calibrate venue/liquidity-tier cost model,"R-004,R-005",cost_model_v1,BLOCKED_LOCAL
+R-008,P1,Factors,Implement MOM-01 canonical characteristics,R-006,factor dataset + tests,READY_AFTER_DATA
+R-009,P1,Factors,Implement REV-01 canonical characteristics,R-006,factor dataset + tests,READY_AFTER_DATA
+R-010,P1,Factors,Implement DEF-01 canonical characteristics,R-006,factor dataset + tests,READY_AFTER_DATA
+R-011,P1,Factors,Implement CARRY-01,"R-005,R-006",factor dataset + cash-flow tests,READY_AFTER_DATA
+R-012,P1,Factors,Implement LIQ-01 tradability and alpha views,"R-004,R-006",factor dataset + capacity report,READY_AFTER_DATA
+R-013,P1,Validation,Implement event-interval purged nested splits,R-006,split library + leakage tests,READY_AFTER_DATA
+R-014,P1,Portfolio,Implement P0/P1 equal-weight costed portfolios,"R-007,R-008,R-009,R-010,R-011,R-012",portfolio reports,READY_AFTER_DATA
+R-015,P1,Inference,Implement date-block bootstrap and HAC reports,R-014,inference module + tests,READY_AFTER_DATA
+R-016,P1,Research,Execute EXP-2026-003 through EXP-2026-009,"R-014,R-015",single-factor tear sheets,PREREGISTERED
+R-017,P2,Composite,Freeze accepted factors and build equal-factor composite,R-016,EXP-2026-011 report,BLOCKED_RESULTS
+R-018,P2,Model,Build regularized linear challenger,R-017,EXP-2026-013 report,BLOCKED_BASELINE
+R-019,P2,Bars,Run matched volume-bar replication,"R-007,R-013,R-014",EXP-2026-015 report,READY_AFTER_DATA
+R-020,P2,Prospective,Freeze v1 and seal prospective holdout,R-017 or R-018,signed freeze record,BLOCKED_RESULTS
+A-001,P2,Architecture,Select storage and compute architecture from audited scale/update facts,"R-001,R-002,R-003",architecture decision record,BLOCKED_RESEARCH
+A-002,P2,Architecture,"Design as-of, universe, factor, experiment and portfolio interfaces",A-001,architecture spec,BLOCKED_RESEARCH
+R-021,P0,Validation,Replace eval_paper2_v2 with fold-specific causal evaluator,Event-time split implementation,Per-fold models/predictions with no overlap,OPEN
+R-022,P0,Bars,Implement causal thresholded streaming information-bar builder,Raw venue observations; threshold policy,Deterministic replay + state tests,OPEN
+R-023,P0,Venue,Run true second-venue representation replication,Venue-specific price/volume data,Matched venue report,OPEN
+R-024,P0,Provenance,Extend model metadata with data/code hashes dates classes coverage predictions and thresholds,Artifact schema,Research-grade artifact manifest,OPEN
+R-025,P1,Operations,Quarantine _info artifacts from model discovery until representation contract passes,Typed model manifest,Compatibility-enforcing loader test,OPEN
+R-026,P3,Trend,Implement Karassavidis volatility-adaptive trend challenger,Transparent trend baseline; cost engine,EXP-2026-018 report,BLOCKED_BASELINE

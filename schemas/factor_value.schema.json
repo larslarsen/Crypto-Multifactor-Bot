@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Factor Value Row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "factor_id",
+    "factor_version",
+    "decision_time",
+    "asset_id",
+    "availability_time",
+    "lookback_start",
+    "lookback_end",
+    "source_dataset_ids"
+  ],
+  "properties": {
+    "factor_id": {
+      "type": "string"
+    },
+    "factor_version": {
+      "type": "string"
+    },
+    "decision_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "asset_id": {
+      "type": "integer"
+    },
+    "raw_value": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "score": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "availability_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lookback_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lookback_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "missing_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "quality_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "transform_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
