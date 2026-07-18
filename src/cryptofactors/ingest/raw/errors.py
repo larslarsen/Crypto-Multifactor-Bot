@@ -33,32 +33,51 @@ class InterruptedWriteError(RawStoreError):
 
 
 class HashMismatchError(RawStoreError):
-    """Optional provider checksum does not match computed SHA-256."""
+    """Provider checksum or expected content hash does not match computed SHA-256."""
+
+
+class ChecksumError(RawStoreError):
+    """Malformed or unsupported checksum configuration/evidence."""
 
 
 class CorruptDestinationError(RawStoreError):
-    """Preexisting path exists but bytes do not match the content hash/path."""
+    """Preexisting path exists but is not a valid matching content object."""
+
+
+class PublicationError(RawStoreError):
+    """Atomic no-clobber publication failed or is unsupported on this filesystem."""
+
+
+class PathSafetyError(RawStoreError):
+    """Storage path configuration or destination failed safety validation."""
+
+
+class CatalogRegistrationError(RawStoreError):
+    """Catalog refused registration (missing/invalid publication evidence)."""
 
 
 class RecoverableCatalogRegistrationError(RawStoreError):
-    """Object bytes are published; catalog registration failed and may be retried.
+    """Object bytes are published; catalog/acquisition registration failed and may be retried.
 
-    The immutable content object is left intact. Callers should retry registration
-    idempotently via the catalog boundary.
+    The immutable content object is left intact. Retry with the same acquisition_id.
     """
 
     def __init__(
         self,
         message: str,
         *,
+        acquisition_id: str,
         sha256: str,
         byte_size: int,
         storage_path: str,
+        storage_uri: str,
         raw_object_id: str,
         context: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(message, context=context)
+        self.acquisition_id = acquisition_id
         self.sha256 = sha256
         self.byte_size = byte_size
         self.storage_path = storage_path
+        self.storage_uri = storage_uri
         self.raw_object_id = raw_object_id

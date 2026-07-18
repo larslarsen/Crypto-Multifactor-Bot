@@ -2,20 +2,29 @@
 
 from __future__ import annotations
 
-from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
+from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog, verify_publication_receipt
 from cryptofactors.ingest.raw.errors import (
+    CatalogRegistrationError,
+    ChecksumError,
     CorruptDestinationError,
     HashMismatchError,
     InterruptedWriteError,
     InvalidChunkError,
+    PathSafetyError,
+    PublicationError,
     RawStoreError,
     RecoverableCatalogRegistrationError,
 )
 from cryptofactors.ingest.raw.models import (
     AcquisitionMetadata,
+    AcquisitionStatus,
+    ChecksumAlgorithm,
+    ChecksumVerification,
     FailedAcquisitionRecord,
     IdempotentDuplicateResult,
     OrphanReconciliationReport,
+    ProviderChecksum,
+    PublicationReceipt,
     PublishResult,
     RawObjectStoreConfig,
 )
@@ -26,6 +35,11 @@ from cryptofactors.ingest.raw.writer import RawObjectWriter
 
 __all__ = [
     "AcquisitionMetadata",
+    "AcquisitionStatus",
+    "CatalogRegistrationError",
+    "ChecksumAlgorithm",
+    "ChecksumError",
+    "ChecksumVerification",
     "CorruptDestinationError",
     "FailedAcquisitionRecord",
     "HashMismatchError",
@@ -33,6 +47,10 @@ __all__ = [
     "InterruptedWriteError",
     "InvalidChunkError",
     "OrphanReconciliationReport",
+    "PathSafetyError",
+    "ProviderChecksum",
+    "PublicationError",
+    "PublicationReceipt",
     "PublishResult",
     "RawObjectCatalog",
     "RawObjectStoreConfig",
@@ -42,4 +60,5 @@ __all__ = [
     "SqliteRawObjectCatalog",
     "content_addressed_relative_path",
     "reconcile_orphan_temps",
+    "verify_publication_receipt",
 ]

@@ -1,19 +1,23 @@
-"""Catalog boundary protocol for accepted raw objects and failed acquisitions."""
+"""Catalog boundary protocol for content objects and acquisition provenance."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Mapping, Protocol
+from typing import Any, Mapping, Protocol, Sequence
 
-from cryptofactors.ingest.raw.models import AcquisitionMetadata, FailedAcquisitionRecord
+from cryptofactors.ingest.raw.models import (
+    AcquisitionMetadata,
+    ChecksumVerification,
+    FailedAcquisitionRecord,
+    PublicationReceipt,
+)
 
 
 class RawObjectCatalog(Protocol):
-    """Catalog operations used by the raw-object writer.
+    """Catalog operations for content identity and acquisition provenance.
 
-    Implementations must never create an accepted ``raw_object`` row that points
-    at partial or unverified bytes. Registration is called only after atomic
-    publication (or identical-byte confirmation).
+    Accepted ``raw_object`` rows represent immutable bytes only (unique by SHA-256).
+    Each retrieval attempt is a distinct ``raw_acquisition`` row.
     """
 
     def ensure_source(
@@ -22,39 +26,38 @@ class RawObjectCatalog(Protocol):
         *,
         source_type: str = "external",
         config: Mapping[str, Any] | None = None,
-    ) -> None:
-        """Ensure a ``source`` row exists for foreign-key integrity."""
+    ) -> None: ...
+
+    def get_content_by_sha256(self, sha256: str) -> Mapping[str, Any] | None:
+        """Return accepted content row fields, or None."""
         ...
 
-    def get_accepted_by_sha256(self, sha256: str) -> Mapping[str, Any] | None:
-        """Return accepted raw_object row fields, or None."""
-        ...
+    def get_acquisition(self, acquisition_id: str) -> Mapping[str, Any] | None: ...
 
-    def register_accepted(
+    def list_acquisitions_for_object(self, raw_object_id: str) -> Sequence[Mapping[str, Any]]: ...
+
+    def register_publication(
         self,
         *,
-        raw_object_id: str,
-        sha256: str,
-        byte_size: int,
-        storage_uri: str,
+        receipt: PublicationReceipt,
         metadata: AcquisitionMetadata,
-    ) -> bool:
-        """Insert or confirm the accepted catalog row.
+        checksum_verification: ChecksumVerification,
+        store_root: str,
+    ) -> tuple[bool, bool]:
+        """Register content (if new) and acquisition from a verified publication receipt.
 
-        Returns True if a new row was inserted; False if an identical accepted
-        row already existed (idempotent retry).
+        Returns ``(content_inserted, acquisition_inserted)``.
+        Idempotent when the same acquisition_id is retried.
         """
         ...
 
     def record_failed_acquisition(
         self,
         *,
-        source_id: str,
+        metadata: AcquisitionMetadata,
         error_message: str,
-        request: Mapping[str, Any],
-        command: str = "raw_acquire",
-        run_id: str | None = None,
+        checksum_verification: ChecksumVerification = ChecksumVerification.ABSENT,
         recorded_at: datetime | None = None,
     ) -> FailedAcquisitionRecord:
-        """Record a failed acquisition without registering an accepted raw object."""
+        """Record a failed acquisition with raw_object_id NULL."""
         ...

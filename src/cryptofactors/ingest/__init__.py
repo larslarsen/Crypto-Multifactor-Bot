@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from cryptofactors.ingest.raw import (
     AcquisitionMetadata,
+    CatalogRegistrationError,
+    ChecksumAlgorithm,
+    ChecksumError,
+    ChecksumVerification,
     CorruptDestinationError,
     FailedAcquisitionRecord,
     HashMismatchError,
@@ -11,6 +15,10 @@ from cryptofactors.ingest.raw import (
     InterruptedWriteError,
     InvalidChunkError,
     OrphanReconciliationReport,
+    PathSafetyError,
+    ProviderChecksum,
+    PublicationError,
+    PublicationReceipt,
     PublishResult,
     RawObjectCatalog,
     RawObjectStoreConfig,
@@ -24,6 +32,10 @@ from cryptofactors.ingest.raw import (
 
 __all__ = [
     "AcquisitionMetadata",
+    "CatalogRegistrationError",
+    "ChecksumAlgorithm",
+    "ChecksumError",
+    "ChecksumVerification",
     "CorruptDestinationError",
     "FailedAcquisitionRecord",
     "HashMismatchError",
@@ -31,6 +43,10 @@ __all__ = [
     "InterruptedWriteError",
     "InvalidChunkError",
     "OrphanReconciliationReport",
+    "PathSafetyError",
+    "ProviderChecksum",
+    "PublicationError",
+    "PublicationReceipt",
     "PublishResult",
     "RawObjectCatalog",
     "RawObjectStoreConfig",
