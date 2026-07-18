@@ -12,7 +12,9 @@ stability, turnover, overlap, and crash behavior. Long-only and winner-minus-los
 
 ## What the new literature changes
 
-- Crypto momentum is short-horizon and leg/liquidity dependent (LIT-028).
+- Momentum returns are short-horizon (LIT-038); liquidity and characteristic interactions
+  strongly shape crypto momentum and cross-sectional behavior (LIT-028, supporting for
+  liquidity and interactions).
 - **LIT-038 (Han/Kang/Ryu, SSRN 4675565, revised 26 Mar 2026) is the PRIMARY source for
   momentum implementation design.** It shows that under daily price fluctuations many
   momentum portfolios are liquidated before realizing terminal backtest returns, and

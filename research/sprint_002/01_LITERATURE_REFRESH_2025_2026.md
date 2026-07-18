@@ -36,11 +36,15 @@ primary page; the machine-readable ledger is `02_LITERATURE_LEDGER.csv`.
   endorse volatility management for crash mitigation. **Decision:** report raw vs
   volatility-managed exposure separately; treat volatility management as a later
   challenger, not the primary test.
-- **Time-series vs cross-sectional (LIT-025 carry paper and LIT-028 interactions).** The
-  refresh reaffirms that crypto momentum is shorter-horizon and that winners-minus-losers
-  behavior differs sharply by leg and by liquidity. **Decision:** require separate
-  reporting for time-series vs cross-sectional, long-leg vs short-leg, large/liquid vs
-  smaller, and spot-long-only vs realistically shortable perpetual implementations.
+- **Time-series vs cross-sectional momentum (LIT-038).** The primary source for
+  distinguishing time-series from cross-sectional momentum is LIT-038 (Han/Kang/Ryu,
+  SSRN 4675565): it evaluates both separately under realistic assumptions and finds
+  time-series momentum strong while cross-sectional momentum is almost non-existent.
+  **Decision:** require separate reporting for time-series vs cross-sectional, long-leg vs
+  short-leg, large/liquid vs smaller, and spot-long-only vs realistically shortable
+  perpetual implementations. (LIT-025 remains associated exclusively with carry; LIT-028
+  remains supporting evidence for liquidity and characteristic interactions, not for the
+  time-series/cross-sectional momentum distinction.)
 
 ### Carry (split into separate mechanisms)
 

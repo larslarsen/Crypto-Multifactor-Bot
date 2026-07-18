@@ -74,3 +74,20 @@ improvement.
 Source count raised from 14 to 15 (LIT-024 … LIT-038). LIT-024 … LIT-037 were not renumbered
 or rewritten. `research/evidence/hypotheses.yaml` and the active ticket GOV-001 are unchanged
 by this correction.
+
+## Bibliographic cleanup (appended 2026-07-18)
+
+- `02_LITERATURE_LEDGER.csv`: set `LIT-038` title to the exact current paper title,
+  "Time-Series and Cross-Sectional Momentum in the Cryptocurrency Market: A Comprehensive
+  Analysis under Realistic Assumptions" (SSRN 4675565).
+- `01_LITERATURE_REFRESH_2025_2026.md`: rewrote the stale "Time-series vs cross-sectional"
+  paragraph that cited `LIT-025` (carry) and `LIT-028` (interactions) for that design
+  requirement; the requirement is now attributed to `LIT-038` as primary, with `LIT-025`
+  kept exclusively with carry and `LIT-028` kept as supporting evidence for liquidity and
+  characteristic interactions only.
+- `factor_cards/MOM-01_literature_addendum.md`: removed stale momentum attribution to
+  `LIT-028`; short-horizon momentum now tied to `LIT-038`, liquidity/interaction support to
+  `LIT-028`.
+- All other `LIT-025`/`LIT-028` references in Sprint 002 already sit in correct
+  carry/liquidity/interactions contexts and were left unchanged.
+- No production code, engineering tickets, hypotheses, or architecture changes.
