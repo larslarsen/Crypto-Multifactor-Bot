@@ -38,11 +38,21 @@ research/sprint_003/
 ├── 07_VENDOR_TRIAL_REQUIREMENTS.md
 ├── 08_RESEARCH_DATA_DECISIONS.csv
 ├── 09_OPEN_QUESTIONS.md
+├── 10_REVIEW_AND_ERRATA.md
 ├── CHANGELOG.md
 └── sources/
     ├── binance.md  kraken.md  okx.md  bybit.md
     ├── coin_metrics.md  defillama.md  token_unlocks.md
 ```
+
+## Status
+
+**CHANGES_REQUIRED → corrected (commit 2nd in Sprint 003).** The original pass (318bfa6)
+primarily tested live REST, not historical backfill. This correction acquires real archive
+objects (Binance `data.binance.vision`, Bybit `public.bybit.com`), audits a real Binance
+replacement register, corrects the Coin Metrics issued-supply metric (`SplyCur`, not
+`SplyIssued`), and records honest access gaps (Kraken/OKX bulk hosts unreachable; Tokenomist
+TLS; DefiLlama emissions now paid). See `10_REVIEW_AND_ERRATA.md`.
 
 ## Relationship to the control plane
 

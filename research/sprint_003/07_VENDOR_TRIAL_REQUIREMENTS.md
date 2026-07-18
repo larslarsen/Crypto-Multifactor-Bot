@@ -16,19 +16,37 @@ or deferred source can be promoted. No commercial purchase was made this audit.
   data is provided "as is"; redistribution of raw data requires review of Binance terms.
 - **Action:** trial a multi-day REST backfill of one pair; confirm checksum handling.
 
-## Kraken (SRC-004)
+## Kraken (SRC-003 / SRC-003b)
 
-- Public REST; no key for OHLC/Trades. Verify bulk-file layout and no-trade candle
-  omission by reconstructing bars from trades and diffing against provider candles.
-- Terms: public data usable for research; confirm redistribution clause.
+- **Bulk files (SRC-003, CONDITIONAL):** the historical host `data.kraken.com` did NOT
+  resolve from this environment (DNS failure 2026-07-18). Acquire from a host where it
+  resolves; verify ZIP/CSV layout, timestamp precision (unix seconds), pair identifiers,
+  base/quote units, quarterly update behavior, and no-trade OHLCVT omission (reconcile
+  reconstructed bars from trades against provider candles).
+- **REST (SRC-003b, ACCEPT incremental):** public, no key. Note the 720-entry OHLC cap; use
+  REST only as incremental, never as historical backfill. Confirm redistribution clause.
 
-## OKX (SRC-005)
+## OKX (SRC-004 / SRC-004b)
 
-- Public REST (market/instruments/public). Record dated funding-formula and interval
-  changes from OKX docs; capture `formulaType` per history row.
-- Terms: review OKX API terms for research use; no key for public market data.
+- **Historical files (SRC-004, CONDITIONAL):** the host `bulk-data-download.okx.com` did NOT
+  resolve from this environment (DNS failure 2026-07-18). Acquire from a resolvable host;
+  verify historical file layout, compression, schema, timestamp/sequence fields, coverage
+  dates, contract units, funding formula/interval fields, correction/replacement behavior,
+  and applicable terms. Live `/market/trades` and `/market/books` are NOT historical
+  qualification — they are incremental only.
+- **REST (SRC-004b, ACCEPT incremental):** public market/instruments endpoints. Capture
+  `formulaType` per funding history row; confirm redistribution terms.
 
-## Bybit (SRC-006)
+## DefiLlama (SRC-007 / SRC-007b)
+
+- **APIs (SRC-007, ACCEPT):** `api.llama.fi/v2/chains` and `stablecoins.llama.fi` are open
+  and reachable. TVL/emissions recomputed server-side.
+- **Emissions adapters (SRC-007b, CONDITIONAL):** the free emissions API (`api.llama.fi/emissions/<token>`)
+  now returns **HTTP 402** (paid plan) and the old SDK `emissions/adapters` path 404s. To use
+  emissions/unlock data, obtain a DefiLlama paid plan OR locate a current public adapter repo
+  and pin its exact commit; then inspect ≥5 adapters for upstream, mapping, schedule logic,
+  recomputation, and revision limits.
+- Pin any adapter repo commit and record it. Respect upstream attributions and paid terms.
 
 - Public v5 market endpoints. Cursor pagination on funding history must be fully walked.
 - Confirm linear vs inverse volume/turnover unit normalization before any cross-venue

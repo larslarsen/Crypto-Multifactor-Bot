@@ -1,32 +1,33 @@
-# Source note — Kraken
+# Source note — Kraken (CORRECTION: bulk host unreachable)
 
-**Role:** BACKFILL_PRIMARY_CANDIDATE (spot)
-**Audit date:** 2026-07-18
+**Role:** BACKFILL_PRIMARY (CONDITIONAL — host unreachable) + INCREMENTAL_PRIMARY (REST OK)
+**Audit date:** 2026-07-18 (correction pass)
 
-## Samples acquired
-- OHLC 1h `XBTUSD` since 2025-01-01: 721 rows, sha ed2b3dba…; fields [time,open,high,low,close,vwap,volume,count].
-- Trades `XBTUSD` since 2025-01-01: 1000 rows, sha a0d9c878…; fields [price,volume,time,side,ordertype,misc].
+## Historical bulk files — ACCESS GAP
+- The official Kraken historical download host (`data.kraken.com`) does **NOT resolve** from
+  this environment (DNS failure, 2026-07-18). Historical trade/OHLCVT bulk backfill is
+  therefore `CONDITIONAL` pending access from a host where the domain resolves.
+- The first pass presented Kraken REST OHLC as a historical source. That was wrong: REST
+  OHLC is an **incremental/current** endpoint capped at **720 entries** and is not the bulk
+  historical file. It is retained only as an incremental source (SRC-003b).
 
-## Schema / semantics
-- Pair keys are **prefixed** (`XXBTZUSD` for XBT/USD). Map to canonical `BTC-USD`.
-- OHLC: unix-seconds UTC; 1h bars.
-- Trades: float unix-seconds; side (b/s), ordertype (l/m), misc flags.
+## Live REST (incremental, retained, valid)
+- Trades `XBTUSD` since 2025-01-01: 1000 rows, sha a0d9c878…; fields price,volume,time,side,ordertype,misc.
+- OHLC `XBTUSD` 1h: 721 rows, sha ed2b3dba…; fields time,open,high,low,close,vwap,volume,count.
 
-## Unit conventions
-- **Volume is in the base asset (XBT)**, price in quote (USD). Watch for base/quote
-  inversion when aggregating with Binance/OKX (which report volume in base too, but pair
-  naming differs).
+## Expected bulk schema (NOT verified — host unreachable)
+- Per-pair daily CSV; OHLCVT cols time,open,high,low,close,vwap,volume,count; Trades cols
+  price,volume,time,side,ordertype,misc.
+- Pairs prefixed (`XXBTZUSD`); volume in base (XBT), price in quote (USD).
+- **No-trade OHLCVT omission**: UNVERIFIED — must confirm whether Kraken emits a
+  zero-volume bar or omits the interval, then reconcile reconstructed bars from trades
+  against provider candles once the bulk host is reachable.
 
-## Timestamp precision
-Unix seconds UTC (float for trades). 2025-01-01 boundary confirmed present.
-
-## Open question
-- No-trade candle handling unverified: does Kraken emit a zero-volume OHLC bar for an
-  interval with no trades, or omit it? Reconstruct bars from trades and diff against
-  provider candles to settle this (Open Question 3).
+## Required before promotion (CONDITIONAL)
+1. Acquire from a host where `data.kraken.com` resolves.
+2. Verify ZIP/CSV layout, timestamp precision (unix seconds), pair identifiers, units.
+3. Confirm no-trade interval handling; diff reconstructed vs provider OHLCVT.
+4. Confirm quarterly update behavior.
 
 ## Licensing
-Public REST usable for research; confirm redistribution clause.
-
-## Gaps
-- Bulk-file layout and no-trade interval semantics need explicit verification (planned).
+- Public data usable for research; confirm redistribution clause.

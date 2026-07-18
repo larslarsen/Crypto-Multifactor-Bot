@@ -12,11 +12,14 @@ rather than overwriting history.
 
 ## Per-source correction / revision behavior (from audit)
 
-- **Binance REST** — live, current-only. Historical bulk files (when reachable) carry
-  provider-computed checksums, but the official replacement-checksum register was
-  **unreachable this audit**, so we could not verify a known provider-replacement example.
-  Implication: backfill from bulk must re-validate checksums at acquisition time; do not
-  assume immutability.
+- **Binance archive** — real replacement register AUDITED this correction:
+  `binance/binance-public-data` → `updates/2022-10-04_aggregate_trade_updates.csv` has format
+  `File, Original File Checksum, New File Checksum` (e.g. BNBBTC-aggTrades-2018-01 old→new).
+  Binance DOES replace historical files and publishes both checksums. The 2025-01-01 spot
+  aggTrades provider `.CHECKSUM` sidecar was verified to **match** the locally computed
+  SHA-256 exactly. Implication: backfill MUST validate provider CHECKSUM at acquisition and
+  record both old and new checksums on replacement; never assume immutability.
+- **Binance REST** — live, current-only; valid for incremental capture only.
 - **Kraken** — bulk files are periodic snapshots; reconstructed bars from trades may differ
   from provider candles (no-trade interval handling unverified). Treat provider candles as
   the canonical reference and reconcile against reconstructed bars.
@@ -30,10 +33,11 @@ rather than overwriting history.
   (per-metric `min_time`/`max_time`). Timeseries observations carry a `status` field that
   distinguishes `active`, missing, and unsupported. A metric's availability range can
   expand (backfill added) or be revised; the catalog snapshot timestamp must be stored.
-- **DefiLlama** — TVL and emissions are **recomputed server-side** on each query; history is
-  not a fixed file. Adapter code (in the SDK, pinned commit) defines computation and can
-  change; token/chain mappings live in the adapter registry. Re-run results may differ
-  after an adapter update. Pin the SDK commit and record it.
+- **DefiLlama** — TVL and emissions were recomputed server-side; history was not a fixed
+  file. **CHANGED this correction:** the emissions API (`api.llama.fi/emissions/<token>`)
+  now returns **HTTP 402** (paid plan) and the old SDK `emissions/adapters` path 404s. The
+  free emissions/unlock bridge is gone; it is now CONDITIONAL on a paid plan. Pin any future
+  adapter repo at an exact commit and record it.
 - **Token unlocks (Tokenomist/Messari/DefiLlama emissions)** — schedule data is frequently
   revised (projections change). We **could not verify vintage preservation** for Tokenomist
   (unreachable). Assume current charts do **not** retain old information sets unless proven

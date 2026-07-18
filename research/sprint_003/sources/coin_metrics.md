@@ -1,39 +1,46 @@
-# Source note — Coin Metrics (Community API v4)
+# Source note — Coin Metrics (CORRECTION: real timeseries, correct metric)
 
-**Role:** BACKFILL_PRIMARY_CANDIDATE (on-chain metrics) / REFERENCE_METADATA (catalog)
-**Audit date:** 2026-07-18
+**Role:** REFERENCE_METADATA (conditional for NET-01)
+**Audit date:** 2026-07-18 (correction pass)
 
-## Samples acquired
-- Catalog `assets` (no params): 5991 assets, sha a75dc20c…, 6.56 MB. Per asset, per-metric
-  `frequencies[{frequency,min_time,max_time,community}]`.
-- Availability confirmed: BTC `AdrActCnt` min 2009-01-03, SUSHI `AdrActCnt` min 2020-08-26
-  (both max 2026-07-17). `SplyIssued` = ISSUED supply.
+## Real timeseries acquired (v4)
+- `btc` `SplyCur`,`AdrActCnt` 2025-01-01..01-05: 6 daily observations. `SplyCur`=19,804,167 on 2025-01-01.
+- `sushi` `SplyCur`,`AdrActCnt` 2025-01-01..01-05: `SplyCur`=279,146,247 on 2025-01-01; `AdrActCnt`=304.
+- `bonk` (limited-coverage): NOT in Community catalog → timeseries 400. Community coverage
+  for micro-caps is limited (likely Pro-only). Recorded as a coverage gap.
 
-## Critical semantic finding
-- **Issued native supply (`SplyIssued`) is NOT circulating float.** It includes locked /
-  staked / unissued-per-schedule tokens. For `DIL-01` and float-based sizing, do not equate
-  issued with circulating. Circulating/float and unlock series likely require Pro or a
-  complementary source.
-- Timeseries observations carry a `status` field that distinguishes **active / missing /
-  unsupported** — missing is not the same as unsupported.
+## CRITICAL CORRECTIONS vs first pass
+1. **Issued supply metric is `SplyCur`, NOT `SplyIssued`.** `SplyIssued` is unsupported in
+   v4 timeseries (returns 400). Confirmed `SplyCur` = current issued supply.
+2. **Timeseries returns a FLAT `data` array** — `[{asset, time, metric:value, ...}]` — NOT
+   the nested `{asset, series:[{metric, values}]}` shape the first pass assumed. The first
+   pass's "empty" timeseries was a parsing error, not missing data.
+3. **`SplyCur` is ISSUED supply, not circulating float.** Coin Metrics also exposes
+   `SplyExNtv` (excluded/locked supply). Future unissued supply is NOT in any supply metric.
+   Distinguish: (a) issued native (`SplyCur`), (b) locked/staked issued (`SplyExNtv`),
+   (c) circulating float (derived = issued − excluded, not a single field), (d) future
+   unissued (absent). For DIL-01, float must be derived; do not equate `SplyCur` with float.
+4. `community:true` flag present on these assets (community-tier data quality).
 
-## API behavior (gotcha)
-- v4 catalog `/catalog/assets` and `/catalog/asset-metrics` **reject** `page_size` and
-  `limit` (HTTP 400). The no-param catalog call returns all 5991 assets in one payload.
-- `/timeseries/asset-metrics` works but is param-format sensitive (bad date formatting →
-  400). Pagination uses `next_page_key`.
+## API behavior (gotcha, retained)
+- Catalog `/catalog/assets` and `/catalog/asset-metrics` reject `page_size`/`limit` (400);
+  no-param call returns all 5991 assets.
+- Timeseries rejects `limit` (use date windows; pagination via `next_page_key` when present).
+
+## Availability ranges (from catalog)
+- `btc`: `SplyCur` 2009-01-03 → 2026-07-17; `AdrActCnt` 2009-01-03 → 2026-07-17.
+- `sushi`: `SplyCur` 2020-08-28 → 2026-07-17; `AdrActCnt` 2020-08-26 → 2026-07-17.
+- Absence of an observation for an asset/metric = missing (not unsupported); distinguish via
+  catalog `min_time`/`max_time`.
 
 ## Timestamp precision
-ISO UTC with **nanosecond** precision (e.g. `2009-01-03T00:00:00.000000000Z`).
+- ISO UTC with nanosecond precision (e.g. `2009-01-03T00:00:00.000000000Z`).
 
 ## Correction / revision
-Server-side; the catalog reflects **current** availability ranges. A metric's range can
-expand (backfill added) or be revised; store the catalog snapshot timestamp.
+- Server-side; catalog reflects CURRENT availability. Ranges can expand (backfill added) or
+  revise. Store catalog snapshot timestamp.
 
-## Licensing
-Community API has usage limits; confirm non-redistribution of derived datasets. Broad
-historical coverage / higher limits may require Pro/Atlas (separate procurement, SRC-012).
-
-## Gaps
-- Smaller-asset coverage and `community:true` quality flag behavior unverified (Open Q5).
-- Pro tier necessity for float/unlock data not assessed.
+## Licensing / NET-01 condition
+- Community API has usage limits. NET-01 remains CONDITIONAL until publication-time vs
+  block-time lag and revision/backfill behavior are bounded (requires on-chain cross-check,
+  SRC-010).

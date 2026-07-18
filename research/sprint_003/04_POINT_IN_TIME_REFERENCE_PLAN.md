@@ -30,19 +30,39 @@ and a confidence classification.
 
 ## Reconstructed exemplars from this audit (evidence only)
 
-- **Binance BTCUSDT first trade of 2025** — `aggTrades` sample first `T` = 1735689600010 ms
-  (2025-01-01T00:00:00.010Z). Classification: `CONFIRMED_MARKET_DATA` for the first-trade
-  edge; this is an active pair, not a listing event, so announcement time = `UNKNOWN`
-  (pair predates the sample window). Use only to demonstrate the timestamp-precision
-  boundary (no T shift).
-- **Bybit BTCUSDT linear perp launch** — `instruments-info.launchTime` = 1584230400000 ms
-  (2020-03-15T00:00:00Z), `deliveryTime` = 0 (perpetual), `contractType` =
-  LinearPerpetual. Classification: `CONFIRMED_MARKET_DATA` (launchTime field).
-- **Bybit BTCUSD inverse perp** — `contractType` = InversePerpetual; volume in contracts.
-  Classification: `CONFIRMED_MARKET_DATA` for instrument type; launch time via same field.
-- **OKX BTC-USDT-SWAP** — `instruments.ctType` = linear, `ctVal` = 0.01 BTC. First funding
-  in sample `fundingTime` = 1784246400000 ms (2026-07-16). Classification:
-  `CONFIRMED_MARKET_DATA` for instrument + funding cadence.
+The exemplars below use real data acquired in this correction pass. Confidence classes:
+`CONFIRMED_OFFICIAL` (announcement), `CONFIRMED_MARKET_DATA` (instrument field / first-last
+trade), `INFERRED` (derived edge, no announcement), `CONFLICTED` (sources disagree on same
+instrument+event), `UNKNOWN` (no reachable evidence). Different venues having naturally
+different listing dates is NOT a conflict.
+
+### Real reconstructed exemplars
+
+| Venue | Instrument | Event | Announcement | Effective | First trade | Last trade | Delivery/settle | Source evidence | Confidence |
+|-------|-----------|-------|-------------|-----------|-------------|------------|-----------------|-----------------|------------|
+| Binance | BTCUSDT (spot) | first/last trade edges (active) | UNKNOWN | n/a | 1735689600010866 (2025-01-01T00:00:00.010Z, archive) | 1735775999658370 (archive 2025-01-01) | n/a | `data.binance.vision` spot aggTrades 2024-12-31 / 2025-01-01 | CONFIRMED_MARKET_DATA (active pair; not a listing event) |
+| Kraken | XBTUSD (spot) | active (no listing edge in sample) | UNKNOWN | n/a | 1735689600.0975654 (REST Trades 2025-01-01) | 1735691765.8469803 | n/a | Kraken REST Trades XBTUSD | CONFIRMED_MARKET_DATA (active; listing predates sample) |
+| OKX | BTC-USDT-SWAP | instrument active | UNKNOWN | n/a | first funding 1784246400000 (2026-07-16, funding history) | n/a | n/a | OKX `/public/instruments` ctType=linear, ctVal=0.01 BTC | CONFIRMED_MARKET_DATA (instrument metadata) |
+| Bybit | BTCUSDT (linear perp) | LISTING | UNKNOWN | 1584230400000 (2020-03-15T00:00:00Z, launchTime) | 2020-03-25 (archive CSV.gz first file) | n/a | 0 (perpetual) | `instruments-info.launchTime` + `public.bybit.com/trading/BTCUSDT/` | CONFIRMED_MARKET_DATA (launchTime field; archive start corroborates) |
+| Bybit | BTCUSD (inverse perp) | LISTING | UNKNOWN | ~2019-10-01 (first archive file) | 1569974394.557895 (2019-10-01T23:59:54Z, archive) | n/a | 0 (perpetual) | `public.bybit.com/trading/BTCUSD/BTCUSD2019-10-01.csv.gz` | INFERRED (first observed trade = earliest available; no launchTime pulled for this symbol) |
+| Bybit | BTCUSDU26 (inverse futures) | DELIVERY/SETTLEMENT | UNKNOWN | 1790323200000 (deliveryTime) | n/a | n/a | 1790323200000 (contractType InverseFutures, deliveryTime>0) | `instruments-info` inverse BTCUSDU26 | CONFIRMED_MARKET_DATA (deliveryTime field; differs from perpetual deliveryTime=0) |
+
+### Notes
+
+- Binance BTCUSDT is an active pair; the archive first/last-trade edges confirm
+  timestamp-precision behavior and continuous trading, not a listing. Announcement time is
+  `UNKNOWN` (pair predates the audit window).
+- Bybit BTCUSDT `launchTime` = 2020-03-15 is a genuine LISTING event recorded from the
+  instrument field (`CONFIRMED_MARKET_DATA`); the 2020-03-25 archive file independently
+  corroborates the pair existed by then.
+- Bybit BTCUSDU26 is a delivered forward contract: `contractType=InverseFutures` with
+  `deliveryTime=1790323200000` (>0), explicitly contrasting the perpetual `deliveryTime=0`.
+  This is a real DELIVERY exemplar.
+- No `CONFLICTED` classification was required: all venues agree on their own instrument's
+  events; cross-venue listing-date differences are expected, not conflicts.
+- Kraken/OKX historical bulk files were unreachable (DNS), so their listing events could
+  not be reconstructed from archive; only active-pair REST edges are available
+  (`CONFIRMED_MARKET_DATA` for active status only).
 
 ## Delisting / delivery reconstruction procedure (per asset, per venue)
 

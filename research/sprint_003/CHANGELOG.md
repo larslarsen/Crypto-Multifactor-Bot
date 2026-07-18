@@ -65,3 +65,55 @@
 - All CSV column counts consistent; SHA-256 values present for every acquired object.
 - Repository-control validator (GOV-001) remains PASS.
 - Committed as one focused commit and pushed to origin/main.
+
+## Correction pass — CHANGES_REQUIRED addressed (2nd Sprint 003 commit)
+
+**Problem:** the original pass primarily tested live REST, not the required historical
+backfill sources, and drew unsupported conclusions.
+
+**Real historical-source acquisitions added:**
+- Binance archive (`data.binance.vision`): BTCUSDT spot aggTrades 2024-12-31 (1,218,370 rows)
+  and 2025-01-01 (653,485 rows); spot klines 1m 2025-01-01 (1,440 rows); USD-M perp
+  aggTrades (726,612) and perp trades (1,804,361) 2025-01-01; funding monthly 2025-01 (94).
+  Provider `.CHECKSUM` for 2025-01-01 **matches** local SHA-256 exactly.
+- Binance replacement register (`binance/binance-public-data` → `updates/2022-10-04_aggregate_trade_updates.csv`)
+  audited: real old→new checksum example (BNBBTC-aggTrades-2018-01).
+- Bybit archive (`public.bybit.com/trading/`): BTCUSD inverse perp 2019-10-01 (4.0 MB gz),
+  BTCUSDT linear perp 2020-03-25 (121 KB gz) with real schemas + unit divergence.
+- Coin Metrics v4 **timeseries** (flat `data` array): btc/sushi SplyCur + AdrActCnt
+  observations; `community:true` flag.
+
+**Timestamp-precision boundary VERIFIED on archive files (not REST):** spot aggTrades
+`transact_time` is 13-digit ms on 2024-12-31 and 16-digit µs from 2025-01-01.
+
+**Corrections made:**
+- Binance backfill now ACCEPT (wrong host was the original error).
+- Removed invented role `BACKFILL_PRIMARY_CANDIDATE`; roles use only approved set.
+- Coin Metrics issued supply = `SplyCur` (not `SplyIssued`); `SplyCur` ≠ circulating float
+  (excluded = `SplyExNtv`); future unissued absent.
+- Kraken/OKX historical bulk hosts unreachable (DNS) → CONDITIONAL; live REST retained as
+  incremental only (Kraken OHLC 720-cap noted).
+- DefiLlama emissions API now HTTP 402 (paid); old SDK adapter path 404 → CONDITIONAL.
+- Bybit funding history capped at most-recent ≤100 (cursor None); pagination demonstrated on
+  instruments-info. Real listing (BTCUSDT launchTime 2020-03-15) + delivery (BTCUSDU26
+  deliveryTime) exemplars added with confidence classes.
+
+**New files / updated:** `10_REVIEW_AND_ERRATA.md` (preserves + classifies first pass);
+`02` adds `sample_status`/`limitation`/`superseded_by` and marks invalid rows; `01/03/04/05/
+06/07/08/09` and all source notes corrected; README status + layout updated.
+
+**Source decisions after correction:**
+- ACCEPT (historical BACKFILL_PRIMARY or INCREMENTAL_PRIMARY): Binance archive+REST, Bybit
+  archive+REST.
+- ACCEPT (REFERENCE_METADATA): Coin Metrics catalog+timeseries, DefiLlama APIs.
+- CONDITIONAL: Kraken bulk (host), OKX historical (host), DefiLlama emissions (paid), Messari
+  (key), On-chain (keys), NET-01 publication-time bound.
+- DEFER: Tokenomist (TLS).
+
+**Still blocked / not upgraded:** DIL-01 (unlock vintage unavailable from any reachable free
+source; DefiLlama now paid; Tokenomist TLS) and NET-01 (publication-time/revision unbounded).
+Neither marked research-ready.
+
+**Validation:** all CSVs consistent; hashes correspond to actual retrieved objects; timestamps
+convert; decisions agree with evidence; no raw large dataset or secret committed.
+
