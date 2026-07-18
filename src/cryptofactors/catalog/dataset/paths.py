@@ -1,4 +1,4 @@
-"""Dataset store path safety and layout (MAN-001)."""
+"""Dataset store path safety — lexical construction + lstat (MAN-001)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def validate_dataset_store_config(config: object) -> None:
         p = Path(rel)
         if p.is_absolute():
             raise UnsafePathError(f"{label} must be relative", context={label: rel})
-        segs = [s for s in str(rel).split(os.sep) if s]
+        segs = [s for s in str(rel).replace("\\", "/").split("/") if s]
         if any(s in (".", "..") for s in segs):
             raise UnsafePathError(
                 f"{label} must not contain '.' or '..'",
@@ -28,31 +28,52 @@ def validate_dataset_store_config(config: object) -> None:
             )
         if not rel.strip():
             raise UnsafePathError(f"{label} must be non-empty")
-    root_r = root.expanduser().resolve()
+    # Lexical join under root; check escape without resolving away symlinks first.
+    root_abs = root.expanduser()
+    if not root_abs.is_absolute():
+        root_abs = (Path.cwd() / root_abs)
+    root_lex = root_abs
     for label, rel in (("temp", temp_dirname), ("datasets", object_prefix)):
-        cand = (root_r / rel).resolve()
-        try:
-            cand.relative_to(root_r)
-        except ValueError as exc:
+        cand = lexical_join(root_lex, rel)
+        if not is_lexical_under(cand, root_lex):
             raise UnsafePathError(
                 f"{label} escapes root",
-                context={"root": str(root_r), "path": str(cand)},
-            ) from exc
+                context={"root": str(root_lex), "path": str(cand)},
+            )
 
 
-def assert_relative_safe(rel: str, *, label: str = "path") -> Path:
-    p = Path(rel)
-    if p.is_absolute() or rel.startswith("/") or rel.startswith("\\"):
+def lexical_join(root: Path, *parts: str) -> Path:
+    """Join without resolving symlinks."""
+    p = root
+    for part in parts:
+        for seg in str(part).replace("\\", "/").split("/"):
+            if seg in ("", "."):
+                continue
+            if seg == "..":
+                raise UnsafePathError("path traversal rejected", context={"seg": seg})
+            p = p / seg
+    return p
+
+
+def is_lexical_under(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def assert_relative_safe(rel: str, *, label: str = "path") -> str:
+    text = rel.replace("\\", "/").strip()
+    if not text or text.startswith("/"):
         raise UnsafePathError(f"{label} must be relative", context={label: rel})
-    parts = p.parts
-    if any(part in (".", "..") for part in parts):
+    parts = [p for p in text.split("/") if p != ""]
+    if any(p in (".", "..") for p in parts):
         raise UnsafePathError(
             f"{label} must not contain '.' or '..'",
             context={label: rel},
         )
-    if not rel or rel.strip() == "":
-        raise UnsafePathError(f"{label} must be non-empty")
-    return p
+    return "/".join(parts)
 
 
 def dataset_relative_dir(dataset_id: str, *, prefix: str = "datasets/sha256") -> Path:
@@ -66,32 +87,88 @@ def dataset_relative_dir(dataset_id: str, *, prefix: str = "datasets/sha256") ->
 
 
 def dataset_absolute_dir(root: Path, dataset_id: str, *, prefix: str = "datasets/sha256") -> Path:
-    return (root / dataset_relative_dir(dataset_id, prefix=prefix)).resolve()
+    """Canonical absolute path constructed lexically (no symlink resolution)."""
+    root_abs = root.expanduser()
+    if not root_abs.is_absolute():
+        root_abs = Path.cwd() / root_abs
+    rel = dataset_relative_dir(dataset_id, prefix=prefix)
+    return lexical_join(root_abs, rel.as_posix())
+
+
+def lstat_path(path: Path) -> os.stat_result | None:
+    try:
+        return os.lstat(path)
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise UnsafePathError(
+            f"lstat failed: {path}",
+            context={"path": str(path), "error": str(exc)},
+        ) from exc
 
 
 def assert_no_symlink_components(path: Path, *, stop_at: Path) -> None:
-    path = path if path.is_absolute() else path.resolve()
-    stop = stop_at.resolve()
-    built = Path("/")
-    for part in path.parts[1:]:
+    """Reject symlink components from stop_at down to path using lstat."""
+    stop = stop_at if stop_at.is_absolute() else Path.cwd() / stop_at
+    target = path if path.is_absolute() else Path.cwd() / path
+    # Walk from stop toward target
+    try:
+        rel = target.relative_to(stop)
+    except ValueError as exc:
+        raise UnsafePathError(
+            "path not under stop_at",
+            context={"path": str(target), "stop": str(stop)},
+        ) from exc
+    built = stop
+    st_stop = lstat_path(built)
+    if st_stop is not None and statmod.S_ISLNK(st_stop.st_mode):
+        raise UnsafePathError(
+            "stop_at must not be a symlink",
+            context={"path": str(built)},
+        )
+    for part in rel.parts:
         built = built / part
-        try:
-            built.resolve().relative_to(stop)
-        except ValueError:
-            continue
-        if built.is_symlink():
+        st = lstat_path(built)
+        if st is None:
+            continue  # not created yet
+        if statmod.S_ISLNK(st.st_mode):
             raise UnsafePathError(
                 "symlinked path component rejected",
                 context={"path": str(built)},
             )
 
 
+def assert_parents_are_directories(path: Path, *, stop_at: Path) -> None:
+    stop = stop_at if stop_at.is_absolute() else Path.cwd() / stop_at
+    current = path.parent
+    while True:
+        st = lstat_path(current)
+        if st is not None:
+            if statmod.S_ISLNK(st.st_mode):
+                raise UnsafePathError(
+                    "parent is a symlink",
+                    context={"path": str(current)},
+                )
+            if not statmod.S_ISDIR(st.st_mode):
+                raise UnsafePathError(
+                    "parent is not a directory",
+                    context={"path": str(current)},
+                )
+        if current == stop or current.parent == current:
+            break
+        try:
+            current.relative_to(stop)
+        except ValueError:
+            break
+        current = current.parent
+
+
 def assert_regular_file(path: Path, *, label: str) -> None:
-    if path.is_symlink():
-        raise UnsafePathError(f"{label} must not be a symlink", context={"path": str(path)})
-    if not path.exists():
+    st = lstat_path(path)
+    if st is None:
         raise UnsafePathError(f"{label} missing", context={"path": str(path)})
-    st = os.lstat(path)
+    if statmod.S_ISLNK(st.st_mode):
+        raise UnsafePathError(f"{label} must not be a symlink", context={"path": str(path)})
     if not statmod.S_ISREG(st.st_mode):
         raise UnsafePathError(f"{label} is not a regular file", context={"path": str(path)})
 
@@ -137,9 +214,8 @@ def fsync_dir(path: Path) -> None:
 
 
 def fsync_parents(path: Path, *, stop_at: Path) -> None:
-    stop = stop_at.resolve()
+    stop = stop_at if stop_at.is_absolute() else Path.cwd() / stop_at
     current = path if path.is_dir() else path.parent
-    current = current.resolve()
     seen: set[Path] = set()
     while True:
         if current in seen:

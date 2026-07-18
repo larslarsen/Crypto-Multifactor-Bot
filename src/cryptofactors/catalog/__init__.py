@@ -5,6 +5,7 @@ from .runner import (
 )
 from cryptofactors.catalog.dataset import (
     DatasetManifest,
+    DatasetPublicationReceipt,
     DatasetPublisher,
     DatasetStoreConfig,
     PublishPlan,
@@ -17,6 +18,7 @@ __all__ = [
     "get_status",
     "MIGRATIONS_DIR",
     "DatasetManifest",
+    "DatasetPublicationReceipt",
     "DatasetPublisher",
     "DatasetStoreConfig",
     "PublishPlan",

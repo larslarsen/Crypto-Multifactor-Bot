@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Protocol, Sequence
 
 
 class DependencyKind(str, Enum):
@@ -32,6 +33,16 @@ class VerificationSeverity(str, Enum):
     FAILURE = "FAILURE"
 
 
+class RowCountPolicy(str, Enum):
+    """How declared row counts are treated when verifying outputs."""
+
+    REQUIRE_VERIFIER = "require_verifier"
+    """Caller must supply a row counter or receipt for every output."""
+
+    ALLOW_UNVERIFIED_DECLARED = "allow_unverified_declared"
+    """Explicit opt-in: declared rows are recorded but not observed/verified."""
+
+
 @dataclass(frozen=True, slots=True)
 class TransformSpec:
     name: str
@@ -40,17 +51,14 @@ class TransformSpec:
 
 @dataclass(frozen=True, slots=True)
 class SchemaIdentity:
-    """Schema identity distinct from free-form schema_version string."""
-
     name: str
     version: str
-    fingerprint: str | None = None  # optional content hash of schema definition
+    fingerprint: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class CodeIdentity:
     commit: str
-    # Optional lock/file identity for reproducibility.
     lock_sha256: str | None = None
 
 
@@ -68,17 +76,27 @@ class DependencyRef:
 
 @dataclass(frozen=True, slots=True)
 class OutputFileSpec:
-    """Declared output before/after verification.
-
-    ``relative_path`` is a locator under the dataset directory (not identity).
-    Identity uses sha256 + rows + bytes + partition.
-    """
+    """Output declaration. Logical relative_path is identity-bearing."""
 
     relative_path: str
     sha256: str
     rows: int
     bytes: int
     partition: Mapping[str, Any] = field(default_factory=dict)
+    rows_verified: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RowCountReceipt:
+    """Verified observation of row count for one output (not a bare declaration)."""
+
+    relative_path: str
+    row_count: int
+    verifier_name: str
+
+
+class RowCounter(Protocol):
+    def __call__(self, path: Path) -> int: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +115,11 @@ class DatasetStatistics:
 
 @dataclass(frozen=True, slots=True)
 class PublicationMetadata:
-    """Non-identity publication bookkeeping (created_at is not fingerprinted)."""
+    """Mutable/bookkeeping publication metadata (not identity-bearing).
+
+    ``created_at`` is catalog bookkeeping only and must not affect
+    ``dataset_id`` or ``manifest_sha256``.
+    """
 
     created_at: datetime
     publisher: str = "cryptofactors.catalog.dataset"
@@ -123,7 +145,7 @@ class DatasetManifest:
     publication: PublicationMetadata
     supersedes_dataset_id: str | None = None
     manifest_sha256: str = ""
-    # schema_version convenience mirror of schema.version for catalog columns
+
     @property
     def schema_version(self) -> str:
         return self.schema.version
@@ -131,8 +153,6 @@ class DatasetManifest:
 
 @dataclass(frozen=True, slots=True)
 class DatasetStoreConfig:
-    """Filesystem layout for immutable datasets."""
-
     root: Path
     temp_dirname: str = "datasets_tmp"
     object_prefix: str = "datasets/sha256"
@@ -143,25 +163,21 @@ class DatasetStoreConfig:
         validate_dataset_store_config(self)
 
     def temp_dir(self) -> Path:
-        return (self.root / self.temp_dirname).resolve()
+        return self.root / self.temp_dirname
 
     def datasets_root(self) -> Path:
-        return (self.root / Path(self.object_prefix)).resolve()
+        return self.root / Path(self.object_prefix)
 
 
 @dataclass(frozen=True, slots=True)
 class PublishPlan:
-    """Inputs to the publisher before identity assignment."""
-
     dataset_type: str
     schema: SchemaIdentity
     transform: TransformSpec
     code: CodeIdentity
     config: ConfigIdentity
     dependencies: Sequence[DependencyRef]
-    # Local paths of outputs keyed by relative_path inside dataset dir.
     output_sources: Mapping[str, Path]
-    # Declared content identity for each output (must match streaming verification).
     output_specs: Sequence[OutputFileSpec]
     statistics: DatasetStatistics
     coverage: CoverageWindow
@@ -169,6 +185,46 @@ class PublishPlan:
     quality_summary: Mapping[str, Any] = field(default_factory=dict)
     supersedes_dataset_id: str | None = None
     created_at: datetime | None = None
+    row_count_policy: RowCountPolicy = RowCountPolicy.REQUIRE_VERIFIER
+    row_counters: Mapping[str, Callable[[Path], int]] = field(default_factory=dict)
+    row_receipts: Mapping[str, RowCountReceipt] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class DatasetPublicationReceipt:
+    """Verified publication evidence required for catalog registration."""
+
+    dataset_id: str
+    manifest_sha256: str
+    manifest_uri: str
+    publication_uri: str
+    dataset_path: Path
+    verified_outputs: tuple[OutputFileSpec, ...]
+    publication_verified: bool
+    object_prefix: str
+    dependencies: tuple[DependencyRef, ...]
+    supersedes_dataset_id: str | None
+    # Immutable catalog-facing fields from the verified manifest body.
+    dataset_type: str
+    schema: SchemaIdentity
+    transform: TransformSpec
+    code: CodeIdentity
+    config: ConfigIdentity
+    statistics: DatasetStatistics
+    coverage: CoverageWindow
+    quality_status: QualityStatus
+    quality_summary: Mapping[str, Any]
+    # Bookkeeping only (not used for identity agreement of immutable content).
+    catalog_created_at: datetime
+
+    def is_complete(self) -> bool:
+        return (
+            self.publication_verified
+            and self.dataset_id.startswith("ds_")
+            and len(self.manifest_sha256) == 64
+            and bool(self.manifest_uri)
+            and bool(self.publication_uri)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,6 +236,7 @@ class DatasetPublishResult:
     reused_existing: bool
     catalog_registered: bool
     manifest: DatasetManifest
+    receipt: DatasetPublicationReceipt
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,3 +254,4 @@ class DatasetVerificationReport:
     findings: tuple[VerificationFinding, ...]
     manifest_sha256: str | None = None
     catalog_manifest_sha256: str | None = None
+    recomputed_dataset_id: str | None = None

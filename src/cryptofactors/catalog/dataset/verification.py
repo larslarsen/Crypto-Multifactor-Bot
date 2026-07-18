@@ -1,23 +1,23 @@
-"""Read-only dataset verification API (MAN-001)."""
+"""Independent read-only dataset verification (MAN-001)."""
 
 from __future__ import annotations
 
+from typing import Any
 
-from cryptofactors.catalog.dataset.canonicalize import (
-    dumps_canonical,
-    full_manifest_dict,
-    sha256_hex,
-)
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
+from cryptofactors.catalog.dataset.errors import InvalidManifestError
 from cryptofactors.catalog.dataset.models import (
     DatasetManifest,
     DatasetStoreConfig,
     DatasetVerificationReport,
+    DependencyKind,
     VerificationFinding,
     VerificationSeverity,
 )
 from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
-from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
+from cryptofactors.catalog.dataset.parse import load_manifest_file
+from cryptofactors.catalog.dataset.paths import dataset_absolute_dir, lstat_path
+import stat as statmod
 
 
 def verify_dataset(
@@ -26,8 +26,9 @@ def verify_dataset(
     catalog: SqliteDatasetCatalog,
     dataset_id: str,
     expected_manifest: DatasetManifest | None = None,
+    row_counters: dict[Any, Any] | None = None,
 ) -> DatasetVerificationReport:
-    """Verify filesystem publication against catalog and optional expected manifest."""
+    """Verify filesystem + catalog independently (expected_manifest optional)."""
     findings: list[VerificationFinding] = []
 
     def add(
@@ -50,17 +51,13 @@ def verify_dataset(
     if row is None:
         add("catalog_missing", VerificationSeverity.FAILURE, "dataset not in catalog")
     else:
-        add(
-            "catalog_present",
-            VerificationSeverity.SUCCESS,
-            "dataset row present",
-            dataset_id=dataset_id,
-        )
+        add("catalog_present", VerificationSeverity.SUCCESS, "dataset row present")
 
     final_dir = dataset_absolute_dir(
         config.root, dataset_id, prefix=config.object_prefix
     )
-    if not final_dir.exists():
+    st = lstat_path(final_dir)
+    if st is None:
         add(
             "location_missing",
             VerificationSeverity.FAILURE,
@@ -73,124 +70,250 @@ def verify_dataset(
             findings=tuple(findings),
             catalog_manifest_sha256=catalog_sha,
         )
+    if statmod.S_ISLNK(st.st_mode):
+        add(
+            "location_symlink",
+            VerificationSeverity.FAILURE,
+            "canonical dataset directory is a symlink",
+            path=str(final_dir),
+        )
 
     man_path = final_dir / "manifest.json"
-    if not man_path.is_file() or man_path.is_symlink():
+    loaded: DatasetManifest | None = None
+    try:
+        loaded = load_manifest_file(man_path)
         add(
-            "manifest_missing",
-            VerificationSeverity.FAILURE,
-            "manifest.json missing or unsafe",
-            path=str(man_path),
+            "manifest_parsed",
+            VerificationSeverity.SUCCESS,
+            "manifest.json parsed and identity verified",
+            manifest_sha256=loaded.manifest_sha256,
+            dataset_id=loaded.dataset_id,
         )
-    else:
-        on_disk = man_path.read_text(encoding="utf-8")
-        disk_sha = sha256_hex(on_disk.strip().encode("utf-8"))
-        # Prefer hashing canonical re-dump of expected when provided.
-        if expected_manifest is not None:
-            expected_text = dumps_canonical(full_manifest_dict(expected_manifest)) + "\n"
-            if on_disk != expected_text and on_disk.strip() != expected_text.strip():
+        if loaded.dataset_id != dataset_id:
+            add(
+                "dataset_id_mismatch",
+                VerificationSeverity.FAILURE,
+                "path dataset_id disagrees with manifest",
+                path_id=dataset_id,
+                manifest_id=loaded.dataset_id,
+            )
+    except InvalidManifestError as exc:
+        add(
+            "manifest_invalid",
+            VerificationSeverity.FAILURE,
+            f"manifest validation failed: {exc}",
+        )
+    except Exception as exc:
+        add(
+            "manifest_load_error",
+            VerificationSeverity.FAILURE,
+            f"cannot load manifest: {exc}",
+        )
+
+    if loaded is not None:
+        # Exact tree membership
+        declared = {"manifest.json"} | {f.relative_path for f in loaded.files}
+        found: set[str] = set()
+        for path in final_dir.rglob("*"):
+            rel = path.relative_to(final_dir).as_posix()
+            st_e = lstat_path(path)
+            if st_e is None:
+                continue
+            if statmod.S_ISDIR(st_e.st_mode) and not statmod.S_ISLNK(st_e.st_mode):
+                continue
+            if statmod.S_ISLNK(st_e.st_mode):
                 add(
-                    "manifest_mismatch",
+                    "unexpected_symlink",
                     VerificationSeverity.FAILURE,
-                    "on-disk manifest disagrees with expected",
+                    "unexpected symlink in dataset tree",
+                    path=rel,
+                )
+                continue
+            if not statmod.S_ISREG(st_e.st_mode):
+                add(
+                    "unexpected_special",
+                    VerificationSeverity.FAILURE,
+                    "unexpected special entry",
+                    path=rel,
+                )
+                continue
+            found.add(rel)
+            if rel not in declared:
+                add(
+                    "unexpected_file",
+                    VerificationSeverity.FAILURE,
+                    "unexpected regular file",
+                    path=rel,
+                )
+        for missing in sorted(declared - found):
+            add(
+                "missing_file",
+                VerificationSeverity.FAILURE,
+                "declared file missing",
+                path=missing,
+            )
+
+        for fspec in loaded.files:
+            fpath = final_dir / fspec.relative_path
+            try:
+                h, sz = stream_sha256_and_size(fpath)
+                if h != fspec.sha256 or sz != fspec.bytes:
+                    add(
+                        "output_mismatch",
+                        VerificationSeverity.FAILURE,
+                        "output hash/size mismatch",
+                        path=fspec.relative_path,
+                        expected_sha=fspec.sha256,
+                        actual_sha=h,
+                    )
+                else:
+                    add(
+                        "output_ok",
+                        VerificationSeverity.SUCCESS,
+                        "output hash/size verified",
+                        path=fspec.relative_path,
+                    )
+                if row_counters and fspec.relative_path in row_counters:
+                    observed = int(row_counters[fspec.relative_path](fpath))
+                    if observed != fspec.rows:
+                        add(
+                            "row_count_mismatch",
+                            VerificationSeverity.FAILURE,
+                            "observed row count mismatch",
+                            path=fspec.relative_path,
+                            expected=fspec.rows,
+                            observed=observed,
+                        )
+            except Exception as exc:
+                add(
+                    "output_error",
+                    VerificationSeverity.FAILURE,
+                    str(exc),
+                    path=fspec.relative_path,
+                )
+
+        # Catalog agreement
+        if row is not None:
+            if str(row["manifest_sha256"]) != loaded.manifest_sha256:
+                add(
+                    "catalog_manifest_disagreement",
+                    VerificationSeverity.FAILURE,
+                    "catalog manifest_sha256 disagrees with on-disk manifest",
+                    catalog=str(row["manifest_sha256"]),
+                    disk=loaded.manifest_sha256,
+                )
+            if str(row["dataset_type"]) != loaded.dataset_type:
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog dataset_type mismatch",
+                )
+            if int(row["row_count"]) != loaded.statistics.row_count:
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog row_count mismatch",
+                )
+            if int(row["byte_size"]) != loaded.statistics.byte_size:
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog byte_size mismatch",
+                )
+
+            files = catalog.list_files(dataset_id)
+            file_map = {str(f["storage_uri"]): f for f in files}
+            for fspec in loaded.files:
+                crow = file_map.get(fspec.relative_path)
+                if crow is None:
+                    add(
+                        "catalog_output_missing",
+                        VerificationSeverity.FAILURE,
+                        "catalog missing output row",
+                        path=fspec.relative_path,
+                    )
+                elif (
+                    str(crow["file_sha256"]) != fspec.sha256
+                    or int(crow["row_count"]) != fspec.rows
+                    or int(crow["byte_size"]) != fspec.bytes
+                ):
+                    add(
+                        "catalog_output_mismatch",
+                        VerificationSeverity.FAILURE,
+                        "catalog output row disagrees with manifest",
+                        path=fspec.relative_path,
+                    )
+            for uri in file_map:
+                if uri not in {f.relative_path for f in loaded.files}:
+                    add(
+                        "catalog_output_extra",
+                        VerificationSeverity.FAILURE,
+                        "catalog has extra output row",
+                        path=uri,
+                    )
+
+            # Lineage exact agreement
+            expected_raw = {
+                (d.id, d.role)
+                for d in loaded.dependencies
+                if d.kind is DependencyKind.RAW_OBJECT
+            }
+            expected_ds = {
+                (d.id, d.role)
+                for d in loaded.dependencies
+                if d.kind is DependencyKind.DATASET
+            }
+            got_raw = {
+                (str(r["raw_object_id"]), str(r["role"]))
+                for r in catalog.list_raw_inputs(dataset_id)
+            }
+            got_ds = {
+                (str(r["input_dataset_id"]), str(r["role"]))
+                for r in catalog.list_dataset_inputs(dataset_id)
+            }
+            if got_raw != expected_raw:
+                add(
+                    "lineage_raw_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "raw-object lineage disagrees with manifest",
+                    expected=sorted(expected_raw),
+                    observed=sorted(got_raw),
                 )
             else:
                 add(
-                    "manifest_match",
+                    "lineage_raw_ok",
                     VerificationSeverity.SUCCESS,
-                    "on-disk manifest matches expected",
+                    "raw-object lineage agrees",
                 )
-            if expected_manifest.manifest_sha256 and catalog_sha:
-                if expected_manifest.manifest_sha256 != catalog_sha:
-                    add(
-                        "catalog_manifest_disagreement",
-                        VerificationSeverity.FAILURE,
-                        "catalog manifest_sha256 disagrees with expected",
-                        catalog=catalog_sha,
-                        expected=expected_manifest.manifest_sha256,
-                    )
-            for fspec in expected_manifest.files:
-                fpath = final_dir / fspec.relative_path
-                try:
-                    h, sz = stream_sha256_and_size(fpath)
-                    if h != fspec.sha256 or sz != fspec.bytes:
-                        add(
-                            "output_mismatch",
-                            VerificationSeverity.FAILURE,
-                            "output hash/size mismatch",
-                            path=fspec.relative_path,
-                            expected_sha=fspec.sha256,
-                            actual_sha=h,
-                        )
-                    else:
-                        add(
-                            "output_ok",
-                            VerificationSeverity.SUCCESS,
-                            "output verified",
-                            path=fspec.relative_path,
-                        )
-                except Exception as exc:
-                    add(
-                        "output_error",
-                        VerificationSeverity.FAILURE,
-                        f"output verification error: {exc}",
-                        path=fspec.relative_path,
-                    )
-        else:
-            add(
-                "manifest_present",
-                VerificationSeverity.SUCCESS,
-                "manifest.json present",
-                approx_sha256=disk_sha,
-            )
-            if row is not None:
-                files = catalog.list_files(dataset_id)
-                for frow in files:
-                    fpath = final_dir / str(frow["storage_uri"])
-                    try:
-                        h, sz = stream_sha256_and_size(fpath)
-                        if h != frow["file_sha256"] or sz != int(frow["byte_size"]):
-                            add(
-                                "output_mismatch",
-                                VerificationSeverity.FAILURE,
-                                "catalog file disagrees with disk",
-                                path=str(frow["storage_uri"]),
-                            )
-                        else:
-                            add(
-                                "output_ok",
-                                VerificationSeverity.SUCCESS,
-                                "catalog file matches disk",
-                                path=str(frow["storage_uri"]),
-                            )
-                    except Exception as exc:
-                        add(
-                            "output_error",
-                            VerificationSeverity.FAILURE,
-                            str(exc),
-                            path=str(frow["storage_uri"]),
-                        )
+            if got_ds != expected_ds:
+                add(
+                    "lineage_dataset_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "upstream dataset lineage disagrees with manifest",
+                    expected=sorted(expected_ds),
+                    observed=sorted(got_ds),
+                )
+            else:
+                add(
+                    "lineage_dataset_ok",
+                    VerificationSeverity.SUCCESS,
+                    "upstream dataset lineage agrees",
+                )
 
-        # Lineage presence
-        if row is not None:
-            raws = catalog.list_raw_inputs(dataset_id)
-            ups = catalog.list_dataset_inputs(dataset_id)
-            add(
-                "lineage_edges",
-                VerificationSeverity.SUCCESS,
-                "lineage edges loaded",
-                raw_inputs=len(raws),
-                dataset_inputs=len(ups),
-            )
+        if expected_manifest is not None:
+            if expected_manifest.manifest_sha256 != loaded.manifest_sha256:
+                add(
+                    "expected_manifest_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "optional expected manifest disagrees",
+                )
 
     ok = not any(f.severity is VerificationSeverity.FAILURE for f in findings)
-    manifest_sha = (
-        expected_manifest.manifest_sha256 if expected_manifest is not None else None
-    )
     return DatasetVerificationReport(
         dataset_id=dataset_id,
         ok=ok,
         findings=tuple(findings),
-        manifest_sha256=manifest_sha,
+        manifest_sha256=loaded.manifest_sha256 if loaded else None,
         catalog_manifest_sha256=catalog_sha,
+        recomputed_dataset_id=loaded.dataset_id if loaded else None,
     )

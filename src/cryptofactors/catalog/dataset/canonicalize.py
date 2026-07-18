@@ -37,7 +37,6 @@ def _require_utc(dt: datetime, *, field_name: str) -> str:
 
 
 def normalize_value(value: Any) -> Any:
-    """Convert supported values to JSON-safe deterministic forms."""
     if value is None or isinstance(value, bool):
         return value
     if isinstance(value, int) and not isinstance(value, bool):
@@ -54,16 +53,20 @@ def normalize_value(value: Any) -> Any:
     if isinstance(value, Decimal):
         if not value.is_finite():
             raise InvalidManifestError("non-finite Decimal rejected")
-        # Exact fixed-point string without exponent.
         return format(value, "f")
     if isinstance(value, datetime):
         return _require_utc(value, field_name="datetime")
     if isinstance(value, Path):
-        # Only relative posix paths in manifests (locators).
         text = value.as_posix()
-        if value.is_absolute() or text.startswith("/") or ".." in Path(text).parts:
+        if value.is_absolute() or text.startswith("/"):
             raise InvalidManifestError(
-                "absolute or traversal paths rejected in canonical form",
+                "absolute paths rejected in canonical form",
+                context={"path": text},
+            )
+        parts = Path(text).parts
+        if any(p in (".", "..") for p in parts):
+            raise InvalidManifestError(
+                "traversal path components rejected",
                 context={"path": text},
             )
         return text
@@ -90,7 +93,6 @@ def normalize_value(value: Any) -> Any:
 
 
 def dumps_canonical(value: Any) -> str:
-    """Stable JSON: sorted keys, compact separators, trailing newline omitted."""
     normalized = normalize_value(value)
     return json.dumps(
         normalized,
@@ -109,28 +111,96 @@ def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def canonical_relative_path(rel: str) -> str:
+    """Normalize logical relative path for identity (posix, no traversal)."""
+    text = rel.replace("\\", "/").strip()
+    if not text or text.startswith("/") or text.startswith("./"):
+        raise InvalidManifestError(
+            "logical output path must be a non-empty relative path",
+            context={"path": rel},
+        )
+    parts = [p for p in text.split("/") if p != ""]
+    if any(p in (".", "..") for p in parts):
+        raise InvalidManifestError(
+            "logical output path must not contain '.' or '..'",
+            context={"path": rel},
+        )
+    return "/".join(parts)
+
+
+def _canonical_partition(partition: Mapping[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = normalize_value(dict(partition))
+    return result
+
+
+def file_sort_key(f: OutputFileSpec | Mapping[str, Any]) -> tuple[Any, ...]:
+    """Complete deterministic ordering key across all semantic file fields."""
+    if isinstance(f, OutputFileSpec):
+        path = canonical_relative_path(f.relative_path)
+        part = dumps_canonical(_canonical_partition(f.partition))
+        return (path, f.sha256.lower(), f.rows, f.bytes, part)
+    path = canonical_relative_path(str(f["uri"] if "uri" in f else f["relative_path"]))
+    part = dumps_canonical(dict(f.get("partition") or {}))
+    return (path, str(f["sha256"]).lower(), int(f["rows"]), int(f["bytes"]), part)
+
+
 def _sorted_deps(deps: list[DependencyRef] | tuple[DependencyRef, ...]) -> list[dict[str, str]]:
     items = [
-        {"id": d.id, "kind": d.kind.value if isinstance(d.kind, Enum) else str(d.kind), "role": d.role}
+        {
+            "id": d.id,
+            "kind": d.kind.value if isinstance(d.kind, Enum) else str(d.kind),
+            "role": d.role,
+        }
         for d in deps
     ]
     return sorted(items, key=lambda x: (x["kind"], x["role"], x["id"]))
 
 
-def _sorted_files(files: list[OutputFileSpec] | tuple[OutputFileSpec, ...]) -> list[dict[str, Any]]:
-    items = []
+def _normalize_files(
+    files: list[OutputFileSpec] | tuple[OutputFileSpec, ...],
+    *,
+    include_uri: bool,
+) -> list[dict[str, Any]]:
+    """Normalize files for identity or full manifest; reject duplicates."""
+    seen_paths: set[str] = set()
+    seen_semantic: set[tuple[Any, ...]] = set()
+    items: list[dict[str, Any]] = []
     for f in files:
-        items.append(
-            {
-                "sha256": f.sha256,
-                "rows": f.rows,
-                "bytes": f.bytes,
-                "partition": dict(f.partition),
-                # relative_path is a locator; included for full manifest, excluded from identity.
-                "uri": f.relative_path,
-            }
+        path = canonical_relative_path(f.relative_path)
+        if path in seen_paths:
+            raise InvalidManifestError(
+                "duplicate logical output path",
+                context={"path": path},
+            )
+        seen_paths.add(path)
+        part = _canonical_partition(f.partition)
+        semantic = (path, f.sha256.lower(), f.rows, f.bytes, dumps_canonical(part))
+        if semantic in seen_semantic:
+            raise InvalidManifestError(
+                "duplicate semantic output declaration",
+                context={"path": path, "sha256": f.sha256},
+            )
+        seen_semantic.add(semantic)
+        entry: dict[str, Any] = {
+            "sha256": f.sha256.lower(),
+            "rows": f.rows,
+            "bytes": f.bytes,
+            "partition": part,
+            "relative_path": path,
+        }
+        if include_uri:
+            entry["uri"] = path
+        items.append(entry)
+    items.sort(
+        key=lambda x: (
+            x["relative_path"],
+            x["sha256"],
+            x["rows"],
+            x["bytes"],
+            dumps_canonical(x["partition"]),
         )
-    return sorted(items, key=lambda x: (x["sha256"], x["uri"]))
+    )
+    return items
 
 
 def identity_payload(
@@ -148,20 +218,13 @@ def identity_payload(
     quality_summary: Mapping[str, Any],
     supersedes_dataset_id: str | None,
 ) -> dict[str, Any]:
-    """Identity-bearing fields only (no dataset_id, created_at, or free storage paths).
+    """Identity-bearing fields.
 
-    File identity uses content hashes/rows/bytes/partition — not uri/path.
+    Logical relative paths are identity-bearing together with sha256, rows,
+    bytes, and partition. Wall-clock publication time is excluded.
     """
-    file_ident = [
-        {
-            "sha256": f.sha256,
-            "rows": f.rows,
-            "bytes": f.bytes,
-            "partition": dict(f.partition),
-        }
-        for f in files
-    ]
-    file_ident = sorted(file_ident, key=lambda x: (x["sha256"], x["rows"], x["bytes"]))
+    file_ident = _normalize_files(list(files), include_uri=False)
+    # Identity file records keep relative_path (logical path).
     return {
         "dataset_type": dataset_type,
         "schema": {
@@ -193,13 +256,13 @@ def identity_payload(
 
 
 def compute_dataset_id(identity: Mapping[str, Any]) -> tuple[str, str]:
-    """Return (dataset_id, identity_sha256)."""
     digest = sha256_hex(canonical_bytes(identity))
     return f"ds_{digest}", digest
 
 
 def full_manifest_dict(manifest: DatasetManifest) -> dict[str, Any]:
-    """Full published manifest including locators and dataset_id."""
+    """Full published manifest. created_at is present for humans but excluded from hash."""
+    files = _normalize_files(list(manifest.files), include_uri=True)
     return {
         "dataset_id": manifest.dataset_id,
         "dataset_type": manifest.dataset_type,
@@ -220,7 +283,7 @@ def full_manifest_dict(manifest: DatasetManifest) -> dict[str, Any]:
         },
         "config_sha256": manifest.config.config_sha256,
         "dependencies": _sorted_deps(manifest.dependencies),
-        "files": _sorted_files(manifest.files),
+        "files": files,
         "row_count": manifest.statistics.row_count,
         "byte_size": manifest.statistics.byte_size,
         "event_start": manifest.coverage.event_start,
@@ -240,8 +303,98 @@ def full_manifest_dict(manifest: DatasetManifest) -> dict[str, Any]:
     }
 
 
-def compute_manifest_sha256(manifest: DatasetManifest) -> str:
-    """Fingerprint of full manifest with empty manifest_sha256 field."""
+def immutable_manifest_body(manifest: DatasetManifest) -> dict[str, Any]:
+    """Identity-stable body for manifest_sha256 (excludes wall-clock fields)."""
     body = full_manifest_dict(manifest)
     body["manifest_sha256"] = ""
-    return sha256_hex(canonical_bytes(body))
+    body["created_at"] = None
+    body["publication"] = {
+        "publisher": manifest.publication.publisher,
+        "publisher_version": manifest.publication.publisher_version,
+        # created_at intentionally omitted from immutable fingerprint
+    }
+    return body
+
+
+def compute_manifest_sha256(manifest: DatasetManifest) -> str:
+    return sha256_hex(canonical_bytes(immutable_manifest_body(manifest)))
+
+
+def identity_from_manifest_dict(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Reconstruct identity payload from a parsed full manifest dict."""
+    files_in = list(data.get("files") or [])
+    files: list[OutputFileSpec] = []
+    for f in files_in:
+        path = str(f.get("relative_path") or f.get("uri") or "")
+        files.append(
+            OutputFileSpec(
+                relative_path=path,
+                sha256=str(f["sha256"]),
+                rows=int(f["rows"]),
+                bytes=int(f["bytes"]),
+                partition=dict(f.get("partition") or {}),
+            )
+        )
+    deps_in = list(data.get("dependencies") or [])
+    deps = [
+        DependencyRef(
+            id=str(d["id"]),
+            kind=DependencyRef.__dataclass_fields__["kind"].type
+            if False
+            else __import__(
+                "cryptofactors.catalog.dataset.models", fromlist=["DependencyKind"]
+            ).DependencyKind(d["kind"]),
+            role=str(d["role"]),
+        )
+        for d in deps_in
+    ]
+    schema = data.get("schema") or {
+        "name": "unknown",
+        "version": data.get("schema_version", ""),
+        "fingerprint": None,
+    }
+    code = data.get("code") or {"commit": data.get("code_commit", ""), "lock_sha256": None}
+    transform = data.get("transform") or {}
+    return identity_payload(
+        dataset_type=str(data["dataset_type"]),
+        schema=SchemaIdentity(
+            name=str(schema["name"]),
+            version=str(schema["version"]),
+            fingerprint=schema.get("fingerprint"),
+        ),
+        transform=TransformSpec(
+            name=str(transform["name"]),
+            version=str(transform["version"]),
+        ),
+        code=CodeIdentity(
+            commit=str(code["commit"]),
+            lock_sha256=code.get("lock_sha256"),
+        ),
+        config=ConfigIdentity(config_sha256=str(data["config_sha256"])),
+        dependencies=deps,
+        files=files,
+        statistics=DatasetStatistics(
+            row_count=int(data["row_count"]),
+            byte_size=int(data["byte_size"]),
+        ),
+        coverage=CoverageWindow(
+            event_start=_parse_dt(data.get("event_start")),
+            event_end=_parse_dt(data.get("event_end")),
+            availability_start=_parse_dt(data.get("availability_start")),
+            availability_end=_parse_dt(data.get("availability_end")),
+        ),
+        quality_status=QualityStatus(str(data["quality_status"])),
+        quality_summary=dict(data.get("quality_summary") or {}),
+        supersedes_dataset_id=data.get("supersedes_dataset_id"),
+    )
+
+
+def _parse_dt(value: Any) -> datetime | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value
+    text = str(value)
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    return datetime.fromisoformat(text)

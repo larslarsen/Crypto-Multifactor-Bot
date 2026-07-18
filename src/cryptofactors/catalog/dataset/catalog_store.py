@@ -1,4 +1,4 @@
-"""SQLite registration for immutable datasets and lineage (MAN-001)."""
+"""SQLite registration for immutable datasets via verified publication receipts."""
 
 from __future__ import annotations
 
@@ -11,16 +11,14 @@ from typing import Any, Mapping, Sequence
 from cryptofactors.catalog.dataset.errors import (
     CorruptDatasetError,
     RecoverableDatasetCatalogError,
+    SupersessionError,
 )
 from cryptofactors.catalog.dataset.models import (
     DatasetManifest,
+    DatasetPublicationReceipt,
     DependencyKind,
     PublicationStatus,
 )
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def _iso(dt: datetime) -> str:
@@ -39,8 +37,15 @@ def _dumps(value: Mapping[str, Any] | None) -> str:
     )
 
 
+def _loads(text: str | None) -> dict[str, Any]:
+    if not text:
+        return {}
+    data = json.loads(text)
+    return dict(data) if isinstance(data, dict) else {}
+
+
 class SqliteDatasetCatalog:
-    """Atomic registration of dataset, files, and lineage edges."""
+    """Atomic registration of dataset, files, and lineage from a verified receipt."""
 
     def __init__(
         self, database: Path | str, *, connection: sqlite3.Connection | None = None
@@ -79,8 +84,7 @@ class SqliteDatasetCatalog:
         rows = self._conn.execute(
             """
             SELECT input_dataset_id FROM dataset_input_dataset
-            WHERE dataset_id = ?
-            ORDER BY input_dataset_id
+            WHERE dataset_id = ? ORDER BY input_dataset_id
             """,
             (dataset_id,),
         ).fetchall()
@@ -88,10 +92,7 @@ class SqliteDatasetCatalog:
 
     def list_files(self, dataset_id: str) -> Sequence[Mapping[str, Any]]:
         rows = self._conn.execute(
-            """
-            SELECT * FROM dataset_file WHERE dataset_id = ?
-            ORDER BY file_sha256
-            """,
+            "SELECT * FROM dataset_file WHERE dataset_id = ? ORDER BY storage_uri",
             (dataset_id,),
         ).fetchall()
         return [dict(r) for r in rows]
@@ -99,8 +100,8 @@ class SqliteDatasetCatalog:
     def list_raw_inputs(self, dataset_id: str) -> Sequence[Mapping[str, Any]]:
         rows = self._conn.execute(
             """
-            SELECT * FROM dataset_input_raw_object WHERE dataset_id = ?
-            ORDER BY raw_object_id, role
+            SELECT * FROM dataset_input_raw_object
+            WHERE dataset_id = ? ORDER BY raw_object_id, role
             """,
             (dataset_id,),
         ).fetchall()
@@ -109,139 +110,268 @@ class SqliteDatasetCatalog:
     def list_dataset_inputs(self, dataset_id: str) -> Sequence[Mapping[str, Any]]:
         rows = self._conn.execute(
             """
-            SELECT * FROM dataset_input_dataset WHERE dataset_id = ?
-            ORDER BY input_dataset_id, role
+            SELECT * FROM dataset_input_dataset
+            WHERE dataset_id = ? ORDER BY input_dataset_id, role
             """,
             (dataset_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def register_dataset(
+    def register_from_receipt(
         self,
+        receipt: DatasetPublicationReceipt,
         *,
         manifest: DatasetManifest,
-        manifest_uri: str,
-        publication_uri: str,
-        publication_status: PublicationStatus = PublicationStatus.REGISTERED,
     ) -> bool:
-        """Insert dataset + files + lineage atomically.
+        """Register only from a verified publication receipt + matching manifest.
 
-        Returns True if newly inserted; False if identical idempotent row exists.
+        Returns True if newly inserted; False if complete identical registration exists.
         """
-        existing = self.get_dataset(manifest.dataset_id)
+        if not receipt.is_complete():
+            raise CorruptDatasetError(
+                "publication receipt incomplete",
+                context={"dataset_id": receipt.dataset_id},
+            )
+        if receipt.dataset_id != manifest.dataset_id:
+            raise CorruptDatasetError("receipt/manifest dataset_id disagree")
+        if receipt.manifest_sha256 != manifest.manifest_sha256:
+            raise CorruptDatasetError("receipt/manifest sha256 disagree")
+        if tuple(receipt.verified_outputs) != manifest.files:
+            # Compare by semantic fields
+            if len(receipt.verified_outputs) != len(manifest.files):
+                raise CorruptDatasetError("receipt outputs disagree with manifest")
+            for a, b in zip(receipt.verified_outputs, manifest.files, strict=True):
+                if (
+                    a.relative_path != b.relative_path
+                    or a.sha256 != b.sha256
+                    or a.rows != b.rows
+                    or a.bytes != b.bytes
+                ):
+                    raise CorruptDatasetError("receipt outputs disagree with manifest")
+
+        existing = self.get_dataset(receipt.dataset_id)
         if existing is not None:
-            if (
-                existing["manifest_sha256"] == manifest.manifest_sha256
-                and existing["manifest_uri"] == manifest_uri
-                and int(existing["row_count"]) == manifest.statistics.row_count
-                and int(existing["byte_size"]) == manifest.statistics.byte_size
-            ):
+            if self._complete_identical_registration(receipt, manifest, existing):
                 return False
             raise CorruptDatasetError(
-                "dataset_id already registered with different manifest",
-                context={
-                    "dataset_id": manifest.dataset_id,
-                    "existing_manifest_sha256": existing["manifest_sha256"],
-                    "new_manifest_sha256": manifest.manifest_sha256,
-                },
+                "dataset_id already registered with incomplete or conflicting records",
+                context={"dataset_id": receipt.dataset_id},
             )
 
+        self._validate_supersession(receipt.supersedes_dataset_id, receipt.dataset_id)
+
         try:
-            self._conn.execute(
-                """
-                INSERT INTO dataset (
-                    dataset_id, dataset_type, schema_version, schema_fingerprint,
-                    manifest_sha256, manifest_uri, publication_uri,
-                    transform_name, transform_version, code_commit, config_sha256,
-                    row_count, byte_size,
-                    event_start, event_end, availability_start, availability_end,
-                    quality_status, quality_summary_json, supersedes_dataset_id,
-                    publication_status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    manifest.dataset_id,
-                    manifest.dataset_type,
-                    manifest.schema.version,
-                    manifest.schema.fingerprint,
-                    manifest.manifest_sha256,
-                    manifest_uri,
-                    publication_uri,
-                    manifest.transform.name,
-                    manifest.transform.version,
-                    manifest.code.commit,
-                    manifest.config.config_sha256,
-                    manifest.statistics.row_count,
-                    manifest.statistics.byte_size,
-                    _iso(manifest.coverage.event_start)
-                    if manifest.coverage.event_start
-                    else None,
-                    _iso(manifest.coverage.event_end) if manifest.coverage.event_end else None,
-                    _iso(manifest.coverage.availability_start)
-                    if manifest.coverage.availability_start
-                    else None,
-                    _iso(manifest.coverage.availability_end)
-                    if manifest.coverage.availability_end
-                    else None,
-                    manifest.quality_status.value,
-                    _dumps(manifest.quality_summary),
-                    manifest.supersedes_dataset_id,
-                    publication_status.value,
-                    _iso(manifest.publication.created_at),
-                ),
-            )
-            for f in manifest.files:
-                self._conn.execute(
-                    """
-                    INSERT INTO dataset_file (
-                        dataset_id, file_sha256, storage_uri, row_count, byte_size, partition_json
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        manifest.dataset_id,
-                        f.sha256,
-                        f.relative_path,
-                        f.rows,
-                        f.bytes,
-                        _dumps(f.partition),
-                    ),
-                )
-            for dep in manifest.dependencies:
-                if dep.kind is DependencyKind.RAW_OBJECT:
-                    self._conn.execute(
-                        """
-                        INSERT INTO dataset_input_raw_object (dataset_id, raw_object_id, role)
-                        VALUES (?, ?, ?)
-                        """,
-                        (manifest.dataset_id, dep.id, dep.role),
-                    )
-                else:
-                    self._conn.execute(
-                        """
-                        INSERT INTO dataset_input_dataset (dataset_id, input_dataset_id, role)
-                        VALUES (?, ?, ?)
-                        """,
-                        (manifest.dataset_id, dep.id, dep.role),
-                    )
-            if (
-                manifest.supersedes_dataset_id
-                and self.dataset_exists(manifest.supersedes_dataset_id)
-            ):
-                self._conn.execute(
-                    """
-                    UPDATE dataset SET publication_status = ?
-                    WHERE dataset_id = ?
-                    """,
-                    (PublicationStatus.SUPERSEDED.value, manifest.supersedes_dataset_id),
-                )
+            self._insert_all(receipt, manifest)
             self._conn.commit()
             return True
+        except sqlite3.IntegrityError:
+            self._conn.rollback()
+            # Concurrent winner: re-read and validate.
+            existing = self.get_dataset(receipt.dataset_id)
+            if existing is not None and self._complete_identical_registration(
+                receipt, manifest, existing
+            ):
+                return False
+            raise RecoverableDatasetCatalogError(
+                "concurrent catalog registration conflict",
+                dataset_id=receipt.dataset_id,
+                manifest_sha256=receipt.manifest_sha256,
+                dataset_path=str(receipt.dataset_path),
+            )
         except Exception as exc:
             self._conn.rollback()
+            if isinstance(exc, (CorruptDatasetError, SupersessionError, RecoverableDatasetCatalogError)):
+                raise
             raise RecoverableDatasetCatalogError(
                 f"catalog registration failed: {exc}",
-                dataset_id=manifest.dataset_id,
-                manifest_sha256=manifest.manifest_sha256,
-                dataset_path=publication_uri,
+                dataset_id=receipt.dataset_id,
+                manifest_sha256=receipt.manifest_sha256,
+                dataset_path=str(receipt.dataset_path),
                 context={"error": str(exc)},
             ) from exc
+
+    def _validate_supersession(
+        self, supersedes: str | None, new_id: str
+    ) -> None:
+        if supersedes is None:
+            return
+        if supersedes == new_id:
+            raise SupersessionError(
+                "self-supersession is rejected",
+                context={"dataset_id": new_id},
+            )
+        if not self.dataset_exists(supersedes):
+            raise SupersessionError(
+                "supersedes_dataset_id does not exist",
+                context={"supersedes_dataset_id": supersedes},
+            )
+        # Reject if target already supersedes new_id (simple cycle) or target's
+        # supersession chain includes new_id.
+        seen: set[str] = set()
+        current: str | None = supersedes
+        while current is not None:
+            if current == new_id:
+                raise SupersessionError(
+                    "supersession cycle detected",
+                    context={"dataset_id": new_id, "via": supersedes},
+                )
+            if current in seen:
+                break
+            seen.add(current)
+            row = self.get_dataset(current)
+            if row is None:
+                break
+            current = row.get("supersedes_dataset_id")
+
+    def _complete_identical_registration(
+        self,
+        receipt: DatasetPublicationReceipt,
+        manifest: DatasetManifest,
+        existing: Mapping[str, Any],
+    ) -> bool:
+        if existing["manifest_sha256"] != receipt.manifest_sha256:
+            return False
+        if existing["manifest_uri"] != receipt.manifest_uri:
+            return False
+        if existing.get("publication_uri") not in (None, receipt.publication_uri):
+            if existing.get("publication_uri") != receipt.publication_uri:
+                return False
+        if int(existing["row_count"]) != manifest.statistics.row_count:
+            return False
+        if int(existing["byte_size"]) != manifest.statistics.byte_size:
+            return False
+        if existing["dataset_type"] != manifest.dataset_type:
+            return False
+        if existing["transform_name"] != manifest.transform.name:
+            return False
+        if existing["transform_version"] != manifest.transform.version:
+            return False
+        if existing["code_commit"] != manifest.code.commit:
+            return False
+        if existing["config_sha256"] != manifest.config.config_sha256:
+            return False
+        if existing["quality_status"] != manifest.quality_status.value:
+            return False
+        if existing.get("supersedes_dataset_id") != manifest.supersedes_dataset_id:
+            return False
+
+        files = self.list_files(receipt.dataset_id)
+        if len(files) != len(manifest.files):
+            return False
+        file_map = {str(f["storage_uri"]): f for f in files}
+        for spec in manifest.files:
+            row = file_map.get(spec.relative_path)
+            if row is None:
+                return False
+            if (
+                str(row["file_sha256"]) != spec.sha256
+                or int(row["row_count"]) != spec.rows
+                or int(row["byte_size"]) != spec.bytes
+            ):
+                return False
+
+        raws = self.list_raw_inputs(receipt.dataset_id)
+        ups = self.list_dataset_inputs(receipt.dataset_id)
+        expected_raw = {
+            (d.id, d.role)
+            for d in manifest.dependencies
+            if d.kind is DependencyKind.RAW_OBJECT
+        }
+        expected_ds = {
+            (d.id, d.role)
+            for d in manifest.dependencies
+            if d.kind is DependencyKind.DATASET
+        }
+        got_raw = {(str(r["raw_object_id"]), str(r["role"])) for r in raws}
+        got_ds = {(str(r["input_dataset_id"]), str(r["role"])) for r in ups}
+        if got_raw != expected_raw or got_ds != expected_ds:
+            return False
+        return True
+
+    def _insert_all(
+        self, receipt: DatasetPublicationReceipt, manifest: DatasetManifest
+    ) -> None:
+        self._conn.execute(
+            """
+            INSERT INTO dataset (
+                dataset_id, dataset_type, schema_version, schema_fingerprint,
+                manifest_sha256, manifest_uri, publication_uri,
+                transform_name, transform_version, code_commit, config_sha256,
+                row_count, byte_size,
+                event_start, event_end, availability_start, availability_end,
+                quality_status, quality_summary_json, supersedes_dataset_id,
+                publication_status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                receipt.dataset_id,
+                manifest.dataset_type,
+                manifest.schema.version,
+                manifest.schema.fingerprint,
+                receipt.manifest_sha256,
+                receipt.manifest_uri,
+                receipt.publication_uri,
+                manifest.transform.name,
+                manifest.transform.version,
+                manifest.code.commit,
+                manifest.config.config_sha256,
+                manifest.statistics.row_count,
+                manifest.statistics.byte_size,
+                _iso(manifest.coverage.event_start)
+                if manifest.coverage.event_start
+                else None,
+                _iso(manifest.coverage.event_end) if manifest.coverage.event_end else None,
+                _iso(manifest.coverage.availability_start)
+                if manifest.coverage.availability_start
+                else None,
+                _iso(manifest.coverage.availability_end)
+                if manifest.coverage.availability_end
+                else None,
+                manifest.quality_status.value,
+                _dumps(manifest.quality_summary),
+                manifest.supersedes_dataset_id,
+                PublicationStatus.REGISTERED.value,
+                _iso(receipt.catalog_created_at),
+            ),
+        )
+        for f in manifest.files:
+            self._conn.execute(
+                """
+                INSERT INTO dataset_file (
+                    dataset_id, file_sha256, storage_uri, row_count, byte_size, partition_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    receipt.dataset_id,
+                    f.sha256,
+                    f.relative_path,
+                    f.rows,
+                    f.bytes,
+                    _dumps(f.partition),
+                ),
+            )
+        for dep in manifest.dependencies:
+            if dep.kind is DependencyKind.RAW_OBJECT:
+                self._conn.execute(
+                    """
+                    INSERT INTO dataset_input_raw_object (dataset_id, raw_object_id, role)
+                    VALUES (?, ?, ?)
+                    """,
+                    (receipt.dataset_id, dep.id, dep.role),
+                )
+            else:
+                self._conn.execute(
+                    """
+                    INSERT INTO dataset_input_dataset (dataset_id, input_dataset_id, role)
+                    VALUES (?, ?, ?)
+                    """,
+                    (receipt.dataset_id, dep.id, dep.role),
+                )
+        if manifest.supersedes_dataset_id:
+            self._conn.execute(
+                """
+                UPDATE dataset SET publication_status = ?
+                WHERE dataset_id = ?
+                """,
+                (PublicationStatus.SUPERSEDED.value, manifest.supersedes_dataset_id),
+            )

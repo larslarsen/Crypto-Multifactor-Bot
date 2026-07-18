@@ -22,6 +22,7 @@ from cryptofactors.catalog.dataset.errors import (
     MissingInputError,
     OutputVerificationError,
     RecoverableDatasetCatalogError,
+    SupersessionError,
     UnsafePathError,
 )
 from cryptofactors.catalog.dataset.lineage import validate_dependencies
@@ -30,6 +31,7 @@ from cryptofactors.catalog.dataset.models import (
     ConfigIdentity,
     CoverageWindow,
     DatasetManifest,
+    DatasetPublicationReceipt,
     DatasetPublishResult,
     DatasetStatistics,
     DatasetStoreConfig,
@@ -41,12 +43,15 @@ from cryptofactors.catalog.dataset.models import (
     PublicationStatus,
     PublishPlan,
     QualityStatus,
+    RowCountPolicy,
+    RowCountReceipt,
     SchemaIdentity,
     TransformSpec,
     VerificationFinding,
     VerificationSeverity,
 )
 from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size, verify_outputs
+from cryptofactors.catalog.dataset.parse import load_manifest_bytes, load_manifest_file
 from cryptofactors.catalog.dataset.publisher import DatasetPublisher
 from cryptofactors.catalog.dataset.verification import verify_dataset
 
@@ -59,6 +64,7 @@ __all__ = [
     "DatasetError",
     "DatasetManifest",
     "DatasetPublicationError",
+    "DatasetPublicationReceipt",
     "DatasetPublishResult",
     "DatasetPublisher",
     "DatasetStatistics",
@@ -76,8 +82,11 @@ __all__ = [
     "PublishPlan",
     "QualityStatus",
     "RecoverableDatasetCatalogError",
+    "RowCountPolicy",
+    "RowCountReceipt",
     "SchemaIdentity",
     "SqliteDatasetCatalog",
+    "SupersessionError",
     "TransformSpec",
     "UnsafePathError",
     "VerificationFinding",
@@ -88,6 +97,8 @@ __all__ = [
     "dumps_canonical",
     "full_manifest_dict",
     "identity_payload",
+    "load_manifest_bytes",
+    "load_manifest_file",
     "normalize_value",
     "stream_sha256_and_size",
     "validate_dependencies",

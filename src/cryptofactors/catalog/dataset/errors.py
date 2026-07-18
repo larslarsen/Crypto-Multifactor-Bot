@@ -23,7 +23,7 @@ class DatasetError(Exception):
 
 
 class InvalidManifestError(DatasetError):
-    """Manifest model or canonicalization is invalid."""
+    """Manifest model, parse, or canonicalization is invalid."""
 
 
 class UnsafePathError(DatasetError):
@@ -35,7 +35,7 @@ class MissingInputError(DatasetError):
 
 
 class OutputVerificationError(DatasetError):
-    """Output file missing, unexpected, unsafe, or content mismatch."""
+    """Output file missing, unexpected, unsafe, or content/row-count mismatch."""
 
 
 class LineageError(DatasetError):
@@ -52,6 +52,10 @@ class DatasetPublicationError(DatasetError):
 
 class DatasetDurabilityError(DatasetPublicationError):
     """Required fsync failed."""
+
+
+class SupersessionError(DatasetError):
+    """Invalid supersession target or cycle."""
 
 
 class RecoverableDatasetCatalogError(DatasetError):

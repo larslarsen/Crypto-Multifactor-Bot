@@ -3,24 +3,29 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import stat as statmod
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
-from cryptofactors.catalog.dataset.errors import OutputVerificationError, UnsafePathError
-from cryptofactors.catalog.dataset.models import OutputFileSpec
-from cryptofactors.catalog.dataset.paths import assert_no_symlink_components, assert_relative_safe
+from cryptofactors.catalog.dataset.canonicalize import canonical_relative_path
+from cryptofactors.catalog.dataset.errors import OutputVerificationError
+from cryptofactors.catalog.dataset.models import (
+    OutputFileSpec,
+    RowCountPolicy,
+    RowCountReceipt,
+)
+from cryptofactors.catalog.dataset.paths import assert_relative_safe, lstat_path
 
 
 def stream_sha256_and_size(path: Path, *, chunk_size: int = 1024 * 1024) -> tuple[str, int]:
-    if path.is_symlink():
+    st = lstat_path(path)
+    if st is None:
+        raise OutputVerificationError("output missing", context={"path": str(path)})
+    if statmod.S_ISLNK(st.st_mode):
         raise OutputVerificationError(
             "output must not be a symlink",
             context={"path": str(path)},
         )
-    if not path.exists():
-        raise OutputVerificationError("output missing", context={"path": str(path)})
-    st = os.lstat(path)
     if not statmod.S_ISREG(st.st_mode):
         raise OutputVerificationError(
             "output is not a regular file",
@@ -42,22 +47,50 @@ def verify_outputs(
     *,
     sources: dict[str, Path],
     specs: list[OutputFileSpec] | tuple[OutputFileSpec, ...],
-    root_for_symlink_stop: Path | None = None,
+    row_count_policy: RowCountPolicy = RowCountPolicy.REQUIRE_VERIFIER,
+    row_counters: Mapping[str, Callable[[Path], int]] | None = None,
+    row_receipts: Mapping[str, RowCountReceipt] | None = None,
     chunk_size: int = 1024 * 1024,
 ) -> tuple[OutputFileSpec, ...]:
-    """Verify declared outputs against local files without loading full content into RAM.
+    """Verify declared outputs against local files without full-file memory loads.
 
-    ``sources`` maps relative_path → local source path.
-    Every key in sources must appear in specs and vice versa.
+    Row counts: a declared count alone is not verified observation. Under
+    ``REQUIRE_VERIFIER``, each output needs a counter or receipt. Under
+    ``ALLOW_UNVERIFIED_DECLARED``, declared rows are accepted with
+    ``rows_verified=False``.
     """
-    spec_map = {s.relative_path: s for s in specs}
-    if len(spec_map) != len(specs):
-        raise OutputVerificationError("duplicate relative_path in output specs")
+    counters = dict(row_counters or {})
+    receipts = dict(row_receipts or {})
+    spec_map: dict[str, OutputFileSpec] = {}
+    for s in specs:
+        path = canonical_relative_path(s.relative_path)
+        if path in spec_map:
+            raise OutputVerificationError(
+                "duplicate logical output path in specs",
+                context={"path": path},
+            )
+        spec_map[path] = OutputFileSpec(
+            relative_path=path,
+            sha256=s.sha256.lower(),
+            rows=s.rows,
+            bytes=s.bytes,
+            partition=dict(s.partition),
+            rows_verified=s.rows_verified,
+        )
 
-    source_keys = set(sources)
-    spec_keys = set(spec_map)
-    missing = spec_keys - source_keys
-    unexpected = source_keys - spec_keys
+    # Normalize source keys
+    norm_sources: dict[str, Path] = {}
+    for k, v in sources.items():
+        path = canonical_relative_path(k)
+        if path in norm_sources:
+            raise OutputVerificationError(
+                "duplicate logical path in sources",
+                context={"path": path},
+            )
+        norm_sources[path] = v
+
+    missing = set(spec_map) - set(norm_sources)
+    unexpected = set(norm_sources) - set(spec_map)
     if missing:
         raise OutputVerificationError(
             "missing output sources for declared specs",
@@ -72,7 +105,7 @@ def verify_outputs(
     verified: list[OutputFileSpec] = []
     for rel, spec in sorted(spec_map.items(), key=lambda kv: kv[0]):
         assert_relative_safe(rel, label="output relative_path")
-        if not (spec.sha256 and len(spec.sha256) == 64):
+        if len(spec.sha256) != 64:
             raise OutputVerificationError(
                 "output sha256 must be 64 hex chars",
                 context={"relative_path": rel},
@@ -82,19 +115,14 @@ def verify_outputs(
                 "rows and bytes must be >= 0",
                 context={"relative_path": rel},
             )
-        src = sources[rel]
-        if root_for_symlink_stop is not None:
-            try:
-                assert_no_symlink_components(src.resolve(), stop_at=root_for_symlink_stop)
-            except UnsafePathError as exc:
-                raise OutputVerificationError(str(exc), context=exc.context) from exc
+        src = norm_sources[rel]
         actual_hash, actual_size = stream_sha256_and_size(src, chunk_size=chunk_size)
-        if actual_hash != spec.sha256.lower():
+        if actual_hash != spec.sha256:
             raise OutputVerificationError(
                 "output SHA-256 mismatch",
                 context={
                     "relative_path": rel,
-                    "expected": spec.sha256.lower(),
+                    "expected": spec.sha256,
                     "actual": actual_hash,
                 },
             )
@@ -107,7 +135,41 @@ def verify_outputs(
                     "actual": actual_size,
                 },
             )
-        # Row count is an explicit declared boundary (not re-derived from binary format).
+
+        rows_verified = False
+        observed_rows = spec.rows
+        if rel in receipts:
+            rec = receipts[rel]
+            if rec.relative_path and canonical_relative_path(rec.relative_path) != rel:
+                raise OutputVerificationError(
+                    "row receipt path mismatch",
+                    context={"relative_path": rel},
+                )
+            observed_rows = rec.row_count
+            rows_verified = True
+        elif rel in counters:
+            observed_rows = int(counters[rel](src))
+            rows_verified = True
+        elif row_count_policy is RowCountPolicy.REQUIRE_VERIFIER:
+            raise OutputVerificationError(
+                "row count verifier or receipt required for output",
+                context={
+                    "relative_path": rel,
+                    "policy": row_count_policy.value,
+                },
+            )
+        # ALLOW_UNVERIFIED_DECLARED: keep declared rows, rows_verified=False
+
+        if rows_verified and observed_rows != spec.rows:
+            raise OutputVerificationError(
+                "output row count mismatch",
+                context={
+                    "relative_path": rel,
+                    "expected": spec.rows,
+                    "observed": observed_rows,
+                },
+            )
+
         verified.append(
             OutputFileSpec(
                 relative_path=rel,
@@ -115,6 +177,7 @@ def verify_outputs(
                 rows=spec.rows,
                 bytes=actual_size,
                 partition=dict(spec.partition),
+                rows_verified=rows_verified,
             )
         )
     return tuple(verified)
