@@ -6,6 +6,11 @@ The Evidence Registry is the institutional memory of the research program. It re
 
 It is not a performance leaderboard and does not assign false precision to scientific judgment.
 
+It supplies **scientific evidence and verdicts only**. It does **not** grant serving or
+capital authorization. Promotion and serving authorization are owned by the Promotion
+Registry (see ADR-0008). A `SUPPORTED` or `REPLICATED` verdict is a scientific statement;
+it creates no paper or live promotion by itself.
+
 ## 2. Core objects
 
 ### Hypothesis

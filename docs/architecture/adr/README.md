@@ -25,6 +25,7 @@ what they amend or supersede.
 | [0005](0005-no-external-research-platform-services.md) | No external research-platform services | Accepted | — |
 | [0006](0006-typed-promotion-and-serving-parity.md) | Typed promotion & serving parity | Accepted | — |
 | [0007](0007-architecture-freeze-and-rfc-process.md) | Architecture freeze & RFC process | Accepted | establishes this register |
+| [0008](0008-research-paper-live-promotion-lifecycle.md) | Research, Paper, and Live artifact promotion lifecycle | Proposed | amends [0006](0006-typed-promotion-and-serving-parity.md) |
 
 ## Status vocabulary
 

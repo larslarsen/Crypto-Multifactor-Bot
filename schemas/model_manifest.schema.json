@@ -112,11 +112,15 @@
     },
     "promotion_status": {
       "enum": [
-        "QUARANTINED_LEGACY",
-        "RESEARCH_ONLY",
+        "RESEARCH_CANDIDATE",
+        "RESEARCH_ACCEPTED",
         "PAPER_APPROVED",
+        "PAPER_SUSPENDED",
         "LIVE_APPROVED",
-        "RETIRED"
+        "LIVE_SUSPENDED",
+        "RETIRED",
+        "REJECTED",
+        "QUARANTINED"
       ]
     },
     "created_at": {

@@ -152,22 +152,61 @@ CREATE TABLE IF NOT EXISTS model_artifact (
     manifest_uri TEXT NOT NULL UNIQUE,
     representation_type TEXT NOT NULL,
     representation_version TEXT NOT NULL,
-    status TEXT NOT NULL,
+    status TEXT NOT NULL
+        CHECK (status IN (
+            'RESEARCH_CANDIDATE',
+            'RESEARCH_ACCEPTED',
+            'PAPER_APPROVED',
+            'PAPER_SUSPENDED',
+            'LIVE_APPROVED',
+            'LIVE_SUSPENDED',
+            'RETIRED',
+            'REJECTED',
+            'QUARANTINED'
+        )),
     created_at TEXT NOT NULL
 );
 
 -- Append-only promotion history. The current stage target is the latest event per stage.
+-- Aligned with ADR-0008 (Research, Paper, Live promotion lifecycle). Each event pins the
+-- exact immutable identity of the promoted artifact and the authorizing authority; a new
+-- artifact version does not inherit a prior version's authorization.
 CREATE TABLE IF NOT EXISTS model_promotion_event (
     promotion_event_id TEXT PRIMARY KEY,
-    stage TEXT NOT NULL,
-    action TEXT NOT NULL CHECK (action IN ('PROMOTE', 'RETIRE', 'CLEAR')),
+    stage TEXT NOT NULL CHECK (stage IN ('RESEARCH', 'PAPER', 'LIVE')),
+    action TEXT NOT NULL CHECK (action IN ('PROMOTE', 'SUSPEND', 'RESUME', 'RETIRE', 'REJECT', 'QUARANTINE')),
+    promotion_state TEXT NOT NULL
+        CHECK (promotion_state IN (
+            'RESEARCH_CANDIDATE',
+            'RESEARCH_ACCEPTED',
+            'PAPER_APPROVED',
+            'PAPER_SUSPENDED',
+            'LIVE_APPROVED',
+            'LIVE_SUSPENDED',
+            'RETIRED',
+            'REJECTED',
+            'QUARANTINED'
+        )),
     model_artifact_id TEXT REFERENCES model_artifact(model_artifact_id),
+    experiment_fingerprint TEXT NOT NULL,
+    dataset_ids_json TEXT NOT NULL,
+    universe_version TEXT NOT NULL,
+    code_commit TEXT NOT NULL,
+    config_sha256 TEXT NOT NULL,
+    feature_version TEXT NOT NULL,
+    representation_version TEXT NOT NULL,
+    portfolio_version TEXT NOT NULL,
+    cost_model_version TEXT NOT NULL,
+    risk_policy_version TEXT NOT NULL,
+    effective_time TEXT NOT NULL,
+    approving_authority TEXT NOT NULL,
+    evidence_ref TEXT NOT NULL,
     event_at TEXT NOT NULL,
     actor TEXT NOT NULL,
     reason TEXT NOT NULL,
     CHECK (
-        (action = 'PROMOTE' AND model_artifact_id IS NOT NULL)
-        OR (action IN ('RETIRE', 'CLEAR'))
+        (action IN ('PROMOTE', 'SUSPEND', 'RESUME', 'RETIRE', 'REJECT', 'QUARANTINE')
+            AND model_artifact_id IS NOT NULL)
     )
 );
 

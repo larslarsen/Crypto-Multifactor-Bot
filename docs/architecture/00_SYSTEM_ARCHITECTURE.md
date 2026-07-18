@@ -64,8 +64,21 @@ flowchart TD
 
     E --> P[Portfolio and cost simulation]
     P --> REP[Reports and immutable experiment bundle]
-    REP --> PROM[Promotion registry]
-    PROM --> SERVE[Paper serving; later live serving]
+    REP --> EV[Evidence decision]
+    EV --> RPR[Research promotion review]
+    RPR -->|PAPER_APPROVED| PA[Paper-approved artifact]
+    PA --> PS[Paper serving]
+    PS --> LPR[Live promotion review]
+    LPR -->|LIVE_APPROVED| LA[Live-approved artifact]
+    LA --> LS[Live serving]
+
+    RPR -. REJECTED / QUARANTINED .-> REJ[(Rejected / Quarantined)]
+    PA -. PAPER_SUSPENDED .-> SUSP[(Suspended)]
+    LA -. LIVE_SUSPENDED .-> SUSP
+    PA -. RETIRED .-> RET[(Retired)]
+    LA -. RETIRED .-> RET
+    SUSP -. LIVE_APPROVED resume .-> LA
+    SUSP -. PAPER_APPROVED resume .-> PA
 
     CTRL[(SQLite control catalog)] -. manifests, watermarks, runs, issues .-> A
     CTRL -. lineage and fingerprints .-> E
@@ -73,6 +86,22 @@ flowchart TD
     DDB -. scans Parquet .-> F
     DDB -. scans Parquet .-> E
 ```
+
+### Artifact promotion lifecycle (see ADR-0008)
+
+The terminal path is:
+
+```text
+Experiment bundle → Evidence decision → Research promotion review → Paper-approved
+artifact → Paper serving → Live promotion review → Live-approved artifact → Live serving
+```
+
+Promotion is an explicit, recorded event, not a performance milestone. Rejected,
+quarantined, suspended, and retired paths are preserved as append-only side states; an
+artifact never leaves them without a new promotion event (or a new artifact identity).
+Scientific verdicts (Evidence Registry) and serving/capital authorization (Promotion
+Registry) are separate systems: a `SUPPORTED`/`REPLICATED` hypothesis does not create a
+paper or live promotion.
 
 ## 4. Physical architecture
 
