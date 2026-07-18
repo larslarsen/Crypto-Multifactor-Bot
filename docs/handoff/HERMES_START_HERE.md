@@ -57,6 +57,18 @@ For each ticket:
 - no committing raw market data, API secrets, local databases, or model binaries;
 - no architecture refactor hidden inside a feature ticket.
 
+## Repository control plane
+
+This repository uses a control plane, not an autonomous workflow:
+
+- There is no self-driving or autonomous ticket progression.
+- Development agents do not push, inspect remotes, or verify public GitHub state.
+- The owner publishes commits.
+- Exactly one ticket is active at a time.
+- Development agents commit locally and stop; only the owner or a designated reviewer
+  accepts work or authorizes the next ticket.
+- Chat instructions are not durable state until recorded in the repository.
+
 ## First assignment
 
-Implement `tickets/CAT-001.md` only. Use `prompts/hermes/001_CAT_001.md` as the task prompt. Do not start raw acquisition until CAT-001 has been reviewed and accepted.
+Always follow the ticket named in `docs/handoff/CURRENT_TASK.md`. Never hard-code a ticket ID in this file.

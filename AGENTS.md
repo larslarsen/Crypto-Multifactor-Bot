@@ -24,13 +24,20 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 ## Agent Behavior
 
 - Be literal. Answer the question that was asked.
-- Do not start the next ticket until the current one is accepted.
+- Work on exactly one active ticket at a time.
+- Do not start the next ticket until the current one is accepted by the owner or a
+  designated reviewer.
+- The owner publishes commits. Development agents commit locally and stop; they do not
+  push, inspect remotes, or verify public GitHub state.
 - When told "do not modify or recommit", obey strictly.
 - When a senior engineer says files must be created, create them in a focused commit.
-- Use `git push origin HEAD:main` when instructed to surface a commit.
-- Verify with `git rev-parse origin/main` after push.
+- Chat instructions are not durable state until they are recorded in the repository
+  (a ticket, ADR, or control document).
 
 ## Enforcement
 
-A governance control script (`scripts/check_repo_control.py`) is run as part of reviews. It validates presence of key artifacts (this file, active ticket, current ADRs, etc.).
+A governance control script (`scripts/check_repo_control.py`) is run as part of reviews.
+It validates the repository-native control plane: exactly one active ticket, a matching
+ticket status and current-task state, the existence of referenced governing documents,
+and the `NONE` next-ticket rule for blocked / awaiting-review work.
 

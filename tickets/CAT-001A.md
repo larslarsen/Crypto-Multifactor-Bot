@@ -5,6 +5,7 @@
 **Layer:** catalog  
 **Architecture change:** none  
 **ADR required:** no
+**Status:** ACCEPTED
 
 ## Objective
 
