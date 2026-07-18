@@ -1,18 +1,20 @@
 # Current developer task
 
-Complete [`CAT-001A`](../../tickets/CAT-001A.md) and stop.
+Complete [`GOV-001`](../../tickets/GOV-001.md) and stop for review.
 
-The architecture is unchanged. This task corrects the CAT-001 implementation so that it
-meets the already committed requirements.
+The architecture is unchanged. This task establishes the minimal governance layer (AGENTS.md, control script, ADR process visibility) so that senior review of subsequent work can happen directly on public main.
 
 ## Governing review
 
-Read [`REVIEW-0001`](../reviews/REVIEW-0001_CAT-001.md) before editing code.
+Read [`ADR-0011`](../adr/0011-repo-governance-and-agent-instructions.md) and the root [`AGENTS.md`](../../AGENTS.md).
 
 ## Required outcome
 
-- Failed migrations leave no partial schema or data.
-- Migration versions are strictly validated for format, duplicates, and gaps.
-- Tests use temporary migration directories and do not modify the repository.
-- The complete CAT-001 acceptance suite passes.
-- A focused change report is provided before any next ticket begins.
+- Root `AGENTS.md` exists and documents agent rules.
+- `tickets/GOV-001.md` exists.
+- ADR 0011 exists.
+- `scripts/check_repo_control.py` exists and passes.
+- `docs/handoff/CURRENT_TASK.md` points to GOV-001.
+- The governance commit is visible on public `origin/main` (run `git rev-parse origin/main`).
+- `scripts/check_repo_control.py` reports PASS.
+- Senior can review without additional context transfer.
