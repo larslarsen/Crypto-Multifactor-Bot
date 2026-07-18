@@ -1,50 +1,60 @@
-"""Conservative timestamp unit inference."""
+"""Conservative, candidate-based timestamp unit inference."""
 
-from datetime import datetime, timezone, timedelta
-from typing import Union, Optional
+from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Union, Dict, Any
+from .errors import AmbiguousTimestampError, AuditError
 
-from .errors import AmbiguousTimestampError
-from .models import TimestampInference
+
+class OutOfRangeTimestampError(AuditError):
+    pass
+
+
+def _safe_to_datetime(value: int, unit: str) -> datetime:
+    if unit == "s":
+        return datetime.fromtimestamp(value, tz=timezone.utc)
+    if unit == "ms":
+        return datetime.fromtimestamp(value / 1000.0, tz=timezone.utc)
+    if unit == "us":
+        return datetime.fromtimestamp(value / 1_000_000.0, tz=timezone.utc)
+    if unit == "ns":
+        return datetime.fromtimestamp(value / 1_000_000_000.0, tz=timezone.utc)
+    raise ValueError(unit)
 
 
 def infer_timestamp_unit(
     value: Union[int, float, str, Decimal],
     min_date: datetime = datetime(2010, 1, 1, tzinfo=timezone.utc),
     max_date: datetime = datetime(2030, 1, 1, tzinfo=timezone.utc),
-) -> TimestampInference:
-    """
-    Infer timestamp unit using magnitude and divisibility.
-    Returns explicit error on ambiguity instead of guessing.
-    """
-    if isinstance(value, str):
-        try:
-            value = int(value) if '.' not in value else float(value)
-        except ValueError:
-            raise AmbiguousTimestampError(f"Cannot parse timestamp: {value}")
-
+) -> Dict[str, Any]:
+    """Candidate validation. Exactly one plausible → return it. Multiple → ambiguous error."""
+    # Normalize input
     if isinstance(value, float):
-        value = int(value)  # conservative
+        if not value.is_integer():
+            raise AuditError("Non-integer float timestamps rejected to avoid precision loss")
+        value = int(value)
+    elif isinstance(value, str):
+        value = int(value) if '.' not in value else int(Decimal(value))
+    elif isinstance(value, Decimal):
+        if value % 1 != 0:
+            raise AuditError("Non-integer Decimal rejected")
+        value = int(value)
+    elif not isinstance(value, int):
+        raise AuditError(f"Unsupported type: {type(value)}")
 
-    if not isinstance(value, (int, Decimal)):
-        raise AmbiguousTimestampError(f"Unsupported timestamp type: {type(value)}")
+    candidates = []
+    for unit in ("s", "ms", "us", "ns"):
+        try:
+            dt = _safe_to_datetime(value, unit)
+            if min_date <= dt <= max_date:
+                candidates.append((unit, dt))
+        except (ValueError, OSError, OverflowError):
+            continue
 
-    # Plausible ranges (Unix epoch style)
-    if 1_000_000_000 <= value <= 2_000_000_000:  # ~2010-2030 in seconds
-        return TimestampInference(unit="s", value=value, inferred_from="magnitude")
-    elif 1_000_000_000_000 <= value <= 2_000_000_000_000:  # milliseconds
-        return TimestampInference(unit="ms", value=value, inferred_from="magnitude")
-    elif 1_000_000_000_000_000 <= value <= 2_000_000_000_000_000:  # microseconds
-        return TimestampInference(unit="us", value=value, inferred_from="magnitude")
-    elif value > 10**17:  # nanoseconds
-        return TimestampInference(unit="ns", value=value, inferred_from="magnitude")
-
-    # Divisibility checks for borderline cases
-    if value % 1_000_000_000 == 0 and value // 1_000_000_000 < 2_000_000_000:
-        return TimestampInference(unit="s", value=value, inferred_from="divisibility")
-
-    # Ambiguous case
-    raise AmbiguousTimestampError(
-        f"Ambiguous timestamp unit for value {value}. "
-        "Multiple units (s/ms/us/ns) are plausible."
-    )
+    if len(candidates) == 1:
+        unit, dt = candidates[0]
+        return {"unit": unit, "datetime": dt, "value": value}
+    elif len(candidates) > 1:
+        raise AmbiguousTimestampError(f"Multiple units plausible for {value}")
+    else:
+        raise OutOfRangeTimestampError(f"Value {value} out of range {min_date}–{max_date}")
