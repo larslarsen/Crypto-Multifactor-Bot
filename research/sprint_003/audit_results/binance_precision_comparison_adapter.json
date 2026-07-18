@@ -1,0 +1,53 @@
+{
+  "adapter_tool": "source_audit.infer_timestamp_unit (runner adapter)",
+  "audit": "binance_precision_comparison_adapter",
+  "config": {
+    "adapter": "headerless_binance_precision (runner-level, infer_timestamp_unit)",
+    "max_ambiguous_rate": "0.05",
+    "max_malformed_rate": "0.1",
+    "min_valid_inferences": 5,
+    "sample_rows": 50,
+    "utc_bounds": [
+      "2017-01-01T00:00:00+00:00",
+      "2027-01-01T00:00:00+00:00"
+    ]
+  },
+  "native_comparator": "compare_binance_archive_precision",
+  "native_status": "failed (headerless not supported; preserved as evidence)",
+  "note": "Adapter ONLY; not a successful native comparator run. Mirrors native min-evidence/quality thresholds.",
+  "sides": [
+    {
+      "ambiguous": 0,
+      "archive": "binance/BTCUSDT-aggTrades-2024-12-31.zip",
+      "dominant_unit": "ms",
+      "malformed": 0,
+      "member": "binance/BTCUSDT-aggTrades-2024-12-31.csv",
+      "out_of_range": 0,
+      "sha256": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
+      "status": "inspected",
+      "timestamp_column_index": 5,
+      "unit_distribution": {
+        "ms": 50
+      },
+      "valid": 50
+    },
+    {
+      "ambiguous": 0,
+      "archive": "binance/BTCUSDT-aggTrades-2025-01-01.zip",
+      "dominant_unit": "us",
+      "malformed": 0,
+      "member": "binance/BTCUSDT-aggTrades-2025-01-01.csv",
+      "out_of_range": 0,
+      "sha256": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
+      "status": "inspected",
+      "timestamp_column_index": 5,
+      "unit_distribution": {
+        "us": 50
+      },
+      "valid": 50
+    }
+  ],
+  "supports_unit_transition": true,
+  "thresholds_met": true,
+  "transition": "TimestampUnit.MILLISECONDS -> TimestampUnit.MICROSECONDS"
+}

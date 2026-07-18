@@ -1,0 +1,118 @@
+{
+  "audit": "provider_coverage",
+  "note": "Factual evidence only; no source acceptance/rejection decisions.",
+  "providers": {
+    "binance": {
+      "evidence_ids": [
+        "EV-001",
+        "EV-002",
+        "EV-003",
+        "EV-004",
+        "EV-005",
+        "EV-006",
+        "EV-007",
+        "EV-008",
+        "EV-009",
+        "EV-010",
+        "EV-011",
+        "EV-012"
+      ],
+      "http_statuses": [
+        "200"
+      ],
+      "records": 12,
+      "restrictions": ""
+    },
+    "bybit": {
+      "evidence_ids": [
+        "EV-020",
+        "EV-021",
+        "EV-022",
+        "EV-023",
+        "EV-024",
+        "EV-025",
+        "EV-026",
+        "EV-027"
+      ],
+      "http_statuses": [
+        "200"
+      ],
+      "records": 8,
+      "restrictions": ""
+    },
+    "coin_metrics": {
+      "evidence_ids": [
+        "EV-028",
+        "EV-029",
+        "EV-030",
+        "EV-031",
+        "EV-032",
+        "EV-033",
+        "EV-034"
+      ],
+      "http_statuses": [
+        "200",
+        "400"
+      ],
+      "records": 7,
+      "restrictions": ""
+    },
+    "defillama": {
+      "evidence_ids": [
+        "EV-035",
+        "EV-036",
+        "EV-037",
+        "EV-038",
+        "EV-039",
+        "EV-040"
+      ],
+      "http_statuses": [
+        "200",
+        "402"
+      ],
+      "records": 6,
+      "restrictions": "emissions API HTTP 402 (paid plan); free unlock bridge gone. Adapters repo present at pin 79df37a51d8f26bf4903b04504980e647307c2fc."
+    },
+    "kraken": {
+      "evidence_ids": [
+        "EV-013",
+        "EV-014",
+        "EV-015"
+      ],
+      "http_statuses": [
+        "404"
+      ],
+      "records": 3,
+      "restrictions": "Kraken documentation URLs returned HTTP 404 (resources not found). This is an HTTP-layer failure, NOT a DNS failure (DNS resolution succeeded; the HTTP server responded 404). Bulk host data.kraken.com / download.kraken.com did not resolve (DNS) from this environment."
+    },
+    "okx": {
+      "evidence_ids": [
+        "EV-016",
+        "EV-017",
+        "EV-018",
+        "EV-019"
+      ],
+      "http_statuses": [
+        "000",
+        "200"
+      ],
+      "records": 4,
+      "restrictions": "bulk-data-download.okx.com DNS-unreachable"
+    },
+    "token_unlocks": {
+      "evidence_ids": [
+        "EV-041",
+        "EV-042",
+        "EV-043"
+      ],
+      "http_statuses": [
+        "000",
+        "200",
+        "404"
+      ],
+      "records": 3,
+      "restrictions": "Tokenomist TLS-unreachable (TLSV1_UNRECOGNIZED_NAME); Messari requires account. EV-041 missing on disk."
+    }
+  },
+  "tool": "manifest reconciliation + staged-file classification"
+}

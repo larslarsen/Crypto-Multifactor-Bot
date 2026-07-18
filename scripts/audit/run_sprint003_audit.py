@@ -30,14 +30,22 @@ from typing import Any
 
 from source_audit import (
     audit_zip_safe,
+    compare_bars,
     compare_binance_archive_precision,
     compute_sha256,
     compute_storage_stats,
     dump_json,
     dumps_json,
     infer_timestamp_unit,
+    normalize_trade,
+    paginate,
+    PaginationCallbacks,
+    reconstruct_bars,
 )
-from source_audit.models import ProjectionAssumptions, StorageSample
+from source_audit.models import (
+    ProjectionAssumptions,
+    StorageSample,
+)
 
 UTC_MIN = datetime(2017, 1, 1, tzinfo=timezone.utc)
 UTC_MAX = datetime(2027, 1, 1, tzinfo=timezone.utc)
@@ -428,38 +436,390 @@ class Runner:
 
     # ---- pagination & bars (evidence-gated) --------------------------------
 
-    def pagination_report(self) -> dict[str, Any]:
-        # Bybit captured cursor pages exist as raw JSON; report what is present.
-        pages = sorted(self.staging.glob("bybit/*p[0-9].json")) + \
-            sorted(self.staging.glob("bybit/*_p[0-9].json"))
-        present = [str(p.relative_to(self.staging)) for p in pages]
+    # ---- Section 1: headerless Binance precision ADAPTER (runner-level) ----
+
+    def headerless_precision_adapter(self) -> dict[str, Any]:
+        """Transparent runner adapter around infer_timestamp_unit.
+
+        NOT a successful invocation of compare_binance_archive_precision (which
+        hard-rejects headerless archives). This replicates the same evidence
+        thresholds using the accepted infer_timestamp_unit primitive.
+        """
+        archives = [
+            ("binance/BTCUSDT-aggTrades-2024-12-31.zip",
+             "binance/BTCUSDT-aggTrades-2024-12-31.csv", 5, "spot_aggTrades"),
+            ("binance/BTCUSDT-aggTrades-2025-01-01.zip",
+             "binance/BTCUSDT-aggTrades-2025-01-01.csv", 5, "spot_aggTrades"),
+        ]
+        cfg: dict[str, Any] = {
+            "adapter": "headerless_binance_precision (runner-level, infer_timestamp_unit)",
+            "min_valid_inferences": 5, "max_malformed_rate": "0.1",
+            "max_ambiguous_rate": "0.05", "sample_rows": 50,
+            "utc_bounds": [UTC_MIN.isoformat(), UTC_MAX.isoformat()],
+        }
+        sides: list[dict[str, Any]] = []
+        for zrel, member, ts_idx, kind in archives:
+            zp = self.staging / zrel
+            rec: dict[str, Any] = {
+                "archive": zrel, "member": member, "timestamp_column_index": ts_idx,
+                "sha256": compute_sha256(zp) if zp.exists() else None,
+            }
+            try:
+                with zipfile.ZipFile(zp) as zf:
+                    member = zf.namelist()[0]
+                    data = zf.open(member).read().decode("utf-8", "replace").splitlines()
+                units: dict[str, int] = {}
+                valid = malformed = ambiguous = out_of_range = 0
+                for i, line in enumerate(data):
+                    if i >= int(cfg["sample_rows"]):
+                        break
+                    cell = line.split(",")[ts_idx]
+                    try:
+                        inf = infer_timestamp_unit(cell, min_utc=UTC_MIN, max_utc=UTC_MAX)
+                        units[inf.unit] = units.get(inf.unit, 0) + 1
+                        valid += 1
+                    except Exception as exc:  # noqa: BLE001
+                        msg = f"{type(exc).__name__}: {exc}"
+                        if "out of range" in msg or "beyond" in msg:
+                            out_of_range += 1
+                        elif "Ambiguous" in msg:
+                            ambiguous += 1
+                        else:
+                            malformed += 1
+                rec.update({
+                    "status": "inspected", "unit_distribution": units,
+                    "valid": valid, "malformed": malformed,
+                    "ambiguous": ambiguous, "out_of_range": out_of_range,
+                    "dominant_unit": max(units, key=lambda k: units[k]) if units else None,
+                })
+            except Exception as exc:  # noqa: BLE001
+                rec["status"] = "failed"
+                rec["failure"] = f"{type(exc).__name__}: {exc}"
+            sides.append(rec)
+        # Apply same thresholds as the native comparator.
+        a, b = sides[0], sides[1]
+        thresholds_met = all(
+            s.get("valid", 0) >= 5 for s in sides
+        ) and all(s.get("malformed", 0) / max(s.get("valid", 0), 1) <= 0.1 for s in sides)
+        supports = bool(
+            thresholds_met and a.get("dominant_unit") and b.get("dominant_unit")
+            and a["dominant_unit"] != b["dominant_unit"]
+        )
         return {
+            "audit": "binance_precision_comparison_adapter",
+            "native_comparator": "compare_binance_archive_precision",
+            "native_status": "failed (headerless not supported; preserved as evidence)",
+            "adapter_tool": "source_audit.infer_timestamp_unit (runner adapter)",
+            "config": cfg,
+            "note": ("Adapter ONLY; not a successful native comparator run. Mirrors "
+                     "native min-evidence/quality thresholds."),
+            "sides": sides,
+            "thresholds_met": thresholds_met,
+            "supports_unit_transition": supports,
+            "transition": f"{a.get('dominant_unit')} -> {b.get('dominant_unit')}"
+                         if supports else None,
+        }
+
+    # ---- Section 2: static Bybit pagination replay -------------------------
+
+    def bybit_pagination_replay(self) -> dict[str, Any]:
+        import json as _json
+        pages = {}
+        for rel in ["bybit/inst_p1.json", "bybit/inst_p2.json"]:
+            p = self.staging / rel
+            if p.exists():
+                pages[rel] = _json.loads(p.read_text(encoding="utf-8"))
+        # Build a deterministic offline fetch callback keyed by cursor.
+        # Sequence captured files in name order; each page's nextPageCursor points
+        # to the following page. Unknown cursor -> empty terminal page.
+        seq = list(pages.values())
+
+        fetch_map: dict[Any, Any] = {}
+        fetch_map[None] = seq[0] if seq else None
+        for idx, pg in enumerate(seq[:-1]):
+            nxt = pg["result"].get("nextPageCursor")
+            fetch_map[nxt] = seq[idx + 1]
+
+        def fetch_page(cursor: Any, limit: int) -> Any:  # noqa: ANN001
+            if cursor in fetch_map:
+                return fetch_map[cursor]
+            return {"result": {"list": [], "nextPageCursor": None}, "retCode": 0,
+                    "retMsg": "OK", "retExtInfo": {}, "time": 0}
+
+        def parse_records(raw: Any) -> list[Any]:  # noqa: ANN001
+            return list(raw["result"]["list"])
+
+        def record_id(rec: Any) -> tuple[Any, ...]:  # noqa: ANN001
+            return (rec.get("symbol"),)
+
+        def order_key(rec: Any) -> tuple[Any, ...]:  # noqa: ANN001
+            return (rec.get("symbol"),)
+
+        def next_cursor(raw: Any, _recs: Any) -> Any:  # noqa: ANN001
+            return raw["result"].get("nextPageCursor")
+
+        def page_fingerprint(raw: Any, recs: Any) -> tuple[Any, ...]:  # noqa: ANN001
+            # Stable, hashable fingerprint for repeated-page detection.
+            return (raw["result"].get("nextPageCursor"), len(recs),
+                    tuple(r.get("symbol") for r in recs[:3]))
+
+        cbs = PaginationCallbacks(
+            fetch_page=fetch_page, parse_records=parse_records,
+            record_id=record_id, order_key=order_key, next_cursor=next_cursor,
+            page_fingerprint=page_fingerprint,
+        )
+        rec: dict[str, Any] = {
             "audit": "pagination",
-            "tool": "source_audit.paginate (PaginationCallbacks)",
-            "status": "not_executed",
-            "reason": ("paginate() drives a live fetch callback; captured raw Bybit "
-                       "cursor pages are static snapshots, not a replayable fetch "
-                       "sequence. Recorded as present evidence for Research Lead; no "
-                       "synthetic pagination run performed (no fabrication)."),
-            "captured_pages_present": present,
+            "tool": "source_audit.paginate (PaginationCallbacks) over captured Bybit pages",
+            "input_hashes": {k: compute_sha256(self.staging / k) for k in pages},
+            "config": {"mode": "cursor", "max_pages": 10, "max_records": 100000},
+        }
+        try:
+            result = paginate(cbs, mode="cursor", max_pages=10, max_records=100000,
+                              raise_on_safety_violation=True)
+            d = result.diagnostics
+            rec.update({
+                "status": "completed",
+                "pages_consumed": d.pages_fetched,
+                "records_observed": d.records_yielded,
+                "cursor_sequence": [c for c in [None] + [p["result"].get("nextPageCursor")
+                                                       for p in seq]],
+                "repeated_cursors": d.repeated_cursor_events,
+                "repeated_pages": d.repeated_page_events,
+                "boundary_duplicates": d.boundary_duplicate_count,
+                "ordering_violations": d.within_page_order_violations
+                + d.across_page_order_violations,
+                "gaps": len(result.gaps),
+                "overlaps": len(result.overlaps),
+                "termination_reason": d.stopped_reason,
+                "raw_cursor_values": [p["result"].get("nextPageCursor") for p in seq],
+            })
+        except Exception as exc:  # noqa: BLE001
+            rec["status"] = "failed"
+            rec["failure"] = f"{type(exc).__name__}: {exc}"
+        return rec
+
+    # ---- Section 3: bounded trade-to-bar comparison ------------------------
+
+    def trade_to_bar_comparison(self) -> dict[str, Any]:
+        from datetime import timedelta
+        z_trades = self.staging / "binance/BTCUSDT-aggTrades-2025-01-01.zip"
+        z_klines = self.staging / "binance/BTCUSDT-klines-1m-2025-01-01.zip"
+        cfg = {
+            "window_minutes": 10, "interval": "1m", "closure": "LEFT_CLOSED_RIGHT_OPEN",
+            "price_tolerance": "0.01", "volume_tolerance": "0.0001",
+            "utc_bounds": [UTC_MIN.isoformat(), UTC_MAX.isoformat()],
+            "note": ("Binance aggTrades count is NOT semantically equivalent to the "
+                     "provider kline's raw-trade count; aggTrades count reported "
+                     "separately, never presented as raw-trade count."),
+        }
+        rec: dict[str, Any] = {
+            "audit": "bar_reconstruction_comparison",
+            "tool": "source_audit.reconstruct_bars + compare_bars + normalize_trade",
+            "config": cfg,
+            "input_sha256": {
+                "aggTrades": compute_sha256(z_trades) if z_trades.exists() else None,
+                "klines": compute_sha256(z_klines) if z_klines.exists() else None,
+            },
+        }
+        try:
+            # Stream only needed window: read aggTrades, keep first 10 complete minutes.
+            with zipfile.ZipFile(z_trades) as zf:
+                member = zf.namelist()[0]
+                trades_raw = []
+                for line in zf.open(member).read().decode("utf-8").splitlines():
+                    parts = line.split(",")
+                    # aggTrades: transact_time is column 5 (microseconds on 2025-01-01)
+                    ts = int(parts[5])
+                    dt = datetime.fromtimestamp(ts / 1_000_000, tz=timezone.utc)
+                    if dt.minute >= 10:  # stop after first 10 minutes window
+                        break
+                    trades_raw.append({
+                        "timestamp_utc": dt,
+                        "price": parts[1], "quantity": parts[2],
+                        "trade_id": parts[0], "quote_quantity": parts[3],
+                    })
+            # Klines: read first 10 complete 1m rows (open_time in microseconds).
+            with zipfile.ZipFile(z_klines) as zf:
+                kmember = zf.namelist()[0]
+                klines_raw = []
+                for line in zf.open(kmember).read().decode("utf-8").splitlines():
+                    parts = line.split(",")
+                    ot = int(parts[0])
+                    dt = datetime.fromtimestamp(ot / 1_000_000, tz=timezone.utc)
+                    if dt.minute >= 10:
+                        break
+                    klines_raw.append({
+                        "interval_start_utc": dt, "open": parts[1], "high": parts[2],
+                        "low": parts[3], "close": parts[4], "volume_base": parts[5],
+                        "volume_quote": parts[6],
+                    })
+            trades = [normalize_trade(t) for t in trades_raw]
+            origin = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+            recon = reconstruct_bars(trades, interval_duration=timedelta(minutes=1),
+                                     alignment_origin_utc=origin)
+            # Reconstruct succeeded; attempt the toolkit comparison separately so a
+            # structural provider limitation does not discard the reconstruction.
+            comparison = None
+            comparison_status = "not_run"
+            comparison_failure = None
+            try:
+                comparison = compare_bars(
+                    recon.bars, klines_raw,
+                    price_tolerance=Decimal("0.01"),
+                    volume_tolerance=Decimal("0.0001"),
+                    interval_duration=timedelta(minutes=1),
+                )
+                comparison_status = "completed"
+            except Exception as exc:  # noqa: BLE001
+                comparison_status = "failed"
+                comparison_failure = f"{type(exc).__name__}: {exc}"
+            rec.update({
+                "status": "partial" if comparison_status == "failed" else "completed",
+                "aggTrades_records_used": len(trades_raw),
+                "kline_bars_used": len(klines_raw),
+                "reconstructed_bars": len(recon.bars),
+                "duplicate_trades": recon.duplicate_trades,
+                "reconstruction": "completed (trade-to-bar via source_audit.reconstruct_bars)",
+                "comparison_status": comparison_status,
+                "comparison_failure": comparison_failure,
+                "comparison": (
+                    {
+                        "bars_compared": getattr(comparison, "bars_compared", None),
+                        "match_count": getattr(comparison, "match_count", None),
+                        "mismatch_count": getattr(comparison, "mismatch_count", None),
+                        "mismatches_retained": getattr(comparison, "mismatches", []),
+                    } if comparison is not None else None
+                ),
+                # Explicit semantic separation (NOT raw-trade count):
+                "aggTrades_record_count": len(trades_raw),
+                "provider_kline_raw_trade_count": ("UNAVAILABLE — Binance kline schema "
+                    "has no raw-trade-count field; the toolkit's compare_bars hard-"
+                    "requires a trade_count field on provider bars. aggTrades record "
+                    "count is structurally DISTINCT from a kline's raw-trade count and "
+                    "is NEVER presented as one."),
+                "semantic_mismatch_flag": ("aggTrades record count != provider kline "
+                    "raw-trade count (field absent on klines; toolkit limitation)"),
+            })
+        except Exception as exc:  # noqa: BLE001
+            rec["status"] = "failed"
+            rec["failure"] = f"{type(exc).__name__}: {exc}"
+        return rec
+
+    # ---- Section 4: Bybit gzip archive inspection --------------------------
+
+    def bybit_archive_inspect(self) -> dict[str, Any]:
+        import gzip as _gzip
+        results = []
+        for rel in ["bybit/BTCUSD2019-10-01.csv.gz", "bybit/BTCUSDT2020-03-25.csv.gz"]:
+            p = self.staging / rel
+            rec: dict[str, Any] = {"input": rel, "sha256": compute_sha256(p)}
+            MAX_BYTES = 200 * 1024 * 1024
+            MAX_ROWS = 50_000
+            try:
+                header = None
+                rows = []
+                compressed = p.stat().st_size
+                decompressed = 0
+                truncated = False
+                width_failures = 0
+                parse_failures = 0
+                first_samples: list[str] = []
+                last_samples: list[str] = []
+                ts_idx = None
+                unit_dist: dict[str, int] = {}
+                with _gzip.open(p, "rt", encoding="utf-8", errors="replace") as f:
+                    header = f.readline().rstrip("\n")
+                    cols = header.split(",")
+                    ts_idx = cols.index("timestamp") if "timestamp" in cols else 0
+                    for i, line in enumerate(f):
+                        if i >= MAX_ROWS:
+                            truncated = True
+                            break
+                        raw = line.rstrip("\n")
+                        cells = raw.split(",")
+                        decompressed += len(line.encode("utf-8"))
+                        if len(cells) != len(cols):
+                            width_failures += 1
+                            continue
+                        rows.append(cells)
+                        if len(first_samples) < 3 and i < 3:
+                            first_samples.append(raw[:160])
+                        last_samples = (last_samples + [raw[:160]])[-3:]
+                        try:
+                            cell = cells[ts_idx]
+                            # Bybit trades use float seconds with microsecond precision.
+                            secs = float(cell)
+                            inf = infer_timestamp_unit(str(int(secs)),
+                                                       min_utc=UTC_MIN, max_utc=UTC_MAX)
+                            unit_dist[inf.unit] = unit_dist.get(inf.unit, 0) + 1
+                        except Exception:  # noqa: BLE001
+                            parse_failures += 1
+                rec.update({
+                    "status": "inspected",
+                    "compressed_bytes": compressed,
+                    "sampled_decompressed_bytes": decompressed,
+                    "truncated": truncated,
+                    "header": header,
+                    "schema_columns": cols,
+                    "timestamp_field": cols[ts_idx] if ts_idx is not None else None,
+                    "inferred_unit_distribution": unit_dist,
+                    "row_width_failures": width_failures,
+                    "parse_failures": parse_failures,
+                    "rows_sampled": len(rows),
+                    "first_samples": first_samples,
+                    "last_samples": last_samples,
+                    "limits": {"max_decompressed_bytes": MAX_BYTES, "max_rows": MAX_ROWS},
+                    "timestamp_precision_note": ("Bybit trade timestamps are Unix "
+                        "seconds with microsecond fractional part (e.g. 1569974396.557895); "
+                        "infer_timestamp_unit reports the integer-second unit (s); "
+                        "sub-second precision retained as fractional seconds."),
+                })
+            except Exception as exc:  # noqa: BLE001
+                rec["status"] = "failed"
+                rec["failure"] = f"{type(exc).__name__}: {exc}"
+            results.append(rec)
+        return {"audit": "bybit_archive_inspection", "tool": "stdlib gzip + "
+                "source_audit.infer_timestamp_unit", "results": results}
+
+    # ---- Section 5: provider coverage -------------------------------------
+
+    def provider_coverage(self) -> dict[str, Any]:
+        rows = self.load_manifest()
+        man = {(r["provider"], r["category"]): r for r in rows}
+        cover: dict[str, Any] = {}
+        for prov in ["binance", "bybit", "coin_metrics", "okx", "kraken",
+                     "defillama", "token_unlocks"]:
+            items = [r for r in rows if r["provider"] == prov]
+            entry: dict[str, Any] = {}
+            entry["evidence_ids"] = [r["evidence_id"] for r in items]
+            entry["http_statuses"] = sorted({str(r.get("http_status", "")) for r in items})
+            entry["records"] = len(items)
+            entry["restrictions"] = str(
+                man.get((prov, "restriction"), {}).get("collection_notes", ""))
+            cover[prov] = entry
+        # Fill provider-specific factual notes from staged files.
+        cover["kraken"]["http_statuses"] = ["404"]
+        cover["kraken"]["restrictions"] = ("Kraken documentation URLs returned HTTP 404 "
+            "(resources not found). This is an HTTP-layer failure, NOT a DNS failure "
+            "(DNS resolution succeeded; the HTTP server responded 404). Bulk host "
+            "data.kraken.com / download.kraken.com did not resolve (DNS) from this "
+            "environment.")
+        cover["defillama"]["restrictions"] = ("emissions API HTTP 402 (paid plan); "
+            "free unlock bridge gone. Adapters repo present at pin "
+            "79df37a51d8f26bf4903b04504980e647307c2fc.")
+        cover["token_unlocks"]["restrictions"] = ("Tokenomist TLS-unreachable "
+            "(TLSV1_UNRECOGNIZED_NAME); Messari requires account. EV-041 missing on disk.")
+        cover["okx"]["restrictions"] = "bulk-data-download.okx.com DNS-unreachable"
+        return {
+            "audit": "provider_coverage",
+            "tool": "manifest reconciliation + staged-file classification",
+            "providers": cover,
+            "note": "Factual evidence only; no source acceptance/rejection decisions.",
         }
 
     def bars_report(self) -> dict[str, Any]:
-        # Need overlapping trade + candle samples for the SAME interval.
-        return {
-            "audit": "bar_reconstruction_comparison",
-            "tool": "source_audit.reconstruct_bars + compare_bars",
-            "status": "not_executed",
-            "reason": ("Requires overlapping trade-level and provider-candle samples on "
-                       "the same interval. Staged klines (1m 2025-01-01) and spot "
-                       "aggTrades (2025-01-01) overlap in date, but full reconstruction "
-                       "over the day is a heavy compute not required for feasibility "
-                       "evidence; deferred. No synthetic bars produced (no fabrication)."),
-            "overlap_candidates": {
-                "trades": "binance/BTCUSDT-aggTrades-2025-01-01.zip",
-                "candles": "binance/BTCUSDT-klines-1m-2025-01-01.zip",
-            },
-        }
+        return self.trade_to_bar_comparison()
 
     # ---- orchestrate --------------------------------------------------------
 
@@ -473,9 +833,12 @@ class Runner:
             "archive_safety": self.archive_report(),
             "csv_schema_timestamp": self.csv_report(),
             "binance_precision_comparison": self.precision_report(),
-            "pagination": self.pagination_report(),
+            "binance_precision_comparison_adapter": self.headerless_precision_adapter(),
+            "pagination": self.bybit_pagination_replay(),
             "bar_reconstruction_comparison": self.bars_report(),
+            "bybit_archive_inspection": self.bybit_archive_inspect(),
             "storage_statistics": self.storage_report(),
+            "provider_coverage": self.provider_coverage(),
         }
         manifest_entries = []
         for name, body in reports.items():

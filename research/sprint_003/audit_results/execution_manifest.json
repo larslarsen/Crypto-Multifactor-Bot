@@ -47,18 +47,32 @@
       "tool": "source_audit.compare_binance_archive_precision"
     },
     {
+      "output_file": "binance_precision_comparison_adapter.json",
+      "output_sha256": "1e587dd8f72b4a270d5c8d0b62d057ba6d39ffeb467c075698458915112d5481",
+      "report": "binance_precision_comparison_adapter",
+      "status": "produced",
+      "tool": ""
+    },
+    {
       "output_file": "pagination.json",
-      "output_sha256": "65d96716d8058feb1abe88753b0c4677c420f2a3b1e532df6cfdad94d8cd722f",
+      "output_sha256": "419e8d91ea8d03f83c16a7a1d0f73bfd1408ed82e7c7f9a9c972b00f1037fb35",
       "report": "pagination",
-      "status": "not_executed",
-      "tool": "source_audit.paginate (PaginationCallbacks)"
+      "status": "completed",
+      "tool": "source_audit.paginate (PaginationCallbacks) over captured Bybit pages"
     },
     {
       "output_file": "bar_reconstruction_comparison.json",
-      "output_sha256": "7eca40256415b40c8a1b8b970bf0565d983323163d349ad388c45e77988ffe43",
+      "output_sha256": "2b47e03d74e3ad44bf00452d32d8cdcf7df88119b6a8db91e64b0791701bc68c",
       "report": "bar_reconstruction_comparison",
-      "status": "not_executed",
-      "tool": "source_audit.reconstruct_bars + compare_bars"
+      "status": "partial",
+      "tool": "source_audit.reconstruct_bars + compare_bars + normalize_trade"
+    },
+    {
+      "output_file": "bybit_archive_inspection.json",
+      "output_sha256": "5cdaf7634f75a923f3ae67a624401cf6d345f2cca68e058b2223f7763287ea61",
+      "report": "bybit_archive_inspection",
+      "status": "produced",
+      "tool": "stdlib gzip + source_audit.infer_timestamp_unit"
     },
     {
       "output_file": "storage_statistics.json",
@@ -66,6 +80,13 @@
       "report": "storage_statistics",
       "status": "completed",
       "tool": "source_audit.compute_storage_stats"
+    },
+    {
+      "output_file": "provider_coverage.json",
+      "output_sha256": "40c3f04e4ff560a71a8de5bd3fe2d911d8c70160c2a654720950211f1af3bbf4",
+      "report": "provider_coverage",
+      "status": "produced",
+      "tool": "manifest reconciliation + staged-file classification"
     }
   ],
   "staging_area": "/tmp/crypto_source_audit (external, not committed)",

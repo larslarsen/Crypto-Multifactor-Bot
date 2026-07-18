@@ -1,10 +1,32 @@
 {
+  "aggTrades_record_count": 5437,
+  "aggTrades_records_used": 5437,
   "audit": "bar_reconstruction_comparison",
-  "overlap_candidates": {
-    "candles": "binance/BTCUSDT-klines-1m-2025-01-01.zip",
-    "trades": "binance/BTCUSDT-aggTrades-2025-01-01.zip"
+  "comparison": null,
+  "comparison_failure": "BarReconstructionError: Provider bar missing trade_count field | context={'trade_count_key': 'trade_count'}",
+  "comparison_status": "failed",
+  "config": {
+    "closure": "LEFT_CLOSED_RIGHT_OPEN",
+    "interval": "1m",
+    "note": "Binance aggTrades count is NOT semantically equivalent to the provider kline's raw-trade count; aggTrades count reported separately, never presented as raw-trade count.",
+    "price_tolerance": "0.01",
+    "utc_bounds": [
+      "2017-01-01T00:00:00+00:00",
+      "2027-01-01T00:00:00+00:00"
+    ],
+    "volume_tolerance": "0.0001",
+    "window_minutes": 10
   },
-  "reason": "Requires overlapping trade-level and provider-candle samples on the same interval. Staged klines (1m 2025-01-01) and spot aggTrades (2025-01-01) overlap in date, but full reconstruction over the day is a heavy compute not required for feasibility evidence; deferred. No synthetic bars produced (no fabrication).",
-  "status": "not_executed",
-  "tool": "source_audit.reconstruct_bars + compare_bars"
+  "duplicate_trades": [],
+  "input_sha256": {
+    "aggTrades": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
+    "klines": "10a12909f1b0e3fcc6b7f502e5ea9be5d1ba3455dd8ab16cc61c8650640ba7c0"
+  },
+  "kline_bars_used": 10,
+  "provider_kline_raw_trade_count": "UNAVAILABLE — Binance kline schema has no raw-trade-count field; the toolkit's compare_bars hard-requires a trade_count field on provider bars. aggTrades record count is structurally DISTINCT from a kline's raw-trade count and is NEVER presented as one.",
+  "reconstructed_bars": 10,
+  "reconstruction": "completed (trade-to-bar via source_audit.reconstruct_bars)",
+  "semantic_mismatch_flag": "aggTrades record count != provider kline raw-trade count (field absent on klines; toolkit limitation)",
+  "status": "partial",
+  "tool": "source_audit.reconstruct_bars + compare_bars + normalize_trade"
 }

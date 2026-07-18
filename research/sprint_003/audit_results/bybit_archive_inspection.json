@@ -1,0 +1,92 @@
+{
+  "audit": "bybit_archive_inspection",
+  "results": [
+    {
+      "compressed_bytes": 4009459,
+      "first_samples": [
+        "1569974396.557895,BTCUSD,Buy,11668,8319.5,PlusTick,656acfd0-8b65-5070-a2f1-b5b55f8402a1,140248813.0,11668,1.40248813",
+        "1569974394.78865,BTCUSD,Sell,5000,8319.0,ZeroMinusTick,49ad8687-eaa2-575f-a357-c243216868f0,60103377.0,5000,0.60103377",
+        "1569974392.355395,BTCUSD,Sell,564,8319.0,ZeroMinusTick,adfe46e0-9177-5f3a-8d32-195ec0c38888,6779660.999999999,564,0.06779661"
+      ],
+      "header": "timestamp,symbol,side,size,price,tickDirection,trdMatchID,grossValue,homeNotional,foreignNotional",
+      "inferred_unit_distribution": {
+        "s": 50000
+      },
+      "input": "bybit/BTCUSD2019-10-01.csv.gz",
+      "last_samples": [
+        "1569932437.054196,BTCUSD,Sell,29565,8435.5,MinusTick,5b8fe2e9-2fe7-5c3a-bd95-7a9c22db1645,350483077.0,29565,3.50483077",
+        "1569932436.909384,BTCUSD,Buy,44000,8436.0,PlusTick,65026b5f-4987-5642-b52c-f2849bb5d41b,521574205.0,44000,5.21574205",
+        "1569932436.333352,BTCUSD,Sell,14996,8435.5,MinusTick,f097a417-a749-5f50-9578-bc2fa43f40dd,177772509.0,14996,1.77772509"
+      ],
+      "limits": {
+        "max_decompressed_bytes": 209715200,
+        "max_rows": 50000
+      },
+      "parse_failures": 0,
+      "row_width_failures": 0,
+      "rows_sampled": 50000,
+      "sampled_decompressed_bytes": 5839347,
+      "schema_columns": [
+        "timestamp",
+        "symbol",
+        "side",
+        "size",
+        "price",
+        "tickDirection",
+        "trdMatchID",
+        "grossValue",
+        "homeNotional",
+        "foreignNotional"
+      ],
+      "sha256": "61bb5a9f9f5378f4732b3f895dd6cecc87c243321c1ca192dfd567446684831c",
+      "status": "inspected",
+      "timestamp_field": "timestamp",
+      "timestamp_precision_note": "Bybit trade timestamps are Unix seconds with microsecond fractional part (e.g. 1569974396.557895); infer_timestamp_unit reports the integer-second unit (s); sub-second precision retained as fractional seconds.",
+      "truncated": true
+    },
+    {
+      "compressed_bytes": 121118,
+      "first_samples": [
+        "1585180700.0647,BTCUSDT,Buy,0.042,6698.5,PlusTick,08ff9568-cb50-55d6-b497-13727eec09dc,28133700000.0,0.042,281.337",
+        "1585180700.02,BTCUSDT,Buy,0.072,6698.0,PlusTick,d9f5154a-d1e7-5ba2-9953-b41d5e74ea68,48225600000.0,0.072,482.256",
+        "1585180575.8594,BTCUSDT,Sell,0.009,6682.0,PlusTick,09dbd416-1ea7-5033-ac1d-11604b0c9bc8,6013800000.0,0.009,60.138"
+      ],
+      "header": "timestamp,symbol,side,size,price,tickDirection,trdMatchID,grossValue,homeNotional,foreignNotional",
+      "inferred_unit_distribution": {
+        "s": 2693
+      },
+      "input": "bybit/BTCUSDT2020-03-25.csv.gz",
+      "last_samples": [
+        "1585133594.5251,BTCUSDT,Buy,0.001,6588.0,PlusTick,044e666f-3ac6-506d-996a-409169e0052c,658800000.0,0.001,6.588",
+        "1585133056.4767,BTCUSDT,Buy,0.001,6500.0,ZeroMinusTick,63d57c0c-2600-5bad-9e99-3a615eb28c26,650000000.0,0.001,6.5",
+        "1585132572.9822,BTCUSDT,Sell,0.001,6500.0,MinusTick,1876995b-1ff2-53fa-903d-b1e22e987196,650000000.0,0.001,6.5"
+      ],
+      "limits": {
+        "max_decompressed_bytes": 209715200,
+        "max_rows": 50000
+      },
+      "parse_failures": 0,
+      "row_width_failures": 0,
+      "rows_sampled": 2693,
+      "sampled_decompressed_bytes": 319105,
+      "schema_columns": [
+        "timestamp",
+        "symbol",
+        "side",
+        "size",
+        "price",
+        "tickDirection",
+        "trdMatchID",
+        "grossValue",
+        "homeNotional",
+        "foreignNotional"
+      ],
+      "sha256": "cbca6933a8f0a11429661cfa93b04056055d776ee199209e8af9719ad2060a33",
+      "status": "inspected",
+      "timestamp_field": "timestamp",
+      "timestamp_precision_note": "Bybit trade timestamps are Unix seconds with microsecond fractional part (e.g. 1569974396.557895); infer_timestamp_unit reports the integer-second unit (s); sub-second precision retained as fractional seconds.",
+      "truncated": false
+    }
+  ],
+  "tool": "stdlib gzip + source_audit.infer_timestamp_unit"
+}

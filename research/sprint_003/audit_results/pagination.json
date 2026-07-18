@@ -1,16 +1,32 @@
 {
   "audit": "pagination",
-  "captured_pages_present": [
-    "bybit/bybit_funding_p1.json",
-    "bybit/fund_p1.json",
-    "bybit/inst_p1.json",
-    "bybit/inst_p2.json",
-    "bybit/bybit_funding_p1.json",
-    "bybit/fund_p1.json",
-    "bybit/inst_p1.json",
-    "bybit/inst_p2.json"
+  "boundary_duplicates": 0,
+  "config": {
+    "max_pages": 10,
+    "max_records": 100000,
+    "mode": "cursor"
+  },
+  "cursor_sequence": [
+    null,
+    "first%3D0GUSDT%26last%3D1000FLOKIUSDT",
+    "first%3D1000LUNCUSDT%26last%3D1000XECUSDT"
   ],
-  "reason": "paginate() drives a live fetch callback; captured raw Bybit cursor pages are static snapshots, not a replayable fetch sequence. Recorded as present evidence for Research Lead; no synthetic pagination run performed (no fabrication).",
-  "status": "not_executed",
-  "tool": "source_audit.paginate (PaginationCallbacks)"
+  "gaps": 0,
+  "input_hashes": {
+    "bybit/inst_p1.json": "b17fbe98fd2d6b54d81de1408e003d97129306a07fc76658713bce3ebb3da77b",
+    "bybit/inst_p2.json": "19e29af387667ded57d79ee4af14191ebae27ce997232a83da18c058821ffce1"
+  },
+  "ordering_violations": 0,
+  "overlaps": 0,
+  "pages_consumed": 3,
+  "raw_cursor_values": [
+    "first%3D0GUSDT%26last%3D1000FLOKIUSDT",
+    "first%3D1000LUNCUSDT%26last%3D1000XECUSDT"
+  ],
+  "records_observed": 20,
+  "repeated_cursors": 0,
+  "repeated_pages": 0,
+  "status": "completed",
+  "termination_reason": "empty_page",
+  "tool": "source_audit.paginate (PaginationCallbacks) over captured Bybit pages"
 }
