@@ -1,0 +1,12 @@
+{
+  "evidence_id": "EV-YYYYMMDD-XXXX",
+  "kind": "EXPERIMENT_RESULT",
+  "title": "",
+  "summary": "",
+  "source_ref": "experiment fingerprint, DOI, commit, or document ID",
+  "artifact_uri": null,
+  "observed_at": null,
+  "registered_at": "",
+  "content_sha256": "",
+  "metadata": {}
+}

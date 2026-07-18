@@ -1,0 +1,12 @@
+{
+  "decision_id": "HD-YYYYMMDD-XXXX",
+  "hypothesis_id": "H-XXX",
+  "hypothesis_version": 1,
+  "action": "SET_VERDICT",
+  "lifecycle": "ACTIVE",
+  "verdict": "INCONCLUSIVE",
+  "evidence_snapshot_id": "ES-YYYYMMDD-XXXX",
+  "reason": "",
+  "actor": "",
+  "event_at": ""
+}

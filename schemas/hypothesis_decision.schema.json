@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cryptofactors.local/schemas/hypothesis_decision.schema.json",
+  "title": "HypothesisDecisionEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision_id",
+    "hypothesis_id",
+    "hypothesis_version",
+    "action",
+    "lifecycle",
+    "verdict",
+    "evidence_snapshot_id",
+    "reason",
+    "actor",
+    "event_at"
+  ],
+  "properties": {
+    "decision_id": {
+      "type": "string"
+    },
+    "hypothesis_id": {
+      "type": "string",
+      "pattern": "^H-[0-9]{3,}$"
+    },
+    "hypothesis_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "action": {
+      "enum": [
+        "REGISTER",
+        "SET_VERDICT",
+        "DEFER",
+        "REOPEN",
+        "CLOSE",
+        "CORRECT"
+      ]
+    },
+    "lifecycle": {
+      "enum": [
+        "DRAFT",
+        "REGISTERED",
+        "ACTIVE",
+        "DEFERRED",
+        "CLOSED"
+      ]
+    },
+    "verdict": {
+      "enum": [
+        "UNTESTED",
+        "PRELIMINARY",
+        "SUPPORTED",
+        "REPLICATED",
+        "NOT_REPLICATED",
+        "REJECTED",
+        "INCONCLUSIVE",
+        "QUARANTINED"
+      ]
+    },
+    "evidence_snapshot_id": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 3
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

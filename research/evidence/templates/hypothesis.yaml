@@ -1,0 +1,18 @@
+{
+  "hypothesis_id": "H-XXX",
+  "version": 1,
+  "slug": "lowercase-kebab-case",
+  "title": "",
+  "statement": "A falsifiable statement.",
+  "mechanism": "Economic or behavioral mechanism.",
+  "expected_sign": "CONDITIONAL",
+  "lifecycle": "DRAFT",
+  "verdict": "UNTESTED",
+  "phase": "",
+  "primary_metric": "",
+  "advancement_rule": "",
+  "rejection_rule": "",
+  "known_confounders": [],
+  "required_dataset_types": [],
+  "preregistered_at": null
+}

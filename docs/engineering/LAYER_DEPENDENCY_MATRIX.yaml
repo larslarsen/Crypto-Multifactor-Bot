@@ -1,0 +1,48 @@
+version: 1
+layers:
+  core:
+    may_import: []
+  catalog:
+    may_import: [core]
+  ingest:
+    may_import: [core, catalog]
+  reference:
+    may_import: [core, catalog]
+  quality:
+    may_import: [core, catalog, reference]
+  market:
+    may_import: [core, catalog, reference, quality]
+  universe:
+    may_import: [core, catalog, reference, market]
+  factors:
+    may_import: [core, catalog, reference, market, universe]
+  labels:
+    may_import: [core, catalog, reference, market, universe]
+  validation:
+    may_import: [core, labels]
+  portfolio:
+    may_import: [core, market, universe, factors, labels]
+  evidence:
+    may_import: [core, catalog]
+  experiments:
+    may_import: [core, catalog, reference, market, universe, factors, labels, validation, portfolio, evidence]
+  serving:
+    may_import: [core, catalog, reference, market, universe, factors, portfolio]
+  execution:
+    may_import: [core, catalog, reference, market, portfolio, serving]
+network_allowed:
+  ingest: true
+  execution: true
+  core: false
+  catalog: false
+  reference: false
+  quality: false
+  market: false
+  universe: false
+  factors: false
+  labels: false
+  validation: false
+  portfolio: false
+  evidence: false
+  experiments: false
+  serving: false

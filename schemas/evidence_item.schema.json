@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cryptofactors.local/schemas/evidence_item.schema.json",
+  "title": "EvidenceItem",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "kind",
+    "title",
+    "summary",
+    "source_ref",
+    "registered_at",
+    "content_sha256",
+    "metadata"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^EV-[A-Z0-9-]+$"
+    },
+    "kind": {
+      "enum": [
+        "LITERATURE_PUBLISHED",
+        "LITERATURE_WORKING",
+        "LEGACY_RESULT",
+        "EXPERIMENT_RESULT",
+        "DATA_AUDIT",
+        "THEORY",
+        "OPERATIONAL_OBSERVATION"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 3
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_uri": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "observed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cryptofactors.local/schemas/hypothesis_evidence_link.schema.json",
+  "title": "HypothesisEvidenceLink",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "hypothesis_id",
+    "hypothesis_version",
+    "evidence_id",
+    "direction",
+    "relevance",
+    "rationale",
+    "integrity",
+    "registered_at",
+    "registered_by"
+  ],
+  "properties": {
+    "hypothesis_id": {
+      "type": "string",
+      "pattern": "^H-[0-9]{3,}$"
+    },
+    "hypothesis_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "evidence_id": {
+      "type": "string"
+    },
+    "direction": {
+      "enum": [
+        "SUPPORTS",
+        "CONTRADICTS",
+        "QUALIFIES",
+        "NEUTRAL"
+      ]
+    },
+    "relevance": {
+      "enum": [
+        "PRIMARY",
+        "SECONDARY",
+        "CONTEXT"
+      ]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 3
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "point_in_time",
+        "causal_split",
+        "reproduction",
+        "costs",
+        "universe",
+        "independence"
+      ],
+      "properties": {
+        "point_in_time": {
+          "enum": [
+            "UNKNOWN",
+            "FAIL",
+            "PARTIAL",
+            "PASS",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "causal_split": {
+          "enum": [
+            "UNKNOWN",
+            "FAIL",
+            "PARTIAL",
+            "PASS",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "reproduction": {
+          "enum": [
+            "NONE",
+            "PARTIAL",
+            "FULL"
+          ]
+        },
+        "costs": {
+          "enum": [
+            "UNKNOWN",
+            "FAIL",
+            "PARTIAL",
+            "PASS",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "universe": {
+          "enum": [
+            "UNKNOWN",
+            "FAIL",
+            "PARTIAL",
+            "PASS",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "independence": {
+          "enum": [
+            "SAME_PIPELINE",
+            "INTERNAL_INDEPENDENT",
+            "EXTERNAL",
+            "NOT_APPLICABLE"
+          ]
+        }
+      }
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "registered_by": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
