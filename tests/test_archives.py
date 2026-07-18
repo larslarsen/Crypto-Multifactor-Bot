@@ -1,10 +1,9 @@
 """Focused tests for archive inspection."""
 
-from pathlib import Path
 from source_audit.archives import audit_zip_safe
 from source_audit.errors import UnsafeArchiveError
-import tempfile
 import zipfile
+import pytest
 
 
 def test_unsafe_path_detection(tmp_path):
@@ -12,5 +11,5 @@ def test_unsafe_path_detection(tmp_path):
     with zipfile.ZipFile(zpath, "w") as z:
         z.writestr("../evil.txt", "bad")
 
-    result = audit_zip_safe(zpath)
-    assert any(m.is_unsafe for m in result.members)
+    with pytest.raises(UnsafeArchiveError):
+        audit_zip_safe(zpath)  # Should raise on unsafe path

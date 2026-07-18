@@ -12,14 +12,14 @@ from .models import ZipAuditResult, ZipMemberInfo, CSVAuditResult
 
 
 def _is_unsafe_path(name: str) -> bool:
-    normalized = name.replace("\\", "/")
-    if ".." in normalized.split("/"):
+    """Component-based validation (prices..backup.csv is valid)."""
+    normalized = name.replace("\\", "/").strip()
+    parts = [p for p in normalized.split("/") if p]
+    if any(p in ("..", ".", "") for p in parts):
         return True
-    if normalized.startswith(("/", "\\")):
+    if normalized.startswith(("/", "\\", "//")):
         return True
     if len(normalized) > 1 and normalized[1] == ":":
-        return True
-    if normalized.startswith("//"):
         return True
     return False
 
@@ -27,36 +27,35 @@ def _is_unsafe_path(name: str) -> bool:
 def audit_zip_safe(
     zip_path: Path,
     max_members: int = 1000,
-    max_compressed: int = 500 * 1024 * 1024,
-    max_extracted: int = 2 * 1024 * 1024 * 1024,
+    max_compressed_per_member: int = 100 * 1024 * 1024,
+    max_total_compressed: int = 500 * 1024 * 1024,
+    max_extracted_per_member: int = 500 * 1024 * 1024,
+    max_total_extracted: int = 2 * 1024 * 1024 * 1024,
     max_ratio: float = 100.0,
 ) -> ZipAuditResult:
     if not zip_path.exists():
         raise FileNotFoundError(zip_path)
 
     members: List[ZipMemberInfo] = []
-    unsafe_paths: List[str] = []
     seen: Set[str] = set()
     total_comp = 0
-    total_extracted = 0
+    total_ex = 0
 
     with zipfile.ZipFile(zip_path) as z:
-        if len(z.namelist()) > max_members:
-            raise UnsafeArchiveError("Too many members")
+        namelist = z.namelist()
+        if len(namelist) > max_members:
+            raise UnsafeArchiveError(f"Too many members: {len(namelist)} > {max_members}")
 
-        for name in z.namelist():
+        for name in namelist:
             if name in seen:
-                raise UnsafeArchiveError(f"Duplicate name: {name}")
+                raise UnsafeArchiveError(f"Duplicate member: {name}")
             seen.add(name)
 
             info = z.getinfo(name)
 
             if _is_unsafe_path(name):
-                unsafe_paths.append(name)
-                members.append(ZipMemberInfo(name, info.compress_size, info.file_size, True))
-                continue
+                raise UnsafeArchiveError(f"Unsafe path: {name}")
 
-            # Symlink / special file detection
             mode = info.external_attr >> 16
             if mode and (mode & 0o170000) == 0o120000:
                 raise UnsafeArchiveError(f"Symlink: {name}")
@@ -64,21 +63,27 @@ def audit_zip_safe(
                 raise UnsafeArchiveError(f"Special file: {name}")
 
             if info.flag_bits & 0x1:
-                raise UnsafeArchiveError(f"Encrypted: {name}")
+                raise UnsafeArchiveError(f"Encrypted member: {name}")
 
-            members.append(ZipMemberInfo(name, info.compress_size, info.file_size, False))
+            if info.compress_size > max_compressed_per_member:
+                raise UnsafeArchiveError(f"Compressed size exceed per member: {name}")
+            if info.file_size > max_extracted_per_member:
+                raise UnsafeArchiveError(f"Extracted size exceed per member: {name}")
+
+            ratio = info.file_size / info.compress_size if info.compress_size > 0 else 1.0
+            if ratio > max_ratio:
+                raise UnsafeArchiveError(f"Compression ratio violation: {name} ({ratio:.1f})")
+
+            members.append(ZipMemberInfo(name, info.compress_size, info.file_size))
             total_comp += info.compress_size
-            total_extracted += info.file_size
+            total_ex += info.file_size
 
-            if info.compress_size > 0 and info.file_size / info.compress_size > max_ratio:
-                raise UnsafeArchiveError(f"Bad ratio: {name}")
+        if total_comp > max_total_compressed:
+            raise UnsafeArchiveError("Total compressed size limit exceeded")
+        if total_ex > max_total_extracted:
+            raise UnsafeArchiveError("Total extracted size limit exceeded")
 
-        if total_comp > max_compressed:
-            raise UnsafeArchiveError("Compressed size limit")
-        if total_extracted > max_extracted:
-            raise UnsafeArchiveError("Extracted size limit")
-
-    return ZipAuditResult(members, len(members), total_comp, total_extracted, unsafe_paths)
+    return ZipAuditResult(members, len(members), total_comp, total_ex, [])
 
 
 def audit_csv_safe(
