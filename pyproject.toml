@@ -27,7 +27,7 @@ dev = ["hypothesis", "mypy", "pytest", "ruff"]
 cf = "cryptofactors.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cryptofactors"]
+packages = ["src/cryptofactors", "src/source_audit"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -239,3 +239,70 @@ def test_left_open_right_closed_closure() -> None:
     )
     assert len(result.bars) == 1
     assert result.bars[0].interval_start_utc == ORIGIN
+
+
+def test_direct_trade_rejects_non_positive_price() -> None:
+    with pytest.raises(InvalidNumericError, match="price"):
+        reconstruct_bars(
+            [
+                Trade(
+                    timestamp_utc=ORIGIN,
+                    price=Decimal("0"),
+                    quantity=Decimal("1"),
+                    trade_id="z",
+                )
+            ],
+            interval_duration=timedelta(minutes=1),
+            alignment_origin_utc=ORIGIN,
+        )
+
+
+def test_direct_trade_rejects_non_positive_quantity() -> None:
+    with pytest.raises(InvalidNumericError, match="quantity"):
+        reconstruct_bars(
+            [
+                Trade(
+                    timestamp_utc=ORIGIN,
+                    price=Decimal("1"),
+                    quantity=Decimal("0"),
+                    trade_id="z",
+                )
+            ],
+            interval_duration=timedelta(minutes=1),
+            alignment_origin_utc=ORIGIN,
+        )
+
+
+def test_duplicate_reconstructed_intervals_reported_not_overwritten() -> None:
+    interval = timedelta(minutes=1)
+    bar = OHLCVBar(
+        interval_start_utc=ORIGIN,
+        interval_end_utc=ORIGIN + interval,
+        open=Decimal("1"),
+        high=Decimal("1"),
+        low=Decimal("1"),
+        close=Decimal("1"),
+        volume_base=Decimal("1"),
+        volume_quote=Decimal("1"),
+        trade_count=1,
+    )
+    other = OHLCVBar(
+        interval_start_utc=ORIGIN,
+        interval_end_utc=ORIGIN + interval,
+        open=Decimal("9"),
+        high=Decimal("9"),
+        low=Decimal("9"),
+        close=Decimal("9"),
+        volume_base=Decimal("9"),
+        volume_quote=Decimal("9"),
+        trade_count=9,
+    )
+    cmp = compare_bars(
+        [bar, other],
+        [bar],
+        price_tolerance=Decimal("0"),
+        volume_tolerance=Decimal("0"),
+    )
+    assert cmp.duplicate_reconstructed_intervals == (ORIGIN,)
+    # First reconstructed bar is used for comparison (not silently last-wins).
+    assert not any(m.field_name == "open" for m in cmp.ohlc_mismatches)

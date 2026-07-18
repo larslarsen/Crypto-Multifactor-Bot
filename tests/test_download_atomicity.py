@@ -112,3 +112,47 @@ def test_compute_sha256_matches(tmp_path: Path) -> None:
     data = b"hash-me"
     p.write_bytes(data)
     assert compute_sha256(p) == hashlib.sha256(data).hexdigest()
+
+
+def test_size_limit_stops_reading_immediately(tmp_path: Path) -> None:
+    """On size failure the transport is closed without draining the body."""
+    body = b"x" * 1000
+    transport = SyntheticTransport(body=body, chunk_size=10)
+    with pytest.raises(SizeLimitError):
+        atomic_download(
+            "https://example.test/big",
+            tmp_path,
+            transport=transport,
+            max_bytes=25,
+            chunk_size=10,
+        )
+    assert transport.closed is True
+    # Must not have consumed the entire body after the limit.
+    assert transport.bytes_yielded < len(body)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_exclusive_publish_does_not_overwrite(tmp_path: Path) -> None:
+    """If destination exists with different content, never overwrite."""
+    body = b"payload-aaa"
+    digest = hashlib.sha256(body).hexdigest()
+    target = content_addressed_path(tmp_path, digest)
+    target.write_bytes(b"OTHER-CONTENT-XXXX")
+    transport = SyntheticTransport(body=body)
+    with pytest.raises(DownloadError, match="different content"):
+        atomic_download("https://example.test/x", tmp_path, transport=transport)
+    assert target.read_bytes() == b"OTHER-CONTENT-XXXX"
+
+
+def test_checksum_mismatch_closes_without_publish(tmp_path: Path) -> None:
+    body = b"checksum-me"
+    transport = SyntheticTransport(body=body)
+    with pytest.raises(ChecksumMismatchError):
+        atomic_download(
+            "https://example.test/x",
+            tmp_path,
+            transport=transport,
+            expected_sha256="ab" * 32,
+        )
+    assert transport.closed is True
+    assert list(tmp_path.iterdir()) == []

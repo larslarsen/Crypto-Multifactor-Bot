@@ -69,7 +69,19 @@ def _normalize_integer_value(
             raise InvalidNumericError(
                 "Non-integer float timestamps are rejected to avoid precision loss"
             )
+        # IEEE-754 doubles only guarantee exact integers up to 2**53.
+        # Integral-looking floats above this bound are precision-unsafe.
+        if abs(value) > float(2**53):
+            raise InvalidNumericError(
+                "Float timestamp magnitude exceeds 2**53; use int, str, or Decimal",
+                context={"value": value},
+            )
         as_int = int(value)
+        if abs(as_int) > 2**53:
+            raise InvalidNumericError(
+                "Float timestamp magnitude exceeds 2**53; use int, str, or Decimal",
+                context={"value": value},
+            )
         # Guard large floats that cannot be represented exactly in binary float.
         if float(as_int) != value:
             raise InvalidNumericError(

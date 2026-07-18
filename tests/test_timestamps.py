@@ -115,3 +115,23 @@ def test_ms_subsecond_exact() -> None:
 def test_reject_non_integer_float() -> None:
     with pytest.raises(InvalidNumericError):
         infer_timestamp_unit(1.5, min_utc=MIN, max_utc=MAX)
+
+
+def test_reject_float_above_2_pow_53() -> None:
+    """Integral-looking floats above 2**53 are precision-unsafe."""
+    # 1e20 is an integral float well above the IEEE exact-integer bound.
+    with pytest.raises(InvalidNumericError, match="2\\*\\*53"):
+        infer_timestamp_unit(1e20, min_utc=MIN, max_utc=MAX)
+    with pytest.raises(InvalidNumericError, match="2\\*\\*53"):
+        infer_timestamp_unit(float(2**54), min_utc=MIN, max_utc=MAX)
+
+
+def test_accept_large_int_and_decimal_beyond_float_safe_range() -> None:
+    # Nanosecond-scale integer well above 2**53 but unambiguous as ns in bounds.
+    value = 1735689600000000000  # > 2**53
+    result = infer_timestamp_unit(value, min_utc=MIN, max_utc=MAX)
+    assert result.unit is TimestampUnit.NANOSECONDS
+    result_d = infer_timestamp_unit(Decimal(value), min_utc=MIN, max_utc=MAX)
+    assert result_d.unit is TimestampUnit.NANOSECONDS
+    result_s = infer_timestamp_unit(str(value), min_utc=MIN, max_utc=MAX)
+    assert result_s.unit is TimestampUnit.NANOSECONDS

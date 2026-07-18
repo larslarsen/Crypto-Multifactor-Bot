@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from decimal import Decimal, ROUND_HALF_EVEN
+from decimal import ROUND_FLOOR, Decimal
 
 from .errors import AuditError, InvalidNumericError
 from .models import ProjectionAssumptions, StorageSample, StorageStats
@@ -35,7 +35,12 @@ def _bytes_per_row(sample: StorageSample, *, basis: str) -> Decimal:
 
 
 def _quantile(sorted_values: Sequence[Decimal], q: Decimal) -> Decimal:
-    """Inclusive linear interpolation quantile for Decimal samples."""
+    """Linear-interpolation quantile using mathematical floor indexing.
+
+    For sorted sample of length n and quantile q in [0, 1]:
+    ``pos = q * (n - 1)``, ``lo = floor(pos)``, ``hi = min(lo + 1, n - 1)``,
+    interpolate by fractional part ``pos - lo``.
+    """
     if not sorted_values:
         raise AuditError("Cannot compute quantile of empty sample set")
     if q < 0 or q > 1:
@@ -44,7 +49,7 @@ def _quantile(sorted_values: Sequence[Decimal], q: Decimal) -> Decimal:
     if n == 1:
         return sorted_values[0]
     pos = q * Decimal(n - 1)
-    lo = int(pos.to_integral_value(rounding=ROUND_HALF_EVEN))
+    lo = int(pos.to_integral_value(rounding=ROUND_FLOOR))
     hi = min(lo + 1, n - 1)
     frac = pos - Decimal(lo)
     return sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * frac
@@ -60,8 +65,9 @@ def compute_storage_stats(
 ) -> StorageStats:
     """Compute bytes-per-row statistics and U25/U50/U100 projections.
 
-    Projections are produced **only** from ``projection_assumptions``. No universe
-    size, frequency, or retention defaults are embedded in this function.
+    Projections use the explicit universe counts on ``projection_assumptions``
+    (``u25_universe_size``, ``u50_universe_size``, ``u100_universe_size``). No
+    percentage-of-base-universe arithmetic is applied.
     """
     if not samples:
         raise AuditError("At least one storage sample is required")
@@ -84,16 +90,21 @@ def compute_storage_stats(
             "projection_assumptions.basis must match the stats basis",
             context={"stats_basis": basis, "projection_basis": pa.basis},
         )
-    _require_nonneg_int("universe_size", pa.universe_size)
-    _require_nonneg_int("rows_per_asset_per_period", pa.rows_per_asset_per_period)
-    _require_nonneg_int("retention_periods", pa.retention_periods)
     for name, val in (
+        ("u25_universe_size", pa.u25_universe_size),
+        ("u50_universe_size", pa.u50_universe_size),
+        ("u100_universe_size", pa.u100_universe_size),
+        ("rows_per_asset_per_period", pa.rows_per_asset_per_period),
+        ("retention_periods", pa.retention_periods),
+    ):
+        _require_nonneg_int(name, val)
+    for dname, dval in (
         ("replication_factor", pa.replication_factor),
         ("overhead_multiplier", pa.overhead_multiplier),
         ("safety_multiplier", pa.safety_multiplier),
     ):
-        if not isinstance(val, Decimal) or val < 0:
-            raise InvalidNumericError(f"{name} must be a non-negative Decimal")
+        if not isinstance(dval, Decimal) or dval < 0:
+            raise InvalidNumericError(f"{dname} must be a non-negative Decimal")
 
     bpr_map: dict[str, Decimal] = {}
     values: list[Decimal] = []
@@ -130,13 +141,11 @@ def compute_storage_stats(
             * pa.safety_multiplier
         )
 
-    # U25 / U50 / U100 are 25%, 50%, 100% of the caller-supplied universe_size.
-    u_full = pa.universe_size
     projections = {
-        "U25": _project(max(u_full // 4, 0), upper),
-        "U50": _project(max(u_full // 2, 0), upper),
-        "U100": _project(u_full, upper),
-        "U100_stress": _project(u_full, stress_case_bytes_per_row),
+        "U25": _project(pa.u25_universe_size, upper),
+        "U50": _project(pa.u50_universe_size, upper),
+        "U100": _project(pa.u100_universe_size, upper),
+        "U100_stress": _project(pa.u100_universe_size, stress_case_bytes_per_row),
     }
 
     return StorageStats(

@@ -93,9 +93,11 @@ def normalize_trade(
     price = _to_decimal(raw[price_key], field_name=price_key)
     qty = _to_decimal(raw[quantity_key], field_name=quantity_key)
     if price <= 0:
-        raise InvalidNumericError(f"{price_key}: price must be > 0")
-    if qty < 0:
-        raise InvalidNumericError(f"{quantity_key}: quantity must be >= 0")
+        raise InvalidNumericError(f"{price_key}: price must be > 0 (non-positive rejected)")
+    if qty <= 0:
+        raise InvalidNumericError(
+            f"{quantity_key}: quantity must be > 0 (non-positive/invalid rejected)"
+        )
 
     quote: Decimal | None = None
     if quote_quantity_key is not None and quote_quantity_key in raw and raw[quote_quantity_key] is not None:
@@ -192,19 +194,30 @@ def reconstruct_bars(
     normalized: list[Trade] = []
     for item in trades:
         if isinstance(item, Trade):
+            # Validate direct Trade objects identically to mapping inputs.
+            ts = _require_utc(item.timestamp_utc, field_name="timestamp_utc")
+            price = _to_decimal(item.price, field_name="price")
+            qty = _to_decimal(item.quantity, field_name="quantity")
+            if price <= 0:
+                raise InvalidNumericError(
+                    "price: price must be > 0 (non-positive rejected)"
+                )
+            if qty <= 0:
+                raise InvalidNumericError(
+                    "quantity: quantity must be > 0 (non-positive/invalid rejected)"
+                )
+            if not str(item.trade_id):
+                raise BarReconstructionError("trade_id must be a non-empty string")
+            quote: Decimal | None = None
+            if item.quote_quantity is not None:
+                quote = _to_decimal(item.quote_quantity, field_name="quote_quantity")
             normalized.append(
                 Trade(
-                    timestamp_utc=_require_utc(
-                        item.timestamp_utc, field_name="timestamp_utc"
-                    ),
-                    price=_to_decimal(item.price, field_name="price"),
-                    quantity=_to_decimal(item.quantity, field_name="quantity"),
+                    timestamp_utc=ts,
+                    price=price,
+                    quantity=qty,
                     trade_id=str(item.trade_id),
-                    quote_quantity=(
-                        _to_decimal(item.quote_quantity, field_name="quote_quantity")
-                        if item.quote_quantity is not None
-                        else None
-                    ),
+                    quote_quantity=quote,
                 )
             )
         else:
@@ -413,16 +426,19 @@ def compare_bars(
                 )
             )
 
-    recon_by_start: dict[datetime, OHLCVBar] = {}
+    recon_by_start: dict[datetime, list[OHLCVBar]] = defaultdict(list)
     for bar in reconstructed:
-        recon_by_start[bar.interval_start_utc] = bar
+        recon_by_start[bar.interval_start_utc].append(bar)
 
     prov_by_start: dict[datetime, list[OHLCVBar]] = defaultdict(list)
     for bar in provider_bars:
         prov_by_start[bar.interval_start_utc].append(bar)
 
     duplicate_provider = tuple(
-        sorted(ts for ts, bars in prov_by_start.items() if len(bars) > 1)
+        sorted(ts for ts, bars_list in prov_by_start.items() if len(bars_list) > 1)
+    )
+    duplicate_reconstructed = tuple(
+        sorted(ts for ts, bars_list in recon_by_start.items() if len(bars_list) > 1)
     )
 
     missing_from_provider: list[datetime] = []
@@ -459,28 +475,21 @@ def compare_bars(
         )
 
     for ts in sorted(recon_keys & prov_keys):
-        r = recon_by_start[ts]
-        p = prov_by_start[ts][0]  # first if duplicates
+        # Never overwrite duplicates: use first observation for field compare;
+        # duplicates are reported separately.
+        r = recon_by_start[ts][0]
+        p = prov_by_start[ts][0]
 
         if r.interval_end_utc != p.interval_end_utc:
             align_m.append(
-                _mismatch(
-                    ts,
-                    "interval_end_utc",
-                    0,
-                    0,
-                    None,
-                    None,
+                BarFieldMismatch(
+                    interval_start_utc=ts,
+                    field_name="interval_end_utc",
+                    expected=r.interval_end_utc.isoformat(),
+                    observed=p.interval_end_utc.isoformat(),
+                    absolute_delta=None,
+                    signed_delta=None,
                 )
-            )
-            # Replace with informative strings via object mutation alternative:
-            align_m[-1] = BarFieldMismatch(
-                interval_start_utc=ts,
-                field_name="interval_end_utc",
-                expected=r.interval_end_utc.isoformat(),
-                observed=p.interval_end_utc.isoformat(),
-                absolute_delta=None,
-                signed_delta=None,
             )
 
         for field_name, rv, pv in (
@@ -524,6 +533,7 @@ def compare_bars(
         trade_count_mismatches=tuple(tc_m),
         timestamp_alignment_mismatches=tuple(align_m),
         duplicate_provider_intervals=duplicate_provider,
+        duplicate_reconstructed_intervals=duplicate_reconstructed,
         price_tolerance=price_tolerance,
         volume_tolerance=volume_tolerance,
         trade_count_tolerance=trade_count_tolerance,

@@ -273,18 +273,30 @@ def _validate_headers(headers: list[str]) -> tuple[str, ...]:
     return tuple(cleaned)
 
 
-class _PhysicalLineLimitedReader(io.TextIOBase):
-    """Text stream wrapper that rejects physical lines longer than a limit.
+class _BoundedCSVTextReader(io.TextIOBase):
+    """Text stream enforcing physical-line and logical-record character limits.
 
     A physical line is terminated by ``\\n`` (or EOF). Quoted multiline CSV fields
-    span multiple physical lines; each physical line is bounded independently.
+    span multiple physical lines. Logical-record character count accumulates across
+    those physical lines and is enforced *before* unbounded growth; it resets on an
+    unquoted newline (end of logical CSV record). Quote state tracks ``"`` with
+    standard doubled-quote escapes.
     """
 
-    def __init__(self, base: io.TextIOBase, max_physical_line: int) -> None:
+    def __init__(
+        self,
+        base: io.TextIOBase,
+        *,
+        max_physical_line: int,
+        max_logical_record: int,
+    ) -> None:
         super().__init__()
         self._base = base
         self._max_physical_line = max_physical_line
+        self._max_logical_record = max_logical_record
         self._buffer = ""
+        self._in_quotes = False
+        self._logical_chars = 0
 
     def readable(self) -> bool:
         return True
@@ -298,7 +310,6 @@ class _PhysicalLineLimitedReader(io.TextIOBase):
                     break
                 chunks.append(line)
             return "".join(chunks)
-        # Read up to size characters, still enforcing per-line limits via readline.
         out: list[str] = []
         remaining = size
         while remaining > 0:
@@ -309,77 +320,77 @@ class _PhysicalLineLimitedReader(io.TextIOBase):
                 out.append(line)
                 remaining -= len(line)
             else:
-                # Put back overflow into buffer — csv rarely uses bounded read.
                 out.append(line[:remaining])
                 self._buffer = line[remaining:] + self._buffer
                 remaining = 0
         return "".join(out)
 
+    def _track_and_check(self, line: str) -> None:
+        body = line.rstrip("\r\n")
+        if len(body) > self._max_physical_line:
+            raise MalformedCSVError(
+                "Physical line exceeds max_physical_line",
+                context={
+                    "length": len(body),
+                    "max_physical_line": self._max_physical_line,
+                },
+            )
+        i = 0
+        while i < len(line):
+            ch = line[i]
+            if ch == '"':
+                if self._in_quotes and i + 1 < len(line) and line[i + 1] == '"':
+                    self._logical_chars += 2
+                    i += 2
+                    continue
+                self._in_quotes = not self._in_quotes
+                self._logical_chars += 1
+                i += 1
+                continue
+            if ch == "\n" and not self._in_quotes:
+                # End of logical record (excluding the terminator from the budget).
+                self._logical_chars = 0
+                i += 1
+                continue
+            if ch != "\r":
+                self._logical_chars += 1
+                if self._logical_chars > self._max_logical_record:
+                    raise MalformedCSVError(
+                        "Logical record exceeds max_logical_record during accumulation",
+                        context={
+                            "length": self._logical_chars,
+                            "max_logical_record": self._max_logical_record,
+                        },
+                    )
+            i += 1
+
     def readline(self, size: int | None = -1) -> str:  # type: ignore[override]
         del size
         if self._buffer:
-            # Prefer buffered content first.
             nl = self._buffer.find("\n")
             if nl >= 0:
                 line = self._buffer[: nl + 1]
                 self._buffer = self._buffer[nl + 1 :]
-                if len(line.rstrip("\r\n")) > self._max_physical_line:
-                    raise MalformedCSVError(
-                        "Physical line exceeds max_physical_line",
-                        context={
-                            "length": len(line.rstrip("\r\n")),
-                            "max_physical_line": self._max_physical_line,
-                        },
-                    )
+                self._track_and_check(line)
                 return line
-            # No newline in buffer — append more.
             more = self._base.readline()
             combined = self._buffer + more
             self._buffer = ""
             if not combined:
                 return ""
-            if "\n" not in combined and len(combined.rstrip("\r\n")) > self._max_physical_line:
-                raise MalformedCSVError(
-                    "Physical line exceeds max_physical_line",
-                    context={
-                        "length": len(combined.rstrip("\r\n")),
-                        "max_physical_line": self._max_physical_line,
-                    },
-                )
             if "\n" not in combined:
-                if len(combined.rstrip("\r\n")) > self._max_physical_line:
-                    raise MalformedCSVError(
-                        "Physical line exceeds max_physical_line",
-                        context={
-                            "length": len(combined.rstrip("\r\n")),
-                            "max_physical_line": self._max_physical_line,
-                        },
-                    )
+                self._track_and_check(combined)
                 return combined
             nl = combined.find("\n")
             line = combined[: nl + 1]
             self._buffer = combined[nl + 1 :]
-            if len(line.rstrip("\r\n")) > self._max_physical_line:
-                raise MalformedCSVError(
-                    "Physical line exceeds max_physical_line",
-                    context={
-                        "length": len(line.rstrip("\r\n")),
-                        "max_physical_line": self._max_physical_line,
-                    },
-                )
+            self._track_and_check(line)
             return line
 
         line = self._base.readline()
         if not line:
             return ""
-        if len(line.rstrip("\r\n")) > self._max_physical_line:
-            raise MalformedCSVError(
-                "Physical line exceeds max_physical_line",
-                context={
-                    "length": len(line.rstrip("\r\n")),
-                    "max_physical_line": self._max_physical_line,
-                },
-            )
+        self._track_and_check(line)
         return line
 
 
@@ -440,181 +451,225 @@ def audit_csv_safe(
     seen_keys: set[tuple[str, ...]] = set()
     prev_order_key: tuple[str, ...] | None = None
 
-    with path.open("r", encoding=encoding, newline="") as raw:
-        limited = _PhysicalLineLimitedReader(raw, max_physical_line)
-        reader = csv.reader(limited, delimiter=delimiter, quotechar='"')
+    # Align the stdlib CSV field limit with caller configuration so fields larger
+    # than the default 131_072 characters are allowed when configured, and fields
+    # exceeding the configured logical-record bound are rejected by the parser.
+    previous_field_limit = csv.field_size_limit()
+    configured_field_limit = max(max_physical_line, max_logical_record, 128)
+    try:
+        csv.field_size_limit(configured_field_limit)
+    except OverflowError:
+        csv.field_size_limit(min(configured_field_limit, 2**31 - 1))
 
+    try:
         try:
-            header_row = next(reader)
-        except StopIteration as exc:
-            raise MalformedCSVError("CSV is empty; missing header") from exc
-        except MalformedCSVError:
-            raise
-        except UnicodeError as exc:
+            raw = path.open("r", encoding=encoding, newline="")
+        except (LookupError, UnicodeError, ValueError) as exc:
             raise MalformedCSVError(
-                f"Encoding failure with encoding={encoding!r}",
+                f"Encoding failure opening file with encoding={encoding!r}",
                 context={"encoding": encoding},
             ) from exc
 
-        headers = _validate_headers(header_row)
-        header_index = {name: idx for idx, name in enumerate(headers)}
-        expected_width = len(headers)
+        with raw:
+            limited = _BoundedCSVTextReader(
+                raw,
+                max_physical_line=max_physical_line,
+                max_logical_record=max_logical_record,
+            )
+            reader = csv.reader(limited, delimiter=delimiter, quotechar='"')
 
-        def _require_fields(label: str, fields: Sequence[str] | None) -> tuple[str, ...]:
-            if not fields:
-                return ()
-            missing = [f for f in fields if f not in header_index]
-            if missing:
+            try:
+                header_row = next(reader)
+            except StopIteration as exc:
+                raise MalformedCSVError("CSV is empty; missing header") from exc
+            except MalformedCSVError:
+                raise
+            except UnicodeError as exc:
                 raise MalformedCSVError(
-                    f"Configured {label} not present in headers",
-                    context={"missing": missing, "headers": list(headers)},
-                )
-            return tuple(fields)
-
-        keys = _require_fields("key_fields", key_fields)
-        orders = _require_fields("order_fields", order_fields)
-        if timestamp_field is not None:
-            if timestamp_field not in header_index:
+                    f"Encoding failure with encoding={encoding!r}",
+                    context={"encoding": encoding},
+                ) from exc
+            except csv.Error as exc:
                 raise MalformedCSVError(
-                    "Configured timestamp_field not present in headers",
-                    context={
-                        "timestamp_field": timestamp_field,
-                        "headers": list(headers),
-                    },
-                )
-            if timestamp_min_utc is None or timestamp_max_utc is None:
-                raise MalformedCSVError(
-                    "timestamp_min_utc and timestamp_max_utc are required when "
-                    "timestamp_field is set"
-                )
+                    f"CSV parse error in header: {exc}",
+                    context={"encoding": encoding},
+                ) from exc
 
-        for row in reader:
-            # row is one logical record (csv module handles quoted multiline).
-            logical_data_records += 1
-            if logical_data_records > max_rows:
-                truncated = True
-                logical_data_records -= 1
-                skipped_records += 1
-                break
+            headers = _validate_headers(header_row)
+            header_index = {name: idx for idx, name in enumerate(headers)}
+            expected_width = len(headers)
 
-            rec_len = _logical_record_length(row)
-            if rec_len > max_logical_record:
-                malformed_records += 1
-                malformed_reports.append(
-                    MalformedRowReport(
-                        logical_row_number=logical_data_records,
-                        reason="logical_record_too_long",
-                        field_count=len(row),
-                        expected_field_count=expected_width,
+            def _require_fields(
+                label: str, fields: Sequence[str] | None
+            ) -> tuple[str, ...]:
+                if not fields:
+                    return ()
+                missing = [f for f in fields if f not in header_index]
+                if missing:
+                    raise MalformedCSVError(
+                        f"Configured {label} not present in headers",
+                        context={"missing": missing, "headers": list(headers)},
                     )
-                )
-                continue
+                return tuple(fields)
 
-            if len(row) != expected_width:
-                malformed_records += 1
-                malformed_reports.append(
-                    MalformedRowReport(
-                        logical_row_number=logical_data_records,
-                        reason="width_mismatch",
-                        field_count=len(row),
-                        expected_field_count=expected_width,
+            keys = _require_fields("key_fields", key_fields)
+            orders = _require_fields("order_fields", order_fields)
+            if timestamp_field is not None:
+                if timestamp_field not in header_index:
+                    raise MalformedCSVError(
+                        "Configured timestamp_field not present in headers",
+                        context={
+                            "timestamp_field": timestamp_field,
+                            "headers": list(headers),
+                        },
                     )
-                )
-                continue
+                if timestamp_min_utc is None or timestamp_max_utc is None:
+                    raise MalformedCSVError(
+                        "timestamp_min_utc and timestamp_max_utc are required when "
+                        "timestamp_field is set"
+                    )
 
-            sample = tuple(row)
-            if sample_size > 0 and len(first_samples) < sample_size:
-                first_samples.append(sample)
-            if sample_size > 0:
-                last_samples.append(sample)
-
-            row_valid = True
-
-            if keys:
+            while True:
                 try:
-                    key = tuple(row[header_index[k]] for k in keys)
-                except IndexError:
+                    row = next(reader)
+                except StopIteration:
+                    break
+                except MalformedCSVError:
+                    raise
+                except UnicodeError as exc:
+                    raise MalformedCSVError(
+                        f"Encoding failure with encoding={encoding!r}",
+                        context={"encoding": encoding},
+                    ) from exc
+                except csv.Error as exc:
+                    # Unrecoverable parser failure → typed audit error (same as header).
+                    raise MalformedCSVError(
+                        f"CSV parse error: {exc}",
+                        context={
+                            "logical_row_number": logical_data_records + 1,
+                            "encoding": encoding,
+                        },
+                    ) from exc
+
+                logical_data_records += 1
+                if logical_data_records > max_rows:
+                    truncated = True
+                    logical_data_records -= 1
+                    skipped_records += 1
+                    break
+
+                rec_len = _logical_record_length(row)
+                if rec_len > max_logical_record:
                     malformed_records += 1
                     malformed_reports.append(
                         MalformedRowReport(
                             logical_row_number=logical_data_records,
-                            reason="key_field_index_error",
+                            reason="logical_record_too_long",
                             field_count=len(row),
                             expected_field_count=expected_width,
                         )
                     )
                     continue
-                if key in seen_keys:
-                    duplicate_key_count += 1
-                else:
-                    seen_keys.add(key)
 
-            if orders:
-                order_key = tuple(row[header_index[k]] for k in orders)
-                if prev_order_key is not None and order_key < prev_order_key:
-                    ordering_violation_count += 1
-                prev_order_key = order_key
-
-            if timestamp_field is not None:
-                raw_ts = row[header_index[timestamp_field]]
-                try:
-                    assert timestamp_min_utc is not None
-                    assert timestamp_max_utc is not None
-                    inference = infer_timestamp_unit(
-                        raw_ts,
-                        min_utc=timestamp_min_utc,
-                        max_utc=timestamp_max_utc,
-                    )
-                    unit_value = (
-                        inference.unit.value
-                        if isinstance(inference.unit, TimestampUnit)
-                        else str(inference.unit)
-                    )
-                    observed_units.add(unit_value)
-                    ts = inference.datetime_utc
-                    if earliest_ts is None or ts < earliest_ts:
-                        earliest_ts = ts
-                    if latest_ts is None or ts > latest_ts:
-                        latest_ts = ts
-                except (
-                    AmbiguousTimestampError,
-                    OutOfRangeTimestampError,
-                    MalformedCSVError,
-                ):
-                    timestamp_parse_failures += 1
-                    row_valid = False
+                if len(row) != expected_width:
                     malformed_records += 1
                     malformed_reports.append(
                         MalformedRowReport(
                             logical_row_number=logical_data_records,
-                            reason="timestamp_parse_failure",
+                            reason="width_mismatch",
                             field_count=len(row),
                             expected_field_count=expected_width,
                         )
                     )
-                except Exception:
-                    timestamp_parse_failures += 1
-                    row_valid = False
-                    malformed_records += 1
-                    malformed_reports.append(
-                        MalformedRowReport(
-                            logical_row_number=logical_data_records,
-                            reason="timestamp_parse_failure",
-                            field_count=len(row),
-                            expected_field_count=expected_width,
-                        )
-                    )
+                    continue
 
-            if row_valid and len(row) == expected_width:
-                # Count as valid when width is correct and timestamp (if any) parsed.
-                # Width failures already continued above.
-                if timestamp_field is None or row_valid:
+                sample = tuple(row)
+                if sample_size > 0 and len(first_samples) < sample_size:
+                    first_samples.append(sample)
+                if sample_size > 0:
+                    last_samples.append(sample)
+
+                row_valid = True
+
+                if keys:
+                    try:
+                        key = tuple(row[header_index[k]] for k in keys)
+                    except IndexError:
+                        malformed_records += 1
+                        malformed_reports.append(
+                            MalformedRowReport(
+                                logical_row_number=logical_data_records,
+                                reason="key_field_index_error",
+                                field_count=len(row),
+                                expected_field_count=expected_width,
+                            )
+                        )
+                        continue
+                    if key in seen_keys:
+                        duplicate_key_count += 1
+                    else:
+                        seen_keys.add(key)
+
+                if orders:
+                    order_key = tuple(row[header_index[k]] for k in orders)
+                    if prev_order_key is not None and order_key < prev_order_key:
+                        ordering_violation_count += 1
+                    prev_order_key = order_key
+
+                if timestamp_field is not None:
+                    raw_ts = row[header_index[timestamp_field]]
+                    try:
+                        assert timestamp_min_utc is not None
+                        assert timestamp_max_utc is not None
+                        inference = infer_timestamp_unit(
+                            raw_ts,
+                            min_utc=timestamp_min_utc,
+                            max_utc=timestamp_max_utc,
+                        )
+                        unit_value = (
+                            inference.unit.value
+                            if isinstance(inference.unit, TimestampUnit)
+                            else str(inference.unit)
+                        )
+                        observed_units.add(unit_value)
+                        ts = inference.datetime_utc
+                        if earliest_ts is None or ts < earliest_ts:
+                            earliest_ts = ts
+                        if latest_ts is None or ts > latest_ts:
+                            latest_ts = ts
+                    except (
+                        AmbiguousTimestampError,
+                        OutOfRangeTimestampError,
+                        MalformedCSVError,
+                    ):
+                        timestamp_parse_failures += 1
+                        row_valid = False
+                        malformed_records += 1
+                        malformed_reports.append(
+                            MalformedRowReport(
+                                logical_row_number=logical_data_records,
+                                reason="timestamp_parse_failure",
+                                field_count=len(row),
+                                expected_field_count=expected_width,
+                            )
+                        )
+                    except Exception:
+                        timestamp_parse_failures += 1
+                        row_valid = False
+                        malformed_records += 1
+                        malformed_reports.append(
+                            MalformedRowReport(
+                                logical_row_number=logical_data_records,
+                                reason="timestamp_parse_failure",
+                                field_count=len(row),
+                                expected_field_count=expected_width,
+                            )
+                        )
+
+                if row_valid and len(row) == expected_width:
                     valid_records += 1
-
-    # Fix valid_records: rows that were width-ok but timestamp failed were counted
-    # as malformed; ensure valid_records only counts fully valid rows.
-    # The loop above increments valid_records only when row_valid is still True
-    # after timestamp handling and width matched — good.
+    finally:
+        csv.field_size_limit(previous_field_limit)
 
     return CSVAuditResult(
         headers=headers,
@@ -646,11 +701,22 @@ def read_zip_member_text(
     *,
     encoding: str,
     max_extracted_bytes: int,
+    chunk_size: int = 65536,
 ) -> str:
-    """Read a single ZIP member into memory with a hard extracted-byte bound.
+    """Stream-decompress a single ZIP member with a hard extracted-byte bound.
 
-    Used by precision comparison. Does not write extracted content to disk.
+    Does not call ``ZipFile.read`` (which allocates the full decompressed member
+    before the limit can be enforced). Decompression is streamed in chunks and
+    aborted as soon as ``max_extracted_bytes`` would be exceeded. Does not write
+    extracted content to disk.
     """
+    if max_extracted_bytes <= 0:
+        raise ValueError("max_extracted_bytes must be positive")
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    if not encoding:
+        raise ValueError("encoding must be explicitly selected")
+
     path = Path(zip_path)
     with zipfile.ZipFile(path, "r") as zf:
         if member_name not in zf.namelist():
@@ -659,6 +725,8 @@ def read_zip_member_text(
                 context={"member": member_name, "path": str(path)},
             )
         info = zf.getinfo(member_name)
+        # Advisory early reject when the declared size already exceeds the bound.
+        # Declared size is not trusted alone; streaming still enforces the limit.
         if info.file_size > max_extracted_bytes:
             raise UnsafeArchiveError(
                 f"Member extracted size exceeds bound: {member_name}",
@@ -668,13 +736,32 @@ def read_zip_member_text(
                     "max": max_extracted_bytes,
                 },
             )
-        raw = zf.read(member_name)
-        if len(raw) > max_extracted_bytes:
-            raise UnsafeArchiveError(
-                f"Member extracted size exceeds bound after read: {member_name}",
-                context={"member": member_name, "size": len(raw)},
-            )
-        return raw.decode(encoding)
+        chunks: list[bytes] = []
+        total = 0
+        with zf.open(member_name, "r") as src:
+            while True:
+                piece = src.read(chunk_size)
+                if not piece:
+                    break
+                total += len(piece)
+                if total > max_extracted_bytes:
+                    raise UnsafeArchiveError(
+                        f"Member extracted size exceeds bound during stream: {member_name}",
+                        context={
+                            "member": member_name,
+                            "bytes_read": total,
+                            "max": max_extracted_bytes,
+                        },
+                    )
+                chunks.append(piece)
+        raw = b"".join(chunks)
+        try:
+            return raw.decode(encoding)
+        except UnicodeError as exc:
+            raise MalformedCSVError(
+                f"Encoding failure decoding ZIP member with encoding={encoding!r}",
+                context={"member": member_name, "encoding": encoding},
+            ) from exc
 
 
 def iter_csv_rows_from_text(
@@ -682,17 +769,36 @@ def iter_csv_rows_from_text(
     *,
     delimiter: str = ",",
     has_header: bool = True,
+    max_field_size: int | None = None,
 ) -> tuple[tuple[str, ...], list[tuple[str, ...]]]:
-    """Parse CSV text into headers and data rows (in-memory helper for comparisons)."""
-    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
-    rows = list(reader)
+    """Parse CSV text into headers and data rows (in-memory helper for comparisons).
+
+    Headerless operation is explicitly rejected (``has_header`` must be True).
+    """
+    if not has_header:
+        raise MalformedCSVError(
+            "Headerless CSV is not supported by iter_csv_rows_from_text; "
+            "provide has_header=True"
+        )
+    previous = csv.field_size_limit()
+    if max_field_size is not None and max_field_size > 0:
+        try:
+            csv.field_size_limit(max_field_size)
+        except OverflowError:
+            csv.field_size_limit(min(max_field_size, 2**31 - 1))
+    try:
+        try:
+            reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+            rows = list(reader)
+        except csv.Error as exc:
+            raise MalformedCSVError(f"CSV parse error: {exc}") from exc
+    finally:
+        csv.field_size_limit(previous)
     if not rows:
         raise MalformedCSVError("CSV text is empty")
-    if has_header:
-        headers = _validate_headers(rows[0])
-        data = [tuple(r) for r in rows[1:]]
-        return headers, data
-    raise MalformedCSVError("Headerless mode not supported")
+    headers = _validate_headers(rows[0])
+    data = [tuple(r) for r in rows[1:]]
+    return headers, data
 
 
 __all__ = [

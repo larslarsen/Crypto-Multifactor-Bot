@@ -6,7 +6,7 @@ and does not hard-code that a precision transition occurred.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 
@@ -40,7 +40,6 @@ def _select_member(
                 context={"path": str(zip_path), "members": names},
             )
         return member_name
-    # Deterministic policy: lexicographically first member matching suffix, else first.
     if member_suffix is not None:
         matched = sorted(n for n in names if n.endswith(member_suffix))
         if matched:
@@ -56,10 +55,13 @@ def _schema_diff(
     set_b = set(schema_b)
     diffs: list[SchemaFieldDiff] = []
     for name in sorted(set_a - set_b):
-        diffs.append(SchemaFieldDiff(field_name=name, side="only_left", detail="present only in A"))
+        diffs.append(
+            SchemaFieldDiff(field_name=name, side="only_left", detail="present only in A")
+        )
     for name in sorted(set_b - set_a):
-        diffs.append(SchemaFieldDiff(field_name=name, side="only_right", detail="present only in B"))
-    # Order differences for shared fields.
+        diffs.append(
+            SchemaFieldDiff(field_name=name, side="only_right", detail="present only in B")
+        )
     shared = [n for n in schema_a if n in set_b]
     shared_b = [n for n in schema_b if n in set_a]
     if shared != shared_b:
@@ -71,6 +73,12 @@ def _schema_diff(
             )
         )
     return tuple(diffs)
+
+
+def _rate(numerator: int, denominator: int) -> float:
+    if denominator <= 0:
+        return 1.0
+    return numerator / denominator
 
 
 def compare_binance_archive_precision(
@@ -88,23 +96,33 @@ def compare_binance_archive_precision(
     max_sample_rows: int = 50,
     max_extracted_bytes: int = 50 * 1024 * 1024,
     has_header: bool = True,
+    min_valid_inferences: int = 5,
+    max_malformed_rate: float = 0.1,
+    max_ambiguous_rate: float = 0.05,
 ) -> BinancePrecisionComparison:
     """Compare timestamp units inferred from two local Binance ZIP archives.
 
-    Parameters
-    ----------
-    archive_a / archive_b:
-        Paths to already-downloaded ZIP objects.
-    member_a / member_b:
-        Explicit member names, or ``None`` to apply the deterministic selection policy
-        (lexicographically first member ending with ``member_suffix``, else first file).
-    timestamp_column:
-        Header name (when ``has_header``) or zero-based index.
-    timestamp_min_utc / timestamp_max_utc:
-        Bounds forwarded to timestamp inference.
+    A transition is supported only when **both** sides meet the evidence thresholds:
+    at least ``min_valid_inferences`` successful unit inferences, malformed rate
+    ≤ ``max_malformed_rate``, ambiguous rate ≤ ``max_ambiguous_rate``, and the
+    dominant units differ. A single valid row is never enough when
+    ``min_valid_inferences > 1`` (default 5).
+
+    Headerless archives are explicitly rejected (``has_header`` must be True).
     """
     if max_sample_rows <= 0:
         raise ValueError("max_sample_rows must be positive")
+    if min_valid_inferences < 1:
+        raise ValueError("min_valid_inferences must be >= 1")
+    if not (0.0 <= max_malformed_rate <= 1.0):
+        raise ValueError("max_malformed_rate must be in [0, 1]")
+    if not (0.0 <= max_ambiguous_rate <= 1.0):
+        raise ValueError("max_ambiguous_rate must be in [0, 1]")
+    if not has_header:
+        raise PrecisionComparisonError(
+            "Headerless Binance archive comparison is not supported; "
+            "provide has_header=True"
+        )
 
     path_a = Path(archive_a)
     path_b = Path(archive_b)
@@ -125,10 +143,10 @@ def compare_binance_archive_precision(
     )
 
     schema_a, rows_a = iter_csv_rows_from_text(
-        text_a, delimiter=delimiter, has_header=has_header
+        text_a, delimiter=delimiter, has_header=True
     )
     schema_b, rows_b = iter_csv_rows_from_text(
-        text_b, delimiter=delimiter, has_header=has_header
+        text_b, delimiter=delimiter, has_header=True
     )
 
     def _ts_index(schema: tuple[str, ...], column: str | int) -> int:
@@ -152,12 +170,14 @@ def compare_binance_archive_precision(
     def _analyze(
         rows: list[tuple[str, ...]],
         idx: int,
-    ) -> tuple[tuple[str, ...], str | None, int, int]:
+    ) -> tuple[tuple[str, ...], str | None, Mapping[str, int], int, int, int, int]:
         raw_samples: list[str] = []
-        units: list[str] = []
+        unit_counts: dict[str, int] = {}
         malformed = 0
         ambiguous = 0
+        sampled = 0
         for row in rows[:max_sample_rows]:
+            sampled += 1
             if idx >= len(row):
                 malformed += 1
                 continue
@@ -174,7 +194,7 @@ def compare_binance_archive_precision(
                     if isinstance(inference.unit, TimestampUnit)
                     else str(inference.unit)
                 )
-                units.append(unit)
+                unit_counts[unit] = unit_counts.get(unit, 0) + 1
             except AmbiguousTimestampError:
                 ambiguous += 1
             except OutOfRangeTimestampError:
@@ -182,26 +202,75 @@ def compare_binance_archive_precision(
             except Exception:
                 malformed += 1
 
+        valid = sum(unit_counts.values())
         dominant: str | None
-        if not units:
+        if not unit_counts:
             dominant = None
         else:
-            # Deterministic: most frequent unit; ties broken by unit name sort.
-            counts: dict[str, int] = {}
-            for u in units:
-                counts[u] = counts.get(u, 0) + 1
-            dominant = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[0][0]
-        return tuple(raw_samples[:10]), dominant, malformed, ambiguous
+            dominant = sorted(unit_counts.items(), key=lambda kv: (-kv[1], kv[0]))[0][0]
+        # Deterministic key order for distributions.
+        distribution = {k: unit_counts[k] for k in sorted(unit_counts)}
+        return (
+            tuple(raw_samples[:10]),
+            dominant,
+            distribution,
+            sampled,
+            valid,
+            malformed,
+            ambiguous,
+        )
 
-    rep_a, unit_a, mal_a, amb_a = _analyze(rows_a, idx_a)
-    rep_b, unit_b, mal_b, amb_b = _analyze(rows_b, idx_b)
+    (
+        rep_a,
+        unit_a,
+        dist_a,
+        sampled_a,
+        valid_a,
+        mal_a,
+        amb_a,
+    ) = _analyze(rows_a, idx_a)
+    (
+        rep_b,
+        unit_b,
+        dist_b,
+        sampled_b,
+        valid_b,
+        mal_b,
+        amb_b,
+    ) = _analyze(rows_b, idx_b)
 
     diffs = _schema_diff(schema_a, schema_b)
 
-    # Evidence-based transition support: different dominant units, both non-null,
-    # and low ambiguity. Never hard-coded.
     supports = False
     rationale_parts: list[str] = []
+
+    def _side_ok(label: str, valid: int, mal: int, amb: int, sampled: int) -> bool:
+        ok = True
+        if valid < min_valid_inferences:
+            rationale_parts.append(
+                f"{label}: valid inferences {valid} < min_valid_inferences "
+                f"{min_valid_inferences}"
+            )
+            ok = False
+        mal_rate = _rate(mal, sampled)
+        amb_rate = _rate(amb, sampled)
+        if mal_rate > max_malformed_rate:
+            rationale_parts.append(
+                f"{label}: malformed rate {mal_rate:.4f} > max_malformed_rate "
+                f"{max_malformed_rate}"
+            )
+            ok = False
+        if amb_rate > max_ambiguous_rate:
+            rationale_parts.append(
+                f"{label}: ambiguous rate {amb_rate:.4f} > max_ambiguous_rate "
+                f"{max_ambiguous_rate}"
+            )
+            ok = False
+        return ok
+
+    a_ok = _side_ok("A", valid_a, mal_a, amb_a, sampled_a)
+    b_ok = _side_ok("B", valid_b, mal_b, amb_b, sampled_b)
+
     if unit_a is None or unit_b is None:
         rationale_parts.append(
             "one or both archives lack a dominant inferred unit from sampled rows"
@@ -211,18 +280,17 @@ def compare_binance_archive_precision(
             f"both archives infer the same dominant unit ({unit_a}); "
             "no precision transition supported by this sample"
         )
+    elif a_ok and b_ok:
+        supports = True
+        rationale_parts.append(
+            f"sampled rows support a unit change from {unit_a} to {unit_b} "
+            f"with valid_a={valid_a}, valid_b={valid_b}, "
+            f"distributions A={dist_a} B={dist_b}"
+        )
     else:
-        if amb_a > 0 or amb_b > 0:
-            rationale_parts.append(
-                f"units differ ({unit_a} vs {unit_b}) but ambiguous observations "
-                f"are present (A={amb_a}, B={amb_b}); transition not supported"
-            )
-        else:
-            supports = True
-            rationale_parts.append(
-                f"sampled rows support a unit change from {unit_a} to {unit_b} "
-                f"with zero ambiguous observations in the sample window"
-            )
+        rationale_parts.append(
+            f"units differ ({unit_a} vs {unit_b}) but evidence thresholds not met"
+        )
 
     return BinancePrecisionComparison(
         archive_a_path=path_a,
@@ -233,6 +301,12 @@ def compare_binance_archive_precision(
         representative_raw_b=rep_b,
         inferred_unit_a=unit_a,
         inferred_unit_b=unit_b,
+        unit_distribution_a=dist_a,
+        unit_distribution_b=dist_b,
+        sampled_rows_a=sampled_a,
+        sampled_rows_b=sampled_b,
+        valid_inferences_a=valid_a,
+        valid_inferences_b=valid_b,
         schema_a=schema_a,
         schema_b=schema_b,
         schema_differences=diffs,
@@ -242,4 +316,7 @@ def compare_binance_archive_precision(
         ambiguous_b=amb_b,
         supports_timestamp_precision_transition=supports,
         transition_rationale="; ".join(rationale_parts),
+        min_valid_inferences=min_valid_inferences,
+        max_malformed_rate=max_malformed_rate,
+        max_ambiguous_rate=max_ambiguous_rate,
     )

@@ -16,16 +16,9 @@ Record = dict[str, Any]
 def _cbs(
     pages: list[list[Record]],
     *,
-    cursor_from_last: bool = True,
+    is_gap: Any = None,
 ) -> PaginationCallbacks:
     """Build callbacks over a fixed list of pages. Cursor is page index."""
-
-    def fetch(cursor: Any, limit: int) -> list[Record]:
-        del limit
-        idx = 0 if cursor is None else int(cursor)
-        if idx < 0 or idx >= len(pages):
-            return []
-        return list(pages[idx])
 
     def parse(raw: Any) -> list[Record]:
         return list(raw)
@@ -36,17 +29,6 @@ def _cbs(
     def order(rec: Record) -> tuple[Any, ...]:
         return (rec["ts"], rec["id"])
 
-    def next_cursor(raw: Any, records: Any) -> Any:
-        del raw
-        if not records:
-            return None
-        # Cursor = index of next page based on last record's page marker if present.
-        # Simpler: each record carries _page; next is page+1 if more pages exist.
-        # We encode page index as the fetch cursor itself via sequential integers.
-        # Infer current page from first record.
-        return None  # overridden below
-
-    # Rebuild with closure over pages for next_cursor.
     state = {"last_cursor": None}
 
     def fetch2(cursor: Any, limit: int) -> list[Record]:
@@ -73,6 +55,7 @@ def _cbs(
         order_key=order,
         next_cursor=next2,
         time_boundary=lambda r: r["ts"],
+        is_gap=is_gap,
     )
 
 
@@ -205,19 +188,57 @@ def test_exclusive_boundary_overlap_flag() -> None:
     assert any(o.kind == "overlap" for o in result.overlaps)
 
 
-def test_gap_reporting_forward() -> None:
+def test_gap_not_inferred_without_policy() -> None:
+    """Forward jumps are not gaps unless the caller supplies is_gap."""
     pages = [
         [{"id": 1, "ts": 1}, {"id": 2, "ts": 2}],
         [{"id": 5, "ts": 5}, {"id": 6, "ts": 6}],
     ]
     result = paginate(
-        _cbs(pages),
+        _cbs(pages),  # no is_gap
+        mode=PaginationMode.FORWARD_TIME,
+        raise_on_safety_violation=False,
+        max_pages=5,
+    )
+    assert result.diagnostics.gap_count == 0
+    assert result.gaps == ()
+
+
+def test_gap_reporting_with_explicit_policy() -> None:
+    pages = [
+        [{"id": 1, "ts": 1}, {"id": 2, "ts": 2}],
+        [{"id": 5, "ts": 5}, {"id": 6, "ts": 6}],
+    ]
+
+    def is_gap(prev: Any, nxt: Any) -> bool:
+        return int(nxt) - int(prev) > 1
+
+    result = paginate(
+        _cbs(pages, is_gap=is_gap),
         mode=PaginationMode.FORWARD_TIME,
         raise_on_safety_violation=False,
         max_pages=5,
     )
     assert result.diagnostics.gap_count >= 1
     assert len(result.gaps) >= 1
+
+
+def test_adjacent_boundaries_not_gap_under_policy() -> None:
+    pages = [
+        [{"id": 1, "ts": 1}, {"id": 2, "ts": 2}],
+        [{"id": 3, "ts": 3}, {"id": 4, "ts": 4}],
+    ]
+
+    def is_gap(prev: Any, nxt: Any) -> bool:
+        return int(nxt) - int(prev) > 1
+
+    result = paginate(
+        _cbs(pages, is_gap=is_gap),
+        mode=PaginationMode.FORWARD_TIME,
+        raise_on_safety_violation=False,
+        max_pages=5,
+    )
+    assert result.diagnostics.gap_count == 0
 
 
 def test_backward_time_order() -> None:

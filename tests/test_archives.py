@@ -214,11 +214,23 @@ def test_csv_physical_line_limit(tmp_path: Path) -> None:
 
 
 def test_csv_logical_record_limit(tmp_path: Path) -> None:
+    """Over-long logical records raise (fail-fast), matching multiline accumulation.
+
+    Contract: max_logical_record is enforced during stream accumulation in
+    ``_BoundedCSVTextReader``. Exceeding it raises ``MalformedCSVError`` rather
+    than collecting a soft ``logical_record_too_long`` row report. This prevents
+    unbounded memory growth before the row loop can run.
+    """
     p = tmp_path / "lr.csv"
+    # Single physical line, two fields, total logical length >> 10.
     p.write_text("a,b\n" + ("y" * 20) + "," + ("z" * 20) + "\n", encoding="utf-8")
-    result = audit_csv_safe(p, encoding="utf-8", max_logical_record=10)
-    assert result.malformed_records == 1
-    assert result.malformed_reports[0].reason == "logical_record_too_long"
+    with pytest.raises(MalformedCSVError, match="Logical record exceeds"):
+        audit_csv_safe(
+            p,
+            encoding="utf-8",
+            max_physical_line=1_000_000,
+            max_logical_record=10,
+        )
 
 
 def test_csv_requires_encoding(tmp_path: Path) -> None:
@@ -226,3 +238,85 @@ def test_csv_requires_encoding(tmp_path: Path) -> None:
     p.write_text("a\n1\n", encoding="utf-8")
     with pytest.raises(ValueError):
         audit_csv_safe(p, encoding="")
+
+
+def test_csv_field_larger_than_default_131072_when_configured(tmp_path: Path) -> None:
+    """Fields above the stdlib default 131072 are allowed when limits permit."""
+    p = tmp_path / "bigfield.csv"
+    big = "x" * 200_000
+    p.write_text(f"h\n{big}\n", encoding="utf-8")
+    result = audit_csv_safe(
+        p,
+        encoding="utf-8",
+        max_physical_line=300_000,
+        max_logical_record=300_000,
+    )
+    assert result.valid_records == 1
+    assert result.first_samples[0][0] == big
+
+
+def test_csv_error_converted_to_typed_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """stdlib ``csv.Error`` is converted to typed ``MalformedCSVError``.
+
+    CPython 3.13 does not raise on unterminated quotes or embedded NUL, and our
+    stream limits fire before ``csv.field_size_limit``. Force a real ``csv.Error``
+    from the reader to exercise the conversion path.
+    """
+    import csv as csv_mod
+
+    p = tmp_path / "ok.csv"
+    p.write_text("h\n1\n", encoding="utf-8")
+    real_reader = csv_mod.reader
+
+    def boom_reader(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+        underlying = real_reader(*args, **kwargs)
+
+        def _gen():  # type: ignore[no-untyped-def]
+            yield next(underlying)  # header row
+            raise csv_mod.Error("synthetic field larger than field limit")
+
+        return _gen()
+
+    monkeypatch.setattr(csv_mod, "reader", boom_reader)
+    with pytest.raises(MalformedCSVError, match="CSV parse error"):
+        audit_csv_safe(
+            p,
+            encoding="utf-8",
+            max_physical_line=1000,
+            max_logical_record=1000,
+        )
+
+
+def test_multiline_logical_limit_during_accumulation(tmp_path: Path) -> None:
+    """Same raise contract as single-line over-long logical records."""
+    p = tmp_path / "multi.csv"
+    # Quoted multiline field that grows past max_logical_record while accumulating.
+    chunk = "y" * 40
+    p.write_text(f'h\n"{chunk}\n{chunk}\n{chunk}"\n', encoding="utf-8")
+    with pytest.raises(MalformedCSVError, match="Logical record exceeds"):
+        audit_csv_safe(
+            p,
+            encoding="utf-8",
+            max_physical_line=100,
+            max_logical_record=50,
+        )
+
+
+def test_zip_member_stream_enforces_byte_bound(tmp_path: Path) -> None:
+    from source_audit.archives import read_zip_member_text
+    from source_audit.errors import UnsafeArchiveError
+
+    zpath = tmp_path / "m.zip"
+    payload = b"Z" * 10_000
+    with zipfile.ZipFile(zpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("big.csv", payload)
+    with pytest.raises(UnsafeArchiveError, match="exceeds bound"):
+        read_zip_member_text(
+            zpath,
+            "big.csv",
+            encoding="utf-8",
+            max_extracted_bytes=100,
+            chunk_size=32,
+        )

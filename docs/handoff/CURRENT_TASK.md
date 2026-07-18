@@ -1,5 +1,5 @@
 Ticket: AUD-002
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Governing documents:
 - docs/architecture/02_DATA_SOURCE_PLAN.md
 - research/sprint_003/10_REVIEW_AND_ERRATA.md

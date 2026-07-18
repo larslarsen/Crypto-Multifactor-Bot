@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import os
 import tempfile
-from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -31,13 +31,25 @@ class TimeoutConfig:
             raise ValueError("timeouts must be positive")
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class StreamResponse:
-    """Transport-level streaming response."""
+    """Transport-level streaming response with deterministic close."""
 
     status_code: int
     headers: Mapping[str, str]
     iter_bytes: Iterator[bytes]
+    close: Callable[[], None] = field(default=lambda: None)
+    _closed: bool = field(default=False, repr=False)
+
+    def close_response(self) -> None:
+        """Close the underlying response without draining remaining body bytes."""
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 @runtime_checkable
@@ -71,29 +83,55 @@ class HttpxTransport:
             write=timeout.read_s,
             pool=timeout.connect_s,
         )
-        # Materialize the response body stream under a held client context by
-        # reading chunks into a generator that owns the client lifecycle.
         client = httpx.Client(timeout=timeout_cfg, follow_redirects=True)
+        response: httpx.Response | None = None
         try:
             request = client.build_request("GET", url, headers=dict(headers or {}))
             response = client.send(request, stream=True)
             status = response.status_code
             resp_headers = {k: v for k, v in response.headers.items()}
+            resp = response
 
             def _chunks() -> Iterator[bytes]:
                 try:
-                    yield from response.iter_bytes()
+                    yield from resp.iter_bytes()
                 finally:
-                    response.close()
+                    # Iterator exhaustion path also closes.
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
+                    try:
+                        client.close()
+                    except Exception:
+                        pass
+
+            def _close() -> None:
+                try:
+                    resp.close()
+                except Exception:
+                    pass
+                try:
                     client.close()
+                except Exception:
+                    pass
 
             return StreamResponse(
                 status_code=status,
                 headers=resp_headers,
                 iter_bytes=_chunks(),
+                close=_close,
             )
         except Exception:
-            client.close()
+            if response is not None:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            try:
+                client.close()
+            except Exception:
+                pass
             raise
 
 
@@ -106,6 +144,29 @@ def content_addressed_path(dest_dir: Path, sha256_hex: str) -> Path:
             context={"sha256": sha256_hex},
         )
     return dest_dir / digest
+
+
+def _publish_exclusive(tmp_path: Path, final_path: Path) -> bool:
+    """Publish ``tmp_path`` to ``final_path`` without overwriting an existing object.
+
+    Returns True when this caller created ``final_path``; False when the path
+    already existed (caller must verify content). Uses ``os.link`` so concurrent
+    publishers cannot clobber an existing object. Falls back to ``O_CREAT|O_EXCL``
+    when hardlinks are unavailable.
+    """
+    try:
+        os.link(str(tmp_path), str(final_path))
+        return True
+    except FileExistsError:
+        return False
+    except OSError:
+        try:
+            fd = os.open(str(final_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+        except FileExistsError:
+            return False
+        os.replace(str(tmp_path), str(final_path))
+        return True
 
 
 def atomic_download(
@@ -125,7 +186,8 @@ def atomic_download(
     Publication identity is the full SHA-256 content hash. Existing identical content
     is reused; differing content at the same path is never overwritten.
     Temporary partial files live on the destination filesystem and are cleaned up on
-    every failure path.
+    every failure path. On size/checksum/write failure the stream is closed immediately
+    without draining remaining body bytes.
     """
     if max_bytes <= 0:
         raise ValueError("max_bytes must be positive")
@@ -148,6 +210,7 @@ def atomic_download(
     digest = hashlib.sha256()
     status_code = 0
     resp_headers: dict[str, str] = {}
+    stream: StreamResponse | None = None
 
     try:
         try:
@@ -174,39 +237,41 @@ def atomic_download(
 
         fd, tmp_name = tempfile.mkstemp(prefix=".partial-", suffix=".part", dir=dest_dir)
         tmp_path = Path(tmp_name)
-        try:
-            with os.fdopen(fd, "wb") as handle:
-                for chunk in stream.iter_bytes:
-                    if not chunk:
-                        continue
-                    # Stream in transport chunks; enforce max_bytes.
-                    offset = 0
-                    while offset < len(chunk):
-                        take = min(chunk_size, len(chunk) - offset)
-                        piece = chunk[offset : offset + take]
-                        offset += take
-                        bytes_written += len(piece)
-                        if bytes_written > max_bytes:
-                            raise SizeLimitError(
-                                f"Max bytes exceeded: {max_bytes}",
-                                context={
-                                    "max_bytes": max_bytes,
-                                    "bytes_written": bytes_written,
-                                    "url": url,
-                                },
-                            )
+        with os.fdopen(fd, "wb") as handle:
+            for chunk in stream.iter_bytes:
+                if not chunk:
+                    continue
+                offset = 0
+                while offset < len(chunk):
+                    take = min(chunk_size, len(chunk) - offset)
+                    piece = chunk[offset : offset + take]
+                    offset += take
+                    next_total = bytes_written + len(piece)
+                    if next_total > max_bytes:
+                        # Stop immediately — do not continue reading.
+                        raise SizeLimitError(
+                            f"Max bytes exceeded: {max_bytes}",
+                            context={
+                                "max_bytes": max_bytes,
+                                "bytes_written": bytes_written,
+                                "url": url,
+                            },
+                        )
+                    try:
                         handle.write(piece)
-                        digest.update(piece)
-                handle.flush()
-                os.fsync(handle.fileno())
-        except Exception:
-            # Ensure iterator resources are exhausted/closed if possible.
-            try:
-                for _ in stream.iter_bytes:
-                    pass
-            except Exception:
-                pass
-            raise
+                    except OSError as exc:
+                        raise DownloadError(
+                            f"Write failure for {url}: {exc}",
+                            context={"url": url},
+                        ) from exc
+                    digest.update(piece)
+                    bytes_written = next_total
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        # Successful full read — close stream deterministically.
+        stream.close_response()
+        stream = None
 
         content_hash = digest.hexdigest()
 
@@ -227,6 +292,7 @@ def atomic_download(
 
         final_path = content_addressed_path(dest_dir, content_hash)
         reused = False
+
         if final_path.exists():
             existing_hash = compute_sha256(final_path, chunk_size=chunk_size)
             if existing_hash.lower() != content_hash.lower():
@@ -238,14 +304,30 @@ def atomic_download(
                         "new_sha256": content_hash,
                     },
                 )
-            # Identical content: reuse, drop partial.
             reused = True
             tmp_path.unlink(missing_ok=True)
             tmp_path = None
         else:
-            # Atomic publish via os.replace on the same filesystem.
-            os.replace(str(tmp_path), str(final_path))
-            tmp_path = None
+            created = _publish_exclusive(tmp_path, final_path)
+            if created:
+                # Content is at final_path; remove the hardlink source or leftover tmp.
+                tmp_path.unlink(missing_ok=True)
+                tmp_path = None
+            else:
+                # Concurrent publisher won — never overwrite; verify identity.
+                existing_hash = compute_sha256(final_path, chunk_size=chunk_size)
+                if existing_hash.lower() != content_hash.lower():
+                    raise DownloadError(
+                        "Content-addressed path exists with different content",
+                        context={
+                            "path": str(final_path),
+                            "existing_sha256": existing_hash,
+                            "new_sha256": content_hash,
+                        },
+                    )
+                reused = True
+                tmp_path.unlink(missing_ok=True)
+                tmp_path = None
 
         return DownloadResult(
             url=url,
@@ -272,6 +354,8 @@ def atomic_download(
             context={"url": url},
         ) from exc
     finally:
+        if stream is not None:
+            stream.close_response()
         if tmp_path is not None and tmp_path.exists():
             tmp_path.unlink(missing_ok=True)
 
@@ -285,6 +369,8 @@ class SyntheticTransport:
     headers: Mapping[str, str] | None = None
     chunk_size: int = 64
     fail_after_bytes: int | None = None
+    closed: bool = False
+    bytes_yielded: int = 0
 
     def stream_get(
         self,
@@ -293,23 +379,32 @@ class SyntheticTransport:
         headers: Mapping[str, str] | None,
         timeout: TimeoutConfig,
     ) -> StreamResponse:
-        del url, headers, timeout  # unused; synthetic
-
+        del url, headers, timeout
         body = self.body
         fail_at = self.fail_after_bytes
         size = self.chunk_size
+        self.bytes_yielded = 0
+        self.closed = False
+        transport = self
 
         def _iter() -> Iterator[bytes]:
             sent = 0
             while sent < len(body):
+                if transport.closed:
+                    return
                 if fail_at is not None and sent >= fail_at:
                     raise OSError("synthetic transport failure")
                 piece = body[sent : sent + size]
                 sent += len(piece)
+                transport.bytes_yielded = sent
                 yield piece
+
+        def _close() -> None:
+            transport.closed = True
 
         return StreamResponse(
             status_code=self.status_code,
             headers=dict(self.headers or {"content-type": "application/octet-stream"}),
             iter_bytes=_iter(),
+            close=_close,
         )

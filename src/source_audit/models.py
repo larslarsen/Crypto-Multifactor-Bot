@@ -160,6 +160,12 @@ class BinancePrecisionComparison:
     representative_raw_b: tuple[str, ...]
     inferred_unit_a: str | None
     inferred_unit_b: str | None
+    unit_distribution_a: Mapping[str, int]
+    unit_distribution_b: Mapping[str, int]
+    sampled_rows_a: int
+    sampled_rows_b: int
+    valid_inferences_a: int
+    valid_inferences_b: int
     schema_a: tuple[str, ...]
     schema_b: tuple[str, ...]
     schema_differences: tuple[SchemaFieldDiff, ...]
@@ -169,6 +175,9 @@ class BinancePrecisionComparison:
     ambiguous_b: int
     supports_timestamp_precision_transition: bool
     transition_rationale: str
+    min_valid_inferences: int
+    max_malformed_rate: float
+    max_ambiguous_rate: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,6 +301,7 @@ class BarComparisonResult:
     trade_count_mismatches: tuple[BarFieldMismatch, ...]
     timestamp_alignment_mismatches: tuple[BarFieldMismatch, ...]
     duplicate_provider_intervals: tuple[datetime, ...]
+    duplicate_reconstructed_intervals: tuple[datetime, ...]
     price_tolerance: Decimal
     volume_tolerance: Decimal
     trade_count_tolerance: int
@@ -311,9 +321,16 @@ class StorageSample:
 
 @dataclass(frozen=True, slots=True)
 class ProjectionAssumptions:
-    """Caller-supplied assumptions for U25/U50/U100 projections. No hidden defaults."""
+    """Caller-supplied assumptions for U25/U50/U100 projections. No hidden defaults.
 
-    universe_size: int
+    ``u25_universe_size``, ``u50_universe_size``, and ``u100_universe_size`` are
+    explicit asset counts for each named scenario — not percentages of a base
+    universe.
+    """
+
+    u25_universe_size: int
+    u50_universe_size: int
+    u100_universe_size: int
     rows_per_asset_per_period: int
     retention_periods: int
     replication_factor: Decimal

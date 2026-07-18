@@ -74,3 +74,30 @@ def test_csv_deterministic() -> None:
     )
     assert text.splitlines()[0] == "id,px"
     assert "1.5" in text
+
+
+def test_csv_nested_uses_canonical_json_not_str() -> None:
+    import csv
+    import io
+    import json
+
+    text = dumps_csv(
+        ["id", "meta"],
+        [(1, {"b": 2, "a": [1, Decimal("1.5")]})],
+    )
+    # Decode the CSV field first — the raw line has RFC-4180 doubled quotes.
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["id", "meta"]
+    assert rows[1][0] == "1"
+    meta_json = rows[1][1]
+    assert "Decimal" not in meta_json
+    assert "{'b'" not in meta_json
+    decoded = json.loads(meta_json)
+    assert decoded == {"a": [1, "1.5"], "b": 2}
+    # Canonical form: sorted keys, compact separators.
+    assert meta_json == json.dumps(
+        {"a": [1, "1.5"], "b": 2},
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )

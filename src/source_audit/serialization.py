@@ -156,15 +156,38 @@ def dumps_csv(
             )
         cells: list[str] = []
         for item in row:
-            normalized = _normalize_for_json(item)
-            if normalized is None:
-                cells.append("")
-            elif isinstance(normalized, bool):
-                cells.append("true" if normalized else "false")
-            else:
-                cells.append(str(normalized))
+            cells.append(_csv_cell(item))
         lines.append(delimiter.join(_escape(c) for c in cells))
     return "\n".join(lines) + "\n"
+
+
+def _csv_cell(value: Any) -> str:
+    """Encode one CSV cell using canonical deterministic forms.
+
+    Nested mappings and sequences use compact deterministic JSON (sorted keys),
+    never Python ``str()`` of complex objects.
+    """
+    normalized = _normalize_for_json(value)
+    if normalized is None:
+        return ""
+    if isinstance(normalized, bool):
+        return "true" if normalized else "false"
+    if isinstance(normalized, (dict, list)):
+        return json.dumps(
+            normalized,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+        )
+    if isinstance(normalized, str):
+        return normalized
+    if isinstance(normalized, int) and not isinstance(normalized, bool):
+        return str(normalized)
+    # Defensive: _normalize_for_json only yields the types above for scalars.
+    raise SerializationError(
+        f"Unexpected normalized CSV cell type: {type(normalized).__name__}"
+    )
 
 
 def dump_csv(

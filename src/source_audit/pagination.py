@@ -1,8 +1,8 @@
 """Generic pagination framework with safety checks and deterministic diagnostics.
 
 Provider-specific request creation, response parsing, record identity, ordering keys,
-cursors, and time boundaries are supplied through typed callbacks. The engine never
-silently deduplicates records.
+cursors, time boundaries, and gap/adjacency policy are supplied through typed callbacks.
+The engine never silently deduplicates records.
 """
 
 from __future__ import annotations
@@ -45,7 +45,14 @@ class PaginationCallbacks:
     page_fingerprint: Callable[[Any, Sequence[Record]], tuple[Any, ...]] | None = None
     """Stable fingerprint of a page for repeated-page detection."""
     time_boundary: Callable[[Record], Any] | None = None
-    """Optional time boundary extractor for time-mode gap/overlap checks."""
+    """Extract the time boundary value used for time-mode gap/order checks."""
+    is_gap: Callable[[Any, Any], bool] | None = None
+    """Caller-supplied adjacency policy: ``is_gap(prev_boundary, next_boundary)``.
+
+    When None, the engine never infers gaps from order-key jumps. Gaps are reported
+    only when this predicate returns True for consecutive page boundary values
+    obtained via ``time_boundary`` (required for gap detection).
+    """
 
 
 def _default_page_fingerprint(raw: Any, records: Sequence[Record]) -> tuple[Any, ...]:
@@ -77,6 +84,8 @@ def paginate(
         raise ValueError("max_records must be positive")
     if page_limit <= 0:
         raise ValueError("page_limit must be positive")
+    if callbacks.is_gap is not None and callbacks.time_boundary is None:
+        raise ValueError("time_boundary is required when is_gap is provided")
 
     records_out: list[Record] = []
     gaps: list[GapReport] = []
@@ -99,8 +108,10 @@ def paginate(
     stopped_reason = "exhausted"
     prev_page_last_key: tuple[Any, ...] | None = None
     prev_page_last_id: tuple[Any, ...] | None = None
+    prev_page_last_boundary: Any | None = None
     prev_page_index = -1
     fingerprint_fn = callbacks.page_fingerprint or _default_page_fingerprint
+    time_modes = {PaginationMode.FORWARD_TIME, PaginationMode.BACKWARD_TIME}
 
     while pages_fetched < max_pages:
         if len(records_out) >= max_records:
@@ -128,10 +139,15 @@ def paginate(
             stopped_reason = "empty_page"
             break
 
-        # Within-page stable order.
+        # Within-page stable order (order_key; for time modes prefer time_boundary).
+        def _cmp_key(rec: Record) -> Any:
+            if mode in time_modes and callbacks.time_boundary is not None:
+                return callbacks.time_boundary(rec)
+            return callbacks.order_key(rec)
+
         for i in range(1, len(page_records)):
-            prev_k = callbacks.order_key(page_records[i - 1])
-            cur_k = callbacks.order_key(page_records[i])
+            prev_k = _cmp_key(page_records[i - 1])
+            cur_k = _cmp_key(page_records[i])
             if mode is PaginationMode.BACKWARD_TIME:
                 if cur_k > prev_k:
                     within_page_order_violations += 1
@@ -149,26 +165,48 @@ def paginate(
                             context={"page_index": pages_fetched - 1, "index": i},
                         )
 
-        # Across-page order + boundary duplicates / gaps / overlaps.
         first_key = callbacks.order_key(page_records[0])
         first_id = callbacks.record_id(page_records[0])
+        first_boundary: Any | None = None
+        if callbacks.time_boundary is not None:
+            first_boundary = callbacks.time_boundary(page_records[0])
+
         if prev_page_last_key is not None:
-            if mode is PaginationMode.BACKWARD_TIME:
-                if first_key > prev_page_last_key:
-                    across_page_order_violations += 1
-                    if raise_on_safety_violation:
-                        raise PaginationError(
-                            "Across-page order violation (backward_time)",
-                            context={"page_index": pages_fetched - 1},
-                        )
+            # Across-page order: use time_boundary when in time mode and available.
+            if mode in time_modes and prev_page_last_boundary is not None and first_boundary is not None:
+                if mode is PaginationMode.BACKWARD_TIME:
+                    if first_boundary > prev_page_last_boundary:
+                        across_page_order_violations += 1
+                        if raise_on_safety_violation:
+                            raise PaginationError(
+                                "Across-page order violation (backward_time)",
+                                context={"page_index": pages_fetched - 1},
+                            )
+                else:
+                    if first_boundary < prev_page_last_boundary:
+                        across_page_order_violations += 1
+                        if raise_on_safety_violation:
+                            raise PaginationError(
+                                "Across-page order violation",
+                                context={"page_index": pages_fetched - 1},
+                            )
             else:
-                if first_key < prev_page_last_key:
-                    across_page_order_violations += 1
-                    if raise_on_safety_violation:
-                        raise PaginationError(
-                            "Across-page order violation",
-                            context={"page_index": pages_fetched - 1},
-                        )
+                if mode is PaginationMode.BACKWARD_TIME:
+                    if first_key > prev_page_last_key:
+                        across_page_order_violations += 1
+                        if raise_on_safety_violation:
+                            raise PaginationError(
+                                "Across-page order violation (backward_time)",
+                                context={"page_index": pages_fetched - 1},
+                            )
+                elif mode is PaginationMode.FORWARD_TIME or mode is PaginationMode.CURSOR:
+                    if mode is PaginationMode.FORWARD_TIME and first_key < prev_page_last_key:
+                        across_page_order_violations += 1
+                        if raise_on_safety_violation:
+                            raise PaginationError(
+                                "Across-page order violation",
+                                context={"page_index": pages_fetched - 1},
+                            )
 
             # Boundary duplicate: first record of this page equals last of previous.
             if first_id == prev_page_last_id:
@@ -182,7 +220,6 @@ def paginate(
                     )
                 )
                 if boundary_policy is BoundaryPolicy.EXCLUSIVE:
-                    # Caller expected exclusive boundaries; report as overlap.
                     overlaps.append(
                         OverlapReport(
                             key=first_id,
@@ -191,25 +228,19 @@ def paginate(
                             kind="overlap",
                         )
                     )
-            elif mode is PaginationMode.FORWARD_TIME and callbacks.time_boundary is not None:
-                # Gap heuristic: order keys strictly after previous without equality.
-                if first_key > prev_page_last_key:
-                    # Only report gap when keys are comparable and not adjacent by equality.
-                    # Without a domain-specific adjacency function we report non-equal
-                    # forward jumps as gaps for diagnostics.
+            elif (
+                mode in time_modes
+                and callbacks.is_gap is not None
+                and prev_page_last_boundary is not None
+                and first_boundary is not None
+                and first_id != prev_page_last_id
+            ):
+                # Explicit caller adjacency policy — never assume every jump is a gap.
+                if callbacks.is_gap(prev_page_last_boundary, first_boundary):
                     gaps.append(
                         GapReport(
-                            previous_key=prev_page_last_key,
-                            next_key=first_key,
-                            page_index=pages_fetched - 1,
-                        )
-                    )
-            elif mode is PaginationMode.BACKWARD_TIME and callbacks.time_boundary is not None:
-                if first_key < prev_page_last_key:
-                    gaps.append(
-                        GapReport(
-                            previous_key=prev_page_last_key,
-                            next_key=first_key,
+                            previous_key=(prev_page_last_boundary,),
+                            next_key=(first_boundary,),
                             page_index=pages_fetched - 1,
                         )
                     )
@@ -250,7 +281,6 @@ def paginate(
             stopped_reason = "no_next_cursor"
             break
 
-        # Non-progress: cursor unchanged.
         if next_c == cursor:
             non_progress_events += 1
             if raise_on_safety_violation:
@@ -261,8 +291,6 @@ def paginate(
             stopped_reason = "non_progress"
             break
 
-        # Repeated cursor over the session.
-        # For cursor mode, the *next* cursor must not have been used as a start before.
         cursor_key = _cursor_key(next_c)
         if cursor_key in seen_cursors:
             repeated_cursor_events += 1
@@ -277,6 +305,10 @@ def paginate(
 
         prev_page_last_key = callbacks.order_key(page_records[-1])
         prev_page_last_id = callbacks.record_id(page_records[-1])
+        if callbacks.time_boundary is not None:
+            prev_page_last_boundary = callbacks.time_boundary(page_records[-1])
+        else:
+            prev_page_last_boundary = None
         prev_page_index = pages_fetched - 1
         cursor = next_c
 
