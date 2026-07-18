@@ -94,7 +94,9 @@ class PublicationReceipt:
     """Typed evidence that bytes are published at a verified content path.
 
     Catalog registration requires a receipt; it cannot be confused with
-    unverified acquisition metadata.
+    unverified acquisition metadata. Identity fields must agree with the
+    configured object prefix and canonical layout
+    ``<object_prefix>/<H[0:2]>/<H[2:4]>/<H>``.
     """
 
     raw_object_id: str
@@ -102,6 +104,7 @@ class PublicationReceipt:
     byte_size: int
     storage_path: Path
     storage_uri: str
+    object_prefix: str
     reused_existing: bool
     verified_regular_file: bool
     verified_size: bool
@@ -114,6 +117,9 @@ class PublicationReceipt:
             and self.verified_sha256
             and self.byte_size >= 0
             and len(self.sha256) == 64
+            and bool(self.object_prefix)
+            and bool(self.storage_uri)
+            and bool(self.raw_object_id)
         )
 
 

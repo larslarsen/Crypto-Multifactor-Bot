@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
+import stat as statmod
 from pathlib import Path
 
-from cryptofactors.ingest.raw.errors import PathSafetyError, RawStoreError
+from cryptofactors.ingest.raw.errors import DurabilityError, PathSafetyError, RawStoreError
 
 
 def validate_sha256_hex(sha256_hex: str) -> str:
@@ -19,7 +20,7 @@ def validate_sha256_hex(sha256_hex: str) -> str:
 
 
 def content_addressed_relative_path(sha256_hex: str, *, prefix: str = "raw/sha256") -> Path:
-    """Return ``raw/sha256/ab/cd/<full_sha256>`` as a relative path."""
+    """Return ``<prefix>/ab/cd/<full_sha256>`` as a relative path."""
     digest = validate_sha256_hex(sha256_hex)
     return Path(prefix) / digest[:2] / digest[2:4] / digest
 
@@ -35,9 +36,22 @@ def raw_object_id_for_sha256(sha256_hex: str) -> str:
     return f"raw_{digest}"
 
 
+def canonical_identity(
+    *,
+    root: Path,
+    object_prefix: str,
+    sha256_hex: str,
+) -> tuple[str, str, Path, str]:
+    """Return ``(sha256, raw_object_id, absolute_path, storage_uri)`` for content H."""
+    digest = validate_sha256_hex(sha256_hex)
+    oid = raw_object_id_for_sha256(digest)
+    rel = content_addressed_relative_path(digest, prefix=object_prefix)
+    uri = rel.as_posix()
+    abs_path = (Path(root).resolve() / rel).resolve()
+    return digest, oid, abs_path, uri
+
+
 def _reject_traversal(label: str, path: str | Path) -> None:
-    # Inspect raw text segments: pathlib normalizes "." away from Path.parts,
-    # so "tmp/./x" would otherwise bypass the check. Split on the OS separator.
     raw_segments = [seg for seg in str(path).split(os.sep) if seg != ""]
     if any(seg in (".", "..") for seg in raw_segments):
         raise PathSafetyError(
@@ -72,9 +86,7 @@ def validate_store_config(config: object) -> None:
     if not object_prefix or object_prefix.strip() == "":
         raise PathSafetyError("object_prefix must be non-empty")
 
-    # Ensure resolved paths stay under root once root exists or is created.
     root_abs = root.expanduser()
-    # Do not resolve if missing — still check pure path joining.
     try:
         root_resolved = root_abs.resolve()
     except OSError as exc:
@@ -83,11 +95,17 @@ def validate_store_config(config: object) -> None:
             context={"root": str(root)},
         ) from exc
 
-    temp_candidate = (root_resolved / temp_rel)
-    obj_candidate = (root_resolved / prefix_rel)
-    for label, candidate in (("temp", temp_candidate), ("objects", obj_candidate)):
+    if root_resolved.exists() and root_resolved.is_symlink():
+        raise PathSafetyError(
+            "store root must not be a symlink",
+            context={"root": str(root_resolved)},
+        )
+
+    for label, candidate in (
+        ("temp", root_resolved / temp_rel),
+        ("objects", root_resolved / prefix_rel),
+    ):
         try:
-            # relative_to raises if not under root
             candidate.resolve().relative_to(root_resolved)
         except ValueError as exc:
             raise PathSafetyError(
@@ -109,23 +127,61 @@ def assert_path_under_root(path: Path, root: Path, *, label: str) -> Path:
     return path_r
 
 
-def assert_no_symlink_components(path: Path, *, must_exist: bool = False) -> None:
-    """Reject if any path component is a symlink (absolute paths only)."""
-    if not path.is_absolute():
-        path = path.resolve()
-    built = Path("/")
-    for part in path.parts[1:]:
+def assert_no_symlink_components(path: Path, *, stop_at: Path | None = None) -> None:
+    """Reject if any path component is a symlink.
+
+    When ``stop_at`` is set, only components at or below ``stop_at`` are checked
+    (so the system root is not required to be non-symlink).
+    """
+    path = path if path.is_absolute() else path.resolve()
+    stop = stop_at.resolve() if stop_at is not None else None
+    built = Path(path.anchor) if path.anchor else Path("/")
+    # Rebuild from parts
+    if path.is_absolute():
+        built = Path("/")
+        parts = path.parts[1:]
+    else:
+        built = Path()
+        parts = path.parts
+
+    for part in parts:
         built = built / part
+        if stop is not None:
+            try:
+                built.resolve().relative_to(stop)
+            except ValueError:
+                # Above stop_at — skip check for system parents
+                if not str(built.resolve()).startswith(str(stop)):
+                    continue
         if built.is_symlink():
             raise PathSafetyError(
                 "symlinked storage-directory component rejected",
                 context={"path": str(built)},
             )
-        if must_exist and not built.exists():
+
+
+def assert_parents_are_directories(path: Path, *, stop_at: Path) -> None:
+    """Ensure every parent of ``path`` down to ``stop_at`` is a real directory."""
+    stop = stop_at.resolve()
+    current = path.parent.resolve()
+    while True:
+        if current.is_symlink():
             raise PathSafetyError(
-                "required path component missing",
-                context={"path": str(built)},
+                "parent path component is a symlink",
+                context={"path": str(current)},
             )
+        if current.exists() and not current.is_dir():
+            raise PathSafetyError(
+                "parent path component is not a directory",
+                context={"path": str(current)},
+            )
+        if current == stop or current.parent == current:
+            break
+        try:
+            current.relative_to(stop)
+        except ValueError:
+            break
+        current = current.parent
 
 
 def assert_regular_nonsymlink_file(path: Path, *, label: str) -> None:
@@ -134,15 +190,12 @@ def assert_regular_nonsymlink_file(path: Path, *, label: str) -> None:
             f"{label} must not be a symlink",
             context={"path": str(path)},
         )
-    if not path.is_file():
+    if not path.exists():
         raise PathSafetyError(
-            f"{label} must be a regular file",
-            context={"path": str(path), "exists": path.exists()},
+            f"{label} does not exist",
+            context={"path": str(path)},
         )
-    # Extra: reject non-regular via stat
     st = os.lstat(path)
-    import stat as statmod
-
     if not statmod.S_ISREG(st.st_mode):
         raise PathSafetyError(
             f"{label} is not a regular file",
@@ -151,9 +204,42 @@ def assert_regular_nonsymlink_file(path: Path, *, label: str) -> None:
 
 
 def fsync_dir(path: Path) -> None:
-    """fsync a directory entry (best-effort on platforms that support it)."""
-    fd = os.open(str(path), os.O_RDONLY)
+    """fsync a directory entry; raise DurabilityError on failure."""
     try:
-        os.fsync(fd)
+        fd = os.open(str(path), os.O_RDONLY)
+    except OSError as exc:
+        raise DurabilityError(
+            f"cannot open directory for fsync: {path}",
+            context={"path": str(path), "error": str(exc)},
+        ) from exc
+    try:
+        try:
+            os.fsync(fd)
+        except OSError as exc:
+            raise DurabilityError(
+                f"directory fsync failed: {path}",
+                context={"path": str(path), "error": str(exc)},
+            ) from exc
+    finally:
+        os.close(fd)
+
+
+def fsync_file(path: Path) -> None:
+    """fsync a file; raise DurabilityError on failure."""
+    try:
+        fd = os.open(str(path), os.O_RDONLY)
+    except OSError as exc:
+        raise DurabilityError(
+            f"cannot open file for fsync: {path}",
+            context={"path": str(path), "error": str(exc)},
+        ) from exc
+    try:
+        try:
+            os.fsync(fd)
+        except OSError as exc:
+            raise DurabilityError(
+                f"file fsync failed: {path}",
+                context={"path": str(path), "error": str(exc)},
+            ) from exc
     finally:
         os.close(fd)

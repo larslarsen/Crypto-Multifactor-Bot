@@ -48,12 +48,20 @@ class PublicationError(RawStoreError):
     """Atomic no-clobber publication failed or is unsupported on this filesystem."""
 
 
+class DurabilityError(PublicationError):
+    """Required file or directory fsync failed."""
+
+
 class PathSafetyError(RawStoreError):
     """Storage path configuration or destination failed safety validation."""
 
 
 class CatalogRegistrationError(RawStoreError):
     """Catalog refused registration (missing/invalid publication evidence)."""
+
+
+class AcquisitionConflictError(RawStoreError):
+    """Same acquisition_id reused with conflicting provenance or content."""
 
 
 class RecoverableCatalogRegistrationError(RawStoreError):

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog, verify_publication_receipt
 from cryptofactors.ingest.raw.errors import (
+    AcquisitionConflictError,
     CatalogRegistrationError,
     ChecksumError,
     CorruptDestinationError,
+    DurabilityError,
     HashMismatchError,
     InterruptedWriteError,
     InvalidChunkError,
@@ -34,6 +36,7 @@ from cryptofactors.ingest.raw.reconcile import reconcile_orphan_temps
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 
 __all__ = [
+    "AcquisitionConflictError",
     "AcquisitionMetadata",
     "AcquisitionStatus",
     "CatalogRegistrationError",
@@ -41,6 +44,7 @@ __all__ = [
     "ChecksumError",
     "ChecksumVerification",
     "CorruptDestinationError",
+    "DurabilityError",
     "FailedAcquisitionRecord",
     "HashMismatchError",
     "IdempotentDuplicateResult",

@@ -9,7 +9,7 @@ import tempfile
 import uuid
 from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import BinaryIO, Union
+from typing import BinaryIO, IO, Union
 
 from cryptofactors.ingest.raw.checksums import (
     evaluate_provider_checksum,
@@ -17,8 +17,11 @@ from cryptofactors.ingest.raw.checksums import (
     require_checksum_ok_for_verified_status,
 )
 from cryptofactors.ingest.raw.errors import (
+    AcquisitionConflictError,
+    CatalogRegistrationError,
     ChecksumError,
     CorruptDestinationError,
+    DurabilityError,
     HashMismatchError,
     InterruptedWriteError,
     InvalidChunkError,
@@ -37,12 +40,13 @@ from cryptofactors.ingest.raw.models import (
     RawObjectStoreConfig,
 )
 from cryptofactors.ingest.raw.paths import (
+    assert_no_symlink_components,
+    assert_parents_are_directories,
     assert_path_under_root,
     assert_regular_nonsymlink_file,
-    content_addressed_absolute_path,
-    content_addressed_relative_path,
+    canonical_identity,
     fsync_dir,
-    raw_object_id_for_sha256,
+    fsync_file,
     validate_sha256_hex,
 )
 from cryptofactors.ingest.raw.protocols import RawObjectCatalog
@@ -103,12 +107,7 @@ def _sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
 
 
 def _publish_exclusive_link(tmp_path: Path, final_path: Path) -> bool:
-    """Atomic no-clobber publication via hardlink only.
-
-    Returns True if this caller created ``final_path``.
-    Never creates an empty placeholder. Never overwrites.
-    Raises PublicationError if the filesystem cannot provide the guarantee.
-    """
+    """Atomic no-clobber publication via hardlink only."""
     final_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         os.link(str(tmp_path), str(final_path))
@@ -174,23 +173,18 @@ def _fsync_parents(path: Path, *, stop_at: Path) -> None:
         if current in seen:
             break
         seen.add(current)
-        try:
-            fsync_dir(current)
-        except OSError:
-            pass
+        fsync_dir(current)
         if current == stop or current.parent == current:
+            break
+        try:
+            current.relative_to(stop)
+        except ValueError:
             break
         current = current.parent
 
 
 class RawObjectWriter:
-    """Immutable content-addressed writer with acquisition provenance.
-
-    Order:
-    1. stream bytes to a leased temp file (hash + count);
-    2. fsync; atomically hardlink-publish or confirm identical existing object;
-    3. build a :class:`PublicationReceipt` and register content + acquisition.
-    """
+    """Immutable content-addressed writer with continuous temp lease + provenance."""
 
     def __init__(
         self,
@@ -204,19 +198,46 @@ class RawObjectWriter:
         self._config = config
         self._catalog = catalog
         self._chunk_size = chunk_size
-        self._config.root.mkdir(parents=True, exist_ok=True)
-        # Reject symlinked root components when present.
-        if self._config.root.exists() and self._config.root.is_symlink():
+        root = self._config.root
+        root.mkdir(parents=True, exist_ok=True)
+        if root.exists() and root.is_symlink():
             raise PathSafetyError(
                 "store root must not be a symlink",
-                context={"root": str(self._config.root)},
+                context={"root": str(root)},
             )
-        self._config.temp_dir().mkdir(parents=True, exist_ok=True)
-        if self._config.temp_dir().is_symlink():
+        assert_no_symlink_components(root.resolve(), stop_at=root.resolve())
+        temp = self._config.temp_dir()
+        temp.mkdir(parents=True, exist_ok=True)
+        if temp.is_symlink():
             raise PathSafetyError(
                 "temp dir must not be a symlink",
-                context={"temp_dir": str(self._config.temp_dir())},
+                context={"temp_dir": str(temp)},
             )
+        assert_no_symlink_components(temp, stop_at=root.resolve())
+
+    def _record_pre_publication_failure(
+        self,
+        metadata: AcquisitionMetadata,
+        exc: BaseException,
+        *,
+        register_catalog: bool,
+        checksum_verification: ChecksumVerification = ChecksumVerification.ABSENT,
+    ) -> None:
+        """Record FAILED acquisition without masking the original exception."""
+        if not register_catalog:
+            return
+        if isinstance(exc, RecoverableCatalogRegistrationError):
+            # Post-publication failure — must not misclassify published bytes.
+            return
+        try:
+            self._catalog.record_failed_acquisition(
+                metadata=metadata,
+                error_message=f"{type(exc).__name__}: {exc}",
+                checksum_verification=checksum_verification,
+            )
+        except Exception as rec_err:
+            # Preserve original as the raised exception; attach recording failure.
+            raise exc from rec_err
 
     def write_stream(
         self,
@@ -232,7 +253,6 @@ class RawObjectWriter:
             raise RawStoreError("metadata.source_id must be non-empty")
 
         acquisition_id = metadata.acquisition_id or f"acq_{uuid.uuid4().hex}"
-        # Ensure stable id on metadata for catalog
         metadata = AcquisitionMetadata(
             source_id=metadata.source_id,
             acquisition_id=acquisition_id,
@@ -246,21 +266,25 @@ class RawObjectWriter:
             content_status=metadata.content_status,
         )
 
+        root = self._config.root.resolve()
         tmp_path: Path | None = None
-        lock_fd: int | None = None
+        handle: IO[bytes] | None = None
         digest = hashlib.sha256()
         byte_size = 0
+        verification = ChecksumVerification.ABSENT
+        published = False
 
         try:
+            assert_no_symlink_components(self._config.temp_dir(), stop_at=root)
             fd, tmp_name = tempfile.mkstemp(
                 prefix=".partial-",
                 suffix=".part",
                 dir=str(self._config.temp_dir()),
             )
             tmp_path = Path(tmp_name)
-            assert_path_under_root(tmp_path, self._config.root.resolve(), label="temp file")
+            assert_path_under_root(tmp_path, root, label="temp file")
 
-            # Active-writer exclusive lease for the duration of the write.
+            # Continuous exclusive lease on one fd from create through cleanup.
             if fcntl is not None:
                 try:
                     fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -272,40 +296,23 @@ class RawObjectWriter:
                         f"could not acquire exclusive temp lease: {exc}",
                         context={"tmp": str(tmp_name)},
                     ) from exc
-            lock_fd = fd
 
+            handle = os.fdopen(fd, "wb")
+            # fd ownership transferred to handle; lease held until handle.close().
             try:
-                with os.fdopen(fd, "wb") as handle:
-                    lock_fd = None  # owned by handle now; flock remains on fileno
-                    fd = -1
-                    for chunk in _iter_chunks(source, chunk_size=self._chunk_size):
-                        handle.write(chunk)
-                        digest.update(chunk)
-                        byte_size += len(chunk)
-                    handle.flush()
+                for chunk in _iter_chunks(source, chunk_size=self._chunk_size):
+                    handle.write(chunk)
+                    digest.update(chunk)
+                    byte_size += len(chunk)
+                handle.flush()
+                try:
                     os.fsync(handle.fileno())
-                    # Keep lock until after we close by re-flocking? flock is on the
-                    # file description; closing handle releases the lock. Hold via
-                    # separate lock file descriptor:
-            except (InvalidChunkError, InterruptedWriteError, ChecksumError, HashMismatchError):
-                raise
-            except OSError as exc:
-                raise InterruptedWriteError(
-                    f"write failed: {exc}",
-                    context={"error": str(exc)},
-                ) from exc
-            finally:
-                if fd >= 0:
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
+                except OSError as exc:
+                    raise DurabilityError(
+                        f"temp file fsync failed: {tmp_path}",
+                        context={"path": str(tmp_path), "error": str(exc)},
+                    ) from exc
 
-            # Re-open temp for lease duration through publish.
-            lease_fd = os.open(str(tmp_path), os.O_RDONLY)
-            try:
-                if fcntl is not None:
-                    fcntl.flock(lease_fd, fcntl.LOCK_EX)
                 content_hash = digest.hexdigest()
 
                 if expected_content_sha256 is not None:
@@ -323,24 +330,21 @@ class RawObjectWriter:
                     reject_malformed=reject_malformed_checksum,
                 )
                 raise_if_hard_fail(verification, content_sha256=content_hash)
-                # Refuse VERIFIED content status without verified checksum.
                 require_checksum_ok_for_verified_status(
                     metadata.content_status, verification
                 )
 
-                rel = content_addressed_relative_path(
-                    content_hash, prefix=self._config.object_prefix
+                digest_c, object_id, final_path, storage_uri = canonical_identity(
+                    root=root,
+                    object_prefix=self._config.object_prefix,
+                    sha256_hex=content_hash,
                 )
-                final_path = content_addressed_absolute_path(
-                    self._config.root,
-                    content_hash,
-                    prefix=self._config.object_prefix,
-                )
-                assert_path_under_root(
-                    final_path, self._config.root.resolve(), label="final path"
-                )
-                storage_uri = rel.as_posix()
-                object_id = raw_object_id_for_sha256(content_hash)
+                assert digest_c == content_hash
+
+                # Path safety immediately before publication.
+                assert_path_under_root(final_path, root, label="final path")
+                assert_no_symlink_components(final_path.parent, stop_at=root)
+                assert_parents_are_directories(final_path, stop_at=root)
 
                 reused = False
                 if final_path.exists() or final_path.is_symlink():
@@ -350,16 +354,15 @@ class RawObjectWriter:
                         expected_size=byte_size,
                     )
                     reused = True
+                    published = True
                 else:
                     created = _publish_exclusive_link(tmp_path, final_path)
                     if created:
-                        # fsync published inode and parent directories.
-                        pfd = os.open(str(final_path), os.O_RDONLY)
-                        try:
-                            os.fsync(pfd)
-                        finally:
-                            os.close(pfd)
-                        _fsync_parents(final_path, stop_at=self._config.root)
+                        # Link succeeded → object is published; durability errors must
+                        # not misclassify it as a failed acquisition.
+                        published = True
+                        fsync_file(final_path)
+                        _fsync_parents(final_path, stop_at=root)
                     else:
                         _verify_existing_object(
                             final_path,
@@ -367,6 +370,7 @@ class RawObjectWriter:
                             expected_size=byte_size,
                         )
                         reused = True
+                        published = True
 
                 receipt = PublicationReceipt(
                     raw_object_id=object_id,
@@ -374,6 +378,7 @@ class RawObjectWriter:
                     byte_size=byte_size,
                     storage_path=final_path,
                     storage_uri=storage_uri,
+                    object_prefix=self._config.object_prefix,
                     reused_existing=reused,
                     verified_regular_file=True,
                     verified_size=True,
@@ -381,18 +386,22 @@ class RawObjectWriter:
                 )
 
                 catalog_registered = False
-                content_inserted = False
                 acq_inserted = False
                 if register_catalog:
                     try:
-                        content_inserted, acq_inserted = self._catalog.register_publication(
+                        _content_ins, acq_inserted = self._catalog.register_publication(
                             receipt=receipt,
                             metadata=metadata,
                             checksum_verification=verification,
-                            store_root=str(self._config.root.resolve()),
+                            store_root=str(root),
+                            object_prefix=self._config.object_prefix,
                         )
                         catalog_registered = True
-                    except RecoverableCatalogRegistrationError:
+                    except (
+                        RecoverableCatalogRegistrationError,
+                        AcquisitionConflictError,
+                        CatalogRegistrationError,
+                    ):
                         raise
                     except Exception as exc:
                         raise RecoverableCatalogRegistrationError(
@@ -432,16 +441,25 @@ class RawObjectWriter:
                     new_acquisition=acq_inserted if catalog_registered else True,
                 )
             finally:
-                if fcntl is not None:
+                # Continuous lease ends only here (single close of write handle).
+                if handle is not None:
+                    if fcntl is not None:
+                        try:
+                            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                        except OSError:
+                            pass
                     try:
-                        fcntl.flock(lease_fd, fcntl.LOCK_UN)
+                        handle.close()
                     except OSError:
                         pass
-                os.close(lease_fd)
+                    handle = None
                 if tmp_path is not None and tmp_path.exists():
-                    # After successful hardlink, tmp is a second name; always unlink tmp.
                     tmp_path.unlink(missing_ok=True)
                     tmp_path = None
+
+        except RecoverableCatalogRegistrationError:
+            # Published bytes remain; do not record FAILED acquisition.
+            raise
         except (
             InvalidChunkError,
             InterruptedWriteError,
@@ -449,20 +467,44 @@ class RawObjectWriter:
             ChecksumError,
             CorruptDestinationError,
             PublicationError,
+            DurabilityError,
             PathSafetyError,
-            RecoverableCatalogRegistrationError,
+            AcquisitionConflictError,
+            CatalogRegistrationError,
             RawStoreError,
-        ):
+        ) as exc:
+            # Pre-publication failures only. Post-link durability errors keep the object.
+            if not published:
+                try:
+                    self._record_pre_publication_failure(
+                        metadata,
+                        exc,
+                        register_catalog=register_catalog,
+                        checksum_verification=verification,
+                    )
+                except type(exc):
+                    raise
             raise
         except Exception as exc:
-            raise InterruptedWriteError(
+            wrapped = InterruptedWriteError(
                 f"raw write failed: {exc}",
                 context={"error": str(exc)},
-            ) from exc
-        finally:
-            if lock_fd is not None:
+            )
+            if not published:
                 try:
-                    os.close(lock_fd)
+                    self._record_pre_publication_failure(
+                        metadata,
+                        wrapped,
+                        register_catalog=register_catalog,
+                        checksum_verification=verification,
+                    )
+                except InterruptedWriteError:
+                    raise
+            raise wrapped from exc
+        finally:
+            if handle is not None:
+                try:
+                    handle.close()
                 except OSError:
                     pass
             if tmp_path is not None and tmp_path.exists():
@@ -490,15 +532,14 @@ class RawObjectWriter:
         metadata: AcquisitionMetadata,
         checksum_verification: ChecksumVerification,
     ) -> tuple[bool, bool]:
-        """Idempotent registration using the same acquisition_id and a fresh receipt."""
-        digest = validate_sha256_hex(sha256)
-        final_path = content_addressed_absolute_path(
-            self._config.root, digest, prefix=self._config.object_prefix
+        digest, object_id, final_path, storage_uri = canonical_identity(
+            root=self._config.root.resolve(),
+            object_prefix=self._config.object_prefix,
+            sha256_hex=sha256,
         )
         _verify_existing_object(
             final_path, expected_sha256=digest, expected_size=byte_size
         )
-        rel = content_addressed_relative_path(digest, prefix=self._config.object_prefix)
         meta = AcquisitionMetadata(
             source_id=metadata.source_id,
             acquisition_id=acquisition_id,
@@ -512,11 +553,12 @@ class RawObjectWriter:
             content_status=metadata.content_status,
         )
         receipt = PublicationReceipt(
-            raw_object_id=raw_object_id_for_sha256(digest),
+            raw_object_id=object_id,
             sha256=digest,
             byte_size=byte_size,
             storage_path=final_path,
-            storage_uri=rel.as_posix(),
+            storage_uri=storage_uri,
+            object_prefix=self._config.object_prefix,
             reused_existing=True,
             verified_regular_file=True,
             verified_size=True,
@@ -527,4 +569,5 @@ class RawObjectWriter:
             metadata=meta,
             checksum_verification=checksum_verification,
             store_root=str(self._config.root.resolve()),
+            object_prefix=self._config.object_prefix,
         )

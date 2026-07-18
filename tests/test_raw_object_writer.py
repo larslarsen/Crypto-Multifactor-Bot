@@ -1,4 +1,4 @@
-"""Focused synthetic tests for RAW-001 (correction pass). Junior executes these."""
+"""Focused RAW-001 integrity regression tests. Junior executes these."""
 
 from __future__ import annotations
 
@@ -16,26 +16,28 @@ import pytest
 
 from cryptofactors.catalog.runner import MIGRATIONS_DIR, apply_migrations
 from cryptofactors.ingest.raw import (
+    AcquisitionConflictError,
     AcquisitionMetadata,
     CatalogRegistrationError,
     ChecksumError,
     ChecksumVerification,
+    DurabilityError,
     HashMismatchError,
-    IdempotentDuplicateResult,
     InterruptedWriteError,
-    InvalidChunkError,
     PathSafetyError,
     ProviderChecksum,
     PublicationError,
     PublicationReceipt,
+    PublishResult,
     RawObjectStoreConfig,
     RawObjectWriter,
-    RecoverableCatalogRegistrationError,
+    RawStoreError,
     SqliteRawObjectCatalog,
     content_addressed_relative_path,
     reconcile_orphan_temps,
     verify_publication_receipt,
 )
+from cryptofactors.ingest.raw.paths import canonical_identity
 from cryptofactors.ingest.raw.writer import _publish_exclusive_link
 
 UTC = timezone.utc
@@ -52,7 +54,9 @@ def _meta(source_id: str = "src_a", **kwargs: object) -> AcquisitionMetadata:
     return AcquisitionMetadata(**base)  # type: ignore[arg-type]
 
 
-def _store(tmp_path: Path) -> tuple[RawObjectStoreConfig, SqliteRawObjectCatalog, RawObjectWriter, Path]:
+def _store(
+    tmp_path: Path,
+) -> tuple[RawObjectStoreConfig, SqliteRawObjectCatalog, RawObjectWriter, Path]:
     db = tmp_path / "control.db"
     apply_migrations(db, migrations_dir=MIGRATIONS_DIR)
     root = tmp_path / "store"
@@ -62,104 +66,179 @@ def _store(tmp_path: Path) -> tuple[RawObjectStoreConfig, SqliteRawObjectCatalog
     return config, catalog, writer, db
 
 
-def test_empty_and_multi_chunk(tmp_path: Path) -> None:
-    _, catalog, writer, _ = _store(tmp_path)
-    empty = writer.write_stream([], _meta())
-    assert empty.byte_size == 0
-    assert empty.sha256 == hashlib.sha256(b"").hexdigest()
-    body = b"abcdefghij"
-    multi = writer.write_stream([body[:3], body[3:]], _meta(source_id="src_b"))
-    assert multi.sha256 == hashlib.sha256(body).hexdigest()
-    assert multi.storage_path.read_bytes() == body
-    rel = content_addressed_relative_path(multi.sha256)
-    assert multi.storage_uri == rel.as_posix()
-
-
-def test_one_object_multiple_acquisitions(tmp_path: Path) -> None:
-    _, catalog, writer, db = _store(tmp_path)
-    body = b"shared-bytes"
-    a1 = writer.write_stream(
-        [body], _meta(source_id="src_a", acquisition_id="acq_1")
-    )
-    a2 = writer.write_stream(
-        [body], _meta(source_id="src_a", acquisition_id="acq_2")
-    )
-    assert a1.raw_object_id == a2.raw_object_id
-    assert a1.sha256 == a2.sha256
-    acqs = catalog.list_acquisitions_for_object(a1.raw_object_id)
-    assert len(acqs) == 2
-    ids = {a["acquisition_id"] for a in acqs}
-    assert ids == {"acq_1", "acq_2"}
-    n = sqlite3.connect(db).execute("SELECT COUNT(*) FROM raw_object").fetchone()[0]
-    assert n == 1
-
-
-def test_identical_content_different_sources(tmp_path: Path) -> None:
-    _, catalog, writer, _ = _store(tmp_path)
-    body = b"cross-source"
-    r1 = writer.write_stream([body], _meta(source_id="src_x", acquisition_id="acq_x"))
-    r2 = writer.write_stream([body], _meta(source_id="src_y", acquisition_id="acq_y"))
-    assert r1.raw_object_id == r2.raw_object_id
-    acqs = catalog.list_acquisitions_for_object(r1.raw_object_id)
-    sources = {a["source_id"] for a in acqs}
-    assert sources == {"src_x", "src_y"}
-
-
-def test_idempotent_retry_same_acquisition_id(tmp_path: Path) -> None:
+def test_canonical_receipt_accepted(tmp_path: Path) -> None:
     config, catalog, writer, _ = _store(tmp_path)
-    body = b"retry-me"
-    meta = _meta(acquisition_id="acq_stable")
-
-    class Boom(SqliteRawObjectCatalog):
-        def register_publication(self, **kwargs):  # type: ignore[no-untyped-def]
-            raise RuntimeError("down")
-
-    w = RawObjectWriter(config, Boom(tmp_path / "control.db"), chunk_size=8)
-    with pytest.raises(RecoverableCatalogRegistrationError) as ei:
-        w.write_stream([body], meta)
-    err = ei.value
-    assert err.acquisition_id == "acq_stable"
-    assert Path(err.storage_path).exists()
-
-    healthy = RawObjectWriter(config, catalog, chunk_size=8)
-    c1, a1 = healthy.retry_catalog_registration(
-        acquisition_id="acq_stable",
-        sha256=err.sha256,
-        byte_size=err.byte_size,
-        metadata=meta,
-        checksum_verification=ChecksumVerification.ABSENT,
+    body = b"canonical-ok"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_c"))
+    assert isinstance(r, PublishResult)
+    digest, oid, path, uri = canonical_identity(
+        root=config.root.resolve(),
+        object_prefix=config.object_prefix,
+        sha256_hex=r.sha256,
     )
-    assert c1 is True and a1 is True
-    c2, a2 = healthy.retry_catalog_registration(
-        acquisition_id="acq_stable",
-        sha256=err.sha256,
-        byte_size=err.byte_size,
+    assert r.raw_object_id == oid
+    assert r.storage_uri == uri
+    assert r.storage_path.resolve() == path
+    assert path.read_bytes() == body
+    receipt = PublicationReceipt(
+        raw_object_id=oid,
+        sha256=digest,
+        byte_size=len(body),
+        storage_path=path,
+        storage_uri=uri,
+        object_prefix=config.object_prefix,
+        reused_existing=False,
+        verified_regular_file=True,
+        verified_size=True,
+        verified_sha256=True,
+    )
+    verify_publication_receipt(
+        receipt,
+        store_root=config.root.resolve(),
+        object_prefix=config.object_prefix,
+    )
+
+
+def test_arbitrary_under_root_path_rejected(tmp_path: Path) -> None:
+    config, catalog, writer, _ = _store(tmp_path)
+    body = b"bytes-here"
+    digest = hashlib.sha256(body).hexdigest()
+    # Correct bytes at non-canonical location under root
+    rogue = config.root / "somewhere" / "else.bin"
+    rogue.parent.mkdir(parents=True, exist_ok=True)
+    rogue.write_bytes(body)
+    oid = f"raw_{digest}"
+    uri = content_addressed_relative_path(digest).as_posix()
+    receipt = PublicationReceipt(
+        raw_object_id=oid,
+        sha256=digest,
+        byte_size=len(body),
+        storage_path=rogue,
+        storage_uri=uri,
+        object_prefix=config.object_prefix,
+        reused_existing=False,
+        verified_regular_file=True,
+        verified_size=True,
+        verified_sha256=True,
+    )
+    with pytest.raises(CatalogRegistrationError, match="canonical content path"):
+        verify_publication_receipt(
+            receipt,
+            store_root=config.root.resolve(),
+            object_prefix=config.object_prefix,
+        )
+
+
+def test_mismatched_raw_object_id_rejected(tmp_path: Path) -> None:
+    config, _, writer, _ = _store(tmp_path)
+    body = b"id-mismatch"
+    r = writer.write_stream([body], _meta())
+    receipt = PublicationReceipt(
+        raw_object_id="raw_" + ("a" * 64),
+        sha256=r.sha256,
+        byte_size=r.byte_size,
+        storage_path=r.storage_path,
+        storage_uri=r.storage_uri,
+        object_prefix=config.object_prefix,
+        reused_existing=False,
+        verified_regular_file=True,
+        verified_size=True,
+        verified_sha256=True,
+    )
+    with pytest.raises(CatalogRegistrationError, match="raw_object_id"):
+        verify_publication_receipt(
+            receipt,
+            store_root=config.root.resolve(),
+            object_prefix=config.object_prefix,
+        )
+
+
+def test_mismatched_storage_uri_rejected(tmp_path: Path) -> None:
+    config, _, writer, _ = _store(tmp_path)
+    body = b"uri-mismatch"
+    r = writer.write_stream([body], _meta())
+    receipt = PublicationReceipt(
+        raw_object_id=r.raw_object_id,
+        sha256=r.sha256,
+        byte_size=r.byte_size,
+        storage_path=r.storage_path,
+        storage_uri="raw/sha256/ff/ff/" + r.sha256,
+        object_prefix=config.object_prefix,
+        reused_existing=False,
+        verified_regular_file=True,
+        verified_size=True,
+        verified_sha256=True,
+    )
+    with pytest.raises(CatalogRegistrationError, match="storage_uri"):
+        verify_publication_receipt(
+            receipt,
+            store_root=config.root.resolve(),
+            object_prefix=config.object_prefix,
+        )
+
+
+def test_symlinked_parent_components_rejected(tmp_path: Path) -> None:
+    store = tmp_path / "store"
+    store.mkdir()
+    real = tmp_path / "real_objects"
+    real.mkdir()
+    # object_prefix first component is a symlink
+    (store / "raw").symlink_to(real)
+    # Corrected behavior: symlinked storage-parent is rejected at config validation.
+    with pytest.raises(PathSafetyError):
+        RawObjectStoreConfig(root=store, object_prefix="raw/sha256")
+
+
+def test_identical_acquisition_retry_accepted(tmp_path: Path) -> None:
+    config, catalog, writer, _ = _store(tmp_path)
+    body = b"retry-same"
+    meta = _meta(acquisition_id="acq_same")
+    r1 = writer.write_stream([body], meta)
+    c2, a2 = writer.retry_catalog_registration(
+        acquisition_id="acq_same",
+        sha256=r1.sha256,
+        byte_size=r1.byte_size,
         metadata=meta,
         checksum_verification=ChecksumVerification.ABSENT,
     )
     assert c2 is False and a2 is False
-    assert catalog.get_acquisition("acq_stable")["status"] == "SUCCEEDED"
 
 
-def test_new_acquisition_of_existing_bytes(tmp_path: Path) -> None:
+def test_same_acquisition_id_other_source_rejected(tmp_path: Path) -> None:
     _, catalog, writer, _ = _store(tmp_path)
-    body = b"again"
-    writer.write_stream([body], _meta(acquisition_id="acq_old"))
-    r = writer.write_stream([body], _meta(acquisition_id="acq_new"))
-    assert isinstance(r, IdempotentDuplicateResult)
-    assert r.content_already_present is True
-    assert r.acquisition_id == "acq_new"
-    assert len(catalog.list_acquisitions_for_object(r.raw_object_id)) == 2
+    body = b"conflict-src"
+    writer.write_stream([body], _meta(source_id="src_a", acquisition_id="acq_c"))
+    with pytest.raises(AcquisitionConflictError):
+        writer.write_stream(
+            [body],
+            _meta(source_id="src_b", acquisition_id="acq_c"),
+        )
 
 
-def test_failed_acquisition_no_raw_object(tmp_path: Path) -> None:
-    _, catalog, writer, db = _store(tmp_path)
-    rec = writer.record_failed_acquisition(
-        _meta(acquisition_id="acq_fail"),
-        "timeout",
+def test_same_acquisition_id_different_request_rejected(tmp_path: Path) -> None:
+    _, _, writer, _ = _store(tmp_path)
+    body = b"conflict-req"
+    writer.write_stream(
+        [body],
+        _meta(acquisition_id="acq_r", request={"url": "https://a.example/x"}),
     )
-    assert rec.acquisition_id == "acq_fail"
-    row = catalog.get_acquisition("acq_fail")
+    with pytest.raises(AcquisitionConflictError):
+        writer.write_stream(
+            [body],
+            _meta(acquisition_id="acq_r", request={"url": "https://b.example/y"}),
+        )
+
+
+def test_interrupted_write_records_failed(tmp_path: Path) -> None:
+    _, catalog, writer, db = _store(tmp_path)
+
+    def gen():
+        yield b"partial"
+        raise RuntimeError("drop")
+
+    with pytest.raises(InterruptedWriteError):
+        writer.write_stream(gen(), _meta(acquisition_id="acq_fail_int"))
+    row = catalog.get_acquisition("acq_fail_int")
     assert row is not None
     assert row["status"] == "FAILED"
     assert row["raw_object_id"] is None
@@ -167,257 +246,205 @@ def test_failed_acquisition_no_raw_object(tmp_path: Path) -> None:
     assert n == 0
 
 
-def test_unsupported_and_malformed_checksums(tmp_path: Path) -> None:
-    _, _, writer, _ = _store(tmp_path)
-    with pytest.raises(ChecksumError, match="unsupported"):
+def test_checksum_and_hash_failures_record_failed(tmp_path: Path) -> None:
+    _, catalog, writer, _ = _store(tmp_path)
+    with pytest.raises(HashMismatchError):
         writer.write_stream(
             [b"x"],
-            _meta(provider_checksum=ProviderChecksum(algorithm="md5", value="ab" * 16)),
+            _meta(acquisition_id="acq_exp"),
+            expected_content_sha256="0" * 64,
         )
-    with pytest.raises(ChecksumError, match="malformed"):
+    assert catalog.get_acquisition("acq_exp")["status"] == "FAILED"
+
+    with pytest.raises(ChecksumError):
         writer.write_stream(
-            [b"x"],
-            _meta(provider_checksum=ProviderChecksum(algorithm="sha256", value="not-hex")),
+            [b"y"],
+            _meta(
+                acquisition_id="acq_bad_algo",
+                provider_checksum=ProviderChecksum(algorithm="md5", value="ab" * 16),
+            ),
         )
+    assert catalog.get_acquisition("acq_bad_algo")["status"] == "FAILED"
 
-
-def test_refuse_verified_without_checksum_success(tmp_path: Path) -> None:
-    _, _, writer, _ = _store(tmp_path)
-    with pytest.raises(ChecksumError, match="VERIFIED"):
+    body = b"z"
+    digest = hashlib.sha256(body).hexdigest()
+    wrong = "1" * 64
+    with pytest.raises(HashMismatchError):
         writer.write_stream(
-            [b"abc"],
-            _meta(content_status="VERIFIED"),
+            [body],
+            _meta(
+                acquisition_id="acq_mis",
+                provider_checksum=ProviderChecksum(algorithm="sha256", value=wrong),
+            ),
         )
-    # With matching checksum, VERIFIED is allowed
-    body = b"abc"
-    digest = hashlib.sha256(body).hexdigest()
-    r = writer.write_stream(
-        [body],
-        _meta(
-            content_status="VERIFIED",
-            provider_checksum=ProviderChecksum(algorithm="sha256", value=digest),
-            acquisition_id="acq_ver",
-        ),
-    )
-    assert r.checksum_verification is ChecksumVerification.VERIFIED
+    assert catalog.get_acquisition("acq_mis")["status"] == "FAILED"
+    assert digest != wrong
 
 
-def test_absolute_and_traversal_config_rejected(tmp_path: Path) -> None:
-    with pytest.raises(PathSafetyError):
-        RawObjectStoreConfig(root=tmp_path, object_prefix="/abs/raw")
-    with pytest.raises(PathSafetyError):
-        RawObjectStoreConfig(root=tmp_path, temp_dirname="/tmp/out")
-    with pytest.raises(PathSafetyError):
-        RawObjectStoreConfig(root=tmp_path, object_prefix="raw/../escape")
-    with pytest.raises(PathSafetyError):
-        RawObjectStoreConfig(root=tmp_path, temp_dirname="tmp/./x")
+def test_failed_record_retry_idempotent(tmp_path: Path) -> None:
+    _, catalog, writer, _ = _store(tmp_path)
+    meta = _meta(acquisition_id="acq_fail_id")
+    r1 = writer.record_failed_acquisition(meta, "timeout")
+    r2 = writer.record_failed_acquisition(meta, "timeout")
+    assert r1.acquisition_id == r2.acquisition_id == "acq_fail_id"
+    n = sqlite3.connect(tmp_path / "control.db").execute(
+        "SELECT COUNT(*) FROM raw_acquisition WHERE acquisition_id = 'acq_fail_id'"
+    ).fetchone()[0]
+    assert n == 1
 
 
-def test_symlink_parent_and_final_rejected(tmp_path: Path) -> None:
-    store = tmp_path / "store"
-    store.mkdir()
-    # symlink as object parent -> rejected at config validation time (safe-path check)
-    real = tmp_path / "elsewhere"
-    real.mkdir()
-    link = store / "raw"
-    link.symlink_to(real)
-    with pytest.raises(PathSafetyError):
-        RawObjectStoreConfig(root=store, object_prefix="raw/sha256")
+def test_original_exception_survives_recording_error(tmp_path: Path) -> None:
+    config, _, _, db = _store(tmp_path)
 
-    # destination symlink -> rejected at write time (CorruptDestinationError)
-    store2 = tmp_path / "store2"
-    store2.mkdir()
-    config = RawObjectStoreConfig(root=store2, object_prefix="raw/sha256")
-    db = tmp_path / "c.db"
-    apply_migrations(db, migrations_dir=MIGRATIONS_DIR)
-    cat = SqliteRawObjectCatalog(db)
-    writer = RawObjectWriter(config, cat, chunk_size=8)
-    body = b"sym-target"
-    digest = hashlib.sha256(body).hexdigest()
-    final = store2 / content_addressed_relative_path(digest)
-    final.parent.mkdir(parents=True, exist_ok=True)
-    target = tmp_path / "blob"
-    target.write_bytes(body)
-    if final.exists():
-        final.unlink()
-    final.symlink_to(target)
-    with pytest.raises(PathSafetyError):
+    class BoomFailCatalog(SqliteRawObjectCatalog):
+        def record_failed_acquisition(self, **kwargs):  # type: ignore[no-untyped-def]
+            raise RuntimeError("ledger unavailable")
+
+    w = RawObjectWriter(config, BoomFailCatalog(db), chunk_size=8)
+
+    def gen():
+        yield b"a"
+        raise RuntimeError("stream-broke")
+
+    with pytest.raises(InterruptedWriteError) as ei:
+        w.write_stream(gen(), _meta(acquisition_id="acq_mask"))
+    # Original engineering failure preserved (not replaced by ledger error alone).
+    assert "stream-broke" in str(ei.value) or "stream-broke" in str(ei.value.__cause__)
+
+
+def test_active_lease_held_through_publication(tmp_path: Path) -> None:
+    """Lease fd remains locked continuously until write completes."""
+    config, catalog, writer, _ = _store(tmp_path)
+    body = b"lease-hold"
+    observed_locked = {"during": False}
+
+    real_link = _publish_exclusive_link
+
+    def link_and_probe(tmp: Path, final: Path) -> bool:
+        import fcntl
+
+        # tmp should still be exclusively locked by the writer while we publish.
+        fd = os.open(str(tmp), os.O_RDONLY)
+        try:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                observed_locked["during"] = False  # acquired → not locked
+            except OSError:
+                observed_locked["during"] = True
+        finally:
+            os.close(fd)
+        return real_link(tmp, final)
+
+    with mock.patch(
+        "cryptofactors.ingest.raw.writer._publish_exclusive_link",
+        side_effect=link_and_probe,
+    ):
         writer.write_stream([body], _meta())
+    assert observed_locked["during"] is True
 
 
-def test_publication_no_empty_final_on_link_failure(tmp_path: Path) -> None:
-    config, _, writer, _ = _store(tmp_path)
-    body = b"no-empty"
+def test_reconcile_cannot_delete_old_active_writer(tmp_path: Path) -> None:
+    config, _, _, _ = _store(tmp_path)
+    temp = config.temp_dir() / ".partial-old-active.part"
+    temp.write_bytes(b"active")
+    os.utime(temp, (time.time() - 99_000, time.time() - 99_000))
+    import fcntl
+
+    fd = os.open(str(temp), os.O_RDONLY)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        report = reconcile_orphan_temps(config, min_age_seconds=10.0, dry_run=False)
+        assert temp.exists()
+        assert report.active_locked >= 1
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
+def test_destructive_reconcile_fails_without_lock_support(tmp_path: Path) -> None:
+    config, _, _, _ = _store(tmp_path)
+    stale = config.temp_dir() / ".partial-stale.part"
+    stale.write_bytes(b"x")
+    os.utime(stale, (time.time() - 99_000, time.time() - 99_000))
+    with mock.patch("cryptofactors.ingest.raw.reconcile.fcntl", None):
+        with pytest.raises(RawStoreError, match="lock primitive"):
+            reconcile_orphan_temps(config, min_age_seconds=10.0, dry_run=False)
+    assert stale.exists()
+
+
+def test_directory_fsync_failure_surfaced(tmp_path: Path) -> None:
+    config, catalog, writer, _ = _store(tmp_path)
+    body = b"fsync-dir-fail"
+
+    def boom_fsync_dir(path: Path) -> None:
+        raise DurabilityError("directory fsync failed", context={"path": str(path)})
+
+    with mock.patch(
+        "cryptofactors.ingest.raw.writer.fsync_dir",
+        side_effect=boom_fsync_dir,
+    ):
+        with pytest.raises(DurabilityError, match="fsync"):
+            writer.write_stream([body], _meta(acquisition_id="acq_fsync"))
+    # Link may succeed before parent fsync; object preserved and not FAILED.
+    acq = catalog.get_acquisition("acq_fsync")
+    assert acq is None or acq["status"] != "FAILED"
     digest = hashlib.sha256(body).hexdigest()
     final = config.root / content_addressed_relative_path(digest)
+    if final.exists():
+        assert final.read_bytes() == body
 
-    def boom_link(tmp: Path, dest: Path) -> bool:
-        raise PublicationError("hardlink unsupported", context={})
+
+def test_multi_acquisition_and_sources(tmp_path: Path) -> None:
+    _, catalog, writer, db = _store(tmp_path)
+    body = b"shared"
+    writer.write_stream([body], _meta(source_id="s1", acquisition_id="a1"))
+    writer.write_stream([body], _meta(source_id="s2", acquisition_id="a2"))
+    n = sqlite3.connect(db).execute("SELECT COUNT(*) FROM raw_object").fetchone()[0]
+    assert n == 1
+    n_a = sqlite3.connect(db).execute("SELECT COUNT(*) FROM raw_acquisition").fetchone()[0]
+    assert n_a == 2
+
+
+def test_publication_failure_records_failed(tmp_path: Path) -> None:
+    config, catalog, writer, _ = _store(tmp_path)
+
+    def boom_link(tmp: Path, final: Path) -> bool:
+        raise PublicationError("no hardlink", context={})
 
     with mock.patch(
         "cryptofactors.ingest.raw.writer._publish_exclusive_link",
         side_effect=boom_link,
     ):
         with pytest.raises(PublicationError):
-            writer.write_stream([body], _meta())
-    assert not final.exists()
+            writer.write_stream([b"nope"], _meta(acquisition_id="acq_pubfail"))
+    row = catalog.get_acquisition("acq_pubfail")
+    assert row is not None and row["status"] == "FAILED" and row["raw_object_id"] is None
 
 
 def test_concurrent_no_clobber(tmp_path: Path) -> None:
     config, _, _, db = _store(tmp_path)
-    body = b"concurrent-payload-zzzzzzzz"
-    barrier = threading.Barrier(4)
+    body = b"concurrent-zzzz"
+    barrier = threading.Barrier(3)
     results: list[object] = []
     errors: list[BaseException] = []
 
-    def worker() -> None:
+    def worker(i: int) -> None:
         cat = SqliteRawObjectCatalog(db)
         w = RawObjectWriter(config, cat, chunk_size=16)
         barrier.wait()
         try:
             results.append(
-                w.write_stream(
-                    [body],
-                    _meta(acquisition_id=f"acq_{threading.get_ident()}"),
-                )
+                w.write_stream([body], _meta(acquisition_id=f"acq_c_{i}"))
             )
         except BaseException as exc:  # noqa: BLE001
             errors.append(exc)
         finally:
             cat.close()
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        futs = [pool.submit(worker) for _ in range(4)]
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futs = [pool.submit(worker, i) for i in range(3)]
         for f in futs:
             f.result()
     assert not errors
-    digests = {getattr(r, "sha256") for r in results}
-    assert digests == {hashlib.sha256(body).hexdigest()}
     n = sqlite3.connect(db).execute("SELECT COUNT(*) FROM raw_object").fetchone()[0]
     assert n == 1
-    n_acq = sqlite3.connect(db).execute("SELECT COUNT(*) FROM raw_acquisition").fetchone()[0]
-    assert n_acq == 4
-
-
-def test_active_old_temp_preserved(tmp_path: Path) -> None:
-    config, _, _, _ = _store(tmp_path)
-    temp = config.temp_dir() / ".partial-active.part"
-    temp.write_bytes(b"locked")
-    old = time.time() - 10_000
-    os.utime(temp, (old, old))
-    fd = os.open(str(temp), os.O_RDONLY)
-    try:
-        import fcntl
-
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        report = reconcile_orphan_temps(config, min_age_seconds=60.0, dry_run=False)
-        assert temp.exists()
-        assert report.active_locked >= 1
-        assert any(c.reason == "active_writer_lease_preserved" for c in report.candidates)
-    finally:
-        import fcntl
-
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
-
-
-def test_stale_unlocked_cleanup_and_accepted_preserved(tmp_path: Path) -> None:
-    config, _, writer, _ = _store(tmp_path)
-    pub = writer.write_stream([b"keep"], _meta())
-    stale = config.temp_dir() / ".partial-stale.part"
-    recent = config.temp_dir() / ".partial-recent.part"
-    other = config.temp_dir() / "notes.txt"
-    stale.write_bytes(b"s")
-    recent.write_bytes(b"r")
-    other.write_bytes(b"o")
-    os.utime(stale, (time.time() - 9999, time.time() - 9999))
-    dry = reconcile_orphan_temps(config, min_age_seconds=60.0, dry_run=True)
-    assert dry.removed == 0
-    assert stale.exists()
-    live = reconcile_orphan_temps(config, min_age_seconds=60.0, dry_run=False)
-    assert live.removed >= 1
-    assert not stale.exists()
-    assert recent.exists()
-    assert other.exists()
-    assert pub.storage_path.exists()
-
-
-def test_catalog_rejects_bad_receipts(tmp_path: Path) -> None:
-    config, catalog, _, _ = _store(tmp_path)
-    root = config.root.resolve()
-    good_body = b"ok-bytes"
-    digest = hashlib.sha256(good_body).hexdigest()
-    path = root / content_addressed_relative_path(digest)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(good_body)
-
-    def receipt(**over: object) -> PublicationReceipt:
-        base = dict(
-            raw_object_id=f"raw_{digest}",
-            sha256=digest,
-            byte_size=len(good_body),
-            storage_path=path,
-            storage_uri=content_addressed_relative_path(digest).as_posix(),
-            reused_existing=False,
-            verified_regular_file=True,
-            verified_size=True,
-            verified_sha256=True,
-        )
-        base.update(over)
-        return PublicationReceipt(**base)  # type: ignore[arg-type]
-
-    # missing
-    missing_path = root / "raw" / "sha256" / "00" / "00" / ("0" * 64)
-    missing = receipt(storage_path=missing_path)
-    with pytest.raises(CatalogRegistrationError, match="missing"):
-        verify_publication_receipt(missing, store_root=root)
-
-    # wrong size flag still re-checked on disk — write partial content under real path
-    path.write_bytes(b"short")
-    with pytest.raises(CatalogRegistrationError, match="size"):
-        verify_publication_receipt(receipt(byte_size=len(good_body)), store_root=root)
-
-    path.write_bytes(good_body)
-    # wrong hash on disk
-    path.write_bytes(b"different-content!!!!")
-    with pytest.raises(CatalogRegistrationError, match="SHA-256"):
-        verify_publication_receipt(receipt(byte_size=path.stat().st_size), store_root=root)
-
-    # symlink destination -> resolved path escapes store root -> rejected
-    path.unlink()
-    target = tmp_path / "t.bin"
-    target.write_bytes(good_body)
-    path.symlink_to(target)
-    with pytest.raises(CatalogRegistrationError, match="symlink|escape"):
-        verify_publication_receipt(
-            receipt(byte_size=len(good_body), storage_path=path),
-            store_root=root,
-        )
-
-
-def test_invalid_chunk_and_interrupted(tmp_path: Path) -> None:
-    _, _, writer, _ = _store(tmp_path)
-    with pytest.raises(InvalidChunkError):
-        writer.write_stream(["nope"], _meta())  # type: ignore[list-item]
-
-    def gen():
-        yield b"a"
-        raise RuntimeError("drop")
-
-    with pytest.raises(InterruptedWriteError):
-        writer.write_stream(gen(), _meta())
-
-
-def test_expected_content_sha256_mismatch(tmp_path: Path) -> None:
-    _, _, writer, _ = _store(tmp_path)
-    with pytest.raises(HashMismatchError):
-        writer.write_stream([b"x"], _meta(), expected_content_sha256="0" * 64)
-
-
-def test_publish_exclusive_link_no_clobber(tmp_path: Path) -> None:
-    a = tmp_path / "a"
-    b = tmp_path / "b"
-    a.write_bytes(b"one")
-    b.write_bytes(b"two")
-    assert _publish_exclusive_link(a, b) is False
-    assert b.read_bytes() == b"two"

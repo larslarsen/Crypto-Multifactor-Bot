@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from cryptofactors.ingest.raw import (
+    AcquisitionConflictError,
     AcquisitionMetadata,
     CatalogRegistrationError,
     ChecksumAlgorithm,
     ChecksumError,
     ChecksumVerification,
     CorruptDestinationError,
+    DurabilityError,
     FailedAcquisitionRecord,
     HashMismatchError,
     IdempotentDuplicateResult,
@@ -31,12 +33,14 @@ from cryptofactors.ingest.raw import (
 )
 
 __all__ = [
+    "AcquisitionConflictError",
     "AcquisitionMetadata",
     "CatalogRegistrationError",
     "ChecksumAlgorithm",
     "ChecksumError",
     "ChecksumVerification",
     "CorruptDestinationError",
+    "DurabilityError",
     "FailedAcquisitionRecord",
     "HashMismatchError",
     "IdempotentDuplicateResult",

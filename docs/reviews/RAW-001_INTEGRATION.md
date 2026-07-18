@@ -133,16 +133,97 @@ python3 scripts/check_repo_control.py  -> Repo control check: PASS
    Note: Pyright (not the repo gate) still flags `reader.read`/`for item in source`
    union-attr on those lines; mypy (the authoritative gate) is clean.
 
-## Unresolved issues
+## Final correction pass (second integration)
 
-- **mypy full-repo pre-existing errors outside RAW-001:** `tests/test_pagination.py`,
-  `tests/test_bars.py`, `tests/test_timestamps.py`, `tests/test_serialization.py`,
-  `tests/test_audit_runner_sprint003.py`, and `scripts/check_repo_control.py` carry
-  `mypy` (strict) errors unrelated to this RAW-001 deliverable. They were not modified
-  in this commit. Recommend a separate hygiene pass if the repo wants `mypy .` fully
-  clean.
-- **No separate concurrency test module:** atomic-publish and active-writer-protection
-  behavior is exercised by the regression suite but there is no dedicated
-  thread/process concurrency test. Not a defect; noted for completeness.
-- **Pyright vs mypy tension** on `reader.read`/`for item in source` union-attr
-  (see deviation 3). mypy (gate) clean; flagged only by Pyright.
+A second Senior correction pass landed in the working tree
+(after `f83c9e1135a2165c553f218039c173df8a89d5a3`) and was integrated and validated.
+
+### Files integrated (this pass)
+
+- `src/cryptofactors/ingest/raw/writer.py` — continuous active-writer lease (one fd
+  owned by the handle from create through cleanup); pre-publication failed-acquisition
+  recording; surfaced temp-file fsync failures (`DurabilityError`); symlink-component
+  checks on root/temp/parent via `assert_no_symlink_components`.
+- `src/cryptofactors/ingest/raw/catalog.py` — acquisition-ID conflict detection
+  (`AcquisitionConflictError` when a SUCCEEDED acquisition_id is reused with conflicting
+  provenance); canonical agreement among hash/object-ID/URI/path in
+  `verify_publication_receipt` (`canonical_identity`); `register_catalog` gains
+  `object_prefix: str | None = None`.
+- `src/cryptofactors/ingest/raw/reconcile.py` — destructive reconciliation fails closed
+  when `fcntl` is unavailable (`RawStoreError`); stale temps preserved without lock
+  support (dry-run only).
+- `src/cryptofactors/ingest/raw/paths.py` — `validate_store_config` rejects symlinked
+  store root; `assert_no_symlink_components` stop-at-root semantics; `canonical_identity`.
+- `src/cryptofactors/ingest/raw/errors.py` — new `AcquisitionConflictError`,
+  `DurabilityError`.
+- `src/cryptofactors/ingest/raw/protocols.py` — `RawObjectCatalog.register_catalog`
+  signature gains `object_prefix`.
+- `src/cryptofactors/ingest/raw/{models,__init__}.py`,
+  `src/cryptofactors/ingest/__init__.py` — exports updated.
+- `tests/test_raw_object_writer.py` — expanded regression suite (+635/-490).
+
+### Commands and results
+
+```
+PYTHONPATH=src uv run pytest tests/test_raw_object_writer.py -q   -> 67 passed (within full run)
+PYTHONPATH=src uv run pytest tests/catalog/ tests/evidence/test_sql_migration.py -q -> passed
+PYTHONPATH=src uv run pytest -q                                    -> 181 passed, 1 warning
+# concurrency/reconciliation repeated x3 -> green
+PYTHONPATH=src uv run ruff check src/ tests/ scripts/            -> All checks passed!
+PYTHONPATH=src uv run mypy src/cryptofactors/ingest/             -> no real errors
+uv build --wheel                                                -> built; clean py3.13 venv import OK
+python3 scripts/check_repo_control.py                           -> Repo control check: PASS
+```
+
+### Interface changes
+
+- `RawObjectCatalog.register_catalog(..., object_prefix: str | None = None)`.
+- New exceptions: `AcquisitionConflictError`, `DurabilityError` (exported).
+- `verify_publication_receipt` enforces canonical identity (hash <-> object ID <->
+  URI <-> filesystem path) and rejects mismatches; `register_catalog` raises
+  `AcquisitionConflictError` on conflicting acquisition-ID reuse.
+
+### Explicit verification (11 scenarios, all confirmed)
+
+1. Arbitrary under-root publication paths rejected (`CatalogRegistrationError`).
+2. Receipt object-ID / URI mismatches rejected.
+3. Conflicting acquisition-ID reuse rejected (`AcquisitionConflictError`).
+4. Genuine retries remain idempotent.
+5. Interrupted/rejected writes raise AND auto-create a FAILED acquisition record.
+6. Failed records contain no raw-object reference (`raw_object_id` is NULL).
+7. An active (recent) temp file survives the full write/publication lifecycle.
+8. Destructive reconciliation refused without lock support (`RawStoreError`).
+9. Symlinked path components rejected (config-validation + write time).
+10. Directory-fsync failures are surfaced (`DurabilityError` raised, not swallowed).
+11. Accepted content is never overwritten or deleted (same bytes -> same object;
+    distinct acquisition_ids retained).
+
+### Deviations from the Senior implementation
+
+1. **Stale test expectation** `test_symlinked_parent_components_rejected`: the Senior's
+   new `validate_store_config` rejects a symlinked storage-parent at config-construction
+   time (`PathSafetyError`), but the test still expected config construction to succeed
+   and only `verify_publication_receipt` to reject. Updated the test to assert the
+   config-time `PathSafetyError` (intent preserved: symlinks rejected).
+2. **Mechanical mypy hygiene in `writer.py`** (no logic change): removed the two
+   `# type: ignore[union-attr]` comments the Senior re-added (mypy strict flags them
+   unused); re-annotated `record_failed_acquisition -> FailedAcquisitionRecord`
+   (re-added the `FailedAcquisitionRecord` import the pass had dropped).
+3. **Ruff auto-fix** removed 8 unused imports introduced by the rewritten test file.
+
+### Unresolved issues
+
+- **`verify_publication_receipt` does not reject a symlinked final path at the
+  resolved-target level.** `canonical_identity` resolves the expected path (following
+  the symlink), so a symlinked final whose target matches the canonical layout passes
+  the canonical-path check, and `assert_no_symlink_components` then runs on the
+  already-resolved `expected_path` (outside root). Symlink rejection for publication is
+  enforced at config-construction and write time instead. Latent gap in receipt
+  verification; left as-is per the mandate not to redesign verification logic. Flagged
+  for Senior decision.
+- mypy full-repo pre-existing errors outside RAW-001 (tests/test_pagination.py,
+  tests/test_bars.py, tests/test_timestamps.py, tests/test_serialization.py,
+  tests/test_audit_runner_sprint003.py, scripts/check_repo_control.py).
+- No separate concurrency test module (behavior covered by regression suite).
+- Pyright vs mypy tension on `reader.read`/`for item in source` union-attr (mypy clean).
+

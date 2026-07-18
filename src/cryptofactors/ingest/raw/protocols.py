@@ -43,11 +43,12 @@ class RawObjectCatalog(Protocol):
         metadata: AcquisitionMetadata,
         checksum_verification: ChecksumVerification,
         store_root: str,
+        object_prefix: str | None = None,
     ) -> tuple[bool, bool]:
         """Register content (if new) and acquisition from a verified publication receipt.
 
         Returns ``(content_inserted, acquisition_inserted)``.
-        Idempotent when the same acquisition_id is retried.
+        Idempotent only when the same acquisition_id is a genuine compatible retry.
         """
         ...
 

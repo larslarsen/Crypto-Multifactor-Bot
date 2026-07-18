@@ -7,6 +7,7 @@ import stat as statmod
 import time
 from pathlib import Path
 
+from cryptofactors.ingest.raw.errors import RawStoreError
 from cryptofactors.ingest.raw.models import (
     OrphanReconciliationReport,
     OrphanTempCandidate,
@@ -38,8 +39,7 @@ def _is_actively_locked(path: Path) -> bool:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
-            return True  # locked by another holder
-        # We acquired the lock → not active by another writer; release.
+            return True
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
         except OSError:
@@ -58,16 +58,17 @@ def reconcile_orphan_temps(
 ) -> OrphanReconciliationReport:
     """Search only the configured temp area; never touch accepted objects.
 
-    Removable only when:
-    - directly under ``config.temp_dir()``;
-    - managed partial name;
-    - not a symlink;
-    - not actively locked;
-    - age strictly greater than ``min_age_seconds``;
-    - and ``dry_run`` is False.
+    Without a platform locking primitive, dry-run may still list candidates, but
+    destructive reconciliation fails closed (no age-only deletes of managed temps).
     """
     if min_age_seconds < 0:
         raise ValueError("min_age_seconds must be >= 0")
+
+    if not dry_run and fcntl is None:
+        raise RawStoreError(
+            "destructive orphan reconciliation requires an exclusive-lock primitive "
+            "(fcntl); refusing age-only deletion of managed temporary files"
+        )
 
     temp_dir = config.temp_dir()
     temp_dir.mkdir(parents=True, exist_ok=True)
@@ -88,7 +89,6 @@ def reconcile_orphan_temps(
         entries = []
 
     for entry in entries:
-        # Never follow symlinks.
         try:
             st = entry.stat(follow_symlinks=False)
         except OSError:
@@ -161,11 +161,27 @@ def reconcile_orphan_temps(
             )
             continue
 
+        # Stale + unlocked (or lock-unknown in dry-run without fcntl).
+        if fcntl is None:
+            # Dry-run only reaches here; report as would-preserve-without-lock.
+            preserved_recent += 1
+            candidates.append(
+                OrphanTempCandidate(
+                    path=path,
+                    size_bytes=st.st_size,
+                    age_seconds=age,
+                    active=False,
+                    stale=True,
+                    removed=False,
+                    reason="stale_preserved_no_lock_support",
+                )
+            )
+            continue
+
         stale_count += 1
         removed = False
         reason = "stale_unlocked_temp_would_remove" if dry_run else "stale_unlocked_temp_removed"
         if not dry_run:
-            # Re-check lock immediately before delete.
             if _is_actively_locked(path):
                 active_locked += 1
                 stale_count -= 1
