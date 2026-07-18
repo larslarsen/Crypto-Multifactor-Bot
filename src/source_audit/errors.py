@@ -1,50 +1,76 @@
-"""Explicit exception types for the source-audit toolkit."""
+"""Explicit exception hierarchy for the source-audit toolkit."""
 
-from typing import Optional, Dict, Any
+from __future__ import annotations
+
+from typing import Any, Mapping
 
 
 class AuditError(Exception):
-    """Base exception for all audit failures."""
-    def __init__(self, message: str, context: Optional[Dict[str, Any]] = None):
+    """Base exception for all source-audit failures."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        context: Mapping[str, Any] | None = None,
+    ) -> None:
         super().__init__(message)
-        self.context = context or {}
+        self.message = message
+        self.context: dict[str, Any] = dict(context) if context else {}
+
+    def __str__(self) -> str:
+        if self.context:
+            return f"{self.message} | context={self.context!r}"
+        return self.message
 
 
 class DownloadError(AuditError):
-    """Raised on download failures (limits, HTTP errors, timeouts)."""
-    pass
+    """Download or atomic-publication failure."""
 
 
-class ChecksumMismatchError(AuditError):
-    """Raised when provider checksum does not match computed hash."""
-    pass
+class ChecksumMismatchError(DownloadError):
+    """Provider checksum does not match the computed content hash."""
+
+
+class SizeLimitError(DownloadError):
+    """Byte, page, record, or member size limit exceeded."""
 
 
 class UnsafeArchiveError(AuditError):
-    """Raised on ZIP-slip, encrypted archives, decompression bombs, etc."""
-    pass
+    """ZIP safety violation (path traversal, symlink, bomb, encryption, etc.)."""
 
 
 class MalformedCSVError(AuditError):
-    """Raised on schema drift, malformed rows, encoding issues."""
-    pass
+    """CSV schema, header, encoding, or structural failure."""
 
 
 class AmbiguousTimestampError(AuditError):
-    """Raised when timestamp unit cannot be determined without ambiguity."""
-    pass
+    """More than one timestamp unit is plausible for a value."""
+
+
+class OutOfRangeTimestampError(AuditError):
+    """No timestamp unit yields a datetime within the configured bounds."""
 
 
 class PaginationError(AuditError):
-    """Raised on pagination loops, non-progress, repeated cursors."""
-    pass
+    """Pagination loop, non-progress, bound violation, or ordering failure."""
 
 
 class OrderingViolationError(AuditError):
-    """Raised on detected ordering or duplicate issues in data."""
-    pass
+    """Detected ordering, gap, or duplicate-policy violation."""
 
 
 class InvalidNumericError(AuditError):
-    """Raised on overflow or invalid numeric values in financial data."""
-    pass
+    """Non-finite, invalid, or precision-unsafe numeric input."""
+
+
+class SerializationError(AuditError):
+    """Unsupported type or non-deterministic serialization input."""
+
+
+class BarReconstructionError(AuditError):
+    """Trade-to-bar reconstruction failure."""
+
+
+class PrecisionComparisonError(AuditError):
+    """Binance archive precision comparison failure."""

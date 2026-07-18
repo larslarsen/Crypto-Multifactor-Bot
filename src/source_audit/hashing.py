@@ -1,20 +1,26 @@
-"""Deterministic hashing utilities."""
+"""Deterministic streaming hashing utilities."""
+
+from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Optional
 
 
-def compute_sha256(path: Path, chunk_size: int = 8192) -> str:
-    """Compute SHA-256 of a file in streaming fashion."""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        while chunk := f.read(chunk_size):
-            h.update(chunk)
-    return h.hexdigest()
+def compute_sha256(path: Path, *, chunk_size: int = 8192) -> str:
+    """Compute the SHA-256 hex digest of a file in streaming fashion."""
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(chunk_size)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
-def verify_checksum(path: Path, expected: str) -> bool:
-    """Verify file against expected hex checksum."""
-    actual = compute_sha256(path)
-    return actual.lower() == expected.lower()
+def verify_checksum(path: Path, expected: str, *, chunk_size: int = 8192) -> bool:
+    """Return True when the file's SHA-256 matches ``expected`` (case-insensitive)."""
+    actual = compute_sha256(path, chunk_size=chunk_size)
+    return actual.lower() == expected.lower().strip()
