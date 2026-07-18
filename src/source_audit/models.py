@@ -1,7 +1,7 @@
 """Typed dataclasses for audit results and configuration."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -73,13 +73,13 @@ class BinancePrecisionComparison:
 
 @dataclass
 class PaginationResult:
-    records: List[Dict]
+    records: List[Dict[Any, Any]]
     pages_fetched: int
     duplicates: int
-    gaps: List[Tuple]
-    overlaps: List[Tuple]
+    gaps: List[Tuple[Any, ...]]
+    overlaps: List[Tuple[Any, ...]]
     ordering_violations: int
-    raw_pages: List[Dict] = field(default_factory=list)
+    raw_pages: List[Dict[Any, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -100,7 +100,7 @@ class BarReconstructionResult:
     bars: List[OHLCVBar]
     missing_provider: List[datetime]
     missing_reconstructed: List[datetime]
-    discrepancies: List[Dict]
+    discrepancies: List[Dict[Any, Any]]
     tolerances_used: Dict[str, float]
 
 
