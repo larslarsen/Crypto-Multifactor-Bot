@@ -1,5 +1,5 @@
 Ticket: MAN-001
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Authorized scope: Implement deterministic dataset manifests, fingerprints, lineage registration, immutable publication, and focused tests.
 Required outcome: Dataset identity is derived from canonical lineage and verified output content, with no overwrite or partial catalog registration.
 Stop condition: Commit the implementation handoff and stop for review.

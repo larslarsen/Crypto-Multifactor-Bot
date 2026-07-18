@@ -30,8 +30,10 @@ CREATE TABLE IF NOT EXISTS dataset (
     dataset_id TEXT PRIMARY KEY,
     dataset_type TEXT NOT NULL,
     schema_version TEXT NOT NULL,
+    schema_fingerprint TEXT,
     manifest_sha256 TEXT NOT NULL UNIQUE,
     manifest_uri TEXT NOT NULL UNIQUE,
+    publication_uri TEXT,
     transform_name TEXT NOT NULL,
     transform_version TEXT NOT NULL,
     code_commit TEXT NOT NULL,
@@ -43,7 +45,9 @@ CREATE TABLE IF NOT EXISTS dataset (
     availability_start TEXT,
     availability_end TEXT,
     quality_status TEXT NOT NULL,
+    quality_summary_json TEXT,
     supersedes_dataset_id TEXT REFERENCES dataset(dataset_id),
+    publication_status TEXT NOT NULL DEFAULT 'REGISTERED',
     created_at TEXT NOT NULL
 );
 
@@ -175,6 +179,10 @@ CREATE INDEX IF NOT EXISTS idx_raw_object_source_acquired
     ON raw_object(source_id, acquired_at);
 CREATE INDEX IF NOT EXISTS idx_dataset_type_created
     ON dataset(dataset_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_dataset_publication_status
+    ON dataset(publication_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_dataset_schema_fingerprint
+    ON dataset(schema_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_quality_issue_status
     ON quality_issue(status, severity);
 CREATE INDEX IF NOT EXISTS idx_experiment_run_fingerprint

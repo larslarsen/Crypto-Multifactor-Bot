@@ -1,0 +1,96 @@
+"""Dataset manifests, immutable publication, and verification (MAN-001)."""
+
+from __future__ import annotations
+
+from cryptofactors.catalog.dataset.canonicalize import (
+    canonical_bytes,
+    compute_dataset_id,
+    compute_manifest_sha256,
+    dumps_canonical,
+    full_manifest_dict,
+    identity_payload,
+    normalize_value,
+)
+from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
+from cryptofactors.catalog.dataset.errors import (
+    CorruptDatasetError,
+    DatasetDurabilityError,
+    DatasetError,
+    DatasetPublicationError,
+    InvalidManifestError,
+    LineageError,
+    MissingInputError,
+    OutputVerificationError,
+    RecoverableDatasetCatalogError,
+    UnsafePathError,
+)
+from cryptofactors.catalog.dataset.lineage import validate_dependencies
+from cryptofactors.catalog.dataset.models import (
+    CodeIdentity,
+    ConfigIdentity,
+    CoverageWindow,
+    DatasetManifest,
+    DatasetPublishResult,
+    DatasetStatistics,
+    DatasetStoreConfig,
+    DatasetVerificationReport,
+    DependencyKind,
+    DependencyRef,
+    OutputFileSpec,
+    PublicationMetadata,
+    PublicationStatus,
+    PublishPlan,
+    QualityStatus,
+    SchemaIdentity,
+    TransformSpec,
+    VerificationFinding,
+    VerificationSeverity,
+)
+from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size, verify_outputs
+from cryptofactors.catalog.dataset.publisher import DatasetPublisher
+from cryptofactors.catalog.dataset.verification import verify_dataset
+
+__all__ = [
+    "CodeIdentity",
+    "ConfigIdentity",
+    "CorruptDatasetError",
+    "CoverageWindow",
+    "DatasetDurabilityError",
+    "DatasetError",
+    "DatasetManifest",
+    "DatasetPublicationError",
+    "DatasetPublishResult",
+    "DatasetPublisher",
+    "DatasetStatistics",
+    "DatasetStoreConfig",
+    "DatasetVerificationReport",
+    "DependencyKind",
+    "DependencyRef",
+    "InvalidManifestError",
+    "LineageError",
+    "MissingInputError",
+    "OutputFileSpec",
+    "OutputVerificationError",
+    "PublicationMetadata",
+    "PublicationStatus",
+    "PublishPlan",
+    "QualityStatus",
+    "RecoverableDatasetCatalogError",
+    "SchemaIdentity",
+    "SqliteDatasetCatalog",
+    "TransformSpec",
+    "UnsafePathError",
+    "VerificationFinding",
+    "VerificationSeverity",
+    "canonical_bytes",
+    "compute_dataset_id",
+    "compute_manifest_sha256",
+    "dumps_canonical",
+    "full_manifest_dict",
+    "identity_payload",
+    "normalize_value",
+    "stream_sha256_and_size",
+    "validate_dependencies",
+    "verify_dataset",
+    "verify_outputs",
+]
