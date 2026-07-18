@@ -1,12 +1,14 @@
 """Bounded streaming HTTP download with atomic publication and full audit trail."""
 
 import os
+import time
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 import tempfile
+import shutil
 import hashlib
 
 from .errors import DownloadError, ChecksumMismatchError

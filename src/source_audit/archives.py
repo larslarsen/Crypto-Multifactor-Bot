@@ -2,6 +2,7 @@
 
 import zipfile
 from pathlib import Path
+from typing import List
 from .errors import UnsafeArchiveError
 from .models import ZipAuditResult, ZipMemberInfo, CSVAuditResult
 

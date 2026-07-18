@@ -1,22 +1,22 @@
 """Generic pagination engine with safety checks."""
 
-from typing import Callable, Dict, List, Any, Optional
+from typing import Callable, Dict, List, Any, Optional, Tuple
 from .errors import PaginationError
 from .models import PaginationResult
 
 
 def paginate(
-    fetch_page: Callable[[Optional[Any], int], List[Dict[Any, Any]]],
+    fetch_page: Callable[[Optional[Any], int], List[Dict]],
     start_cursor: Optional[Any] = None,
     max_pages: int = 100,
     limit: int = 1000,
-    extract_cursor: Optional[Callable[[Dict[Any, Any]], Any]] = None,
+    extract_cursor: Optional[Callable[[Dict], Any]] = None,
 ) -> PaginationResult:
     """
     Generic paginator with duplicate and progress detection.
     Provider-specific logic supplied via callbacks.
     """
-    records: List[Dict[Any, Any]] = []
+    records: List[Dict] = []
     seen_cursors = set()
     seen_records = set()
     duplicates = 0

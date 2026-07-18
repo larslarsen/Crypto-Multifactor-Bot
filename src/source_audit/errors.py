@@ -1,11 +1,12 @@
 """Explicit exception types for the source-audit toolkit."""
 
-from typing import Optional, Dict, Any
+from dataclasses import dataclass
+from typing import Any, Optional
 
 
 class AuditError(Exception):
     """Base exception for all audit failures."""
-    def __init__(self, message: str, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, context: Optional[dict] = None):
         super().__init__(message)
         self.context = context or {}
 

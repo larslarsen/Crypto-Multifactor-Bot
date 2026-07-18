@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+from typing import Optional
 
 
 def compute_sha256(path: Path, chunk_size: int = 8192) -> str:

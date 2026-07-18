@@ -1,6 +1,9 @@
 """Focused tests for archive inspection."""
 
+from pathlib import Path
 from source_audit.archives import audit_zip_safe
+from source_audit.errors import UnsafeArchiveError
+import tempfile
 import zipfile
 
 

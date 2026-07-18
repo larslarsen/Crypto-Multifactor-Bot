@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Union, Dict, Any
+from typing import Union
 from .errors import AmbiguousTimestampError, AuditError
 
 
@@ -26,7 +26,7 @@ def infer_timestamp_unit(
     value: Union[int, float, str, Decimal],
     min_date: datetime = datetime(2010, 1, 1, tzinfo=timezone.utc),
     max_date: datetime = datetime(2030, 1, 1, tzinfo=timezone.utc),
-) -> Dict[str, Any]:
+) -> dict:
     """Candidate validation. Exactly one plausible → return it. Multiple → ambiguous error."""
     # Normalize input
     if isinstance(value, float):
