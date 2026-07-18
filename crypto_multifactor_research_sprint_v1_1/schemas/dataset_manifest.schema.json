@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Dataset Manifest Record",
+  "type": "object",
+  "required": [
+    "dataset_id",
+    "source",
+    "schema_version",
+    "collector_commit",
+    "acquired_at",
+    "rows",
+    "bytes",
+    "sha256"
+  ],
+  "properties": {
+    "dataset_id": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "venue_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "instrument_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "collector_commit": {
+      "type": "string"
+    },
+    "acquired_at": {
+      "type": "string"
+    },
+    "event_start": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "event_end": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rows": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "license_class": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.installed.cfg
+.venv/
+venv/
+ENV/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Research data (large / proprietary / regenerable) — keep specs, not raw obs
+data/
+*.csv
+*.parquet
+*.pkl
+*.joblib
+*.h5
+raw_*/ 
+cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Local secrets / credentials
+.env
+*.key
+secrets.*
+
+# Logs
+*.log
+logs/

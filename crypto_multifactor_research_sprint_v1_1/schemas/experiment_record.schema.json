@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Research Experiment Record",
+  "type": "object",
+  "required": [
+    "experiment_id",
+    "status",
+    "research_mode",
+    "created_at",
+    "code_commit",
+    "dataset_ids",
+    "universe_version",
+    "target",
+    "cost_model",
+    "primary_metrics",
+    "decision"
+  ],
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^EXP-[0-9]{4}-[0-9]{3,}$"
+    },
+    "status": {
+      "enum": [
+        "PREREGISTERED",
+        "RUNNING",
+        "COMPLETE",
+        "REJECTED",
+        "ACCEPTED",
+        "BLOCKED_DATA",
+        "BLOCKED_BASELINE",
+        "SEALED"
+      ]
+    },
+    "research_mode": {
+      "enum": [
+        "CONFIRMATORY",
+        "EXPLORATORY",
+        "DIAGNOSTIC"
+      ]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "code_commit": {
+      "type": "string"
+    },
+    "dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "universe_version": {
+      "type": "string"
+    },
+    "target": {
+      "type": "object"
+    },
+    "cost_model": {
+      "type": "string"
+    },
+    "primary_metrics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision": {
+      "enum": [
+        "PENDING",
+        "REJECT",
+        "ADVANCE",
+        "ARCHIVE"
+      ]
+    }
+  }
+}
