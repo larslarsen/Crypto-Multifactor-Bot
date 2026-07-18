@@ -1,29 +1,86 @@
-# Crypto Multifactor Platform — Implementation Handoff v1
+# Crypto Multifactor Platform
 
-**Status:** architecture extension and coding handoff  
-**Date:** 2026-07-18  
-**Purpose:** add enforceable platform boundaries, an Evidence Registry, detailed implementation tickets, and constrained prompts for an AI coding agent.
+A local-first, point-in-time cryptocurrency research platform for building and evaluating
+implementable multifactor portfolios.
 
-This package is an additive overlay for the `Crypto-Multifactor-Bot` repository. It does not replace the research sprint or architecture package. It converts two agreed design decisions into implementation contracts:
+## Status
 
-1. the platform is divided into **Data**, **Research**, and **Execution** layers with explicit dependency rules;
-2. hypotheses, evidence, experiments, and decisions are recorded in an append-only **Evidence Registry**.
+- **Architecture:** frozen unless an approved ADR changes it.
+- **Current implementation milestone:** control catalog and migration runner.
+- **Current task:** [`CAT-001A`](tickets/CAT-001A.md), a conformance remediation for CAT-001.
+- **Trading status:** no model is approved for serving or live capital.
 
-## Package layout
+This repository is the source of truth. Research, architecture, tickets, implementation,
+tests, and promotion decisions must remain traceable inside the repository.
 
-- `repo_overlay/`: files intended to be copied into the repository root.
-- `handoff/`: operating instructions and prompts for Hermes or another coding agent.
-- `PACKAGE_MANIFEST.json`: hashes and sizes for every file.
-- `PACKAGE.sha256`: hash of the manifest.
+## Governing principles
 
-## What to do first
+1. Data integrity precedes factors, models, and execution.
+2. Raw observations are immutable and content-addressed.
+3. Every derived dataset is identified by a reproducible manifest.
+4. Point-in-time availability is distinct from event time.
+5. Research consumes immutable datasets; it does not call exchanges directly.
+6. Execution consumes explicitly promoted artifacts; it does not discover `latest_*` files.
+7. Hypotheses, evidence, experiments, and decisions are append-only and auditable.
+8. Simple, costed baselines precede machine-learning challengers.
+9. No architecture change is made without an ADR supported by a concrete problem.
 
-1. Read `APPLY_TO_REPO.md`.
-2. Copy `repo_overlay/` into the repository root without deleting existing files.
-3. Give Hermes `handoff/HERMES_START_HERE.md` as its governing prompt.
-4. Assign only `CAT-001` first.
-5. Require a reviewable commit and passing tests before assigning `RAW-001`.
+## Platform boundaries
 
-## Important boundary
+```text
+External sources
+      |
+      v
+Data layer
+  ingestion -> immutable raw objects -> validation -> canonical datasets
+      |
+      v
+Research layer
+  universes -> factors -> labels -> experiments -> portfolios -> evidence
+      |
+      v
+Execution layer
+  promoted artifacts -> paper serving -> broker adapters
+```
 
-This package contains specifications, migrations, schemas, tests, and small reference modules. It deliberately does **not** implement exchange collectors, factor models, or trading logic. Those are downstream of the catalog and raw-object foundations.
+Dependency direction is enforced by the repository's layer-contract checks.
+
+## Start here
+
+- [Architecture RFC](docs/ARCHITECTURE_RFC.md)
+- [Architecture documents](docs/architecture/)
+- [Architecture decisions](docs/adr/)
+- [Engineering standards](docs/engineering/)
+- [Hermes handoff](docs/handoff/HERMES_START_HERE.md)
+- [Current developer task](docs/handoff/CURRENT_TASK.md)
+- [Implementation tickets](tickets/)
+- [Research sprint](crypto_multifactor_research_sprint_v1_1/)
+
+## Development setup
+
+```bash
+cd /home/lars/Crypto_Multifactor_Bot
+uv sync --extra dev
+uv run pytest
+uv run ruff check src tests
+uv run mypy src
+```
+
+Initialize a local control database:
+
+```bash
+mkdir -p .local
+uv run cf catalog init --database .local/control.db
+uv run cf catalog status --database .local/control.db
+```
+
+Local databases, downloaded data, secrets, caches, and generated experiment artifacts must
+not be committed.
+
+## Current review gate
+
+CAT-001 is not accepted until [`CAT-001A`](tickets/CAT-001A.md) passes. The current
+migration runner can leave partial schema changes after a failed migration, and its
+migration discovery does not yet enforce duplicate-version and gap rejection.
+
+Do not begin raw-data ingestion tickets until the remediation is reviewed and accepted.
