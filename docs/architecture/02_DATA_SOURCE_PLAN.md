@@ -188,3 +188,41 @@ Add only after:
 - CoinGecko Demo historical limits: https://docs.coingecko.com/demo/reference/coins-id-market-chart-range
 - Coin Metrics Community: https://docs.coinmetrics.io/api/v4/
 - DefiLlama API: https://api-docs.defillama.com/
+
+## 10. Evidence-backed acceptance conditions (Sprint 003)
+
+Decisions below are recorded from the Sprint 003 source-feasibility audit
+(`research/sprint_003/13_RESEARCH_LEAD_DECISIONS.md`). They refine the roles in
+Section 7 with provider-specific acceptance, deferral, and mandatory conditions.
+
+### Per-provider decisions
+
+- **Binance:** `ACCEPT — BACKFILL_PRIMARY`.
+- **Bybit:** `CONDITIONAL — CROSSCHECK` and incremental derivatives/funding.
+- **Coin Metrics Community:** `CONDITIONAL — EXPLORATORY_PHASE2`.
+- **OKX:** `DEFER` historical approval pending audited historical files.
+- **Kraken:** `DEFER` pending successful bulk-file acquisition.
+- **DefiLlama:** `CONDITIONAL — EXPLORATORY_PHASE2`; emissions access not established as free.
+- **Tokenomist / Messari:** `DEFER` pending authorized access or vendor trial.
+- **CoinGecko / CoinMarketCap:** discovery and cross-check only; not point-in-time authorities.
+- **DIL-01:** remains deferred.
+
+### Mandatory Binance conditions
+
+- Preserve provider checksums for every acquired object.
+- Retain corrected and superseded objects rather than overwriting them.
+- Infer and record timestamp units **per object** (not global to the provider).
+- Support **both millisecond and microsecond** archives. The spot aggTrades
+  unit change to microseconds from 2025-01-01 is real and must be versioned.
+- Never infer timestamp units from filename dates alone; the unit must be
+  observed from the data (see `source_audit.infer_timestamp_unit`).
+
+### Mandatory Bybit conditions
+
+- Deterministic cursor pagination (seed request + returned cursor drive the
+  next fetch; unknown cursor terminates). Raw pages must be reproducible offline.
+- Retain raw pages exactly (response bytes, not just normalized rows).
+- Preserve fractional-second timestamps exactly (Bybit trades carry Unix seconds
+  with microsecond fractional precision; do not truncate to integer seconds).
+- Maintain source-specific schema/version records for each endpoint and revision.
+
