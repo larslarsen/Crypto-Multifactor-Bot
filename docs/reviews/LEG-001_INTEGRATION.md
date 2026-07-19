@@ -76,10 +76,17 @@ blockers (11-14), and a v1.2.2 merge-key regression guard (15):
 14. `test_output_subtree_excluded_before_enqueue` — Sr acceptance blocker 4:
     `legacy_root/out/preexisting.txt` with `output_dir=legacy_root/out` is absent
     from the inventory; `excluded_by_rule["output_self"]` records the exclusion.
-15. `test_multilevel_merge_deterministic_binary_order` — v1.2.2 regression guard:
-    a forced multi-level external merge (small run buffer) yields identical
-    inventory bytes across two scans, proving binary-identity ordering at every
-    merge level.
+15. `test_multilevel_merge_deterministic_binary_order` — v1.2.2 regression guard
+    (strengthened): builds more staged runs than the merge fan-in (`_MERGE_FAN_IN`
+    = 16) using `_write_sorted_run()`, with canonical binary keys whose sort
+    order deliberately conflicts with each payload's `relative_path` (single-byte
+    names sort first by binary key but last by `relative_path`). Invokes
+    `_merge_runs_streaming()` through >=1 intermediate merge level and asserts:
+    (1) final public records follow canonical binary-key order; (2) output lines
+    are valid public JSON with no internal `<hexkey>\t` prefix; (3) a
+    relative_path-ordered merge oracle yields a different order, so the test
+    fails under relative_path ordering. Fails on parent commit `b40fcae`
+    (pre-fix code lacks the binary-key merge).
 
 ## v1.2.2 integration defect fixed (to pass repo gates)
 

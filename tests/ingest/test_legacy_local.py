@@ -18,8 +18,12 @@ import pytest
 
 import cryptofactors.ingest.legacy_local as ll
 from cryptofactors.ingest.legacy_local import (
+    EntryType,
+    EvidenceClass,
+    InventoryEntry,
     LegacyInventoryExistsError,
     LegacyPathCollisionError,
+    ProvenanceClass,
     ScanStatus,
     scan_legacy_root,
 )
@@ -473,30 +477,118 @@ def test_output_subtree_excluded_before_enqueue(tmp_path: Path) -> None:
     assert summary.excluded_by_rule.get("output_self", 0) >= 1
 
 
-# Regression guard for the v1.2.2 merge-key fix: external merge (including
-# intermediate levels) must order by canonical binary identity, never by the
-# display relative_path. Force a multi-level merge, then confirm the inventory
-# is byte-identical across two scans.
+# Strengthened regression for the v1.2.2 merge-key fix.
+#
+# Builds more staged runs than the merge fan-in, with canonical binary keys
+# whose sort order deliberately CONFLICTS with each payload's relative_path.
+# Exercises at least one intermediate merge level. Asserts the public output
+# follows canonical binary-key order (NOT relative_path) and contains only
+# valid public JSON. The third assertion proves the test would fail if the
+# merge ordered heads by relative_path. (Fails on parent commit b40fcae,
+# which ordered the merge by display relative_path.)
 def test_multilevel_merge_deterministic_binary_order(tmp_path: Path) -> None:
-    root = tmp_path / "legacy"
-    root.mkdir()
-    n = 2000
-    for i in range(n):
-        (root / f"f{i:05d}.bin").write_bytes(b"seed-%d" % (i % 131))
-    out1 = tmp_path / "out1"
-    out2 = tmp_path / "out2"
+    # Private helpers (production code is unchanged; accessed reflectively).
+    write_run = getattr(ll, "_write_sorted_run")
+    merge = getattr(ll, "_merge_runs_streaming")
+    identity_key = getattr(ll, "_parts_identity_key")
+    fan_in: int = ll._MERGE_FAN_IN
 
-    with mock.patch.object(ll, "_RUN_BUFFER_LIMIT", 50):
-        s1 = scan_legacy_root(root, out1)
-        s2 = scan_legacy_root(root, out2)
-    assert s1.total_entries == n
-    assert s1.hashed_regular_files == n
-    assert s2.total_entries == n
-    # Byte-identical across scans proves stable binary-key ordering at every
-    # merge level (display paths would sort differently under some locales).
-    inv1 = (out1 / "legacy_inventory.jsonl").read_bytes()
-    inv2 = (out2 / "legacy_inventory.jsonl").read_bytes()
-    assert inv1 == inv2
+    work = tmp_path / "work"
+    work.mkdir()
+
+    # Names chosen so binary-key (length-prefixed) order REVERSES display order:
+    #   single-byte names (display high, e.g. "z") sort FIRST by binary key;
+    #   two-byte names   (display low,  e.g. "aa") sort FIRST by relative_path.
+    names: list[bytes] = [b"z", b"y", b"x", b"w", b"v", b"u", b"t", b"s", b"r", b"q"] \
+        + [b"aa", b"ab", b"ac", b"ad", b"ae", b"af", b"ag", b"ah", b"ai", b"aj"]
+    assert len(names) > fan_in  # >16 -> forces >=1 intermediate merge level
+
+    records: list[tuple[bytes, str, str]] = []  # (binary_key, relative_path, json_line)
+    for name in names:
+        parts = (name,)
+        rel = ll._parts_to_relative(parts)  # display form
+        ent = InventoryEntry(
+            relative_path=rel,
+            entry_type=EntryType.REGULAR_FILE,
+            byte_size=0,
+            mtime_ns=0,
+            sha256="00" * 32,
+            evidence_class=EvidenceClass.UNKNOWN,
+            provenance_class=ProvenanceClass.LEGACY_UNKNOWN,
+            classification_basis="none",
+            scan_status=ScanStatus.OK,
+        )
+        line = json.dumps(ent.to_canonical_dict())
+        records.append((identity_key(parts), rel, line))
+
+    # One staged run per record -> more runs than the fan-in.
+    run_paths: list[Path] = []
+    for i, (key, _rel, line) in enumerate(records):
+        p = work / f"run-{i:02d}.jsonl"
+        write_run([(key, line)], p)
+        run_paths.append(p)
+
+    # Production merge: binary-key order, public JSON on final output.
+    out_bin = work / "final.bin.jsonl"
+    merge(run_paths, out_bin, strip_keys=True)
+    bin_lines = [ln for ln in out_bin.read_text().splitlines() if ln.strip()]
+
+    # --- Requirement 1: final public records follow canonical binary-key order.
+    expected_bin_rel = [rel for _key, rel, _ in sorted(records, key=lambda r: r[0])]
+    got_bin_rel = [json.loads(ln)["relative_path"] for ln in bin_lines]
+    assert got_bin_rel == expected_bin_rel
+
+    # --- Requirement 2: only valid public JSON, no internal key prefix.
+    for ln in bin_lines:
+        assert "\t" not in ln  # internal <hexkey>\t<payload> prefix stripped
+        obj = json.loads(ln)  # raises on malformed public JSON
+        assert isinstance(obj, dict)
+        assert "relative_path" in obj
+
+    # --- Requirement 3: a relative_path-ordered merge would differ (so the
+    # test fails if merge heads were ordered by relative_path). Built as an
+    # oracle that reads the same staged runs and merges by payload relative_path.
+    out_rel = work / "final.rel.jsonl"
+    _merge_runs_by_relative_path(run_paths, out_rel)
+    rel_lines = [ln for ln in out_rel.read_text().splitlines() if ln.strip()]
+    expected_rel_rel = [rel for _key, rel, _ in sorted(records, key=lambda r: r[1])]
+    got_rel_rel = [json.loads(ln)["relative_path"] for ln in rel_lines]
+    assert got_rel_rel == expected_rel_rel
+    assert got_bin_rel != got_rel_rel  # binary-key order != relative_path order
+
+
+def _merge_runs_by_relative_path(run_paths: list[Path], out_path: Path) -> None:
+    """Oracle: same staged runs, but merge heads ordered by payload relative_path.
+
+    Proves the regression would fail if the production merge used relative_path
+    (matching parent commit b40fcae behavior). Read-only over the run files.
+    """
+    handles = [p.open("r", encoding="utf-8") for p in run_paths]
+    heads: list[tuple[str, str, int] | None] = []
+    for idx, h in enumerate(handles):
+        ln = h.readline()
+        if ln and ln.strip():
+            # Parse internal <hexkey>\t<payload> then take public JSON payload.
+            _, payload = getattr(ll, "_parse_run_record")(ln)
+            rel = json.loads(payload)["relative_path"]
+            heads.append((rel, payload, idx))
+        else:
+            heads.append(None)
+    with out_path.open("w", encoding="utf-8") as out:
+        while True:
+            active = [h for h in heads if h is not None]
+            if not active:
+                break
+            active.sort(key=lambda t: t[0])  # ORDER BY relative_path
+            _rel, payload, best_idx = active[0]
+            out.write(payload + "\n")
+            nxt = handles[best_idx].readline()
+            if nxt and nxt.strip():
+                _, payload = getattr(ll, "_parse_run_record")(nxt)
+                rel = json.loads(payload)["relative_path"]
+                heads[best_idx] = (rel, payload, best_idx)
+            else:
+                heads[best_idx] = None
 
 
 if __name__ == "__main__":
