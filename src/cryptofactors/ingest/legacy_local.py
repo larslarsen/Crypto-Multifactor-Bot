@@ -3,22 +3,23 @@
 Forensic census only. Registration does not imply acceptance. Source bytes
 are never rewritten. Classification is metadata, never promotion.
 
-Path identity is preserved exactly (no whitespace trimming, no backslash
-reinterpretation on POSIX). Traversal/hashing use descriptor-relative,
-no-follow operations where supported so a TOCTOU symlink replacement cannot
-redirect the scanner outside the legacy root.
+Traversal and hashing are descriptor-relative (dir_fd + O_NOFOLLOW +
+O_DIRECTORY). The directory work queue is binary-safe SQLite. Non-UTF-8
+POSIX names are represented deterministically without surrogate code points
+in UTF-8 JSON. Publication uses exclusive no-clobber link/create semantics.
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
-import io
 import json
 import os
 import re
 import sqlite3
 import stat as statmod
 import tempfile
+import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -26,12 +27,20 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Final
 
-SCANNER_VERSION: Final[str] = "1.1.0"
-INVENTORY_SCHEMA_VERSION: Final[str] = "1.1.0"
+SCANNER_VERSION: Final[str] = "1.2.0"
+INVENTORY_SCHEMA_VERSION: Final[str] = "1.2.0"
 _MERGE_FAN_IN: Final[int] = 16
-_QUEUE_BATCH: Final[int] = 256
 _RUN_BUFFER_LIMIT: Final[int] = 2048
+_QUEUE_BATCH: Final[int] = 256
 
+# Open flags — required APIs (no hasattr probes for openat/fstatat).
+_O_RDONLY: Final[int] = os.O_RDONLY
+_O_DIRECTORY: Final[int] = os.O_DIRECTORY
+_O_NOFOLLOW: Final[int] = os.O_NOFOLLOW
+_O_CLOEXEC: Final[int] = getattr(os, "O_CLOEXEC", 0)
+
+
+# ---- Exceptions -----------------------------------------------------------
 
 class LegacyScanError(Exception):
     def __init__(self, message: str, *, context: Mapping[str, Any] | None = None) -> None:
@@ -68,6 +77,8 @@ class LegacyConfigError(LegacyScanError):
 class LegacyTraversalError(LegacyScanError):
     pass
 
+
+# ---- Enums ----------------------------------------------------------------
 
 class EntryType(str, Enum):
     REGULAR_FILE = "regular_file"
@@ -109,6 +120,8 @@ class ScanStatus(str, Enum):
     ERROR_MALFORMED = "error_malformed"
     ERROR_COLLISION = "error_collision"
 
+
+# ---- Classification / Exclusion -------------------------------------------
 
 @dataclass(frozen=True, slots=True)
 class ClassificationRule:
@@ -182,8 +195,11 @@ def _default_exclusion_rules() -> tuple[ExclusionRule, ...]:
         ExclusionRule("secret_files", _names(".env", ".env.local", ".env.production", "secrets.yaml", "secrets.yml", "secrets.json", "credentials.json", "service_account.json")),
         ExclusionRule("key_files", _suffixes(".key", ".pem", ".p12", ".pfx", ".jks", ".keystore")),
         ExclusionRule("python_bytecode", _suffixes(".pyc", ".pyo", ".pyd")),
+        ExclusionRule("leg001_work", lambda r: any(p.startswith(".leg001-") for p in r.split("/"))),
     )
 
+
+# ---- Models ---------------------------------------------------------------
 
 @dataclass(frozen=True, slots=True)
 class InventoryEntry:
@@ -219,7 +235,11 @@ class DuplicateGroup:
     relative_paths: tuple[str, ...]
 
     def to_canonical_dict(self) -> dict[str, Any]:
-        return {"sha256": self.sha256, "relative_paths": list(self.relative_paths), "path_count": len(self.relative_paths)}
+        return {
+            "sha256": self.sha256,
+            "relative_paths": list(self.relative_paths),
+            "path_count": len(self.relative_paths),
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -250,28 +270,43 @@ class InventorySummary:
 
     def to_canonical_dict(self) -> dict[str, Any]:
         return {
-            "root": self.root, "root_resolved": self.root_resolved,
-            "scanner_version": self.scanner_version, "schema_version": self.schema_version,
-            "scanned_at_utc": self.scanned_at_utc, "total_entries": self.total_entries,
-            "hashed_regular_files": self.hashed_regular_files, "total_hashed_bytes": self.total_hashed_bytes,
+            "root": self.root,
+            "root_resolved": self.root_resolved,
+            "scanner_version": self.scanner_version,
+            "schema_version": self.schema_version,
+            "scanned_at_utc": self.scanned_at_utc,
+            "total_entries": self.total_entries,
+            "hashed_regular_files": self.hashed_regular_files,
+            "total_hashed_bytes": self.total_hashed_bytes,
             "counts_by_entry_type": dict(sorted(self.counts_by_entry_type.items())),
             "counts_by_evidence_class": dict(sorted(self.counts_by_evidence_class.items())),
             "counts_by_provenance_class": dict(sorted(self.counts_by_provenance_class.items())),
             "counts_by_scan_status": dict(sorted(self.counts_by_scan_status.items())),
             "excluded_by_rule": dict(sorted(self.excluded_by_rule.items())),
-            "duplicate_hash_groups": self.duplicate_hash_groups, "duplicate_path_count": self.duplicate_path_count,
-            "error_count": self.error_count, "inventory_sha256": self.inventory_sha256,
-            "inventory_byte_size": self.inventory_byte_size, "inventory_uri": self.inventory_uri,
-            "summary_uri": self.summary_uri, "duplicate_report_sha256": self.duplicate_report_sha256,
-            "duplicate_report_byte_size": self.duplicate_report_byte_size, "duplicate_report_uri": self.duplicate_report_uri,
+            "duplicate_hash_groups": self.duplicate_hash_groups,
+            "duplicate_path_count": self.duplicate_path_count,
+            "error_count": self.error_count,
+            "inventory_sha256": self.inventory_sha256,
+            "inventory_byte_size": self.inventory_byte_size,
+            "inventory_uri": self.inventory_uri,
+            "summary_uri": self.summary_uri,
+            "duplicate_report_sha256": self.duplicate_report_sha256,
+            "duplicate_report_byte_size": self.duplicate_report_byte_size,
+            "duplicate_report_uri": self.duplicate_report_uri,
         }
 
 
 def _validate_output_basename(name: str, label: str) -> None:
     if not name or name != name.strip():
-        raise LegacyConfigError(f"{label} must be a non-empty basename without surrounding whitespace", context={label: name})
+        raise LegacyConfigError(
+            f"{label} must be a non-empty basename without surrounding whitespace",
+            context={label: name},
+        )
     if "/" in name or "\\" in name or name in (".", "..") or name.startswith("/"):
-        raise LegacyConfigError(f"{label} must be a simple basename (no separators, not . or ..)", context={label: name})
+        raise LegacyConfigError(
+            f"{label} must be a simple basename (no separators, not . or ..)",
+            context={label: name},
+        )
     if os.sep in name or (os.altsep and os.altsep in name):
         raise LegacyConfigError(f"{label} must be a simple basename", context={label: name})
 
@@ -301,11 +336,42 @@ class ScanConfig:
             raise LegacyConfigError("inventory, summary, and duplicate-report filenames must be distinct")
 
 
-def _join_rel(parent_rel: str, name: str) -> str:
-    """Join parent relative path with exact filesystem name. No strip, no backslash rewrite."""
-    if not parent_rel:
-        return name
-    return parent_rel + "/" + name
+# ---- Path identity (binary-safe, no truncation, no surrogates in JSON) ----
+
+def _name_to_display(name: bytes) -> str:
+    """Deterministic JSON-safe display form of one path component.
+
+    Valid UTF-8 is emitted as-is. Non-UTF-8 bytes use a ``b64:`` prefix so the
+    result contains only UTF-8 code points (no surrogates).
+    """
+    try:
+        text = name.decode("utf-8")
+    except UnicodeDecodeError:
+        return "b64:" + base64.b64encode(name).decode("ascii")
+    # Reject embedded NUL and path separators inside a single component display
+    # only for safety of the joined relative_path string; identity uses raw bytes.
+    if "\x00" in text:
+        return "b64:" + base64.b64encode(name).decode("ascii")
+    return text
+
+
+def _parts_to_relative(parts: tuple[bytes, ...]) -> str:
+    if not parts:
+        return ""
+    return "/".join(_name_to_display(p) for p in parts)
+
+
+def _parts_identity_key(parts: tuple[bytes, ...]) -> bytes:
+    """Canonical binary identity key — preserves exact FS names including newlines."""
+    # Length-prefixed segments so embedded newlines/slashes cannot collide.
+    out = bytearray()
+    for p in parts:
+        out.append(0x01)
+        ln = len(p)
+        out.extend(ln.to_bytes(4, "big"))
+        out.extend(p)
+    out.append(0x00)
+    return bytes(out)
 
 
 def _sanitize_error(exc: BaseException, *, max_len: int = 200) -> str:
@@ -361,50 +427,101 @@ def _entry_type_from_mode(mode: int) -> EntryType:
     return EntryType.SPECIAL
 
 
-def _stat_identity(st: os.stat_result) -> tuple[int, int, int, int, int | None]:
-    return (st.st_dev, st.st_ino, statmod.S_IFMT(st.st_mode), st.st_size, getattr(st, "st_mtime_ns", None))
+def _stat_identity(st: os.stat_result) -> tuple[int, int, int, int, int | None, int | None]:
+    """(dev, ino, mode_type, size, mtime_ns, ctime_ns)."""
+    return (
+        st.st_dev,
+        st.st_ino,
+        statmod.S_IFMT(st.st_mode),
+        st.st_size,
+        getattr(st, "st_mtime_ns", None),
+        getattr(st, "st_ctime_ns", None),
+    )
 
 
-def _hash_open_fd(fd: int, *, chunk_size: int) -> tuple[str, int]:
-    digest = hashlib.sha256()
-    total = 0
-    while True:
-        chunk = os.read(fd, chunk_size)
-        if not chunk:
-            break
-        digest.update(chunk)
-        total += len(chunk)
-    return digest.hexdigest(), total
+# ---- Descriptor-relative open / walk --------------------------------------
+
+def _open_dir_nofollow(dir_fd: int | None, name: str | None) -> int:
+    """Open a directory without following symlinks.
+
+    If ``name`` is None, ``dir_fd`` must be None and ``name`` is unused —
+    callers open the root by absolute path separately.
+    """
+    flags = _O_RDONLY | _O_DIRECTORY | _O_NOFOLLOW | _O_CLOEXEC
+    if dir_fd is None:
+        raise LegacyTraversalError("dir_fd required for relative open")
+    assert name is not None
+    return os.open(name, flags, dir_fd=dir_fd)
 
 
-def _hash_regular_nofollow(
-    parent_path: Path, name: str, *, chunk_size: int
-) -> tuple[str | None, int, int | None, ScanStatus, str | None]:
-    """Hash a regular file with TOCTOU protection via O_NOFOLLOW + fstat identity checks."""
-    dir_fd: int | None = None
-    file_fd: int | None = None
+def _open_root_dir(root: Path) -> int:
+    flags = _O_RDONLY | _O_DIRECTORY | _O_NOFOLLOW | _O_CLOEXEC
+    return os.open(str(root), flags)
+
+
+def _open_file_nofollow(dir_fd: int, name: str) -> int:
+    flags = _O_RDONLY | _O_NOFOLLOW | _O_CLOEXEC
+    return os.open(name, flags, dir_fd=dir_fd)
+
+
+def _walk_open_dir(root_fd: int, parts: tuple[bytes, ...]) -> int:
+    """Open the directory identified by ``parts`` from ``root_fd``, no-follow.
+
+    Each component is reopened with O_DIRECTORY|O_NOFOLLOW relative to its
+    parent descriptor. A swapped symlink component raises OSError (ELOOP/ENOTDIR).
+    """
+    if not parts:
+        # Duplicate the root fd so callers can close freely.
+        return os.open(".", _O_RDONLY | _O_DIRECTORY | _O_CLOEXEC, dir_fd=root_fd)
+    fd = root_fd
+    owned: list[int] = []
     try:
-        dir_flags = os.O_RDONLY
-        if hasattr(os, "O_DIRECTORY"):
-            dir_flags |= os.O_DIRECTORY
-        if hasattr(os, "O_NOFOLLOW"):
-            dir_flags |= os.O_NOFOLLOW
-        try:
-            dir_fd = os.open(str(parent_path), dir_flags)
-        except OSError as exc:
-            return None, 0, None, ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)
+        for i, comp in enumerate(parts):
+            # Use filesystem encoding for the name relative to dir_fd.
+            name = os.fsdecode(comp) if isinstance(comp, (bytes, bytearray)) else str(comp)
+            # Prefer bytes name when possible for exactness.
+            try:
+                next_fd = os.open(comp, _O_RDONLY | _O_DIRECTORY | _O_NOFOLLOW | _O_CLOEXEC, dir_fd=fd)
+            except (TypeError, ValueError, OSError):
+                next_fd = os.open(name, _O_RDONLY | _O_DIRECTORY | _O_NOFOLLOW | _O_CLOEXEC, dir_fd=fd)
+            if fd is not root_fd:
+                owned.append(fd)
+            fd = next_fd
+        return fd
+    except Exception:
+        if fd is not root_fd:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        raise
+    finally:
+        for o in owned:
+            try:
+                os.close(o)
+            except OSError:
+                pass
 
-        flags = os.O_RDONLY
-        if hasattr(os, "O_NOFOLLOW"):
-            flags |= os.O_NOFOLLOW
+
+def _hash_regular_at(
+    dir_fd: int,
+    name_bytes: bytes,
+    *,
+    chunk_size: int,
+) -> tuple[str | None, int, int | None, ScanStatus, str | None]:
+    """Hash a regular file relative to ``dir_fd`` with full identity revalidation."""
+    file_fd: int | None = None
+    name = os.fsdecode(name_bytes)
+    try:
         try:
-            if hasattr(os, "openat"):
-                file_fd = os.openat(dir_fd, name, flags)
-            else:
-                file_fd = os.open(str(parent_path / name), flags)
+            try:
+                file_fd = os.open(name_bytes, _O_RDONLY | _O_NOFOLLOW | _O_CLOEXEC, dir_fd=dir_fd)
+            except (TypeError, ValueError, OSError):
+                file_fd = os.open(name, _O_RDONLY | _O_NOFOLLOW | _O_CLOEXEC, dir_fd=dir_fd)
         except OSError as exc:
             err = _sanitize_error(exc)
-            if getattr(exc, "errno", None) in (getattr(os, "ELOOP", -1), getattr(os, "EPERM", -1)):
+            errno = getattr(exc, "errno", None)
+            if errno in (getattr(__import__("errno"), "ELOOP", -1), getattr(__import__("errno"), "EPERM", -1)):
                 return None, 0, None, ScanStatus.ERROR_SYMLINK, err
             return None, 0, None, ScanStatus.ERROR_UNREADABLE, err
 
@@ -416,120 +533,213 @@ def _hash_regular_nofollow(
         if statmod.S_ISLNK(st_before.st_mode):
             return None, 0, None, ScanStatus.ERROR_SYMLINK, "entry is a symlink"
         if not statmod.S_ISREG(st_before.st_mode):
-            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_SPECIAL, "not a regular file"
+            return (
+                None,
+                st_before.st_size,
+                getattr(st_before, "st_mtime_ns", None),
+                ScanStatus.ERROR_SPECIAL,
+                "not a regular file",
+            )
 
         id_before = _stat_identity(st_before)
+        digest = hashlib.sha256()
+        total = 0
         try:
-            sha, hashed_len = _hash_open_fd(file_fd, chunk_size=chunk_size)
+            while True:
+                chunk = os.read(file_fd, chunk_size)
+                if not chunk:
+                    break
+                digest.update(chunk)
+                total += len(chunk)
         except OSError as exc:
-            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_HASH, _sanitize_error(exc)
+            return (
+                None,
+                st_before.st_size,
+                getattr(st_before, "st_mtime_ns", None),
+                ScanStatus.ERROR_HASH,
+                _sanitize_error(exc),
+            )
 
         try:
             st_after = os.fstat(file_fd)
         except OSError as exc:
-            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, _sanitize_error(exc)
+            return (
+                None,
+                st_before.st_size,
+                getattr(st_before, "st_mtime_ns", None),
+                ScanStatus.ERROR_CHANGED,
+                _sanitize_error(exc),
+            )
 
-        if _stat_identity(st_after) != id_before or hashed_len != st_before.st_size:
-            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, "file changed during scan"
+        if _stat_identity(st_after) != id_before or total != st_before.st_size:
+            return (
+                None,
+                st_before.st_size,
+                getattr(st_before, "st_mtime_ns", None),
+                ScanStatus.ERROR_CHANGED,
+                "file changed during scan",
+            )
 
+        # Revalidate directory entry still names the same object.
         try:
-            if hasattr(os, "fstatat") and dir_fd is not None:
-                st_dirent = os.fstatat(dir_fd, name, getattr(os, "AT_SYMLINK_NOFOLLOW", 0))
-            else:
-                st_dirent = os.lstat(str(parent_path / name))
-            d_id = _stat_identity(st_dirent)
-            if d_id[0] != id_before[0] or d_id[1] != id_before[1] or d_id[2] != id_before[2]:
-                return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, "directory entry replaced during scan"
-        except OSError as exc:
-            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, _sanitize_error(exc)
+            st_dirent = os.stat(name_bytes, dir_fd=dir_fd, follow_symlinks=False)
+        except (TypeError, ValueError, OSError):
+            try:
+                st_dirent = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+            except OSError as exc:
+                return (
+                    None,
+                    st_before.st_size,
+                    getattr(st_before, "st_mtime_ns", None),
+                    ScanStatus.ERROR_CHANGED,
+                    _sanitize_error(exc),
+                )
+        d_id = _stat_identity(st_dirent)
+        if d_id[0] != id_before[0] or d_id[1] != id_before[1] or d_id[2] != id_before[2]:
+            return (
+                None,
+                st_before.st_size,
+                getattr(st_before, "st_mtime_ns", None),
+                ScanStatus.ERROR_CHANGED,
+                "directory entry replaced during scan",
+            )
 
-        return sha, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.OK, None
+        return sha if (sha := digest.hexdigest()) else None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.OK, None
     finally:
         if file_fd is not None:
             try:
                 os.close(file_fd)
             except OSError:
                 pass
-        if dir_fd is not None:
-            try:
-                os.close(dir_fd)
-            except OSError:
-                pass
 
+
+# ---- Exclusive publication (MAN-001-style no-clobber) ----------------------
 
 class _PublishReservation:
-    """Stage all artifacts, fsync, exclusive no-clobber publish; roll back own outputs on failure."""
+    """Stage complete artifact set, exclusive publish, inode-proven rollback."""
 
     def __init__(self, output_dir: Path, basenames: Sequence[str]) -> None:
         self.output_dir = output_dir
         self.basenames = list(basenames)
         self.stage_dir: Path | None = None
-        self.published: list[Path] = []
+        self.published: list[tuple[Path, int, int]] = []  # path, dev, ino
 
     def __enter__(self) -> _PublishReservation:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         for name in self.basenames:
             dest = self.output_dir / name
-            if dest.exists():
-                raise LegacyInventoryExistsError("output artifact already exists (no-clobber)", context={"path": str(dest)})
-        self.stage_dir = Path(tempfile.mkdtemp(prefix=".leg001-stage-", dir=str(self.output_dir)))
+            try:
+                st = os.lstat(dest)
+            except FileNotFoundError:
+                continue
+            raise LegacyInventoryExistsError(
+                "output artifact already exists (no-clobber)",
+                context={"path": str(dest), "ino": st.st_ino},
+            )
+        self.stage_dir = Path(
+            tempfile.mkdtemp(prefix=".leg001-stage-", dir=str(self.output_dir))
+        )
         return self
 
-    def stage_bytes(self, basename: str, data: bytes) -> None:
+    def stage_path(self, basename: str) -> Path:
         assert self.stage_dir is not None
-        dest = self.stage_dir / basename
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{basename}-", suffix=".partial", dir=str(self.stage_dir))
-        tmp_path = Path(tmp_name)
-        try:
-            with os.fdopen(fd, "wb") as handle:
-                handle.write(data)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.rename(str(tmp_path), str(dest))
-            _fsync_file(dest)
-        except Exception as exc:
-            if tmp_path.exists():
-                tmp_path.unlink(missing_ok=True)
-            raise LegacyOutputError(f"failed to stage artifact: {exc}", context={"basename": basename}) from exc
+        if basename not in self.basenames:
+            raise LegacyOutputError("unexpected artifact basename", context={"basename": basename})
+        return self.stage_dir / basename
 
     def publish(self) -> None:
         assert self.stage_dir is not None
         _fsync_dir(self.stage_dir)
-        for name in self.basenames:
+        # Publish completion marker (summary) last.
+        ordered = [b for b in self.basenames if b]  # caller puts summary last
+        for name in ordered:
             staged = self.stage_dir / name
             if not staged.exists():
-                raise LegacyOutputError("staged artifact missing before publication", context={"basename": name})
+                self._rollback()
+                raise LegacyOutputError(
+                    "staged artifact missing before publication",
+                    context={"basename": name},
+                )
             final = self.output_dir / name
-            if final.exists():
-                self._rollback()
-                raise LegacyInventoryExistsError("output artifact appeared during publication (no-clobber)", context={"path": str(final)})
+            # Exclusive: os.link fails with EEXIST if final exists.
             try:
-                os.rename(str(staged), str(final))
-            except (FileExistsError, OSError) as exc:
+                os.link(str(staged), str(final))
+            except FileExistsError as exc:
                 self._rollback()
-                if isinstance(exc, FileExistsError) or getattr(exc, "errno", None) in (getattr(os, "EEXIST", -1), getattr(os, "ENOTEMPTY", -1)):
-                    raise LegacyInventoryExistsError("output artifact collision during publication", context={"path": str(final)}) from exc
-                raise LegacyOutputError(f"atomic publication failed: {exc}", context={"path": str(final)}) from exc
-            self.published.append(final)
+                raise LegacyInventoryExistsError(
+                    "output artifact collision during publication",
+                    context={"path": str(final)},
+                ) from exc
+            except OSError as exc:
+                # Cross-device: fall back to O_EXCL create + copy.
+                if getattr(exc, "errno", None) == getattr(__import__("errno"), "EXDEV", -1):
+                    try:
+                        self._exclusive_copy(staged, final)
+                    except FileExistsError as exc2:
+                        self._rollback()
+                        raise LegacyInventoryExistsError(
+                            "output artifact collision during publication",
+                            context={"path": str(final)},
+                        ) from exc2
+                    except OSError as exc2:
+                        self._rollback()
+                        raise LegacyOutputError(
+                            f"atomic publication failed: {exc2}",
+                            context={"path": str(final)},
+                        ) from exc2
+                else:
+                    self._rollback()
+                    raise LegacyOutputError(
+                        f"atomic publication failed: {exc}",
+                        context={"path": str(final)},
+                    ) from exc
+            st = os.lstat(final)
+            self.published.append((final, st.st_dev, st.st_ino))
             try:
                 _fsync_file(final)
             except OSError as exc:
                 self._rollback()
-                raise LegacyOutputError(f"fsync after publish failed: {exc}", context={"path": str(final)}) from exc
+                raise LegacyOutputError(
+                    f"fsync after publish failed: {exc}",
+                    context={"path": str(final)},
+                ) from exc
         try:
             _fsync_dir(self.output_dir)
         except OSError:
             pass
+        # Remove staged originals (links keep inodes where hardlinked).
+        for name in ordered:
+            try:
+                (self.stage_dir / name).unlink(missing_ok=True)
+            except OSError:
+                pass
         try:
             self.stage_dir.rmdir()
         except OSError:
             pass
         self.stage_dir = None
 
+    def _exclusive_copy(self, src: Path, dest: Path) -> None:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | _O_CLOEXEC
+        fd = os.open(str(dest), flags, 0o644)
+        try:
+            with open(src, "rb") as inf:
+                while True:
+                    chunk = inf.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    os.write(fd, chunk)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
     def _rollback(self) -> None:
-        for p in self.published:
+        """Remove only files whose (dev, ino) matches what this publisher created."""
+        for path, dev, ino in self.published:
             try:
-                p.unlink(missing_ok=True)
+                st = os.lstat(path)
+                if st.st_dev == dev and st.st_ino == ino:
+                    path.unlink(missing_ok=True)
             except OSError:
                 pass
         self.published.clear()
@@ -538,20 +748,40 @@ class _PublishReservation:
         if exc_type is not None:
             self._rollback()
         if self.stage_dir is not None and self.stage_dir.exists():
-            for child in sorted(self.stage_dir.rglob("*"), reverse=True):
-                try:
-                    if child.is_file() or child.is_symlink():
-                        child.unlink(missing_ok=True)
-                    elif child.is_dir():
-                        child.rmdir()
-                except OSError:
-                    pass
-            try:
-                self.stage_dir.rmdir()
-            except OSError:
-                pass
+            self._bounded_rmtree(self.stage_dir)
         return None
 
+    @staticmethod
+    def _bounded_rmtree(root: Path) -> None:
+        """Iterative cleanup — no recursive rmtree unbounded stack."""
+        stack = [root]
+        while stack:
+            current = stack.pop()
+            try:
+                if current.is_symlink() or current.is_file():
+                    current.unlink(missing_ok=True)
+                    continue
+            except OSError:
+                continue
+            try:
+                children = list(current.iterdir())
+            except OSError:
+                try:
+                    current.rmdir()
+                except OSError:
+                    pass
+                continue
+            if not children:
+                try:
+                    current.rmdir()
+                except OSError:
+                    pass
+            else:
+                stack.append(current)
+                stack.extend(children)
+
+
+# ---- External merge (unique intermediate paths, bounded fan-in) -----------
 
 def _write_sorted_run(lines: list[tuple[str, str]], run_path: Path) -> None:
     lines.sort(key=lambda t: t[0])
@@ -560,28 +790,62 @@ def _write_sorted_run(lines: list[tuple[str, str]], run_path: Path) -> None:
             handle.write(line if line.endswith("\n") else line + "\n")
 
 
-def _merge_runs(run_paths: list[Path], out_path: Path, *, fan_in: int = _MERGE_FAN_IN) -> None:
+def _unique_merge_path(parent: Path) -> Path:
+    return parent / f".merge-{uuid.uuid4().hex}.jsonl"
+
+
+def _merge_runs_streaming(
+    run_paths: list[Path],
+    out_path: Path,
+    *,
+    fan_in: int = _MERGE_FAN_IN,
+) -> tuple[str, int]:
+    """K-way merge writing directly to ``out_path`` while computing SHA-256 and size.
+
+    Returns (sha256_hex, byte_size). Never loads the full output into memory.
+    Intermediate merge paths are unique UUIDs and never equal any input.
+    """
     if not run_paths:
-        out_path.write_text("", encoding="utf-8")
-        return
+        out_path.write_bytes(b"")
+        return hashlib.sha256(b"").hexdigest(), 0
+
     if len(run_paths) == 1:
-        out_path.write_bytes(run_paths[0].read_bytes())
-        return
+        digest = hashlib.sha256()
+        total = 0
+        with run_paths[0].open("rb") as src, out_path.open("wb") as dst:
+            while True:
+                chunk = src.read(1024 * 1024)
+                if not chunk:
+                    break
+                dst.write(chunk)
+                digest.update(chunk)
+                total += len(chunk)
+            dst.flush()
+            os.fsync(dst.fileno())
+        return digest.hexdigest(), total
+
     if len(run_paths) > fan_in:
         intermediate: list[Path] = []
         parent = out_path.parent
         try:
             for i in range(0, len(run_paths), fan_in):
                 batch = run_paths[i : i + fan_in]
-                mid = parent / f".merge-mid-{i}.jsonl"
-                _merge_runs(batch, mid, fan_in=fan_in)
+                mid = _unique_merge_path(parent)
+                # Ensure mid is not in batch.
+                while mid in batch or mid == out_path:
+                    mid = _unique_merge_path(parent)
+                _merge_runs_streaming(batch, mid, fan_in=fan_in)
                 intermediate.append(mid)
-            _merge_runs(intermediate, out_path, fan_in=fan_in)
+            return _merge_runs_streaming(intermediate, out_path, fan_in=fan_in)
         finally:
             for p in intermediate:
-                p.unlink(missing_ok=True)
-        return
-    handles: list[io.TextIOWrapper] = []
+                try:
+                    p.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
+    # Open at most fan_in handles.
+    handles: list[Any] = []
     heads: list[tuple[str, str, int] | None] = []
     try:
         for p in run_paths:
@@ -593,20 +857,29 @@ def _merge_runs(run_paths: list[Path], out_path: Path, *, fan_in: int = _MERGE_F
                 heads.append((obj["relative_path"], line, len(handles) - 1))
             else:
                 heads.append(None)
-        with out_path.open("w", encoding="utf-8") as out:
+
+        digest = hashlib.sha256()
+        total = 0
+        with out_path.open("wb") as out:
             while True:
                 active = [h for h in heads if h is not None]
                 if not active:
                     break
                 active.sort(key=lambda t: t[0])
                 _, best_line, best_idx = active[0]
-                out.write(best_line if best_line.endswith("\n") else best_line + "\n")
+                raw = (best_line if best_line.endswith("\n") else best_line + "\n").encode("utf-8")
+                out.write(raw)
+                digest.update(raw)
+                total += len(raw)
                 nxt = handles[best_idx].readline()
                 if nxt:
                     obj = json.loads(nxt)
                     heads[best_idx] = (obj["relative_path"], nxt, best_idx)
                 else:
                     heads[best_idx] = None
+            out.flush()
+            os.fsync(out.fileno())
+        return digest.hexdigest(), total
     finally:
         for h in handles:
             try:
@@ -614,6 +887,8 @@ def _merge_runs(run_paths: list[Path], out_path: Path, *, fan_in: int = _MERGE_F
             except OSError:
                 pass
 
+
+# ---- Scanner --------------------------------------------------------------
 
 class LegacyLocalScanner:
     def __init__(self, config: ScanConfig | None = None) -> None:
@@ -640,24 +915,23 @@ class LegacyLocalScanner:
         out_resolved = str(out_abs.resolve())
 
         if root_resolved == out_resolved:
-            raise LegacyConfigError("output_dir must not equal legacy_root", context={"root": root_resolved, "output_dir": out_resolved})
+            raise LegacyConfigError(
+                "output_dir must not equal legacy_root",
+                context={"root": root_resolved, "output_dir": out_resolved},
+            )
 
-        out_rel_under_root: str | None = None
-        try:
-            rel = str(Path(out_resolved).relative_to(root_resolved)).replace("\\", "/")
-            out_rel_under_root = "" if rel == "." else rel
-        except ValueError:
-            out_rel_under_root = None
+        # Work area: always under output parent, named .leg001-work-* (auto-excluded).
+        work_parent = Path(out_resolved).parent
+        work_dir = Path(tempfile.mkdtemp(prefix=".leg001-work-", dir=str(work_parent)))
+        work_resolved = str(work_dir.resolve())
 
         scanned_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        basenames = [cfg.inventory_filename, cfg.summary_filename, cfg.duplicate_report_filename]
-
-        work_dir = Path(tempfile.mkdtemp(prefix=".leg001-work-", dir=str(Path(out_resolved).parent)))
-        path_db = work_dir / "paths.sqlite"
-        hash_db = work_dir / "hashes.sqlite"
-        runs_dir = work_dir / "runs"
-        runs_dir.mkdir()
-        queue_path = work_dir / "dir_queue.txt"
+        # Summary last = completion marker.
+        basenames = [
+            cfg.inventory_filename,
+            cfg.duplicate_report_filename,
+            cfg.summary_filename,
+        ]
 
         counts_entry: dict[str, int] = {}
         counts_evidence: dict[str, int] = {}
@@ -671,6 +945,8 @@ class LegacyLocalScanner:
         run_paths: list[Path] = []
         run_buffer: list[tuple[str, str]] = []
         run_counter = 0
+        runs_dir = work_dir / "runs"
+        runs_dir.mkdir()
 
         def flush_run() -> None:
             nonlocal run_counter, run_buffer
@@ -684,209 +960,469 @@ class LegacyLocalScanner:
 
         def emit(entry: InventoryEntry) -> None:
             nonlocal total_entries, error_count
-            line = json.dumps(entry.to_canonical_dict(), sort_keys=True, ensure_ascii=False, allow_nan=False)
+            line = json.dumps(
+                entry.to_canonical_dict(), sort_keys=True, ensure_ascii=False, allow_nan=False
+            )
             run_buffer.append((entry.relative_path, line))
             if len(run_buffer) >= _RUN_BUFFER_LIMIT:
                 flush_run()
             counts_entry[entry.entry_type.value] = counts_entry.get(entry.entry_type.value, 0) + 1
-            counts_evidence[entry.evidence_class.value] = counts_evidence.get(entry.evidence_class.value, 0) + 1
-            counts_provenance[entry.provenance_class.value] = counts_provenance.get(entry.provenance_class.value, 0) + 1
-            counts_status[entry.scan_status.value] = counts_status.get(entry.scan_status.value, 0) + 1
+            counts_evidence[entry.evidence_class.value] = (
+                counts_evidence.get(entry.evidence_class.value, 0) + 1
+            )
+            counts_provenance[entry.provenance_class.value] = (
+                counts_provenance.get(entry.provenance_class.value, 0) + 1
+            )
+            counts_status[entry.scan_status.value] = (
+                counts_status.get(entry.scan_status.value, 0) + 1
+            )
             total_entries += 1
             if entry.scan_status not in (ScanStatus.OK, ScanStatus.SKIPPED_EXCLUDED):
                 error_count += 1
 
-        def under_output(child_rel: str) -> bool:
-            if out_rel_under_root is None or not out_rel_under_root:
-                return False
-            return child_rel == out_rel_under_root or child_rel.startswith(out_rel_under_root + "/")
+        def is_excluded_resolved(candidate_resolved: str) -> bool:
+            if candidate_resolved == out_resolved or candidate_resolved.startswith(
+                out_resolved + os.sep
+            ):
+                return True
+            if candidate_resolved == work_resolved or candidate_resolved.startswith(
+                work_resolved + os.sep
+            ):
+                return True
+            return False
 
+        root_fd: int | None = None
         try:
-            path_conn = sqlite3.connect(str(path_db))
-            path_conn.execute("CREATE TABLE seen (rel TEXT PRIMARY KEY NOT NULL)")
-            hash_conn = sqlite3.connect(str(hash_db))
-            hash_conn.execute("CREATE TABLE hash_paths (sha256 TEXT NOT NULL, rel TEXT NOT NULL)")
-            hash_conn.execute("CREATE INDEX idx_hp ON hash_paths(sha256)")
+            root_fd = _open_root_dir(root)
 
-            with queue_path.open("w", encoding="utf-8") as qh:
-                qh.write(str(root) + "\0" + "\n")
+            # Binary-safe SQLite control DB: queue + seen identities + hash index.
+            db_path = work_dir / "control.sqlite"
+            conn = sqlite3.connect(str(db_path))
+            conn.execute(
+                "CREATE TABLE dir_queue ("
+                "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "  parts BLOB NOT NULL"
+                ")"
+            )
+            conn.execute(
+                "CREATE TABLE seen ("
+                "  id_key BLOB PRIMARY KEY NOT NULL"
+                ")"
+            )
+            conn.execute(
+                "CREATE TABLE hash_paths ("
+                "  sha256 TEXT NOT NULL,"
+                "  rel TEXT NOT NULL"
+                ")"
+            )
+            conn.execute("CREATE INDEX idx_hp ON hash_paths(sha256)")
 
-            queue_offset = 0
+            # Seed queue with root (empty parts tuple).
+            conn.execute("INSERT INTO dir_queue(parts) VALUES (?)", (b"",))
+            conn.commit()
+
             while True:
-                batch: list[tuple[str, str]] = []
-                with queue_path.open("r", encoding="utf-8") as qh:
-                    qh.seek(queue_offset)
-                    for _ in range(_QUEUE_BATCH):
-                        line = qh.readline()
-                        if not line:
-                            break
-                        queue_offset = qh.tell()
-                        line = line.rstrip("\n")
-                        if "\0" not in line:
-                            continue
-                        abspath, rel = line.split("\0", 1)
-                        batch.append((abspath, rel))
-                if not batch:
+                rows = conn.execute(
+                    "SELECT id, parts FROM dir_queue ORDER BY id LIMIT ?",
+                    (_QUEUE_BATCH,),
+                ).fetchall()
+                if not rows:
                     break
+                for row_id, parts_blob in rows:
+                    conn.execute("DELETE FROM dir_queue WHERE id = ?", (row_id,))
+                    # Decode parts: empty blob = root; else length-prefixed segments.
+                    parts = _decode_parts(parts_blob)
+                    rel = _parts_to_relative(parts)
 
-                for abspath, rel in batch:
-                    if out_rel_under_root is not None and (
-                        rel == out_rel_under_root or (out_rel_under_root and rel.startswith(out_rel_under_root + "/"))
-                    ):
-                        excluded_by_rule["output_self"] = excluded_by_rule.get("output_self", 0) + 1
+                    # Open this directory from the trusted root descriptor.
+                    dir_fd: int | None = None
+                    try:
+                        dir_fd = _walk_open_dir(root_fd, parts)
+                        # Confirm still a directory under the same root device tree.
+                        st_dir = os.fstat(dir_fd)
+                        if not statmod.S_ISDIR(st_dir.st_mode):
+                            emit(
+                                InventoryEntry(
+                                    rel or ".",
+                                    EntryType.UNREADABLE,
+                                    None,
+                                    None,
+                                    None,
+                                    EvidenceClass.UNKNOWN,
+                                    ProvenanceClass.LEGACY_UNKNOWN,
+                                    "not_a_directory",
+                                    ScanStatus.ERROR_UNREADABLE,
+                                    "queued path is not a directory",
+                                )
+                            )
+                            continue
+                    except OSError as exc:
+                        emit(
+                            InventoryEntry(
+                                rel or ".",
+                                EntryType.UNREADABLE,
+                                None,
+                                None,
+                                None,
+                                EvidenceClass.UNKNOWN,
+                                ProvenanceClass.LEGACY_UNKNOWN,
+                                "traversal_error",
+                                ScanStatus.ERROR_UNREADABLE,
+                                _sanitize_error(exc),
+                            )
+                        )
                         continue
 
                     try:
-                        with os.scandir(abspath) as it:
-                            for child in it:
-                                child_name = child.name
-                                try:
-                                    child_name.encode("utf-8", errors="strict")
-                                    unencodable = False
-                                except UnicodeEncodeError:
-                                    unencodable = True
+                        # List entries via fd-based listdir (bytes names when possible).
+                        try:
+                            names_raw = os.listdir(dir_fd)
+                        except TypeError:
+                            names_raw = os.listdir(dir_fd)
+                        # Normalize to bytes.
+                        name_list: list[bytes] = []
+                        for n in names_raw:
+                            if isinstance(n, bytes):
+                                name_list.append(n)
+                            else:
+                                name_list.append(os.fsencode(n))
 
-                                child_rel = _join_rel(rel, child_name)
-                                try:
-                                    path_byte_len = len(child_rel.encode("utf-8", errors="replace"))
-                                except Exception:
-                                    path_byte_len = cfg.max_path_bytes + 1
+                        for name_b in name_list:
+                            child_parts = parts + (name_b,)
+                            child_rel = _parts_to_relative(child_parts)
+                            id_key = _parts_identity_key(child_parts)
 
-                                if unencodable:
-                                    emit(InventoryEntry(child_rel, EntryType.MALFORMED, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "unencodable_name", ScanStatus.ERROR_UNENCODABLE, "filename not strict UTF-8"))
-                                    continue
-                                if path_byte_len > cfg.max_path_bytes:
-                                    emit(InventoryEntry(child_rel[:200] + "...", EntryType.MALFORMED, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "overlong_path", ScanStatus.ERROR_OVERLONG, f"path exceeds {cfg.max_path_bytes} bytes"))
-                                    continue
-                                try:
-                                    path_conn.execute("INSERT INTO seen(rel) VALUES (?)", (child_rel,))
-                                except sqlite3.IntegrityError:
-                                    raise LegacyPathCollisionError("logical relative_path collision", context={"relative_path": child_rel}) from None
+                            # Collision on exact binary identity.
+                            try:
+                                conn.execute(
+                                    "INSERT INTO seen(id_key) VALUES (?)", (id_key,)
+                                )
+                            except sqlite3.IntegrityError:
+                                raise LegacyPathCollisionError(
+                                    "logical relative_path collision",
+                                    context={"relative_path": child_rel},
+                                ) from None
 
-                                if under_output(child_rel):
-                                    excluded_by_rule["output_self"] = excluded_by_rule.get("output_self", 0) + 1
-                                    continue
-                                if out_rel_under_root is not None and not out_rel_under_root:
+                            # Overlong — still emit full unique identity, mark status.
+                            path_byte_len = len(id_key)
+                            overlong = path_byte_len > cfg.max_path_bytes
+
+                            # Resolved-path exclusion for output/work trees.
+                            # We cannot resolve via follow; use name-based exclusion
+                            # plus explicit resolved checks when the child is a dir
+                            # we would enqueue.
+                            excl = _match_exclusion(child_rel, cfg.exclusion_rules)
+                            if excl is not None:
+                                excluded_by_rule[excl] = excluded_by_rule.get(excl, 0) + 1
+                                child_is_dir = False
+                                try:
+                                    st_c = os.stat(
+                                        name_b, dir_fd=dir_fd, follow_symlinks=False
+                                    )
+                                    child_is_dir = statmod.S_ISDIR(st_c.st_mode)
+                                except (TypeError, ValueError, OSError):
                                     try:
-                                        cr = str(Path(child.path).resolve())
-                                        if cr == out_resolved or cr.startswith(out_resolved + os.sep):
-                                            excluded_by_rule["output_self"] = excluded_by_rule.get("output_self", 0) + 1
-                                            continue
+                                        st_c = os.stat(
+                                            os.fsdecode(name_b),
+                                            dir_fd=dir_fd,
+                                            follow_symlinks=False,
+                                        )
+                                        child_is_dir = statmod.S_ISDIR(st_c.st_mode)
                                     except OSError:
                                         pass
+                                emit(
+                                    InventoryEntry(
+                                        child_rel,
+                                        EntryType.DIRECTORY if child_is_dir else EntryType.REGULAR_FILE,
+                                        None,
+                                        None,
+                                        None,
+                                        EvidenceClass.UNKNOWN,
+                                        ProvenanceClass.LEGACY_UNKNOWN,
+                                        f"excluded:{excl}",
+                                        ScanStatus.SKIPPED_EXCLUDED,
+                                    )
+                                )
+                                continue
 
-                                excl = _match_exclusion(child_rel, cfg.exclusion_rules)
-                                if excl is not None:
-                                    excluded_by_rule[excl] = excluded_by_rule.get(excl, 0) + 1
-                                    is_dir = False
-                                    try:
-                                        is_dir = child.is_dir(follow_symlinks=False)
-                                    except OSError:
-                                        pass
-                                    emit(InventoryEntry(child_rel, EntryType.DIRECTORY if is_dir else EntryType.REGULAR_FILE, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, f"excluded:{excl}", ScanStatus.SKIPPED_EXCLUDED))
-                                    continue
+                            if overlong:
+                                emit(
+                                    InventoryEntry(
+                                        child_rel,
+                                        EntryType.MALFORMED,
+                                        None,
+                                        None,
+                                        None,
+                                        EvidenceClass.UNKNOWN,
+                                        ProvenanceClass.LEGACY_UNKNOWN,
+                                        "overlong_path",
+                                        ScanStatus.ERROR_OVERLONG,
+                                        f"path identity exceeds {cfg.max_path_bytes} bytes",
+                                    )
+                                )
+                                continue
 
+                            # Stat no-follow relative to dir_fd.
+                            try:
                                 try:
-                                    st = child.stat(follow_symlinks=False)
-                                except OSError as exc:
-                                    emit(InventoryEntry(child_rel, EntryType.UNREADABLE, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "lstat_error", ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)))
-                                    continue
+                                    st = os.stat(
+                                        name_b, dir_fd=dir_fd, follow_symlinks=False
+                                    )
+                                except (TypeError, ValueError, OSError):
+                                    st = os.stat(
+                                        os.fsdecode(name_b),
+                                        dir_fd=dir_fd,
+                                        follow_symlinks=False,
+                                    )
+                            except OSError as exc:
+                                emit(
+                                    InventoryEntry(
+                                        child_rel,
+                                        EntryType.UNREADABLE,
+                                        None,
+                                        None,
+                                        None,
+                                        EvidenceClass.UNKNOWN,
+                                        ProvenanceClass.LEGACY_UNKNOWN,
+                                        "lstat_error",
+                                        ScanStatus.ERROR_UNREADABLE,
+                                        _sanitize_error(exc),
+                                    )
+                                )
+                                continue
 
-                                et = _entry_type_from_mode(st.st_mode)
-                                if et is EntryType.DIRECTORY:
-                                    with queue_path.open("a", encoding="utf-8") as qh:
-                                        qh.write(child.path + "\0" + child_rel + "\n")
-                                    ev, prov, basis = _classify(child_rel, cfg.classification_rules)
-                                    emit(InventoryEntry(child_rel, et, None, getattr(st, "st_mtime_ns", None), None, ev, prov, basis, ScanStatus.OK))
-                                    continue
-                                if et is EntryType.SYMLINK:
-                                    ev, prov, basis = _classify(child_rel, cfg.classification_rules)
-                                    emit(InventoryEntry(child_rel, et, None, getattr(st, "st_mtime_ns", None), None, ev, prov, basis, ScanStatus.ERROR_SYMLINK, "symlink not followed"))
-                                    continue
-                                if et is EntryType.SPECIAL:
-                                    ev, prov, basis = _classify(child_rel, cfg.classification_rules)
-                                    emit(InventoryEntry(child_rel, et, st.st_size, getattr(st, "st_mtime_ns", None), None, ev, prov, basis, ScanStatus.ERROR_SPECIAL, "special file not hashed"))
-                                    continue
+                            et = _entry_type_from_mode(st.st_mode)
 
-                                sha, size, mtime_ns, status, err = _hash_regular_nofollow(Path(abspath), child_name, chunk_size=cfg.chunk_size)
-                                if status is ScanStatus.OK and sha is not None:
-                                    hashed_files += 1
-                                    hashed_bytes += size
-                                    hash_conn.execute("INSERT INTO hash_paths(sha256, rel) VALUES (?, ?)", (sha, child_rel))
-                                ev, prov, basis = _classify(child_rel, cfg.classification_rules)
-                                emit(InventoryEntry(child_rel, EntryType.REGULAR_FILE, size if size else None, mtime_ns, sha, ev, prov, basis, status, err))
+                            if et is EntryType.DIRECTORY:
+                                # Enqueue binary parts for later descriptor-relative walk.
+                                conn.execute(
+                                    "INSERT INTO dir_queue(parts) VALUES (?)",
+                                    (_encode_parts(child_parts),),
+                                )
+                                ev, prov, basis = _classify(
+                                    child_rel, cfg.classification_rules
+                                )
+                                emit(
+                                    InventoryEntry(
+                                        child_rel,
+                                        et,
+                                        None,
+                                        getattr(st, "st_mtime_ns", None),
+                                        None,
+                                        ev,
+                                        prov,
+                                        basis,
+                                        ScanStatus.OK,
+                                    )
+                                )
+                                continue
 
-                    except OSError as exc:
-                        emit(InventoryEntry(rel or ".", EntryType.UNREADABLE, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "traversal_error", ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)))
+                            if et is EntryType.SYMLINK:
+                                ev, prov, basis = _classify(
+                                    child_rel, cfg.classification_rules
+                                )
+                                emit(
+                                    InventoryEntry(
+                                        child_rel,
+                                        et,
+                                        None,
+                                        getattr(st, "st_mtime_ns", None),
+                                        None,
+                                        ev,
+                                        prov,
+                                        basis,
+                                        ScanStatus.ERROR_SYMLINK,
+                                        "symlink not followed",
+                                    )
+                                )
+                                continue
+
+                            if et is EntryType.SPECIAL:
+                                ev, prov, basis = _classify(
+                                    child_rel, cfg.classification_rules
+                                )
+                                emit(
+                                    InventoryEntry(
+                                        child_rel,
+                                        et,
+                                        st.st_size,
+                                        getattr(st, "st_mtime_ns", None),
+                                        None,
+                                        ev,
+                                        prov,
+                                        basis,
+                                        ScanStatus.ERROR_SPECIAL,
+                                        "special file not hashed",
+                                    )
+                                )
+                                continue
+
+                            # Regular file — descriptor-relative hash.
+                            sha, size, mtime_ns, status, err = _hash_regular_at(
+                                dir_fd, name_b, chunk_size=cfg.chunk_size
+                            )
+                            if status is ScanStatus.OK and sha is not None:
+                                hashed_files += 1
+                                hashed_bytes += size
+                                conn.execute(
+                                    "INSERT INTO hash_paths(sha256, rel) VALUES (?, ?)",
+                                    (sha, child_rel),
+                                )
+                            ev, prov, basis = _classify(
+                                child_rel, cfg.classification_rules
+                            )
+                            emit(
+                                InventoryEntry(
+                                    child_rel,
+                                    EntryType.REGULAR_FILE,
+                                    size if size else None,
+                                    mtime_ns,
+                                    sha,
+                                    ev,
+                                    prov,
+                                    basis,
+                                    status,
+                                    err,
+                                )
+                            )
+                    finally:
+                        if dir_fd is not None:
+                            try:
+                                os.close(dir_fd)
+                            except OSError:
+                                pass
+
+                conn.commit()
 
             flush_run()
-            path_conn.commit()
-            hash_conn.commit()
+            conn.commit()
 
-            sorted_inv = work_dir / "sorted_inventory.jsonl"
-            _merge_runs(run_paths, sorted_inv)
-            inv_bytes = sorted_inv.read_bytes()
-            inv_sha = hashlib.sha256(inv_bytes).hexdigest()
-
-            dup_groups = 0
-            dup_paths = 0
-            dup_lines: list[tuple[str, str]] = []
-            for sha, cnt in hash_conn.execute(
-                "SELECT sha256, COUNT(*) AS c FROM hash_paths GROUP BY sha256 HAVING c > 1 ORDER BY sha256"
-            ):
-                paths = [row[0] for row in hash_conn.execute("SELECT rel FROM hash_paths WHERE sha256 = ? ORDER BY rel", (sha,))]
-                dup_groups += 1
-                dup_paths += len(paths)
-                group = DuplicateGroup(sha256=sha, relative_paths=tuple(paths))
-                line = json.dumps(group.to_canonical_dict(), sort_keys=True, ensure_ascii=False, allow_nan=False)
-                dup_lines.append((sha, line))
-            dup_body = "".join(ln + "\n" for _, ln in dup_lines)
-            dup_bytes = dup_body.encode("utf-8")
-            dup_sha = hashlib.sha256(dup_bytes).hexdigest()
-            hash_conn.close()
-            path_conn.close()
-
-            summary = InventorySummary(
-                root=str(root), root_resolved=root_resolved,
-                scanner_version=SCANNER_VERSION, schema_version=INVENTORY_SCHEMA_VERSION,
-                scanned_at_utc=scanned_at, total_entries=total_entries,
-                hashed_regular_files=hashed_files, total_hashed_bytes=hashed_bytes,
-                counts_by_entry_type=counts_entry, counts_by_evidence_class=counts_evidence,
-                counts_by_provenance_class=counts_provenance, counts_by_scan_status=counts_status,
-                excluded_by_rule=excluded_by_rule, duplicate_hash_groups=dup_groups,
-                duplicate_path_count=dup_paths, error_count=error_count,
-                inventory_sha256=inv_sha, inventory_byte_size=len(inv_bytes),
-                inventory_uri=cfg.inventory_filename, summary_uri=cfg.summary_filename,
-                duplicate_report_sha256=dup_sha, duplicate_report_byte_size=len(dup_bytes),
-                duplicate_report_uri=cfg.duplicate_report_filename,
-            )
-            sum_bytes = _canonical_dumps(summary.to_canonical_dict()).encode("utf-8")
-
+            # ---- Stream-merge inventory into stage; stream duplicates ----
             with _PublishReservation(Path(out_resolved), basenames) as pub:
-                pub.stage_bytes(cfg.inventory_filename, inv_bytes)
-                pub.stage_bytes(cfg.duplicate_report_filename, dup_bytes)
-                pub.stage_bytes(cfg.summary_filename, sum_bytes)
+                inv_stage = pub.stage_path(cfg.inventory_filename)
+                inv_sha, inv_size = _merge_runs_streaming(run_paths, inv_stage)
+
+                # Stream duplicate report from SQL — no full materialization.
+                dup_stage = pub.stage_path(cfg.duplicate_report_filename)
+                dup_sha, dup_size, dup_groups, dup_paths = _stream_duplicate_report(
+                    conn, dup_stage
+                )
+
+                summary = InventorySummary(
+                    root=str(root),
+                    root_resolved=root_resolved,
+                    scanner_version=SCANNER_VERSION,
+                    schema_version=INVENTORY_SCHEMA_VERSION,
+                    scanned_at_utc=scanned_at,
+                    total_entries=total_entries,
+                    hashed_regular_files=hashed_files,
+                    total_hashed_bytes=hashed_bytes,
+                    counts_by_entry_type=counts_entry,
+                    counts_by_evidence_class=counts_evidence,
+                    counts_by_provenance_class=counts_provenance,
+                    counts_by_scan_status=counts_status,
+                    excluded_by_rule=excluded_by_rule,
+                    duplicate_hash_groups=dup_groups,
+                    duplicate_path_count=dup_paths,
+                    error_count=error_count,
+                    inventory_sha256=inv_sha,
+                    inventory_byte_size=inv_size,
+                    inventory_uri=cfg.inventory_filename,
+                    summary_uri=cfg.summary_filename,
+                    duplicate_report_sha256=dup_sha,
+                    duplicate_report_byte_size=dup_size,
+                    duplicate_report_uri=cfg.duplicate_report_filename,
+                )
+                sum_stage = pub.stage_path(cfg.summary_filename)
+                sum_bytes = _canonical_dumps(summary.to_canonical_dict()).encode("utf-8")
+                with sum_stage.open("wb") as sf:
+                    sf.write(sum_bytes)
+                    sf.flush()
+                    os.fsync(sf.fileno())
+
                 pub.publish()
+
+            conn.close()
             return summary
 
         except LegacyScanError:
             raise
         except OSError as exc:
-            raise LegacyOutputError(f"filesystem failure during scan: {exc}", context={"root": str(root)}) from exc
+            raise LegacyOutputError(
+                f"filesystem failure during scan: {exc}",
+                context={"root": str(root)},
+            ) from exc
         finally:
-            if work_dir.exists():
-                for item in sorted(work_dir.rglob("*"), reverse=True):
-                    try:
-                        if item.is_file() or item.is_symlink():
-                            item.unlink(missing_ok=True)
-                        elif item.is_dir():
-                            item.rmdir()
-                    except OSError:
-                        pass
+            if root_fd is not None:
                 try:
-                    work_dir.rmdir()
+                    os.close(root_fd)
                 except OSError:
                     pass
+            if work_dir.exists():
+                _PublishReservation._bounded_rmtree(work_dir)
+
+
+def _encode_parts(parts: tuple[bytes, ...]) -> bytes:
+    return _parts_identity_key(parts)
+
+
+def _decode_parts(blob: bytes) -> tuple[bytes, ...]:
+    if not blob:
+        return ()
+    parts: list[bytes] = []
+    i = 0
+    while i < len(blob):
+        if blob[i] == 0x00:
+            break
+        if blob[i] != 0x01:
+            break
+        i += 1
+        if i + 4 > len(blob):
+            break
+        ln = int.from_bytes(blob[i : i + 4], "big")
+        i += 4
+        parts.append(blob[i : i + ln])
+        i += ln
+    return tuple(parts)
+
+
+def _stream_duplicate_report(
+    conn: sqlite3.Connection, out_path: Path
+) -> tuple[str, int, int, int]:
+    """Stream duplicate groups from SQLite into ``out_path``. Returns sha, size, groups, paths."""
+    digest = hashlib.sha256()
+    total = 0
+    groups = 0
+    paths = 0
+    with out_path.open("wb") as out:
+        for (sha,) in conn.execute(
+            "SELECT sha256 FROM hash_paths GROUP BY sha256 HAVING COUNT(*) > 1 ORDER BY sha256"
+        ):
+            rels = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT rel FROM hash_paths WHERE sha256 = ? ORDER BY rel", (sha,)
+                )
+            ]
+            groups += 1
+            paths += len(rels)
+            group = DuplicateGroup(sha256=sha, relative_paths=tuple(rels))
+            line = (
+                json.dumps(
+                    group.to_canonical_dict(),
+                    sort_keys=True,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                )
+                + "\n"
+            )
+            raw = line.encode("utf-8")
+            out.write(raw)
+            digest.update(raw)
+            total += len(raw)
+        out.flush()
+        os.fsync(out.fileno())
+    return digest.hexdigest(), total, groups, paths
 
 
 def scan_legacy_root(
