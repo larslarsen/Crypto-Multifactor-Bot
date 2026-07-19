@@ -55,8 +55,10 @@ def test_embedded_newline_name_unique(tmp_path: Path) -> None:
     (root / "a.txt").write_bytes(b"y")
     out = tmp_path / "out"
     scan_legacy_root(root, out)
+    # The newline name is encoded reversibly (b64: due to embedded newline) and
+    # is its own unique entry, distinct from the plain "a.txt".
     rels = [e["relative_path"] for e in _inv(out)]
-    assert "a\nb.txt" in rels
+    assert "b64:YQpiLnR4dA==" in rels  # a\nb.txt (reversible b64 form)
     assert "a.txt" in rels
     assert len(rels) == len(set(rels))  # newline name is its own unique entry
     assert len(_inv(out)) == 2
@@ -372,6 +374,103 @@ def test_bounded_streaming_on_large_tree(tmp_path: Path) -> None:
     assert max(run_sizes) < n * 200  # each run is a small fraction of the tree
     # Inventory fully captures the tree (sorted, complete).
     assert len(_inv(out)) == n
+
+
+# ===========================================================================
+# Sr acceptance blockers (v1.2.1) — encoded as focused tests.
+# ===========================================================================
+
+
+# Blocker 1: Bounded directory iteration + streaming duplicates.
+def test_bounded_iteration_and_streaming_duplicates(tmp_path: Path) -> None:
+    root = tmp_path / "legacy"
+    root.mkdir()
+    # Many entries: traversal must not fully materialize via os.listdir.
+    many = 1000
+    for i in range(many):
+        (root / f"e{i:04d}.dat").write_bytes(b"entry-%d" % i)
+    # Two files share one content hash -> repeated hash in duplicate report.
+    (root / "dup_a.txt").write_bytes(b"shared-content")
+    (root / "dup_b.txt").write_bytes(b"shared-content")
+    out = tmp_path / "out"
+    summary = scan_legacy_root(root, out)
+    # Census completed over the large directory.
+    assert summary.total_entries == many + 2
+    assert summary.hashed_regular_files == many + 2
+    # The repeated content hash is reported with both relative paths.
+    assert summary.duplicate_hash_groups == 1
+    assert summary.duplicate_path_count == 2
+    group = json.loads((out / "legacy_inventory_duplicates.jsonl").read_text())
+    assert set(group["relative_paths"]) == {"dup_a.txt", "dup_b.txt"}
+
+
+# Blocker 2: Reversible, collision-free path representation + deterministic order.
+def test_b64_self_wrap_distinct_and_deterministic_order(tmp_path: Path) -> None:
+    root = tmp_path / "legacy"
+    root.mkdir()
+    # Raw byte name b"\x80" and a literal UTF-8 file named "b64:gA==" must
+    # produce TWO different relative_path values.
+    raw_path = bytes(root) + b"/" + b"\x80"
+    fd = os.open(raw_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(b"raw")
+    lit_path = bytes(root) + b"/" + b"b64:gA=="
+    fd = os.open(lit_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(b"literal")
+
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
+    scan_legacy_root(root, out1)
+    scan_legacy_root(root, out2)
+
+    rels = [e["relative_path"] for e in _inv(out1)]
+    # Raw byte b"\x80" -> b64:gA== ; literal UTF-8 "b64:gA==" -> re-wrapped again
+    # to b64:YjY0OmdBPT0= . The two MUST be distinct values.
+    raw_rel = "b64:gA=="
+    lit_rel = "b64:YjY0OmdBPT0="
+    assert raw_rel in rels
+    assert lit_rel in rels
+    assert raw_rel != lit_rel
+
+    # Deterministic ordering: inventory bytes identical across two scans
+    # (scanned_at_utc lives only in the summary, not the inventory JSONL).
+    inv1 = (out1 / "legacy_inventory.jsonl").read_bytes()
+    inv2 = (out2 / "legacy_inventory.jsonl").read_bytes()
+    assert inv1 == inv2
+
+
+# Blocker 3: Zero-byte regular file size.
+def test_zero_byte_regular_file_size(tmp_path: Path) -> None:
+    root = tmp_path / "legacy"
+    root.mkdir()
+    (root / "empty.txt").write_bytes(b"")  # empty regular file
+    (root / "nonempty.txt").write_bytes(b"x")
+    out = tmp_path / "out"
+    scan_legacy_root(root, out)
+    empty = _entry(out, "empty.txt")
+    assert empty["entry_type"] == "regular_file"
+    assert empty["byte_size"] == 0  # not null / omitted
+    nonempty = _entry(out, "nonempty.txt")
+    assert nonempty["byte_size"] == 1
+
+
+# Blocker 4: Output/work subtree exclusion before enqueue or hash.
+def test_output_subtree_excluded_before_enqueue(tmp_path: Path) -> None:
+    root = tmp_path / "legacy"
+    root.mkdir()
+    (root / "keep.txt").write_bytes(b"keep me")
+    # Layout: legacy_root/out/preexisting.txt with output_dir = legacy_root/out
+    out = root / "out"
+    out.mkdir()
+    (out / "preexisting.txt").write_bytes(b"should not be scanned")
+    summary = scan_legacy_root(root, out)
+    rels = {e["relative_path"] for e in _inv(out)}
+    # The pre-existing output artifact must NOT appear in the census.
+    assert "out/preexisting.txt" not in rels
+    assert "preexisting.txt" not in rels
+    # Summary records the output self-exclusion.
+    assert summary.excluded_by_rule.get("output_self", 0) >= 1
 
 
 if __name__ == "__main__":

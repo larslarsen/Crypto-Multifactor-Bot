@@ -20,15 +20,15 @@ import sqlite3
 import stat as statmod
 import tempfile
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Final
 
-SCANNER_VERSION: Final[str] = "1.2.0"
-INVENTORY_SCHEMA_VERSION: Final[str] = "1.2.0"
+SCANNER_VERSION: Final[str] = "1.2.1"
+INVENTORY_SCHEMA_VERSION: Final[str] = "1.2.1"
 _MERGE_FAN_IN: Final[int] = 16
 _RUN_BUFFER_LIMIT: Final[int] = 2048
 _QUEUE_BATCH: Final[int] = 256
@@ -339,18 +339,27 @@ class ScanConfig:
 # ---- Path identity (binary-safe, no truncation, no surrogates in JSON) ----
 
 def _name_to_display(name: bytes) -> str:
-    """Deterministic JSON-safe display form of one path component.
+    """Deterministic JSON-safe, reversible, collision-free path component form.
 
-    Valid UTF-8 is emitted as-is. Non-UTF-8 bytes use a ``b64:`` prefix so the
-    result contains only UTF-8 code points (no surrogates).
+    Valid UTF-8 names that do not start with the ``b64:`` sentinel and do not
+    contain NUL or ``/`` are emitted as-is.  Every other byte sequence —
+    including a literal UTF-8 name equal to ``b64:...`` — is emitted as
+    ``b64:`` + standard base64 of the raw bytes.  Decoding rule: if a segment
+    starts with ``b64:``, base64-decode the remainder; otherwise UTF-8 encode.
+    This makes raw ``b"\x80"`` (``b64:gA==``) distinct from a file literally
+    named ``b64:gA==`` (``b64:YjY0OmdBPT0=``).
     """
     try:
         text = name.decode("utf-8")
     except UnicodeDecodeError:
         return "b64:" + base64.b64encode(name).decode("ascii")
-    # Reject embedded NUL and path separators inside a single component display
-    # only for safety of the joined relative_path string; identity uses raw bytes.
-    if "\x00" in text:
+    if (
+        text.startswith("b64:")
+        or "\x00" in text
+        or "/" in text
+        or "\n" in text
+        or "\r" in text
+    ):
         return "b64:" + base64.b64encode(name).decode("ascii")
     return text
 
@@ -425,6 +434,23 @@ def _entry_type_from_mode(mode: int) -> EntryType:
     if statmod.S_ISDIR(mode):
         return EntryType.DIRECTORY
     return EntryType.SPECIAL
+
+
+def _iter_dir_names(dir_fd: int) -> Iterator[bytes]:
+    """Yield directory entry names one at a time, descriptor-relative.
+
+    Uses ``os.scandir`` on ``/proc/self/fd/<dir_fd>`` so the iteration is bound
+    to the already-open directory descriptor (O_NOFOLLOW root walk) and does
+    not materialize the full name list in memory.
+    """
+    proc = f"/proc/self/fd/{int(dir_fd)}"
+    with os.scandir(proc) as it:
+        for entry in it:
+            name = entry.name
+            if isinstance(name, bytes):
+                yield name
+            else:
+                yield os.fsencode(name)
 
 
 def _stat_identity(st: os.stat_result) -> tuple[int, int, int, int, int | None, int | None]:
@@ -783,7 +809,7 @@ class _PublishReservation:
 
 # ---- External merge (unique intermediate paths, bounded fan-in) -----------
 
-def _write_sorted_run(lines: list[tuple[str, str]], run_path: Path) -> None:
+def _write_sorted_run(lines: list[tuple[bytes, str]], run_path: Path) -> None:
     lines.sort(key=lambda t: t[0])
     with run_path.open("w", encoding="utf-8") as handle:
         for _, line in lines:
@@ -925,6 +951,35 @@ class LegacyLocalScanner:
         work_dir = Path(tempfile.mkdtemp(prefix=".leg001-work-", dir=str(work_parent)))
         work_resolved = str(work_dir.resolve())
 
+        # Binary path-prefix of output_dir when it lies under legacy_root.
+        # Used to exclude the subtree *before* enqueue or hash.
+        out_parts_prefix: tuple[bytes, ...] | None = None
+        try:
+            out_rel_path = Path(out_resolved).relative_to(root_resolved)
+            if out_rel_path.parts and out_rel_path.parts != (".",):
+                out_parts_prefix = tuple(os.fsencode(p) for p in out_rel_path.parts)
+            else:
+                out_parts_prefix = ()
+        except ValueError:
+            out_parts_prefix = None
+
+        work_parts_prefix: tuple[bytes, ...] | None = None
+        try:
+            work_rel_path = Path(work_resolved).relative_to(root_resolved)
+            if work_rel_path.parts and work_rel_path.parts != (".",):
+                work_parts_prefix = tuple(os.fsencode(p) for p in work_rel_path.parts)
+            else:
+                work_parts_prefix = ()
+        except ValueError:
+            work_parts_prefix = None
+
+        def _under_prefix(child: tuple[bytes, ...], prefix: tuple[bytes, ...] | None) -> bool:
+            if prefix is None:
+                return False
+            if len(child) < len(prefix):
+                return False
+            return child[: len(prefix)] == prefix
+
         scanned_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         # Summary last = completion marker.
         basenames = [
@@ -943,7 +998,7 @@ class LegacyLocalScanner:
         hashed_bytes = 0
         error_count = 0
         run_paths: list[Path] = []
-        run_buffer: list[tuple[str, str]] = []
+        run_buffer: list[tuple[bytes, str]] = []
         run_counter = 0
         runs_dir = work_dir / "runs"
         runs_dir.mkdir()
@@ -958,12 +1013,14 @@ class LegacyLocalScanner:
             run_counter += 1
             run_buffer = []
 
-        def emit(entry: InventoryEntry) -> None:
+        def emit(entry: InventoryEntry, *, sort_key: bytes = b"") -> None:
             nonlocal total_entries, error_count
             line = json.dumps(
                 entry.to_canonical_dict(), sort_keys=True, ensure_ascii=False, allow_nan=False
             )
-            run_buffer.append((entry.relative_path, line))
+            # Sort by canonical binary identity (not display path) so order is
+            # independent of enumeration and of reversible display encoding.
+            run_buffer.append((sort_key, line))
             if len(run_buffer) >= _RUN_BUFFER_LIMIT:
                 flush_run()
             counts_entry[entry.entry_type.value] = counts_entry.get(entry.entry_type.value, 0) + 1
@@ -1054,7 +1111,7 @@ class LegacyLocalScanner:
                                     ScanStatus.ERROR_UNREADABLE,
                                     "queued path is not a directory",
                                 )
-                            )
+                            , sort_key=_parts_identity_key(parts))
                             continue
                     except OSError as exc:
                         emit(
@@ -1070,27 +1127,29 @@ class LegacyLocalScanner:
                                 ScanStatus.ERROR_UNREADABLE,
                                 _sanitize_error(exc),
                             )
-                        )
+                        , sort_key=_parts_identity_key(parts))
                         continue
 
                     try:
-                        # List entries via fd-based listdir (bytes names when possible).
-                        try:
-                            names_raw = os.listdir(dir_fd)
-                        except TypeError:
-                            names_raw = os.listdir(dir_fd)
-                        # Normalize to bytes.
-                        name_list: list[bytes] = []
-                        for n in names_raw:
-                            if isinstance(n, bytes):
-                                name_list.append(n)
-                            else:
-                                name_list.append(os.fsencode(n))
-
-                        for name_b in name_list:
+                        # Bounded descriptor-relative entry iteration via
+                        # /proc/self/fd/<dir_fd> (does not follow a swapped
+                        # directory inode; yields one entry at a time).
+                        for name_b in _iter_dir_names(dir_fd):
                             child_parts = parts + (name_b,)
                             child_rel = _parts_to_relative(child_parts)
                             id_key = _parts_identity_key(child_parts)
+
+                            # Output/work subtree exclusion BEFORE enqueue or hash.
+                            if _under_prefix(child_parts, out_parts_prefix):
+                                excluded_by_rule["output_self"] = (
+                                    excluded_by_rule.get("output_self", 0) + 1
+                                )
+                                continue
+                            if _under_prefix(child_parts, work_parts_prefix):
+                                excluded_by_rule["work_self"] = (
+                                    excluded_by_rule.get("work_self", 0) + 1
+                                )
+                                continue
 
                             # Collision on exact binary identity.
                             try:
@@ -1107,10 +1166,6 @@ class LegacyLocalScanner:
                             path_byte_len = len(id_key)
                             overlong = path_byte_len > cfg.max_path_bytes
 
-                            # Resolved-path exclusion for output/work trees.
-                            # We cannot resolve via follow; use name-based exclusion
-                            # plus explicit resolved checks when the child is a dir
-                            # we would enqueue.
                             excl = _match_exclusion(child_rel, cfg.exclusion_rules)
                             if excl is not None:
                                 excluded_by_rule[excl] = excluded_by_rule.get(excl, 0) + 1
@@ -1142,7 +1197,7 @@ class LegacyLocalScanner:
                                         f"excluded:{excl}",
                                         ScanStatus.SKIPPED_EXCLUDED,
                                     )
-                                )
+                                , sort_key=id_key)
                                 continue
 
                             if overlong:
@@ -1159,7 +1214,7 @@ class LegacyLocalScanner:
                                         ScanStatus.ERROR_OVERLONG,
                                         f"path identity exceeds {cfg.max_path_bytes} bytes",
                                     )
-                                )
+                                , sort_key=id_key)
                                 continue
 
                             # Stat no-follow relative to dir_fd.
@@ -1188,7 +1243,7 @@ class LegacyLocalScanner:
                                         ScanStatus.ERROR_UNREADABLE,
                                         _sanitize_error(exc),
                                     )
-                                )
+                                , sort_key=id_key)
                                 continue
 
                             et = _entry_type_from_mode(st.st_mode)
@@ -1214,7 +1269,7 @@ class LegacyLocalScanner:
                                         basis,
                                         ScanStatus.OK,
                                     )
-                                )
+                                , sort_key=id_key)
                                 continue
 
                             if et is EntryType.SYMLINK:
@@ -1234,7 +1289,7 @@ class LegacyLocalScanner:
                                         ScanStatus.ERROR_SYMLINK,
                                         "symlink not followed",
                                     )
-                                )
+                                , sort_key=id_key)
                                 continue
 
                             if et is EntryType.SPECIAL:
@@ -1254,7 +1309,7 @@ class LegacyLocalScanner:
                                         ScanStatus.ERROR_SPECIAL,
                                         "special file not hashed",
                                     )
-                                )
+                                , sort_key=id_key)
                                 continue
 
                             # Regular file — descriptor-relative hash.
@@ -1275,7 +1330,7 @@ class LegacyLocalScanner:
                                 InventoryEntry(
                                     child_rel,
                                     EntryType.REGULAR_FILE,
-                                    size if size else None,
+                                    size,
                                     mtime_ns,
                                     sha,
                                     ev,
@@ -1284,7 +1339,7 @@ class LegacyLocalScanner:
                                     status,
                                     err,
                                 )
-                            )
+                            , sort_key=id_key)
                     finally:
                         if dir_fd is not None:
                             try:
@@ -1389,40 +1444,47 @@ def _decode_parts(blob: bytes) -> tuple[bytes, ...]:
 def _stream_duplicate_report(
     conn: sqlite3.Connection, out_path: Path
 ) -> tuple[str, int, int, int]:
-    """Stream duplicate groups from SQLite into ``out_path``. Returns sha, size, groups, paths."""
+    """Stream duplicate groups from SQLite into ``out_path`` without materializing all paths.
+
+    Each group is written incrementally: one path at a time from the cursor.
+    Returns (sha256_hex, byte_size, group_count, path_count).
+    """
     digest = hashlib.sha256()
     total = 0
     groups = 0
-    paths = 0
+    path_count = 0
+
+    def _write(out_f: Any, data: bytes) -> None:
+        nonlocal total
+        out_f.write(data)
+        digest.update(data)
+        total += len(data)
+
     with out_path.open("wb") as out:
-        for (sha,) in conn.execute(
-            "SELECT sha256 FROM hash_paths GROUP BY sha256 HAVING COUNT(*) > 1 ORDER BY sha256"
+        for sha, cnt in conn.execute(
+            "SELECT sha256, COUNT(*) AS c FROM hash_paths "
+            "GROUP BY sha256 HAVING c > 1 ORDER BY sha256"
         ):
-            rels = [
-                row[0]
-                for row in conn.execute(
-                    "SELECT rel FROM hash_paths WHERE sha256 = ? ORDER BY rel", (sha,)
-                )
-            ]
             groups += 1
-            paths += len(rels)
-            group = DuplicateGroup(sha256=sha, relative_paths=tuple(rels))
-            line = (
-                json.dumps(
-                    group.to_canonical_dict(),
-                    sort_keys=True,
-                    ensure_ascii=False,
-                    allow_nan=False,
-                )
-                + "\n"
-            )
-            raw = line.encode("utf-8")
-            out.write(raw)
-            digest.update(raw)
-            total += len(raw)
+            # Deterministic key order: path_count, relative_paths, sha256
+            _write(out, b'{"path_count": ')
+            _write(out, str(int(cnt)).encode("ascii"))
+            _write(out, b', "relative_paths": [')
+            first = True
+            for (rel,) in conn.execute(
+                "SELECT rel FROM hash_paths WHERE sha256 = ? ORDER BY rel", (sha,)
+            ):
+                path_count += 1
+                if not first:
+                    _write(out, b", ")
+                first = False
+                _write(out, json.dumps(rel, ensure_ascii=False).encode("utf-8"))
+            _write(out, b'], "sha256": ')
+            _write(out, json.dumps(sha, ensure_ascii=False).encode("utf-8"))
+            _write(out, b"}\n")
         out.flush()
         os.fsync(out.fileno())
-    return digest.hexdigest(), total, groups, paths
+    return digest.hexdigest(), total, groups, path_count
 
 
 def scan_legacy_root(
