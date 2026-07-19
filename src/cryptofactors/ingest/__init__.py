@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from cryptofactors.ingest.legacy_local import (
     ClassificationRule,
+    DuplicateGroup,
     EntryType,
     EvidenceClass,
     ExclusionRule,
     InventoryEntry,
     InventorySummary,
+    LegacyConfigError,
     LegacyInventoryExistsError,
     LegacyLocalScanner,
     LegacyOutputError,
+    LegacyPathCollisionError,
     LegacyPathError,
     LegacyScanError,
     LegacyTraversalError,
@@ -51,7 +54,6 @@ from cryptofactors.ingest.raw import (
 )
 
 __all__ = [
-    # RAW-001
     "AcquisitionConflictError",
     "AcquisitionMetadata",
     "CatalogRegistrationError",
@@ -79,16 +81,18 @@ __all__ = [
     "SqliteRawObjectCatalog",
     "content_addressed_relative_path",
     "reconcile_orphan_temps",
-    # LEG-001
     "ClassificationRule",
+    "DuplicateGroup",
     "EntryType",
     "EvidenceClass",
     "ExclusionRule",
     "InventoryEntry",
     "InventorySummary",
+    "LegacyConfigError",
     "LegacyInventoryExistsError",
     "LegacyLocalScanner",
     "LegacyOutputError",
+    "LegacyPathCollisionError",
     "LegacyPathError",
     "LegacyScanError",
     "LegacyTraversalError",

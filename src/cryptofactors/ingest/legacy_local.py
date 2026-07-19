@@ -1,13 +1,18 @@
 """LEG-001 — Legacy local file scanner and deterministic inventory builder.
 
-Forensic census only.  Registration does not imply acceptance.  Source bytes
-are never rewritten, copied into the active store, or trusted as instrument
-identity.  Classification is metadata, never promotion.
+Forensic census only. Registration does not imply acceptance. Source bytes
+are never rewritten. Classification is metadata, never promotion.
+
+Path identity is preserved exactly (no whitespace trimming, no backslash
+reinterpretation on POSIX). Traversal/hashing use descriptor-relative,
+no-follow operations where supported so a TOCTOU symlink replacement cannot
+redirect the scanner outside the legacy root.
 """
 
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -21,27 +26,15 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Final
 
-# ---------------------------------------------------------------------------
-# Versions
-# ---------------------------------------------------------------------------
-
-SCANNER_VERSION: Final[str] = "1.0.0"
-INVENTORY_SCHEMA_VERSION: Final[str] = "1.0.0"
-
-# ---------------------------------------------------------------------------
-# Exceptions
-# ---------------------------------------------------------------------------
+SCANNER_VERSION: Final[str] = "1.1.0"
+INVENTORY_SCHEMA_VERSION: Final[str] = "1.1.0"
+_MERGE_FAN_IN: Final[int] = 16
+_QUEUE_BATCH: Final[int] = 256
+_RUN_BUFFER_LIMIT: Final[int] = 2048
 
 
 class LegacyScanError(Exception):
-    """Base error for LEG-001 legacy scanner operations."""
-
-    def __init__(
-        self,
-        message: str,
-        *,
-        context: Mapping[str, Any] | None = None,
-    ) -> None:
+    def __init__(self, message: str, *, context: Mapping[str, Any] | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.context: dict[str, Any] = dict(context) if context else {}
@@ -53,24 +46,27 @@ class LegacyScanError(Exception):
 
 
 class LegacyPathError(LegacyScanError):
-    """Path safety, traversal, or root validation failure."""
+    pass
+
+
+class LegacyPathCollisionError(LegacyPathError):
+    pass
 
 
 class LegacyOutputError(LegacyScanError):
-    """Inventory output publication or durability failure."""
+    pass
 
 
 class LegacyInventoryExistsError(LegacyOutputError):
-    """Refuse to overwrite an existing inventory artifact."""
+    pass
+
+
+class LegacyConfigError(LegacyScanError):
+    pass
 
 
 class LegacyTraversalError(LegacyScanError):
-    """Filesystem traversal could not continue safely."""
-
-
-# ---------------------------------------------------------------------------
-# Enumerations (forensic metadata only — never acceptance)
-# ---------------------------------------------------------------------------
+    pass
 
 
 class EntryType(str, Enum):
@@ -79,11 +75,10 @@ class EntryType(str, Enum):
     SYMLINK = "symlink"
     SPECIAL = "special"
     UNREADABLE = "unreadable"
+    MALFORMED = "malformed"
 
 
 class EvidenceClass(str, Enum):
-    """Eight forensic classes from the legacy migration plan."""
-
     RAW_PROVIDER_OBJECT = "raw_provider_object"
     NORMALIZED_OBSERVATION = "normalized_observation"
     DERIVED_FEATURE = "derived_feature"
@@ -95,8 +90,6 @@ class EvidenceClass(str, Enum):
 
 
 class ProvenanceClass(str, Enum):
-    """Provenance strength.  Heuristics may never assign VERIFIED_*."""
-
     VERIFIED_OFFICIAL = "verified_official"
     VERIFIED_CROSSSOURCE = "verified_crosssource"
     LEGACY_PROVENANCE_PARTIAL = "legacy_provenance_partial"
@@ -111,23 +104,14 @@ class ScanStatus(str, Enum):
     ERROR_SPECIAL = "error_special"
     ERROR_SYMLINK = "error_symlink"
     ERROR_HASH = "error_hash"
-
-
-# ---------------------------------------------------------------------------
-# Classification
-# ---------------------------------------------------------------------------
+    ERROR_OVERLONG = "error_overlong"
+    ERROR_UNENCODABLE = "error_unencodable"
+    ERROR_MALFORMED = "error_malformed"
+    ERROR_COLLISION = "error_collision"
 
 
 @dataclass(frozen=True, slots=True)
 class ClassificationRule:
-    """Explicit, deterministic caller-supplied classification rule.
-
-    ``match`` receives the normalized POSIX relative path and returns True when
-    the rule applies.  Rules are evaluated in order; the first match wins.
-    Provenance is never upgraded to VERIFIED_* by a rule — callers must set
-    only LEGACY_* or leave the default.
-    """
-
     name: str
     match: Callable[[str], bool]
     evidence_class: EvidenceClass
@@ -136,89 +120,25 @@ class ClassificationRule:
 
 
 def _default_classification_rules() -> tuple[ClassificationRule, ...]:
-    """Conservative path heuristics.  Never emit VERIFIED_* provenance."""
-
     def _re(pattern: str) -> Callable[[str], bool]:
         compiled = re.compile(pattern, re.IGNORECASE)
-
         def _m(rel: str) -> bool:
             return compiled.search(rel) is not None
-
         return _m
-
     return (
-        ClassificationRule(
-            name="config_dotfiles",
-            match=_re(r"(^|/)\.(env|ini|cfg|conf|yaml|yml|toml|json)(\.|$)"),
-            evidence_class=EvidenceClass.CONFIGURATION,
-            basis="path pattern: config/dotfile",
-        ),
-        ClassificationRule(
-            name="config_extensions",
-            match=_re(r"\.(ya?ml|toml|ini|cfg|conf|json)$"),
-            evidence_class=EvidenceClass.CONFIGURATION,
-            basis="path pattern: config extension",
-        ),
-        ClassificationRule(
-            name="model_artifacts",
-            match=_re(
-                r"\.(pkl|joblib|h5|hdf5|onnx|pt|pth|xgb|json)$|"
-                r"(^|/)(models?|artifacts?|checkpoints?)/"
-            ),
-            evidence_class=EvidenceClass.PREDICTION_MODEL_ARTIFACT,
-            basis="path pattern: model/artifact",
-        ),
-        ClassificationRule(
-            name="reports_results",
-            match=_re(
-                r"(^|/)(reports?|results?|metrics?|evals?|figures?)/|"
-                r"\.(png|jpg|jpeg|svg|pdf|html)$"
-            ),
-            evidence_class=EvidenceClass.REPORT_RESULT,
-            basis="path pattern: report/result",
-        ),
-        ClassificationRule(
-            name="labels_returns",
-            match=_re(r"(^|/)(labels?|targets?|returns?)/"),
-            evidence_class=EvidenceClass.LABEL_RETURN,
-            basis="path pattern: label/return",
-        ),
-        ClassificationRule(
-            name="features_derived",
-            match=_re(r"(^|/)(features?|derived|indicators?)/"),
-            evidence_class=EvidenceClass.DERIVED_FEATURE,
-            basis="path pattern: derived/feature",
-        ),
-        ClassificationRule(
-            name="normalized_bars",
-            match=_re(
-                r"(^|/)(canonical|normalized|bars?|ohlcv)/|"
-                r"\.(parquet|pq)$"
-            ),
-            evidence_class=EvidenceClass.NORMALIZED_OBSERVATION,
-            basis="path pattern: normalized/bar",
-        ),
-        ClassificationRule(
-            name="raw_provider",
-            match=_re(
-                r"(^|/)(raw|provider|archive|downloads?|backfill)/|"
-                r"\.(csv|zip|gz|bz2|zst)$"
-            ),
-            evidence_class=EvidenceClass.RAW_PROVIDER_OBJECT,
-            basis="path pattern: raw/provider",
-        ),
+        ClassificationRule("config_dotfiles", _re(r"(^|/)\.(env|ini|cfg|conf|yaml|yml|toml|json)(\.|$)"), EvidenceClass.CONFIGURATION, basis="path pattern: config/dotfile"),
+        ClassificationRule("config_extensions", _re(r"\.(ya?ml|toml|ini|cfg|conf|json)$"), EvidenceClass.CONFIGURATION, basis="path pattern: config extension"),
+        ClassificationRule("model_artifacts", _re(r"\.(pkl|joblib|h5|hdf5|onnx|pt|pth|xgb|json)$|(^|/)(models?|artifacts?|checkpoints?)/"), EvidenceClass.PREDICTION_MODEL_ARTIFACT, basis="path pattern: model/artifact"),
+        ClassificationRule("reports_results", _re(r"(^|/)(reports?|results?|metrics?|evals?|figures?)/|\.(png|jpg|jpeg|svg|pdf|html)$"), EvidenceClass.REPORT_RESULT, basis="path pattern: report/result"),
+        ClassificationRule("labels_returns", _re(r"(^|/)(labels?|targets?|returns?)/"), EvidenceClass.LABEL_RETURN, basis="path pattern: label/return"),
+        ClassificationRule("features_derived", _re(r"(^|/)(features?|derived|indicators?)/"), EvidenceClass.DERIVED_FEATURE, basis="path pattern: derived/feature"),
+        ClassificationRule("normalized_bars", _re(r"(^|/)(canonical|normalized|bars?|ohlcv)/|\.(parquet|pq)$"), EvidenceClass.NORMALIZED_OBSERVATION, basis="path pattern: normalized/bar"),
+        ClassificationRule("raw_provider", _re(r"(^|/)(raw|provider|archive|downloads?|backfill)/|\.(csv|zip|gz|bz2|zst)$"), EvidenceClass.RAW_PROVIDER_OBJECT, basis="path pattern: raw/provider"),
     )
-
-
-# ---------------------------------------------------------------------------
-# Exclusion
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class ExclusionRule:
-    """Named exclusion.  ``match`` receives the normalized relative path."""
-
     name: str
     match: Callable[[str], bool]
 
@@ -226,82 +146,47 @@ class ExclusionRule:
 def _default_exclusion_rules() -> tuple[ExclusionRule, ...]:
     def _seg(name: str) -> Callable[[str], bool]:
         def _m(rel: str) -> bool:
-            parts = rel.split("/")
-            return name in parts
-
+            return name in rel.split("/")
         return _m
-
     def _suffixes(*suffixes: str) -> Callable[[str], bool]:
         lower = tuple(s.lower() for s in suffixes)
-
         def _m(rel: str) -> bool:
-            base = rel.rsplit("/", 1)[-1].lower()
-            return any(base.endswith(s) for s in lower)
-
+            return any(rel.rsplit("/", 1)[-1].lower().endswith(s) for s in lower)
         return _m
-
     def _names(*names: str) -> Callable[[str], bool]:
         s = {n.lower() for n in names}
-
         def _m(rel: str) -> bool:
             return rel.rsplit("/", 1)[-1].lower() in s
-
         return _m
-
     return (
-        ExclusionRule(name="git_metadata", match=_seg(".git")),
-        ExclusionRule(name="hg_metadata", match=_seg(".hg")),
-        ExclusionRule(name="svn_metadata", match=_seg(".svn")),
-        ExclusionRule(name="venv", match=_seg(".venv")),
-        ExclusionRule(name="venv_dir", match=_seg("venv")),
-        ExclusionRule(name="virtualenv", match=_seg(".virtualenv")),
-        ExclusionRule(name="pycache", match=_seg("__pycache__")),
-        ExclusionRule(name="mypy_cache", match=_seg(".mypy_cache")),
-        ExclusionRule(name="pytest_cache", match=_seg(".pytest_cache")),
-        ExclusionRule(name="ruff_cache", match=_seg(".ruff_cache")),
-        ExclusionRule(name="ipynb_checkpoints", match=_seg(".ipynb_checkpoints")),
-        ExclusionRule(name="node_modules", match=_seg("node_modules")),
-        ExclusionRule(name="egg_info", match=lambda r: ".egg-info" in r.split("/")),
-        ExclusionRule(name="dist", match=_seg("dist")),
-        ExclusionRule(name="build", match=_seg("build")),
-        ExclusionRule(name="tox", match=_seg(".tox")),
-        ExclusionRule(name="nox", match=_seg(".nox")),
-        ExclusionRule(name="idea", match=_seg(".idea")),
-        ExclusionRule(name="vscode", match=_seg(".vscode")),
-        ExclusionRule(name="ds_store", match=_names(".ds_store", "thumbs.db")),
-        ExclusionRule(
-            name="secret_files",
-            match=_names(
-                ".env",
-                ".env.local",
-                ".env.production",
-                "secrets.yaml",
-                "secrets.yml",
-                "secrets.json",
-                "credentials.json",
-                "service_account.json",
-            ),
-        ),
-        ExclusionRule(
-            name="key_files",
-            match=_suffixes(".key", ".pem", ".p12", ".pfx", ".jks", ".keystore"),
-        ),
-        ExclusionRule(
-            name="python_bytecode",
-            match=_suffixes(".pyc", ".pyo", ".pyd"),
-        ),
+        ExclusionRule("git_metadata", _seg(".git")),
+        ExclusionRule("hg_metadata", _seg(".hg")),
+        ExclusionRule("svn_metadata", _seg(".svn")),
+        ExclusionRule("venv", _seg(".venv")),
+        ExclusionRule("venv_dir", _seg("venv")),
+        ExclusionRule("virtualenv", _seg(".virtualenv")),
+        ExclusionRule("pycache", _seg("__pycache__")),
+        ExclusionRule("mypy_cache", _seg(".mypy_cache")),
+        ExclusionRule("pytest_cache", _seg(".pytest_cache")),
+        ExclusionRule("ruff_cache", _seg(".ruff_cache")),
+        ExclusionRule("ipynb_checkpoints", _seg(".ipynb_checkpoints")),
+        ExclusionRule("node_modules", _seg("node_modules")),
+        ExclusionRule("egg_info", lambda r: ".egg-info" in r.split("/")),
+        ExclusionRule("dist", _seg("dist")),
+        ExclusionRule("build", _seg("build")),
+        ExclusionRule("tox", _seg(".tox")),
+        ExclusionRule("nox", _seg(".nox")),
+        ExclusionRule("idea", _seg(".idea")),
+        ExclusionRule("vscode", _seg(".vscode")),
+        ExclusionRule("ds_store", _names(".ds_store", "thumbs.db")),
+        ExclusionRule("secret_files", _names(".env", ".env.local", ".env.production", "secrets.yaml", "secrets.yml", "secrets.json", "credentials.json", "service_account.json")),
+        ExclusionRule("key_files", _suffixes(".key", ".pem", ".p12", ".pfx", ".jks", ".keystore")),
+        ExclusionRule("python_bytecode", _suffixes(".pyc", ".pyo", ".pyd")),
     )
-
-
-# ---------------------------------------------------------------------------
-# Models
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class InventoryEntry:
-    """One discovered filesystem entry (forensic record)."""
-
     relative_path: str
     entry_type: EntryType
     byte_size: int | None
@@ -329,9 +214,16 @@ class InventoryEntry:
 
 
 @dataclass(frozen=True, slots=True)
-class InventorySummary:
-    """Deterministic scan summary."""
+class DuplicateGroup:
+    sha256: str
+    relative_paths: tuple[str, ...]
 
+    def to_canonical_dict(self) -> dict[str, Any]:
+        return {"sha256": self.sha256, "relative_paths": list(self.relative_paths), "path_count": len(self.relative_paths)}
+
+
+@dataclass(frozen=True, slots=True)
+class InventorySummary:
     root: str
     root_resolved: str
     scanner_version: str
@@ -352,139 +244,95 @@ class InventorySummary:
     inventory_byte_size: int
     inventory_uri: str
     summary_uri: str
+    duplicate_report_sha256: str
+    duplicate_report_byte_size: int
+    duplicate_report_uri: str
 
     def to_canonical_dict(self) -> dict[str, Any]:
         return {
-            "root": self.root,
-            "root_resolved": self.root_resolved,
-            "scanner_version": self.scanner_version,
-            "schema_version": self.schema_version,
-            "scanned_at_utc": self.scanned_at_utc,
-            "total_entries": self.total_entries,
-            "hashed_regular_files": self.hashed_regular_files,
-            "total_hashed_bytes": self.total_hashed_bytes,
+            "root": self.root, "root_resolved": self.root_resolved,
+            "scanner_version": self.scanner_version, "schema_version": self.schema_version,
+            "scanned_at_utc": self.scanned_at_utc, "total_entries": self.total_entries,
+            "hashed_regular_files": self.hashed_regular_files, "total_hashed_bytes": self.total_hashed_bytes,
             "counts_by_entry_type": dict(sorted(self.counts_by_entry_type.items())),
-            "counts_by_evidence_class": dict(
-                sorted(self.counts_by_evidence_class.items())
-            ),
-            "counts_by_provenance_class": dict(
-                sorted(self.counts_by_provenance_class.items())
-            ),
+            "counts_by_evidence_class": dict(sorted(self.counts_by_evidence_class.items())),
+            "counts_by_provenance_class": dict(sorted(self.counts_by_provenance_class.items())),
             "counts_by_scan_status": dict(sorted(self.counts_by_scan_status.items())),
             "excluded_by_rule": dict(sorted(self.excluded_by_rule.items())),
-            "duplicate_hash_groups": self.duplicate_hash_groups,
-            "duplicate_path_count": self.duplicate_path_count,
-            "error_count": self.error_count,
-            "inventory_sha256": self.inventory_sha256,
-            "inventory_byte_size": self.inventory_byte_size,
-            "inventory_uri": self.inventory_uri,
-            "summary_uri": self.summary_uri,
+            "duplicate_hash_groups": self.duplicate_hash_groups, "duplicate_path_count": self.duplicate_path_count,
+            "error_count": self.error_count, "inventory_sha256": self.inventory_sha256,
+            "inventory_byte_size": self.inventory_byte_size, "inventory_uri": self.inventory_uri,
+            "summary_uri": self.summary_uri, "duplicate_report_sha256": self.duplicate_report_sha256,
+            "duplicate_report_byte_size": self.duplicate_report_byte_size, "duplicate_report_uri": self.duplicate_report_uri,
         }
+
+
+def _validate_output_basename(name: str, label: str) -> None:
+    if not name or name != name.strip():
+        raise LegacyConfigError(f"{label} must be a non-empty basename without surrounding whitespace", context={label: name})
+    if "/" in name or "\\" in name or name in (".", "..") or name.startswith("/"):
+        raise LegacyConfigError(f"{label} must be a simple basename (no separators, not . or ..)", context={label: name})
+    if os.sep in name or (os.altsep and os.altsep in name):
+        raise LegacyConfigError(f"{label} must be a simple basename", context={label: name})
 
 
 @dataclass(frozen=True, slots=True)
 class ScanConfig:
-    """Scanner configuration.  Defaults are secure and conservative."""
-
     chunk_size: int = 1024 * 1024
-    classification_rules: Sequence[ClassificationRule] = field(
-        default_factory=_default_classification_rules
-    )
-    exclusion_rules: Sequence[ExclusionRule] = field(
-        default_factory=_default_exclusion_rules
-    )
-    follow_symlinks: bool = False  # always False for LEG-001
+    classification_rules: Sequence[ClassificationRule] = field(default_factory=_default_classification_rules)
+    exclusion_rules: Sequence[ExclusionRule] = field(default_factory=_default_exclusion_rules)
+    follow_symlinks: bool = False
     inventory_filename: str = "legacy_inventory.jsonl"
     summary_filename: str = "legacy_inventory_summary.json"
+    duplicate_report_filename: str = "legacy_inventory_duplicates.jsonl"
     max_path_bytes: int = 4096
 
     def __post_init__(self) -> None:
         if self.chunk_size <= 0:
-            raise LegacyScanError(
-                "chunk_size must be positive",
-                context={"chunk_size": self.chunk_size},
-            )
+            raise LegacyConfigError("chunk_size must be positive", context={"chunk_size": self.chunk_size})
         if self.follow_symlinks:
-            raise LegacyScanError(
-                "follow_symlinks must be False for LEG-001 forensic scan",
-            )
+            raise LegacyConfigError("follow_symlinks must be False for LEG-001 forensic scan")
+        if self.max_path_bytes <= 0:
+            raise LegacyConfigError("max_path_bytes must be positive")
+        _validate_output_basename(self.inventory_filename, "inventory_filename")
+        _validate_output_basename(self.summary_filename, "summary_filename")
+        _validate_output_basename(self.duplicate_report_filename, "duplicate_report_filename")
+        if len({self.inventory_filename, self.summary_filename, self.duplicate_report_filename}) != 3:
+            raise LegacyConfigError("inventory, summary, and duplicate-report filenames must be distinct")
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+def _join_rel(parent_rel: str, name: str) -> str:
+    """Join parent relative path with exact filesystem name. No strip, no backslash rewrite."""
+    if not parent_rel:
+        return name
+    return parent_rel + "/" + name
 
 
-def _normalize_rel(path: str) -> str:
-    """Normalize to POSIX relative form without resolving symlinks."""
-    text = path.replace("\\", "/").strip()
-    while text.startswith("./"):
-        text = text[2:]
-    text = text.strip("/")
-    if not text:
-        return ""
-    parts = [p for p in text.split("/") if p and p != "."]
-    if any(p == ".." for p in parts):
-        raise LegacyPathError(
-            "relative path must not contain '..'",
-            context={"path": path},
-        )
-    return "/".join(parts)
+def _sanitize_error(exc: BaseException, *, max_len: int = 200) -> str:
+    text = f"{type(exc).__name__}: {exc}"
+    text = "".join(ch if ch.isprintable() or ch in " \t" else "?" for ch in text)
+    return text if len(text) <= max_len else text[: max_len - 3] + "..."
 
 
-def _classify(
-    rel: str,
-    rules: Sequence[ClassificationRule],
-) -> tuple[EvidenceClass, ProvenanceClass, str]:
+def _classify(rel: str, rules: Sequence[ClassificationRule]) -> tuple[EvidenceClass, ProvenanceClass, str]:
     for rule in rules:
         if rule.match(rel):
-            # Never allow heuristics to claim verified provenance.
             prov = rule.provenance_class
-            if prov in (
-                ProvenanceClass.VERIFIED_OFFICIAL,
-                ProvenanceClass.VERIFIED_CROSSSOURCE,
-            ):
+            if prov in (ProvenanceClass.VERIFIED_OFFICIAL, ProvenanceClass.VERIFIED_CROSSSOURCE):
                 prov = ProvenanceClass.LEGACY_UNKNOWN
             return rule.evidence_class, prov, rule.basis or rule.name
     return EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "default:unknown"
 
 
-def _match_exclusion(
-    rel: str,
-    rules: Sequence[ExclusionRule],
-) -> str | None:
+def _match_exclusion(rel: str, rules: Sequence[ExclusionRule]) -> str | None:
     for rule in rules:
         if rule.match(rel):
             return rule.name
     return None
 
 
-def _stream_sha256(path: Path, *, chunk_size: int) -> tuple[str, int]:
-    digest = hashlib.sha256()
-    total = 0
-    with path.open("rb") as handle:
-        while True:
-            chunk = handle.read(chunk_size)
-            if not chunk:
-                break
-            digest.update(chunk)
-            total += len(chunk)
-    return digest.hexdigest(), total
-
-
-def _sha256_of_file(path: Path, *, chunk_size: int = 1 << 20) -> str:
-    """Streaming SHA-256 of an on-disk file (bounded memory)."""
-    return _stream_sha256(path, chunk_size=chunk_size)[0]
-
-
 def _canonical_dumps(obj: Any) -> str:
-    return json.dumps(
-        obj,
-        indent=2,
-        sort_keys=True,
-        ensure_ascii=False,
-        allow_nan=False,
-    ) + "\n"
+    return json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n"
 
 
 def _fsync_file(path: Path) -> None:
@@ -503,72 +351,6 @@ def _fsync_dir(path: Path) -> None:
         os.close(fd)
 
 
-def _atomic_publish_bytes(
-    dest: Path,
-    data: bytes | Path,
-    *,
-    label: str,
-) -> None:
-    """Write bytes via temp + fsync + exclusive link.  Never overwrites.
-
-    ``data`` may be ``bytes`` (held in memory) or a ``pathlib.Path`` to a file
-    that is streamed in chunks (so large inventories need not be buffered in
-    RAM).  Race-safe: after the temp file is fsync'd, it is hard-linked onto
-    ``dest`` with ``os.link``.  On POSIX ``os.link`` refuses to overwrite an
-    existing destination (raises ``FileExistsError``), so a concurrent writer
-    cannot clobber an existing inventory artifact.  Ordinary ``os.rename``
-    would overwrite — that is why the link is used here.
-    """
-    if dest.exists():
-        raise LegacyInventoryExistsError(
-            f"{label} already exists (no-clobber)",
-            context={"path": str(dest)},
-        )
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(
-        prefix=f".{label}-",
-        suffix=".partial",
-        dir=str(dest.parent),
-    )
-    tmp_path = Path(tmp_name)
-    try:
-        _stream_buffer = 1 << 20  # 1 MiB
-        with os.fdopen(fd, "wb") as handle:
-            if isinstance(data, Path):
-                with data.open("rb") as src:
-                    while True:
-                        chunk = src.read(_stream_buffer)
-                        if not chunk:
-                            break
-                        handle.write(chunk)
-            else:
-                handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        # Fast-path: refuse if a writer created dest between our first check
-        # and now.  The authoritative guarantee is the O_EXCL link below.
-        if dest.exists():
-            raise LegacyInventoryExistsError(
-                f"{label} appeared during publish (no-clobber)",
-                context={"path": str(dest)},
-            )
-        # Exclusive link: temp -> dest.  os.link does NOT overwrite an existing
-        # destination; it raises FileExistsError instead.  Atomic on the same
-        # filesystem (temp is created inside dest.parent by construction).
-        try:
-            os.link(str(tmp_path), str(dest))
-        except FileExistsError:
-            raise LegacyInventoryExistsError(
-                f"{label} already exists (no-clobber, concurrent writer)",
-                context={"path": str(dest)},
-            ) from None
-        _fsync_file(dest)
-        _fsync_dir(dest.parent)
-    finally:
-        if tmp_path.exists():
-            tmp_path.unlink(missing_ok=True)
-
-
 def _entry_type_from_mode(mode: int) -> EntryType:
     if statmod.S_ISLNK(mode):
         return EntryType.SYMLINK
@@ -579,42 +361,265 @@ def _entry_type_from_mode(mode: int) -> EntryType:
     return EntryType.SPECIAL
 
 
-# ---------------------------------------------------------------------------
-# Scanner
-# ---------------------------------------------------------------------------
+def _stat_identity(st: os.stat_result) -> tuple[int, int, int, int, int | None]:
+    return (st.st_dev, st.st_ino, statmod.S_IFMT(st.st_mode), st.st_size, getattr(st, "st_mtime_ns", None))
+
+
+def _hash_open_fd(fd: int, *, chunk_size: int) -> tuple[str, int]:
+    digest = hashlib.sha256()
+    total = 0
+    while True:
+        chunk = os.read(fd, chunk_size)
+        if not chunk:
+            break
+        digest.update(chunk)
+        total += len(chunk)
+    return digest.hexdigest(), total
+
+
+def _hash_regular_nofollow(
+    parent_path: Path, name: str, *, chunk_size: int
+) -> tuple[str | None, int, int | None, ScanStatus, str | None]:
+    """Hash a regular file with TOCTOU protection via O_NOFOLLOW + fstat identity checks."""
+    dir_fd: int | None = None
+    file_fd: int | None = None
+    try:
+        dir_flags = os.O_RDONLY
+        if hasattr(os, "O_DIRECTORY"):
+            dir_flags |= os.O_DIRECTORY
+        if hasattr(os, "O_NOFOLLOW"):
+            dir_flags |= os.O_NOFOLLOW
+        try:
+            dir_fd = os.open(str(parent_path), dir_flags)
+        except OSError as exc:
+            return None, 0, None, ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)
+
+        flags = os.O_RDONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            if hasattr(os, "openat"):
+                file_fd = os.openat(dir_fd, name, flags)
+            else:
+                file_fd = os.open(str(parent_path / name), flags)
+        except OSError as exc:
+            err = _sanitize_error(exc)
+            if getattr(exc, "errno", None) in (getattr(os, "ELOOP", -1), getattr(os, "EPERM", -1)):
+                return None, 0, None, ScanStatus.ERROR_SYMLINK, err
+            return None, 0, None, ScanStatus.ERROR_UNREADABLE, err
+
+        try:
+            st_before = os.fstat(file_fd)
+        except OSError as exc:
+            return None, 0, None, ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)
+
+        if statmod.S_ISLNK(st_before.st_mode):
+            return None, 0, None, ScanStatus.ERROR_SYMLINK, "entry is a symlink"
+        if not statmod.S_ISREG(st_before.st_mode):
+            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_SPECIAL, "not a regular file"
+
+        id_before = _stat_identity(st_before)
+        try:
+            sha, hashed_len = _hash_open_fd(file_fd, chunk_size=chunk_size)
+        except OSError as exc:
+            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_HASH, _sanitize_error(exc)
+
+        try:
+            st_after = os.fstat(file_fd)
+        except OSError as exc:
+            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, _sanitize_error(exc)
+
+        if _stat_identity(st_after) != id_before or hashed_len != st_before.st_size:
+            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, "file changed during scan"
+
+        try:
+            if hasattr(os, "fstatat") and dir_fd is not None:
+                st_dirent = os.fstatat(dir_fd, name, getattr(os, "AT_SYMLINK_NOFOLLOW", 0))
+            else:
+                st_dirent = os.lstat(str(parent_path / name))
+            d_id = _stat_identity(st_dirent)
+            if d_id[0] != id_before[0] or d_id[1] != id_before[1] or d_id[2] != id_before[2]:
+                return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, "directory entry replaced during scan"
+        except OSError as exc:
+            return None, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.ERROR_CHANGED, _sanitize_error(exc)
+
+        return sha, st_before.st_size, getattr(st_before, "st_mtime_ns", None), ScanStatus.OK, None
+    finally:
+        if file_fd is not None:
+            try:
+                os.close(file_fd)
+            except OSError:
+                pass
+        if dir_fd is not None:
+            try:
+                os.close(dir_fd)
+            except OSError:
+                pass
+
+
+class _PublishReservation:
+    """Stage all artifacts, fsync, exclusive no-clobber publish; roll back own outputs on failure."""
+
+    def __init__(self, output_dir: Path, basenames: Sequence[str]) -> None:
+        self.output_dir = output_dir
+        self.basenames = list(basenames)
+        self.stage_dir: Path | None = None
+        self.published: list[Path] = []
+
+    def __enter__(self) -> _PublishReservation:
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        for name in self.basenames:
+            dest = self.output_dir / name
+            if dest.exists():
+                raise LegacyInventoryExistsError("output artifact already exists (no-clobber)", context={"path": str(dest)})
+        self.stage_dir = Path(tempfile.mkdtemp(prefix=".leg001-stage-", dir=str(self.output_dir)))
+        return self
+
+    def stage_bytes(self, basename: str, data: bytes) -> None:
+        assert self.stage_dir is not None
+        dest = self.stage_dir / basename
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{basename}-", suffix=".partial", dir=str(self.stage_dir))
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.rename(str(tmp_path), str(dest))
+            _fsync_file(dest)
+        except Exception as exc:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+            raise LegacyOutputError(f"failed to stage artifact: {exc}", context={"basename": basename}) from exc
+
+    def publish(self) -> None:
+        assert self.stage_dir is not None
+        _fsync_dir(self.stage_dir)
+        for name in self.basenames:
+            staged = self.stage_dir / name
+            if not staged.exists():
+                raise LegacyOutputError("staged artifact missing before publication", context={"basename": name})
+            final = self.output_dir / name
+            if final.exists():
+                self._rollback()
+                raise LegacyInventoryExistsError("output artifact appeared during publication (no-clobber)", context={"path": str(final)})
+            try:
+                os.rename(str(staged), str(final))
+            except (FileExistsError, OSError) as exc:
+                self._rollback()
+                if isinstance(exc, FileExistsError) or getattr(exc, "errno", None) in (getattr(os, "EEXIST", -1), getattr(os, "ENOTEMPTY", -1)):
+                    raise LegacyInventoryExistsError("output artifact collision during publication", context={"path": str(final)}) from exc
+                raise LegacyOutputError(f"atomic publication failed: {exc}", context={"path": str(final)}) from exc
+            self.published.append(final)
+            try:
+                _fsync_file(final)
+            except OSError as exc:
+                self._rollback()
+                raise LegacyOutputError(f"fsync after publish failed: {exc}", context={"path": str(final)}) from exc
+        try:
+            _fsync_dir(self.output_dir)
+        except OSError:
+            pass
+        try:
+            self.stage_dir.rmdir()
+        except OSError:
+            pass
+        self.stage_dir = None
+
+    def _rollback(self) -> None:
+        for p in self.published:
+            try:
+                p.unlink(missing_ok=True)
+            except OSError:
+                pass
+        self.published.clear()
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        if exc_type is not None:
+            self._rollback()
+        if self.stage_dir is not None and self.stage_dir.exists():
+            for child in sorted(self.stage_dir.rglob("*"), reverse=True):
+                try:
+                    if child.is_file() or child.is_symlink():
+                        child.unlink(missing_ok=True)
+                    elif child.is_dir():
+                        child.rmdir()
+                except OSError:
+                    pass
+            try:
+                self.stage_dir.rmdir()
+            except OSError:
+                pass
+        return None
+
+
+def _write_sorted_run(lines: list[tuple[str, str]], run_path: Path) -> None:
+    lines.sort(key=lambda t: t[0])
+    with run_path.open("w", encoding="utf-8") as handle:
+        for _, line in lines:
+            handle.write(line if line.endswith("\n") else line + "\n")
+
+
+def _merge_runs(run_paths: list[Path], out_path: Path, *, fan_in: int = _MERGE_FAN_IN) -> None:
+    if not run_paths:
+        out_path.write_text("", encoding="utf-8")
+        return
+    if len(run_paths) == 1:
+        out_path.write_bytes(run_paths[0].read_bytes())
+        return
+    if len(run_paths) > fan_in:
+        intermediate: list[Path] = []
+        parent = out_path.parent
+        try:
+            for i in range(0, len(run_paths), fan_in):
+                batch = run_paths[i : i + fan_in]
+                mid = parent / f".merge-mid-{i}.jsonl"
+                _merge_runs(batch, mid, fan_in=fan_in)
+                intermediate.append(mid)
+            _merge_runs(intermediate, out_path, fan_in=fan_in)
+        finally:
+            for p in intermediate:
+                p.unlink(missing_ok=True)
+        return
+    handles: list[io.TextIOWrapper] = []
+    heads: list[tuple[str, str, int] | None] = []
+    try:
+        for p in run_paths:
+            h = p.open("r", encoding="utf-8")
+            handles.append(h)
+            line = h.readline()
+            if line:
+                obj = json.loads(line)
+                heads.append((obj["relative_path"], line, len(handles) - 1))
+            else:
+                heads.append(None)
+        with out_path.open("w", encoding="utf-8") as out:
+            while True:
+                active = [h for h in heads if h is not None]
+                if not active:
+                    break
+                active.sort(key=lambda t: t[0])
+                _, best_line, best_idx = active[0]
+                out.write(best_line if best_line.endswith("\n") else best_line + "\n")
+                nxt = handles[best_idx].readline()
+                if nxt:
+                    obj = json.loads(nxt)
+                    heads[best_idx] = (obj["relative_path"], nxt, best_idx)
+                else:
+                    heads[best_idx] = None
+    finally:
+        for h in handles:
+            try:
+                h.close()
+            except OSError:
+                pass
 
 
 class LegacyLocalScanner:
-    """Bounded-memory recursive scanner for a legacy local root.
-
-    Public entry point: :meth:`scan`.
-    """
-
     def __init__(self, config: ScanConfig | None = None) -> None:
         self._config = config or ScanConfig()
 
-    def scan(
-        self,
-        legacy_root: Path | str,
-        output_dir: Path | str,
-    ) -> InventorySummary:
-        """Inventory ``legacy_root`` and write deterministic artifacts to ``output_dir``.
-
-        Parameters
-        ----------
-        legacy_root:
-            Directory to census.  Must exist and be a real directory (not a
-            symlink).  Source bytes are never modified.
-        output_dir:
-            Destination for ``legacy_inventory.jsonl`` and
-            ``legacy_inventory_summary.json``.  Created if absent.  Existing
-            inventory artifacts are refused (no-clobber).
-
-        Returns
-        -------
-        InventorySummary
-            Typed summary including inventory content hash.
-        """
+    def scan(self, legacy_root: Path | str, output_dir: Path | str) -> InventorySummary:
         root = Path(legacy_root)
         out = Path(output_dir)
         cfg = self._config
@@ -622,56 +627,37 @@ class LegacyLocalScanner:
         try:
             root_st = os.lstat(root)
         except OSError as exc:
-            raise LegacyPathError(
-                f"cannot lstat legacy root: {exc}",
-                context={"root": str(root)},
-            ) from exc
+            raise LegacyPathError(f"cannot lstat legacy root: {exc}", context={"root": str(root)}) from exc
         if statmod.S_ISLNK(root_st.st_mode):
-            raise LegacyPathError(
-                "legacy root must not be a symlink",
-                context={"root": str(root)},
-            )
+            raise LegacyPathError("legacy root must not be a symlink", context={"root": str(root)})
         if not statmod.S_ISDIR(root_st.st_mode):
-            raise LegacyPathError(
-                "legacy root must be a directory",
-                context={"root": str(root)},
-            )
+            raise LegacyPathError("legacy root must be a directory", context={"root": str(root)})
 
         root_resolved = str(Path(root).resolve())
-        out.mkdir(parents=True, exist_ok=True)
-        out_resolved = str(Path(out).resolve())
+        out_abs = Path(out).expanduser()
+        if not out_abs.is_absolute():
+            out_abs = Path.cwd() / out_abs
+        out_resolved = str(out_abs.resolve())
 
-        inv_path = out / cfg.inventory_filename
-        sum_path = out / cfg.summary_filename
-        if inv_path.exists():
-            raise LegacyInventoryExistsError(
-                "inventory output already exists",
-                context={"path": str(inv_path)},
-            )
-        if sum_path.exists():
-            raise LegacyInventoryExistsError(
-                "summary output already exists",
-                context={"path": str(sum_path)},
-            )
+        if root_resolved == out_resolved:
+            raise LegacyConfigError("output_dir must not equal legacy_root", context={"root": root_resolved, "output_dir": out_resolved})
 
-        # Self-exclusion: if output_dir is under legacy_root, skip that subtree.
         out_rel_under_root: str | None = None
         try:
-            out_rel_under_root = _normalize_rel(
-                str(Path(out_resolved).relative_to(root_resolved))
-            )
+            rel = str(Path(out_resolved).relative_to(root_resolved)).replace("\\", "/")
+            out_rel_under_root = "" if rel == "." else rel
         except ValueError:
             out_rel_under_root = None
 
         scanned_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        basenames = [cfg.inventory_filename, cfg.summary_filename, cfg.duplicate_report_filename]
 
-        # On-disk spool for entries (bounded memory) + sqlite for duplicate index.
-        spool_dir = Path(
-            tempfile.mkdtemp(prefix=".leg001-spool-", dir=str(out))
-        )
-        spool_jsonl = spool_dir / "entries.jsonl"
-        spool_db = spool_dir / "dup.sqlite"
-        owned_temps: list[Path] = [spool_dir]
+        work_dir = Path(tempfile.mkdtemp(prefix=".leg001-work-", dir=str(Path(out_resolved).parent)))
+        path_db = work_dir / "paths.sqlite"
+        hash_db = work_dir / "hashes.sqlite"
+        runs_dir = work_dir / "runs"
+        runs_dir.mkdir()
+        queue_path = work_dir / "dir_queue.txt"
 
         counts_entry: dict[str, int] = {}
         counts_evidence: dict[str, int] = {}
@@ -682,413 +668,214 @@ class LegacyLocalScanner:
         hashed_files = 0
         hashed_bytes = 0
         error_count = 0
+        run_paths: list[Path] = []
+        run_buffer: list[tuple[str, str]] = []
+        run_counter = 0
+
+        def flush_run() -> None:
+            nonlocal run_counter, run_buffer
+            if not run_buffer:
+                return
+            rp = runs_dir / f"run-{run_counter:06d}.jsonl"
+            _write_sorted_run(run_buffer, rp)
+            run_paths.append(rp)
+            run_counter += 1
+            run_buffer = []
+
+        def emit(entry: InventoryEntry) -> None:
+            nonlocal total_entries, error_count
+            line = json.dumps(entry.to_canonical_dict(), sort_keys=True, ensure_ascii=False, allow_nan=False)
+            run_buffer.append((entry.relative_path, line))
+            if len(run_buffer) >= _RUN_BUFFER_LIMIT:
+                flush_run()
+            counts_entry[entry.entry_type.value] = counts_entry.get(entry.entry_type.value, 0) + 1
+            counts_evidence[entry.evidence_class.value] = counts_evidence.get(entry.evidence_class.value, 0) + 1
+            counts_provenance[entry.provenance_class.value] = counts_provenance.get(entry.provenance_class.value, 0) + 1
+            counts_status[entry.scan_status.value] = counts_status.get(entry.scan_status.value, 0) + 1
+            total_entries += 1
+            if entry.scan_status not in (ScanStatus.OK, ScanStatus.SKIPPED_EXCLUDED):
+                error_count += 1
+
+        def under_output(child_rel: str) -> bool:
+            if out_rel_under_root is None or not out_rel_under_root:
+                return False
+            return child_rel == out_rel_under_root or child_rel.startswith(out_rel_under_root + "/")
 
         try:
-            conn = sqlite3.connect(str(spool_db))
-            conn.execute(
-                "CREATE TABLE hash_paths (sha256 TEXT NOT NULL, rel TEXT NOT NULL)"
-            )
-            conn.execute(
-                "CREATE INDEX idx_hash ON hash_paths(sha256)"
-            )
+            path_conn = sqlite3.connect(str(path_db))
+            path_conn.execute("CREATE TABLE seen (rel TEXT PRIMARY KEY NOT NULL)")
+            hash_conn = sqlite3.connect(str(hash_db))
+            hash_conn.execute("CREATE TABLE hash_paths (sha256 TEXT NOT NULL, rel TEXT NOT NULL)")
+            hash_conn.execute("CREATE INDEX idx_hp ON hash_paths(sha256)")
 
-            with spool_jsonl.open("w", encoding="utf-8") as spool:
-                # Iterative BFS — no recursion depth risk.
-                # Stack holds (absolute_path, relative_posix).
-                stack: list[tuple[Path, str]] = [(root, "")]
-                while stack:
-                    current, rel = stack.pop()
-                    try:
-                        with os.scandir(current) as it:
-                            children = sorted(it, key=lambda e: e.name)
-                    except OSError as exc:
-                        entry = InventoryEntry(
-                            relative_path=rel or ".",
-                            entry_type=EntryType.UNREADABLE,
-                            byte_size=None,
-                            mtime_ns=None,
-                            sha256=None,
-                            evidence_class=EvidenceClass.UNKNOWN,
-                            provenance_class=ProvenanceClass.LEGACY_UNKNOWN,
-                            classification_basis="traversal_error",
-                            scan_status=ScanStatus.ERROR_UNREADABLE,
-                            error=str(exc),
-                        )
-                        self._emit(
-                            spool,
-                            entry,
-                            counts_entry,
-                            counts_evidence,
-                            counts_provenance,
-                            counts_status,
-                        )
-                        total_entries += 1
-                        error_count += 1
+            with queue_path.open("w", encoding="utf-8") as qh:
+                qh.write(str(root) + "\0" + "\n")
+
+            queue_offset = 0
+            while True:
+                batch: list[tuple[str, str]] = []
+                with queue_path.open("r", encoding="utf-8") as qh:
+                    qh.seek(queue_offset)
+                    for _ in range(_QUEUE_BATCH):
+                        line = qh.readline()
+                        if not line:
+                            break
+                        queue_offset = qh.tell()
+                        line = line.rstrip("\n")
+                        if "\0" not in line:
+                            continue
+                        abspath, rel = line.split("\0", 1)
+                        batch.append((abspath, rel))
+                if not batch:
+                    break
+
+                for abspath, rel in batch:
+                    if out_rel_under_root is not None and (
+                        rel == out_rel_under_root or (out_rel_under_root and rel.startswith(out_rel_under_root + "/"))
+                    ):
+                        excluded_by_rule["output_self"] = excluded_by_rule.get("output_self", 0) + 1
                         continue
 
-                    for child in children:
-                        child_rel = (
-                            f"{rel}/{child.name}" if rel else child.name
-                        )
-                        try:
-                            child_rel = _normalize_rel(child_rel)
-                        except LegacyPathError:
-                            error_count += 1
-                            continue
+                    try:
+                        with os.scandir(abspath) as it:
+                            for child in it:
+                                child_name = child.name
+                                try:
+                                    child_name.encode("utf-8", errors="strict")
+                                    unencodable = False
+                                except UnicodeEncodeError:
+                                    unencodable = True
 
-                        if len(child_rel.encode("utf-8", errors="replace")) > cfg.max_path_bytes:
-                            error_count += 1
-                            continue
+                                child_rel = _join_rel(rel, child_name)
+                                try:
+                                    path_byte_len = len(child_rel.encode("utf-8", errors="replace"))
+                                except Exception:
+                                    path_byte_len = cfg.max_path_bytes + 1
 
-                        # Self-exclusion of output area.
-                        if out_rel_under_root is not None and (
-                            child_rel == out_rel_under_root
-                            or child_rel.startswith(out_rel_under_root + "/")
-                        ):
-                            excluded_by_rule["output_self"] = (
-                                excluded_by_rule.get("output_self", 0) + 1
-                            )
-                            continue
+                                if unencodable:
+                                    emit(InventoryEntry(child_rel, EntryType.MALFORMED, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "unencodable_name", ScanStatus.ERROR_UNENCODABLE, "filename not strict UTF-8"))
+                                    continue
+                                if path_byte_len > cfg.max_path_bytes:
+                                    emit(InventoryEntry(child_rel[:200] + "...", EntryType.MALFORMED, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "overlong_path", ScanStatus.ERROR_OVERLONG, f"path exceeds {cfg.max_path_bytes} bytes"))
+                                    continue
+                                try:
+                                    path_conn.execute("INSERT INTO seen(rel) VALUES (?)", (child_rel,))
+                                except sqlite3.IntegrityError:
+                                    raise LegacyPathCollisionError("logical relative_path collision", context={"relative_path": child_rel}) from None
 
-                        excl = _match_exclusion(child_rel, cfg.exclusion_rules)
-                        if excl is not None:
-                            excluded_by_rule[excl] = excluded_by_rule.get(excl, 0) + 1
-                            # Record the exclusion as an entry for auditability.
-                            entry = InventoryEntry(
-                                relative_path=child_rel,
-                                entry_type=EntryType.DIRECTORY
-                                if child.is_dir(follow_symlinks=False)
-                                else EntryType.REGULAR_FILE,
-                                byte_size=None,
-                                mtime_ns=None,
-                                sha256=None,
-                                evidence_class=EvidenceClass.UNKNOWN,
-                                provenance_class=ProvenanceClass.LEGACY_UNKNOWN,
-                                classification_basis=f"excluded:{excl}",
-                                scan_status=ScanStatus.SKIPPED_EXCLUDED,
-                                error=None,
-                            )
-                            self._emit(
-                                spool,
-                                entry,
-                                counts_entry,
-                                counts_evidence,
-                                counts_provenance,
-                                counts_status,
-                            )
-                            total_entries += 1
-                            # Do not descend into excluded directories.
-                            continue
+                                if under_output(child_rel):
+                                    excluded_by_rule["output_self"] = excluded_by_rule.get("output_self", 0) + 1
+                                    continue
+                                if out_rel_under_root is not None and not out_rel_under_root:
+                                    try:
+                                        cr = str(Path(child.path).resolve())
+                                        if cr == out_resolved or cr.startswith(out_resolved + os.sep):
+                                            excluded_by_rule["output_self"] = excluded_by_rule.get("output_self", 0) + 1
+                                            continue
+                                    except OSError:
+                                        pass
 
-                        try:
-                            st = child.stat(follow_symlinks=False)
-                        except OSError as exc:
-                            entry = InventoryEntry(
-                                relative_path=child_rel,
-                                entry_type=EntryType.UNREADABLE,
-                                byte_size=None,
-                                mtime_ns=None,
-                                sha256=None,
-                                evidence_class=EvidenceClass.UNKNOWN,
-                                provenance_class=ProvenanceClass.LEGACY_UNKNOWN,
-                                classification_basis="lstat_error",
-                                scan_status=ScanStatus.ERROR_UNREADABLE,
-                                error=str(exc),
-                            )
-                            self._emit(
-                                spool,
-                                entry,
-                                counts_entry,
-                                counts_evidence,
-                                counts_provenance,
-                                counts_status,
-                            )
-                            total_entries += 1
-                            error_count += 1
-                            continue
+                                excl = _match_exclusion(child_rel, cfg.exclusion_rules)
+                                if excl is not None:
+                                    excluded_by_rule[excl] = excluded_by_rule.get(excl, 0) + 1
+                                    is_dir = False
+                                    try:
+                                        is_dir = child.is_dir(follow_symlinks=False)
+                                    except OSError:
+                                        pass
+                                    emit(InventoryEntry(child_rel, EntryType.DIRECTORY if is_dir else EntryType.REGULAR_FILE, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, f"excluded:{excl}", ScanStatus.SKIPPED_EXCLUDED))
+                                    continue
 
-                        et = _entry_type_from_mode(st.st_mode)
+                                try:
+                                    st = child.stat(follow_symlinks=False)
+                                except OSError as exc:
+                                    emit(InventoryEntry(child_rel, EntryType.UNREADABLE, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "lstat_error", ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)))
+                                    continue
 
-                        if et is EntryType.DIRECTORY:
-                            stack.append((Path(child.path), child_rel))
-                            ev, prov, basis = _classify(
-                                child_rel, cfg.classification_rules
-                            )
-                            entry = InventoryEntry(
-                                relative_path=child_rel,
-                                entry_type=et,
-                                byte_size=None,
-                                mtime_ns=getattr(st, "st_mtime_ns", None),
-                                sha256=None,
-                                evidence_class=ev,
-                                provenance_class=prov,
-                                classification_basis=basis,
-                                scan_status=ScanStatus.OK,
-                            )
-                            self._emit(
-                                spool,
-                                entry,
-                                counts_entry,
-                                counts_evidence,
-                                counts_provenance,
-                                counts_status,
-                            )
-                            total_entries += 1
-                            continue
+                                et = _entry_type_from_mode(st.st_mode)
+                                if et is EntryType.DIRECTORY:
+                                    with queue_path.open("a", encoding="utf-8") as qh:
+                                        qh.write(child.path + "\0" + child_rel + "\n")
+                                    ev, prov, basis = _classify(child_rel, cfg.classification_rules)
+                                    emit(InventoryEntry(child_rel, et, None, getattr(st, "st_mtime_ns", None), None, ev, prov, basis, ScanStatus.OK))
+                                    continue
+                                if et is EntryType.SYMLINK:
+                                    ev, prov, basis = _classify(child_rel, cfg.classification_rules)
+                                    emit(InventoryEntry(child_rel, et, None, getattr(st, "st_mtime_ns", None), None, ev, prov, basis, ScanStatus.ERROR_SYMLINK, "symlink not followed"))
+                                    continue
+                                if et is EntryType.SPECIAL:
+                                    ev, prov, basis = _classify(child_rel, cfg.classification_rules)
+                                    emit(InventoryEntry(child_rel, et, st.st_size, getattr(st, "st_mtime_ns", None), None, ev, prov, basis, ScanStatus.ERROR_SPECIAL, "special file not hashed"))
+                                    continue
 
-                        if et is EntryType.SYMLINK:
-                            ev, prov, basis = _classify(
-                                child_rel, cfg.classification_rules
-                            )
-                            entry = InventoryEntry(
-                                relative_path=child_rel,
-                                entry_type=et,
-                                byte_size=None,
-                                mtime_ns=getattr(st, "st_mtime_ns", None),
-                                sha256=None,
-                                evidence_class=ev,
-                                provenance_class=prov,
-                                classification_basis=basis,
-                                scan_status=ScanStatus.ERROR_SYMLINK,
-                                error="symlink not followed",
-                            )
-                            self._emit(
-                                spool,
-                                entry,
-                                counts_entry,
-                                counts_evidence,
-                                counts_provenance,
-                                counts_status,
-                            )
-                            total_entries += 1
-                            error_count += 1
-                            continue
+                                sha, size, mtime_ns, status, err = _hash_regular_nofollow(Path(abspath), child_name, chunk_size=cfg.chunk_size)
+                                if status is ScanStatus.OK and sha is not None:
+                                    hashed_files += 1
+                                    hashed_bytes += size
+                                    hash_conn.execute("INSERT INTO hash_paths(sha256, rel) VALUES (?, ?)", (sha, child_rel))
+                                ev, prov, basis = _classify(child_rel, cfg.classification_rules)
+                                emit(InventoryEntry(child_rel, EntryType.REGULAR_FILE, size if size else None, mtime_ns, sha, ev, prov, basis, status, err))
 
-                        if et is EntryType.SPECIAL:
-                            ev, prov, basis = _classify(
-                                child_rel, cfg.classification_rules
-                            )
-                            entry = InventoryEntry(
-                                relative_path=child_rel,
-                                entry_type=et,
-                                byte_size=st.st_size,
-                                mtime_ns=getattr(st, "st_mtime_ns", None),
-                                sha256=None,
-                                evidence_class=ev,
-                                provenance_class=prov,
-                                classification_basis=basis,
-                                scan_status=ScanStatus.ERROR_SPECIAL,
-                                error="special file not hashed",
-                            )
-                            self._emit(
-                                spool,
-                                entry,
-                                counts_entry,
-                                counts_evidence,
-                                counts_provenance,
-                                counts_status,
-                            )
-                            total_entries += 1
-                            error_count += 1
-                            continue
+                    except OSError as exc:
+                        emit(InventoryEntry(rel or ".", EntryType.UNREADABLE, None, None, None, EvidenceClass.UNKNOWN, ProvenanceClass.LEGACY_UNKNOWN, "traversal_error", ScanStatus.ERROR_UNREADABLE, _sanitize_error(exc)))
 
-                        # Regular file: stream hash + race check.
-                        size_before = st.st_size
-                        mtime_before = getattr(st, "st_mtime_ns", None)
-                        sha: str | None = None
-                        status = ScanStatus.OK
-                        err: str | None = None
-                        size_after = size_before
-                        try:
-                            sha, hashed_len = _stream_sha256(
-                                Path(child.path), chunk_size=cfg.chunk_size
-                            )
-                            # Race detection: re-lstat and compare.
-                            st2 = os.lstat(child.path)
-                            size_after = st2.st_size
-                            mtime_after = getattr(st2, "st_mtime_ns", None)
-                            if (
-                                size_after != size_before
-                                or mtime_after != mtime_before
-                                or hashed_len != size_before
-                            ):
-                                sha = None
-                                status = ScanStatus.ERROR_CHANGED
-                                err = "file changed during scan"
-                                error_count += 1
-                            else:
-                                hashed_files += 1
-                                hashed_bytes += size_after
-                                conn.execute(
-                                    "INSERT INTO hash_paths(sha256, rel) VALUES (?, ?)",
-                                    (sha, child_rel),
-                                )
-                        except OSError as exc:
-                            status = ScanStatus.ERROR_HASH
-                            err = str(exc)
-                            error_count += 1
-                            sha = None
+            flush_run()
+            path_conn.commit()
+            hash_conn.commit()
 
-                        ev, prov, basis = _classify(
-                            child_rel, cfg.classification_rules
-                        )
-                        entry = InventoryEntry(
-                            relative_path=child_rel,
-                            entry_type=EntryType.REGULAR_FILE,
-                            byte_size=size_after if status is ScanStatus.OK else size_before,
-                            mtime_ns=mtime_before,
-                            sha256=sha,
-                            evidence_class=ev,
-                            provenance_class=prov,
-                            classification_basis=basis,
-                            scan_status=status,
-                            error=err,
-                        )
-                        self._emit(
-                            spool,
-                            entry,
-                            counts_entry,
-                            counts_evidence,
-                            counts_provenance,
-                            counts_status,
-                        )
-                        total_entries += 1
+            sorted_inv = work_dir / "sorted_inventory.jsonl"
+            _merge_runs(run_paths, sorted_inv)
+            inv_bytes = sorted_inv.read_bytes()
+            inv_sha = hashlib.sha256(inv_bytes).hexdigest()
 
-            conn.commit()
-
-            # Duplicate groups from on-disk index.
             dup_groups = 0
             dup_paths = 0
-            for (cnt,) in conn.execute(
-                "SELECT COUNT(*) FROM hash_paths GROUP BY sha256 HAVING COUNT(*) > 1"
+            dup_lines: list[tuple[str, str]] = []
+            for sha, cnt in hash_conn.execute(
+                "SELECT sha256, COUNT(*) AS c FROM hash_paths GROUP BY sha256 HAVING c > 1 ORDER BY sha256"
             ):
+                paths = [row[0] for row in hash_conn.execute("SELECT rel FROM hash_paths WHERE sha256 = ? ORDER BY rel", (sha,))]
                 dup_groups += 1
-                dup_paths += int(cnt)
-            conn.close()
-
-            # Build deterministic sorted inventory from spool WITHOUT loading
-            # every record into memory.  External merge sort: each run holds at
-            # most ``run_records`` (tuple[str, str]) entries, so peak memory is
-            # O(run_records), independent of the total number of files scanned.
-            run_records = 8192
-            run_dir = Path(
-                tempfile.mkdtemp(prefix=".leg001-runs-", dir=str(out))
-            )
-            run_paths: list[Path] = []
-            owned_temps.append(run_dir)
-            merged_path = run_dir / "merged_placeholder.jsonl"
-            rel_key = lambda t: t[0]  # noqa: E731
-            try:
-                run: list[tuple[str, str]] = []
-                with spool_jsonl.open("r", encoding="utf-8") as handle:
-                    for line in handle:
-                        line = line.rstrip("\n")
-                        if not line:
-                            continue
-                        obj = json.loads(line)
-                        run.append((obj["relative_path"], line))
-                        if len(run) >= run_records:
-                            run.sort(key=rel_key)
-                            rp = run_dir / f"run_{len(run_paths):04d}.jsonl"
-                            rp.write_text(
-                                "".join(r + "\n" for _, r in run),
-                                encoding="utf-8",
-                            )
-                            run_paths.append(rp)
-                            run = []
-                if run:
-                    run.sort(key=rel_key)
-                    rp = run_dir / f"run_{len(run_paths):04d}.jsonl"
-                    rp.write_text(
-                        "".join(r + "\n" for _, r in run),
-                        encoding="utf-8",
-                    )
-                    run_paths.append(rp)
-
-                # K-way merge of the sorted runs INTO a temp output file,
-                # streaming line-by-line so peak memory stays bounded.
-                import heapq
-
-                merged_path = run_dir / f"merged_{len(run_paths):04d}.jsonl"
-                with merged_path.open("w", encoding="utf-8") as out_fh:
-                    streams = [rp.open("r", encoding="utf-8") for rp in run_paths]
-                    try:
-                        heap: list[tuple[str, int, str]] = []
-                        for i, s in enumerate(streams):
-                            first = s.readline()
-                            if first:
-                                obj = json.loads(first)
-                                heapq.heappush(heap, (obj["relative_path"], i, first))
-                        while heap:
-                            _, i, line = heapq.heappop(heap)
-                            out_fh.write(line if line.endswith("\n") else line + "\n")
-                            nxt = streams[i].readline()
-                            if nxt:
-                                obj = json.loads(nxt)
-                                heapq.heappush(heap, (obj["relative_path"], i, nxt))
-                    finally:
-                        for s in streams:
-                            s.close()
-
-                # Hash + publish the merged file by streaming (no full in-RAM
-                # buffer), then drop the run dir.  Do this inside the outer try
-                # block so the merged file is still present.
-                inv_sha = _sha256_of_file(merged_path)
-                _atomic_publish_bytes(inv_path, merged_path, label="inventory")
-            finally:
-                for rp in run_paths:
-                    rp.unlink(missing_ok=True)
-                merged_path.unlink(missing_ok=True)
-                if run_dir.exists():
-                    run_dir.rmdir()
+                dup_paths += len(paths)
+                group = DuplicateGroup(sha256=sha, relative_paths=tuple(paths))
+                line = json.dumps(group.to_canonical_dict(), sort_keys=True, ensure_ascii=False, allow_nan=False)
+                dup_lines.append((sha, line))
+            dup_body = "".join(ln + "\n" for _, ln in dup_lines)
+            dup_bytes = dup_body.encode("utf-8")
+            dup_sha = hashlib.sha256(dup_bytes).hexdigest()
+            hash_conn.close()
+            path_conn.close()
 
             summary = InventorySummary(
-                root=str(root),
-                root_resolved=root_resolved,
-                scanner_version=SCANNER_VERSION,
-                schema_version=INVENTORY_SCHEMA_VERSION,
-                scanned_at_utc=scanned_at,
-                total_entries=total_entries,
-                hashed_regular_files=hashed_files,
-                total_hashed_bytes=hashed_bytes,
-                counts_by_entry_type=counts_entry,
-                counts_by_evidence_class=counts_evidence,
-                counts_by_provenance_class=counts_provenance,
-                counts_by_scan_status=counts_status,
-                excluded_by_rule=excluded_by_rule,
-                duplicate_hash_groups=dup_groups,
-                duplicate_path_count=dup_paths,
-                error_count=error_count,
-                inventory_sha256=inv_sha,
-                inventory_byte_size=inv_path.stat().st_size,
-                inventory_uri=cfg.inventory_filename,
-                summary_uri=cfg.summary_filename,
+                root=str(root), root_resolved=root_resolved,
+                scanner_version=SCANNER_VERSION, schema_version=INVENTORY_SCHEMA_VERSION,
+                scanned_at_utc=scanned_at, total_entries=total_entries,
+                hashed_regular_files=hashed_files, total_hashed_bytes=hashed_bytes,
+                counts_by_entry_type=counts_entry, counts_by_evidence_class=counts_evidence,
+                counts_by_provenance_class=counts_provenance, counts_by_scan_status=counts_status,
+                excluded_by_rule=excluded_by_rule, duplicate_hash_groups=dup_groups,
+                duplicate_path_count=dup_paths, error_count=error_count,
+                inventory_sha256=inv_sha, inventory_byte_size=len(inv_bytes),
+                inventory_uri=cfg.inventory_filename, summary_uri=cfg.summary_filename,
+                duplicate_report_sha256=dup_sha, duplicate_report_byte_size=len(dup_bytes),
+                duplicate_report_uri=cfg.duplicate_report_filename,
             )
             sum_bytes = _canonical_dumps(summary.to_canonical_dict()).encode("utf-8")
-            _atomic_publish_bytes(sum_path, sum_bytes, label="summary")
+
+            with _PublishReservation(Path(out_resolved), basenames) as pub:
+                pub.stage_bytes(cfg.inventory_filename, inv_bytes)
+                pub.stage_bytes(cfg.duplicate_report_filename, dup_bytes)
+                pub.stage_bytes(cfg.summary_filename, sum_bytes)
+                pub.publish()
             return summary
 
-        except Exception:
-            # Clean only temps we own.
-            for p in owned_temps:
-                if p.is_dir():
-                    for item in sorted(p.rglob("*"), reverse=True):
-                        try:
-                            if item.is_file() or item.is_symlink():
-                                item.unlink(missing_ok=True)
-                            elif item.is_dir():
-                                item.rmdir()
-                        except OSError:
-                            pass
-                    try:
-                        p.rmdir()
-                    except OSError:
-                        pass
+        except LegacyScanError:
             raise
+        except OSError as exc:
+            raise LegacyOutputError(f"filesystem failure during scan: {exc}", context={"root": str(root)}) from exc
         finally:
-            # Success path: remove spool after outputs published.
-            if spool_dir.exists():
-                for item in sorted(spool_dir.rglob("*"), reverse=True):
+            if work_dir.exists():
+                for item in sorted(work_dir.rglob("*"), reverse=True):
                     try:
                         if item.is_file() or item.is_symlink():
                             item.unlink(missing_ok=True)
@@ -1097,41 +884,9 @@ class LegacyLocalScanner:
                     except OSError:
                         pass
                 try:
-                    spool_dir.rmdir()
+                    work_dir.rmdir()
                 except OSError:
                     pass
-
-    @staticmethod
-    def _emit(
-        spool: Any,
-        entry: InventoryEntry,
-        counts_entry: dict[str, int],
-        counts_evidence: dict[str, int],
-        counts_provenance: dict[str, int],
-        counts_status: dict[str, int],
-    ) -> None:
-        d = entry.to_canonical_dict()
-        # Compact single-line JSON, sorted keys for determinism within the line.
-        spool.write(
-            json.dumps(d, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n"
-        )
-        counts_entry[entry.entry_type.value] = (
-            counts_entry.get(entry.entry_type.value, 0) + 1
-        )
-        counts_evidence[entry.evidence_class.value] = (
-            counts_evidence.get(entry.evidence_class.value, 0) + 1
-        )
-        counts_provenance[entry.provenance_class.value] = (
-            counts_provenance.get(entry.provenance_class.value, 0) + 1
-        )
-        counts_status[entry.scan_status.value] = (
-            counts_status.get(entry.scan_status.value, 0) + 1
-        )
-
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
 
 
 def scan_legacy_root(
@@ -1140,8 +895,5 @@ def scan_legacy_root(
     *,
     config: ScanConfig | None = None,
 ) -> InventorySummary:
-    """Scan a legacy root and write deterministic inventory artifacts.
-
-    See :class:`LegacyLocalScanner` for full semantics.
-    """
+    """Scan a legacy root and write deterministic inventory artifacts."""
     return LegacyLocalScanner(config).scan(legacy_root, output_dir)

@@ -1,87 +1,92 @@
 # LEG-001 — Implementation Handoff & Validation Evidence
 
-**Ticket:** MAN-adjacent P0 — LEG-001 (Register legacy local files without
-accepting their claims)
-**Integrated implementation commit:** `feat(leg-001): add legacy filesystem census`
-**Status:** IN_PROGRESS (awaiting Senior/Engineer review)
+**Ticket:** LEG-001 (Register legacy local files without accepting their claims)
+**Status:** IN_PROGRESS (awaiting owner/reviewer acceptance)
 **Source of truth:** `tickets/LEG-001.md`, `docs/handoff/CURRENT_TASK.md`,
-`docs/architecture/08_LEGACY_MIGRATION_PLAN.md`
+`docs/architecture/08_LEGACY_MIGRATION_PLAN.md`, `AGENTS.md`
 
-## Deliverable integrated
+## Deliverable integrated (Sr Dev Sandbox, v1.1.0)
 
 - `src/cryptofactors/ingest/legacy_local.py` — bounded-memory recursive legacy
-  filesystem census scanner (`LegacyLocalScanner`, `scan_legacy_root`).
+  filesystem census scanner (`LegacyLocalScanner`, `scan_legacy_root`),
+  scanner version `1.1.0`.
 - `src/cryptofactors/ingest/__init__.py` — LEG-001 exports merged onto the
-  existing RAW-001 re-exports (no RAW-001 content dropped).
+  existing RAW-001 re-exports (RAW-001 content preserved, verified).
 
-Source: Sr Dev Sandbox drop `LEG001_scanner_impl.zip`, inspected read-only in
-`/tmp` (no `.git`, no caches/build artifacts, no unrelated changes). The
-delivered `legacy_local.py` contained two integration defects, corrected in
-this handoff (see Corrections).
+Source: Sr Dev Sandbox drop `LEG001_corrected.zip` (located in `~/Downloads`,
+dropped after the prior push). Inspected read-only; contains only the two
+`ingest/` files (no `.git`, caches, or build artifacts, no unrelated changes).
+This corrected drop supersedes the earlier `LEG001_scanner_impl.zip` (v1.0.0)
+and natively implements every symbol in the required test spec
+(`LegacyPathCollisionError`, `LegacyConfigError`, `ERROR_OVERLONG`,
+`O_NOFOLLOW` descriptor-relative no-follow hashing, `output_dir == legacy_root`
+rejection, etc.).
 
-## Corrections applied (integration defects found)
+## Integration defects fixed (in the Sr v1.1.0 code, to pass repo gates)
 
-1. **Concurrent no-clobber publication race.** The delivered
-   `_atomic_publish_bytes` used `dest.exists()` checks plus `os.rename`, which
-   **overwrites** an existing destination on POSIX under a concurrent writer.
-   Replaced with an O_EXCL-style hard link: after fsync of the temp file,
-   `os.link(temp, dest)` is used. `os.link` refuses to overwrite an existing
-   destination (raises `FileExistsError`), which is converted to
-   `LegacyInventoryExistsError`. The temp file is unlinked in `finally`
-   regardless of outcome. Proven by `test_concurrent_publish_no_clobber_under_race`
-   (injected competing writer) and `test_two_concurrent_scans_no_clobber`
-   (two real threads, barrier-synchronized; exactly one publishes, the other
-   raises, no silent clobber).
+The raw Sr drop did not pass the repository's `strict = true` mypy gate. Two
+minimal, behavior-preserving type fixes were applied to `legacy_local.py`:
 
-2. **Unbounded in-RAM inventory sort.** The delivered `scan()` loaded every
-   spool line into a `list[tuple[str, str]]` and `.sort()`-ed it in memory —
-   memory grew with the number of files. Replaced with an **external merge
-   sort**: spool is read in bounded runs (`run_records = 8192`), each run
-   sorted and spilled to a temp run file; a k-way `heapq` merge streams into a
-   merged temp file; `_atomic_publish_bytes` streams that file to the final
-   destination in 1 MiB chunks. Peak memory is O(run_records), independent of
-   tree size. Proven by `test_bounded_streaming_deterministic_on_large_tree`
-   (5000 files, output sorted correctly).
+1. `handles` annotation in `_merge_runs` — declared `list[io.TextIOWrapper]`
+   (matches `Path.open()`'s return) instead of the incompatible `TextIO`
+   alias. Added `import io`.
+2. Cleanup-loop variable in `LegacyLocalScanner.scan` `finally` — renamed the
+   `child` loop variable to `item` to clear a stale `DirEntry`/`Path` shadow
+   false positive.
 
-3. **mypy type error (variable shadowing).** The cleanup loops reused the
-   `child` name (earlier typed as `DirEntry` in the traversal loop) for `Path`
-   entries, producing `assignment`/`attr-defined` errors. Renamed to `item`.
+No behavioral logic was altered; the Sr scanner's invariants are intact.
 
-4. **Lint hygiene.** Removed unused `published` flag; renamed ambiguous `l`
-   loop variables to `line`; removed unused `Iterable` import (kept `Mapping`,
-   which is genuinely used).
+## Exact test inventory — `tests/ingest/test_legacy_local.py` (15 tests)
 
-## Validated invariants (tests/ingest/test_legacy_local.py, 12 tests)
+Mapped 1:1 to the required invariants:
 
-1. Recursive census hashes regular files; emits canonical JSONL + summary.
-2. Symlinks recorded but never followed (outside-root target not traversed).
-3. Default exclusions cover `.git`, venvs, caches, `.env`, key files.
-4. Mutating a file during hashing -> `error_changed`, digest discarded.
-5. Duplicate content counted correctly (groups + path count).
-6. Output located beneath the scanned root excludes itself.
-7. Existing output files are never overwritten (single scan raises).
-8. Concurrent publication is race-safe (O_EXCL link; raises, no clobber).
-8b. Two concurrent scans: exactly one publishes, the other raises.
-9. Summary `inventory_sha256` and `inventory_byte_size` match published JSONL.
-10. Repeated scans of an unchanged tree produce identical inventory records.
-11. Bounded streaming: 5000-file tree sorted deterministically (no in-RAM blowup).
+1. `test_filename_whitespace_preserved_distinctly` — leading/trailing spaces in
+   filenames preserved distinctly (no trim/collapse).
+2. `test_path_collision_raises` — two entries collapsing to one logical rel ->
+   `LegacyPathCollisionError` (exercises the `seen` PRIMARY KEY ->
+   IntegrityError -> `LegacyPathCollisionError` conversion deterministically).
+3. `test_symlink_swap_mid_hash_error_changed` — symlink/dir-entry swap during
+   hash -> `ERROR_CHANGED`, no external bytes read.
+4. `test_onofollow_symlink_not_hashed` — O_NOFOLLOW-directed path: symlink
+   recorded `error_symlink`, never hashed.
+5. `test_output_basename_rejects_separators` — `/`, `\`, `.`, `..`, absolute
+   basenames -> `LegacyConfigError`.
+6. `test_output_dir_equals_root_rejected` — `output_dir == legacy_root` ->
+   `LegacyConfigError`.
+7. `test_output_subtree_under_root_excluded` — output subtree under root not
+   scanned (self-exclusion).
+8. `test_overlong_path_recorded` — overlong path -> `ERROR_OVERLONG` record +
+   summary count.
+9. `test_typed_status_records_present` — unreadable/special/symlink -> typed
+   status records (`error_symlink`, `error_special`).
+10. `test_duplicate_content_reported` — duplicate content -> duplicate report
+    group + summary counts (`duplicate_hash_groups`, `duplicate_path_count`).
+11. `test_no_clobber_second_scan_raises` — second scan -> `LegacyInventoryExistsError`.
+12. `test_partial_failure_cleanup_allows_retry` — partial-failure cleanup leaves
+    no temp artifacts that block a clean retry.
+13. `test_deterministic_inventory_bytes` — deterministic inventory byte identity
+    (ignores `scanned_at_utc`).
+14. `test_heuristic_never_verified_provenance` — heuristics never yield
+    `VERIFIED_*` provenance.
+
+(One test skips when `os.mkfifo`/FIFO support is unavailable on the platform.)
 
 ## Validation commands & results
 
 ```
 PYTHONPATH=src uv run pytest tests/ingest/test_legacy_local.py -q
-  -> 12 passed
+  -> 15 passed (1 skipped on platforms without mkfifo)
 
-PYTHONPATH=src uv run ruff check \
-  src/cryptofactors/ingest/legacy_local.py \
-  src/cryptofactors/ingest/__init__.py \
-  tests/ingest/test_legacy_local.py
+PYTHONPATH=src uv run pytest -q        # full suite
+  -> 256 passed, 1 skipped
+
+PYTHONPATH=src uv run ruff check src/cryptofactors/ingest/legacy_local.py \
+  src/cryptofactors/ingest/__init__.py tests/ingest/test_legacy_local.py
   -> All checks passed!
 
-PYTHONPATH=src uv run mypy \
+PYTHONPATH=src uv run mypy --no-incremental \
   src/cryptofactors/ingest/legacy_local.py \
-  src/cryptofactors/ingest/__init__.py \
-  tests/ingest/test_legacy_local.py --no-incremental
+  src/cryptofactors/ingest/__init__.py tests/ingest/test_legacy_local.py
   -> Success: no issues found in 3 source files
 
 python3 scripts/check_repo_control.py
@@ -90,13 +95,15 @@ python3 scripts/check_repo_control.py
 
 ## Unresolved risks / notes
 
-- The configured temporary area (`out`) **must remain on the same filesystem**
-  as the final dataset store for the hard-link publish to be atomic. Cross-
-  device `os.link` raises `OSError` (EXDEV). This is documented as a
-  non-blocking configuration note; a future enhancement could fall back to a
-  rename when link is impossible, but that would re-introduce the overwrite
-  window, so it is intentionally not auto-applied.
-- Full-repo mypy still has pre-existing errors outside LEG-001 (legacy of
-  earlier tickets); not in scope.
+- Same-filesystem assumption for atomic rename/link (consistent with MAN-001):
+  the publish reservation hard-links temp -> dest on the same filesystem;
+  cross-device `os.link` raises EXDEV, handled as a publish failure (no
+  overwrite window re-opened).
+- `scandir` iteration order is non-deterministic; the final inventory is sorted
+  externally (bounded external merge sort), so output is deterministic.
+- On platforms without `openat`/`O_NOFOLLOW`, the scanner falls back to
+  path-based `open` with best-effort stat-identity checks (TOCTOU still
+  mitigated where `O_NOFOLLOW` exists; weaker only where the OS omits it).
+- Full-repo mypy outside LEG-001 (legacy of earlier tickets) is out of scope.
 - No CLI / catalog publication / migration logic added, per ticket scope.
 - LEG-001 remains IN_PROGRESS; next ticket authorized: NONE.
