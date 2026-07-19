@@ -10,3 +10,4 @@ Governing documents:
 - docs/architecture/08_LEGACY_MIGRATION_PLAN.md
 - docs/reviews/REVIEW-0009_RAW-001_FINAL.md
 - docs/reviews/REVIEW-0011_MAN-001_FINAL.md
+- docs/reviews/LEG-001_INTEGRATION.md
