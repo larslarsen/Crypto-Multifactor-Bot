@@ -11,3 +11,4 @@ Governing documents:
 - docs/architecture/08_LEGACY_MIGRATION_PLAN.md
 - docs/reviews/REVIEW-0012_LEG-001_FINAL.md
 - docs/reviews/REVIEW-0005_AUD-001_TOOLKIT_CHANGES_REQUIRED.md
+- docs/reviews/AUD-001_INTEGRATION.md
