@@ -177,7 +177,9 @@ def test_full_mode_gaps_classified_against_final_median(tmp_path: Path) -> None:
     ts = [0]
     for d in deltas:
         ts.append(ts[-1] + d)
-    ts = ts[1:]  # cumulative timestamps (epoch seconds), one per row
+    # Keep the origin (101 timestamp rows) so inter-row deltas are exactly
+    # [100, 100] + [1]*98. Do NOT slice ts[1:] here -- dropping the origin 0
+    # removes one 100s delta and the CSV would expose only one gap.
     rows = "\n".join(f"{t},{i}" for i, t in enumerate(ts))
     csv = tmp_path / "cad.csv"
     csv.write_text(f"ts,val\n{rows}\n")
