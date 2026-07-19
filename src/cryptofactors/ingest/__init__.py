@@ -1,7 +1,25 @@
-"""Ingest-layer primitives (RAW-001: content-addressed raw object writer)."""
+"""Ingest-layer primitives (RAW-001 raw store + LEG-001 legacy scanner)."""
 
 from __future__ import annotations
 
+from cryptofactors.ingest.legacy_local import (
+    ClassificationRule,
+    EntryType,
+    EvidenceClass,
+    ExclusionRule,
+    InventoryEntry,
+    InventorySummary,
+    LegacyInventoryExistsError,
+    LegacyLocalScanner,
+    LegacyOutputError,
+    LegacyPathError,
+    LegacyScanError,
+    LegacyTraversalError,
+    ProvenanceClass,
+    ScanConfig,
+    ScanStatus,
+    scan_legacy_root,
+)
 from cryptofactors.ingest.raw import (
     AcquisitionConflictError,
     AcquisitionMetadata,
@@ -33,6 +51,7 @@ from cryptofactors.ingest.raw import (
 )
 
 __all__ = [
+    # RAW-001
     "AcquisitionConflictError",
     "AcquisitionMetadata",
     "CatalogRegistrationError",
@@ -60,4 +79,21 @@ __all__ = [
     "SqliteRawObjectCatalog",
     "content_addressed_relative_path",
     "reconcile_orphan_temps",
+    # LEG-001
+    "ClassificationRule",
+    "EntryType",
+    "EvidenceClass",
+    "ExclusionRule",
+    "InventoryEntry",
+    "InventorySummary",
+    "LegacyInventoryExistsError",
+    "LegacyLocalScanner",
+    "LegacyOutputError",
+    "LegacyPathError",
+    "LegacyScanError",
+    "LegacyTraversalError",
+    "ProvenanceClass",
+    "ScanConfig",
+    "ScanStatus",
+    "scan_legacy_root",
 ]
