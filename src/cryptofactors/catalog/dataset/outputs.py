@@ -6,6 +6,7 @@ import hashlib
 import stat as statmod
 from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import TypeVar
 
 from cryptofactors.catalog.dataset.canonicalize import canonical_relative_path
 from cryptofactors.catalog.dataset.errors import OutputVerificationError
@@ -15,6 +16,8 @@ from cryptofactors.catalog.dataset.models import (
     RowCountReceipt,
 )
 from cryptofactors.catalog.dataset.paths import assert_relative_safe, lstat_path
+
+_T = TypeVar("_T")
 
 
 def stream_sha256_and_size(path: Path, *, chunk_size: int = 1024 * 1024) -> tuple[str, int]:
@@ -43,9 +46,32 @@ def stream_sha256_and_size(path: Path, *, chunk_size: int = 1024 * 1024) -> tupl
     return digest.hexdigest(), total
 
 
+def _normalize_path_keyed_mapping(
+    mapping: Mapping[str, _T],
+    *,
+    label: str,
+) -> dict[str, _T]:
+    """Re-key a mapping by canonical relative path without collapsing value types.
+
+    Each call site specializes ``_T`` independently (``Path``, row-counter
+    callables, ``RowCountReceipt``, etc.), so inference cannot contaminate one
+    mapping's value type with another's.
+    """
+    out: dict[str, _T] = {}
+    for key, value in mapping.items():
+        path = canonical_relative_path(key)
+        if path in out:
+            raise OutputVerificationError(
+                f"duplicate canonical logical path in {label}",
+                context={"path": path},
+            )
+        out[path] = value
+    return out
+
+
 def verify_outputs(
     *,
-    sources: dict[str, Path],
+    sources: Mapping[str, Path],
     specs: list[OutputFileSpec] | tuple[OutputFileSpec, ...],
     row_count_policy: RowCountPolicy = RowCountPolicy.REQUIRE_VERIFIER,
     row_counters: Mapping[str, Callable[[Path], int]] | None = None,
@@ -59,8 +85,6 @@ def verify_outputs(
     ``ALLOW_UNVERIFIED_DECLARED``, declared rows are accepted with
     ``rows_verified=False``.
     """
-    counters = dict(row_counters or {})
-    receipts = dict(row_receipts or {})
     spec_map: dict[str, OutputFileSpec] = {}
     for s in specs:
         path = canonical_relative_path(s.relative_path)
@@ -78,16 +102,24 @@ def verify_outputs(
             rows_verified=s.rows_verified,
         )
 
-    # Normalize source keys
-    norm_sources: dict[str, Path] = {}
-    for k, v in sources.items():
-        path = canonical_relative_path(k)
-        if path in norm_sources:
-            raise OutputVerificationError(
-                "duplicate logical path in sources",
-                context={"path": path},
-            )
-        norm_sources[path] = v
+    # Four separate specializations of the TypeVar helper — never share a
+    # heterogeneous dict[str, object] across different value types.
+    # Empty defaults are explicitly annotated so mypy does not infer
+    # dict[Never, Never] and contaminate the TypeVar specialization.
+    empty_counters: dict[str, Callable[[Path], int]] = {}
+    empty_receipts: dict[str, RowCountReceipt] = {}
+    norm_sources: dict[str, Path] = _normalize_path_keyed_mapping(
+        sources,
+        label="sources",
+    )
+    norm_counters: dict[str, Callable[[Path], int]] = _normalize_path_keyed_mapping(
+        row_counters if row_counters is not None else empty_counters,
+        label="row counters",
+    )
+    norm_receipts: dict[str, RowCountReceipt] = _normalize_path_keyed_mapping(
+        row_receipts if row_receipts is not None else empty_receipts,
+        label="row receipts",
+    )
 
     missing = set(spec_map) - set(norm_sources)
     unexpected = set(norm_sources) - set(spec_map)
@@ -138,8 +170,8 @@ def verify_outputs(
 
         rows_verified = False
         observed_rows = spec.rows
-        if rel in receipts:
-            rec = receipts[rel]
+        if rel in norm_receipts:
+            rec = norm_receipts[rel]
             if rec.relative_path and canonical_relative_path(rec.relative_path) != rel:
                 raise OutputVerificationError(
                     "row receipt path mismatch",
@@ -147,8 +179,8 @@ def verify_outputs(
                 )
             observed_rows = rec.row_count
             rows_verified = True
-        elif rel in counters:
-            observed_rows = int(counters[rel](src))
+        elif rel in norm_counters:
+            observed_rows = int(norm_counters[rel](src))
             rows_verified = True
         elif row_count_policy is RowCountPolicy.REQUIRE_VERIFIER:
             raise OutputVerificationError(

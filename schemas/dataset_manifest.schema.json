@@ -1,175 +1,350 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Immutable Dataset Manifest",
-  "type": "object",
+  "$defs": {
+    "_CodeIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "title": "Commit",
+          "type": "string"
+        },
+        "lock_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lock Sha256"
+        }
+      },
+      "required": [
+        "commit"
+      ],
+      "title": "_CodeIdentity",
+      "type": "object"
+    },
+    "_DependencyRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "role"
+      ],
+      "title": "_DependencyRef",
+      "type": "object"
+    },
+    "_OutputFileSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "partition": {
+          "additionalProperties": true,
+          "title": "Partition",
+          "type": "object"
+        },
+        "relative_path": {
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relative_path",
+        "uri",
+        "sha256",
+        "rows",
+        "bytes"
+      ],
+      "title": "_OutputFileSpec",
+      "type": "object"
+    },
+    "_PublicationMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "publisher": {
+          "minLength": 1,
+          "title": "Publisher",
+          "type": "string"
+        },
+        "publisher_version": {
+          "minLength": 1,
+          "title": "Publisher Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "created_at",
+        "publisher",
+        "publisher_version"
+      ],
+      "title": "_PublicationMetadata",
+      "type": "object"
+    },
+    "_SchemaIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fingerprint"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "_SchemaIdentity",
+      "type": "object"
+    },
+    "_TransformSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "_TransformSpec",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
+  "description": "Strict schema for the canonical published dataset manifest.",
+  "properties": {
+    "availability_end": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Availability End"
+    },
+    "availability_start": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Availability Start"
+    },
+    "byte_size": {
+      "minimum": 0,
+      "title": "Byte Size",
+      "type": "integer"
+    },
+    "code": {
+      "$ref": "#/$defs/_CodeIdentity"
+    },
+    "code_commit": {
+      "title": "Code Commit",
+      "type": "string"
+    },
+    "config_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Config Sha256",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "dataset_id": {
+      "pattern": "^ds_[a-f0-9]{64}$",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "dataset_type": {
+      "minLength": 1,
+      "title": "Dataset Type",
+      "type": "string"
+    },
+    "dependencies": {
+      "items": {
+        "$ref": "#/$defs/_DependencyRef"
+      },
+      "minItems": 0,
+      "title": "Dependencies",
+      "type": "array"
+    },
+    "event_end": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event End"
+    },
+    "event_start": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Start"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/_OutputFileSpec"
+      },
+      "minItems": 1,
+      "title": "Files",
+      "type": "array"
+    },
+    "manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Manifest Sha256",
+      "type": "string"
+    },
+    "publication": {
+      "$ref": "#/$defs/_PublicationMetadata"
+    },
+    "quality_status": {
+      "title": "Quality Status",
+      "type": "string"
+    },
+    "quality_summary": {
+      "additionalProperties": true,
+      "title": "Quality Summary",
+      "type": "object"
+    },
+    "row_count": {
+      "minimum": 0,
+      "title": "Row Count",
+      "type": "integer"
+    },
+    "schema": {
+      "$ref": "#/$defs/_SchemaIdentity"
+    },
+    "schema_version": {
+      "minLength": 1,
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "supersedes_dataset_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Supersedes Dataset Id"
+    },
+    "transform": {
+      "$ref": "#/$defs/_TransformSpec"
+    }
+  },
   "required": [
     "dataset_id",
     "dataset_type",
     "schema_version",
+    "schema",
     "transform",
     "code_commit",
+    "code",
     "config_sha256",
     "dependencies",
     "files",
     "row_count",
     "byte_size",
     "quality_status",
-    "created_at"
+    "created_at",
+    "publication",
+    "manifest_sha256"
   ],
-  "properties": {
-    "dataset_id": {
-      "type": "string",
-      "pattern": "^ds_[a-f0-9]{64}$"
-    },
-    "dataset_type": {
-      "type": "string",
-      "minLength": 1
-    },
-    "schema_version": {
-      "type": "string",
-      "minLength": 1
-    },
-    "transform": {
-      "type": "object",
-      "required": [
-        "name",
-        "version"
-      ],
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "code_commit": {
-      "type": "string",
-      "minLength": 7
-    },
-    "config_sha256": {
-      "type": "string",
-      "pattern": "^[a-f0-9]{64}$"
-    },
-    "dependencies": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "role"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "kind": {
-            "enum": [
-              "RAW_OBJECT",
-              "DATASET"
-            ]
-          },
-          "role": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "files": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [
-          "sha256",
-          "uri",
-          "rows",
-          "bytes"
-        ],
-        "properties": {
-          "sha256": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          },
-          "uri": {
-            "type": "string"
-          },
-          "rows": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "bytes": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "partition": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "row_count": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "byte_size": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "event_start": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time"
-    },
-    "event_end": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time"
-    },
-    "availability_start": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time"
-    },
-    "availability_end": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time"
-    },
-    "quality_status": {
-      "enum": [
-        "PASS",
-        "PASS_WITH_WARNINGS",
-        "QUARANTINED",
-        "REJECTED"
-      ]
-    },
-    "quality_summary": {
-      "type": "object"
-    },
-    "supersedes_dataset_id": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "created_at": {
-      "type": "string",
-      "format": "date-time"
-    }
-  }
+  "title": "ManifestWireModel",
+  "type": "object"
 }

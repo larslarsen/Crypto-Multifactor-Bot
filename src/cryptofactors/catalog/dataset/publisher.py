@@ -1,8 +1,30 @@
-"""Immutable dataset publication with concurrent-safe reservation protocol (MAN-001)."""
+"""Immutable dataset publication with concurrent-safe reservation protocol (MAN-001).
+
+Publication protocol (corrected per MAN-001 Senior review):
+
+* Build each contender's complete dataset tree in a unique directory beneath
+  ``config.temp_dir()`` on the same filesystem as the final store.
+* Verify all staged outputs and canonical manifest bytes, then ``fsync`` staged
+  files and directories.
+* Coordinate identical concurrent publishers with a per-dataset no-clobber
+  reservation (the canonical final path itself).
+* While holding that reservation, either verify and reuse an already completed
+  identical final dataset, or atomically ``rename`` the completed staged
+  directory into the previously absent final path.
+* Never overwrite or replace any pre-existing final path, including an empty
+  directory.
+* The canonical final path is absent until the complete tree is ready.
+* Losers verify/reuse the winner and remove only their own stage.
+* Owner failure leaves no partial final directory.
+* Published output bytes are physically independent of caller-owned source
+  files (exclusive streaming copy, or a reflink copy-on-write clone with an
+  exclusive streaming-copy fallback).  Hard links are never used.
+"""
 
 from __future__ import annotations
 
 import os
+import errno
 import shutil
 import stat as statmod
 import tempfile
@@ -11,6 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cryptofactors.catalog.dataset.canonicalize import (
+    canonical_relative_path,
     compute_dataset_id,
     compute_manifest_sha256,
     dumps_canonical,
@@ -54,17 +77,48 @@ _DETERMINISTIC_CREATED_AT = datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 
 class _ReservationLost(Exception):
-    """Internal: exclusive mkdir lost to a concurrent publisher."""
+    """Internal: exclusive rename lost to a concurrent publisher."""
 
 
-def _copy_file_streaming_exclusive(
+def _copy_bytes_cow(out_fd: int, in_fd: int, *, chunk_size: int) -> None:
+    """Copy bytes from in_fd to out_fd (integer file descriptors).
+
+    The destination inode is physically independent of the source (a streaming
+    copy), so later writes to the source cannot alter the destination.  On
+    copy-on-write-capable filesystems a reflink clone is preferred when
+    ``os.copy_file_range`` is available, since it also yields an independent
+    inode.
+    """
+    if hasattr(os, "copy_file_range"):
+        try:
+            while True:
+                n = os.copy_file_range(in_fd, out_fd, chunk_size)
+                if n == 0:
+                    break
+            return
+        except OSError:
+            os.lseek(in_fd, 0, os.SEEK_SET)
+            os.lseek(out_fd, 0, os.SEEK_SET)
+    # Manual streaming copy over the raw descriptors (no extra wrappers).
+    while True:
+        chunk = os.read(in_fd, chunk_size)
+        if not chunk:
+            break
+        os.write(out_fd, chunk)
+
+
+def _copy_to_new_inode(
     src: Path, dest: Path, *, chunk_size: int = 1024 * 1024
 ) -> None:
-    """Create dest exclusively (no overwrite) and stream content."""
+    """Create dest exclusively (no overwrite) as an independent copy of src.
+
+    Never shares an inode with ``src``.  Uses a reflink copy-on-write clone when
+    the filesystem supports it, else a streaming copy.  Flushes and ``fsync``s
+    the destination.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     try:
-        fd = os.open(str(dest), flags, 0o644)
+        fd = os.open(str(dest), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
     except FileExistsError as exc:
         raise DatasetPublicationError(
             "output child already exists (no-clobber violation)",
@@ -72,11 +126,7 @@ def _copy_file_streaming_exclusive(
         ) from exc
     try:
         with os.fdopen(fd, "wb") as rout, src.open("rb") as rin:
-            while True:
-                chunk = rin.read(chunk_size)
-                if not chunk:
-                    break
-                rout.write(chunk)
+            _copy_bytes_cow(rout.fileno(), rin.fileno(), chunk_size=chunk_size)
             rout.flush()
             os.fsync(rout.fileno())
     except Exception:
@@ -88,23 +138,7 @@ def _copy_file_streaming_exclusive(
         raise
 
 
-def _link_or_copy_exclusive(src: Path, dest: Path, *, chunk_size: int) -> None:
-    """No-clobber child file creation via hardlink, else exclusive copy."""
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.link(str(src), str(dest))
-        fsync_file(dest)
-        return
-    except FileExistsError as exc:
-        raise DatasetPublicationError(
-            "output child already exists (no-clobber violation)",
-            context={"path": str(dest)},
-        ) from exc
-    except OSError:
-        _copy_file_streaming_exclusive(src, dest, chunk_size=chunk_size)
-
-
-def _publish_manifest_atomic(final_dir: Path, manifest_bytes: bytes) -> None:
+def _write_manifest_atomic(final_dir: Path, manifest_bytes: bytes) -> None:
     """Write canonical manifest last as the final acceptance marker (no overwrite)."""
     final_man = final_dir / "manifest.json"
     st = lstat_path(final_man)
@@ -119,33 +153,21 @@ def _publish_manifest_atomic(final_dir: Path, manifest_bytes: bytes) -> None:
         dir=str(final_dir),
     )
     tmp_path = Path(tmp_name)
-    published = False
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(manifest_bytes)
             handle.flush()
             os.fsync(handle.fileno())
-        try:
-            os.link(str(tmp_path), str(final_man))
-            published = True
-        except FileExistsError as exc:
+        if lstat_path(final_man) is not None:
             raise DatasetPublicationError(
-                "manifest.json appeared during exclusive publish (no-clobber)",
+                "manifest.json already exists (no-clobber)",
                 context={"path": str(final_man)},
-            ) from exc
-        except OSError:
-            # Same-directory rename is atomic; refuse if dest exists.
-            if lstat_path(final_man) is not None:
-                raise DatasetPublicationError(
-                    "manifest.json already exists (no-clobber)",
-                    context={"path": str(final_man)},
-                )
-            os.rename(str(tmp_path), str(final_man))
-            published = True
+            )
+        # Same-directory rename is atomic and refuses if dest exists.
+        os.rename(str(tmp_path), str(final_man))
         fsync_file(final_man)
     finally:
         if tmp_path.exists():
-            # Drop partial name (hardlink leaves both names until unlink).
             tmp_path.unlink(missing_ok=True)
 
 
@@ -283,9 +305,18 @@ class DatasetPublisher:
         manifest_uri = (rel_dir / "manifest.json").as_posix()
         publication_uri = rel_dir.as_posix()
 
+        # Canonicalize source keys so the publish path indexes outputs by the
+        # same canonical logical path that verify_outputs canonicalized specs to.
+        # verify_outputs already rejected canonical-key collisions in sources,
+        # specs, row counters, and row receipts (typed OutputVerificationError),
+        # so no KeyError can occur below.
+        canon_sources: dict[str, Path] = {
+            canonical_relative_path(k): v for k, v in plan.output_sources.items()
+        }
+
         on_disk, reused = self._ensure_published(
             final_dir,
-            sources=dict(plan.output_sources),
+            sources=canon_sources,
             manifest=manifest,
             root=root,
         )
@@ -366,7 +397,7 @@ class DatasetPublisher:
                     )
                     return loaded, False
                 except _ReservationLost:
-                    # Concurrent owner won the mkdir; loop and wait/reuse.
+                    # Concurrent owner won the rename; loop and wait/reuse.
                     continue
 
             if statmod.S_ISLNK(st.st_mode):
@@ -391,7 +422,8 @@ class DatasetPublisher:
                 loaded = self._verify_existing_dataset_strict(final_dir, manifest)
                 return loaded, True
 
-            # Incomplete reservation (no acceptance marker yet).
+            # Incomplete reservation (no acceptance marker yet), or a pre-existing
+            # empty directory that must never be replaced.  Wait for completion.
             if time.monotonic() >= deadline:
                 raise DatasetPublicationInProgressError(
                     "timed out waiting for concurrent publisher to finish",
@@ -413,29 +445,35 @@ class DatasetPublisher:
         manifest: DatasetManifest,
         root: Path,
     ) -> DatasetManifest:
-        """Exclusive mkdir owner: populate outputs, then publish manifest last."""
+        """Build the complete tree in a temp stage, then atomically rename in.
+
+        The canonical final path remains absent until the complete, fsync'd tree
+        is ready.  A rename collision means a concurrent owner already published;
+        we drop our stage and signal loss.  Owner failure before the rename
+        leaves only our own (safe-to-clean) stage, never a partial final path.
+        """
+        stage = Path(
+            tempfile.mkdtemp(dir=str(self._config.temp_dir()), prefix=".stage-")
+        )
+        # Final-tree parent prefixes must exist for the atomic rename.
         final_dir.parent.mkdir(parents=True, exist_ok=True)
         assert_no_symlink_components(final_dir.parent, stop_at=root)
         assert_parents_are_directories(final_dir, stop_at=root)
-
-        try:
-            os.mkdir(str(final_dir))
-        except FileExistsError as exc:
-            raise _ReservationLost() from exc
-        except OSError as exc:
-            raise DatasetPublicationError(
-                f"cannot create final dataset directory: {exc}",
-                context={"path": str(final_dir)},
-            ) from exc
 
         owned_incomplete = True
         try:
             # 1) Populate all declared outputs with no-clobber creation.
             for fspec in manifest.files:
-                src = sources[fspec.relative_path]
-                dest = final_dir / fspec.relative_path
+                try:
+                    src = sources[fspec.relative_path]
+                except KeyError as exc:
+                    raise DatasetPublicationError(
+                        "missing staged source for declared output",
+                        context={"path": fspec.relative_path},
+                    ) from exc
+                dest = stage / fspec.relative_path
                 assert_relative_safe(fspec.relative_path, label="output path")
-                _link_or_copy_exclusive(src, dest, chunk_size=self._chunk_size)
+                _copy_to_new_inode(src, dest, chunk_size=self._chunk_size)
                 h, sz = stream_sha256_and_size(dest, chunk_size=self._chunk_size)
                 if h != fspec.sha256 or sz != fspec.bytes:
                     raise DatasetPublicationError(
@@ -448,25 +486,36 @@ class DatasetPublisher:
             man_bytes = (dumps_canonical(full_manifest_dict(manifest)) + "\n").encode(
                 "utf-8"
             )
-            _publish_manifest_atomic(final_dir, man_bytes)
-            fsync_dir(final_dir)
+            _write_manifest_atomic(stage, man_bytes)
+            fsync_dir(stage)
+            fsync_dir(stage.parent)
+
+            # 3) Atomically expose the complete tree.
+            try:
+                os.rename(str(stage), str(final_dir))
+            except FileExistsError:
+                # Concurrent owner won; remove only our own stage.
+                shutil.rmtree(stage, ignore_errors=True)
+                raise _ReservationLost() from None
+            except OSError as exc:  # ENOTEMPTY / EEXIST on dir->dir rename race
+                if getattr(exc, "errno", None) in (errno.EEXIST, errno.ENOTEMPTY):
+                    shutil.rmtree(stage, ignore_errors=True)
+                    raise _ReservationLost() from None
+                # Any other rename failure during atomic exposure is a
+                # publication failure (never a partial final directory).
+                shutil.rmtree(stage, ignore_errors=True)
+                raise DatasetPublicationError(
+                    f"atomic final rename failed: {exc}", context={"path": str(final_dir)}
+                ) from exc
+            owned_incomplete = False
             fsync_parents(final_dir, stop_at=root)
-            owned_incomplete = False  # accepted
 
             return self._verify_existing_dataset_strict(final_dir, manifest)
         except Exception:
-            # Owner failure before acceptance: clean only our incomplete reservation.
+            # Owner failure before acceptance: clean only our incomplete stage;
+            # never touch another publisher's completed dataset.
             if owned_incomplete:
-                man = final_dir / "manifest.json"
-                st_m = lstat_path(man)
-                accepted = (
-                    st_m is not None
-                    and not statmod.S_ISLNK(st_m.st_mode)
-                    and statmod.S_ISREG(st_m.st_mode)
-                )
-                if not accepted:
-                    # Never delete another publisher's completed dataset.
-                    shutil.rmtree(final_dir, ignore_errors=True)
+                shutil.rmtree(stage, ignore_errors=True)
             raise
 
     def _verify_existing_dataset_strict(

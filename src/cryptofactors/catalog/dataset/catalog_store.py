@@ -19,12 +19,22 @@ from cryptofactors.catalog.dataset.models import (
     DependencyKind,
     PublicationStatus,
 )
+from cryptofactors.catalog.dataset.verify_tree import verify_published_tree
 
 
 def _iso(dt: datetime) -> str:
     if dt.tzinfo is None:
-        raise ValueError("datetime must be timezone-aware")
+        raise CorruptDatasetError(
+            "datetime must be timezone-aware UTC",
+            context={"value": str(dt)},
+        )
     return dt.astimezone(timezone.utc).isoformat()
+
+
+def _iso_coalesce(dt: datetime | None) -> str | None:
+    if dt is None:
+        return None
+    return _iso(dt)
 
 
 def _dumps(value: Mapping[str, Any] | None) -> str:
@@ -48,7 +58,11 @@ class SqliteDatasetCatalog:
     """Atomic registration of dataset, files, and lineage from a verified receipt."""
 
     def __init__(
-        self, database: Path | str, *, connection: sqlite3.Connection | None = None
+        self,
+        database: Path | str,
+        *,
+        connection: sqlite3.Connection | None = None,
+        chunk_size: int = 1024 * 1024,
     ) -> None:
         self._owned = connection is None
         if connection is not None:
@@ -58,6 +72,7 @@ class SqliteDatasetCatalog:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.execute("PRAGMA busy_timeout = 5000")
+        self._chunk_size = chunk_size
 
     def close(self) -> None:
         if self._owned:
@@ -149,6 +164,10 @@ class SqliteDatasetCatalog:
                 ):
                     raise CorruptDatasetError("receipt outputs disagree with manifest")
 
+        # Defect #6: independently confirm the immutable tree still exists and
+        # matches the receipt before touching the catalog.  Read-only.
+        verify_published_tree(receipt, manifest, chunk_size=self._chunk_size)
+
         existing = self.get_dataset(receipt.dataset_id)
         if existing is not None:
             if self._complete_identical_registration(receipt, manifest, existing):
@@ -229,18 +248,24 @@ class SqliteDatasetCatalog:
         manifest: DatasetManifest,
         existing: Mapping[str, Any],
     ) -> bool:
+        """Exact comparison of every persisted field (Defect #5)."""
         if existing["manifest_sha256"] != receipt.manifest_sha256:
             return False
         if existing["manifest_uri"] != receipt.manifest_uri:
             return False
-        if existing.get("publication_uri") not in (None, receipt.publication_uri):
-            if existing.get("publication_uri") != receipt.publication_uri:
-                return False
+        if existing.get("publication_uri") is not None and existing.get(
+            "publication_uri"
+        ) != receipt.publication_uri:
+            return False
         if int(existing["row_count"]) != manifest.statistics.row_count:
             return False
         if int(existing["byte_size"]) != manifest.statistics.byte_size:
             return False
         if existing["dataset_type"] != manifest.dataset_type:
+            return False
+        if existing["schema_version"] != manifest.schema.version:
+            return False
+        if (existing.get("schema_fingerprint") or None) != manifest.schema.fingerprint:
             return False
         if existing["transform_name"] != manifest.transform.name:
             return False
@@ -252,7 +277,27 @@ class SqliteDatasetCatalog:
             return False
         if existing["quality_status"] != manifest.quality_status.value:
             return False
+        if _dumps(manifest.quality_summary) != (existing.get("quality_summary_json") or "{}"):
+            return False
+        if _iso_coalesce(manifest.coverage.event_start) != (
+            existing.get("event_start")
+        ):
+            return False
+        if _iso_coalesce(manifest.coverage.event_end) != (existing.get("event_end")):
+            return False
+        if _iso_coalesce(manifest.coverage.availability_start) != (
+            existing.get("availability_start")
+        ):
+            return False
+        if _iso_coalesce(manifest.coverage.availability_end) != (
+            existing.get("availability_end")
+        ):
+            return False
+        if _iso(receipt.catalog_created_at) != existing.get("created_at"):
+            return False
         if existing.get("supersedes_dataset_id") != manifest.supersedes_dataset_id:
+            return False
+        if not self._publication_status_consistent(existing, manifest):
             return False
 
         files = self.list_files(receipt.dataset_id)
@@ -267,6 +312,7 @@ class SqliteDatasetCatalog:
                 str(row["file_sha256"]) != spec.sha256
                 or int(row["row_count"]) != spec.rows
                 or int(row["byte_size"]) != spec.bytes
+                or _dumps(spec.partition) != (row.get("partition_json") or "{}")
             ):
                 return False
 
@@ -286,6 +332,31 @@ class SqliteDatasetCatalog:
         got_ds = {(str(r["input_dataset_id"]), str(r["role"])) for r in ups}
         if got_raw != expected_raw or got_ds != expected_ds:
             return False
+        return True
+
+    def _publication_status_consistent(
+        self,
+        existing: Mapping[str, Any],
+        manifest: DatasetManifest,
+    ) -> bool:
+        """Validate publication_status vs supersession state (Defect #5)."""
+        status = existing.get("publication_status")
+        # A successor (manifest supersedes another) requires that predecessor to
+        # already be SUPERSEDED; otherwise the chain is inconsistent.
+        if manifest.supersedes_dataset_id:
+            pred = self.get_dataset(manifest.supersedes_dataset_id)
+            if pred is None:
+                return False
+            if pred.get("publication_status") != PublicationStatus.SUPERSEDED.value:
+                return False
+        # If this row is SUPERSEDED, a registered successor must reference it.
+        if status == PublicationStatus.SUPERSEDED.value:
+            ok = self._conn.execute(
+                "SELECT 1 FROM dataset WHERE supersedes_dataset_id = ? LIMIT 1",
+                (existing["dataset_id"],),
+            ).fetchone()
+            if ok is None:
+                return False
         return True
 
     def _insert_all(

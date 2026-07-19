@@ -54,7 +54,13 @@ from cryptofactors.catalog.dataset.models import (
 from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size, verify_outputs
 from cryptofactors.catalog.dataset.parse import load_manifest_bytes, load_manifest_file
 from cryptofactors.catalog.dataset.publisher import DatasetPublisher
+from cryptofactors.catalog.dataset.schema_model import (
+    ManifestWireModel,
+    generate_schema_json,
+    validate_manifest_dict,
+)
 from cryptofactors.catalog.dataset.verification import verify_dataset
+from cryptofactors.catalog.dataset.verify_tree import verify_published_tree
 
 __all__ = [
     "CodeIdentity",
@@ -93,6 +99,9 @@ __all__ = [
     "UnsafePathError",
     "VerificationFinding",
     "VerificationSeverity",
+    "ManifestWireModel",
+    "generate_schema_json",
+    "validate_manifest_dict",
     "canonical_bytes",
     "compute_dataset_id",
     "compute_manifest_sha256",
@@ -106,4 +115,5 @@ __all__ = [
     "validate_dependencies",
     "verify_dataset",
     "verify_outputs",
+    "verify_published_tree",
 ]

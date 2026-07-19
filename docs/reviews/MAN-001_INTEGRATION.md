@@ -370,3 +370,71 @@ python3 scripts/check_repo_control.py                           -> Repo control 
 
 - Same as prior passes: mypy full-repo pre-existing errors outside MAN-001 (46);
   Pyright vs mypy tension; no CLI.
+
+---
+
+## Correction pass — Senior review (REVIEW-0010, CHANGES_REQUIRED)
+
+**Baseline reviewed:** `1667662b650d148fbece6b120de9490da0723cc9`
+**Correction commit:** `fix(man-001): enforce atomic immutable dataset publication` (LOCAL, no push)
+**Trigger:** Senior review found 7 defects (D1–D7) in the reviewed commit.
+
+### Defects addressed
+
+1. Published outputs shared the caller's source inode via `os.link` → replaced with an
+   exclusive copy to a new inode (`_copy_to_new_inode`); published bytes are now physically
+   independent of source.
+2. Publication built directly in the final dir → rewritten to a unique temp stage under
+   `config.temp_dir()`, fsync, then atomic `os.rename` into an absent final dir under a
+   no-clobber reservation; never overwrites a pre-existing (incl. empty) final dir.
+3. Relative-path maps not canonicalized consistently → all maps canonicalized via
+   `_normalize_path_keyed_mapping`; canonical collisions rejected with a typed error (Sr Dev fix).
+4. Manifest wire schema not a single source of truth → Pydantic v2 strict model
+   `DatasetManifestWire` = source of truth; `schemas/dataset_manifest.schema.json` regenerated;
+   strict validation in `manifest_from_dict`; contract test asserts parity.
+5. Catalog idempotence not exact + `verify_dataset` omitted fields → exact projection of every
+   persisted field (incl. `publication_status`, `quality_summary_json`, coverage/availability
+   times, `created_at`, `supersedes_dataset_id`, file `partition_json`); tamper → FAILURE /
+   `CorruptDatasetError`.
+6. Catalog txn could commit before the on-disk tree was verified → `verify_published_tree`
+   (new shared module) runs before the txn; used by both `register_from_receipt` and
+   `verify_dataset`.
+7. Ruff hygiene → removed unused `published` and unused `plan2`.
+
+### Sr Dev drop integrated
+
+`MAN001_typing_fix.zip` → `src/cryptofactors/catalog/dataset/outputs.py` (typing fix only).
+Resolved the 4 mypy `assignment` errors in the canonicalization path.
+
+### Validation commands and results (correction commit)
+
+```text
+PYTHONPATH=src uv run mypy --no-incremental --cache-dir=/tmp/mc src/cryptofactors/catalog/ tests/test_dataset_manifest.py tests/catalog/test_man001_duplicate_content.py tests/catalog/test_man001_correction.py
+    -> Success: no issues found in 18 source files
+
+PYTHONPATH=src uv run ruff check src tests scripts
+    -> All checks passed!
+
+PYTHONPATH=src uv run pytest tests/catalog/test_man001_correction.py -q
+    -> 27 passed   (all 7 defect categories covered)
+
+PYTHONPATH=src uv run pytest tests/test_dataset_manifest.py tests/catalog/test_man001_duplicate_content.py tests/catalog/test_man001_migration_acceptance.py -q
+    -> 31 passed
+
+PYTHONPATH=src uv run pytest -q
+    -> 239 passed, 1 warning
+
+git diff --check
+    -> CLEAN
+
+uv build --wheel
+    -> Successfully built dist/crypto_multifactor_bot-0.1.0-py3-none-any.whl
+
+python3 scripts/check_repo_control.py
+    -> Repo control check: PASS
+```
+
+### Result
+
+All 7 defects corrected and validated. MAN-001 remains AWAITING_REVIEW; no next ticket
+authorized. Correction commit is LOCAL (no push) pending Senior/Engineer re-review.

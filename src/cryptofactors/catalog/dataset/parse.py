@@ -14,6 +14,7 @@ from cryptofactors.catalog.dataset.canonicalize import (
     identity_from_manifest_dict,
 )
 from cryptofactors.catalog.dataset.errors import InvalidManifestError
+from cryptofactors.catalog.dataset.schema_model import validate_manifest_dict
 from cryptofactors.catalog.dataset.models import (
     CodeIdentity,
     ConfigIdentity,
@@ -105,6 +106,9 @@ def manifest_from_dict(
     *,
     exact_file_bytes: bytes | None = None,
 ) -> DatasetManifest:
+    # Strict wire-model validation (single source of truth via Pydantic).
+    validate_manifest_dict(dict(data))
+
     required = [
         "dataset_id",
         "dataset_type",

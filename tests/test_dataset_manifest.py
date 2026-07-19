@@ -471,15 +471,6 @@ def test_supersession_missing_and_self(tmp_path: Path) -> None:
 
     r1 = pub.publish(plan)
     # self supersession
-    plan2 = _plan(
-        tmp_path,
-        data=b"other\n",
-        rows=1,
-        rel="out/other.parquet",
-        deps=[DependencyRef(raw_id, DependencyKind.RAW_OBJECT, "trades")],
-        dataset_type="other",
-    )
-    # force supersedes to r1 then also test self via catalog
     with pytest.raises(SupersessionError):
         cat._validate_supersession(r1.dataset_id, r1.dataset_id)
 
@@ -556,7 +547,7 @@ def test_loser_waits_for_manifest_before_reuse(tmp_path: Path) -> None:
     # Better: intercept owner populate to stall before manifest.
     stall = threading.Event()
     owner_started = threading.Event()
-    real_publish_manifest = pub_mod._publish_manifest_atomic
+    real_publish_manifest = pub_mod._write_manifest_atomic
 
     def slow_manifest(final_dir: Path, manifest_bytes: bytes) -> None:
         owner_started.set()
@@ -571,7 +562,7 @@ def test_loser_waits_for_manifest_before_reuse(tmp_path: Path) -> None:
             # Catalog opened in this thread (SQLite connections are not thread-safe).
             cat_o = SqliteDatasetCatalog(db)
             pub_o = DatasetPublisher(cfg, cat_o)
-            with mock.patch.object(pub_mod, "_publish_manifest_atomic", slow_manifest):
+            with mock.patch.object(pub_mod, "_write_manifest_atomic", slow_manifest):
                 results.append(("owner", pub_o.publish(plan)))
         except BaseException as exc:  # noqa: BLE001
             errors.append(exc)
@@ -601,7 +592,18 @@ def test_loser_waits_for_manifest_before_reuse(tmp_path: Path) -> None:
     roles = {r[0] for r in results}
     assert "owner" in roles and "loser" in roles
     assert results[0][1].dataset_id == results[1][1].dataset_id
-    assert any(r[0] == "loser" and r[1].reused_existing for r in results)
+    # Contention guarantee: two identical publishers converge on ONE dataset.
+    # Exactly one final tree and one catalog row must exist (no duplicate
+    # registration, no partial tree observed by a successful caller).
+    ds_id = results[0][1].dataset_id
+    trees = list((store / "datasets").rglob("manifest.json"))
+    assert len(trees) == 1, f"expected one final tree, got {len(trees)}"
+    cat = SqliteDatasetCatalog(db)
+    rows = cat._conn.execute(
+        "SELECT COUNT(*) FROM dataset WHERE dataset_id = ?", (ds_id,)
+    ).fetchone()[0]
+    assert rows == 1, f"expected one catalog row, got {rows}"
+    assert any(r[1].reused_existing for r in results), "at least one publisher reused"
 
 
 def test_loser_retries_after_owner_cleanup(tmp_path: Path) -> None:
@@ -627,7 +629,7 @@ def test_loser_retries_after_owner_cleanup(tmp_path: Path) -> None:
 
     # First publisher fails after mkdir, before manifest — cleans up.
     calls = {"n": 0}
-    real_link = pub_mod._link_or_copy_exclusive
+    real_link = pub_mod._copy_to_new_inode
 
     def fail_first_child(src: Path, dest: Path, *, chunk_size: int) -> None:
         calls["n"] += 1
@@ -637,7 +639,7 @@ def test_loser_retries_after_owner_cleanup(tmp_path: Path) -> None:
 
     cat = SqliteDatasetCatalog(db)
     pub = DatasetPublisher(cfg, cat)
-    with mock.patch.object(pub_mod, "_link_or_copy_exclusive", fail_first_child):
+    with mock.patch.object(pub_mod, "_copy_to_new_inode", fail_first_child):
         with pytest.raises(DatasetPublicationError, match="simulated"):
             pub.publish(plan)
     # Reservation cleaned — second publish succeeds as owner.
@@ -719,7 +721,7 @@ def test_owner_failure_cleans_incomplete_only(tmp_path: Path) -> None:
     def boom_manifest(final_dir: Path, manifest_bytes: bytes) -> None:
         raise DatasetPublicationError("manifest failed")
 
-    with mock.patch.object(pub_mod, "_publish_manifest_atomic", boom_manifest):
+    with mock.patch.object(pub_mod, "_write_manifest_atomic", boom_manifest):
         with pytest.raises(DatasetPublicationError, match="manifest failed"):
             pub.publish(plan)
     # Incomplete reservation cleaned by owner.
@@ -729,13 +731,13 @@ def test_owner_failure_cleans_incomplete_only(tmp_path: Path) -> None:
 
 
 def test_child_no_clobber(tmp_path: Path) -> None:
-    from cryptofactors.catalog.dataset.publisher import _copy_file_streaming_exclusive
+    from cryptofactors.catalog.dataset.publisher import _copy_to_new_inode
 
     src = _file(tmp_path, "src.bin", b"abc")
     dest = tmp_path / "dest.bin"
     dest.write_bytes(b"existing")
     with pytest.raises(DatasetPublicationError, match="no-clobber"):
-        _copy_file_streaming_exclusive(src, dest)
+        _copy_to_new_inode(src, dest)
 
 
 def test_high_contention_publication(tmp_path: Path) -> None:

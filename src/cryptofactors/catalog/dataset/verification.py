@@ -20,6 +20,34 @@ from cryptofactors.catalog.dataset.paths import dataset_absolute_dir, lstat_path
 import stat as statmod
 
 
+def _catalog_json(value: Any) -> str:
+    """Canonical JSON of a stored JSON column for exact comparison.
+
+    Accepts either a Python object (dict/list) or an already-serialized JSON
+    string (as stored in SQLite TEXT columns), normalizing both to the same
+    canonical form.
+    """
+    if value is None or value == "" or value == {} or value == []:
+        return "{}"
+    if isinstance(value, str):
+        import json
+
+        value = json.loads(value)
+    import json as _json
+
+    return _json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _iso_coalesce(dt: Any) -> str | None:
+    if dt is None:
+        return None
+    from datetime import timezone as _tz
+
+    if getattr(dt, "tzinfo", None) is None:
+        return None
+    return str(dt.astimezone(_tz.utc).isoformat())
+
+
 def verify_dataset(
     *,
     config: DatasetStoreConfig,
@@ -220,6 +248,71 @@ def verify_dataset(
                     VerificationSeverity.FAILURE,
                     "catalog byte_size mismatch",
                 )
+            if str(row.get("schema_fingerprint") or "") != (
+                loaded.schema.fingerprint or ""
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog schema_fingerprint mismatch",
+                )
+            if _catalog_json(row.get("quality_summary_json")) != _catalog_json(
+                loaded.quality_summary
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog quality_summary mismatch",
+                )
+            if str(row.get("event_start") or "") != (
+                _iso_coalesce(loaded.coverage.event_start) or ""
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog event_start mismatch",
+                )
+            if str(row.get("event_end") or "") != (
+                _iso_coalesce(loaded.coverage.event_end) or ""
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog event_end mismatch",
+                )
+            if str(row.get("availability_start") or "") != (
+                _iso_coalesce(loaded.coverage.availability_start) or ""
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog availability_start mismatch",
+                )
+            if str(row.get("availability_end") or "") != (
+                _iso_coalesce(loaded.coverage.availability_end) or ""
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog availability_end mismatch",
+                )
+            if str(row.get("publication_status") or "") not in (
+                "REGISTERED",
+                "SUPERSEDED",
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog publication_status invalid",
+                )
+            if str(row.get("supersedes_dataset_id") or "") != (
+                loaded.supersedes_dataset_id or ""
+            ):
+                add(
+                    "catalog_field_mismatch",
+                    VerificationSeverity.FAILURE,
+                    "catalog supersedes_dataset_id mismatch",
+                )
 
             files = catalog.list_files(dataset_id)
             file_map = {str(f["storage_uri"]): f for f in files}
@@ -236,6 +329,8 @@ def verify_dataset(
                     str(crow["file_sha256"]) != fspec.sha256
                     or int(crow["row_count"]) != fspec.rows
                     or int(crow["byte_size"]) != fspec.bytes
+                    or _catalog_json(crow.get("partition_json"))
+                    != _catalog_json(fspec.partition)
                 ):
                     add(
                         "catalog_output_mismatch",
