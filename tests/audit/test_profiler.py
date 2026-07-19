@@ -164,3 +164,96 @@ def test_missing_file_raises(tmp_path: Path) -> None:
     out = tmp_path / "out"
     with pytest.raises(AuditInputError):
         profile_candidate(missing, ident, mode=ProfileMode.SAMPLE, output_dir=out)
+
+
+# ---- Reviewer CHANGES_REQUIRED findings (REVIEW-0013) -----------------------
+
+
+def test_sha256_mismatch_is_verified_not_just_recorded(tmp_path: Path) -> None:
+    csv = tmp_path / "cand.csv"
+    csv.write_text("a,b\n1,2\n3,4\n")
+    ident = _identity(csv)
+    # Corrupt the hash; byte_size still matches, so only SHA-256 verification catches it.
+    object.__setattr__(ident, "content_sha256", "f" * 64)
+    out = tmp_path / "out"
+    with pytest.raises(AuditInputError):
+        profile_candidate(csv, ident, mode=ProfileMode.FULL, output_dir=out)
+
+
+def test_parquet_preserves_physical_types(tmp_path: Path) -> None:
+    import polars as pl
+
+    csv = tmp_path / "cand.csv"
+    csv.write_text("i,f,s,b\n1,1.5,hello,true\n2,2.5,world,false\n")
+    out = tmp_path / "out"
+    profiled = profile_candidate(
+        csv, _identity(csv), mode=ProfileMode.FULL, output_dir=out
+    )
+    by_name = {c.name: c for c in profiled.summary.columns}
+    # CSV inference yields physical types; declared_type_label stays None for CSV
+    # (no native Arrow schema), and uncertainty is tracked.
+    assert by_name["i"].physical_type is PhysicalType.INTEGER
+    assert by_name["f"].physical_type is PhysicalType.FLOAT
+    assert by_name["s"].physical_type is PhysicalType.STRING
+    assert by_name["b"].physical_type is PhysicalType.BOOLEAN
+
+    # Parquet input carries a real Arrow schema; declared_type_label must be preserved.
+    pq_path = tmp_path / "cand.parquet"
+    pl.DataFrame(
+        {
+            "i": pl.Series([1, 2], dtype=pl.Int64),
+            "f": pl.Series([1.5, 2.5], dtype=pl.Float64),
+            "s": pl.Series(["hello", "world"], dtype=pl.String),
+            "b": pl.Series([True, False], dtype=pl.Boolean),
+        }
+    ).write_parquet(str(pq_path))
+    ident_pq = InputIdentity(
+        content_sha256=hashlib.sha256(pq_path.read_bytes()).hexdigest(),
+        byte_size=pq_path.stat().st_size,
+        source_uri=f"file://{pq_path}",
+        media_type="application/octet-stream",
+    )
+    out2 = tmp_path / "out2"
+    profiled_pq = profile_candidate(
+        pq_path, ident_pq, mode=ProfileMode.FULL, output_dir=out2
+    )
+    by_pq = {c.name: c for c in profiled_pq.summary.columns}
+    # The native Arrow dtype is recorded verbatim (physical types preserved).
+    assert by_pq["i"].declared_type_label is not None
+    assert by_pq["f"].declared_type_label is not None
+    assert by_pq["s"].declared_type_label is not None
+    assert by_pq["b"].declared_type_label is not None
+    labels = {name: col.declared_type_label for name, col in by_pq.items()}
+    assert labels["i"] == "int64"
+    assert labels["f"] == "double"
+    assert labels["s"] == "large_string"
+    assert labels["b"] == "bool"
+    # Clearly-typed columns are not flagged as uncertain.
+    assert by_pq["i"].type_uncertainty is False
+
+
+def test_full_mode_processes_large_csv_without_materializing(tmp_path: Path) -> None:
+    # Proxy for bounded FULL-mode: a 50k-row CSV must profile in FULL mode and
+    # report EXACT row counts (the out-of-core spill path runs, not collect()).
+    n = 50_000
+    csv = tmp_path / "big.csv"
+    rows = "\n".join(f"{i},{i * 1.5}" for i in range(n))
+    csv.write_text(f"n,v\n{rows}\n")
+    out = tmp_path / "out"
+    res = profile_candidate(
+        csv, _identity(csv), mode=ProfileMode.FULL, output_dir=out
+    )
+    assert res.summary.row_count == n
+    assert res.summary.row_count_completeness is MetricCompleteness.EXACT
+
+
+def test_summary_carries_valid_identity_statistics(tmp_path: Path) -> None:
+    csv = tmp_path / "cand.csv"
+    csv.write_text("a,b\n1,2\n3,4\n")
+    ident = _identity(csv)
+    out = tmp_path / "out"
+    res = profile_candidate(csv, ident, mode=ProfileMode.FULL, output_dir=out)
+    # Valid MAN-001 statistics: summary records the verified identity verbatim.
+    assert res.summary.input["content_sha256"] == ident.content_sha256
+    assert res.summary.input["byte_size"] == ident.byte_size
+    assert res.summary.input["source_uri"] == ident.source_uri

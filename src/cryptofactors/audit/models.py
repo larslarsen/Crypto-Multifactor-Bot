@@ -124,6 +124,7 @@ class ColumnProfile:
     max_value: str | None = None
     range_completeness: MetricCompleteness = MetricCompleteness.UNAVAILABLE
     mapped_role: ColumnRole | None = None
+    declared_type_label: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +156,7 @@ class TimestampCoverage:
     gap_count: int | None
     median_cadence_seconds: float | None
     cadence_completeness: MetricCompleteness
+    parse_failure_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +224,7 @@ class ProfileSummary:
                 "gap_count": self.timestamp.gap_count,
                 "median_cadence_seconds": self.timestamp.median_cadence_seconds,
                 "cadence_completeness": self.timestamp.cadence_completeness.value,
+                "parse_failure_count": self.timestamp.parse_failure_count,
             },
             "duplicate_keys": {
                 "key_columns": list(self.duplicate_keys.key_columns),

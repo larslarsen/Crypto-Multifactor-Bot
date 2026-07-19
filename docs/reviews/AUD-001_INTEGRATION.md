@@ -4,12 +4,42 @@
 **Status:** IN_PROGRESS (implementation landed; awaiting reviewer acceptance)
 **Source of truth:** `tickets/AUD-001.md`, `docs/handoff/CURRENT_TASK.md`, AGENTS.md
 
-## Deliverable integrated (Sr Dev Sandbox drop)
+## Correction drop (v1.2.0 — reviewer CHANGES_REQUIRED resolved)
 
-- `src/cryptofactors/audit/__init__.py` — AUD-001 public API
-  (`profile_candidate`, `PROFILER_VERSION`, models, errors).
-- `src/cryptofactors/audit/profiler.py` — `profile_candidate()` bounded sampling
-  (SAMPLE) and streaming full-pass (FULL) modes; inferred physical schema with
+- Source: Sr Dev Sandbox drop `AUD001_v12_outofcore_fix.zip` (newest in `~/Downloads`,
+  dropped after the governance repair at `6ed42c0`). Integrates as `PROFILER_VERSION`
+  `1.2.0`; `errors.py` / `__init__.py` unchanged, `models.py` + `profiler.py` revised.
+- This drop resolves the four `CHANGES_REQUIRED` findings from `REVIEW-0013`:
+  1. **Bounded FULL-mode** — `_PARQUET_BATCH` / `_CADENCE_RESERVOIR` / `_DETAIL_CAP`
+     bounds; FULL mode spills exact duplicate-key counts (`_KeySpill`) and exact
+     cadence median (`_DeltaSpill`) to SQLite; never `collect()`s a full Parquet
+     dataset; SAMPLE mode uses a bounded reservoir.
+  2. **Valid MAN-001 statistics** — artifacts stage with verified byte size + SHA-256
+     and a stable `_SCHEMA_FINGERPRINT`; summary records the verified identity.
+  3. **SHA-256 verification** — `_verify_identity()` checks both `content_sha256` and
+     `byte_size` against the file before any staging (verify, not merely record).
+  4. **Preserved Parquet physical types** — `_parquet_type_label()` records the native
+     Arrow dtype verbatim as `declared_type_label` on each `ColumnProfile`; clearly
+     typed columns are not flagged uncertain.
+- Integration defects fixed by Hermes (behavior-preserving, to pass repo strict gates,
+  same pattern as the v1.0.0 integration): `csv.DictReader[str]` type arg; renamed
+  comprehension-leaked locals (`c`→`close_`, `num`→`num_val`) that broke OHLC/type
+  assignment under strict mypy; removed an unused `ColumnRole` import; added
+  `# type: ignore[import-untyped]` on the `pyarrow` import (repo has no pyarrow stubs);
+  re-applied the empty-`{}` Parquet padding in `_write_parquet` (the drop reintroduced
+  the same field-less-struct bug).
+
+## Focused test inventory — `tests/audit/test_profiler.py` (11 tests)
+
+Original 7 (sampling vs full, inferred types, impossible-OHLC, mapping roles,
+duplicate keys, byte-size mismatch, missing file) plus 4 new finding-encoding tests:
+- `test_sha256_mismatch_is_verified_not_just_recorded` — wrong hash (matching size)
+  raises `AuditInputError`.
+- `test_parquet_preserves_physical_types` — Parquet input records Arrow dtype verbatim
+  (`int64`/`double`/`large_string`/`bool`) and `type_uncertainty is False`.
+- `test_full_mode_processes_large_csv_without_materializing` — 50k-row CSV profiles in
+  FULL with `EXACT` row count (out-of-core spill path runs).
+- `test_summary_carries_valid_identity_statistics` — summary records verified identity.
   explicit uncertainty; nulls, distinct counts, timestamp coverage, monotonicity
   / gap heuristics, duplicate-key metrics, impossible-OHLC checks, quality issues.
 - `src/cryptofactors/audit/models.py` — typed models (`ColumnProfile`,
