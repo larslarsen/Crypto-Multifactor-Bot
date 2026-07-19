@@ -7,7 +7,7 @@ implementable multifactor portfolios.
 
 - **Architecture:** frozen unless an approved ADR changes it.
 - **Current implementation milestone:** control catalog and migration runner.
-- **Current task:** [`GOV-001`](tickets/GOV-001.md), establish repository governance artifacts and agent controls.
+- **Current task:** [`AUD-001`](tickets/AUD-001.md), schema and coverage profiler.
 - **Trading status:** no model is approved for serving or live capital.
 
 This repository is the source of truth. Research, architecture, tickets, implementation,
