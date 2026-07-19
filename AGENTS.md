@@ -27,13 +27,16 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 - Work on exactly one active ticket at a time.
 - Do not start the next ticket until the current one is accepted by the owner or a
   designated reviewer.
-- The owner publishes commits. Development agents commit locally and stop; they do not
-  push, inspect remotes, or verify public GitHub state.
+- The owner and the Jr development agent (Hermes) both publish commits. Development
+  agents commit locally and may push to the shared remote (the Jr dev pushes, not just
+  the owner); they must not inspect remotes or verify public GitHub state beyond the
+  push itself.
 - When told "do not modify or recommit", obey strictly.
 - When a senior engineer says files must be created, create them in a focused commit.
 - Chat instructions are not durable state until they are recorded in the repository
   (a ticket, ADR, or control document).
-- The owner is the acceptance and publication authority only. The owner does not act as a
+- The owner is the acceptance authority only. Publication (push) is shared: both the
+  owner and the Jr development agent may push. The owner does not act as a
   relay or messenger between agents and other stakeholders (seniors, reviewers). Seniors and
   reviewers prompt the agent directly; the agent executes and stops for the owner's review.
   Do not draft relay/prompt blocks for the owner to forward on the owner's behalf.
