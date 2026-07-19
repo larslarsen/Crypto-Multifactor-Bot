@@ -81,5 +81,5 @@ not be committed.
 
 ## Current review gate
 
-CAT-001A remediation has been implemented. CAT-001A is awaiting final review.
-Do not begin raw-data ingestion tickets until the remediation is reviewed and accepted.
+Active ticket: [`AUD-001`](tickets/AUD-001.md) — schema and coverage profiler
+(reviewer verdict `CHANGES_REQUIRED`; Sr Dev correction drop pending integration).

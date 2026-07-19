@@ -161,15 +161,38 @@ def test_all_valid_states_accepted(tmp_path: Path) -> None:
         assert ok, (state, errors)
 
 
-def test_no_push_or_remote_requirement_in_gov_docs(tmp_path: Path) -> None:
+def test_sr_dev_granted_git_duties_is_rejected(tmp_path: Path) -> None:
     make_valid_structure(tmp_path)
-    # Inject a prohibited requirement into AGENTS.md.
+    # Sr Dev must do source edits only; granting it Git/commit/push violates
+    # role separation.
     (tmp_path / "AGENTS.md").write_text(
-        "# AGENTS.md\nAgents must run `git push origin main` and verify public origin/main.\n"
+        "# AGENTS.md\nSr Dev commits the integrated code and pushes to origin/main.\n"
     )
     ok, errors = validate(tmp_path)
     assert not ok
-    assert any("push or verify remotes" in e for e in errors)
+    assert any("role separation violated" in e for e in errors)
+
+
+def test_hermes_push_ban_is_rejected(tmp_path: Path) -> None:
+    make_valid_structure(tmp_path)
+    # The old owner-only publication rule is removed; prohibiting Hermes from
+    # pushing must be flagged.
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\nHermes must not push; the owner publishes commits.\n"
+    )
+    ok, errors = validate(tmp_path)
+    assert not ok
+    assert any("prohibits Hermes from pushing" in e for e in errors)
+
+
+def test_hermes_owns_push_is_accepted(tmp_path: Path) -> None:
+    make_valid_structure(tmp_path)
+    # Hermes owning commit/push duties is the intended model and must pass.
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\nJr Dev — Hermes owns Git, commits, and pushes.\n"
+    )
+    ok, errors = validate(tmp_path)
+    assert ok, errors
 
 
 def test_no_hard_coded_ticket_in_hermes(tmp_path: Path) -> None:

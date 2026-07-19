@@ -27,19 +27,20 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 - Work on exactly one active ticket at a time.
 - Do not start the next ticket until the current one is accepted by the owner or a
   designated reviewer.
-- The owner and the Jr development agent (Hermes) both publish commits. Development
-  agents commit locally and may push to the shared remote (the Jr dev pushes, not just
-  the owner); they must not inspect remotes or verify public GitHub state beyond the
-  push itself.
-- When told "do not modify or recommit", obey strictly.
-- When a senior engineer says files must be created, create them in a focused commit.
-- Chat instructions are not durable state until they are recorded in the repository
-  (a ticket, ADR, or control document).
-- The owner is the acceptance authority only. Publication (push) is shared: both the
-  owner and the Jr development agent may push. The owner does not act as a
-  relay or messenger between agents and other stakeholders (seniors, reviewers). Seniors and
-  reviewers prompt the agent directly; the agent executes and stops for the owner's review.
-  Do not draft relay/prompt blocks for the owner to forward on the owner's behalf.
+- The repository has three engineering roles and a relay owner:
+  - **Senior Quantitative Finance Researcher/Engineer (reviewer):** inspects
+    commits, accepts or rejects engineering work, and authorizes the next ticket.
+  - **Sr Dev — Sandbox:** performs senior code reasoning and source edits only.
+    No Git, integration, repository administration, commits, pushes, or acceptance
+    testing.
+  - **Sr Dev — Grok Build:** reserved for genuinely necessary expensive agentic
+    work; same source-edits-only boundary as Sr Dev — Sandbox.
+  - **Jr Dev — Hermes:** owns source-drop integration, test creation/execution,
+    repository records, Git, commits, and pushes.
+- The owner relays the reviewer's one-way developer prompts. Developers do not chat
+  with the reviewer.
+- The reviewer is the acceptance authority; publication (commit + push) is Hermes's
+  duty, not a gated owner-only action.
 
 ## Enforcement
 

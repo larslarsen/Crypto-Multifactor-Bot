@@ -62,14 +62,15 @@ For each ticket:
 This repository uses a control plane, not an autonomous workflow:
 
 - There is no self-driving or autonomous ticket progression.
-- Development agents do not push, inspect remotes, or verify public GitHub state.
-- The owner publishes commits.
 - Exactly one ticket is active at a time.
-- Development agents commit locally and stop; only the owner or a designated reviewer
-  accepts work or authorizes the next ticket.
+- Jr Dev — Hermes owns source-drop integration, tests, repository records, Git,
+  commits, and pushes. Sr Dev (Sandbox / Grok Build) performs source edits only —
+  no Git, integration, commits, pushes, or acceptance testing.
+- The Senior Quantitative Finance Researcher/Engineer (reviewer) inspects commits,
+  accepts or rejects work, and authorizes the next ticket.
+- The owner relays the reviewer's one-way developer prompts; developers do not chat
+  with the reviewer.
 - Chat instructions are not durable state until recorded in the repository.
-- The owner is the acceptance and publication authority only, and does not act as a relay
-  between agents and seniors/reviewers. Seniors and reviewers prompt the agent directly.
 
 ## First assignment
 

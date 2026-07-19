@@ -13,8 +13,10 @@ fixed field format. This script checks that:
 - every document referenced under `Governing documents:` exists;
 - `Next ticket authorized` is `NONE` or a complete ticket ID containing digits;
 - blocked or awaiting-review work requires `NONE`;
-- governance docs do not hard-code ticket assignments or require development
-  agents to push / inspect remotes / verify public GitHub state.
+- the control plane enforces role separation: Sr Dev (Sandbox / Grok Build) performs
+  source edits only (no Git, integration, commits, pushes, or acceptance testing),
+  while Jr Dev — Hermes owns Git, commits, and pushes. Governance docs must not grant
+  Sr Dev those duties, nor prohibit Hermes from pushing.
 
 It is a routine integration of GOV-001. It adds no dependencies and does not
 redesign validation.
@@ -46,14 +48,17 @@ TICKET_ID_RE = re.compile(r"^[A-Z]{2,}-\d")
 # durable docs other than CURRENT_TASK.md.
 HARD_CODED_RE = re.compile(r"(?:implement|do|complete)\s+`?tickets/[A-Z]{2,}-\d+", re.IGNORECASE)
 
-# Development-agent push / remote-verification requirements are rejected. The
-# owner publishes commits; development agents commit locally and stop. We match
-# requirement phrases only (e.g. "git push", "push origin", "rev-parse origin",
-# "verify ... remote/origin", "visible on public ... main"), not statements that
-# prohibit those actions.
-REMOTE_REQ_RE = re.compile(
-    r"(?:git push|push origin|rev-parse origin|visible on public .*?main|"
-    r"verify.*(?:remote|origin))",
+# Role-separation enforcement (replaces the old "dev agents must not push" rule).
+# Sr Dev (Sandbox / Grok Build) does source edits only; it must not be granted Git,
+# integration, commit, push, or acceptance-testing duties in any governance doc.
+SR_DEV_DUTY_RE = re.compile(
+    r"Sr Dev.{0,15}?(?:git|commits?|pushes?|integrate|repository admin|acceptance test)",
+    re.IGNORECASE,
+)
+# The old owner-only publication rule is removed: Hermes owns commit/push. No
+# governance doc may prohibit Hermes (or the Jr dev) from pushing.
+HERMES_PUSH_BAN_RE = re.compile(
+    r"(?:Hermes|Jr dev).{0,80}?(?:must not|may not|cannot|does not|do not|prohibited).{0,40}?(?:push|publish)",
     re.IGNORECASE,
 )
 
@@ -197,14 +202,26 @@ def validate(root: Path) -> Tuple[bool, List[str]]:
     else:
         errors.append("HERMES_START_HERE.md missing")
 
-    # No governance doc may require development agents to push or verify remotes.
-    for doc in [root / "AGENTS.md", current_task_p, hermes, ticket_p] if ticket_p else [
-        root / "AGENTS.md",
-        current_task_p,
-        hermes,
-    ]:
-        if doc is not None and doc.exists() and REMOTE_REQ_RE.search(doc.read_text()):
-            errors.append(f"{doc.name} requires development agents to push or verify remotes")
+    # Role separation: Sr Dev does source edits only; Hermes owns Git/commit/push.
+    # No governance doc may grant Sr Dev Git/integration/commit/push/acceptance-test
+    # duties, and none may prohibit Hermes from pushing.
+    gov_docs = [root / "AGENTS.md", current_task_p, hermes]
+    if ticket_p is not None:
+        gov_docs.append(ticket_p)
+    for doc in gov_docs:
+        if doc is None or not doc.exists():
+            continue
+        text = doc.read_text()
+        if SR_DEV_DUTY_RE.search(text):
+            errors.append(
+                f"{doc.name} grants Sr Dev Git/integration/commit/push duties "
+                f"(role separation violated)"
+            )
+        if HERMES_PUSH_BAN_RE.search(text):
+            errors.append(
+                f"{doc.name} prohibits Hermes from pushing (remove owner-only "
+                f"publication rules)"
+            )
 
     return len(errors) == 0, errors
 
