@@ -11,12 +11,14 @@ import json
 import sqlite3
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from cryptofactors.ids import fingerprint
 from cryptofactors.reference.errors import (
     ReferenceConflictError,
     ReferenceNotFoundError,
+    ReferenceResolutionError,
     ReferenceValidationError,
 )
 from cryptofactors.reference.models import (
@@ -83,6 +85,37 @@ class ReferenceStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
 
+    @contextmanager
+    def _atomic(self) -> Iterator[None]:
+        """BEGIN IMMEDIATE when not already in a transaction; else SAVEPOINT.
+
+        Does not commit an outer caller transaction. Concurrent writers serialize
+        via IMMEDIATE locks. Overlap checks and writes share one atomic unit.
+        """
+        outer = self._conn.in_transaction
+        sp = None
+        if outer:
+            sp = "ref_store_sp"
+            self._conn.execute(f"SAVEPOINT {sp}")
+        else:
+            self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+            if outer:
+                self._conn.execute(f"RELEASE {sp}")
+            else:
+                self._conn.commit()
+        except Exception:
+            if outer:
+                try:
+                    self._conn.execute(f"ROLLBACK TO {sp}")
+                    self._conn.execute(f"RELEASE {sp}")
+                except sqlite3.Error:
+                    pass
+            else:
+                self._conn.rollback()
+            raise
+
     # ---- identity helpers -------------------------------------------------
 
     @staticmethod
@@ -90,14 +123,22 @@ class ReferenceStore:
         return fingerprint("ven", {"venue_code": venue_code.strip().upper()})
 
     @staticmethod
-    def asset_id_for(*, asset_class: AssetClass, display_name: str, salt: str) -> str:
-        # salt must be caller-supplied stable discriminator — never ticker alone.
+    def asset_id_for(*, asset_class: AssetClass, identity_key: str) -> str:
+        """Stable asset id from immutable caller identity material only.
+
+        ``identity_key`` is opaque caller-supplied material (never mutable
+        display metadata, never ticker text alone).
+        """
+        key = identity_key.strip()
+        if not key:
+            raise ReferenceValidationError(
+                "identity_key is required; asset identity is never derived from display metadata or ticker text alone"
+            )
         return fingerprint(
             "ast",
             {
                 "asset_class": asset_class.value,
-                "display_name": display_name,
-                "salt": salt,
+                "identity_key": key,
             },
         )
 
@@ -135,16 +176,15 @@ class ReferenceStore:
         vid = self.venue_id_for(code)
         ts = ensure_utc(created_at or datetime.now(timezone.utc))
         try:
-            self._conn.execute(
-                "INSERT INTO ref_venue(venue_id, venue_code, display_name, venue_type, created_at) "
-                "VALUES (?, ?, ?, ?, ?) "
-                "ON CONFLICT(venue_id) DO UPDATE SET "
-                "display_name=excluded.display_name, venue_type=excluded.venue_type",
-                (vid, code, display_name, venue_type.value, dt_to_iso(ts)),
-            )
-            self._conn.commit()
+            with self._atomic():
+                self._conn.execute(
+                    "INSERT INTO ref_venue(venue_id, venue_code, display_name, venue_type, created_at) "
+                    "VALUES (?, ?, ?, ?, ?) "
+                    "ON CONFLICT(venue_id) DO UPDATE SET "
+                    "display_name=excluded.display_name, venue_type=excluded.venue_type",
+                    (vid, code, display_name, venue_type.value, dt_to_iso(ts)),
+                )
         except sqlite3.IntegrityError as exc:
-            self._conn.rollback()
             raise ReferenceConflictError(
                 "venue conflict",
                 context={"venue_code": code, "error": str(exc)},
@@ -156,26 +196,19 @@ class ReferenceStore:
         *,
         asset_class: AssetClass,
         display_name: str,
-        salt: str,
+        identity_key: str,
         created_at: datetime | None = None,
     ) -> Asset:
-        if not salt.strip():
-            raise ReferenceValidationError(
-                "asset salt is required; identities are never derived from ticker text alone"
-            )
-        aid = self.asset_id_for(
-            asset_class=asset_class, display_name=display_name, salt=salt
-        )
+        aid = self.asset_id_for(asset_class=asset_class, identity_key=identity_key)
         ts = ensure_utc(created_at or datetime.now(timezone.utc))
         try:
-            self._conn.execute(
-                "INSERT INTO ref_asset(asset_id, asset_class, display_name, created_at) "
-                "VALUES (?, ?, ?, ?)",
-                (aid, asset_class.value, display_name, dt_to_iso(ts)),
-            )
-            self._conn.commit()
+            with self._atomic():
+                self._conn.execute(
+                    "INSERT INTO ref_asset(asset_id, asset_class, display_name, created_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    (aid, asset_class.value, display_name, dt_to_iso(ts)),
+                )
         except sqlite3.IntegrityError as exc:
-            self._conn.rollback()
             raise ReferenceConflictError(
                 "asset already registered",
                 context={"asset_id": aid},
@@ -211,24 +244,23 @@ class ReferenceStore:
         )
         ts = ensure_utc(created_at or datetime.now(timezone.utc))
         try:
-            self._conn.execute(
-                "INSERT INTO ref_instrument("
-                "instrument_id, asset_id, venue_id, instrument_type, "
-                "base_asset_id, quote_asset_id, created_at"
-                ") VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    iid,
-                    asset_id,
-                    venue_id,
-                    instrument_type.value,
-                    base_asset_id,
-                    quote_asset_id,
-                    dt_to_iso(ts),
-                ),
-            )
-            self._conn.commit()
+            with self._atomic():
+                self._conn.execute(
+                    "INSERT INTO ref_instrument("
+                    "instrument_id, asset_id, venue_id, instrument_type, "
+                    "base_asset_id, quote_asset_id, created_at"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        iid,
+                        asset_id,
+                        venue_id,
+                        instrument_type.value,
+                        base_asset_id,
+                        quote_asset_id,
+                        dt_to_iso(ts),
+                    ),
+                )
         except sqlite3.IntegrityError as exc:
-            self._conn.rollback()
             raise ReferenceConflictError(
                 "instrument already registered",
                 context={"instrument_id": iid},
@@ -250,12 +282,6 @@ class ReferenceStore:
         self._require_instrument(instrument_id)
         if version_seq < 1:
             raise ReferenceValidationError("version_seq must be >= 1")
-        self._assert_no_valid_overlap(
-            table="ref_instrument_version",
-            id_col="instrument_id",
-            id_val=instrument_id,
-            window=window,
-        )
         vid = fingerprint(
             "iv",
             {
@@ -264,28 +290,35 @@ class ReferenceStore:
                 "valid_from": dt_to_iso(window.valid_from),
             },
         )
+        if supersedes_version_id is not None:
+            self._require_instrument_version(supersedes_version_id, instrument_id)
         try:
-            self._conn.execute(
-                "INSERT INTO ref_instrument_version("
-                "instrument_version_id, instrument_id, version_seq, contract_spec_json, "
-                "valid_from, valid_to, known_from, known_to, supersedes_version_id, evidence_json"
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    vid,
-                    instrument_id,
-                    version_seq,
-                    _json_dumps(dict(contract_spec)),
-                    dt_to_iso(window.valid_from),
-                    dt_to_iso(window.valid_to) if window.valid_to else None,
-                    dt_to_iso(window.known_from),
-                    dt_to_iso(window.known_to) if window.known_to else None,
-                    supersedes_version_id,
-                    _json_dumps(dict(evidence or {})),
-                ),
-            )
-            self._conn.commit()
+            with self._atomic():
+                self._assert_no_valid_overlap(
+                    table="ref_instrument_version",
+                    id_col="instrument_id",
+                    id_val=instrument_id,
+                    window=window,
+                )
+                self._conn.execute(
+                    "INSERT INTO ref_instrument_version("
+                    "instrument_version_id, instrument_id, version_seq, contract_spec_json, "
+                    "valid_from, valid_to, known_from, known_to, supersedes_version_id, evidence_json"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        vid,
+                        instrument_id,
+                        version_seq,
+                        _json_dumps(dict(contract_spec)),
+                        dt_to_iso(window.valid_from),
+                        dt_to_iso(window.valid_to) if window.valid_to else None,
+                        dt_to_iso(window.known_from),
+                        dt_to_iso(window.known_to) if window.known_to else None,
+                        supersedes_version_id,
+                        _json_dumps(dict(evidence or {})),
+                    ),
+                )
         except sqlite3.IntegrityError as exc:
-            self._conn.rollback()
             raise ReferenceConflictError(
                 "instrument version conflict",
                 context={"instrument_id": instrument_id, "version_seq": version_seq},
@@ -323,7 +356,6 @@ class ReferenceStore:
             self._require_venue(venue_id)
         # Reject silent collisions: same norm+venue with overlapping both windows
         # pointing at a different target.
-        self._assert_no_alias_collision(norm, venue_id, window, target_kind, target_id)
         aid = fingerprint(
             "als",
             {
@@ -336,30 +368,30 @@ class ReferenceStore:
             },
         )
         try:
-            self._conn.execute(
-                "INSERT INTO ref_alias("
-                "alias_id, alias_text, alias_text_norm, venue_id, target_kind, target_id, "
-                "valid_from, valid_to, known_from, known_to, confidence, evidence_json, is_primary"
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    aid,
-                    text,
-                    norm,
-                    venue_id,
-                    target_kind.value,
-                    target_id,
-                    dt_to_iso(window.valid_from),
-                    dt_to_iso(window.valid_to) if window.valid_to else None,
-                    dt_to_iso(window.known_from),
-                    dt_to_iso(window.known_to) if window.known_to else None,
-                    confidence,
-                    _json_dumps(dict(evidence or {})),
-                    1 if is_primary else 0,
-                ),
-            )
-            self._conn.commit()
+            with self._atomic():
+                self._assert_no_alias_collision(norm, venue_id, window, target_kind, target_id)
+                self._conn.execute(
+                    "INSERT INTO ref_alias("
+                    "alias_id, alias_text, alias_text_norm, venue_id, target_kind, target_id, "
+                    "valid_from, valid_to, known_from, known_to, confidence, evidence_json, is_primary"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        aid,
+                        text,
+                        norm,
+                        venue_id,
+                        target_kind.value,
+                        target_id,
+                        dt_to_iso(window.valid_from),
+                        dt_to_iso(window.valid_to) if window.valid_to else None,
+                        dt_to_iso(window.known_from),
+                        dt_to_iso(window.known_to) if window.known_to else None,
+                        confidence,
+                        _json_dumps(dict(evidence or {})),
+                        1 if is_primary else 0,
+                    ),
+                )
         except sqlite3.IntegrityError as exc:
-            self._conn.rollback()
             raise ReferenceConflictError(
                 "alias insert conflict",
                 context={"alias_text": text},
@@ -388,6 +420,19 @@ class ReferenceStore:
     ) -> ListingEvent:
         self._require_instrument(instrument_id)
         self._require_venue(venue_id)
+        instr_venue = self._conn.execute(
+            "SELECT venue_id FROM ref_instrument WHERE instrument_id = ?",
+            (instrument_id,),
+        ).fetchone()
+        if instr_venue is None or instr_venue["venue_id"] != venue_id:
+            raise ReferenceValidationError(
+                "listing venue must match instrument venue",
+                context={
+                    "instrument_id": instrument_id,
+                    "listing_venue_id": venue_id,
+                    "instrument_venue_id": None if instr_venue is None else instr_venue["venue_id"],
+                },
+            )
         eid = fingerprint(
             "lst",
             {
@@ -398,24 +443,24 @@ class ReferenceStore:
                 "known_from": dt_to_iso(window.known_from),
             },
         )
-        self._conn.execute(
-            "INSERT INTO ref_listing_event("
-            "listing_event_id, instrument_id, venue_id, event_type, "
-            "valid_from, valid_to, known_from, known_to, evidence_json"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                eid,
-                instrument_id,
-                venue_id,
-                event_type.value,
-                dt_to_iso(window.valid_from),
-                dt_to_iso(window.valid_to) if window.valid_to else None,
-                dt_to_iso(window.known_from),
-                dt_to_iso(window.known_to) if window.known_to else None,
-                _json_dumps(dict(evidence or {})),
-            ),
-        )
-        self._conn.commit()
+        with self._atomic():
+            self._conn.execute(
+                "INSERT INTO ref_listing_event("
+                "listing_event_id, instrument_id, venue_id, event_type, "
+                "valid_from, valid_to, known_from, known_to, evidence_json"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    eid,
+                    instrument_id,
+                    venue_id,
+                    event_type.value,
+                    dt_to_iso(window.valid_from),
+                    dt_to_iso(window.valid_to) if window.valid_to else None,
+                    dt_to_iso(window.known_from),
+                    dt_to_iso(window.known_to) if window.known_to else None,
+                    _json_dumps(dict(evidence or {})),
+                ),
+            )
         return ListingEvent(
             eid,
             instrument_id,
@@ -456,28 +501,28 @@ class ReferenceStore:
                 "known_from": dt_to_iso(window.known_from),
             },
         )
-        self._conn.execute(
-            "INSERT INTO ref_migration_event("
-            "migration_event_id, event_type, from_kind, from_id, to_kind, to_id, "
-            "ratio_num, ratio_den, valid_from, valid_to, known_from, known_to, evidence_json"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                mid,
-                event_type.value,
-                from_kind.value,
-                from_id,
-                to_kind.value,
-                to_id,
-                ratio_num,
-                ratio_den,
-                dt_to_iso(window.valid_from),
-                dt_to_iso(window.valid_to) if window.valid_to else None,
-                dt_to_iso(window.known_from),
-                dt_to_iso(window.known_to) if window.known_to else None,
-                _json_dumps(dict(evidence or {})),
-            ),
-        )
-        self._conn.commit()
+        with self._atomic():
+            self._conn.execute(
+                "INSERT INTO ref_migration_event("
+                "migration_event_id, event_type, from_kind, from_id, to_kind, to_id, "
+                "ratio_num, ratio_den, valid_from, valid_to, known_from, known_to, evidence_json"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    mid,
+                    event_type.value,
+                    from_kind.value,
+                    from_id,
+                    to_kind.value,
+                    to_id,
+                    ratio_num,
+                    ratio_den,
+                    dt_to_iso(window.valid_from),
+                    dt_to_iso(window.valid_to) if window.valid_to else None,
+                    dt_to_iso(window.known_from),
+                    dt_to_iso(window.known_to) if window.known_to else None,
+                    _json_dumps(dict(evidence or {})),
+                ),
+            )
         return MigrationEvent(
             mid,
             event_type,
@@ -500,11 +545,13 @@ class ReferenceStore:
         candidates: Sequence[Mapping[str, Any]],
         venue_id: str | None = None,
     ) -> AmbiguityCase:
+        """Idempotent: same norm/venue/decision/knowledge returns existing QUEUED case."""
         text = alias_text.strip()
         norm = normalize_alias(text)
         d = ensure_utc(decision_time)
         k = ensure_utc(knowledge_time)
         now = datetime.now(timezone.utc)
+        # Idempotency key excludes candidate ordering noise
         cid = fingerprint(
             "amb",
             {
@@ -512,28 +559,33 @@ class ReferenceStore:
                 "venue_id": venue_id,
                 "decision_time": dt_to_iso(d),
                 "knowledge_time": dt_to_iso(k),
-                "candidates": list(candidates),
             },
         )
-        self._conn.execute(
-            "INSERT INTO ref_ambiguity_case("
-            "case_id, alias_text, alias_text_norm, venue_id, decision_time, knowledge_time, "
-            "status, candidate_json, created_at, updated_at"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                cid,
-                text,
-                norm,
-                venue_id,
-                dt_to_iso(d),
-                dt_to_iso(k),
-                AmbiguityStatus.QUEUED.value,
-                _json_dumps({"candidates": list(candidates)}),
-                dt_to_iso(now),
-                dt_to_iso(now),
-            ),
-        )
-        self._conn.commit()
+        with self._atomic():
+            existing = self._conn.execute(
+                "SELECT * FROM ref_ambiguity_case WHERE case_id = ?",
+                (cid,),
+            ).fetchone()
+            if existing is not None:
+                return self._row_to_ambiguity(existing)
+            self._conn.execute(
+                "INSERT INTO ref_ambiguity_case("
+                "case_id, alias_text, alias_text_norm, venue_id, decision_time, knowledge_time, "
+                "status, candidate_json, created_at, updated_at"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    cid,
+                    text,
+                    norm,
+                    venue_id,
+                    dt_to_iso(d),
+                    dt_to_iso(k),
+                    AmbiguityStatus.QUEUED.value,
+                    _json_dumps({"candidates": list(candidates)}),
+                    dt_to_iso(now),
+                    dt_to_iso(now),
+                ),
+            )
         return AmbiguityCase(
             cid,
             text,
@@ -545,6 +597,165 @@ class ReferenceStore:
             now,
             now,
             venue_id,
+        )
+
+    def resolve_ambiguity_case(
+        self,
+        case_id: str,
+        *,
+        target_kind: TargetKind,
+        target_id: str,
+        resolution_note: str | None = None,
+        status: AmbiguityStatus = AmbiguityStatus.RESOLVED,
+    ) -> AmbiguityCase:
+        """Typed manual resolution transition with validated target lineage."""
+        if status not in (AmbiguityStatus.RESOLVED, AmbiguityStatus.REJECTED, AmbiguityStatus.DEFERRED):
+            raise ReferenceResolutionError(
+                "invalid resolution status transition",
+                context={"status": status.value},
+            )
+        if status is AmbiguityStatus.RESOLVED:
+            self._assert_target_exists(target_kind, target_id)
+        now = datetime.now(timezone.utc)
+        with self._atomic():
+            row = self._conn.execute(
+                "SELECT * FROM ref_ambiguity_case WHERE case_id = ?",
+                (case_id,),
+            ).fetchone()
+            if row is None:
+                raise ReferenceNotFoundError(
+                    "ambiguity case not found", context={"case_id": case_id}
+                )
+            if row["status"] != AmbiguityStatus.QUEUED.value:
+                raise ReferenceResolutionError(
+                    "only QUEUED cases can be transitioned",
+                    context={"case_id": case_id, "status": row["status"]},
+                )
+            self._conn.execute(
+                "UPDATE ref_ambiguity_case SET "
+                "status = ?, resolution_target_kind = ?, resolution_target_id = ?, "
+                "resolution_note = ?, updated_at = ? "
+                "WHERE case_id = ?",
+                (
+                    status.value,
+                    target_kind.value if status is AmbiguityStatus.RESOLVED else None,
+                    target_id if status is AmbiguityStatus.RESOLVED else None,
+                    resolution_note,
+                    dt_to_iso(now),
+                    case_id,
+                ),
+            )
+            row2 = self._conn.execute(
+                "SELECT * FROM ref_ambiguity_case WHERE case_id = ?",
+                (case_id,),
+            ).fetchone()
+        assert row2 is not None
+        return self._row_to_ambiguity(row2)
+
+    def supersede_alias(
+        self,
+        alias_id: str,
+        *,
+        close_known_at: datetime,
+        new_alias_text: str | None = None,
+        new_target_kind: TargetKind | None = None,
+        new_target_id: str | None = None,
+        new_window: BiTemporalWindow | None = None,
+        new_confidence: float | None = None,
+        new_evidence: Mapping[str, Any] | None = None,
+    ) -> AliasRecord:
+        """Atomic knowledge-time correction: close prior known_to, insert replacement.
+
+        Historical as-of queries with knowledge_time before close_known_at still
+        see the prior row; later knowledge sees the replacement.
+        """
+        close_at = ensure_utc(close_known_at)
+        with self._atomic():
+            row = self._conn.execute(
+                "SELECT * FROM ref_alias WHERE alias_id = ?", (alias_id,)
+            ).fetchone()
+            if row is None:
+                raise ReferenceNotFoundError(
+                    "alias not found", context={"alias_id": alias_id}
+                )
+            prior = self._row_to_alias(row)
+            if prior.window.known_to is not None:
+                raise ReferenceConflictError(
+                    "alias already closed for knowledge time",
+                    context={"alias_id": alias_id, "known_to": dt_to_iso(prior.window.known_to)},
+                )
+            if close_at <= prior.window.known_from:
+                raise ReferenceValidationError(
+                    "close_known_at must be > prior known_from",
+                    context={"close_known_at": dt_to_iso(close_at)},
+                )
+            # Close prior open known_to
+            self._conn.execute(
+                "UPDATE ref_alias SET known_to = ? WHERE alias_id = ?",
+                (dt_to_iso(close_at), alias_id),
+            )
+            # Build replacement
+            text = (new_alias_text or prior.alias_text).strip()
+            norm = normalize_alias(text)
+            tkind = new_target_kind or prior.target_kind
+            tid = new_target_id or prior.target_id
+            self._assert_target_exists(tkind, tid)
+            if new_window is not None:
+                window = new_window
+            else:
+                window = BiTemporalWindow(
+                    valid_from=prior.window.valid_from,
+                    valid_to=prior.window.valid_to,
+                    known_from=close_at,
+                    known_to=None,
+                )
+            conf = prior.confidence if new_confidence is None else new_confidence
+            evid = dict(new_evidence) if new_evidence is not None else dict(prior.evidence)
+            evid = {**evid, "supersedes_alias_id": alias_id}
+            self._assert_no_alias_collision(norm, prior.venue_id, window, tkind, tid)
+            new_id = fingerprint(
+                "als",
+                {
+                    "alias_text_norm": norm,
+                    "venue_id": prior.venue_id,
+                    "target_kind": tkind.value,
+                    "target_id": tid,
+                    "valid_from": dt_to_iso(window.valid_from),
+                    "known_from": dt_to_iso(window.known_from),
+                },
+            )
+            self._conn.execute(
+                "INSERT INTO ref_alias("
+                "alias_id, alias_text, alias_text_norm, venue_id, target_kind, target_id, "
+                "valid_from, valid_to, known_from, known_to, confidence, evidence_json, is_primary"
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    new_id,
+                    text,
+                    norm,
+                    prior.venue_id,
+                    tkind.value,
+                    tid,
+                    dt_to_iso(window.valid_from),
+                    dt_to_iso(window.valid_to) if window.valid_to else None,
+                    dt_to_iso(window.known_from),
+                    dt_to_iso(window.known_to) if window.known_to else None,
+                    conf,
+                    _json_dumps(evid),
+                    1 if prior.is_primary else 0,
+                ),
+            )
+        return AliasRecord(
+            new_id,
+            text,
+            norm,
+            tkind,
+            tid,
+            window,
+            prior.venue_id,
+            conf,
+            evid,
+            prior.is_primary,
         )
 
     # ---- as-of resolution -------------------------------------------------
@@ -692,6 +903,20 @@ class ReferenceStore:
                 "instrument not found", context={"instrument_id": instrument_id}
             )
 
+    def _require_instrument_version(
+        self, version_id: str, instrument_id: str
+    ) -> None:
+        row = self._conn.execute(
+            "SELECT 1 FROM ref_instrument_version "
+            "WHERE instrument_version_id = ? AND instrument_id = ?",
+            (version_id, instrument_id),
+        ).fetchone()
+        if row is None:
+            raise ReferenceNotFoundError(
+                "instrument version not found",
+                context={"instrument_version_id": version_id, "instrument_id": instrument_id},
+            )
+
     def _assert_target_exists(self, kind: TargetKind, target_id: str) -> None:
         if kind is TargetKind.VENUE:
             self._require_venue(target_id)
@@ -789,6 +1014,27 @@ class ReferenceStore:
             confidence=float(row["confidence"]),
             evidence=_json_loads(row["evidence_json"]),
             is_primary=bool(row["is_primary"]),
+        )
+
+    def _row_to_ambiguity(self, row: sqlite3.Row) -> AmbiguityCase:
+        return AmbiguityCase(
+            case_id=row["case_id"],
+            alias_text=row["alias_text"],
+            alias_text_norm=row["alias_text_norm"],
+            decision_time=iso_to_dt(row["decision_time"]),
+            knowledge_time=iso_to_dt(row["knowledge_time"]),
+            status=AmbiguityStatus(row["status"]),
+            candidates=_json_loads(row["candidate_json"]).get("candidates", []),
+            created_at=iso_to_dt(row["created_at"]),
+            updated_at=iso_to_dt(row["updated_at"]),
+            venue_id=row["venue_id"],
+            resolution_target_kind=(
+                TargetKind(row["resolution_target_kind"])
+                if row["resolution_target_kind"] is not None
+                else None
+            ),
+            resolution_target_id=row["resolution_target_id"],
+            resolution_note=row["resolution_note"],
         )
 
     def _row_to_instr_version(self, row: sqlite3.Row) -> InstrumentVersion:

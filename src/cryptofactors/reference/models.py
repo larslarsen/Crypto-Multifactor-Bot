@@ -67,6 +67,10 @@ class ResolutionOutcome(str, Enum):
     QUEUED = "QUEUED"
 
 
+# Fixed-width lexicographically sortable UTC: YYYY-MM-DDTHH:MM:SS.ffffffZ
+_UTC_STORE_FMT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
 def ensure_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         raise ValueError("datetime must be timezone-aware UTC")
@@ -74,7 +78,10 @@ def ensure_utc(dt: datetime) -> datetime:
 
 
 def dt_to_iso(dt: datetime) -> str:
-    return ensure_utc(dt).isoformat().replace("+00:00", "Z")
+    """Canonical storage/fingerprint/query form: fixed microseconds + Z."""
+    u = ensure_utc(dt)
+    # strftime %f is always 6 digits; Z suffix keeps lex order == time order.
+    return u.strftime("%Y-%m-%dT%H:%M:%S.") + f"{u.microsecond:06d}Z"
 
 
 def iso_to_dt(value: str) -> datetime:
