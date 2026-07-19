@@ -39,8 +39,11 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     repository records, Git, commits, and pushes.
 - The owner relays the reviewer's one-way developer prompts. Developers do not chat
   with the reviewer.
-- The reviewer is the acceptance authority; publication (commit + push) is Hermes's
-  duty, not a gated owner-only action.
+- **Reviewer acceptance is exclusive.** Only the Senior Quantitative Finance
+  Researcher/Engineer accepts or rejects engineering work and authorizes the next
+  ticket. The owner is the prompt relay only and is not an alternate acceptance
+  authority. Publication (commit + push) is Hermes's duty, not a gated owner-only
+  action.
 
 ## Enforcement
 

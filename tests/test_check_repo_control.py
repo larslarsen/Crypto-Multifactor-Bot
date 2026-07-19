@@ -166,7 +166,7 @@ def test_sr_dev_granted_git_duties_is_rejected(tmp_path: Path) -> None:
     # Sr Dev must do source edits only; granting it Git/commit/push violates
     # role separation.
     (tmp_path / "AGENTS.md").write_text(
-        "# AGENTS.md\nSr Dev commits the integrated code and pushes to origin/main.\n"
+        "# AGENTS.md\nSr Dev must push and commit to origin/main.\n"
     )
     ok, errors = validate(tmp_path)
     assert not ok
@@ -193,6 +193,49 @@ def test_hermes_owns_push_is_accepted(tmp_path: Path) -> None:
     )
     ok, errors = validate(tmp_path)
     assert ok, errors
+
+
+def test_sr_dev_must_not_push_is_accepted(tmp_path: Path) -> None:
+    make_valid_structure(tmp_path)
+    # Explicit prohibition of a Sr Dev duty is accepted (not a violation).
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\nSr Dev must not push.\n"
+    )
+    ok, errors = validate(tmp_path)
+    assert ok, errors
+
+
+def test_sr_dev_must_push_is_rejected(tmp_path: Path) -> None:
+    make_valid_structure(tmp_path)
+    # Positive Sr Dev push duty is rejected (despite ordinary modal wording).
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\nSr Dev must push.\n"
+    )
+    ok, errors = validate(tmp_path)
+    assert not ok
+    assert any("role separation violated" in e for e in errors)
+
+
+def test_sr_dev_sandbox_owns_git_is_rejected(tmp_path: Path) -> None:
+    make_valid_structure(tmp_path)
+    # Role qualifier ("— Sandbox") must not mask a positive Git duty.
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\nSr Dev — Sandbox owns Git.\n"
+    )
+    ok, errors = validate(tmp_path)
+    assert not ok
+    assert any("role separation violated" in e for e in errors)
+
+
+def test_sr_dev_handles_integration_is_rejected(tmp_path: Path) -> None:
+    make_valid_structure(tmp_path)
+    # "handles integration" is a positive duty and must be rejected.
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\nSr Dev handles integration.\n"
+    )
+    ok, errors = validate(tmp_path)
+    assert not ok
+    assert any("role separation violated" in e for e in errors)
 
 
 def test_no_hard_coded_ticket_in_hermes(tmp_path: Path) -> None:

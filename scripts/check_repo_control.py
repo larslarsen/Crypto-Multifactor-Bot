@@ -48,15 +48,56 @@ TICKET_ID_RE = re.compile(r"^[A-Z]{2,}-\d")
 # durable docs other than CURRENT_TASK.md.
 HARD_CODED_RE = re.compile(r"(?:implement|do|complete)\s+`?tickets/[A-Z]{2,}-\d+", re.IGNORECASE)
 
-# Role-separation enforcement (replaces the old "dev agents must not push" rule).
-# Sr Dev (Sandbox / Grok Build) does source edits only; it must not be granted Git,
-# integration, commit, push, or acceptance-testing duties in any governance doc.
-SR_DEV_DUTY_RE = re.compile(
-    r"Sr Dev.{0,15}?(?:git|commits?|pushes?|integrate|repository admin|acceptance test)",
+# Role-separation enforcement (replaces the fragile "Sr Dev.{0,15}?(duty)" regex).
+# Sr Dev (Sandbox / Grok Build) does source edits only; it must not be positively
+# assigned Git, integration, commit, push, repository-administration, or
+# acceptance-testing duties in any governance doc. Explicit prohibitions
+# ("must not push", "no Git") are accepted; only positive duty assertions are
+# rejected, regardless of role qualifiers or ordinary wording. Dependency-free:
+# we anchor on "Sr Dev", scan a bounded window, and require a duty verb/modal
+# immediately governing a duty noun, then exempt the match if a prohibition sits
+# between the anchor and that duty.
+_SR_DEV_ANCHOR_RE = re.compile(r"Sr Dev", re.IGNORECASE)
+_SR_DEV_DUTY_ASSERT_RE = re.compile(
+    r"(?:owns|performs|handles|does|runs|executes|manages|maintains|"
+    r"is responsible for|responsible for|must|should|may|will|shall)"
+    r"[\s\w\-]{0,30}?"
+    r"(?:git|commit|commits|push|pushes|integrate|integration|"
+    r"repository admin|acceptance test)",
     re.IGNORECASE,
 )
-# The old owner-only publication rule is removed: Hermes owns commit/push. No
-# governance doc may prohibit Hermes (or the Jr dev) from pushing.
+_SR_DEV_PROHIB_RE = re.compile(
+    r"(?:must not|may not|cannot|can not|does not|do not|"
+    r"is not|are not|prohibited|never|no longer|no )",
+    re.IGNORECASE,
+)
+
+
+def _sr_dev_granted_duties(text: str) -> bool:
+    """Return True if any 'Sr Dev' span positively assigns Git/integration/commit/
+    push/repository-admin/acceptance-test duties without an explicit prohibition.
+
+    The scan is bounded to the remainder of the current line so a Sr Dev clause is
+    evaluated on its own (it does not bleed into a later Hermes clause that may
+    legitimately own those duties)."""
+    for m in _SR_DEV_ANCHOR_RE.finditer(text):
+        line_end = text.find("\n", m.end())
+        hard = m.end() + 40
+        end = min(line_end, hard) if line_end != -1 else hard
+        window = text[m.end() : end]
+        duty = _SR_DEV_DUTY_ASSERT_RE.search(window)
+        if not duty:
+            continue
+        # Accept only if a prohibition sits within the asserted duty span
+        # (covers "must not push", "no Git", etc.).
+        if _SR_DEV_PROHIB_RE.search(window[: duty.end()]):
+            continue
+        return True
+    return False
+
+
+# Hermes owns commit/push (publication is not an owner-only action). No governance
+# doc may prohibit Hermes (or the Jr dev) from pushing.
 HERMES_PUSH_BAN_RE = re.compile(
     r"(?:Hermes|Jr dev).{0,80}?(?:must not|may not|cannot|does not|do not|prohibited).{0,40}?(?:push|publish)",
     re.IGNORECASE,
@@ -212,7 +253,7 @@ def validate(root: Path) -> Tuple[bool, List[str]]:
         if doc is None or not doc.exists():
             continue
         text = doc.read_text()
-        if SR_DEV_DUTY_RE.search(text):
+        if _sr_dev_granted_duties(text):
             errors.append(
                 f"{doc.name} grants Sr Dev Git/integration/commit/push duties "
                 f"(role separation violated)"
