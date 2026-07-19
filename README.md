@@ -7,7 +7,7 @@ implementable multifactor portfolios.
 
 - **Architecture:** frozen unless an approved ADR changes it.
 - **Current implementation milestone:** control catalog and migration runner.
-- **Current task:** [`AUD-001`](tickets/AUD-001.md), schema and coverage profiler.
+- **Current task:** [`REF-001`](tickets/REF-001.md), point-in-time asset and instrument master.
 - **Trading status:** no model is approved for serving or live capital.
 
 This repository is the source of truth. Research, architecture, tickets, implementation,
@@ -81,5 +81,5 @@ not be committed.
 
 ## Current review gate
 
-Active ticket: [`AUD-001`](tickets/AUD-001.md) — schema and coverage profiler
-(reviewer verdict `CHANGES_REQUIRED`; Sr Dev correction drop pending integration).
+Active ticket: [`REF-001`](tickets/REF-001.md) — point-in-time asset and instrument master
+(`IN_PROGRESS`; CAT-001 and AUD-001 data-audit prerequisites satisfied).

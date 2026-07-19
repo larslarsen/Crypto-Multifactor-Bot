@@ -1,7 +1,7 @@
 # AUD-001 — Implementation Handoff & Validation Evidence
 
 **Ticket:** AUD-001 (Schema and coverage profiler)
-**Status:** IN_PROGRESS (implementation landed; awaiting reviewer acceptance)
+**Status:** ACCEPTED (final review REVIEW-0016 at commit `5fac3ac20f4c88074207f795aef3b5f7d6078f5b`)
 **Source of truth:** `tickets/AUD-001.md`, `docs/handoff/CURRENT_TASK.md`, AGENTS.md
 
 ## Correction drop (v1.2.0 — reviewer CHANGES_REQUIRED resolved)
