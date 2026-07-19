@@ -1,6 +1,6 @@
 Ticket: AUD-001
-State: IN_PROGRESS
-Authorized scope: v1.2.0 correction (commit `64c254d`) integrated and validated. v1.2.1 Sr drop `AUD001_v121_exact_gaps_fix.zip` integrated (PROFILER_VERSION 1.2.1); one open CHANGES_REQUIRED finding (cadence `gap_count` undercounts by one — REVIEW-0015) routed to Sr Dev. Await Sr Dev's corrected drop (zip) for Hermes to apply; do not begin the next ticket.
+State: ACCEPTED
+Authorized scope: v1.2.0 correction (commit `64c254d`) integrated and validated. v1.2.1 Sr drop `AUD001_v121_exact_gaps_fix.zip` integrated (PROFILER_VERSION 1.2.1); apparent gap undercount (REVIEW-0015) WITHDRAWN — root cause was a test-fixture slice, not a production defect, fixed in `5fac3ac…`. AUD-001 accepted at `5fac3ac20f4c88074207f795aef3b5f7d6078f5b` (REVIEW-0016, ACCEPTED). Next ticket authorized: NONE.
 Required outcome: AUD-001 FULL-mode cadence gaps counted exactly against the final median; acceptance commands green.
 Stop condition: After Sr Dev's corrected drop lands and the gap test passes, produce a change report and stop. Do not begin the next ticket.
 Next ticket authorized: NONE

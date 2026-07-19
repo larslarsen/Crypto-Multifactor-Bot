@@ -1,14 +1,33 @@
-# REVIEW-0015 — AUD-001 v1.2.1 CHANGES_REQUIRED (gap undercount)
+# REVIEW-0015 — AUD-001 v1.2.1 gap undercount (WITHDRAWN — fixture error)
+
+**Status:** WITHDRAWN / superseded by REVIEW-0016 (`ACCEPTED`).
+
+**Correction:** The "gap undercount" reported here was **not a production defect**.
+The reproduction used a test fixture that built cumulative timestamps from origin `0`
+then dropped it with `ts = ts[1:]`, which removed one 100-second inter-row delta, so the
+CSV exposed only a single 100s delta while the assertion expected two. The production
+spill/`gap_count_against` logic was correct all along (the isolation test already
+returned `gap_count == 2`). The fixture bug was fixed in commit `5fac3ac…`
+(`tests/audit/test_profiler.py` no longer slices `ts[1:]`), after which
+`test_full_mode_gaps_classified_against_final_median` passes with `gap_count == 2` and
+`median_cadence_seconds == 1`. No Sr Dev change to `src/cryptofactors/audit/` was required.
+
+The remainder of this record is retained for audit trail only; treat its finding as
+resolved-without-code-change.
+
+---
+
+# REVIEW-0015 (original text, retained for history)
 
 **Ticket:** AUD-001 — Schema and coverage profiler
 **Implementation reviewed:** commit `64c254d623540d51fbe63b4772d9cf147539d856`
   (AUD-001 v1.2.0 correction, pushed) + Sr drop `AUD001_v121_exact_gaps_fix.zip`
-  integrated as `PROFILER_VERSION` `1.2.1` (commit pending this record).
-**Verdict / Status:** CHANGES_REQUIRED
-**Reviewer of record:** Hermes (Jr Dev) — integration owner; re-acceptance is the
-  Senior Quantitative Finance Researcher/Engineer's exclusive call.
+  integrated as `PROFILER_VERSION` `1.2.1` (commit `260eb24…`).
+**Verdict / Status:** CHANGES_REQUIRED → **WITHDRAWN** (fixture error, not a defect)
 
-## Blocking finding — cadence `gap_count` undercount
+## (Original) Blocking finding — cadence `gap_count` undercount
+
+> WITHDRAWN: this was a test-fixture artifact, not a production bug. See top note.
 
 The v1.2.1 "exact gaps" fix intends to classify gaps against the FINAL median via
 `cadence_exact.gap_count_against(med_cadence)` (bounded SQL `COUNT WHERE delta > 3*median`).
@@ -52,17 +71,11 @@ strict gates; they are NOT the requested change and need no Sr Dev action:
 
 ## Disposition
 
-AUD-001 remains `IN_PROGRESS` at `64c254d…` (v1.2.0 accepted-for-integration; v1.2.1
-pending this CHANGES_REQUIRED). Hermes integrated v1.2.1 and committed it so the Sr Dev
-can read the exact state from the repo. Await Sr Dev's corrected drop (zip) for Hermes
-to apply, then re-run acceptance gates. Next ticket authorized: `NONE`.
+WITHDRAWN. The gap "defect" was a fixture artifact; fixed in `5fac3ac…`. AUD-001
+accepted at `5fac3ac…` (see REVIEW-0016). Next ticket authorized: `NONE`.
 
-## Request to Sr Dev (relay verbatim)
+## (Original) Request to Sr Dev (relay verbatim)
 
+> WITHDRAWN — no Sr Dev change required. Retained for history.
 > AUD-001 `gap_count` undercounts by one in FULL mode. Read the code under
-> `src/cryptofactors/audit/profiler.py` (FULL-mode cadence path, ~lines 840-846, and
-> `_DeltaSpill.gap_count_against`). Do NOT touch tests, docs, schema, migrations, or
-> anything outside `src/cryptofactors/audit/`. Return a zip of the corrected
-> `profiler.py` (and `models.py` only if needed) for Hermes to apply. The fix must make
-> `tests/audit/test_profiler.py::test_full_mode_gaps_classified_against_final_median`
-> pass (two large deltas against a tiny final median → gap_count == 2).
+> `src/cryptofactors/audit/profiler.py` …

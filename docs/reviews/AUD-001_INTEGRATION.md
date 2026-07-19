@@ -118,11 +118,16 @@ python3 scripts/check_repo_control.py
 - Intent: gaps classified against the FINAL median via `_DeltaSpill.gap_count_against`
   (bounded SQL `COUNT WHERE delta > 3*median`), replacing the v1.2.0 running-probe
   approximation.
-- **Open defect (CHANGES_REQUIRED, REVIEW-0015):** the profiler's reported `gap_count`
-  undercounts by one in FULL mode (reproduced: two 100s around a 1s median → expected
-  2, profiler returns 1; the spill class itself returns 2 in isolation). Routed to Sr
-  Dev; `tests/audit/test_profiler.py::test_full_mode_gaps_classified_against_final_median`
-  pins it (currently FAILS on v1.2.1).
+- **Open defect (CHANGES_REQUIRED, REVIEW-0015):** WITHDRAWN. The apparent `gap_count`
+  undercount was a **test-fixture artifact**, not a production defect. The fixture built
+  cumulative timestamps from origin `0` then dropped it with `ts = ts[1:]`, removing one
+  100-second inter-row delta so the CSV exposed only a single 100s delta while the
+  assertion expected two. The production spill/`gap_count_against` logic was correct
+  (isolation test already returned `gap_count == 2`). Fixed in `5fac3ac…` (fixture no
+  longer slices `ts[1:]`); `test_full_mode_gaps_classified_against_final_median` now
+  passes with `gap_count == 2`, `median_cadence_seconds == 1`. No Sr Dev change to
+  `src/cryptofactors/audit/` was required. See REVIEW-0015 (WITHDRAWN) and REVIEW-0016
+  (ACCEPTED).
 - Integration fixes Hermes re-applied (behavior-preserving, strict-gate only): added
   `@dataclass` to `_DeltaSpill` and `_CadenceReservoir` (drop had reverted them →
   runtime `TypeError`); `csv.DictReader[str]`; renamed comprehension-leaked locals
@@ -138,3 +143,18 @@ python3 scripts/check_repo_control.py
   NOT publish — publication remains the caller's explicit, gated step.
 - Full-repo mypy outside AUD-001 (legacy of earlier tickets) is out of scope.
 - AUD-001 remains IN_PROGRESS; next ticket authorized: NONE.
+
+## Final acceptance (REVIEW-0016, ACCEPTED)
+
+- **Accepted commit:** `5fac3ac20f4c88074207f795aef3b5f7d6078f5b`
+- **Verdict:** `ACCEPTED` (reviewer of record: Senior Quantitative Finance
+  Researcher/Engineer). Recorded by Hermes per control-plane governance.
+- Acceptance commands green at the accepted commit:
+  - `pytest tests/audit` → 12 passed
+  - `ruff check src/cryptofactors/audit tests/audit` → all checks passed
+  - `mypy --no-incremental src/cryptofactors/audit tests/audit` → Success (5 files)
+  - `pytest -q` (full suite) → passed
+  - `check_repo_control.py` → PASS
+- The REVIEW-0015 gap undercount was a fixture artifact (WITHDRAWN); no production change
+  was required. AUD-001 is `ACCEPTED`; `tickets/AUD-001.md` and `CURRENT_TASK.md` set to
+  `ACCEPTED`. Next ticket authorized: `NONE`.
