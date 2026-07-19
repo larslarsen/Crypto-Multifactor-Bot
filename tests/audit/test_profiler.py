@@ -166,6 +166,35 @@ def test_missing_file_raises(tmp_path: Path) -> None:
         profile_candidate(missing, ident, mode=ProfileMode.SAMPLE, output_dir=out)
 
 
+def test_full_mode_gaps_classified_against_final_median(tmp_path: Path) -> None:
+    # v1.2.1 fix: gaps are counted against the FINAL median (exact SQL pass),
+    # not a drifting running-probe median of early samples.
+    # Cadence comes from the `ts` column: two large early deltas (100s) followed
+    # by many tiny deltas (1s). Final median is 1 -> threshold 3 -> exactly the
+    # two 100s are gaps.
+    n_small = 98
+    deltas = [100, 100] + [1] * n_small
+    ts = [0]
+    for d in deltas:
+        ts.append(ts[-1] + d)
+    ts = ts[1:]  # cumulative timestamps (epoch seconds), one per row
+    rows = "\n".join(f"{t},{i}" for i, t in enumerate(ts))
+    csv = tmp_path / "cad.csv"
+    csv.write_text(f"ts,val\n{rows}\n")
+    out = tmp_path / "out"
+    res = profile_candidate(
+        csv, _identity(csv), mode=ProfileMode.FULL, output_dir=out
+    )
+    # Exact gap count against the true final median.
+    final_median = sorted(deltas)[len(deltas) // 2]
+    expected = sum(1 for d in deltas if d > 3 * final_median)
+    assert res.summary.timestamp.gap_count == expected
+    assert expected == 2
+    # Median is the tiny value (1), confirming gaps are measured against it.
+    assert res.summary.timestamp.median_cadence_seconds == final_median
+
+
+
 # ---- Reviewer CHANGES_REQUIRED findings (REVIEW-0013) -----------------------
 
 

@@ -211,6 +211,7 @@ class ProfileSummary:
                     "max_value": c.max_value,
                     "range_completeness": c.range_completeness.value,
                     "mapped_role": c.mapped_role.value if c.mapped_role else None,
+                    "declared_type_label": c.declared_type_label,
                 }
                 for c in self.columns
             ],

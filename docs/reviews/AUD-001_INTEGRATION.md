@@ -108,6 +108,28 @@ python3 scripts/check_repo_control.py
   -> Repo control check: PASS
 ```
 
+## Correction drop v1.2.1 (exact gaps — REVIEW-0015, CHANGES_REQUIRED open)
+
+- Source: Sr Dev Sandbox drop `AUD001_v121_exact_gaps_fix.zip` (newest in `~/Downloads`
+  after `64c254d`). Integrates as `PROFILER_VERSION` `1.2.1`; `errors.py` /
+  `__init__.py` unchanged, `models.py` + `profiler.py` revised. `_SCHEMA_VERSION`
+  bumped to `1.1.0` and `declared_type_label` is now also serialized into the summary
+  JSON (makes Parquet physical-type preservation durable in output).
+- Intent: gaps classified against the FINAL median via `_DeltaSpill.gap_count_against`
+  (bounded SQL `COUNT WHERE delta > 3*median`), replacing the v1.2.0 running-probe
+  approximation.
+- **Open defect (CHANGES_REQUIRED, REVIEW-0015):** the profiler's reported `gap_count`
+  undercounts by one in FULL mode (reproduced: two 100s around a 1s median → expected
+  2, profiler returns 1; the spill class itself returns 2 in isolation). Routed to Sr
+  Dev; `tests/audit/test_profiler.py::test_full_mode_gaps_classified_against_final_median`
+  pins it (currently FAILS on v1.2.1).
+- Integration fixes Hermes re-applied (behavior-preserving, strict-gate only): added
+  `@dataclass` to `_DeltaSpill` and `_CadenceReservoir` (drop had reverted them →
+  runtime `TypeError`); `csv.DictReader[str]`; renamed comprehension-leaked locals
+  (`c`→`close_`, `num`→`num_val`); removed unused `ColumnRole` import; pyarrow
+  `# type: ignore[import-untyped]`; re-applied the empty-`{}` Parquet padding in
+  `_write_parquet`.
+
 ## Unresolved risks / notes
 
 - Profiling writes Parquet detail/issues artifacts via `polars`; CSV and Parquet

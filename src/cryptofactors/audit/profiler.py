@@ -60,14 +60,14 @@ from cryptofactors.catalog.dataset.models import (
     TransformSpec,
 )
 
-PROFILER_VERSION = "1.2.0"
+PROFILER_VERSION = "1.2.1"
 _TRANSFORM_NAME = "audit.schema_coverage_profile"
 _TRANSFORM_VERSION = "1"
 _DATASET_TYPE = "audit_profile"
 _SCHEMA_NAME = "audit_profile_summary"
-_SCHEMA_VERSION = "1.0.0"
+_SCHEMA_VERSION = "1.1.0"
 _SCHEMA_FINGERPRINT = (
-    "aud001-profile-summary-v1"  # stable identity — not content-derived
+    "aud001-profile-summary-v1.1.0"  # stable identity — not content-derived
 )
 
 _SUMMARY_NAME = "profile_summary.json"
@@ -169,14 +169,15 @@ class _KeySpill:
 
 @dataclass
 class _DeltaSpill:
-    """SQLite-backed exact cadence aggregation (bounded process memory)."""
+    """SQLite-backed exact cadence storage (bounded process memory).
 
+    Deltas are spilled only. Final median is computed once after the scan;
+    gap count is a second bounded SQL pass against that final threshold.
+    No evolving probe is used for reported exact metrics.
+    """
     path: Path
     conn: sqlite3.Connection
     count: int = 0
-    gap_count: int = 0
-    _last_med_probe: float | None = None
-    _probe_n: int = 0
 
     @classmethod
     def create(cls, work_dir: Path) -> _DeltaSpill:
@@ -197,23 +198,16 @@ class _DeltaSpill:
             return
         self.conn.execute("INSERT INTO deltas(delta) VALUES (?)", (float(delta),))
         self.count += 1
-        # gap heuristic using running probe median of first/last samples only
-        self._probe_n += 1
-        if self._last_med_probe is not None and self._last_med_probe > 0:
-            if delta > 3 * self._last_med_probe:
-                self.gap_count += 1
-        if self.count in (1, 5, 11, 21, 51, 101) or self.count % 1024 == 0:
-            self._last_med_probe = self.median()
 
     def flush(self) -> None:
         self.conn.commit()
 
     def median(self) -> float | None:
+        """Exact median of spilled non-negative deltas."""
         self.conn.commit()
         n = self.conn.execute("SELECT COUNT(*) FROM deltas").fetchone()[0]
         if not n:
             return None
-        # 0-based offset for lower median
         off = (n - 1) // 2
         row = self.conn.execute(
             "SELECT delta FROM deltas ORDER BY delta LIMIT 1 OFFSET ?",
@@ -221,12 +215,23 @@ class _DeltaSpill:
         ).fetchone()
         return float(row[0]) if row else None
 
+    def gap_count_against(self, median: float | None, *, factor: float = 3.0) -> int | None:
+        """Count deltas strictly greater than factor * final median (exact)."""
+        if median is None or median <= 0 or self.count == 0:
+            return None if self.count == 0 else 0
+        self.conn.commit()
+        threshold = factor * median
+        row = self.conn.execute(
+            "SELECT COUNT(*) FROM deltas WHERE delta > ?",
+            (threshold,),
+        ).fetchone()
+        return int(row[0]) if row else 0
+
     def close(self) -> None:
         try:
             self.conn.close()
         except Exception:
             pass
-
 
 @dataclass
 class _CadenceReservoir:
@@ -835,7 +840,8 @@ def _profile_stream(
     if cadence_exact is not None:
         cadence_exact.flush()
         med_cadence = cadence_exact.median()
-        gap_out = cadence_exact.gap_count if cadence_exact.count else None
+        # Gaps classified only against the final median (exact, out-of-core).
+        gap_out = cadence_exact.gap_count_against(med_cadence)
         cad_comp = completeness if cadence_exact.count else MetricCompleteness.UNAVAILABLE
         cadence_exact.close()
     elif cadence_sample is not None:
@@ -976,19 +982,19 @@ def _write_parquet(path: Path, rows: Sequence[Mapping[str, Any]]) -> int:
         raise AuditOutputError(
             "polars is required to write Parquet profile artifacts",
         ) from exc
-
-    def _pad(row: Mapping[str, Any]) -> dict[str, Any]:
-        # Empty dicts -> field-less struct, which polars cannot write to Parquet.
-        # Pad with a dummy key so the struct column stays valid (content preserved
-        # for any non-empty dict).
-        out = {}
-        for k, v in row.items():
-            out[k] = v if v != {} else {"_empty": None}
-        return out
-
     if not rows:
         df = pl.DataFrame({"_empty": []})
     else:
+
+        def _pad(row: Mapping[str, Any]) -> dict[str, Any]:
+            # Empty dicts -> field-less struct, which polars cannot write to Parquet.
+            # Pad with a dummy key so the struct column stays valid (content preserved
+            # for any non-empty dict).
+            out = {}
+            for k, v in row.items():
+                out[k] = v if v != {} else {"_empty": None}
+            return out
+
         df = pl.DataFrame(
             [_pad(r) for r in rows], infer_schema_length=min(len(rows), 1000)
         )
