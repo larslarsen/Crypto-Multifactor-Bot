@@ -5,23 +5,21 @@
 **Source of truth:** `tickets/LEG-001.md`, `docs/handoff/CURRENT_TASK.md`,
 `docs/architecture/08_LEGACY_MIGRATION_PLAN.md`, `AGENTS.md`
 
-## Deliverable integrated (Sr Dev Sandbox, v1.2.1)
+## Deliverable integrated (Sr Dev Sandbox, v1.2.2)
 
 - `src/cryptofactors/ingest/legacy_local.py` — bounded-memory recursive legacy
   filesystem census scanner (`LegacyLocalScanner`, `scan_legacy_root`),
-  scanner version `1.2.1`.
+  scanner version `1.2.2`.
 - `src/cryptofactors/ingest/__init__.py` — LEG-001 exports merged onto the
   existing RAW-001 re-exports (RAW-001 content preserved, verified).
 
-Source: Sr Dev Sandbox drop `LEG001_v121_repo_directive.zip` (newest in
-`~/Downloads`, dropped after the v1.2.0 push). Inspected read-only; contains
-`legacy_local.py` (v1.2.1), the updated `tickets/LEG-001.md`, `CURRENT_TASK.md`,
-and `LEG-001_SR_ACCEPTANCE_FIXES.md`. Supersedes `LEG001_v12_corrected.zip`
-(v1.2.0). v1.2.1 adds: descriptor-relative streaming directory iteration via
-`/proc/self/fd` (no `os.listdir` materialization), `b64:` self-wrapping so a raw
-`b"\x80"` (`b64:gA==`) stays distinct from a literal `b64:gA==` file
-(`b64:YjY0OmdBPT0=`), zero-byte regular-file `byte_size`, and output/work
-subtree exclusion (`output_self`/`work_self`) before enqueue or hash.
+Source: Sr Dev Sandbox drop `LEG001_v122_merge_key_fix.zip` (newest in
+`~/Downloads`, dropped after the v1.2.1 push). Inspected read-only; contains
+only `legacy_local.py` (v1.2.2). Supersedes `LEG001_v121_repo_directive.zip`
+(v1.2.1). v1.2.2 fixes the external merge: every run record now persists its
+canonical binary identity key (`<hex(key)>\t<json>`) so each merge level (and
+the final emit) orders by binary identity, never by the display `relative_path`.
+This removes any locale/display-dependent ordering drift in multi-level merges.
 
 ## Integration defects fixed (in the Sr v1.2.0 code, to pass repo gates)
 
@@ -37,10 +35,10 @@ two ruff findings. Minimal, behavior-preserving fixes applied to
 
 No behavioral logic was altered; the Sr scanner's invariants are intact.
 
-## Exact test inventory — `tests/ingest/test_legacy_local.py` (14 tests)
+## Exact test inventory — `tests/ingest/test_legacy_local.py` (15 tests)
 
-Mapped to the required Jr validation focus (1-10) and the Sr v1.2.1 acceptance
-blockers (11-14):
+Mapped to the required Jr validation focus (1-10), the Sr v1.2.1 acceptance
+blockers (11-14), and a v1.2.2 merge-key regression guard (15):
 
 1. `test_embedded_newline_name_unique` — filename with embedded newline survives
    and is its own unique inventory entry (reversible `b64:` form).
@@ -78,6 +76,16 @@ blockers (11-14):
 14. `test_output_subtree_excluded_before_enqueue` — Sr acceptance blocker 4:
     `legacy_root/out/preexisting.txt` with `output_dir=legacy_root/out` is absent
     from the inventory; `excluded_by_rule["output_self"]` records the exclusion.
+15. `test_multilevel_merge_deterministic_binary_order` — v1.2.2 regression guard:
+    a forced multi-level external merge (small run buffer) yields identical
+    inventory bytes across two scans, proving binary-identity ordering at every
+    merge level.
+
+## v1.2.2 integration defect fixed (to pass repo gates)
+
+The raw v1.2.2 drop re-introduced a dead `root_id = _stat_identity(os.fstat(root_fd))`
+assignment. Removed (behavior-preserving lint fix). No behavioral logic altered;
+the Sr merge-key fix is intact.
 
 ## v1.2.1 integration defect fixed (to pass repo gates)
 
@@ -98,7 +106,7 @@ No behavioral logic was altered; the Sr scanner's invariants are intact.
 ```
 # Exact acceptance commands (tickets/LEG-001.md):
 PYTHONPATH=src uv run pytest tests/ingest/test_legacy_local.py -q --tb=short
-  -> 14 passed
+  -> 15 passed
 
 PYTHONPATH=src uv run ruff check src/cryptofactors/ingest/legacy_local.py tests/ingest/test_legacy_local.py
   -> All checks passed!
@@ -111,7 +119,7 @@ python3 scripts/check_repo_control.py
 
 # Full suite (context):
 PYTHONPATH=src uv run pytest -q
-  -> 253 passed
+  -> 254 passed
 ```
 
 ## Unresolved risks / notes

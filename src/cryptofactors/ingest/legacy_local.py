@@ -27,8 +27,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Final
 
-SCANNER_VERSION: Final[str] = "1.2.1"
-INVENTORY_SCHEMA_VERSION: Final[str] = "1.2.1"
+SCANNER_VERSION: Final[str] = "1.2.2"
+INVENTORY_SCHEMA_VERSION: Final[str] = "1.2.2"
 _MERGE_FAN_IN: Final[int] = 16
 _RUN_BUFFER_LIMIT: Final[int] = 2048
 _QUEUE_BATCH: Final[int] = 256
@@ -808,12 +808,37 @@ class _PublishReservation:
 
 
 # ---- External merge (unique intermediate paths, bounded fan-in) -----------
+#
+# Staged run record format (internal only; never published):
+#   <hex(binary_identity_key)>\t<public inventory JSON object>\n
+# Every merge level compares the binary key. Final output strips the key and
+# emits only the unchanged public JSON object.
+
+
+def _format_run_record(sort_key: bytes, json_line: str) -> str:
+    payload_body = json_line[:-1] if json_line.endswith("\n") else json_line
+    return sort_key.hex() + "\t" + payload_body + "\n"
+
+
+def _parse_run_record(line: str) -> tuple[bytes, str]:
+    """Return (binary_identity_key, json_line_without_trailing_newline)."""
+    raw = line[:-1] if line.endswith("\n") else line
+    tab = raw.find("\t")
+    if tab <= 0:
+        raise LegacyScanError(
+            "internal run record missing binary merge key",
+            context={"line_prefix": raw[:64]},
+        )
+    key = bytes.fromhex(raw[:tab])
+    return key, raw[tab + 1 :]
+
 
 def _write_sorted_run(lines: list[tuple[bytes, str]], run_path: Path) -> None:
+    """Sort by canonical binary identity and persist key alongside each JSON record."""
     lines.sort(key=lambda t: t[0])
     with run_path.open("w", encoding="utf-8") as handle:
-        for _, line in lines:
-            handle.write(line if line.endswith("\n") else line + "\n")
+        for sort_key, json_line in lines:
+            handle.write(_format_run_record(sort_key, json_line))
 
 
 def _unique_merge_path(parent: Path) -> Path:
@@ -825,11 +850,13 @@ def _merge_runs_streaming(
     out_path: Path,
     *,
     fan_in: int = _MERGE_FAN_IN,
+    strip_keys: bool = True,
 ) -> tuple[str, int]:
-    """K-way merge writing directly to ``out_path`` while computing SHA-256 and size.
+    """K-way merge ordered by binary identity keys at every level.
 
-    Returns (sha256_hex, byte_size). Never loads the full output into memory.
-    Intermediate merge paths are unique UUIDs and never equal any input.
+    When ``strip_keys`` is True (final inventory), only the public JSON object
+    is written. Intermediate merges keep the key prefix so the next level
+    compares the same canonical binary identity as ``_write_sorted_run``.
     """
     if not run_paths:
         out_path.write_bytes(b"")
@@ -838,14 +865,18 @@ def _merge_runs_streaming(
     if len(run_paths) == 1:
         digest = hashlib.sha256()
         total = 0
-        with run_paths[0].open("rb") as src, out_path.open("wb") as dst:
-            while True:
-                chunk = src.read(1024 * 1024)
-                if not chunk:
-                    break
-                dst.write(chunk)
-                digest.update(chunk)
-                total += len(chunk)
+        with run_paths[0].open("r", encoding="utf-8") as src_f, out_path.open("wb") as dst:
+            for line in src_f:
+                if not line.strip():
+                    continue
+                key, payload = _parse_run_record(line)
+                if strip_keys:
+                    out_line = (payload + "\n").encode("utf-8")
+                else:
+                    out_line = _format_run_record(key, payload).encode("utf-8")
+                dst.write(out_line)
+                digest.update(out_line)
+                total += len(out_line)
             dst.flush()
             os.fsync(dst.fileno())
         return digest.hexdigest(), total
@@ -857,12 +888,14 @@ def _merge_runs_streaming(
             for i in range(0, len(run_paths), fan_in):
                 batch = run_paths[i : i + fan_in]
                 mid = _unique_merge_path(parent)
-                # Ensure mid is not in batch.
                 while mid in batch or mid == out_path:
                     mid = _unique_merge_path(parent)
-                _merge_runs_streaming(batch, mid, fan_in=fan_in)
+                # Intermediate levels MUST retain keys for the next merge.
+                _merge_runs_streaming(batch, mid, fan_in=fan_in, strip_keys=False)
                 intermediate.append(mid)
-            return _merge_runs_streaming(intermediate, out_path, fan_in=fan_in)
+            return _merge_runs_streaming(
+                intermediate, out_path, fan_in=fan_in, strip_keys=strip_keys
+            )
         finally:
             for p in intermediate:
                 try:
@@ -870,17 +903,17 @@ def _merge_runs_streaming(
                 except OSError:
                     pass
 
-    # Open at most fan_in handles.
     handles: list[Any] = []
-    heads: list[tuple[str, str, int] | None] = []
+    # head: (binary_key, json_payload, handle_index)
+    heads: list[tuple[bytes, str, int] | None] = []
     try:
         for p in run_paths:
             h = p.open("r", encoding="utf-8")
             handles.append(h)
             line = h.readline()
-            if line:
-                obj = json.loads(line)
-                heads.append((obj["relative_path"], line, len(handles) - 1))
+            if line and line.strip():
+                key, payload = _parse_run_record(line)
+                heads.append((key, payload, len(handles) - 1))
             else:
                 heads.append(None)
 
@@ -891,16 +924,20 @@ def _merge_runs_streaming(
                 active = [h for h in heads if h is not None]
                 if not active:
                     break
+                # Canonical binary identity ordering — never relative_path.
                 active.sort(key=lambda t: t[0])
-                _, best_line, best_idx = active[0]
-                raw = (best_line if best_line.endswith("\n") else best_line + "\n").encode("utf-8")
+                best_key, best_payload, best_idx = active[0]
+                if strip_keys:
+                    raw = (best_payload + "\n").encode("utf-8")
+                else:
+                    raw = _format_run_record(best_key, best_payload).encode("utf-8")
                 out.write(raw)
                 digest.update(raw)
                 total += len(raw)
                 nxt = handles[best_idx].readline()
-                if nxt:
-                    obj = json.loads(nxt)
-                    heads[best_idx] = (obj["relative_path"], nxt, best_idx)
+                if nxt and nxt.strip():
+                    key, payload = _parse_run_record(nxt)
+                    heads[best_idx] = (key, payload, best_idx)
                 else:
                     heads[best_idx] = None
             out.flush()

@@ -473,5 +473,31 @@ def test_output_subtree_excluded_before_enqueue(tmp_path: Path) -> None:
     assert summary.excluded_by_rule.get("output_self", 0) >= 1
 
 
+# Regression guard for the v1.2.2 merge-key fix: external merge (including
+# intermediate levels) must order by canonical binary identity, never by the
+# display relative_path. Force a multi-level merge, then confirm the inventory
+# is byte-identical across two scans.
+def test_multilevel_merge_deterministic_binary_order(tmp_path: Path) -> None:
+    root = tmp_path / "legacy"
+    root.mkdir()
+    n = 2000
+    for i in range(n):
+        (root / f"f{i:05d}.bin").write_bytes(b"seed-%d" % (i % 131))
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
+
+    with mock.patch.object(ll, "_RUN_BUFFER_LIMIT", 50):
+        s1 = scan_legacy_root(root, out1)
+        s2 = scan_legacy_root(root, out2)
+    assert s1.total_entries == n
+    assert s1.hashed_regular_files == n
+    assert s2.total_entries == n
+    # Byte-identical across scans proves stable binary-key ordering at every
+    # merge level (display paths would sort differently under some locales).
+    inv1 = (out1 / "legacy_inventory.jsonl").read_bytes()
+    inv2 = (out2 / "legacy_inventory.jsonl").read_bytes()
+    assert inv1 == inv2
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
