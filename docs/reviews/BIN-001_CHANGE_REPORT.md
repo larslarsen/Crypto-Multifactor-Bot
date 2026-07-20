@@ -1,8 +1,8 @@
 # BIN-001 — Change Report: Binance archive kline normalizer
 
 **Ticket:** BIN-001
-**State:** IN_PROGRESS
-**Next ticket authorized:** NONE
+**State:** ACCEPTED by REVIEW-0025
+**Next ticket authorized:** BAR-001
 
 ## Integrated Sr Dev drop — REVIEW-0023 v4 source-reviewed
 
