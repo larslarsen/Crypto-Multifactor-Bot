@@ -1,7 +1,7 @@
 # BAR-001 — Integration Change Report
 
 **Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
-**Governing review:** REVIEW-0038 (false-blocker remediation; retains REVIEW-0028/29/30/31/32/33/34/35/36/37)
+**Governing review:** REVIEW-0039 (final integration assertions required; CHANGES_REQUIRED, Jr only)
 **Date:** 2026-07-20
 
 ## Source
@@ -12,9 +12,33 @@
 
 ## Jr integration changes
 
-`tests/market/test_canonical_bars.py` — 39 focused regression tests. Each
+`tests/market/test_canonical_bars.py` — 40 focused regression tests. Each
 CURRENT_TASK checklist item is covered by a dedicated test that independently
-reaches and asserts the target branch:
+reaches and asserts the target branch.
+
+### REVIEW-0039 corrections (tested implementation HEAD `d12caff`)
+
+1. `test_identical_duplicate_collapses_both_orders` — uses separate output
+   directories, reads both outputs, asserts exactly one retained row, asserts the
+   deterministic retained `source_dataset_id` (order-independent), and asserts
+   byte-identical output in both source orders.
+2. `test_explicit_1m_selection_no_merge` / `test_no_merge_mixed_timeframe_daily_counts`
+   — 5m rows now carry distinguishable open/close/volume/trade values; daily
+   base_volume / trade_count / open / close are asserted equal to the selected 1m
+   totals only, in both source orders (a merge would be detected).
+3. `test_daily_ohlcv_values` — asserts `base_volume`, `quote_volume`,
+   `trade_count`, and the taker-volume sums for the complete day.
+4. `test_reconcile_missing_native` — supplies native evidence for a different
+   period so the `missing_native` branch is reached; asserts report status
+   `missing_native` and issue `bar001_daily_missing_native`.
+5. `test_unsafe_path_token_rejected_fail_closed` (new) — a validly signed source
+   with an unsafe caller/path token (`../escape`) is rejected before any
+   filesystem write escapes the root.
+6. `_manifest_with_partition` — no longer writes shared `/tmp/part_probe`; uses the
+   test's `tmp_path` so fixtures are isolated, parallel-safe, and independent of
+   prior runs.
+
+### Checklist coverage (items 1-10)
 
 | # | Requirement | Test(s) |
 |---|---|---|
@@ -30,37 +54,37 @@ reaches and asserts the target branch:
 | 7 | Simultaneous 1m/5m, ambiguity, explicit 1m, no merge | `test_mixed_timeframe_ambiguity_fails_closed`, `test_explicit_1m_selection_no_merge`, `test_no_merge_mixed_timeframe_daily_counts` |
 | 8 | Daily OHLCV values | `test_daily_ohlcv_values` |
 | 9 | Reconciliation match/mismatch/missing-native/missing-resampled | `test_reconcile_match`, `test_reconcile_mismatch_quarantine`, `test_reconcile_missing_native`, `test_reconcile_missing_resampled` |
-| 10 | Safe paths, partition measurements, lineage, `verify_outputs`, catalog `DatasetPublisher.publish` | `test_safe_output_paths_and_partition_measurements`, `test_row_and_dependency_lineage`, `test_verify_outputs_passes`, `test_catalog_registered_publish` |
+| 10 | Safe paths, partition measurements, lineage, `verify_outputs`, catalog `DatasetPublisher.publish` | `test_safe_output_paths_and_partition_measurements`, `test_unsafe_path_token_rejected_fail_closed`, `test_row_and_dependency_lineage`, `test_verify_outputs_passes`, `test_catalog_registered_publish` |
 
-Also retained regression coverage: empty sources, PASS_WITH_WARNINGS propagation,
-nullable missing fields, strict COIN-M schema rejection, inclusive-close match/mismatch,
-partial-day exclusion, forged manifest hash, local file hash mismatch, REJECTED/
-QUARANTINED fail-closed, legacy v1 identity, daily-source-timeframe canonical identity,
-whitespace-equivalent timeframe identity.
+Retained regression coverage: empty sources, PASS_WITH_WARNINGS propagation,
+nullable missing fields, strict COIN-M schema rejection, inclusive-close
+match/mismatch, partial-day exclusion, forged manifest hash, local file hash
+mismatch, REJECTED/QUARANTINED fail-closed, legacy v1 identity, daily-source-
+timeframe canonical identity, whitespace-equivalent timeframe identity.
 
-## Fixture method (REVIEW-0038 requirement)
+## Fixture method
 
 Each forged case re-signs identity independently so exactly one branch is reached:
 - Dataset-ID mismatch: forge `dataset_id`, re-sign `manifest_sha256` over the forged body.
 - Byte-size mismatch: preserve real file SHA, change declared `OutputFileSpec.bytes`
-  and `statistics.byte_size`, re-sign `dataset_id` + `manifest_sha256`, and propagate
-  the new `verified_outputs`/dataset_id to the receipt so dual-evidence agrees and the
-  file byte-size check fires at runtime.
+  and `statistics.byte_size`, re-sign `dataset_id` + `manifest_sha256`, propagate
+  the new `verified_outputs`/dataset_id to the receipt so dual-evidence agrees and
+  the file byte-size check fires at runtime.
 - Unsupported identity / partition variants: change one identity field, re-sign both
   `dataset_id` and `manifest_sha256`.
 
-## Ticket-exact gate results (committed HEAD — see docs/reviews/bar001_gates_exact_HEAD.txt)
-
+## Ticket-exact gate results (tested implementation HEAD `d12caff`)
+See docs/reviews/bar001_gates_exact_HEAD.txt for exact command output:
 1. `PYTHONPATH=src uv run pytest tests/market/test_canonical_bars.py -q --tb=short`
-   39 tests pass
+   40 tests pass
 2. `uv run ruff check tests/market/test_canonical_bars.py`
    All checks passed!
 3. `PYTHONPATH=src uv run pytest -q --tb=short`
-   Full suite pass (pre-existing benign archive warning only)
+   367 passed (pre-existing benign archive warning only)
 4. `python3 scripts/check_repo_control.py`
    PASS
 
 ## Stop condition
 
 Complete current suite and every ticket-exact gate pass; change report updated;
-committed/pushed; stopped for reviewer inspection.
+committed (implementation + records); pushed; stopped for reviewer inspection.
