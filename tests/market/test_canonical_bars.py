@@ -375,11 +375,10 @@ def test_unsupported_schema_version_rejected(tmp_path: Path) -> None:
 _REQUIRED_PARTITION_KEYS = ("venue_id", "market_type", "interval", "instrument_id", "schema_variant")
 
 
-def _manifest_with_partition(partition: dict) -> DatasetManifest:
-    p = Path("/tmp/part_probe/bars.parquet")
+def _manifest_with_partition(partition: dict, tmp_path: Path) -> DatasetManifest:
+    p = tmp_path / "part_probe" / "bars.parquet"
     p.parent.mkdir(parents=True, exist_ok=True)
-    if not p.exists():
-        _write_parquet(p, _schema(), [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))])
+    _write_parquet(p, _schema(), [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))])
     spec = OutputFileSpec(
         relative_path="bars.parquet",
         sha256=hashlib.sha256(p.read_bytes()).hexdigest(),
@@ -434,10 +433,10 @@ def test_partition_key_missing_rejected(tmp_path: Path) -> None:
     for key in _REQUIRED_PARTITION_KEYS:
         part = _good_partition()
         del part[key]
-        m = _manifest_with_partition(part)
+        m = _manifest_with_partition(part, tmp_path)
         with pytest.raises(ValueError, match="missing required partition key"):
             _publish(tmp_path, [VerifiedSourceBarDataset(
-                local_files={"bars.parquet": Path("/tmp/part_probe/bars.parquet")},
+                local_files={"bars.parquet": tmp_path / "part_probe" / "bars.parquet"},
                 manifest=m,
                 venue_id="binance",
                 instrument_id=1,
@@ -457,10 +456,10 @@ def test_partition_key_mismatched_rejected(tmp_path: Path) -> None:
     for key in _REQUIRED_PARTITION_KEYS:
         part = _good_partition()
         part[key] = mismatches[key]
-        m = _manifest_with_partition(part)
+        m = _manifest_with_partition(part, tmp_path)
         with pytest.raises(ValueError, match="disagrees with verified partition"):
             _publish(tmp_path, [VerifiedSourceBarDataset(
-                local_files={"bars.parquet": Path("/tmp/part_probe/bars.parquet")},
+                local_files={"bars.parquet": tmp_path / "part_probe" / "bars.parquet"},
                 manifest=m,
                 venue_id="binance",
                 instrument_id=1,
@@ -535,10 +534,29 @@ def test_identical_duplicate_collapses_both_orders(tmp_path: Path) -> None:
     rows_b = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
     src_a = _source_dataset(tmp_path, rows=rows_a, relative_path="a/bars.parquet", dataset_id="ds_a")
     src_b = _source_dataset(tmp_path, rows=rows_b, relative_path="b/bars.parquet", dataset_id="ds_b")
-    res_ab = _publish(tmp_path, [src_a, src_b])
-    res_ba = _publish(tmp_path, [src_b, src_a])
+
+    out_ab = tmp_path / "out_ab"
+    out_ba = tmp_path / "out_ba"
+    res_ab = _publish(out_ab, [src_a, src_b])
+    res_ba = _publish(out_ba, [src_b, src_a])
+
+    # Exactly one collapsed partition path in each order.
     assert len(res_ab.intraday_paths) == 1
     assert len(res_ba.intraday_paths) == 1
+
+    tab_ab = pq.read_table(str(res_ab.intraday_paths[0]))
+    tab_ba = pq.read_table(str(res_ba.intraday_paths[0]))
+
+    # Exactly one retained row, with a deterministic retained source_dataset_id.
+    assert tab_ab.num_rows == 1
+    assert tab_ba.num_rows == 1
+    retained_ab = tab_ab.column("source_dataset_id")[0].as_py()
+    retained_ba = tab_ba.column("source_dataset_id")[0].as_py()
+    assert retained_ab == retained_ba  # order-independent deterministic retention
+    assert retained_ab.startswith("ds_")
+
+    # Identical output bytes in both source orders (no metadata drift).
+    assert tab_ab == tab_ba
 
 
 def test_conflict_duplicate_quarantines_both_orders(tmp_path: Path) -> None:
@@ -611,11 +629,17 @@ def test_mixed_timeframe_ambiguity_fails_closed(tmp_path: Path) -> None:
 
 def test_explicit_1m_selection_no_merge(tmp_path: Path) -> None:
     rows_1m = _full_day_rows("1m")
+    # 5m rows carry distinguishable values so a merge would be detectable.
     rows_5m = _full_day_rows("5m")
+    for r in rows_5m:
+        r[1] = Decimal("777")   # open
+        r[4] = Decimal("888")   # close
+        r[5] = Decimal("50")    # volume
+        r[8] = 3                # trades
     src_1m = _source_dataset(tmp_path, rows=rows_1m, relative_path="m1/bars.parquet", interval="1m", dataset_id="ds_1m")
     src_5m = _source_dataset(tmp_path, rows=rows_5m, relative_path="m5/bars.parquet", interval="5m", dataset_id="ds_5m")
     res = _publish(tmp_path, [src_1m, src_5m], daily_source_timeframe="1m")
-    # daily should be resampled from 1m only: 1 day -> 1 daily bar.
+    # daily resampled from 1m only: 1 day -> 1 daily bar.
     assert len(res.daily_paths) == 1
     plan = res.publish_plan
     assert plan.quality_summary["daily_source_timeframe"] == "1m"
@@ -623,11 +647,30 @@ def test_explicit_1m_selection_no_merge(tmp_path: Path) -> None:
 
 def test_no_merge_mixed_timeframe_daily_counts(tmp_path: Path) -> None:
     rows_1m = _full_day_rows("1m")
+    # 5m rows carry distinguishable volume/trade totals.
+    rows_5m = _full_day_rows("5m")
+    for r in rows_5m:
+        r[5] = Decimal("50")    # volume per 5m bar
+        r[8] = 3                # trades per 5m bar
     src_1m = _source_dataset(tmp_path, rows=rows_1m, relative_path="m1/bars.parquet", interval="1m", dataset_id="ds_1m_only")
-    res = _publish(tmp_path, [src_1m], daily_source_timeframe="1m")
-    # 1m day resampled -> exactly 1 daily bar (1d).
-    daily = pq.read_table(str(res.daily_paths[0]))
-    assert daily.num_rows == 1
+    src_5m = _source_dataset(tmp_path, rows=rows_5m, relative_path="m5/bars.parquet", interval="5m", dataset_id="ds_5m_only")
+
+    # Daily must equal the selected 1m totals only, in both source orders.
+    n_1m = len(rows_1m)
+    vol_1m = Decimal("1000") * n_1m
+    trades_1m = 10 * n_1m
+
+    res_ab = _publish(tmp_path, [src_1m, src_5m], daily_source_timeframe="1m")
+    res_ba = _publish(tmp_path, [src_5m, src_1m], daily_source_timeframe="1m")
+    for res in (res_ab, res_ba):
+        assert len(res.daily_paths) == 1
+        daily = pq.read_table(str(res.daily_paths[0]))
+        assert daily.num_rows == 1
+        col = {n: daily.column(n)[0].as_py() for n in daily.column_names}
+        assert col["base_volume"] == vol_1m          # not the 5m sum
+        assert col["trade_count"] == trades_1m        # not the 5m sum
+        assert col["open"] == Decimal("100")     # 1m open, not 5m's 777
+        assert col["close"] == Decimal("105")    # 1m close, not 5m's 888
 
 
 # ------------------------------------------------------------------
@@ -647,6 +690,13 @@ def test_daily_ohlcv_values(tmp_path: Path) -> None:
     assert col["high"] == Decimal("110")
     assert col["low"] == Decimal("90")
     assert col["timeframe"] == "1d"
+    n = len(rows)
+    # volume / trade / taker sums across the complete day.
+    assert col["base_volume"] == Decimal("1000") * n
+    assert col["quote_volume"] == Decimal("105000") * n
+    assert col["trade_count"] == 10 * n
+    assert col["taker_buy_base_volume"] == Decimal("2") * n
+    assert col["taker_buy_quote_volume"] == Decimal("500") * n
 
 
 # ------------------------------------------------------------------
@@ -687,14 +737,20 @@ def test_reconcile_mismatch_quarantine(tmp_path: Path) -> None:
 
 
 def test_reconcile_missing_native(tmp_path: Path) -> None:
+    # Resampled daily exists but supplied native evidence is for a different
+    # period, so the resampled bar reaches the missing_native branch.
     rows = _full_day_rows("1m")
     src = _source_dataset(tmp_path, rows=rows, relative_path="m1/bars.parquet", interval="1m", dataset_id="ds_rmn")
-    res = _publish(tmp_path, [src], daily_source_timeframe="1m")
-    # No native daily supplied -> resampled daily still promoted; reconcile report empty.
+    other_day = _us(datetime(2025, 1, 2, tzinfo=UTC))
+    native = _native_daily_source(tmp_path, other_day, Decimal("105"), "ds_nat_other")
+    res = _publish(tmp_path, [src], native_daily=[native], daily_source_timeframe="1m")
+    # resampled daily still promoted (missing_native is a warning, not quarantine).
     assert len(res.daily_paths) == 1
     assert len(res.reconcile_paths) == 1
     rep = pq.read_table(str(res.reconcile_paths[0]))
-    assert rep.num_rows == 0
+    statuses = set(rep.column("status").to_pylist())
+    assert "missing_native" in statuses
+    assert any("bar001_daily_missing_native" in i.code for i in res.issues)
 
 
 def test_reconcile_missing_resampled(tmp_path: Path) -> None:
@@ -726,6 +782,28 @@ def test_safe_output_paths_and_partition_measurements(tmp_path: Path) -> None:
     assert "intraday" in kinds
     assert "daily" in kinds
     assert all(m.rows > 0 for m in res.partition_sizes if m.kind in ("intraday", "daily"))
+
+
+def test_unsafe_path_token_rejected_fail_closed(tmp_path: Path) -> None:
+    # A validly signed source whose caller/path token is unsafe must be rejected
+    # before any filesystem write escapes the output root.
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p = tmp_path / "bars.parquet"
+    _write_parquet(p, _schema(), rows)
+    m = _build_manifest(p, dataset_id="ds_unsafe", rows=1)
+    unsafe_venue = "../escape"
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p},
+        receipt=_receipt_for(m),
+        venue_id=unsafe_venue,
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="invalid venue_id for partition path"):
+        _publish(tmp_path, [src])
+    # No output escaped the root.
+    assert not any(part.name == "escape" for part in tmp_path.iterdir())
 
 
 def test_row_and_dependency_lineage(tmp_path: Path) -> None:
