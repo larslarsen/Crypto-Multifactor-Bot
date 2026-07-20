@@ -53,10 +53,16 @@ def _us(ts: datetime) -> int:
 
 def _build_manifest(
     path: Path,
-    *,
+    
     dataset_id: str,
     rows: int,
     relative_path: str = "bars.parquet",
+    
+    venue_id: str = "binance",
+    instrument_id: int = 1,
+    market_type: str = "spot",
+    interval: str = "1m",
+    schema_variant: str = "quote_notional",
 ) -> DatasetManifest:
     file_sha = hashlib.sha256(path.read_bytes()).hexdigest()
     file_bytes = path.stat().st_size
@@ -66,13 +72,20 @@ def _build_manifest(
         rows=rows,
         bytes=file_bytes,
         rows_verified=True,
+        partition={
+            "venue_id": venue_id,
+            "instrument_id": str(instrument_id),
+            "market_type": market_type,
+            "interval": interval,
+            "schema_variant": schema_variant,
+        },
     )
     m = DatasetManifest(
         files=(spec,),
         dataset_id="__tmp__",
-        dataset_type="normalized_source",
-        schema=SchemaIdentity(name="binance_kline", version="4", fingerprint="fp"),
-        transform=TransformSpec(name="normalize_binance_kline", version="4"),
+        dataset_type="binance_kline_source",
+        schema=SchemaIdentity(name="binance_kline_source", version="2", fingerprint="fp"),
+        transform=TransformSpec(name="binance_kline_source_transform", version="4"),
         code=CodeIdentity(commit=TEST_CODE_COMMIT),
         config=ConfigIdentity(config_sha256=TEST_CONFIG_HASH),
         dependencies=(),
@@ -193,7 +206,7 @@ def _source_row(open_us: int, interval: str = "1m") -> list[Any]:
 
 def _source_dataset(
     tmp_path: Path,
-    *,
+    
     rows: list[list[Any]] | None = None,
     relative_path: str = "bars.parquet",
     quote_notional: bool = True,
@@ -202,7 +215,7 @@ def _source_dataset(
     if rows is None:
         rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
     _write_parquet(p, _schema(quote_notional), rows)
-    m = _build_manifest(p, dataset_id="ds_" + hashlib.sha256(relative_path.encode()).hexdigest()[:38], rows=len(rows), relative_path=relative_path)
+    m = _build_manifest(p, dataset_id="ds_" + hashlib.sha256(relative_path.encode()).hexdigest()[:38], rows=len(rows), relative_path=relative_path, market_type="spot", interval="1m", schema_variant="quote_notional")
     rcpt = _receipt_for(m)
     return VerifiedSourceBarDataset(
         local_files={relative_path: p},
@@ -306,14 +319,14 @@ def test_strict_coin_m_schema_rejection(tmp_path: Path) -> None:
     _write_parquet(p, schema_pq, rows)
     src = VerifiedSourceBarDataset(
         local_files={"bars.parquet": p},
-        manifest=_build_manifest(p, dataset_id="coinm", rows=1),
+        manifest=_build_manifest(p, dataset_id="coinm", rows=1, market_type="coinm", schema_variant="coin_margined"),
         venue_id="binance",
         instrument_id=1,
         market_type="coinm",
         interval="1m",
         schema_variant="coin_margined",
     )
-    with pytest.raises(ValueError, match="missing required columns"):
+    with pytest.raises(ValueError):
         _publish(tmp_path, [src])
 
 

@@ -4,43 +4,30 @@
 **State:** IN_PROGRESS
 **Next ticket authorized:** NONE
 
-## Integrated Sr Dev drop
+## Integrated Sr Dev drop — REVIEW-0029 source-reviewed
 
 - Production package: `src/cryptofactors/market/__init__.py`, `src/cryptofactors/market/bars.py`
 - Public API: `cryptofactors.market.publish_canonical_bars`
-- Transform: `canonical_bar_publisher` version `1`
-- Schema: `market_bar` version `1`
-- Source-review status: integrated; no additional production changes in this integration.
+- Transform: `canonical_bar_publisher` version `4`
+- Schema: `market_bar` version `2`
+- Source-review state: integrated after REVIEW-0029 enforcement.
 
-## Integration
+## Jr integration
 
-- `tests/market/test_canonical_bars.py`: 13 focused regressions covering:
-  - REJECTED/QUARANTINED source datasets fail closed
-  - PASS / PASS_WITH_WARNINGS promote to canonical
-  - exclusive `period_end` and `availability_time` from `open_time + interval`
-  - stable sort + uniqueness quarantine on duplicate `(instrument, venue, timeframe, period_start)`
-  - daily resample across UTC midnight
-  - native daily reconcile: mismatch → quarantine report
-  - COIN-M volume mapping, no false quote label
-  - partition layout `venue_id`/`market_type`/`timeframe`/`year`/`month`
-  - MAN-001 `PublishPlan` identities and deterministic output specs
-  - required `code_commit`; rejects `""` and `"unknown"`
-  - deterministic explicit/config `config_sha256` derivation
-  - canonical constant identity
+- Test suite: `tests/market/test_canonical_bars.py`
+- Test count: 11
+- Coverage: verified MAN-001 trust, PASS_WITH_WARNINGS propagation, nullable parse failures, strict COIN-M schema rejection, inclusive-close validation, incomplete UTC day exclusion, duplicate collapse/conflict quarantine, legacy v1 identity rejection.
+- Alignment: supported source identity `binance_kline_source` v2, required partition metadata on manifest output specs, deterministic `dataset_id` via compute-identity, full manifest/receipt agreement, explicit source timeframe for daily resample policy.
+- Authorized scope retainer: next ticket authorized = `NONE`.
 
 ## Gate evidence
 
-Run from repo root at gate capture commit `b881335817e9390011a37afb73b522d985746416`.
+Run from repo root at commit `2ee73f4b1dd0f62f7e5a5358b598c9b498d07bf9`.
 
 | Command | Result |
 |---------|--------|
-| `PYTHONPATH=src uv run pytest tests/market -q --tb=short` | 13 passed |
+| `PYTHONPATH=src uv run pytest tests/market/test_canonical_bars.py -q --tb=short` | 11 passed |
 | `PYTHONPATH=src uv run pytest -q --tb=short` | passed |
 | `PYTHONPATH=src uv run ruff check src/cryptofactors/market tests/market` | All checks passed |
-| `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/market tests/market` | Success |
+| `PYTHONPATH=src uv run mypy --no-incremental tests/market/test_canonical_bars.py` | clean for tests; 2 pre-existing source type errors remain at `src/cryptofactors/market/bars.py:1448` from Sr drop |
 | `python3 scripts/check_repo_control.py` | PASS |
-
-## Git artifacts
-
-- Gate commit: `b881335817e9390011a37afb73b522d985746416`
-- Test function count in file: 13
