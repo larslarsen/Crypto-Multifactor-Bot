@@ -7,7 +7,7 @@ implementable multifactor portfolios.
 
 - **Architecture:** frozen unless an approved ADR changes it.
 - **Current implementation milestone:** control catalog and migration runner.
-- **Current task:** [`REF-001`](tickets/REF-001.md), point-in-time asset and instrument master — `ACCEPTED`.
+- **Current task:** [`BIN-001`](tickets/BIN-001.md), Binance archive kline normalizer — `IN_PROGRESS`.
 - **Trading status:** no model is approved for serving or live capital.
 
 This repository is the source of truth. Research, architecture, tickets, implementation,
@@ -81,5 +81,5 @@ not be committed.
 
 ## Current review gate
 
-Active ticket: [`REF-001`](tickets/REF-001.md) — point-in-time asset and instrument master
-(`ACCEPTED` at `b742e8d…`; CAT-001 and AUD-001 data-audit prerequisites satisfied).
+Active ticket: [`BIN-001`](tickets/BIN-001.md) — Binance archive kline normalizer
+(`IN_PROGRESS`; dependencies RAW-001, MAN-001, and REF-001 accepted).
