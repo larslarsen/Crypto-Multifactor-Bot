@@ -90,6 +90,6 @@ Repo control after corrective commit: PASS.
 
 ## Stop condition
 
-Integrated, gated, reported, committed, and pushed. Ticket set to
-`AWAITING_REVIEW` with the reviewer as next actor. Next ticket remains
-unauthorized.
+Integrated, gated, reported, committed, and pushed. Ticket accepted under
+REVIEW-0050 (commit `f667c6d`, corrective `f00c3d8`); set to `ACCEPTED`. Next
+ticket remains unauthorized.
