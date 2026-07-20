@@ -21,6 +21,8 @@ import csv
 import decimal
 import hashlib
 import io
+import json
+import re
 import zipfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -55,7 +57,9 @@ BINANCE_KLINE_SCHEMA_NAME = "binance_kline_source"
 # v2: UTC-us fact times + source timestamp columns + market-physical volume fields
 BINANCE_KLINE_SCHEMA_VERSION = "2"
 BINANCE_KLINE_TRANSFORM_NAME = "binance_kline_normalizer"
-BINANCE_KLINE_TRANSFORM_VERSION = "3"
+BINANCE_KLINE_TRANSFORM_VERSION = "4"
+
+_SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 
 # Fixed Binance kline CSV schema (12 fields, headerless or first row data)
 BINANCE_KLINE_FIELD_COUNT = 12
@@ -707,6 +711,89 @@ def _parquet_row_counter(path: Path) -> int:
     return int(pq.ParquetFile(str(path)).metadata.num_rows)
 
 
+def _require_code_commit(code_commit: str) -> str:
+    """Require a non-empty immutable code identity from the caller.
+
+    Does not invoke Git or infer repository state. Rejects empty and the
+    placeholder ``unknown``.
+    """
+    commit = code_commit.strip()
+    if not commit or commit == "unknown":
+        raise ValueError(
+            "code_commit is required and must be a non-empty immutable code "
+            "identity supplied by the caller (not 'unknown'); the normalizer "
+            "does not invoke Git or infer repository state"
+        )
+    return commit
+
+
+def _canonical_config_bytes(
+    *,
+    market: _MarketTypeSpec,
+    interval_spec: _IntervalSpec,
+    venue_id: str,
+    instrument_id: str,
+    schema_fingerprint: str,
+) -> bytes:
+    """Deterministic encoding of identity-bearing normalization configuration."""
+    payload = {
+        "close_time_convention": "inclusive_open_plus_interval_minus_one",
+        "dataset_type": BINANCE_KLINE_DATASET_TYPE,
+        "instrument_id": instrument_id,
+        "interval": interval_spec.label,
+        "interval_kind": interval_spec.kind,
+        "market_type": market.canonical,
+        "schema_fingerprint": schema_fingerprint,
+        "schema_name": BINANCE_KLINE_SCHEMA_NAME,
+        "schema_variant": market.schema_variant,
+        "schema_version": BINANCE_KLINE_SCHEMA_VERSION,
+        "secondary_volume_unit": market.secondary_volume_unit,
+        "taker_buy_secondary_volume_unit": market.taker_buy_secondary_volume_unit,
+        "taker_buy_volume_unit": market.taker_buy_volume_unit,
+        "timestamp_storage": "utc_microseconds",
+        "transform_name": BINANCE_KLINE_TRANSFORM_NAME,
+        "transform_version": BINANCE_KLINE_TRANSFORM_VERSION,
+        "venue_id": venue_id,
+        "volume_unit": market.volume_unit,
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
+        "utf-8"
+    )
+
+
+def _resolve_config_sha256(
+    config_sha256: str | None,
+    *,
+    market: _MarketTypeSpec,
+    interval_spec: _IntervalSpec,
+    venue_id: str,
+    instrument_id: str,
+    schema_fingerprint: str,
+) -> str:
+    """Return a MAN-001-valid 64-hex config hash.
+
+    When the caller supplies a hash, validate it. When omitted or empty, derive a
+    deterministic hash from identity-bearing normalization configuration. Never
+    emit an empty string.
+    """
+    if config_sha256 is not None and str(config_sha256).strip() != "":
+        digest = str(config_sha256).strip().lower()
+        if not _SHA256_HEX_RE.fullmatch(digest):
+            raise ValueError(
+                "config_sha256 must be a 64-character lowercase hex SHA-256 digest"
+            )
+        return digest
+    return hashlib.sha256(
+        _canonical_config_bytes(
+            market=market,
+            interval_spec=interval_spec,
+            venue_id=venue_id,
+            instrument_id=instrument_id,
+            schema_fingerprint=schema_fingerprint,
+        )
+    ).hexdigest()
+
+
 def _assign_issue_to_objects(
     issue: QualityIssue,
     works: dict[str, _ObjectWork],
@@ -733,14 +820,18 @@ def normalize_binance_kline(
     venue_id: str,
     instrument_id: str,
     output_dir: Path | str,
-    code_commit: str = "unknown",
+    code_commit: str,
     config_sha256: str | None = None,
 ) -> BinanceKlineNormalizeResult:
     """Normalize registered Binance kline archive raw objects.
 
-    Explicit params required. Per-row unit inference from data.
-    Stages source-specific bars + quality with raw-object lineage.
-    Returns MAN-001-publishable PublishPlan (source-normalized only).
+    Explicit params required, including a non-empty immutable ``code_commit``
+    supplied by the caller (never inferred via Git). When ``config_sha256`` is
+    omitted, a deterministic 64-hex digest is derived from identity-bearing
+    normalization configuration so the returned plan is MAN-001-valid.
+    Per-row unit inference from data. Stages source-specific bars + quality
+    with raw-object lineage. Returns MAN-001-publishable PublishPlan
+    (source-normalized only).
     """
     if not raw_objects:
         raise ValueError("at least one raw_object required")
@@ -755,8 +846,18 @@ def normalize_binance_kline(
             "market_type, interval, venue_id, instrument_id are required and non-empty"
         )
 
+    code_id = _require_code_commit(code_commit)
     market = _resolve_market_type(market_type)
     interval_spec = _parse_interval(interval)
+    schema_fp_early = _schema_fingerprint(market)
+    cfg_hash = _resolve_config_sha256(
+        config_sha256,
+        market=market,
+        interval_spec=interval_spec,
+        venue_id=venue_id,
+        instrument_id=instrument_id,
+        schema_fingerprint=schema_fp_early,
+    )
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1024,7 +1125,7 @@ def normalize_binance_kline(
         q_status = QualityStatus.PASS
 
     vol_names = _volume_field_names(market)
-    schema_fp = _schema_fingerprint(market)
+    schema_fp = schema_fp_early
 
     plan = PublishPlan(
         dataset_type=BINANCE_KLINE_DATASET_TYPE,
@@ -1037,8 +1138,8 @@ def normalize_binance_kline(
             name=BINANCE_KLINE_TRANSFORM_NAME,
             version=BINANCE_KLINE_TRANSFORM_VERSION,
         ),
-        code=CodeIdentity(commit=code_commit),
-        config=ConfigIdentity(config_sha256=config_sha256 or ""),
+        code=CodeIdentity(commit=code_id),
+        config=ConfigIdentity(config_sha256=cfg_hash),
         dependencies=tuple(deps),
         output_sources=output_sources,
         output_specs=output_specs,
@@ -1067,6 +1168,8 @@ def normalize_binance_kline(
             "normalizer_version": BINANCE_KLINE_TRANSFORM_VERSION,
             "schema_version": BINANCE_KLINE_SCHEMA_VERSION,
             "schema_fingerprint": schema_fp,
+            "config_sha256": cfg_hash,
+            "code_commit": code_id,
             "timestamp_unit_inferred_per_row": True,
             "timestamp_storage": "utc_microseconds",
             "close_time_convention": "inclusive_open_plus_interval_minus_one",
