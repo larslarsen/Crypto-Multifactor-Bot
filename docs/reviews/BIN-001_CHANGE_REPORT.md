@@ -4,16 +4,15 @@
 **State:** IN_PROGRESS
 **Next ticket authorized:** NONE
 
-## Accepted Sr Dev drops — v4 RETURNED -> v4 ACCEPTED
+## Integrated Sr Dev drop — REVIEW-0023 v4 source-reviewed
 
-- First drop: transform/schema validators, `_require_code_commit`, `_canonical_config_bytes`, `_resolve_config_sha256`, empty-string defect fixed in `src/cryptofactors/ingest/binance.py`.
-- Second drop: identical functionally, accepted and integrated.
+- Production file: `src/cryptofactors/ingest/binance.py`
+- Source-review status: reviewed and integrated; no additional production changes in this integration.
 - Transform: `BINANCE_KLINE_TRANSFORM_VERSION = "4"`
 - Schema: `BINANCE_KLINE_SCHEMA_VERSION = "2"`
 
 ## Integration
 
-- No additional production changes beyond Sr drop acceptance.
 - `tests/ingest/market/test_binance_kline.py`: 30 focused v4 regressions covering:
   - required non-empty `code_commit`; rejects `""` and `"unknown"`
   - explicit 64-hex `config_sha256` preserved and invalid values rejected
@@ -44,7 +43,23 @@
 | Month-end/leap tests only parser-level | Added calendar `_expected_close_inclusive` normalization |
 | Coverage not asserted | Assert exact values; current single-bar bounds both equal open instant |
 | Market tests only names | Assert physical CSV values map to correct columns |
-| Count claims not authoritative | File contains exactly 29 `test_*` functions |
-| Test function count in file | 30 |
-| Review-0024 gate commit | `7f4163b` |
-| Control-plane command | `python3 scripts/check_repo_control.py` |
+| Deterministic-config hash not proven | Added `test_derived_config_sha256_is_deterministic_and_normalization_sensitive` |
+| Month-end test name false | Renamed `_jan31_to_feb28` → `_jan31_to_feb29` |
+| Review-policy `config_sha256` constant constraint | No new constants added; derivation + validation implemented in `binance.py` |
+
+## Fresh gate evidence on `b881335817e9390011a37afb73b522d985746416`
+
+Full gate output: `docs/reviews/bin001_gates_review24.txt`
+
+| Command | Result |
+|---------|--------|
+| `PYTHONPATH=src uv run pytest tests/ingest/market -q --tb=short` | 30 passed |
+| `PYTHONPATH=src uv run pytest -q` | passed |
+| `PYTHONPATH=src uv run ruff check src/cryptofactors/ingest tests/ingest/market` | All checks passed |
+| `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/ingest tests/ingest/market` | Success |
+| `python3 scripts/check_repo_control.py` | PASS |
+
+## Git artifacts
+
+- Integration commit: `b881335817e9390011a37afb73b522d985746416`
+- Test function count in file: 30
