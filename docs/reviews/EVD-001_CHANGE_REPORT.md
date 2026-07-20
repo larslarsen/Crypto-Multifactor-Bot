@@ -52,7 +52,7 @@ regression checklist from REVIEW-0055 §1:
 
 | Gate | Command | Result |
 |---|---|---|
-| 1 | `PYTHONPATH=src uv run pytest tests/evidence -q` | 27 passed (26 new + 1 pre-existing) |
+| 1 | `PYTHONPATH=src uv run pytest tests/evidence -q` | 31 passed (26 new regression tests + 5 pre-existing) |
 | 2 | `ruff check src/cryptofactors/evidence src/cryptofactors/cli.py tests/evidence` | All checks passed |
 | 3 | `mypy --no-incremental src/cryptofactors/evidence src/cryptofactors/cli.py tests/evidence` | Success: no issues found in 9 source files |
 | 4 | `PYTHONPATH=src uv run pytest -q` | 423 passed, 1 pre-existing archive warning |
