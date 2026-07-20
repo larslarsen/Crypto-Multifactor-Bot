@@ -14,7 +14,7 @@
 ## Integration
 
 - No additional production changes beyond Sr drop acceptance.
-- `tests/ingest/market/test_binance_kline.py`: 29 focused v4 regressions covering:
+- `tests/ingest/market/test_binance_kline.py`: 30 focused v4 regressions covering:
   - required non-empty `code_commit`; rejects `""` and `"unknown"`
   - explicit 64-hex `config_sha256` preserved and invalid values rejected
   - auto-derived `config_sha256` is 64-character lowercase hex
@@ -45,20 +45,6 @@
 | Coverage not asserted | Assert exact values; current single-bar bounds both equal open instant |
 | Market tests only names | Assert physical CSV values map to correct columns |
 | Count claims not authoritative | File contains exactly 29 `test_*` functions |
-| Hash placeholders | Real immutable commit `d2ba2dc` recorded below |
-
-### Fresh validation commands and results
-
-Run from repo root at integration accept commit `d2ba2dc`.
-| Command | Result |
-|---------|--------|
-| `PYTHONPATH=src uv run pytest tests/ingest/market -q --tb=short` | 25 passed |
-| `PYTHONPATH=src uv run pytest -q` | passed |
-| `PYTHONPATH=src uv run ruff check src/cryptofactors/ingest tests/ingest/market` | All checks passed |
-| `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/ingest tests/ingest/market` | Success |
-| `python3 scripts/check_repo_control.py .` | PASS |
-
-## Git artifacts
-
-- Integration commit: `d2ba2dc145bdebff59308bbc82d8bcc90c7f3379`
-- Test function count in file: 29
+| Test function count in file | 30 |
+| Review-0024 gate commit | `7f4163b` |
+| Control-plane command | `python3 scripts/check_repo_control.py` |
