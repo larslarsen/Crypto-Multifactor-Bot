@@ -1,7 +1,7 @@
 # LEG-001 — Implementation Handoff & Validation Evidence
 
 **Ticket:** LEG-001 (Register legacy local files without accepting their claims)
-**Status:** IN_PROGRESS (awaiting owner/reviewer acceptance)
+**Status:** ACCEPTED (final review `docs/reviews/REVIEW-0012_LEG-001_FINAL.md`; accepted commit `009dd112e7dd722e9075467faa594af944983c56`)
 **Source of truth:** `tickets/LEG-001.md`, `docs/handoff/CURRENT_TASK.md`,
 `docs/architecture/08_LEGACY_MIGRATION_PLAN.md`, `AGENTS.md`
 
@@ -141,4 +141,4 @@ PYTHONPATH=src uv run pytest -q
   where the OS omits the descriptor-relative APIs).
 - Full-repo mypy outside LEG-001 (legacy of earlier tickets) is out of scope.
 - No CLI / catalog publication / migration logic added, per ticket scope.
-- LEG-001 remains IN_PROGRESS; next ticket authorized: NONE.
+- LEG-001 is ACCEPTED; this handoff is closed. Next ticket authorized: NONE (per REVIEW-0012).

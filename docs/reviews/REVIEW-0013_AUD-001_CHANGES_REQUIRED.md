@@ -1,7 +1,7 @@
 # REVIEW-0013 — AUD-001 CHANGES_REQUIRED
 
 **Ticket:** AUD-001 — Schema and coverage profiler
-**Verdict / Status:** CHANGES_REQUIRED
+**Verdict / Status:** CHANGES_REQUIRED - RESOLVED (correction drop integrated; AUD-001 ACCEPTED at REVIEW-0016_AUD-001_ACCEPTED.md)
 **Reviewed implementation commit:** `9e1a0fc3e0a5b08b14cee23c1d2dc6a9ab8fcf3d`
 **Integration record:** `docs/reviews/AUD-001_INTEGRATION.md`
 **Prior review:** none (first review of the committed AUD-001 implementation).

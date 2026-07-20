@@ -2,8 +2,8 @@
 
 **Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
 **Reviewed state:** local work based on `41f6800`
-**Status:** CHANGES_REQUIRED (Jr integration only)
-**Next required actor:** Jr Dev - Hermes using a more reliable model
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0042_BAR-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Date:** 2026-07-20
 
 The submission is rejected. It labels required integration tests "source-limited" even

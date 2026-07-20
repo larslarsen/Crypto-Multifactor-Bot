@@ -2,7 +2,7 @@
 
 **Ticket:** BIN-001 - Binance archive kline normalizer
 **Integration reported at:** `727ca56`
-**Status:** CHANGES_REQUIRED
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0025_BIN-001_ACCEPTED.md)
 **Next required actor:** Sr Dev - Grok Build
 **Date:** 2026-07-19
 

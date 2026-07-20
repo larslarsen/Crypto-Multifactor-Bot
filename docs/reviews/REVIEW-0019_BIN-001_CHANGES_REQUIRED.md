@@ -3,7 +3,7 @@
 **Ticket:** BIN-001 - Binance archive kline normalizer
 **Implementation commit reviewed:** `d40ecea0aa5333b05b336430d15cb8ee1b481d74`
 **Repository HEAD reviewed:** `3ad0e023a163d6639829a6e8c4aaae25ceec916e`
-**Status:** CHANGES_REQUIRED
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0025_BIN-001_ACCEPTED.md)
 **Date:** 2026-07-19
 
 This review supersedes REVIEW-0018 as the current BIN-001 disposition. REVIEW-0018

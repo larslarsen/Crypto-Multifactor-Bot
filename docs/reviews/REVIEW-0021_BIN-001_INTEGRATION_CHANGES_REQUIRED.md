@@ -2,8 +2,8 @@
 
 **Ticket:** BIN-001 - Binance archive kline normalizer
 **Integration reported at:** `ced2436`
-**Status:** CHANGES_REQUIRED (integration evidence only)
-**Next required actor:** Jr Dev - Hermes
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0025_BIN-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Date:** 2026-07-19
 
 Direct inspection found no new production-source blocker requiring an immediate Sr Dev

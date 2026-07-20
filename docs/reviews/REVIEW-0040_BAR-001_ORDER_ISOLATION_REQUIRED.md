@@ -3,8 +3,8 @@
 **Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
 **Reviewed implementation:** `d12caff`
 **Reviewed records:** `1d57bb6`
-**Status:** CHANGES_REQUIRED (narrow Jr integration correction)
-**Next required actor:** Jr Dev - Hermes (Tencent HY3)
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0042_BAR-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Date:** 2026-07-20
 
 All REVIEW-0039 findings except source-order isolation are resolved.

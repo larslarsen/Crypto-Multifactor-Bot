@@ -2,7 +2,7 @@
 
 **Review type:** Senior mandatory review of MAN-001 after integration
 **Reviewed commit (baseline):** `1667662b650d148fbece6b120de9490da0723cc9`
-**Review decision:** CHANGES_REQUIRED (MAN-001 remains AWAITING_REVIEW)
+**Review decision:** CHANGES_REQUIRED (MAN-001 remains AWAITING_REVIEW) - RESOLVED (correction commit satisfied; MAN-001 ACCEPTED at REVIEW-0011_MAN-001_FINAL.md)
 **Correction commit (after fixes):** `fix(man-001): enforce atomic immutable dataset publication`
 **Reviewer:** Senior Engineer
 **Junior (Hermes) scope:** integrate Sr Dev code drop, run validation matrix, records, one local commit. No push.

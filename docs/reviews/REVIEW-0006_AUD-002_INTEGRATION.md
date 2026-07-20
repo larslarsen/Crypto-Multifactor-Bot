@@ -1,7 +1,7 @@
 # REVIEW-0006 — AUD-002 source-audit toolkit integration (Junior handoff)
 
 **Ticket:** AUD-002
-**Status set:** AWAITING_REVIEW
+**Status set:** AWAITING_REVIEW - RESOLVED (superseded by REVIEW-0007_AUD-002_FINAL.md; AUD-002 ACCEPTED)
 **Next ticket authorized: NONE**
 **Baseline:** `ad0f41d07b39f6733eb10b807573463c0fdb9201`
 **Author of implementation:** Senior Developer (live working-tree, Grok Build / grok-4.5)

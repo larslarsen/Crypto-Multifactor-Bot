@@ -2,7 +2,7 @@
 
 **Ticket:** BIN-001 - Binance archive kline normalizer
 **Workspace reviewed:** Jr-pushed v2 state; the v2 integration hash is not recorded accurately in the change report
-**Status:** CHANGES_REQUIRED
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0025_BIN-001_ACCEPTED.md)
 **Date:** 2026-07-19
 
 REVIEW-0019 remains the governing defect history. The v2 revision resolves real

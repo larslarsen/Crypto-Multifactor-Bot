@@ -1,8 +1,8 @@
 # REVIEW-0056 - EVD-001 INTEGRATION EVIDENCE REQUIRED
 
 **Ticket:** EVD-001 - Operational Evidence Registry
-**Status:** CHANGES_REQUIRED - JR RECORDS/EVIDENCE ONLY
-**Next required actor:** Jr Dev - Hermes
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0057_EVD-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 

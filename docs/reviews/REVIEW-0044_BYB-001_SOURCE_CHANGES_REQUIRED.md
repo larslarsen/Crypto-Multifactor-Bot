@@ -2,7 +2,7 @@
 
 **Ticket:** BYB-001 - Bybit Public Trade-Archive Normalizer
 **Reviewed file:** `src/cryptofactors/ingest/bybit.py`
-**Status:** CHANGES_REQUIRED - SR SOURCE ONLY
+**Status:** CHANGES_REQUIRED - SR SOURCE ONLY - RESOLVED (Sr drop integrated; BYB-001 ACCEPTED at REVIEW-0050_BYB-001_ACCEPTED.md)
 **Next required actor:** Sr Dev - Grok Build
 **Date:** 2026-07-20
 

@@ -1,7 +1,7 @@
 # REVIEW-0028 - BAR-001: CHANGES REQUIRED
 
 **Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
-**Status:** CHANGES_REQUIRED
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0042_BAR-001_ACCEPTED.md)
 **Next required actor:** Sr Dev - Grok Build
 **Date:** 2026-07-20
 

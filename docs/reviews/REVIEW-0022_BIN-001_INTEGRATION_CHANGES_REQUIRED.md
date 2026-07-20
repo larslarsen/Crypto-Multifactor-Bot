@@ -2,8 +2,8 @@
 
 **Ticket:** BIN-001 - Binance archive kline normalizer
 **Integration reported at:** `2df75b2ed1d247eb409613e9e5e0aaac6eae3d41`
-**Status:** CHANGES_REQUIRED (integration tests/evidence only)
-**Next required actor:** Jr Dev - Hermes
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0025_BIN-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Date:** 2026-07-19
 
 The latest integration fixes REVIEW-0021's hard-coded checkout path and records 22

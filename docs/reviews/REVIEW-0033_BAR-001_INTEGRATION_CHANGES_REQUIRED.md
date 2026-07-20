@@ -1,8 +1,8 @@
 # REVIEW-0033 - BAR-001 INTEGRATION: CHANGES_REQUIRED
 
 **Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
-**Status:** CHANGES_REQUIRED (Jr integration only)
-**Next required actor:** Jr Dev - Hermes
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0042_BAR-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Date:** 2026-07-19
 
 The v5 source remains approved. The current 16-test integration adds only part of the

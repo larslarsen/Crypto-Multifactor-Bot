@@ -1,7 +1,7 @@
 # REVIEW-0001 — CAT-001 control catalog
 
 **Review date:** 2026-07-18  
-**Decision:** changes required  
+**Decision:** changes required - RESOLVED (superseded by REVIEW-0002_CAT-001A_FINAL.md; CAT-001A ACCEPTED) 
 **Architecture impact:** none  
 **ADR required:** no
 

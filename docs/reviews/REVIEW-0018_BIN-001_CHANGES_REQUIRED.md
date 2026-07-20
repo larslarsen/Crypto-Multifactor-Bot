@@ -3,7 +3,7 @@
 **Ticket:** BIN-001 — Binance archive kline normalizer
 **Integrated drop:** `src/cryptofactors/ingest/binance.py` (Sr Dev — Hermes, in-tree edit; no commit by Sr)
 **Integrated by:** Hermes (Jr Dev) per control-plane governance
-**Status:** CHANGES_REQUIRED (Sr-source defect; integration landed, 2 required cases unmet)
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0025_BIN-001_ACCEPTED.md)
 **Date:** 2026-07-19
 
 ## Scope integrated

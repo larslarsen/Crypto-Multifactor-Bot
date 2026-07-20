@@ -1,7 +1,7 @@
 # REVIEW-0003 — GOV-001 governance artifacts and agent controls
 
 **Review date:** 2026-07-18
-**Decision:** awaiting_review (submitted by junior; owner acceptance pending)
+**Decision:** awaiting_review (submitted by junior; owner acceptance pending) - RESOLVED (superseded by REVIEW-0004_GOV-001_FINAL.md; GOV-001 ACCEPTED)
 **Architecture impact:** none
 **ADR required:** ADR-0011
 

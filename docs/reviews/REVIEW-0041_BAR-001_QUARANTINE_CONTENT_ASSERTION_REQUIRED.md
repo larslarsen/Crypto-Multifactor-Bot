@@ -3,8 +3,8 @@
 **Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
 **Reviewed implementation:** `3a6ed1a`
 **Reviewed records:** `490c12e`
-**Status:** CHANGES_REQUIRED (single Jr test correction)
-**Next required actor:** Jr Dev - Hermes (Tencent HY3)
+**Status:** CHANGES_REQUIRED - RESOLVED (superseded by REVIEW-0042_BAR-001_ACCEPTED.md)
+**Next required actor:** ~~Jr Dev - Hermes~~ -> Reviewer (resolved)
 **Date:** 2026-07-20
 
 Mixed-timeframe and source-order isolation are correct. One REVIEW-0040 assertion remains.

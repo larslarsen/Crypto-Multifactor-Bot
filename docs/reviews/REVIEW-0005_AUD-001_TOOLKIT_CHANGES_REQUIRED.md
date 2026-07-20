@@ -1,7 +1,7 @@
 # REVIEW-0005 — AUD-001-labelled toolkit commits: CHANGES_REQUIRED
 
 **Review date:** 2026-07-18
-**Decision:** changes_required
+**Decision:** changes_required - RESOLVED (superseded by AUD-002 / REVIEW-0007_AUD-002_FINAL.md; AUD-002 ACCEPTED)
 **Architecture impact:** none (governance / ticket re-scoping)
 **ADR required:** no
 
