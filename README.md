@@ -13,4 +13,4 @@ Active tickets:
 - [`BIN-001`](tickets/BIN-001.md) — Binance archive kline normalizer (`ACCEPTED` at `b8813358`).  
 - [`BAR-001`](tickets/BAR-001.md) — canonical bar publisher and daily reconciliation (`ACCEPTED` at integration commit `c10dd3a`; `docs/reviews/REVIEW-0042_BAR-001_ACCEPTED.md`).
 - [`RES-001`](tickets/RES-001.md) — post-Sprint-003 research protocol reconciliation (`ACCEPTED` at `ff31763`; `docs/reviews/REVIEW-0043_RES-001_ACCEPTED.md`).
-- [`BYB-001`](tickets/BYB-001.md) — Bybit public trade-archive normalizer (`AWAITING_REVIEW`; source approved under `docs/reviews/REVIEW-0048_BYB-001_SOURCE_APPROVED_JR_AUTHORIZED.md`, Jr integration complete at `f667c6d`, governing review chain REVIEW-0044→0049 published per `docs/reviews/REVIEW-0049_BYB-001_INTEGRATION_PUBLICATION_REQUIRED.md`).
+- [`BYB-001`](tickets/BYB-001.md) — Bybit public trade-archive normalizer (`ACCEPTED` at integration commit `f667c6d`; governing review chain REVIEW-0044→0050; `docs/reviews/REVIEW-0050_BYB-001_ACCEPTED.md`).

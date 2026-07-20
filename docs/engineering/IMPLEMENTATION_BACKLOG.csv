@@ -7,5 +7,5 @@ AUD-001,P0,quality,Schema and coverage profiler,LEG-001;MAN-001,BLOCKING,
 REF-001,P0,reference,Point-in-time asset and instrument master,CAT-001;AUD-001,BLOCKING,
 BIN-001,P0,ingest/market,First official archive normalizer,RAW-001;MAN-001;REF-001,BLOCKING,ACCEPTED
 BAR-001,P0,market/quality,Canonical bar publisher and daily reconciliation,BIN-001,BLOCKING,ACCEPTED
-BYB-001,P0,ingest/market,Bybit public trade-archive normalizer (conditional crosscheck),RAW-001;MAN-001;REF-001;AUD-003;BAR-001,BLOCKING,AWAITING_REVIEW
+BYB-001,P0,ingest/market,Bybit public trade-archive normalizer (conditional crosscheck),RAW-001;MAN-001;REF-001;AUD-003;BAR-001,BLOCKING,ACCEPTED
 EVD-001,P1,evidence,Operational Evidence Registry,CAT-001;experiment identity,NON_BLOCKING_FOR_DATA,
