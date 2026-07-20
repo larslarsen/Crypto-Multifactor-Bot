@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: BYB-001
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
 Accepted dependencies: RAW-001, MAN-001, REF-001, AUD-003, and BAR-001.
 Governing documents:
@@ -15,14 +15,15 @@ Governing documents:
 - docs/reviews/REVIEW-0047_BYB-001_SOURCE_FINAL_CORRECTIONS_REQUIRED.md
 - docs/reviews/REVIEW-0048_BYB-001_SOURCE_APPROVED_JR_AUTHORIZED.md
 - docs/reviews/REVIEW-0049_BYB-001_INTEGRATION_PUBLICATION_REQUIRED.md
+- docs/reviews/REVIEW-0050_BYB-001_ACCEPTED.md
 - docs/reviews/BYB-001_CHANGE_REPORT.md
 
 ## Authorized work
 
-Publish the omitted governing review records and evidence under REVIEW-0049. Do not change or
-rerun approved source/tests. Exclude `.stale/`.
+Publish REVIEW-0050 and the BYB-001 accepted/closed ticket, backlog, README, and handoff records.
+Do not change or rerun accepted source/tests. Exclude `.stale/`.
 
 ## Stop condition
 
-After pushing the corrective records-only commit, set the ticket to `AWAITING_REVIEW`, identify
-the reviewer as next actor, return exact evidence, and stop. Next ticket remains unauthorized.
+After pushing the acceptance and closing records, return the closing commit evidence and stop.
+Next ticket remains unauthorized.
