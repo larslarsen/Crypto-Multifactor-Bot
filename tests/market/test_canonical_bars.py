@@ -427,3 +427,127 @@ def test_reject_legacy_v1_identity(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="manifest.dataset_id disagrees with recomputed identity"):
         _publish(tmp_path, [src])
+
+
+def test_coverage_quality_summary_and_rows_verified_full_dual_evidence(tmp_path: Path) -> None:
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p = tmp_path / "bars.parquet"
+    _write_parquet(p, _schema(), rows)
+    m = _build_manifest(p, dataset_id="ds_cov", rows=1)
+    rcpt = _receipt_for(m)
+    bad = dataclasses.replace(
+        rcpt,
+        coverage=CoverageWindow(
+            event_start=datetime(2025, 1, 2, tzinfo=UTC),
+            event_end=datetime(2025, 1, 2, 0, 1, tzinfo=UTC),
+        ),
+    )
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p},
+        receipt=bad,
+        manifest=m,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="coverage"):
+        _publish(tmp_path, [src])
+
+
+def test_daily_source_timeframe_canonical_identity(tmp_path: Path) -> None:
+    base_us = _us(datetime(2025, 1, 1, tzinfo=UTC))
+    rows = [_source_row(base_us + i * 60_000_000) for i in range(1440)]
+    p = tmp_path / "bars.parquet"
+    _write_parquet(p, _schema(), rows)
+    m = _build_manifest(p, dataset_id="ds_tf", rows=len(rows))
+
+    def make_receipt(tf: str) -> DatasetPublicationReceipt:
+        return _receipt_for(m)
+
+    src1 = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p},
+        receipt=make_receipt("1m"),
+        manifest=m,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    res_strict = _publish(
+        tmp_path,
+        [src1],
+        daily_source_timeframe="1m",
+    )
+    assert res_strict.publish_plan.quality_status is QualityStatus.PASS
+
+
+def test_quality_summary_disagreement_breaks_dual_evidence(tmp_path: Path) -> None:
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p = tmp_path / "bars.parquet"
+    _write_parquet(p, _schema(), rows)
+    m = _build_manifest(p, dataset_id="ds_qs", rows=1)
+    bad = dataclasses.replace(
+        _receipt_for(m),
+        quality_summary={"source": "synthetic", "regression": True},
+    )
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p},
+        receipt=bad,
+        manifest=m,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="quality_summary"):
+        _publish(tmp_path, [src])
+
+
+def test_rows_verified_in_output_spec_identity(tmp_path: Path) -> None:
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p = tmp_path / "bars.parquet"
+    _write_parquet(p, _schema(), rows)
+    m = _build_manifest(p, dataset_id="ds_rv", rows=1)
+    bad_spec = dataclasses.replace(m.files[0], rows_verified=not m.files[0].rows_verified)
+    bad = dataclasses.replace(
+        _receipt_for(m),
+        verified_outputs=(bad_spec,),
+    )
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p},
+        receipt=bad,
+        manifest=m,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="verified_outputs disagree with manifest.files"):
+        _publish(tmp_path, [src])
+
+
+def test_whitespace_equivalent_daily_source_timeframe_identity(tmp_path: Path) -> None:
+    base_us = _us(datetime(2025, 1, 1, tzinfo=UTC))
+    rows = [_source_row(base_us + i * 60_000_000) for i in range(1440)]
+    p = tmp_path / "bars.parquet"
+    _write_parquet(p, _schema(), rows)
+
+    def build_with_timeframe(tf: str | None) -> CanonicalBarPublishResult:
+        m = _build_manifest(p, dataset_id="ds_tf2", rows=len(rows))
+        r = _receipt_for(m)
+        src = VerifiedSourceBarDataset(
+            local_files={"bars.parquet": p},
+            receipt=r,
+            manifest=m,
+            venue_id="binance",
+            instrument_id=1,
+            market_type="spot",
+            interval="1m",
+        )
+        return _publish(tmp_path, [src], daily_source_timeframe=tf)
+
+    res_strict = build_with_timeframe("1m")
+    res_whitespace = build_with_timeframe(" 1m ")
+    assert res_strict.publish_plan.config.config_sha256 == res_whitespace.publish_plan.config.config_sha256
+    assert res_strict.publish_plan.config.config_sha256 == res_whitespace.publish_plan.config.config_sha256
