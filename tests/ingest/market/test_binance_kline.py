@@ -14,12 +14,16 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import importlib.resources as resources
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from cryptofactors.audit.models import IssueSeverity
-from cryptofactors.catalog.dataset.models import PublishPlan, RowCountPolicy
+from cryptofactors.catalog.dataset.models import (
+    PublishPlan,
+    RowCountPolicy,
+)
 from cryptofactors.catalog.dataset.outputs import verify_outputs
 from cryptofactors.contracts import RawObject
 from cryptofactors.ingest.binance import (
@@ -389,8 +393,21 @@ def test_full_man001_publish_plan(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# lineage / no network / local-only smoke
+# helpers / fixtures
 # ---------------------------------------------------------------------------
+
+
+def _publish(tmp_path: Path, raw: RawObject, market_type: str = "spot") -> BinanceKlineNormalizeResult:
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    return normalize_binance_kline(
+        [raw],
+        market_type=market_type,
+        interval="1m",
+        venue_id="v",
+        instrument_id="i",
+        output_dir=out,
+    )
 
 
 def test_output_lineage_contains_raw_object(tmp_path: Path) -> None:
@@ -404,6 +421,7 @@ def test_output_lineage_contains_raw_object(tmp_path: Path) -> None:
 
 
 def test_no_network_used() -> None:
-    src = Path("/home/lars/Crypto_Multifactor_Bot/src/cryptofactors/ingest/binance.py").read_text()
+    source_path = resources.files("cryptofactors.ingest").joinpath("binance.py")
+    text = source_path.read_text(encoding="utf-8")
     for needle in ["urllib", "requests", "http.client", "httpx", "aiohttp", "socket"]:
-        assert needle not in src, f"networking hint: {needle}"
+        assert needle not in text, f"networking hint: {needle}"

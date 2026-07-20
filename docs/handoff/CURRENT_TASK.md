@@ -9,8 +9,9 @@ Governing documents:
 - docs/reviews/REVIEW-0018_BIN-001_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0019_BIN-001_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0020_BIN-001_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0021_BIN-001_INTEGRATION_CHANGES_REQUIRED.md
 - docs/reviews/BIN-001_CHANGE_REPORT.md
-Authorized scope: Complete the role-scoped BIN-001 remediation in REVIEW-0020, retaining REVIEW-0019 as defect history. Sr Dev - Grok Build edits only `src/cryptofactors/ingest/binance.py`; Jr Dev - Hermes owns source-drop integration, tests, ticket/change-report corrections, acceptance gates, Git, commit, and push. No migration, architecture, or unrelated product changes.
+Authorized scope: Complete the Jr-only integration-evidence remediation in REVIEW-0021. Jr Dev - Hermes may edit focused tests and BIN-001 records, run acceptance gates, and own Git/commit/push. Production source changes and Sr Dev work are not authorized unless a strengthened publication regression exposes a source defect and the reviewer routes it. No migration, architecture, or unrelated product changes.
 Required outcome: BIN-001 deliverables — normalize registered Binance archive objects into source-specific typed bars; publish canonical bars only after quality acceptance. Required cases: explicit market type and interval; timestamp unit handling across source eras; UTC interval semantics; quote/base volume units; duplicate and gap handling through quality issues; source object lineage on every output partition; no network access in the normalizer.
 Stop condition: After the corrected acceptance commands pass, update the change report, commit and push, then stop for reviewer inspection. Do not begin the next ticket.
 Next ticket authorized: NONE
