@@ -225,6 +225,28 @@ def test_derived_config_sha256_is_64_hex(tmp_path: Path) -> None:
     assert all(ch in "0123456789abcdef" for ch in res.publish_plan.config.config_sha256)
 
 
+def test_derived_config_sha256_is_deterministic_and_normalization_sensitive(tmp_path: Path) -> None:
+    """Same identity-bearing inputs -> same derived hash; change one identity -> different hash."""
+    row = [_good_row_ms(1_000_000_000_000)[:]]
+    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(*row)))
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    a = normalize_binance_kline(
+        [raw], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
+    )
+    b = normalize_binance_kline(
+        [raw], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
+    )
+    assert a.publish_plan.config.config_sha256 == b.publish_plan.config.config_sha256
+    c = normalize_binance_kline(
+        [raw], market_type="coinm", interval="1m", venue_id="v", instrument_id="i",
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
+    )
+    assert a.publish_plan.config.config_sha256 != c.publish_plan.config.config_sha256
+
+
 # inclusive close ms/us ------------------------------------------------------
 
 
@@ -429,7 +451,7 @@ def test_month_end_1M_next_open_not_same_day() -> None:
     assert spec.label == "1M"
 
 
-def test_month_end_1M_closed_jan31_to_feb28() -> None:
+def test_month_end_1M_closed_jan31_to_feb29() -> None:
     expected_open = datetime(2020, 1, 31, tzinfo=timezone.utc)
     expected_open_us = int(expected_open.timestamp() * 1_000_000)
     expected_close_us = int(datetime(2020, 2, 29, tzinfo=timezone.utc).timestamp() * 1_000_000) - 1_000
