@@ -82,4 +82,4 @@ not be committed.
 ## Current review gate
 
 Active ticket: [`BAR-001`](tickets/BAR-001.md) - canonical bar publisher and daily reconciliation
-(`IN_PROGRESS`; BIN-001 accepted at `b8813358`, see REVIEW-0025; next ticket `NONE`).
+(`IN_PROGRESS`; BIN-001 accepted at `b8813358`; BAR-001 CHANGES_REQUIRED, see REVIEW-0027; next ticket `NONE`).
