@@ -26,7 +26,7 @@ def valid_hypothesis() -> HypothesisVersion:
 def test_hypothesis_is_frozen() -> None:
     hypothesis = valid_hypothesis()
     with pytest.raises(ValidationError):
-        hypothesis.title = "Changed"  # type: ignore[misc]
+        hypothesis.title = "Changed"
 
 
 def test_naive_preregistration_time_is_rejected() -> None:
