@@ -25,8 +25,10 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 
 - Be literal. Answer the question that was asked.
 - Work on exactly one active ticket at a time.
-- Do not start the next ticket until the current one is accepted by the owner or a
-  designated reviewer.
+- Do not start the next ticket until the current one is accepted by the Lead
+  Quantitative Finance Researcher/Engineer (reviewer) and the next ticket is
+  authorized. Acceptance and next-ticket authorization are exclusive to the reviewer;
+  the owner is the prompt relay only and is not an acceptance authority.
 - The repository has four governance actors (reviewer, two senior coders, one relay owner)
   plus the Jr Dev integration role:
   - **Lead Quantitative Finance Researcher/Engineer (reviewer):** inspects commits, makes

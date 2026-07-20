@@ -19,6 +19,13 @@ Sr integrity-fix drop (in-tree, `REF-001_SR_INTEGRITY_FIXES.md`):
   I5 global vs venue alias collision is same-scope only, insertion-order independent;
   I6 cross-scope different targets surface at resolve time, not silent collision;
   I7 polymorphic existence/semantic checks run inside the atomic write unit.
+
+REF-001 ticket deliverable scenarios (synthetic coverage):
+  S1 ticker reuse: same symbol -> different instruments across nonoverlapping valid windows;
+  S2 redenomination: typed asset->asset REDENOMINATION event preserves endpoints/ratio/time/evidence;
+  S3 migration: typed contract-migration event preserves distinct source/dest identities + lineage;
+  S4 delisting: LIST/DELIST lifecycle events retain venue, economic time, known time, identity;
+  S5 late-metadata correction: covered by D9 (supersede_alias) and I4 (supersede_instrument_version).
 """
 
 from __future__ import annotations
@@ -469,3 +476,167 @@ def test_I6_cross_scope_different_targets_surface_at_resolve_time(tmp_path: Path
     assert res.outcome in (
         models.ResolutionOutcome.QUEUED, models.ResolutionOutcome.AMBIGUOUS
     )
+
+
+# --- REF-001 ticket deliverable scenarios (synthetic coverage) --------------
+
+
+def _seed_two_instruments(tmp_path: Path) -> tuple[
+    sqlite3.Connection, store.ReferenceStore, str, str, str, str
+]:
+    """Two distinct instruments on the same asset+venue (different salts)."""
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    iid2 = s.register_instrument(
+        asset_id=aid, venue_id=vid, instrument_type=models.InstrumentType.SPOT, salt="z2"
+    ).instrument_id
+    return conn, s, vid, aid, iid, iid2
+
+
+def test_S1_ticker_reuse_resolves_correct_instrument_per_valid_window(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid1, iid2 = _seed_two_instruments(tmp_path)
+    w1 = models.BiTemporalWindow(
+        valid_from=datetime(2018, 1, 1, tzinfo=timezone.utc),
+        valid_to=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    w2 = models.BiTemporalWindow(
+        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid1,
+        window=w1, venue_id=vid,
+    )
+    s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid2,
+        window=w2, venue_id=vid,
+    )
+    kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    early = s.resolve_alias("BTC", decision_time=datetime(2019, 6, 1, tzinfo=timezone.utc), knowledge_time=kt, venue_id=vid)
+    assert early.outcome is models.ResolutionOutcome.RESOLVED
+    assert early.target_id == iid1
+    late = s.resolve_alias("BTC", decision_time=datetime(2021, 6, 1, tzinfo=timezone.utc), knowledge_time=kt, venue_id=vid)
+    assert late.outcome is models.ResolutionOutcome.RESOLVED
+    assert late.target_id == iid2
+
+
+def test_S2_redenomination_event_preserves_endpoints_ratio_time_evidence(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    aid2 = s.asset_id_for(asset_class=models.AssetClass.CRYPTO, identity_key="usdc|epj...")
+    s.register_asset(asset_class=models.AssetClass.CRYPTO, display_name="USD Coin", identity_key="usdc|epj...")
+    w = models.BiTemporalWindow(
+        valid_from=datetime(2021, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    ev = s.add_migration_event(
+        event_type=models.MigrationEventType.REDENOMINATION,
+        from_kind=models.TargetKind.ASSET, from_id=aid,
+        to_kind=models.TargetKind.ASSET, to_id=aid2,
+        window=w, ratio_num=1.0, ratio_den=1000.0,
+        evidence={"note": "1 new == 1000 old"},
+    )
+    assert ev.event_type is models.MigrationEventType.REDENOMINATION
+    assert ev.from_id == aid and ev.to_id == aid2
+    assert ev.from_id != ev.to_id
+    assert ev.ratio_num == 1.0 and ev.ratio_den == 1000.0
+    assert ev.window.valid_from == w.valid_from and ev.window.known_from == w.known_from
+    assert ev.evidence == {"note": "1 new == 1000 old"}
+
+
+def test_S2_redenomination_rejects_zero_denominator_and_partial_ratio(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    aid2 = s.asset_id_for(asset_class=models.AssetClass.CRYPTO, identity_key="usdc|epj...")
+    s.register_asset(asset_class=models.AssetClass.CRYPTO, display_name="USD Coin", identity_key="usdc|epj...")
+    w = models.BiTemporalWindow(
+        valid_from=datetime(2021, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    with pytest.raises(errors.ReferenceValidationError):
+        s.add_migration_event(
+            event_type=models.MigrationEventType.REDENOMINATION,
+            from_kind=models.TargetKind.ASSET, from_id=aid,
+            to_kind=models.TargetKind.ASSET, to_id=aid2,
+            window=w, ratio_num=1.0, ratio_den=0.0,
+        )
+    with pytest.raises(errors.ReferenceValidationError):
+        s.add_migration_event(
+            event_type=models.MigrationEventType.REDENOMINATION,
+            from_kind=models.TargetKind.ASSET, from_id=aid,
+            to_kind=models.TargetKind.ASSET, to_id=aid2,
+            window=w, ratio_num=1.0,
+        )
+
+
+def test_S3_contract_migration_preserves_distinct_source_dest_and_lineage(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid1, iid2 = _seed_two_instruments(tmp_path)
+    w = models.BiTemporalWindow(
+        valid_from=datetime(2022, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    ev = s.add_migration_event(
+        event_type=models.MigrationEventType.CONTRACT_MIGRATION,
+        from_kind=models.TargetKind.INSTRUMENT, from_id=iid1,
+        to_kind=models.TargetKind.INSTRUMENT, to_id=iid2,
+        window=w, evidence={"reason": "perp expiry"},
+    )
+    assert ev.event_type is models.MigrationEventType.CONTRACT_MIGRATION
+    assert ev.from_id == iid1 and ev.to_id == iid2
+    assert ev.from_id != ev.to_id
+    assert ev.evidence == {"reason": "perp expiry"}
+
+
+def test_S4_delisting_lifecycle_events_retain_venue_time_and_identity(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    list_w = models.BiTemporalWindow(
+        valid_from=datetime(2019, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    delist_w = models.BiTemporalWindow(
+        valid_from=datetime(2023, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 6, 1, tzinfo=timezone.utc),
+    )
+    listed = s.add_listing_event(
+        instrument_id=iid, venue_id=vid, event_type=models.ListingEventType.LIST, window=list_w
+    )
+    delisted = s.add_listing_event(
+        instrument_id=iid, venue_id=vid, event_type=models.ListingEventType.DELIST, window=delist_w
+    )
+    # venue + historical identity retained across both events
+    assert listed.instrument_id == iid == delisted.instrument_id
+    assert listed.venue_id == vid == delisted.venue_id
+    # economic (valid) time and system-known time preserved
+    assert listed.window.valid_from == list_w.valid_from
+    assert listed.window.known_from == list_w.known_from
+    assert delisted.window.valid_from == delist_w.valid_from
+    assert delisted.window.known_from == delist_w.known_from
+    assert listed.event_type is models.ListingEventType.LIST
+    assert delisted.event_type is models.ListingEventType.DELIST
+
+
+def test_S5_late_metadata_correction_covered_by_D9_I4(tmp_path: Path) -> None:
+    # Late-metadata correction (knowledge-time correction arriving after the fact)
+    # is exercised by D9 (test_supersede_alias_closes_known_to_and_inserts_replacement)
+    # and I4 (test_I4_supersede_instrument_version_preserves_historical_as_of). This
+    # test documents that coverage and pins the contract with a quick alias correction.
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    al = s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        window=models.BiTemporalWindow(
+            valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+            known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        ),
+        venue_id=vid,
+    )
+    close_at = al.window.known_from + timedelta(seconds=1)
+    # late correction: close prior known_to, insert replacement with contiguous knowledge time
+    s.supersede_alias(al.alias_id, close_known_at=close_at)
+    before = s.resolve_alias(
+        "BTC", decision_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        knowledge_time=al.window.known_from, venue_id=vid,
+    )
+    after = s.resolve_alias(
+        "BTC", decision_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        knowledge_time=close_at + timedelta(seconds=1), venue_id=vid,
+    )
+    assert before.outcome is models.ResolutionOutcome.RESOLVED
+    assert after.outcome is models.ResolutionOutcome.RESOLVED

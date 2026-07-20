@@ -63,11 +63,24 @@ Integrity fixes (each pinned by a focused regression `tests/reference/test_ref_s
 
 `ResolutionOutcome.REJECTED` / `DEFERRED` added to `models.py`.
 
+## Drop 4 — REF-001 deliverable scenario regressions (Jr Dev — Hermes)
+
+No production-source or migration change. Added focused synthetic regressions under
+`tests/reference/` covering the remaining ticket deliverables:
+
+| ID | Scenario | Regression |
+|----|----------|-----------|
+| S1 | Ticker reuse: same symbol maps to different instruments across nonoverlapping half-open valid windows; historical as-of resolve returns the correct instrument | `test_S1_ticker_reuse_resolves_correct_instrument_per_valid_window` |
+| S2 | Redenomination: typed asset→asset `REDENOMINATION` event preserves endpoints, positive ratio, valid/known time, evidence (plus zero-denominator / partial-ratio rejection) | `test_S2_redenomination_event_preserves_endpoints_ratio_time_evidence`, `test_S2_redenomination_rejects_zero_denominator_and_partial_ratio` |
+| S3 | Migration: typed contract-migration event preserves distinct source/dest identities + lineage | `test_S3_contract_migration_preserves_distinct_source_dest_and_lineage` |
+| S4 | Delisting: LIST/DELIST lifecycle events retain venue, economic (valid) time, known time, and historical identity | `test_S4_delisting_lifecycle_events_retain_venue_time_and_identity` |
+| S5 | Late-metadata correction: documented as covered by D9 (`test_supersede_alias_...`) and I4 (`test_I4_supersede_instrument_version_...`); pinned by a quick alias-correction test | `test_S5_late_metadata_correction_covered_by_D9_I4` |
+
 ## Validation evidence (at integrated commit)
 
 | Command | Result |
 |---------|--------|
-| `PYTHONPATH=src uv run pytest tests/reference -q` | 19 passed (11 v2 D-series + 8 integrity I-series) |
+| `PYTHONPATH=src uv run pytest tests/reference -q` | 25 passed (11 v2 D-series + 8 integrity I-series + 6 deliverable S-series) |
 | `PYTHONPATH=src uv run ruff check src/cryptofactors/reference tests/reference` | All checks passed |
 | `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/reference tests/reference` | Success (5 files) |
 | `PYTHONPATH=src uv run pytest -q` (full suite) | passed |
@@ -76,5 +89,6 @@ Integrity fixes (each pinned by a focused regression `tests/reference/test_ref_s
 ## Open items / next steps
 
 - REF-001 acceptance not yet recorded (await reviewer verdict).
-- Deliverable synthetic tests for ticker reuse, redenomination, migration, delisting,
-  and late metadata correction are partially covered; expand before acceptance if required.
+- All five ticket deliverable scenarios (ticker reuse, redenomination, migration,
+  delisting, late metadata correction) are now covered by focused regressions
+  (S1–S5); no partial-coverage gap remains.

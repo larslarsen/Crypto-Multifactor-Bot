@@ -32,17 +32,33 @@
 - `tests/reference/test_ref_store.py`: +8 focused regressions (I1–I6; I7 covered by I2/I4).
 - `docs/reviews/REF-001_INTEGRATION.md`: evidence + drop-3 section appended.
 
-## Jr integration notes
+## Supplement — REF-001 deliverable scenario regressions (Jr Dev — Hermes)
 
-- The in-tree drop was complete; no missing helpers or strict-mypy fixes were required
-  (unlike v2). No production-source edits by Jr beyond confirming the Sr code as-is.
-- CURRENT_TASK.md was already updated by Sr to reflect the integrity-fix scope.
+Separate commit (no production-source / migration change). Added focused synthetic
+regressions covering the remaining ticket deliverables under `tests/reference/`:
+
+- **S1 ticker reuse:** same symbol → different instruments across nonoverlapping
+  half-open valid windows; historical as-of resolve returns the correct instrument
+  (`test_S1_ticker_reuse_resolves_correct_instrument_per_valid_window`).
+- **S2 redenomination:** typed asset→asset `REDENOMINATION` event preserves endpoints,
+  positive ratio, valid/known time, evidence; rejects zero denominator and partial ratio
+  (`test_S2_redenomination_event_preserves_endpoints_ratio_time_evidence`,
+  `test_S2_redenomination_rejects_zero_denominator_and_partial_ratio`).
+- **S3 migration:** typed contract-migration event preserves distinct source/dest
+  identities + lineage (`test_S3_contract_migration_preserves_distinct_source_dest_and_lineage`).
+- **S4 delisting:** LIST/DELIST lifecycle events retain venue, economic (valid) time,
+  known time, and historical identity (`test_S4_delisting_lifecycle_events_retain_venue_time_and_identity`).
+- **S5 late-metadata correction:** documented as already covered by D9 and I4; pinned by
+  a quick alias-correction test (`test_S5_late_metadata_correction_covered_by_D9_I4`).
+
+All five deliverable scenarios are now covered; the prior "partial coverage" note is
+retired. REF-001 remains `IN_PROGRESS`; `Next ticket authorized: NONE`.
 
 ## Validation evidence
 
 | Command | Result |
 |---------|--------|
-| `PYTHONPATH=src uv run pytest tests/reference -q` | 19 passed |
+| `PYTHONPATH=src uv run pytest tests/reference -q` | 25 passed (11 v2 D-series + 8 integrity I-series + 6 deliverable S-series) |
 | `PYTHONPATH=src uv run ruff check src/cryptofactors/reference tests/reference` | All checks passed |
 | `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/reference tests/reference` | Success (5 files) |
 | `PYTHONPATH=src uv run pytest -q` (full suite) | passed |
