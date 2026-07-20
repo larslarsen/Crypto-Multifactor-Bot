@@ -1,23 +1,31 @@
 # CURRENT_TASK
 
-Ticket: BIN-001
+Ticket: BAR-001
 State: IN_PROGRESS
 Next ticket authorized: NONE
+Next required actor: Sr Dev - Grok Build
 
-Accepted dependencies: RAW-001 (accepted), MAN-001 (accepted), REF-001 (accepted at `b742e8d2a3cf5239b93a9541aa0013589297cad2`; REVIEW-0017).
+Accepted dependency: BIN-001 at
+`b881335817e9390011a37afb73b522d985746416` (REVIEW-0025).
 
 ## Governing documents
 
-- tickets/BIN-001.md
-- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
+- tickets/BAR-001.md
 - docs/architecture/01_DATA_ARCHITECTURE.md
-- docs/reviews/REVIEW-0024_BIN-001_INTEGRATION_CHANGES_REQUIRED.md
-- docs/reviews/BIN-001_CHANGE_REPORT.md
+- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
+- docs/reviews/REVIEW-0025_BIN-001_ACCEPTED.md
 
 ## Authorized scope
 
-Complete the Jr-only governance and gate-evidence remediation in REVIEW-0024. Jr Dev - Hermes may edit focused tests and BIN-001 records, run ticket-exact gates, and own Git, commit, and push. Production source and Sr Dev work are not authorized.
+Implement BAR-001 only. Sr Dev - Grok Build owns production-source reasoning and edits:
+publish schema-conformant canonical intraday bars only from quality-accepted immutable
+source datasets; enforce explicit venue/instrument/interval/time/unit/availability
+semantics, stable sorting and uniqueness; derive deterministic daily bars; reconcile
+against source-native daily bars with explicit tolerances and quarantine; and expose
+partition-size measurements. Preserve dataset IDs, manifests, lineage, UTC semantics,
+and fail-closed quality behavior. No network acquisition, migration, architecture change,
+tests, records, Git, commits, or pushes. Stop after the source drop is ready for Jr
+integration.
 
-## Stop condition
-
-After every exact gate passes and records match the current files, commit and push, then stop for final reviewer inspection. Do not begin another ticket.
+After the Sr drop, Jr Dev - Hermes owns integration, focused tests, acceptance commands,
+change report, repository control, Git, commit, and push. Do not begin another ticket.

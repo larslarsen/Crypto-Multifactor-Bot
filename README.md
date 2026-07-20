@@ -7,7 +7,7 @@ implementable multifactor portfolios.
 
 - **Architecture:** frozen unless an approved ADR changes it.
 - **Current implementation milestone:** control catalog and migration runner.
-- **Current task:** [`BIN-001`](tickets/BIN-001.md), Binance archive kline normalizer — `IN_PROGRESS`.
+- **Current task:** [`BAR-001`](tickets/BAR-001.md), canonical bar publisher and daily reconciliation - `IN_PROGRESS`.
 - **Trading status:** no model is approved for serving or live capital.
 
 This repository is the source of truth. Research, architecture, tickets, implementation,
@@ -81,5 +81,5 @@ not be committed.
 
 ## Current review gate
 
-Active ticket: [`BIN-001`](tickets/BIN-001.md) — Binance archive kline normalizer
-(`IN_PROGRESS`; dependencies RAW-001, MAN-001, and REF-001 accepted; integration CHANGES_REQUIRED, see REVIEW-0024).
+Active ticket: [`BAR-001`](tickets/BAR-001.md) - canonical bar publisher and daily reconciliation
+(`IN_PROGRESS`; BIN-001 accepted at `b8813358`, see REVIEW-0025; next ticket `NONE`).
