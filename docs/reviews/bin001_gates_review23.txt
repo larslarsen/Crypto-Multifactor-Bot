@@ -1,0 +1,16 @@
+=== FOCUSED ===
+.............................                                            [100%]
+=== RUFF ===
+All checks passed!
+=== MYPY ===
+Success: no issues found in 13 source files
+=== FULL ===
+    return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=== REPO CONTROL ===
+Repo control check: PASS
+=== HEAD ===
+0d0fdd89ba2b9f8d96452447381c2336285e1268
+=== TEST COUNT ===
+29
