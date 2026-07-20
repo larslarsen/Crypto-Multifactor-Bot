@@ -21,7 +21,7 @@ reaches and asserts the target branch.
 1. `test_identical_duplicate_collapses_both_orders` — uses separate output
    directories, reads both outputs, asserts exactly one retained row, asserts the
    deterministic retained `source_dataset_id` (order-independent), and asserts
-   byte-identical output in both source orders.
+   semantically identical output tables in both source orders.
 2. `test_explicit_1m_selection_no_merge` / `test_no_merge_mixed_timeframe_daily_counts`
    — 5m rows now carry distinguishable open/close/volume/trade values; daily
    base_volume / trade_count / open / close are asserted equal to the selected 1m
@@ -37,6 +37,18 @@ reaches and asserts the target branch.
 6. `_manifest_with_partition` — no longer writes shared `/tmp/part_probe`; uses the
    test's `tmp_path` so fixtures are isolated, parallel-safe, and independent of
    prior runs.
+
+### REVIEW-0040 corrections (tested implementation HEAD `3a6ed1a`)
+
+1. `test_no_merge_mixed_timeframe_daily_counts` — both source orders published
+   under separate output parents (`out_ab` / `out_ba`) and read independently, so
+   neither publication overwrites the other; selected-1m OHLC/volume/trade totals
+   asserted for both.
+2. `test_conflict_duplicate_quarantines_both_orders` — both orders published under
+   separate output parents; each asserts no intraday promotion, exactly one
+   quarantined conflicting row, and the `bar001_duplicate_conflict` issue.
+3. Change-report wording corrected: the duplicate-collapse test proves *semantic*
+   table equality, not byte identity.
 
 ### Checklist coverage (items 1-10)
 
@@ -73,7 +85,7 @@ Each forged case re-signs identity independently so exactly one branch is reache
 - Unsupported identity / partition variants: change one identity field, re-sign both
   `dataset_id` and `manifest_sha256`.
 
-## Ticket-exact gate results (tested implementation HEAD `d12caff`)
+## Ticket-exact gate results (tested implementation HEAD `3a6ed1a`)
 See docs/reviews/bar001_gates_exact_HEAD.txt for exact command output:
 1. `PYTHONPATH=src uv run pytest tests/market/test_canonical_bars.py -q --tb=short`
    40 tests pass
