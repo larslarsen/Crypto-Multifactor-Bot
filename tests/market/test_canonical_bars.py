@@ -390,6 +390,97 @@ def test_conflict_duplicate_quarantines(tmp_path: Path) -> None:
     assert any("bar001_duplicate_conflict" in i.code for i in res.issues)
 
 
+
+def test_receive_rejected_quality_fails_closed(tmp_path: Path) -> None:
+    from cryptofactors.catalog.dataset.models import (
+        DatasetPublicationReceipt,
+        QualityStatus,
+        CoverageWindow,
+        CodeIdentity,
+        ConfigIdentity,
+        DatasetStatistics,
+        SchemaIdentity,
+        TransformSpec,
+    )
+    rcpt = DatasetPublicationReceipt(
+        dataset_id="ds_rej",
+        manifest_sha256="a" * 64,
+        manifest_uri="manifest.json",
+        publication_uri="datasets/sha256",
+        dataset_path=Path("/tmp"),
+        verified_outputs=(),
+        publication_verified=True,
+        object_prefix="datasets/sha256",
+        dependencies=(),
+        supersedes_dataset_id=None,
+        dataset_type="binance_kline_source",
+        schema=SchemaIdentity(name="binance_kline_source", version="2", fingerprint="fp"),
+        transform=TransformSpec(name="canonical_bar_publisher", version="5"),
+        code=CodeIdentity(commit="0" * 40),
+        config=ConfigIdentity(config_sha256="a" * 64),
+        statistics=DatasetStatistics(row_count=0, byte_size=0),
+        coverage=CoverageWindow(event_start=datetime(2025, 1, 1, tzinfo=UTC), event_end=datetime(2025, 1, 1, 0, 1, tzinfo=UTC)),
+        quality_status=QualityStatus.REJECTED,
+        quality_summary={},
+        catalog_created_at=datetime(2025, 1, 1, tzinfo=UTC),
+    )
+    src = VerifiedSourceBarDataset(
+        receipt=rcpt,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+        local_files={},
+    )
+    with pytest.raises(ValueError, match="source dataset quality_status must be PASS or PASS_WITH_WARNINGS"):
+        _publish(tmp_path, [src])
+
+
+def test_receive_quarantined_quality_fails_closed(tmp_path: Path) -> None:
+    from cryptofactors.catalog.dataset.models import (
+        DatasetPublicationReceipt,
+        QualityStatus,
+        CoverageWindow,
+        CodeIdentity,
+        ConfigIdentity,
+        DatasetStatistics,
+        SchemaIdentity,
+        TransformSpec,
+    )
+    rcpt = DatasetPublicationReceipt(
+        dataset_id="ds_quar",
+        manifest_sha256="a" * 64,
+        manifest_uri="manifest.json",
+        publication_uri="datasets/sha256",
+        dataset_path=Path("/tmp"),
+        verified_outputs=(),
+        publication_verified=True,
+        object_prefix="datasets/sha256",
+        dependencies=(),
+        supersedes_dataset_id=None,
+        dataset_type="binance_kline_source",
+        schema=SchemaIdentity(name="binance_kline_source", version="2", fingerprint="fp"),
+        transform=TransformSpec(name="canonical_bar_publisher", version="5"),
+        code=CodeIdentity(commit="0" * 40),
+        config=ConfigIdentity(config_sha256="a" * 64),
+        statistics=DatasetStatistics(row_count=0, byte_size=0),
+        coverage=CoverageWindow(event_start=datetime(2025, 1, 1, tzinfo=UTC), event_end=datetime(2025, 1, 1, 0, 1, tzinfo=UTC)),
+        quality_status=QualityStatus.QUARANTINED,
+        quality_summary={},
+        catalog_created_at=datetime(2025, 1, 1, tzinfo=UTC),
+    )
+    src = VerifiedSourceBarDataset(
+        receipt=rcpt,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+        local_files={},
+    )
+    with pytest.raises(ValueError, match="source dataset quality_status must be PASS or PASS_WITH_WARNINGS"):
+        _publish(tmp_path, [src])
+
+
 def test_reject_legacy_v1_identity(tmp_path: Path) -> None:
     rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
     p = tmp_path / "bars.parquet"
