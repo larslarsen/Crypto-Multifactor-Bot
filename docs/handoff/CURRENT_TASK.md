@@ -3,7 +3,7 @@
 Ticket: BYB-001
 State: ACCEPTED
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted dependencies: RAW-001, MAN-001, REF-001, AUD-003, and BAR-001.
 Governing documents:
@@ -18,12 +18,14 @@ Governing documents:
 - docs/reviews/REVIEW-0050_BYB-001_ACCEPTED.md
 - docs/reviews/BYB-001_CHANGE_REPORT.md
 
-## Authorized work
+## Authorized work (complete)
 
-Publish REVIEW-0050 and the BYB-001 accepted/closed ticket, backlog, README, and handoff records.
-Do not change or rerun accepted source/tests. Exclude `.stale/`.
+BYB-001 Jr integration, all six acceptance gates, REVIEW-0049 publication correction, and
+REVIEW-0050 acceptance/closing records (ticket Decision, backlog, README, handoff) are committed
+and pushed. Do not change or rerun accepted source/tests. Exclude `.stale/`.
 
 ## Stop condition
 
-After pushing the acceptance and closing records, return the closing commit evidence and stop.
-Next ticket remains unauthorized.
+All BYB-001 work for Jr Dev - Hermes is complete and pushed. Ticket is ACCEPTED under
+REVIEW-0050. Next ticket authorized: NONE. Next required actor: Reviewer. Awaiting further
+authorization; no Jr work remains.
