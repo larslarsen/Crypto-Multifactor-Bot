@@ -1,13 +1,13 @@
 # CURRENT_TASK
 
 Ticket: BAR-001
-State: AWAITING_REVIEW
+State: IN_PROGRESS
 Next ticket authorized: NONE
 Next required actor: Jr Dev - Hermes
 
 Accepted dependency: BIN-001 at `b881335817e9390011a37afb73b522d985746416`
 (REVIEW-0025).
-Governing review: docs/reviews/REVIEW-0033_BAR-001_INTEGRATION_CHANGES_REQUIRED.md
+Governing review: docs/reviews/REVIEW-0038_BAR-001_FALSE_BLOCKERS_CHANGES_REQUIRED.md
 
 ## Authorized work
 
