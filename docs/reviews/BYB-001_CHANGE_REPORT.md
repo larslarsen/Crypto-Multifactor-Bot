@@ -83,7 +83,7 @@ commit (no source/test changes) adds them:
 - `docs/reviews/REVIEW-0049_BYB-001_INTEGRATION_PUBLICATION_REQUIRED.md`
 
 Integration commit (unchanged, gates still green): `f667c6d`
-Corrective commit (this records-only publish): `<corrective_commit>`
+Corrective commit (this records-only publish): `f00c3d8`
 Push/remote evidence: `git fetch` + `git rev-parse origin/main` == local after push.
 `git status --short` after push contains only the unrelated `.stale/` entry.
 Repo control after corrective commit: PASS.
