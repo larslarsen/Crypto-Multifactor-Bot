@@ -1,0 +1,22 @@
+=== FOCUSED ===
+...........................                                              [100%]
+=== RUFF ===
+All checks passed!
+=== MYPY ===
+Success: no issues found in 13 source files
+=== FULL ===
+........................................................................ [ 22%]
+........................................................................ [ 44%]
+........................................................................ [ 66%]
+........................................................................ [ 88%]
+....................................                                     [100%]
+=============================== warnings summary ===============================
+tests/test_archives.py::test_duplicate_member_names
+  /home/lars/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/lib/python3.13/zipfile/__init__.py:1661: UserWarning: Duplicate name: 'a.csv'
+    return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=== REPO CONTROL ===
+Repo control check: PASS
+=== HEAD ===
+779aa5fa8bac724476f423166dd22681c357c39a
