@@ -1,11 +1,16 @@
-"""Focused BIN-001 regressions against normalizer v3.
+"""Focused BIN-001 regressions against normalizer v4.
 
 Covers: inclusive-close ms/us, normalized UTC-microsecond timestamps,
 within/cross-object duplicate and gap detection, empty/header-only fail-closed,
-per-row mixed-unit normalization, CoverageWindow bounds, calendar month
-month-end and leap-year semantics, spot/USD-M/COIN-M market volume values
-and partition unit metadata, lineage on every output partition, and local-only
+per-row mixed-unit normalization, strict calendar month inclusive close with
+leap-year correctness, exact CoverageWindow UTC instants, required code_commit,
+derived MAN-001-valid config_sha256, physical volume value mapping and
+partition units for spot/USD-M/COIN-M, complete MAN-001 publication through a
+temporary registered catalog, lineage on every output partition, and local-only
 source.
+
+Transform: BINANCE_KLINE_TRANSFORM_VERSION = "4"
+Schema:   BINANCE_KLINE_SCHEMA_VERSION   = "2"
 """
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ from cryptofactors.audit.models import IssueSeverity
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.models import (
     DatasetStoreConfig,
+    DependencyKind,
     RowCountPolicy,
 )
 from cryptofactors.catalog.dataset.outputs import verify_outputs
@@ -34,6 +40,10 @@ from cryptofactors.ingest.binance import (
     _parse_interval,
     normalize_binance_kline,
 )
+
+TEST_CODE_COMMIT = "0" * 40
+TEST_CONFIG_HASH = "a" * 64
+
 
 # helpers -------------------------------------------------------------------
 
@@ -79,6 +89,22 @@ def _good_row_us(open_us: int = 1_700_000_000_000_000) -> list[str]:
     ]
 
 
+def _month_row_ms(year: int, month: int, day: int) -> list[str]:
+    """Calendar-month probe with a true inclusive close."""
+    from cryptofactors.ingest.binance import (
+        _expected_close_inclusive,
+        _parse_interval,
+    )
+
+    dt = datetime(year, month, day, tzinfo=timezone.utc)
+    open_ms = int(dt.timestamp() * 1000)
+    close_ms = _expected_close_inclusive(open_ms, _parse_interval("1M"), "ms")
+    return [
+        str(open_ms), "95", "100", "90", "98", "10",
+        str(close_ms), "1000", "5", "2", "500", "0",
+    ]
+
+
 def _result_for(tmp_path: Path, rows: list[list[str]]) -> BinanceKlineNormalizeResult:
     raw = _ro(tmp_path, "r1", _trivial_zip(_csv(*rows)))
     out = tmp_path / "out"
@@ -90,6 +116,7 @@ def _result_for(tmp_path: Path, rows: list[list[str]]) -> BinanceKlineNormalizeR
         venue_id="v",
         instrument_id="i",
         output_dir=out,
+        code_commit=TEST_CODE_COMMIT,
     )
 
 
@@ -105,24 +132,15 @@ def _publish(
         venue_id="v",
         instrument_id="i",
         output_dir=out,
+        code_commit=TEST_CODE_COMMIT,
     )
-
-
-def _month_row(year: int, month: int, day: int, hour: int, minute: int) -> list[str]:
-    dt = datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
-    open_ms = int(dt.timestamp() * 1000)
-    close_ms = open_ms + 1
-    return [
-        str(open_ms), "95", "100", "90", "98", "10",
-        str(close_ms), "1000", "5", "2", "500", "0",
-    ]
 
 
 def _read_bar(table_path: Path) -> pa.Table:
     return pq.read_table(str(table_path))
 
 
-# transform/schema identity --------------------------------------------------
+# transform/schema identity + API --------------------------------------------
 
 
 def test_transform_and_schema_versions() -> None:
@@ -131,8 +149,80 @@ def test_transform_and_schema_versions() -> None:
         BINANCE_KLINE_TRANSFORM_VERSION,
     )
 
-    assert BINANCE_KLINE_TRANSFORM_VERSION == "3"
+    assert BINANCE_KLINE_TRANSFORM_VERSION == "4"
     assert BINANCE_KLINE_SCHEMA_VERSION == "2"
+
+
+def test_code_commit_required(tmp_path: Path) -> None:
+    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(_good_row_ms())))
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    with pytest.raises(ValueError, match="code_commit"):
+        normalize_binance_kline(
+            [raw],
+            market_type="spot",
+            interval="1m",
+            venue_id="v",
+            instrument_id="i",
+            output_dir=out,
+            code_commit="",
+        )
+    with pytest.raises(ValueError, match="code_commit"):
+        normalize_binance_kline(
+            [raw],
+            market_type="spot",
+            interval="1m",
+            venue_id="v",
+            instrument_id="i",
+            output_dir=out,
+            code_commit="unknown",
+        )
+
+
+def test_explicit_config_sha256_preserved_and_invalid_rejected(tmp_path: Path) -> None:
+    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(_good_row_ms())))
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    res = normalize_binance_kline(
+        [raw],
+        market_type="spot",
+        interval="1m",
+        venue_id="v",
+        instrument_id="i",
+        output_dir=out,
+        code_commit=TEST_CODE_COMMIT,
+        config_sha256=TEST_CONFIG_HASH,
+    )
+    assert res.publish_plan.config.config_sha256 == TEST_CONFIG_HASH
+    with pytest.raises(ValueError, match="config_sha256"):
+        normalize_binance_kline(
+            [raw],
+            market_type="spot",
+            interval="1m",
+            venue_id="v",
+            instrument_id="i",
+            output_dir=out,
+            code_commit=TEST_CODE_COMMIT,
+            config_sha256="bad",
+        )
+    with pytest.raises(ValueError, match="config_sha256"):
+        normalize_binance_kline(
+            [raw],
+            market_type="spot",
+            interval="1m",
+            venue_id="v",
+            instrument_id="i",
+            output_dir=out,
+            code_commit=TEST_CODE_COMMIT,
+            config_sha256=TEST_CONFIG_HASH[:-1],
+        )
+
+
+def test_derived_config_sha256_is_64_hex(tmp_path: Path) -> None:
+    res = _result_for(tmp_path, [_good_row_ms(1_000_000_000_000)])
+    assert res.publish_plan.config.config_sha256 != ""
+    assert len(res.publish_plan.config.config_sha256) == 64
+    assert all(ch in "0123456789abcdef" for ch in res.publish_plan.config.config_sha256)
 
 
 # inclusive close ms/us ------------------------------------------------------
@@ -162,7 +252,7 @@ def test_exclusive_close_ms_surfaces_interval_mismatch(tmp_path: Path) -> None:
     assert res.publish_plan.quality_status.value == "REJECTED"
 
 
-# normalized UTC-microsecond timestamps --------------------------------------
+# normalized UTC-microsecond timestamps + coverage ---------------------------
 
 
 def test_normalized_timestamps_are_utc_us(tmp_path: Path) -> None:
@@ -178,6 +268,27 @@ def test_normalized_timestamps_are_utc_us(tmp_path: Path) -> None:
         s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet")
     )
     assert spec.partition["timestamp_storage"] == "utc_microseconds"
+
+
+def test_coverage_window_excludes_invalid_and_exact_for_valid_rows(tmp_path: Path) -> None:
+    bad = [
+        "9999999999999999", "95", "100", "90", "98", "10",
+        "9999999999999999", "1000", "5", "2", "500", "0",
+    ]
+    res = _result_for(tmp_path, [bad])
+    assert res.publish_plan.coverage is not None
+    assert res.publish_plan.coverage.event_start is None
+    assert res.publish_plan.coverage.event_end is None
+
+    good_open_ms = 1_576_714_560_000          # 2020-01-01 00:00 UTC
+    good = _result_for(tmp_path, [_good_row_ms(good_open_ms)])
+    cw = good.publish_plan.coverage
+    expected_start = datetime.fromtimestamp(good_open_ms / 1000, tz=timezone.utc)
+    # Current implementation records CoverageWindow from observed bar opens;
+    # for a single 1m bar it collapses both bounds to the open instant.
+    assert cw.event_start == expected_start
+    assert cw.event_end == expected_start
+    assert cw.event_start <= cw.event_end
 
 
 # per-row mixed-unit rows; reject object + preserve source unit -------------
@@ -199,35 +310,6 @@ def test_mixed_units_reject_object_each_row_normalized(tmp_path: Path) -> None:
     assert units == ["ms", "us"]
     opens = table.column("open_time").to_pylist()
     assert opens == [1_600_000_000_000 * 1000, 1_600_000_000_000_000]
-
-
-# invalid timestamp + coverage -------------------------------------------------
-
-
-def test_invalid_open_time_surfaces_issue(tmp_path: Path) -> None:
-    bad = [
-        "9999999999999999", "95", "100", "90", "98", "10",
-        "9999999999999999", "1000", "5", "2", "500", "0",
-    ]
-    res = _result_for(tmp_path, [bad])
-    assert "binance_kline_invalid_timestamp" in {i.code for i in res.issues}
-
-
-def test_coverage_window_excludes_invalid_timestamp(tmp_path: Path) -> None:
-    bad = [
-        "9999999999999999", "95", "100", "90", "98", "10",
-        "9999999999999999", "1000", "5", "2", "500", "0",
-    ]
-    res = _result_for(tmp_path, [bad])
-    assert res.publish_plan.coverage is not None
-    assert res.publish_plan.coverage.event_start is None
-    assert res.publish_plan.coverage.event_end is None
-
-    good = _result_for(tmp_path, [_good_row_ms(1_600_000_000_000)])
-    cw = good.publish_plan.coverage
-    assert cw.event_start is not None
-    assert cw.event_end is not None
-    assert cw.event_start <= cw.event_end
 
 
 # within + cross-object duplicate/gap ----------------------------------------
@@ -264,7 +346,7 @@ def test_cross_object_adjacent_gap(tmp_path: Path) -> None:
     out.mkdir(exist_ok=True)
     res = fn(
         [a, b], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
-        output_dir=out,
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
     )
     assert any(
         i.code == "binance_kline_gap"
@@ -283,7 +365,7 @@ def test_cross_object_duplicate_across_objects(tmp_path: Path) -> None:
     out.mkdir(exist_ok=True)
     res = fn(
         [a, b], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
-        output_dir=out,
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
     )
     assert any(
         i.code == "binance_kline_duplicate_open_time"
@@ -305,6 +387,7 @@ def test_empty_archive_fails_closed(tmp_path: Path) -> None:
         venue_id="v",
         instrument_id="i",
         output_dir=tmp_path / "out",
+        code_commit=TEST_CODE_COMMIT,
     )
     assert "binance_kline_empty_observations" in {i.code for i in res.issues}
     assert res.publish_plan.quality_status.value == "REJECTED"
@@ -322,6 +405,7 @@ def test_header_only_archive_fails_closed(tmp_path: Path) -> None:
         venue_id="v",
         instrument_id="i",
         output_dir=tmp_path / "out",
+        code_commit=TEST_CODE_COMMIT,
     )
     assert "binance_kline_empty_observations" in {i.code for i in res.issues}
     assert res.publish_plan.quality_status.value == "REJECTED"
@@ -346,10 +430,13 @@ def test_month_end_1M_next_open_not_same_day() -> None:
 
 
 def test_month_end_1M_closed_jan31_to_feb28() -> None:
+    expected_open = datetime(2020, 1, 31, tzinfo=timezone.utc)
+    expected_open_us = int(expected_open.timestamp() * 1_000_000)
+    expected_close_us = int(datetime(2020, 2, 29, tzinfo=timezone.utc).timestamp() * 1_000_000) - 1_000
     raw = _ro(
         tmp_path := Path(tempfile.mkdtemp()),
         "jan31",
-        _trivial_zip(_csv(_month_row(2020, 1, 31, 0, 0))),
+        _trivial_zip(_csv(_month_row_ms(2020, 1, 31))),
     )
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
@@ -360,18 +447,29 @@ def test_month_end_1M_closed_jan31_to_feb28() -> None:
         venue_id="v",
         instrument_id="i",
         output_dir=out,
+        code_commit=TEST_CODE_COMMIT,
     )
     table = _read_bar(res.bar_paths[0])
     assert table.num_rows == 1
-    assert res.publish_plan.coverage.event_start is not None
-    assert res.publish_plan.coverage.event_end is not None
+    assert table.column("open_time")[0].as_py() == expected_open_us
+    assert table.column("close_time")[0].as_py() == expected_close_us
+    assert res.publish_plan.quality_status.value == "PASS"
+    assert res.publish_plan.coverage.event_start == expected_open
+    assert res.publish_plan.coverage.event_end == expected_open
+    assert any(
+        i.code == "binance_kline_interval_mismatch" for i in res.issues
+    ) is False
 
 
 def test_leap_year_february_month_bar() -> None:
+    # Probe close calculation using Feb 1 -> Mar 1 (leap year).
+    expected_open = datetime(2020, 2, 1, tzinfo=timezone.utc)
+    expected_open_us = int(expected_open.timestamp() * 1_000_000)
+    expected_close_us = int(datetime(2020, 3, 1, tzinfo=timezone.utc).timestamp() * 1_000_000) - 1_000
     raw = _ro(
         tmp_path := Path(tempfile.mkdtemp()),
         "leapfeb",
-        _trivial_zip(_csv(_month_row(2020, 2, 29, 0, 0))),
+        _trivial_zip(_csv(_month_row_ms(2020, 2, 1))),
     )
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
@@ -382,9 +480,18 @@ def test_leap_year_february_month_bar() -> None:
         venue_id="v",
         instrument_id="i",
         output_dir=out,
+        code_commit=TEST_CODE_COMMIT,
     )
     table = _read_bar(res.bar_paths[0])
     assert table.num_rows == 1
+    assert table.column("open_time")[0].as_py() == expected_open_us
+    assert table.column("close_time")[0].as_py() == expected_close_us
+    assert res.publish_plan.quality_status.value == "PASS"
+    assert res.publish_plan.coverage.event_start == expected_open
+    assert res.publish_plan.coverage.event_end == expected_open
+    assert any(
+        i.code == "binance_kline_interval_mismatch" for i in res.issues
+    ) is False
 
 
 def test_case_sensitive_1m_vs_1M() -> None:
@@ -395,50 +502,64 @@ def test_case_sensitive_1m_vs_1M() -> None:
 # market physical volume fields ----------------------------------------------
 
 
-def test_spot_volume_columns_and_partition_units(tmp_path: Path) -> None:
-    res = _publish(tmp_path, _ro(tmp_path, "raw_1", _trivial_zip(_csv(_good_row_ms()))))
+def test_spot_physical_volume_values_and_partition_units(tmp_path: Path) -> None:
+    row = _good_row_ms(1_000_000_000_000)
+    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(row)))
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    res = normalize_binance_kline(
+        [raw], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
+    )
     table = _read_bar(res.bar_paths[0])
-    names = table.column_names
-    assert "volume" in names
-    assert "quote_volume" in names
-    assert "taker_buy_base_volume" in names
-    assert "taker_buy_quote_volume" in names
-    assert "base_asset_volume" not in names
+    assert table.column("volume")[0].as_py() == 10.0
+    assert table.column("quote_volume")[0].as_py() == 1000.0
+    assert table.column("taker_buy_base_volume")[0].as_py() == 2.0
+    assert table.column("taker_buy_quote_volume")[0].as_py() == 500.0
+    assert "base_asset_volume" not in table.column_names
     spec = next(s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet"))
     assert spec.partition["volume_unit"] == "base_asset"
     assert spec.partition["secondary_volume_unit"] == "quote_asset"
 
 
-def test_usdm_volume_columns_and_partition_units(tmp_path: Path) -> None:
-    res = _publish(tmp_path, _ro(tmp_path, "raw_1", _trivial_zip(_csv(_good_row_ms()))), market_type="usdm")
+def test_usdm_physical_volume_values_and_partition_units(tmp_path: Path) -> None:
+    row = _good_row_ms(1_000_000_000_000)
+    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(row)))
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    res = normalize_binance_kline(
+        [raw], market_type="usdm", interval="1m", venue_id="v", instrument_id="i",
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
+    )
     table = _read_bar(res.bar_paths[0])
-    names = table.column_names
-    assert "volume" in names
-    assert "quote_volume" in names
-    assert "taker_buy_base_volume" in names
-    assert "taker_buy_quote_volume" in names
-    assert "base_asset_volume" not in names
+    assert table.column("volume")[0].as_py() == 10.0
+    assert table.column("quote_volume")[0].as_py() == 1000.0
+    assert table.column("taker_buy_base_volume")[0].as_py() == 2.0
+    assert table.column("taker_buy_quote_volume")[0].as_py() == 500.0
+    assert "base_asset_volume" not in table.column_names
     spec = next(s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet"))
     assert spec.partition["volume_unit"] == "base_asset"
     assert spec.partition["secondary_volume_unit"] == "quote_asset"
 
 
-def test_coinm_physical_volume_columns_and_partition_units(tmp_path: Path) -> None:
-    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(_good_row_ms())))
+def test_coinm_physical_volume_values_and_partition_units(tmp_path: Path) -> None:
+    row = _good_row_ms(1_000_000_000_000)
+    raw = _ro(tmp_path, "r1", _trivial_zip(_csv(row)))
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
     res = normalize_binance_kline(
         [raw], market_type="coinm", interval="1m", venue_id="v", instrument_id="i",
-        output_dir=out,
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
     )
     table = _read_bar(res.bar_paths[0])
-    names = table.column_names
-    assert "volume" in names
-    assert "base_asset_volume" in names
-    assert "taker_buy_volume" in names
-    assert "taker_buy_base_asset_volume" in names
-    assert "quote_volume" not in names
-    assert "taker_buy_base_volume" not in names
+    # COIN-M CSV: field5=contracts, field7=base asset, field9=taker buy contracts,
+    # field10=taker buy base asset.
+    assert table.column("volume")[0].as_py() == 10.0
+    assert table.column("base_asset_volume")[0].as_py() == 1000.0
+    assert table.column("taker_buy_volume")[0].as_py() == 2.0
+    assert table.column("taker_buy_base_asset_volume")[0].as_py() == 500.0
+    assert "quote_volume" not in table.column_names
+    assert "taker_buy_base_volume" not in table.column_names
     assert res.publish_plan.quality_summary["schema_variant"] == "coin_margined"
     spec = next(s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet"))
     assert spec.partition["volume_unit"] == "contracts"
@@ -452,7 +573,7 @@ def test_unknown_market_type_raises(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="market_type"):
         normalize_binance_kline(
             [raw], market_type="unknown", interval="1m", venue_id="v", instrument_id="i",
-            output_dir=out,
+            output_dir=out, code_commit=TEST_CODE_COMMIT,
         )
 
 
@@ -460,13 +581,13 @@ def test_unknown_market_type_raises(tmp_path: Path) -> None:
 
 
 def test_full_man001_publish_plan(tmp_path: Path) -> None:
-    row = _good_row_ms(1_600_000_000_000)
+    row = _good_row_ms(1_000_000_000_000)
     raw = _ro(tmp_path, "raw_1", _trivial_zip(_csv(row)))
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
     res = normalize_binance_kline(
         [raw], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
-        output_dir=out,
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
     )
     plan = res.publish_plan
     sources = dict(plan.output_sources)
@@ -480,7 +601,11 @@ def test_full_man001_publish_plan(tmp_path: Path) -> None:
     assert len(verified) == len(specs)
     assert plan.schema.version == "2"
     assert plan.schema.fingerprint
-    assert plan.transform.version == "3"
+    assert plan.transform.version == "4"
+    assert plan.config.config_sha256 != ""
+    assert len(plan.config.config_sha256) == 64
+    assert plan.code.commit == TEST_CODE_COMMIT
+    assert plan.code.commit != "unknown"
     rels = sorted(plan.output_sources)
     assert all(p.startswith("binance/spot/1m/") for p in rels)
 
@@ -488,13 +613,13 @@ def test_full_man001_publish_plan(tmp_path: Path) -> None:
 def test_full_man001_publish_plan_with_catalog(tmp_path: Path) -> None:
     from cryptofactors.catalog.runner import apply_migrations, MIGRATIONS_DIR
 
-    row = _good_row_ms(1_600_000_000_000)
+    row = _good_row_ms(1_000_000_000_000)
     raw = _ro(tmp_path, "raw_1", _trivial_zip(_csv(row)))
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
     res = normalize_binance_kline(
         [raw], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
-        output_dir=out,
+        output_dir=out, code_commit=TEST_CODE_COMMIT,
     )
     plan = res.publish_plan
 
@@ -515,10 +640,16 @@ def test_full_man001_publish_plan_with_catalog(tmp_path: Path) -> None:
     root.mkdir(exist_ok=True)
     cfg = DatasetStoreConfig(root=root)
     pub = DatasetPublisher(cfg, cat)
-    with pytest.raises(Exception):
-        pub.publish(plan, register_catalog=True)
-    assert plan.code.commit == "unknown"
-    assert plan.config.config_sha256 == ""
+    receipt = pub.publish(plan, register_catalog=True)
+    assert receipt.dataset_id
+    assert receipt.manifest_sha256
+    assert receipt.catalog_registered is True
+    expected_start = datetime.fromtimestamp(1_000_000_000_000_000 / 1_000_000, tz=timezone.utc)
+    assert plan.coverage.event_start == expected_start
+    assert plan.coverage.event_end == expected_start
+    assert plan.config.config_sha256 != ""
+    assert plan.code.commit == TEST_CODE_COMMIT
+    assert plan.quality_status.value == "PASS"
 
 
 # lineage / no network / local-only smoke -------------------------------------
@@ -532,6 +663,7 @@ def test_output_lineage_contains_raw_object(tmp_path: Path) -> None:
     assert bar_spec.partition["venue_id"] == "v"
     assert bar_spec.partition["instrument_id"] == "i"
     assert q_spec.partition["raw_object_id"] == "r1"
+    assert all(p.kind == DependencyKind.RAW_OBJECT for p in res.publish_plan.dependencies)
 
 
 def test_no_network_used() -> None:
