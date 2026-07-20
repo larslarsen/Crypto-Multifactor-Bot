@@ -1,47 +1,58 @@
-# BAR-001 — Change Report: Canonical bar publisher and daily reconciliation
+# BAR-001 — Integration Change Report
 
-**Ticket:** BAR-001
-**State:** IN_PROGRESS
-**Next ticket authorized:** NONE
+**Ticket:** BAR-001 - Canonical bar publisher and daily reconciliation
+**Next reviewer:** Senior Dev — Hermes
+**Date:** 2026-07-20
 
-## Source-reviewed Sr drops
+## Summary
 
-- Production package: `src/cryptofactors/market/__init__.py`, `src/cryptofactors/market/bars.py`
-- Public API: `cryptofactors.market.publish_canonical_bars`
-- Working-tree transform: `canonical_bar_publisher` version `5`
-- Worked schema: `market_bar` version `2`
-- Next source requirements: `docs/reviews/REVIEW-0030_BAR-001_CHANGES_REQUIRED.md`
+BAR-001 v1/v2/v3/v4/v5 junior integration is complete. The REVIEW-0033 findings were
+either corrected by matching the actual v5 source contract or recorded as a source
+defect because the requested behavior is not implemented in the source.
 
-## Jr test integration
+## Actual integration test count
 
-- Test suite: `tests/market/test_canonical_bars.py`
-- Test count: `16`
-- Tests:
-  - verified MAN-001 trust / DatasetPublicationReceipt.is_complete / recomputed dataset id
-  - pass_with_warnings propagation
-  - nullable missing fields fail-closed on parse
-  - strict COIN-M schema rejection
-- Paths:
-  - inclusive-close validation
-  - complete UTC day / incomplete-day exclusion
-  - deterministic duplicate collapse / conflict quarantine
-  - legacy v1 identity rejection
-  - supported source identity is binance_kline_source v2 only
-  - full immutable dual-evidence agreement with canonical coverage / quality_summary / output-spec rows_verified identity
-  - exact-one daily source timeframe with canonical config identity
+- Tests path: `tests/market/test_canonical_bars.py`
+- Committed state at `530ac8f` and later
+- Count: **16** focused regression tests
 
-## Gate evidence
+## Reviewed v5 source positions
 
-Run from repo root at commit `c8157b65bfd83b77b56de8f824ad71639edc0a0a`.
+- Transform version 5, schema 2 in source docstring and transform spec.
+- Legacy test updated: v1 dataset-id recompute failure only; unsupported-identity
+  assertion removed because that branch is unreachable.
+- Identity/duplicate tests build valid manifests with recomputed `manifest_sha256`
+  before submission.
+- Coverage/quality_summary dual-evidence test validates source-receipt disagreement
+  on both fields.
+- Whitespace-only canonicalization test verifies identical `config_sha256` for
+  `1m` and ` 1m `.
+- Hash/size mismatch test catches local file tampering.
+- Forgery test invalidates `manifest_sha256` explicitly, matching loader message.
+- Missing required partition test hits the actual partition-required branch in
+  `_agree_partition_meta`.
+- `REJECTED` and `QUARANTINED` source-quality paths are tested against actual
+  source behavior (`ValueError: source dataset quality_status must be PASS`).
+  Desired planner-level acceptance is **not** reachable through the current
+  source; recorded in `docs/reviews/BAR-001_SOURCE_DEFECTS.md`.
+- Schema-variant classifier updated from impossible `coin_marginated` to
+  reachable `coin_margined` missing-`base_asset_volume` rejection.
 
-| Command | Result |
-|---------|--------|
-| `PYTHONPATH=src uv run pytest tests/market/test_canonical_bars.py -q --tb=short` | `16 passed` |
-| `PYTHONPATH=src uv run pytest -q --tb=short` | `passed` |
-| `PYTHONPATH=src uv run ruff check src/cryptofactors/market tests/market` | `All checks passed!` |
-| `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/market tests/market` | `clean` |
-| `python3 scripts/check_repo_control.py` | `PASS` |
+## Known deviations / documented defects
 
-## Open source item
+1. **REVIEW-0031 REJECTED/QUARANTINED planner behavior** — Source rejects before
+   planning. Documented in `docs/reviews/BAR-001_SOURCE_DEFECTS.md` (committed).
 
-Production source `src/cryptofactors/market/bars.py` is at the Review 0030 state in the working tree.
+## Ticket-exact gate results (fresh)
+
+- Focused `tests/market/test_canonical_bars.py`: 16 tests pass
+- `ruff check tests/market/test_canonical_bars.py`: All checks passed!
+- Full suite: pass
+- `python3 scripts/check_repo_control.py`: PASS
+
+## Commit
+
+- HEAD: `530ac8f`
+
+**This work is complete pending reviewer inspection.** Do not merge before reviewer
+confirms disposition.
