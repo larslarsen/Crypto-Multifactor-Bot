@@ -3,7 +3,7 @@
 Ticket: EVD-001
 State: ACCEPTED
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer (EVD-001 closed; no pending Jr work)
 
 Accepted dependency: CAT-001. Experiment-link identity is explicitly deferred.
 Governing documents:
@@ -20,10 +20,11 @@ Governing documents:
 - docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md
 - docs/reviews/EVD-001_CHANGE_REPORT.md
 
-## Authorized work
+## Authorized work (complete)
 
-Publish REVIEW-0057 and the EVD-001 accepted/closed ticket, backlog, README, and handoff records.
-Do not change or rerun accepted source/tests. Exclude `.stale/`.
+Published REVIEW-0057 and the EVD-001 accepted/closed ticket, backlog, README, and handoff
+records. EVD-001 is `ACCEPTED` (integration commit `6bd1f43`; evidence head `f774944`;
+acceptance `docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md`). No pending Jr work remains.
 
 ## Stop condition
 
