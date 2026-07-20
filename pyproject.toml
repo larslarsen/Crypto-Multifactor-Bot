@@ -40,3 +40,9 @@ target-version = "py312"
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+# pyarrow ships without a py.typed marker in this environment; treat as untyped
+# third-party dependency (strict type-checking still applies to first-party code).
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true

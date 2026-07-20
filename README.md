@@ -82,4 +82,4 @@ not be committed.
 ## Current review gate
 
 Active ticket: [`BIN-001`](tickets/BIN-001.md) — Binance archive kline normalizer
-(`IN_PROGRESS`; dependencies RAW-001, MAN-001, and REF-001 accepted).
+(`IN_PROGRESS`; dependencies RAW-001, MAN-001, and REF-001 accepted; CHANGES_REQUIRED for duplicate/gap detection, see REVIEW-0018).
