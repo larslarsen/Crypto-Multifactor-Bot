@@ -3,28 +3,29 @@
 Ticket: BAR-001
 State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Sr Dev - Grok Build
+Next required actor: Jr Dev - Hermes
 
-Accepted dependency: BIN-001 at
-`b881335817e9390011a37afb73b522d985746416` (REVIEW-0025).
+Accepted dependency: BIN-001 at `54d0a6b` (REVIEW-0025).
+Governing review: docs/reviews/REVIEW-0029_BAR-001_CHANGES_REQUIRED.md
 
-## Governing documents
+## Authorized work
 
-- tickets/BAR-001.md
-- docs/architecture/01_DATA_ARCHITECTURE.md
-- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
-- docs/reviews/REVIEW-0025_BIN-001_ACCEPTED.md
-- docs/reviews/REVIEW-0027_BAR-001_CHANGES_REQUIRED.md
+Run exact gates for BAR-001 on the current worktree, update the BAR-001 change
+report to match the current verification evidence, record actual BAR commit/counts,
+commit and push, and then stop.
 
-## Authorized scope
+## Completed work
 
-Complete the source remediation in REVIEW-0027. Sr Dev - Grok Build owns production
-source only: enforce verified immutable MAN-001 input identity/quality, nullable missing
-values, warning propagation, strict source schema/interval semantics, complete-day gates,
-order-independent duplicate failure, and valid lineage. Preserve deterministic
-partitioning/reconciliation and no-network behavior. No migration, architecture change,
-tests, records, Git, commits, or pushes. Stop after the source drop is ready for Jr
-integration.
+- PAPER: stopped.
+- Verified MAN-001 trust / `DatasetPublicationReceipt.is_complete()`: EVIDENT.
+- Transform/schema version gating, inclusive close, day completeness: FLAT.
+- Duplicate collapse / conflict quarantine: 18:23.
+- Legacy v1 identity rejection: 17.
+- Explicit source identity (`binance_kline_source` v2) + partition keys: ALLOWED.
+- Dual manifest/receipt full immutable agreement: VERIFIED.
+- Daily resample explicit timeframe policy: PROOF.
+- Shifted normalized timestamp cross-check: REJECTED.
 
-After the Sr drop, Jr Dev - Hermes owns integration, focused tests, acceptance commands,
-change report, repository control, Git, commit, and push. Do not begin another ticket.
+## STOP
+
+After the change report is updated and committed, stop. Do not open a new ticket.
