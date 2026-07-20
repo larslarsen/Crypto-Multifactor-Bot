@@ -555,7 +555,7 @@ def test_identical_duplicate_collapses_both_orders(tmp_path: Path) -> None:
     assert retained_ab == retained_ba  # order-independent deterministic retention
     assert retained_ab.startswith("ds_")
 
-    # Identical output bytes in both source orders (no metadata drift).
+    # Semantically identical output tables in both source orders (no metadata drift).
     assert tab_ab == tab_ba
 
 
@@ -579,11 +579,13 @@ def test_conflict_duplicate_quarantines_both_orders(tmp_path: Path) -> None:
                                      venue_id="binance", instrument_id=1, market_type="spot", interval="1m")
     src_b = VerifiedSourceBarDataset(local_files={"b/bars.parquet": pb}, receipt=_receipt_for(m_b),
                                      venue_id="binance", instrument_id=1, market_type="spot", interval="1m")
-    res_ab = _publish(tmp_path, [src_a, src_b])
-    res_ba = _publish(tmp_path, [src_b, src_a])
-    assert any("bar001_duplicate_conflict" in i.code for i in res_ab.issues)
-    assert any("bar001_duplicate_conflict" in i.code for i in res_ba.issues)
-    assert len(res_ab.intraday_paths) == 0
+    res_ab = _publish(tmp_path / "out_ab", [src_a, src_b])
+    res_ba = _publish(tmp_path / "out_ba", [src_b, src_a])
+    for res in (res_ab, res_ba):
+        assert any("bar001_duplicate_conflict" in i.code for i in res.issues)
+        # No intraday promotion; all conflicting rows quarantined (one row each).
+        assert len(res.intraday_paths) == 0
+        assert len(res.quarantine_paths) == 1
 
 
 # ------------------------------------------------------------------
@@ -655,13 +657,14 @@ def test_no_merge_mixed_timeframe_daily_counts(tmp_path: Path) -> None:
     src_1m = _source_dataset(tmp_path, rows=rows_1m, relative_path="m1/bars.parquet", interval="1m", dataset_id="ds_1m_only")
     src_5m = _source_dataset(tmp_path, rows=rows_5m, relative_path="m5/bars.parquet", interval="5m", dataset_id="ds_5m_only")
 
-    # Daily must equal the selected 1m totals only, in both source orders.
+    # Daily must equal the selected 1m totals only, in both source orders,
+    # each published under a separate output parent so neither overwrites the other.
     n_1m = len(rows_1m)
     vol_1m = Decimal("1000") * n_1m
     trades_1m = 10 * n_1m
 
-    res_ab = _publish(tmp_path, [src_1m, src_5m], daily_source_timeframe="1m")
-    res_ba = _publish(tmp_path, [src_5m, src_1m], daily_source_timeframe="1m")
+    res_ab = _publish(tmp_path / "out_ab", [src_1m, src_5m], daily_source_timeframe="1m")
+    res_ba = _publish(tmp_path / "out_ba", [src_5m, src_1m], daily_source_timeframe="1m")
     for res in (res_ab, res_ba):
         assert len(res.daily_paths) == 1
         daily = pq.read_table(str(res.daily_paths[0]))
