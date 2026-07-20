@@ -31,3 +31,12 @@ Run from repo root at commit `2ee73f4b1dd0f62f7e5a5358b598c9b498d07bf9`.
 | `PYTHONPATH=src uv run ruff check src/cryptofactors/market tests/market` | All checks passed |
 | `PYTHONPATH=src uv run mypy --no-incremental tests/market/test_canonical_bars.py` | clean for tests; 2 pre-existing source type errors remain at `src/cryptofactors/market/bars.py:1448` from Sr drop |
 | `python3 scripts/check_repo_control.py` | PASS |
+
+## Open source type-check nits from Sr drop (BAR-001 async)
+
+Two mypy errors remain in `src/cryptofactors/market/bars.py` at line 1448:
+- `Generator has incompatible item type "int"; expected "bool"`
+- `Argument 1 to "int" has incompatible type "int | None"`
+
+These are in production source code dropped by Sr Dev; Jr does not edit
+production source independently. Latent to address in next Sr review/drop.
