@@ -1,7 +1,7 @@
 # REF-001 — Implementation Handoff & Validation Evidence
 
 **Ticket:** REF-001 (Point-in-time asset and instrument master)
-**Status:** IN_PROGRESS (v1 + v2 Sr drops integrated; regression suite green)
+**Status:** ACCEPTED (final review REVIEW-0017 at commit `b742e8d2a3cf5239b93a9541aa0013589297cad2`)
 **Source of truth:** `tickets/REF-001.md`, `docs/handoff/CURRENT_TASK.md`, AGENTS.md
 
 ## Drop 1 — `REF001_reference_master.zip` (schema + store)
