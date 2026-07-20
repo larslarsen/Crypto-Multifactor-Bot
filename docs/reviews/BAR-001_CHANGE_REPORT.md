@@ -45,10 +45,18 @@ reaches and asserts the target branch.
    neither publication overwrites the other; selected-1m OHLC/volume/trade totals
    asserted for both.
 2. `test_conflict_duplicate_quarantines_both_orders` — both orders published under
-   separate output parents; each asserts no intraday promotion, exactly one
-   quarantined conflicting row, and the `bar001_duplicate_conflict` issue.
+   separate output parents; each asserts no intraday promotion, a single
+   quarantine partition containing **both** conflicting rows (both close values and
+   both source dataset IDs present), and the `bar001_duplicate_conflict` issue.
 3. Change-report wording corrected: the duplicate-collapse test proves *semantic*
    table equality, not byte identity.
+
+### REVIEW-0041 corrections (tested implementation HEAD `3a6ed1a`)
+
+1. `test_conflict_duplicate_quarantines_both_orders` — reads each order's
+   independent quarantine Parquet and asserts exactly two rows, both conflicting
+   close values (105 and 200) and both source dataset IDs present, both orders
+   semantically equal, and no intraday promotion in either order.
 
 ### Checklist coverage (items 1-10)
 
@@ -85,7 +93,7 @@ Each forged case re-signs identity independently so exactly one branch is reache
 - Unsupported identity / partition variants: change one identity field, re-sign both
   `dataset_id` and `manifest_sha256`.
 
-## Ticket-exact gate results (tested implementation HEAD `3a6ed1a`)
+## Ticket-exact gate results (tested implementation HEAD `c10dd3a`)
 See docs/reviews/bar001_gates_exact_HEAD.txt for exact command output:
 1. `PYTHONPATH=src uv run pytest tests/market/test_canonical_bars.py -q --tb=short`
    40 tests pass
