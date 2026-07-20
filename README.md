@@ -12,3 +12,4 @@
 Active tickets:  
 - [`BIN-001`](tickets/BIN-001.md) — Binance archive kline normalizer (`ACCEPTED` at `b8813358`).  
 - [`BAR-001`](tickets/BAR-001.md) — canonical bar publisher and daily reconciliation (`ACCEPTED` at integration commit `c10dd3a`; `docs/reviews/REVIEW-0042_BAR-001_ACCEPTED.md`).
+- [`RES-001`](tickets/RES-001.md) — post-Sprint-003 research protocol reconciliation (`IN_PROGRESS`; documentation-only Sprint 004).

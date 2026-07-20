@@ -1,6 +1,6 @@
 {
-  "registry_version": 1,
-  "as_of": "2026-07-18T00:00:00Z",
+  "registry_version": 2,
+  "as_of": "2026-07-20T00:00:00Z",
   "hypotheses": [
     {
       "hypothesis_id": "H-001",
@@ -178,6 +178,37 @@
       "rejection_rule": "Effect exists only with look-ahead from later supply corrections; no point-in-time supply/unlock series exists; vanishes after conservative costs or accepted-factor controls; or is concentrated in one era or a few assets without a prespecified explanation.",
       "sprint_002_source_basis": "LIT-030 (Guo 2026, SSRN 6636258); LIT-036 (Mohammad et al. 2026, Front. Blockchain 9:1817622)",
       "preregistered_at": "2026-07-18T00:00:00Z"
+    },
+    {
+      "hypothesis_id": "H-012",
+      "version": 1,
+      "slug": "time-series-momentum-realistic-mechanics",
+      "title": "Time-series momentum under realizable trading mechanics",
+      "statement": "Among point-in-time eligible cryptoassets, the sign of an asset's own lagged 30-7 or 90-7 return predicts its subsequent seven-day net realizable return after costs, funding, margin, liquidation, shortability, and capacity constraints.",
+      "mechanism": "Slow information diffusion and trend-following demand may create own-asset continuation, while realistic derivative mechanics determine whether the apparent trend return is realizable.",
+      "expected_sign": "POSITIVE_TO_OWN_LAGGED_TREND",
+      "lifecycle": "REGISTERED",
+      "verdict": "UNTESTED",
+      "phase": "PHASE_1_AFTER_RESEARCH_SUBSTRATE_AND_EXECUTION_REALISM_GATES",
+      "primary_metric": "net_realizable_wealth_path_return_after_liquidation_and_costs",
+      "advancement_rule": "Pass the preregistered dependence-aware economic threshold at target capital in mandatory spot/perpetual and raw/volatility-managed cells without retuning.",
+      "rejection_rule": "Reject if performance is nonpositive at the preregistered threshold, requires terminal-only accounting, disappears after funding/liquidation/cost controls, or is concentrated in one asset, venue, or period.",
+      "known_confounders": [
+        "broad crypto market exposure",
+        "volatility scaling",
+        "funding and basis",
+        "shortability and liquidation selection",
+        "asset age and liquidity",
+        "cross-sectional momentum overlap"
+      ],
+      "required_dataset_types": [
+        "market_bars",
+        "universe_snapshot",
+        "funding_cashflows",
+        "execution_route_snapshot",
+        "label_return"
+      ],
+      "preregistered_at": "2026-07-20T00:00:00Z"
     }
   ]
 }

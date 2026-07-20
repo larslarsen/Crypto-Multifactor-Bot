@@ -2,7 +2,7 @@
 
 The SQLite registry is the operational control record. These versioned files seed and document the initial hypotheses. Generated current-state exports must be reproducible from append-only registry events.
 
-- `hypotheses.yaml`: initial hypothesis identities and version 1 definitions.
+- `hypotheses.yaml`: current append-only hypothesis identities and registered version definitions.
 - `templates/`: authoring templates.
 - `status_model.md`: lifecycle and verdict semantics.
 
