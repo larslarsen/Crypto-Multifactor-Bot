@@ -4,7 +4,8 @@
 **Source approved:** REVIEW-0055 (SOURCE APPROVED / JR AUTHORIZED)
 **Date:** 2026-07-20
 **Actor:** Jr Dev - Hermes
-**Integration commit:** (set on push)
+**Integration commit:** `6bd1f43` (pushed to `origin/main`; later records-only commits `4287aa7`, `f774944`).
+**Remote/push evidence:** `git fetch` + `git rev-parse origin/main` == local at `f774944`; `git status --short` after push contains only the unrelated `.stale/` entry; repo control PASS.
 
 ## What was integrated
 
@@ -48,14 +49,14 @@ regression checklist from REVIEW-0055 §1:
 - Removed an unused `DecisionAction` import from the new test file (ruff gate).
 - No production source behavior was changed.
 
-## Acceptance evidence (exact, fresh)
+## Acceptance evidence (exact, fresh — commands transcribed verbatim from `tickets/EVD-001.md`)
 
-| Gate | Command | Result |
+| Gate | Command (verbatim) | Result |
 |---|---|---|
-| 1 | `PYTHONPATH=src uv run pytest tests/evidence -q` | 31 passed (26 new regression tests + 5 pre-existing) |
-| 2 | `ruff check src/cryptofactors/evidence src/cryptofactors/cli.py tests/evidence` | All checks passed |
-| 3 | `mypy --no-incremental src/cryptofactors/evidence src/cryptofactors/cli.py tests/evidence` | Success: no issues found in 9 source files |
-| 4 | `PYTHONPATH=src uv run pytest -q` | 423 passed, 1 pre-existing archive warning |
+| 1 | `PYTHONPATH=src uv run pytest tests/evidence -q --tb=short` | 31 passed (26 new regression tests + 5 pre-existing) |
+| 2 | `PYTHONPATH=src uv run ruff check src/cryptofactors/evidence src/cryptofactors/cli.py tests/evidence` | All checks passed |
+| 3 | `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/evidence src/cryptofactors/cli.py tests/evidence` | Success: no issues found in 9 source files |
+| 4 | `PYTHONPATH=src uv run pytest -q --tb=short` | 423 passed, 1 pre-existing archive warning |
 | 5 | `python3 scripts/check_layer_imports.py` | layer import check passed |
 | 6 | `python3 scripts/check_repo_control.py` | Repo control check: PASS |
 
