@@ -64,9 +64,8 @@ This repository uses a control plane, not an autonomous workflow:
 - There is no self-driving or autonomous ticket progression.
 - Exactly one ticket is active at a time.
 - Jr Dev — Hermes owns source-drop integration, tests, repository records, Git,
-  commits, and pushes. Sr Dev — Hermes (default senior coder, `grok-build-0.1`) and
-  Sr Dev — Grok Build (escalation-only, Grok 4.5) perform source edits only — no Git,
-  integration, commits, pushes, or acceptance testing. See
+  commits, and pushes. Sr Dev — Grok Build (sole senior coder, Grok 4.5) performs
+  source edits only — no Git, integration, commits, pushes, or acceptance testing. See
   `docs/engineering/DEVELOPMENT_ROLES.md` for the full role map and routing order.
 - The Lead Quantitative Finance Researcher/Engineer (reviewer) inspects commits,
   makes engineering decisions, accepts or rejects work, selects the minimum-usage

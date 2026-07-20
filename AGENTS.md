@@ -29,24 +29,21 @@ This file governs how AI agents (and humans acting as agents) work in this repos
   Quantitative Finance Researcher/Engineer (reviewer) and the next ticket is
   authorized. Acceptance and next-ticket authorization are exclusive to the reviewer;
   the owner is the prompt relay only and is not an acceptance authority.
-- The repository has four governance actors (reviewer, two senior coders, one relay owner)
+- The repository has three governance actors (reviewer, senior coder, relay owner)
   plus the Jr Dev integration role:
   - **Lead Quantitative Finance Researcher/Engineer (reviewer):** inspects commits, makes
     engineering decisions, accepts or rejects work, selects the minimum-usage capable
     developer, and authorizes the next ticket.
-  - **Sr Dev — Hermes:** agentic, using `grok-build-0.1`. Default owner of senior
-    production-source implementation and correction work. No tests, integration,
+  - **Sr Dev — Grok Build:** agentic, using Grok 4.5. Sole formal senior production-code
+    role: owns senior code reasoning and source edits only. No tests, integration,
     repository records, Git, commits, or pushes.
-  - **Sr Dev — Grok Build:** agentic, using Grok 4.5. Escalation-only for difficult
-    concurrency, bitemporal logic, architecture, cross-module reasoning, or failed Sr Dev
-    — Hermes work. Same source-edits-only boundary.
-  - **Jr Dev — Hermes:** agentic, using Tencent `hy3:free`. Owns source-drop integration,
-    test creation/execution, repository records, Git, commits, and pushes.
+  - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
+    available. Owns source-drop integration, test creation/execution, repository records,
+    Git, commits, and pushes.
   - **Owner:** relays one-way prompts and supplies repository URLs, hashes, ZIPs, and
     source drops.
-- Routing prioritizes the cheapest capable agent, engineering risk, user effort, and
-  observed results; it does not hard-code unverified subscription-cost ratios. See
-  `docs/engineering/DEVELOPMENT_ROLES.md`.
+- Routing is based on end-to-end accepted-result quality, engineering risk, and
+  reliability — not nominal per-token price. See `docs/engineering/DEVELOPMENT_ROLES.md`.
 - The owner relays the reviewer's one-way developer prompts. Developers do not chat
   with the reviewer.
 - **Reviewer acceptance is exclusive.** Only the Senior Quantitative Finance
