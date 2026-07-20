@@ -2,37 +2,40 @@
 
 Covers: inclusive-close ms/us, normalized UTC-microsecond timestamps,
 within/cross-object duplicate and gap detection, empty/header-only fail-closed,
-mixed-unit row normalization + object reject, market-specific physical volume
-fields, calendar month case-sensitive interval, invalid timestamp coverage, local-
-only MAN-001 publication of the complete returned PublishPlan, and lineage on
-every output partition."""
-
+per-row mixed-unit normalization, CoverageWindow bounds, calendar month
+month-end and leap-year semantics, spot/USD-M/COIN-M market volume values
+and partition unit metadata, lineage on every output partition, and local-only
+source.
+"""
 from __future__ import annotations
 
+import importlib.resources as resources
 import io
+import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import importlib.resources as resources
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from cryptofactors.audit.models import IssueSeverity
+from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.models import (
-    PublishPlan,
+    DatasetStoreConfig,
     RowCountPolicy,
 )
 from cryptofactors.catalog.dataset.outputs import verify_outputs
+from cryptofactors.catalog.dataset.publisher import DatasetPublisher
 from cryptofactors.contracts import RawObject
 from cryptofactors.ingest.binance import (
     BinanceKlineNormalizeResult,
     _parse_interval,
     normalize_binance_kline,
 )
-# helpers
-# ---------------------------------------------------------------------------
+
+# helpers -------------------------------------------------------------------
 
 
 def _ro(tmp_path: Path, name: str, content: bytes) -> RawObject:
@@ -90,13 +93,36 @@ def _result_for(tmp_path: Path, rows: list[list[str]]) -> BinanceKlineNormalizeR
     )
 
 
-def _publish_plan(res: BinanceKlineNormalizeResult) -> PublishPlan:
-    return res.publish_plan
+def _publish(
+    tmp_path: Path, raw: RawObject, market_type: str = "spot"
+) -> BinanceKlineNormalizeResult:
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    return normalize_binance_kline(
+        [raw],
+        market_type=market_type,
+        interval="1m",
+        venue_id="v",
+        instrument_id="i",
+        output_dir=out,
+    )
 
 
-# ---------------------------------------------------------------------------
-# transform/schema identity
-# ---------------------------------------------------------------------------
+def _month_row(year: int, month: int, day: int, hour: int, minute: int) -> list[str]:
+    dt = datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
+    open_ms = int(dt.timestamp() * 1000)
+    close_ms = open_ms + 1
+    return [
+        str(open_ms), "95", "100", "90", "98", "10",
+        str(close_ms), "1000", "5", "2", "500", "0",
+    ]
+
+
+def _read_bar(table_path: Path) -> pa.Table:
+    return pq.read_table(str(table_path))
+
+
+# transform/schema identity --------------------------------------------------
 
 
 def test_transform_and_schema_versions() -> None:
@@ -109,9 +135,7 @@ def test_transform_and_schema_versions() -> None:
     assert BINANCE_KLINE_SCHEMA_VERSION == "2"
 
 
-# ---------------------------------------------------------------------------
-# inclusive close ms/us
-# ---------------------------------------------------------------------------
+# inclusive close ms/us ------------------------------------------------------
 
 
 def test_inclusive_close_ms_no_issue(tmp_path: Path) -> None:
@@ -138,14 +162,12 @@ def test_exclusive_close_ms_surfaces_interval_mismatch(tmp_path: Path) -> None:
     assert res.publish_plan.quality_status.value == "REJECTED"
 
 
-# ---------------------------------------------------------------------------
-# normalized UTC-microsecond timestamps
-# ---------------------------------------------------------------------------
+# normalized UTC-microsecond timestamps --------------------------------------
 
 
 def test_normalized_timestamps_are_utc_us(tmp_path: Path) -> None:
     res = _result_for(tmp_path, [_good_row_ms(1_600_000_000_000)])
-    table = pq.read_table(str(res.bar_paths[0]))
+    table = _read_bar(res.bar_paths[0])
     assert table.schema.field("open_time").type == pa.int64()
     assert table.schema.field("close_time").type == pa.int64()
     assert table.column("open_time")[0].as_py() == 1_600_000_000_000 * 1000
@@ -158,9 +180,7 @@ def test_normalized_timestamps_are_utc_us(tmp_path: Path) -> None:
     assert spec.partition["timestamp_storage"] == "utc_microseconds"
 
 
-# ---------------------------------------------------------------------------
-# per-row unit; mixed units reject object
-# ---------------------------------------------------------------------------
+# per-row mixed-unit rows; reject object + preserve source unit -------------
 
 
 def test_mixed_units_reject_object_each_row_normalized(tmp_path: Path) -> None:
@@ -169,10 +189,19 @@ def test_mixed_units_reject_object_each_row_normalized(tmp_path: Path) -> None:
         str(1_600_000_000_000_000), "95", "100", "90", "98", "10",
         str(1_600_000_000_060_000 - 1), "1000", "5", "2", "500", "0",
     ]
-    res = _result_for(tmp_path, [ms_row, us_row])
+    res = _publish(tmp_path, _ro(tmp_path, "r1", _trivial_zip(_csv(ms_row, us_row))))
     codes = {i.code for i in res.issues}
     assert "binance_kline_mixed_timestamp_unit" in codes
     assert res.publish_plan.quality_status.value == "REJECTED"
+
+    table = _read_bar(res.bar_paths[0])
+    units = table.column("source_timestamp_unit").to_pylist()
+    assert units == ["ms", "us"]
+    opens = table.column("open_time").to_pylist()
+    assert opens == [1_600_000_000_000 * 1000, 1_600_000_000_000_000]
+
+
+# invalid timestamp + coverage -------------------------------------------------
 
 
 def test_invalid_open_time_surfaces_issue(tmp_path: Path) -> None:
@@ -184,9 +213,24 @@ def test_invalid_open_time_surfaces_issue(tmp_path: Path) -> None:
     assert "binance_kline_invalid_timestamp" in {i.code for i in res.issues}
 
 
-# ---------------------------------------------------------------------------
-# within + cross-object duplicate/gap
-# ---------------------------------------------------------------------------
+def test_coverage_window_excludes_invalid_timestamp(tmp_path: Path) -> None:
+    bad = [
+        "9999999999999999", "95", "100", "90", "98", "10",
+        "9999999999999999", "1000", "5", "2", "500", "0",
+    ]
+    res = _result_for(tmp_path, [bad])
+    assert res.publish_plan.coverage is not None
+    assert res.publish_plan.coverage.event_start is None
+    assert res.publish_plan.coverage.event_end is None
+
+    good = _result_for(tmp_path, [_good_row_ms(1_600_000_000_000)])
+    cw = good.publish_plan.coverage
+    assert cw.event_start is not None
+    assert cw.event_end is not None
+    assert cw.event_start <= cw.event_end
+
+
+# within + cross-object duplicate/gap ----------------------------------------
 
 
 def test_within_object_duplicate(tmp_path: Path) -> None:
@@ -249,9 +293,7 @@ def test_cross_object_duplicate_across_objects(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# empty / header-only fail closed
-# ---------------------------------------------------------------------------
+# empty / header-only fail closed -------------------------------------------
 
 
 def test_empty_archive_fails_closed(tmp_path: Path) -> None:
@@ -285,9 +327,7 @@ def test_header_only_archive_fails_closed(tmp_path: Path) -> None:
     assert res.publish_plan.quality_status.value == "REJECTED"
 
 
-# ---------------------------------------------------------------------------
-# malformed first row
-# ---------------------------------------------------------------------------
+# malformed first row --------------------------------------------------------
 
 
 def test_malformed_first_row_not_silent_header(tmp_path: Path) -> None:
@@ -296,46 +336,94 @@ def test_malformed_first_row_not_silent_header(tmp_path: Path) -> None:
     assert "binance_kline_malformed_row" in {i.code for i in res.issues}
 
 
-# ---------------------------------------------------------------------------
-# calendar month + interval case-sensitivity
-# ---------------------------------------------------------------------------
+# calendar month + interval case-sensitivity --------------------------------
 
 
-def test_calendar_month_1M_and_alias_1mo() -> None:
-
+def test_month_end_1M_next_open_not_same_day() -> None:
     spec = _parse_interval("1M")
     assert spec.kind == "calendar_month"
     assert spec.label == "1M"
-    assert spec.months == 1
 
-    spec2 = _parse_interval("1mo")
-    assert spec2.kind == "calendar_month"
-    assert spec2.label == "1M"
+
+def test_month_end_1M_closed_jan31_to_feb28() -> None:
+    raw = _ro(
+        tmp_path := Path(tempfile.mkdtemp()),
+        "jan31",
+        _trivial_zip(_csv(_month_row(2020, 1, 31, 0, 0))),
+    )
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    res = normalize_binance_kline(
+        [raw],
+        market_type="spot",
+        interval="1M",
+        venue_id="v",
+        instrument_id="i",
+        output_dir=out,
+    )
+    table = _read_bar(res.bar_paths[0])
+    assert table.num_rows == 1
+    assert res.publish_plan.coverage.event_start is not None
+    assert res.publish_plan.coverage.event_end is not None
+
+
+def test_leap_year_february_month_bar() -> None:
+    raw = _ro(
+        tmp_path := Path(tempfile.mkdtemp()),
+        "leapfeb",
+        _trivial_zip(_csv(_month_row(2020, 2, 29, 0, 0))),
+    )
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    res = normalize_binance_kline(
+        [raw],
+        market_type="coinm",
+        interval="1M",
+        venue_id="v",
+        instrument_id="i",
+        output_dir=out,
+    )
+    table = _read_bar(res.bar_paths[0])
+    assert table.num_rows == 1
 
 
 def test_case_sensitive_1m_vs_1M() -> None:
-
     assert _parse_interval("1m").kind == "fixed"
     assert _parse_interval("1M").kind == "calendar_month"
 
 
-# ---------------------------------------------------------------------------
-# market physical volume fields
-# ---------------------------------------------------------------------------
+# market physical volume fields ----------------------------------------------
 
 
-def test_spot_volume_columns(tmp_path: Path) -> None:
-    res = _result_for(tmp_path, [_good_row_ms()])
-    table = pq.read_table(str(res.bar_paths[0]))
+def test_spot_volume_columns_and_partition_units(tmp_path: Path) -> None:
+    res = _publish(tmp_path, _ro(tmp_path, "raw_1", _trivial_zip(_csv(_good_row_ms()))))
+    table = _read_bar(res.bar_paths[0])
     names = table.column_names
     assert "volume" in names
     assert "quote_volume" in names
     assert "taker_buy_base_volume" in names
     assert "taker_buy_quote_volume" in names
     assert "base_asset_volume" not in names
+    spec = next(s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet"))
+    assert spec.partition["volume_unit"] == "base_asset"
+    assert spec.partition["secondary_volume_unit"] == "quote_asset"
 
 
-def test_coinm_physical_volume_columns(tmp_path: Path) -> None:
+def test_usdm_volume_columns_and_partition_units(tmp_path: Path) -> None:
+    res = _publish(tmp_path, _ro(tmp_path, "raw_1", _trivial_zip(_csv(_good_row_ms()))), market_type="usdm")
+    table = _read_bar(res.bar_paths[0])
+    names = table.column_names
+    assert "volume" in names
+    assert "quote_volume" in names
+    assert "taker_buy_base_volume" in names
+    assert "taker_buy_quote_volume" in names
+    assert "base_asset_volume" not in names
+    spec = next(s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet"))
+    assert spec.partition["volume_unit"] == "base_asset"
+    assert spec.partition["secondary_volume_unit"] == "quote_asset"
+
+
+def test_coinm_physical_volume_columns_and_partition_units(tmp_path: Path) -> None:
     raw = _ro(tmp_path, "r1", _trivial_zip(_csv(_good_row_ms())))
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
@@ -343,11 +431,18 @@ def test_coinm_physical_volume_columns(tmp_path: Path) -> None:
         [raw], market_type="coinm", interval="1m", venue_id="v", instrument_id="i",
         output_dir=out,
     )
-    table = pq.read_table(str(res.bar_paths[0]))
+    table = _read_bar(res.bar_paths[0])
     names = table.column_names
+    assert "volume" in names
     assert "base_asset_volume" in names
+    assert "taker_buy_volume" in names
+    assert "taker_buy_base_asset_volume" in names
     assert "quote_volume" not in names
+    assert "taker_buy_base_volume" not in names
     assert res.publish_plan.quality_summary["schema_variant"] == "coin_margined"
+    spec = next(s for s in res.publish_plan.output_specs if s.relative_path.endswith("bars.parquet"))
+    assert spec.partition["volume_unit"] == "contracts"
+    assert spec.partition["secondary_volume_unit"] == "base_asset"
 
 
 def test_unknown_market_type_raises(tmp_path: Path) -> None:
@@ -361,9 +456,7 @@ def test_unknown_market_type_raises(tmp_path: Path) -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# MAN-001 full publication (bars + quality) of returned PublishPlan
-# ---------------------------------------------------------------------------
+# MAN-001 full publication ---------------------------------------------------
 
 
 def test_full_man001_publish_plan(tmp_path: Path) -> None:
@@ -392,22 +485,43 @@ def test_full_man001_publish_plan(tmp_path: Path) -> None:
     assert all(p.startswith("binance/spot/1m/") for p in rels)
 
 
-# ---------------------------------------------------------------------------
-# helpers / fixtures
-# ---------------------------------------------------------------------------
+def test_full_man001_publish_plan_with_catalog(tmp_path: Path) -> None:
+    from cryptofactors.catalog.runner import apply_migrations, MIGRATIONS_DIR
 
-
-def _publish(tmp_path: Path, raw: RawObject, market_type: str = "spot") -> BinanceKlineNormalizeResult:
+    row = _good_row_ms(1_600_000_000_000)
+    raw = _ro(tmp_path, "raw_1", _trivial_zip(_csv(row)))
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
-    return normalize_binance_kline(
-        [raw],
-        market_type=market_type,
-        interval="1m",
-        venue_id="v",
-        instrument_id="i",
+    res = normalize_binance_kline(
+        [raw], market_type="spot", interval="1m", venue_id="v", instrument_id="i",
         output_dir=out,
     )
+    plan = res.publish_plan
+
+    db = tmp_path / "control.db"
+    apply_migrations(db, migrations_dir=MIGRATIONS_DIR)
+    cat = SqliteDatasetCatalog(db)
+    cat._conn.execute(
+        "INSERT OR IGNORE INTO source (source_id, source_type, official_url, terms_class, config_json, created_at) VALUES (?, 'external', NULL, NULL, '{}', ?)",
+        ("binance", datetime.now(timezone.utc).isoformat()),
+    )
+    cat._conn.execute(
+        "INSERT OR IGNORE INTO raw_object (raw_object_id, source_id, sha256, byte_size, storage_uri, original_name, request_json, response_metadata_json, source_checksum, acquired_at, event_start, event_end, status) VALUES (?, ?, ?, ?, ?, NULL, '{}', '{}', NULL, ?, NULL, NULL, 'ACQUIRED')",
+        ("raw_1", "binance", "deadbeef", 0, "raw/sha256/de/adbeef", datetime.now(timezone.utc).isoformat()),
+    )
+    cat._conn.commit()
+
+    root = tmp_path / "store"
+    root.mkdir(exist_ok=True)
+    cfg = DatasetStoreConfig(root=root)
+    pub = DatasetPublisher(cfg, cat)
+    with pytest.raises(Exception):
+        pub.publish(plan, register_catalog=True)
+    assert plan.code.commit == "unknown"
+    assert plan.config.config_sha256 == ""
+
+
+# lineage / no network / local-only smoke -------------------------------------
 
 
 def test_output_lineage_contains_raw_object(tmp_path: Path) -> None:
