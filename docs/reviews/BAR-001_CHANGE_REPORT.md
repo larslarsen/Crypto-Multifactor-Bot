@@ -51,7 +51,7 @@ reaches and asserts the target branch.
 3. Change-report wording corrected: the duplicate-collapse test proves *semantic*
    table equality, not byte identity.
 
-### REVIEW-0041 corrections (tested implementation HEAD `3a6ed1a`)
+### REVIEW-0041 corrections (tested implementation HEAD `c10dd3a`)
 
 1. `test_conflict_duplicate_quarantines_both_orders` — reads each order's
    independent quarantine Parquet and asserts exactly two rows, both conflicting
