@@ -583,9 +583,19 @@ def test_conflict_duplicate_quarantines_both_orders(tmp_path: Path) -> None:
     res_ba = _publish(tmp_path / "out_ba", [src_b, src_a])
     for res in (res_ab, res_ba):
         assert any("bar001_duplicate_conflict" in i.code for i in res.issues)
-        # No intraday promotion; all conflicting rows quarantined (one row each).
+        # No intraday promotion; conflict quarantine partition holds both rows.
         assert len(res.intraday_paths) == 0
         assert len(res.quarantine_paths) == 1
+        qtab = pq.read_table(str(res.quarantine_paths[0]))
+        assert qtab.num_rows == 2  # both conflicting rows retained
+        closes = set(qtab.column("close").to_pylist())
+        sids = set(qtab.column("source_dataset_id").to_pylist())
+        assert Decimal("105") in closes and Decimal("200") in closes
+        assert len(sids) == 2  # both conflicting source dataset IDs present
+    # Both orders quarantine semantically equal content.
+    q_ab = pq.read_table(str(res_ab.quarantine_paths[0]))
+    q_ba = pq.read_table(str(res_ba.quarantine_paths[0]))
+    assert q_ab == q_ba
 
 
 # ------------------------------------------------------------------
