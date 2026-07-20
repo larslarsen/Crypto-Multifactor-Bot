@@ -67,6 +67,27 @@ required Jr integration cases plus the REVIEW-0046/0047 regression behavior:
 6. `python3 scripts/check_repo_control.py`
    -> Repo control check: PASS
 
+## Publication correction (REVIEW-0049)
+
+Commit `f667c6d` integrated the source and 29-test suite and passed all six
+acceptance gates, but it omitted the governing BYB review records referenced by
+`CURRENT_TASK.md`; those files remained untracked. This corrective, records-only
+commit (no source/test changes) adds them:
+
+- `docs/reviews/BYB-001_SR_SOURCE_TASK.md`
+- `docs/reviews/REVIEW-0044_BYB-001_SOURCE_CHANGES_REQUIRED.md`
+- `docs/reviews/REVIEW-0045_BYB-001_SOURCE_FINAL_CHANGES_REQUIRED.md`
+- `docs/reviews/REVIEW-0046_BYB-001_SOURCE_CORRECTNESS_CHANGES_REQUIRED.md`
+- `docs/reviews/REVIEW-0047_BYB-001_SOURCE_FINAL_CORRECTIONS_REQUIRED.md`
+- `docs/reviews/REVIEW-0048_BYB-001_SOURCE_APPROVED_JR_AUTHORIZED.md`
+- `docs/reviews/REVIEW-0049_BYB-001_INTEGRATION_PUBLICATION_REQUIRED.md`
+
+Integration commit (unchanged, gates still green): `f667c6d`
+Corrective commit (this records-only publish): `<corrective_commit>`
+Push/remote evidence: `git fetch` + `git rev-parse origin/main` == local after push.
+`git status --short` after push contains only the unrelated `.stale/` entry.
+Repo control after corrective commit: PASS.
+
 ## Stop condition
 
 Integrated, gated, reported, committed, and pushed. Ticket set to
