@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EVD-001
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
 Accepted dependency: CAT-001. Experiment-link identity is explicitly deferred.
 Governing documents:
@@ -17,15 +17,15 @@ Governing documents:
 - docs/reviews/REVIEW-0054_EVD-001_SOURCE_LAST_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0055_EVD-001_SOURCE_APPROVED_JR_AUTHORIZED.md
 - docs/reviews/REVIEW-0056_EVD-001_INTEGRATION_EVIDENCE_REQUIRED.md
+- docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md
 - docs/reviews/EVD-001_CHANGE_REPORT.md
 
 ## Authorized work
 
-Correct only EVD-001 integration publication evidence under REVIEW-0056. Reconcile exact commands,
-counts, commit/push evidence, and included files. Do not change accepted source/tests unless an
-exact gate fails.
+Publish REVIEW-0057 and the EVD-001 accepted/closed ticket, backlog, README, and handoff records.
+Do not change or rerun accepted source/tests. Exclude `.stale/`.
 
 ## Stop condition
 
-After pushing the records/evidence correction, set `AWAITING_REVIEW`, identify the reviewer as
-next actor, return both commit hashes, and stop. Next ticket remains unauthorized.
+After pushing the acceptance and closing records, return the closing commit evidence and stop.
+Next ticket remains unauthorized.

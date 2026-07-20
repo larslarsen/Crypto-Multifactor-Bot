@@ -14,4 +14,4 @@ Active tickets:
 - [`BAR-001`](tickets/BAR-001.md) — canonical bar publisher and daily reconciliation (`ACCEPTED` at integration commit `c10dd3a`; `docs/reviews/REVIEW-0042_BAR-001_ACCEPTED.md`).
 - [`RES-001`](tickets/RES-001.md) — post-Sprint-003 research protocol reconciliation (`ACCEPTED` at `ff31763`; `docs/reviews/REVIEW-0043_RES-001_ACCEPTED.md`).
 - [`BYB-001`](tickets/BYB-001.md) — Bybit public trade-archive normalizer (`ACCEPTED` at integration commit `f667c6d`; governing review chain REVIEW-0044→0050; `docs/reviews/REVIEW-0050_BYB-001_ACCEPTED.md`).
-- [`EVD-001`](tickets/EVD-001.md) — Operational Evidence Registry (`AWAITING_REVIEW`; source approved under `docs/reviews/REVIEW-0055_EVD-001_SOURCE_APPROVED_JR_AUTHORIZED.md`, Jr integration complete; `docs/reviews/EVD-001_CHANGE_REPORT.md`).
+- [`EVD-001`](tickets/EVD-001.md) — Operational Evidence Registry (`ACCEPTED` at integration commit `6bd1f43`; evidence head `f774944`; `docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md`).
