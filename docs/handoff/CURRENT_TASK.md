@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: BAR-001
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Jr Dev - Hermes
 

@@ -551,3 +551,85 @@ def test_whitespace_equivalent_daily_source_timeframe_identity(tmp_path: Path) -
     res_whitespace = build_with_timeframe(" 1m ")
     assert res_strict.publish_plan.config.config_sha256 == res_whitespace.publish_plan.config.config_sha256
     assert res_strict.publish_plan.config.config_sha256 == res_whitespace.publish_plan.config.config_sha256
+
+def test_forged_manifest_hash_and_dataset_id_rejected(tmp_path: Path) -> None:
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p2 = tmp_path / "bars.parquet"
+    _write_parquet(p2, _schema(), rows)
+    m = _build_manifest(p2, dataset_id="ds_hash", rows=1)
+    bad_m = dataclasses.replace(m, manifest_sha256="0" * 64, dataset_id="ds_bad")
+    rcpt = _receipt_for(m)
+    rcpt = dataclasses.replace(rcpt, manifest_sha256="0" * 64, dataset_id="ds_bad")
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p2},
+        receipt=rcpt,
+        manifest=bad_m,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="manifest_sha256 disagrees with recomputed body"):
+        _publish(tmp_path, [src])
+
+
+def test_local_file_hash_and_size_mismatch_reject(tmp_path: Path) -> None:
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p2 = tmp_path / "bars.parquet"
+    _write_parquet(p2, _schema(), rows)
+    m = _build_manifest(p2, dataset_id="ds_loc", rows=1)
+    tampered = p2.with_suffix(".bad.parquet")
+    tampered.write_bytes(p2.read_bytes() + b"x")
+    rcpt = _receipt_for(m)
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": tampered},
+        receipt=rcpt,
+        manifest=m,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="hash mismatch"):
+        _publish(tmp_path, [src])
+
+
+def test_missing_required_partition_key_rejects(tmp_path: Path) -> None:
+    rows = [_source_row(_us(datetime(2025, 1, 1, tzinfo=UTC)))]
+    p2 = tmp_path / "bars.parquet"
+    _write_parquet(p2, _schema(), rows)
+    raw_sha = hashlib.sha256(p2.read_bytes()).hexdigest()
+    bad_spec = OutputFileSpec(relative_path="bars.parquet", sha256=raw_sha, rows=1, bytes=p2.stat().st_size, rows_verified=True, partition={"venue_id": "binance", "market_type": "spot"})
+    rcpt = DatasetPublicationReceipt(
+        dataset_id="ds_miss_part",
+        manifest_sha256="a" * 64,
+        manifest_uri="manifest.json",
+        publication_uri="datasets/sha256",
+        dataset_path=Path("/tmp"),
+        verified_outputs=(bad_spec,),
+        publication_verified=True,
+        object_prefix="datasets/sha256",
+        dependencies=(),
+        supersedes_dataset_id=None,
+        dataset_type="binance_kline_source",
+        schema=SchemaIdentity(name="binance_kline_source", version="2", fingerprint="fp"),
+        transform=TransformSpec(name="canonical_bar_publisher", version="5"),
+        code=CodeIdentity(commit=TEST_CODE_COMMIT),
+        config=ConfigIdentity(config_sha256=TEST_CONFIG_HASH),
+        statistics=DatasetStatistics(row_count=1, byte_size=p2.stat().st_size),
+        coverage=CoverageWindow(event_start=datetime(2025, 1, 1, tzinfo=UTC), event_end=datetime(2025, 1, 1, 0, 1, tzinfo=UTC)),
+        quality_status=QualityStatus.PASS,
+        quality_summary={"source": "synthetic"},
+        catalog_created_at=datetime(2025, 1, 1, tzinfo=UTC),
+    )
+    src = VerifiedSourceBarDataset(
+        local_files={"bars.parquet": p2},
+        receipt=rcpt,
+        manifest=None,
+        venue_id="binance",
+        instrument_id=1,
+        market_type="spot",
+        interval="1m",
+    )
+    with pytest.raises(ValueError, match="missing required partition key"):
+        _publish(tmp_path, [src])
