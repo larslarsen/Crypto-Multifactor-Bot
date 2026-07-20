@@ -1,10 +1,11 @@
-ticket_id,priority,layer,title,dependencies,gate_role
-CAT-001,P0,catalog,Initialize SQLite control catalog and migrations,NONE,BLOCKING
-RAW-001,P0,ingest/catalog,Content-addressed immutable raw object writer,CAT-001,BLOCKING
-MAN-001,P0,catalog,Immutable dataset manifest publisher,CAT-001;RAW-001,BLOCKING
-LEG-001,P0,ingest,Legacy local file census,RAW-001,BLOCKING
-AUD-001,P0,quality,Schema and coverage profiler,LEG-001;MAN-001,BLOCKING
-REF-001,P0,reference,Point-in-time asset and instrument master,CAT-001;AUD-001,BLOCKING
-BIN-001,P0,ingest/market,First official archive normalizer,RAW-001;MAN-001;REF-001,BLOCKING
-BAR-001,P0,market/quality,Canonical bar publisher and daily reconciliation,BIN-001,BLOCKING
-EVD-001,P1,evidence,Operational Evidence Registry,CAT-001;experiment identity,NON_BLOCKING_FOR_DATA
+ticket_id,priority,layer,title,dependencies,gate_role,status
+CAT-001,P0,catalog,Initialize SQLite control catalog and migrations,NONE,BLOCKING,
+RAW-001,P0,ingest/catalog,Content-addressed immutable raw object writer,CAT-001,BLOCKING,
+MAN-001,P0,catalog,Immutable dataset manifest publisher,CAT-001;RAW-001,BLOCKING,
+LEG-001,P0,ingest,Legacy local file census,RAW-001,BLOCKING,
+AUD-001,P0,quality,Schema and coverage profiler,LEG-001;MAN-001,BLOCKING,
+REF-001,P0,reference,Point-in-time asset and instrument master,CAT-001;AUD-001,BLOCKING,
+BIN-001,P0,ingest/market,First official archive normalizer,RAW-001;MAN-001;REF-001,BLOCKING,ACCEPTED
+BAR-001,P0,market/quality,Canonical bar publisher and daily reconciliation,BIN-001,BLOCKING,ACCEPTED
+BYB-001,P0,ingest/market,Bybit public trade-archive normalizer (conditional crosscheck),RAW-001;MAN-001;REF-001;AUD-003;BAR-001,BLOCKING,AWAITING_REVIEW
+EVD-001,P1,evidence,Operational Evidence Registry,CAT-001;experiment identity,NON_BLOCKING_FOR_DATA,
