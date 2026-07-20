@@ -48,6 +48,11 @@ from cryptofactors.catalog.dataset.models import (
     SchemaIdentity,
     TransformSpec,
 )
+from cryptofactors.catalog.dataset.canonicalize import (
+    compute_dataset_id,
+    compute_manifest_sha256,
+    identity_payload,
+)
 from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
 
 # ---------------------------------------------------------------------------
@@ -58,9 +63,24 @@ MARKET_BARS_DATASET_TYPE = "market_bars"
 CANONICAL_BAR_SCHEMA_NAME = "market_bar"
 CANONICAL_BAR_SCHEMA_VERSION = "2"
 CANONICAL_BAR_TRANSFORM_NAME = "canonical_bar_publisher"
-CANONICAL_BAR_TRANSFORM_VERSION = "2"
+CANONICAL_BAR_TRANSFORM_VERSION = "5"
+
+# Accepted BIN-001 source identity (BAR-001 currently depends on this contract only).
+_SUPPORTED_SOURCE_DATASET_TYPE = "binance_kline_source"
+_SUPPORTED_SOURCE_SCHEMA_NAME = "binance_kline_source"
+_SUPPORTED_SOURCE_SCHEMA_VERSION = "2"
+_REQUIRED_PARTITION_KEYS = (
+    "venue_id",
+    "market_type",
+    "interval",
+    "instrument_id",
+    "schema_variant",
+)
 
 _SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
+# Safe single path segment for hive partitions (no separators / traversal).
+_SAFE_PATH_TOKEN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_ALLOWED_MARKET_TYPES = frozenset({"spot", "usdm", "coinm"})
 
 _ACCEPTED_SOURCE_QUALITY = frozenset(
     {QualityStatus.PASS, QualityStatus.PASS_WITH_WARNINGS}
@@ -83,6 +103,24 @@ _FIXED_INTERVALS: dict[str, timedelta] = {
     "3d": timedelta(days=3),
     "1w": timedelta(weeks=1),
 }
+
+# Sub-day intervals that exactly divide 24h — only these may feed daily resampling.
+_DAILY_RESAMPLE_INTERVALS = frozenset(
+    {
+        "1s",
+        "1m",
+        "3m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "4h",
+        "6h",
+        "8h",
+        "12h",
+    }
+)
 
 # ---------------------------------------------------------------------------
 # Public input / result types
@@ -171,7 +209,12 @@ class _BarRow:
     quality_flags: list[str] = field(default_factory=list)
 
     def content_fingerprint(self) -> str:
-        """Order-independent identity of economic bar content (excl. flags)."""
+        """Economic bar content only — lineage is NOT part of identity.
+
+        ``source_dataset_id`` is excluded so identical economics from different
+        verified datasets collapse as identical (REVIEW-0028 #3). Lineage is
+        used only for deterministic tie-break and dependency edges.
+        """
         payload = {
             "instrument_id": self.instrument_id,
             "venue_id": self.venue_id,
@@ -195,7 +238,6 @@ class _BarRow:
                 if self.taker_buy_quote_volume is None
                 else str(self.taker_buy_quote_volume)
             ),
-            "source_dataset_id": self.source_dataset_id,
         }
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -281,37 +323,358 @@ def _to_decimal(value: Any) -> Decimal:
     return Decimal(str(value))
 
 
+def _recompute_manifest_identity(manifest: DatasetManifest) -> tuple[str, str]:
+    """Return (dataset_id, manifest_sha256) recomputed via MAN-001 helpers."""
+    computed_sha = compute_manifest_sha256(manifest).lower()
+    identity = identity_payload(
+        dataset_type=manifest.dataset_type,
+        schema=manifest.schema,
+        transform=manifest.transform,
+        code=manifest.code,
+        config=manifest.config,
+        dependencies=manifest.dependencies,
+        files=manifest.files,
+        statistics=manifest.statistics,
+        coverage=manifest.coverage,
+        quality_status=manifest.quality_status,
+        quality_summary=manifest.quality_summary,
+        supersedes_dataset_id=manifest.supersedes_dataset_id,
+    )
+    expected_id, _ = compute_dataset_id(identity)
+    return expected_id, computed_sha
+
+
+def _file_spec_identity(spec: OutputFileSpec) -> tuple[Any, ...]:
+    """Order-stable identity of one verified output for dual-evidence compare."""
+    part = tuple(
+        sorted((str(k), str(v)) for k, v in dict(spec.partition or {}).items())
+    )
+    return (
+        str(spec.relative_path),
+        str(spec.sha256).lower(),
+        int(spec.rows),
+        int(spec.bytes),
+        part,
+        bool(spec.rows_verified),
+    )
+
+
+def _coverage_identity(cov: CoverageWindow) -> tuple[Any, ...]:
+    """Canonical coverage fields for dual-evidence agreement."""
+    def _ts(v: datetime | None) -> str | None:
+        if v is None:
+            return None
+        if v.tzinfo is None:
+            return v.isoformat()
+        return v.astimezone(timezone.utc).isoformat()
+
+    return (
+        _ts(cov.event_start),
+        _ts(cov.event_end),
+        _ts(cov.availability_start),
+        _ts(cov.availability_end),
+    )
+
+
+def _quality_summary_identity(summary: Mapping[str, Any]) -> str:
+    """Canonical JSON for quality_summary equality (sorted keys)."""
+    return json.dumps(dict(summary), sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _files_identity(files: Sequence[OutputFileSpec]) -> tuple[tuple[Any, ...], ...]:
+    return tuple(sorted(_file_spec_identity(f) for f in files))
+
+
+def _dep_identity(deps: Sequence[DependencyRef]) -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        sorted((d.id, d.kind.value if hasattr(d.kind, "value") else str(d.kind), d.role) for d in deps)
+    )
+
+
+def _assert_supported_source_identity(
+    *,
+    dataset_type: str,
+    schema_name: str,
+    schema_version: str,
+) -> None:
+    """Reject non-BIN-001 source identities (current BAR-001 contract)."""
+    if dataset_type != _SUPPORTED_SOURCE_DATASET_TYPE:
+        raise ValueError(
+            f"unsupported source dataset_type={dataset_type!r}; "
+            f"BAR-001 accepts only {_SUPPORTED_SOURCE_DATASET_TYPE!r}"
+        )
+    if (
+        schema_name != _SUPPORTED_SOURCE_SCHEMA_NAME
+        or schema_version != _SUPPORTED_SOURCE_SCHEMA_VERSION
+    ):
+        raise ValueError(
+            f"unsupported source schema {schema_name!r} v{schema_version!r}; "
+            f"BAR-001 accepts only {_SUPPORTED_SOURCE_SCHEMA_NAME!r} "
+            f"v{_SUPPORTED_SOURCE_SCHEMA_VERSION!r}"
+        )
+
+
+def _assert_full_dual_evidence_agreement(
+    *,
+    manifest: DatasetManifest,
+    receipt: DatasetPublicationReceipt,
+) -> None:
+    """Require full immutable agreement between manifest and receipt.
+
+    Includes coverage, quality_summary, and complete output specs including
+    rows_verified (REVIEW-0030 #1).
+    """
+    checks: list[tuple[str, Any, Any]] = [
+        ("dataset_type", receipt.dataset_type, manifest.dataset_type),
+        ("schema.name", receipt.schema.name, manifest.schema.name),
+        ("schema.version", receipt.schema.version, manifest.schema.version),
+        ("schema.fingerprint", receipt.schema.fingerprint, manifest.schema.fingerprint),
+        ("transform.name", receipt.transform.name, manifest.transform.name),
+        ("transform.version", receipt.transform.version, manifest.transform.version),
+        ("code.commit", receipt.code.commit, manifest.code.commit),
+        ("code.lock_sha256", receipt.code.lock_sha256, manifest.code.lock_sha256),
+        (
+            "config.config_sha256",
+            receipt.config.config_sha256,
+            manifest.config.config_sha256,
+        ),
+        (
+            "statistics.row_count",
+            receipt.statistics.row_count,
+            manifest.statistics.row_count,
+        ),
+        (
+            "statistics.byte_size",
+            receipt.statistics.byte_size,
+            manifest.statistics.byte_size,
+        ),
+        (
+            "supersedes_dataset_id",
+            receipt.supersedes_dataset_id,
+            manifest.supersedes_dataset_id,
+        ),
+        ("quality_status", receipt.quality_status, manifest.quality_status),
+    ]
+    for label, a, b in checks:
+        if a != b:
+            raise ValueError(
+                f"receipt/manifest disagree on {label}: receipt={a!r} manifest={b!r}"
+            )
+    if _coverage_identity(receipt.coverage) != _coverage_identity(manifest.coverage):
+        raise ValueError(
+            "receipt/manifest disagree on coverage "
+            f"(receipt={_coverage_identity(receipt.coverage)!r} "
+            f"manifest={_coverage_identity(manifest.coverage)!r})"
+        )
+    if _quality_summary_identity(receipt.quality_summary) != _quality_summary_identity(
+        manifest.quality_summary
+    ):
+        raise ValueError("receipt/manifest disagree on quality_summary")
+    if _dep_identity(receipt.dependencies) != _dep_identity(manifest.dependencies):
+        raise ValueError("receipt/manifest disagree on dependencies")
+    if _files_identity(receipt.verified_outputs) != _files_identity(manifest.files):
+        raise ValueError(
+            "receipt.verified_outputs disagree with manifest.files "
+            "(relative_path/sha256/rows/bytes/partition/rows_verified)"
+        )
+
+
 def _extract_verified_identity(
     *,
     manifest: DatasetManifest | None,
     receipt: DatasetPublicationReceipt | None,
 ) -> tuple[str, QualityStatus, tuple[OutputFileSpec, ...], str]:
-    """Return (dataset_id, quality_status, verified_files, manifest_sha256)."""
+    """Return (dataset_id, quality_status, verified_files, manifest_sha256).
+
+    Manifest identity is recomputed (hash + dataset_id). Receipts must be
+    complete. Dual evidence requires full immutable agreement (REVIEW-0029 #3).
+    """
+    if receipt is None and manifest is None:
+        raise ValueError(
+            "VerifiedSourceBarDataset requires manifest or receipt with MAN-001 evidence"
+        )
+
+    if receipt is not None and manifest is not None:
+        if not receipt.is_complete():
+            raise ValueError(
+                "DatasetPublicationReceipt must be complete "
+                "(publication_verified, ds_ id, 64-hex manifest_sha256, URIs)"
+            )
+        expected_id, computed_sha = _recompute_manifest_identity(manifest)
+        declared_sha = (manifest.manifest_sha256 or "").lower()
+        if declared_sha != computed_sha:
+            raise ValueError(
+                f"manifest_sha256 disagrees with recomputed body: "
+                f"declared={declared_sha} computed={computed_sha}"
+            )
+        if manifest.dataset_id != expected_id:
+            raise ValueError(
+                f"manifest.dataset_id disagrees with recomputed identity: "
+                f"declared={manifest.dataset_id!r} expected={expected_id!r}"
+            )
+        r_sha = receipt.manifest_sha256.lower()
+        if r_sha != computed_sha or receipt.dataset_id != expected_id:
+            raise ValueError(
+                "receipt and manifest disagree on dataset_id/manifest_sha256 "
+                f"(receipt id={receipt.dataset_id!r} sha={r_sha}; "
+                f"manifest id={expected_id!r} sha={computed_sha})"
+            )
+        if receipt.quality_status is not manifest.quality_status:
+            raise ValueError(
+                "receipt and manifest disagree on quality_status: "
+                f"receipt={receipt.quality_status.value} "
+                f"manifest={manifest.quality_status.value}"
+            )
+        _assert_full_dual_evidence_agreement(manifest=manifest, receipt=receipt)
+        _assert_supported_source_identity(
+            dataset_type=manifest.dataset_type,
+            schema_name=manifest.schema.name,
+            schema_version=manifest.schema.version,
+        )
+        # Prefer manifest.files (recomputed identity); already proven equal to receipt.
+        return (
+            expected_id,
+            manifest.quality_status,
+            tuple(manifest.files),
+            computed_sha,
+        )
+
     if receipt is not None:
-        if not receipt.publication_verified:
+        if not receipt.is_complete():
             raise ValueError(
-                "DatasetPublicationReceipt.publication_verified must be True"
+                "DatasetPublicationReceipt must be complete "
+                "(publication_verified, ds_ id, 64-hex manifest_sha256, URIs)"
             )
-        if not receipt.dataset_id or not _SHA256_HEX_RE.fullmatch(
-            receipt.manifest_sha256.lower()
-        ):
-            raise ValueError("receipt must carry dataset_id and 64-hex manifest_sha256")
-        q = receipt.quality_status
-        files = receipt.verified_outputs
-        return receipt.dataset_id, q, files, receipt.manifest_sha256.lower()
-    if manifest is not None:
-        if not manifest.dataset_id:
-            raise ValueError("manifest.dataset_id is required")
-        msha = (manifest.manifest_sha256 or "").lower()
-        if not _SHA256_HEX_RE.fullmatch(msha):
-            raise ValueError(
-                "manifest.manifest_sha256 must be a non-empty 64-hex digest "
-                "(verified MAN-001 identity)"
-            )
-        return manifest.dataset_id, manifest.quality_status, manifest.files, msha
-    raise ValueError(
-        "VerifiedSourceBarDataset requires manifest or receipt with MAN-001 evidence"
+        _assert_supported_source_identity(
+            dataset_type=receipt.dataset_type,
+            schema_name=receipt.schema.name,
+            schema_version=receipt.schema.version,
+        )
+        return (
+            receipt.dataset_id,
+            receipt.quality_status,
+            tuple(receipt.verified_outputs),
+            receipt.manifest_sha256.lower(),
+        )
+
+    assert manifest is not None
+    expected_id, computed_sha = _recompute_manifest_identity(manifest)
+    declared_sha = (manifest.manifest_sha256 or "").lower()
+    if not _SHA256_HEX_RE.fullmatch(declared_sha):
+        raise ValueError(
+            "manifest.manifest_sha256 must be a non-empty 64-hex digest"
+        )
+    if declared_sha != computed_sha:
+        raise ValueError(
+            f"manifest_sha256 disagrees with recomputed body: "
+            f"declared={declared_sha} computed={computed_sha}"
+        )
+    if manifest.dataset_id != expected_id:
+        raise ValueError(
+            f"manifest.dataset_id disagrees with recomputed identity: "
+            f"declared={manifest.dataset_id!r} expected={expected_id!r}"
+        )
+    _assert_supported_source_identity(
+        dataset_type=manifest.dataset_type,
+        schema_name=manifest.schema.name,
+        schema_version=manifest.schema.version,
     )
+    return expected_id, manifest.quality_status, tuple(manifest.files), computed_sha
+
+
+def _is_source_bar_spec(spec: OutputFileSpec) -> bool:
+    """True only for verified source-observation bar partitions (not quality/etc.)."""
+    rel = spec.relative_path.replace("\\", "/").strip("/")
+    parts = rel.split("/")
+    blocked = {"quality", "reconcile", "quarantine"}
+    if any(p in blocked or p.startswith("quality") for p in parts):
+        return False
+    kind = str((spec.partition or {}).get("kind") or "").lower()
+    if kind in blocked:
+        return False
+    # Require explicit bars.parquet naming (BIN-001 / BAR source convention).
+    if not rel.endswith("bars.parquet"):
+        return False
+    return True
+
+
+def _validate_path_token(label: str, value: str) -> str:
+    """Reject separators/traversal and empty tokens before filesystem writes."""
+    v = value.strip()
+    if not v or not _SAFE_PATH_TOKEN.fullmatch(v):
+        raise ValueError(
+            f"invalid {label} for partition path: {value!r} "
+            "(must be a single alphanumeric token with ._- only)"
+        )
+    if ".." in v or "/" in v or "\\" in v:
+        raise ValueError(f"invalid {label} for partition path: {value!r}")
+    return v
+
+
+def _validate_market_type(market_type: str) -> str:
+    m = market_type.strip().lower()
+    if m not in _ALLOWED_MARKET_TYPES:
+        raise ValueError(
+            f"market_type must be one of {sorted(_ALLOWED_MARKET_TYPES)}; got {market_type!r}"
+        )
+    return m
+
+
+def _is_daily_resample_interval(interval: str) -> bool:
+    """Fixed sub-day intervals that exactly tile a UTC day."""
+    if interval not in _DAILY_RESAMPLE_INTERVALS:
+        return False
+    secs = int(_FIXED_INTERVALS[interval].total_seconds())
+    return secs > 0 and (86_400 % secs) == 0
+
+
+def _agree_partition_meta(
+    *,
+    dataset_id: str,
+    specs: Sequence[OutputFileSpec],
+    venue_id: str,
+    instrument_id: int,
+    market_type: str,
+    interval: str,
+    schema_variant: str,
+) -> None:
+    """Require complete BIN-001 economic partition metadata on every bar spec.
+
+    Every selected output must carry all required keys; values must agree across
+    specs and match the caller (REVIEW-0029 #1). No missing-key fallback.
+    """
+    if not specs:
+        raise ValueError(
+            f"no selected bar outputs to bind economic metadata for dataset_id={dataset_id!r}"
+        )
+    expected = {
+        "venue_id": venue_id,
+        "market_type": market_type,
+        "interval": interval,
+        "instrument_id": str(instrument_id),
+        "schema_variant": schema_variant,
+    }
+    for key in _REQUIRED_PARTITION_KEYS:
+        seen: set[str] = set()
+        for spec in specs:
+            part = dict(spec.partition or {})
+            if key not in part:
+                raise ValueError(
+                    f"selected bar output {spec.relative_path!r} missing required "
+                    f"partition key {key!r} for dataset_id={dataset_id!r}"
+                )
+            seen.add(str(part[key]))
+        if len(seen) != 1:
+            raise ValueError(
+                f"partition key {key!r} inconsistent across bar outputs for "
+                f"dataset_id={dataset_id!r}: {sorted(seen)}"
+            )
+        got = next(iter(seen))
+        if got != expected[key]:
+            raise ValueError(
+                f"caller {key}={expected[key]!r} disagrees with verified "
+                f"partition {key}={got!r} for dataset_id={dataset_id!r}"
+            )
 
 
 def _verify_local_files(
@@ -321,21 +684,13 @@ def _verify_local_files(
     local_files: Mapping[str, Path],
     issues: list[QualityIssue],
 ) -> list[tuple[OutputFileSpec, Path]]:
-    """Match local paths to verified outputs by relative_path and re-hash."""
-    # Only bar parquet outputs (exclude quality-only partitions).
-    bar_specs = [
-        f
-        for f in verified_files
-        if f.relative_path.endswith("bars.parquet")
-        or f.relative_path.endswith(".parquet")
-        and "quality" not in f.relative_path.split("/")
-    ]
-    if not bar_specs:
-        # Fall back to all parquet files if naming differs.
-        bar_specs = [f for f in verified_files if f.relative_path.endswith(".parquet")]
+    """Match local paths to verified **source bar** outputs and re-hash."""
+    bar_specs = [f for f in verified_files if _is_source_bar_spec(f)]
     if not bar_specs:
         raise ValueError(
-            f"verified dataset {dataset_id!r} has no parquet outputs to promote"
+            f"verified dataset {dataset_id!r} has no source bar outputs "
+            "(expected relative_path ending in bars.parquet, excluding "
+            "quality/reconcile/quarantine)"
         )
 
     resolved: list[tuple[OutputFileSpec, Path]] = []
@@ -412,6 +767,17 @@ def _expected_source_close(open_src: int, interval: str, unit: str) -> int:
     """BIN-001 inclusive close: open + interval − 1 source unit."""
     steps_src = int(_interval_delta(interval).total_seconds() * _unit_factor_src(unit))
     return open_src + steps_src - 1
+
+
+def _source_to_utc_us(src_ts: int, unit: str) -> int:
+    """Convert preserved source timestamp to UTC microseconds."""
+    if unit == "us":
+        return int(src_ts)
+    if unit == "ms":
+        return int(src_ts) * 1_000
+    if unit == "s":
+        return int(src_ts) * 1_000_000
+    raise ValueError(f"unsupported source_timestamp_unit: {unit!r}")
 
 
 def _canonical_bar_schema() -> pa.Schema:
@@ -590,15 +956,21 @@ def _load_verified_bars(
             f"(from verified MAN-001 evidence); got {quality.value!r} "
             f"for dataset_id={dataset_id!r}"
         )
-    if not src.venue_id.strip():
-        raise ValueError("venue_id is required and non-empty")
+    venue_id = _validate_path_token("venue_id", src.venue_id)
+    market_type = _validate_market_type(src.market_type)
     if src.instrument_id <= 0:
         raise ValueError("instrument_id must be a positive integer surrogate")
 
     interval = interval_override or src.interval
+    interval = interval.strip()
+    _interval_us(interval)  # validate known interval
+    schema_variant = src.schema_variant.strip()
+    if schema_variant not in {"quote_notional", "coin_margined"}:
+        raise ValueError(f"unsupported schema_variant: {schema_variant!r}")
+
     interval_us = _interval_us(interval)
     base_col, quote_col, tb_base_col, tb_quote_col = _required_volume_columns(
-        src.schema_variant
+        schema_variant
     )
 
     if quality is QualityStatus.PASS_WITH_WARNINGS:
@@ -617,6 +989,15 @@ def _load_verified_bars(
         local_files=src.local_files,
         issues=issues,
     )
+    _agree_partition_meta(
+        dataset_id=dataset_id,
+        specs=[s for s, _ in pairs],
+        venue_id=venue_id,
+        instrument_id=src.instrument_id,
+        market_type=market_type,
+        interval=interval,
+        schema_variant=schema_variant,
+    )
 
     out: list[_BarRow] = []
     for _spec, path in pairs:
@@ -627,25 +1008,38 @@ def _load_verified_bars(
         if missing:
             raise ValueError(
                 f"source parquet missing required columns {missing} for "
-                f"schema_variant={src.schema_variant!r} dataset_id={dataset_id!r} "
+                f"schema_variant={schema_variant!r} dataset_id={dataset_id!r} "
                 f"path={path}"
             )
         if quote_col is not None and quote_col not in names:
             raise ValueError(
                 f"source parquet missing required quote column {quote_col!r} for "
-                f"schema_variant={src.schema_variant!r} dataset_id={dataset_id!r}"
+                f"schema_variant={schema_variant!r} dataset_id={dataset_id!r}"
             )
         # Strict: no fallback from base_asset_volume → volume for COIN-M.
-        if src.schema_variant == "coin_margined" and "volume" in names and base_col not in names:
+        if schema_variant == "coin_margined" and base_col not in names:
             raise ValueError(
                 "coin_margined source missing base_asset_volume; refusing to "
                 "treat contract volume as base-asset volume"
             )
+        # REVIEW-0028/0029: require source timestamp fields + normalized close_time.
+        for col in (
+            "source_open_time",
+            "source_close_time",
+            "source_timestamp_unit",
+            "close_time",
+        ):
+            if col not in names:
+                raise ValueError(
+                    f"source parquet missing required {col!r} for timestamp "
+                    f"cross-validation (dataset_id={dataset_id!r} path={path})"
+                )
 
         n = table.num_rows
         for i in range(n):
             try:
                 open_us = int(table.column("open_time")[i].as_py())
+                close_us = int(table.column("close_time")[i].as_py())
                 o = _to_decimal(table.column("open")[i].as_py())
                 h = _to_decimal(table.column("high")[i].as_py())
                 low = _to_decimal(table.column("low")[i].as_py())
@@ -677,75 +1071,72 @@ def _load_verified_bars(
                     flags.append("source_pass_with_warnings")
                 if quote_v is None:
                     flags.append("quote_volume_unavailable")
-                if src.schema_variant == "coin_margined":
+                if schema_variant == "coin_margined":
                     flags.append("coinm_volume_semantics")
 
-                # Inclusive close validation (BIN-001 convention).
+                # Inclusive close: exact open+interval-1 in source unit only.
+                sot = int(table.column("source_open_time")[i].as_py())
+                sct = int(table.column("source_close_time")[i].as_py())
+                unit = str(table.column("source_timestamp_unit")[i].as_py())
+                expected = _expected_source_close(sot, interval, unit)
+                if sct != expected:
+                    issues.append(
+                        QualityIssue(
+                            code="bar001_interval_close_mismatch",
+                            severity=IssueSeverity.ERROR,
+                            message=(
+                                "source close_time does not match inclusive "
+                                "open+interval-1 convention"
+                            ),
+                            context={
+                                "dataset_id": dataset_id,
+                                "source_open_time": sot,
+                                "source_close_time": sct,
+                                "expected_close": expected,
+                                "unit": unit,
+                                "interval": interval,
+                                "path": str(path),
+                                "row": i,
+                            },
+                        )
+                    )
+                    continue  # reject row
+
+                # REVIEW-0029 #4: normalized columns must match source unit conversion.
+                expected_open_us = _source_to_utc_us(sot, unit)
+                expected_close_us = _source_to_utc_us(sct, unit)
+                if open_us != expected_open_us or close_us != expected_close_us:
+                    issues.append(
+                        QualityIssue(
+                            code="bar001_normalized_source_timestamp_mismatch",
+                            severity=IssueSeverity.ERROR,
+                            message=(
+                                "normalized open_time/close_time disagree with "
+                                "source_* timestamps and unit"
+                            ),
+                            context={
+                                "dataset_id": dataset_id,
+                                "open_time": open_us,
+                                "close_time": close_us,
+                                "expected_open_us": expected_open_us,
+                                "expected_close_us": expected_close_us,
+                                "source_open_time": sot,
+                                "source_close_time": sct,
+                                "unit": unit,
+                                "path": str(path),
+                                "row": i,
+                            },
+                        )
+                    )
+                    continue
+
                 period_end = open_us + interval_us
-                if (
-                    "source_open_time" in names
-                    and "source_close_time" in names
-                    and "source_timestamp_unit" in names
-                ):
-                    sot = int(table.column("source_open_time")[i].as_py())
-                    sct = int(table.column("source_close_time")[i].as_py())
-                    unit = str(table.column("source_timestamp_unit")[i].as_py())
-                    expected = _expected_source_close(sot, interval, unit)
-                    if sct != expected:
-                        issues.append(
-                            QualityIssue(
-                                code="bar001_interval_close_mismatch",
-                                severity=IssueSeverity.ERROR,
-                                message=(
-                                    "source close_time does not match inclusive "
-                                    "open+interval-1 convention"
-                                ),
-                                context={
-                                    "dataset_id": dataset_id,
-                                    "source_open_time": sot,
-                                    "source_close_time": sct,
-                                    "expected_close": expected,
-                                    "unit": unit,
-                                    "interval": interval,
-                                    "path": str(path),
-                                    "row": i,
-                                },
-                            )
-                        )
-                        continue  # reject row
-                elif "close_time" in names:
-                    # Normalized µs only: inclusive close = open + interval − 1µs
-                    # is wrong across ms eras; require source_* fields from BIN-001.
-                    ct = int(table.column("close_time")[i].as_py())
-                    # Accept only if close_time == period_end - unit step cannot be known;
-                    # require that close is strictly before exclusive period_end and
-                    # at least open (non-empty period).
-                    if ct < open_us or ct >= period_end:
-                        issues.append(
-                            QualityIssue(
-                                code="bar001_interval_close_mismatch",
-                                severity=IssueSeverity.ERROR,
-                                message=(
-                                    "close_time outside [open_time, period_end); "
-                                    "provide source_* fields for exact inclusive check"
-                                ),
-                                context={
-                                    "dataset_id": dataset_id,
-                                    "open_time": open_us,
-                                    "close_time": ct,
-                                    "period_end": period_end,
-                                    "path": str(path),
-                                    "row": i,
-                                },
-                            )
-                        )
-                        continue
 
                 out.append(
                     _BarRow(
                         instrument_id=src.instrument_id,
-                        venue_id=src.venue_id,
-                        market_type=src.market_type,
+                        venue_id=venue_id,
+                        market_type=market_type,
                         timeframe=interval,
                         period_start_us=open_us,
                         period_end_us=period_end,
@@ -899,34 +1290,28 @@ def _complete_days(
     """Split intraday into complete-UTC-day rows vs incomplete-day quarantine.
 
     Incomplete days are excluded from daily resampling (not zero-filled).
+    Grouping includes timeframe so mixed intervals never share a cadence check
+    (REVIEW-0028 #4). Only sub-day intervals that tile 24h are eligible for
+    daily promotion (#5).
     """
-    by_day: dict[tuple[int, str, str, int], list[_BarRow]] = defaultdict(list)
+    by_day: dict[tuple[int, str, str, str, int], list[_BarRow]] = defaultdict(list)
     for row in intraday:
         day = _day_start_us(row.period_start_us)
-        key = (row.instrument_id, row.venue_id, row.market_type, day)
+        key = (
+            row.instrument_id,
+            row.venue_id,
+            row.market_type,
+            row.timeframe,
+            day,
+        )
         by_day[key].append(row)
 
     complete: list[_BarRow] = []
     incomplete_q: list[_BarRow] = []
     for key, members in sorted(by_day.items()):
-        instrument_id, venue_id, market_type, day_us = key
-        # All members share timeframe within a source promotion.
-        timeframe = members[0].timeframe
-        try:
-            interval_us = _interval_us(timeframe)
-        except ValueError:
-            issues.append(
-                QualityIssue(
-                    code="bar001_daily_unsupported_interval",
-                    severity=IssueSeverity.ERROR,
-                    message=f"cannot validate day completeness for timeframe={timeframe!r}",
-                    context={
-                        "instrument_id": instrument_id,
-                        "venue_id": venue_id,
-                        "day_start": day_us,
-                    },
-                )
-            )
+        instrument_id, venue_id, market_type, timeframe, day_us = key
+
+        def _quarantine_members(flag: str) -> None:
             for m in members:
                 incomplete_q.append(
                     _BarRow(
@@ -947,9 +1332,47 @@ def _complete_days(
                         taker_buy_base_volume=m.taker_buy_base_volume,
                         taker_buy_quote_volume=m.taker_buy_quote_volume,
                         source_dataset_id=m.source_dataset_id,
-                        quality_flags=list(m.quality_flags) + ["incomplete_utc_day"],
+                        quality_flags=list(m.quality_flags) + [flag],
                     )
                 )
+
+        if not _is_daily_resample_interval(timeframe):
+            issues.append(
+                QualityIssue(
+                    code="bar001_daily_unsupported_interval",
+                    severity=IssueSeverity.ERROR,
+                    message=(
+                        f"timeframe={timeframe!r} is not a fixed sub-day interval "
+                        "that tiles 24h; excluded from daily resampling"
+                    ),
+                    context={
+                        "instrument_id": instrument_id,
+                        "venue_id": venue_id,
+                        "day_start": day_us,
+                        "timeframe": timeframe,
+                    },
+                )
+            )
+            _quarantine_members("unsupported_daily_interval")
+            continue
+
+        try:
+            interval_us = _interval_us(timeframe)
+        except ValueError:
+            issues.append(
+                QualityIssue(
+                    code="bar001_daily_unsupported_interval",
+                    severity=IssueSeverity.ERROR,
+                    message=f"cannot validate day completeness for timeframe={timeframe!r}",
+                    context={
+                        "instrument_id": instrument_id,
+                        "venue_id": venue_id,
+                        "day_start": day_us,
+                        "timeframe": timeframe,
+                    },
+                )
+            )
+            _quarantine_members("incomplete_utc_day")
             continue
 
         expected = _expected_day_opens(day_us, interval_us)
@@ -999,16 +1422,71 @@ def _complete_days(
     return complete, incomplete_q
 
 
+def _canonicalize_daily_source_timeframe(value: str | None) -> str | None:
+    """Strip/validate configured timeframe once for behavior + config identity.
+
+    ``"1m"`` and ``" 1m "`` must hash identically (REVIEW-0030 #2).
+    """
+    if value is None:
+        return None
+    tf = value.strip()
+    if not tf:
+        return None
+    if not _is_daily_resample_interval(tf):
+        raise ValueError(
+            f"daily_source_timeframe={tf!r} is not a valid sub-day "
+            "resampling interval that tiles 24h"
+        )
+    return tf
+
+
+def _select_rows_for_daily_resample(
+    complete_rows: Sequence[_BarRow],
+    *,
+    daily_source_timeframe: str | None,
+) -> tuple[list[_BarRow], str | None]:
+    """Pick exactly one identity-bearing source timeframe for daily bars.
+
+    ``daily_source_timeframe`` must already be canonical (stripped/validated) or
+    None. Returns (rows, effective_timeframe) for config identity hashing.
+    Never merges multiple complete timeframes (REVIEW-0029 #2 / REVIEW-0030 #2).
+    """
+    if not complete_rows:
+        return [], None
+    present = sorted({r.timeframe for r in complete_rows})
+    if daily_source_timeframe is not None:
+        tf = daily_source_timeframe  # already canonical
+        if not _is_daily_resample_interval(tf):
+            raise ValueError(
+                f"daily_source_timeframe={tf!r} is not a valid sub-day "
+                "resampling interval that tiles 24h"
+            )
+        selected = [r for r in complete_rows if r.timeframe == tf]
+        if not selected:
+            raise ValueError(
+                f"daily_source_timeframe={tf!r} has no complete-day rows; "
+                f"present complete timeframes={present}"
+            )
+        return selected, tf
+    if len(present) > 1:
+        raise ValueError(
+            "ambiguous multiple complete source timeframes for daily resampling: "
+            f"{present}; pass daily_source_timeframe= to select exactly one"
+        )
+    return list(complete_rows), present[0]
+
+
 def _resample_daily(intraday_complete: Sequence[_BarRow]) -> list[_BarRow]:
-    """Deterministic UTC-day OHLCV from **complete** days only."""
-    groups: dict[tuple[int, str, str, int], list[_BarRow]] = defaultdict(list)
+    """Deterministic UTC-day OHLCV from **complete** days of one timeframe only."""
+    # Defense in depth: group by timeframe so mixed inputs cannot silently merge.
+    groups: dict[tuple[int, str, str, str, int], list[_BarRow]] = defaultdict(list)
     for row in intraday_complete:
         day = _day_start_us(row.period_start_us)
-        key = (row.instrument_id, row.venue_id, row.market_type, day)
+        key = (row.instrument_id, row.venue_id, row.market_type, row.timeframe, day)
         groups[key].append(row)
 
     daily: list[_BarRow] = []
-    for (instrument_id, venue_id, market_type, day_us), members in sorted(
+    for (instrument_id, venue_id, market_type, _src_tf, day_us), members in sorted(
         groups.items(), key=lambda kv: kv[0]
     ):
         members_sorted = sorted(members, key=lambda r: (r.period_start_us, r.source_dataset_id))
@@ -1018,14 +1496,16 @@ def _resample_daily(intraday_complete: Sequence[_BarRow]) -> list[_BarRow]:
         low = min(m.low for m in members_sorted)
         base_v = sum((m.base_volume for m in members_sorted), Decimal("0"))
         # Quote: sum only if all present; else null (missing semantics preserved).
-        if any(m.quote_volume is None for m in members_sorted):
+        quote_vals = [m.quote_volume for m in members_sorted]
+        if any(v is None for v in quote_vals):
             quote_v: Decimal | None = None
         else:
-            quote_v = sum((m.quote_volume for m in members_sorted if m.quote_volume is not None), Decimal("0"))
-        if any(m.trade_count is None for m in members_sorted):
+            quote_v = sum((v for v in quote_vals if v is not None), Decimal("0"))
+        trade_vals = [m.trade_count for m in members_sorted]
+        if any(v is None for v in trade_vals):
             trade_count: int | None = None
         else:
-            trade_count = sum(int(m.trade_count) for m in members_sorted)
+            trade_count = sum(int(v) for v in trade_vals if v is not None)
 
         tb_base_vals = [
             m.taker_buy_base_volume
@@ -1378,8 +1858,14 @@ def publish_canonical_bars(
     native_daily: Sequence[VerifiedDailySource] | None = None,
     price_tolerance: Decimal | str = Decimal("0"),
     volume_tolerance: Decimal | str = Decimal("0"),
+    daily_source_timeframe: str | None = None,
 ) -> CanonicalBarPublishResult:
-    """Publish canonical intraday + daily bars from verified MAN-001 sources."""
+    """Publish canonical intraday + daily bars from verified MAN-001 sources.
+
+    ``daily_source_timeframe`` selects the single intraday cadence used for
+    daily resampling when multiple complete timeframes are present. If omitted
+    and more than one complete timeframe exists, publication fails closed.
+    """
     if not source_datasets:
         raise ValueError("at least one verified source_dataset is required")
 
@@ -1415,14 +1901,20 @@ def publish_canonical_bars(
     # Intraday promotion keeps unique rows; incomplete days still appear as
     # intraday observations but cannot form daily bars.
     complete_for_daily, incomplete_q = _complete_days(unique_intraday, issues)
-    daily = _resample_daily(complete_for_daily)
+    # Canonicalize once for both selection behavior and config hash identity.
+    resolved_daily_tf = _canonicalize_daily_source_timeframe(daily_source_timeframe)
+    daily_input, effective_daily_tf = _select_rows_for_daily_resample(
+        complete_for_daily,
+        daily_source_timeframe=resolved_daily_tf,
+    )
+    daily = _resample_daily(daily_input)
 
     reconcile_rows: list[dict[str, Any]] = []
     q_daily: list[_BarRow] = []
     accepted_daily = list(daily)
     if native_daily:
         for nd in native_daily:
-            nd_id, _nq, _ = _extract_verified_identity(
+            nd_id, _nq, _files, _msha = _extract_verified_identity(
                 manifest=nd.manifest, receipt=nd.receipt
             )
             deps.append(
@@ -1492,9 +1984,16 @@ def publish_canonical_bars(
         nonlocal total_rows, total_bytes
         groups = _group_by_partition(rows)
         for (venue, mkt, tf, year, month), part_rows in sorted(groups.items()):
+            venue_t = _validate_path_token("venue_id", venue)
+            mkt_t = _validate_market_type(mkt)
+            tf_t = _validate_path_token("timeframe", tf)
+            if year < 1970 or year > 2100 or month < 1 or month > 12:
+                raise ValueError(
+                    f"invalid year/month partition year={year} month={month}"
+                )
             rel = (
-                f"{path_prefix}/venue_id={venue}/market_type={mkt}/"
-                f"timeframe={tf}/year={year:04d}/month={month:02d}/bars.parquet"
+                f"{path_prefix}/venue_id={venue_t}/market_type={mkt_t}/"
+                f"timeframe={tf_t}/year={year:04d}/month={month:02d}/bars.parquet"
             )
             nested = out_dir / rel
             nested.parent.mkdir(parents=True, exist_ok=True)
@@ -1509,9 +2008,9 @@ def publish_canonical_bars(
                     rows=nrows,
                     bytes=nbytes,
                     partition={
-                        "venue_id": venue,
-                        "market_type": mkt,
-                        "timeframe": tf,
+                        "venue_id": venue_t,
+                        "market_type": mkt_t,
+                        "timeframe": tf_t,
                         "year": year,
                         "month": month,
                         "kind": kind,
@@ -1525,9 +2024,9 @@ def publish_canonical_bars(
                     relative_path=rel,
                     rows=nrows,
                     bytes=nbytes,
-                    venue_id=venue,
-                    market_type=mkt,
-                    timeframe=tf,
+                    venue_id=venue_t,
+                    market_type=mkt_t,
+                    timeframe=tf_t,
                     year=year,
                     month=month,
                     kind=kind,
@@ -1642,9 +2141,15 @@ def publish_canonical_bars(
         "source_dataset_ids": sorted(set(source_ids)),
         "availability_policy": "period_end_exclusive",
         "complete_day_required_for_daily": True,
+        # Canonical selected TF only (stripped/validated); never raw caller string.
+        "daily_source_timeframe": effective_daily_tf,
         "partitioning": ["venue_id", "market_type", "timeframe", "year", "month"],
         "timestamp_storage": "utc_microseconds",
         "verified_man001_inputs": True,
+        "supported_source_dataset_type": _SUPPORTED_SOURCE_DATASET_TYPE,
+        "supported_source_schema": (
+            f"{_SUPPORTED_SOURCE_SCHEMA_NAME}:{_SUPPORTED_SOURCE_SCHEMA_VERSION}"
+        ),
     }
     cfg_hash = _resolve_config_sha256(config_sha256, payload=cfg_payload)
 
@@ -1710,6 +2215,9 @@ def publish_canonical_bars(
             "source_quality_gate": "verified MAN-001 PASS|PASS_WITH_WARNINGS only",
             "source_qualities": [q.value for q in source_qualities],
             "complete_day_required_for_daily": True,
+            "daily_source_timeframe": effective_daily_tf,
+            "manifest_identity_recomputed": True,
+            "economic_fingerprint_excludes_lineage": True,
         },
         row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
         row_counters=row_counters,
