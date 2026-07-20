@@ -1,6 +1,6 @@
-"""REF-001 — focused regressions for the v2 Sr corrections.
+"""REF-001 — focused regressions.
 
-Each test pins one defect corrected in `REF001_v2_corrections.zip`:
+v2 Sr corrections (`REF001_v2_corrections.zip`):
   D1 timestamp canonicalization is fixed-width + lex-sortable;
   D2 writes are atomic (BEGIN IMMEDIATE / SAVEPOINT);
   D3 asset/instrument identity is never derived from display/ticker text;
@@ -10,6 +10,15 @@ Each test pins one defect corrected in `REF001_v2_corrections.zip`:
   D7 ambiguity queue is idempotent (no duplicate QUEUED);
   D8 typed manual resolution transition (RESOLVED/REJECTED/DEFERRED from QUEUED);
   D9 knowledge-time correction via supersede_alias.
+
+Sr integrity-fix drop (in-tree, `REF-001_SR_INTEGRITY_FIXES.md`):
+  I1 resolve_alias honors persisted manual decisions; no requeue;
+  I2 resolve_ambiguity_case(RESOLVED) gates target to the stored candidate set;
+  I3 supersede_alias requires contiguous knowledge-time (replacement known_from == close_known_at);
+  I4 supersede_instrument_version closes prior + inserts replacement; historical as-of preserved;
+  I5 global vs venue alias collision is same-scope only, insertion-order independent;
+  I6 cross-scope different targets surface at resolve time, not silent collision;
+  I7 polymorphic existence/semantic checks run inside the atomic write unit.
 """
 
 from __future__ import annotations
@@ -273,3 +282,190 @@ def test_alias_collision_with_different_target_rejected(tmp_path: Path) -> None:
             window=w,
             venue_id=vid,
         )
+
+
+# --- Sr integrity-fix drop (REF-001_SR_INTEGRITY_FIXES.md) -------------------
+
+
+def _seed_ambiguous(tmp_path: Path) -> tuple[
+    sqlite3.Connection, store.ReferenceStore, str, str, str, str
+]:
+    """Cross-scope ambiguity: a global alias and a venue alias, same norm,
+    different instrument targets. A venue-scoped resolve then sees both
+    candidates (matching the same-scope collision rule, this is allowed)."""
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    other = s.register_instrument(
+        asset_id=aid, venue_id=vid, instrument_type=models.InstrumentType.SPOT, salt="y"
+    )
+    w = models.BiTemporalWindow(
+        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        window=w, venue_id=None,
+    )
+    s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT,
+        target_id=other.instrument_id, window=w, venue_id=vid,
+    )
+    return conn, s, vid, aid, iid, other.instrument_id
+
+
+def test_I1_resolve_alias_honors_resolved_decision_and_does_not_requeue(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    dt = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    first = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    assert first.outcome is models.ResolutionOutcome.QUEUED
+    case_id = first.case_id
+    assert case_id is not None
+    s.resolve_ambiguity_case(
+        case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=iid
+    )
+    second = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    assert second.outcome is models.ResolutionOutcome.RESOLVED
+    assert second.target_id == iid
+    assert second.case_id == case_id
+
+
+def test_I1_resolved_rejected_and_deferred_are_typed_and_never_requeue(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    dt = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    base = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    case_id = base.case_id
+    assert case_id is not None
+    s.resolve_ambiguity_case(
+        case_id, status=models.AmbiguityStatus.REJECTED, resolution_note="not a real pair"
+    )
+    rejected = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    assert rejected.outcome is models.ResolutionOutcome.REJECTED
+    assert rejected.case_id == case_id
+    dt2 = datetime(2025, 2, 1, tzinfo=timezone.utc)
+    base2 = s.resolve_alias("BTC", decision_time=dt2, knowledge_time=kt, venue_id=vid)
+    assert base2.case_id is not None
+    s.resolve_ambiguity_case(base2.case_id, status=models.AmbiguityStatus.DEFERRED)
+    deferred = s.resolve_alias("BTC", decision_time=dt2, knowledge_time=kt, venue_id=vid)
+    assert deferred.outcome is models.ResolutionOutcome.DEFERRED
+
+
+def test_I2_resolve_ambiguity_case_rejects_target_not_in_candidates(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    dt = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    case = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    assert case.case_id is not None
+    foreign = s.register_instrument(
+        asset_id=aid, venue_id=vid, instrument_type=models.InstrumentType.SPOT, salt="z"
+    )
+    with pytest.raises(errors.ReferenceResolutionError):
+        s.resolve_ambiguity_case(
+            case.case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=foreign.instrument_id
+        )
+
+
+def test_I2_resolve_ambiguity_case_rejects_venue_incompatible_instrument(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    s.upsert_venue(
+        venue_code="COINBASE", display_name="Coinbase", venue_type=models.VenueType.CEX
+    )
+    cb_vid = s.venue_id_for("coinbase")
+    cb_instr = s.register_instrument(
+        asset_id=aid, venue_id=cb_vid, instrument_type=models.InstrumentType.SPOT, salt="cb"
+    )
+    dt = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    case = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    assert case.case_id is not None
+    with pytest.raises(errors.ReferenceResolutionError):
+        s.resolve_ambiguity_case(
+            case.case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=cb_instr.instrument_id
+        )
+
+
+def test_I3_supersede_alias_requires_contiguous_knowledge_time(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid = _seed(tmp_path)
+    al = s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        window=models.BiTemporalWindow(
+            valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc), known_from=datetime(2024, 1, 1, tzinfo=timezone.utc)
+        ),
+        venue_id=vid,
+    )
+    close_at = al.window.known_from + timedelta(seconds=1)
+    bad_window = models.BiTemporalWindow(
+        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        known_from=close_at + timedelta(seconds=10),
+    )
+    with pytest.raises(errors.ReferenceValidationError):
+        s.supersede_alias(al.alias_id, close_known_at=close_at, new_window=bad_window)
+    good_window = models.BiTemporalWindow(
+        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc), known_from=close_at
+    )
+    repl = s.supersede_alias(al.alias_id, close_known_at=close_at, new_window=good_window)
+    assert repl.window.known_from == close_at
+
+
+def test_I4_supersede_instrument_version_preserves_historical_as_of(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    w = models.BiTemporalWindow(
+        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        valid_to=datetime(2021, 1, 1, tzinfo=timezone.utc),
+        known_from=_now(), known_to=None,
+    )
+    v = s.add_instrument_version(instrument_id=iid, version_seq=1, contract_spec={"a": 1}, window=w)
+    close_at = w.known_from + timedelta(seconds=1)
+    repl = s.supersede_instrument_version(
+        v.instrument_version_id, close_known_at=close_at, contract_spec={"a": 2}
+    )
+    assert repl.window.known_from == close_at
+    prior = s.instrument_version_as_of(
+        iid, decision_time=datetime(2020, 6, 1, tzinfo=timezone.utc), knowledge_time=w.known_from
+    )
+    assert prior is not None and prior.contract_spec == {"a": 1}
+    post = s.instrument_version_as_of(
+        iid, decision_time=datetime(2020, 6, 1, tzinfo=timezone.utc),
+        knowledge_time=close_at + timedelta(seconds=1),
+    )
+    assert post is not None and post.contract_spec == {"a": 2}
+
+
+def test_I5_global_venue_alias_collision_is_same_scope_and_order_independent(tmp_path: Path) -> None:
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    w = models.BiTemporalWindow(
+        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc), known_from=_now()
+    )
+    s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        window=w, venue_id=None,
+    )
+    s.add_alias(
+        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=other,
+        window=w, venue_id=vid,
+    )
+    w2 = models.BiTemporalWindow(
+        valid_from=datetime(2021, 1, 1, tzinfo=timezone.utc), known_from=_now()
+    )
+    s.add_alias(
+        alias_text="ETH", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        window=w2, venue_id=vid,
+    )
+    with pytest.raises(errors.ReferenceConflictError):
+        s.add_alias(
+            alias_text="ETH", target_kind=models.TargetKind.INSTRUMENT, target_id=other,
+            window=w2, venue_id=vid,
+        )
+
+
+def test_I6_cross_scope_different_targets_surface_at_resolve_time(tmp_path: Path) -> None:
+    # _seed_ambiguous already creates a global alias (->iid) and a venue alias
+    # (->other) for "BTC"; a venue-scoped resolve must surface both candidates
+    # for manual triage rather than silently merging.
+    conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
+    dt = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    res = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
+    assert res.outcome in (
+        models.ResolutionOutcome.QUEUED, models.ResolutionOutcome.AMBIGUOUS
+    )

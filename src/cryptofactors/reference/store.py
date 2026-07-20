@@ -230,12 +230,6 @@ class ReferenceStore:
             raise ReferenceValidationError(
                 "instrument salt is required; identities are never derived from ticker text alone"
             )
-        self._require_asset(asset_id)
-        self._require_venue(venue_id)
-        if base_asset_id:
-            self._require_asset(base_asset_id)
-        if quote_asset_id:
-            self._require_asset(quote_asset_id)
         iid = self.instrument_id_for(
             asset_id=asset_id,
             venue_id=venue_id,
@@ -245,6 +239,14 @@ class ReferenceStore:
         ts = ensure_utc(created_at or datetime.now(timezone.utc))
         try:
             with self._atomic():
+                # Polymorphic refs are not FK-enforced for base/quote alone in all
+                # paths; keep existence checks inside the write unit.
+                self._require_asset(asset_id)
+                self._require_venue(venue_id)
+                if base_asset_id:
+                    self._require_asset(base_asset_id)
+                if quote_asset_id:
+                    self._require_asset(quote_asset_id)
                 self._conn.execute(
                     "INSERT INTO ref_instrument("
                     "instrument_id, asset_id, venue_id, instrument_type, "
@@ -279,7 +281,6 @@ class ReferenceStore:
         supersedes_version_id: str | None = None,
         evidence: Mapping[str, Any] | None = None,
     ) -> InstrumentVersion:
-        self._require_instrument(instrument_id)
         if version_seq < 1:
             raise ReferenceValidationError("version_seq must be >= 1")
         vid = fingerprint(
@@ -290,10 +291,11 @@ class ReferenceStore:
                 "valid_from": dt_to_iso(window.valid_from),
             },
         )
-        if supersedes_version_id is not None:
-            self._require_instrument_version(supersedes_version_id, instrument_id)
         try:
             with self._atomic():
+                self._require_instrument(instrument_id)
+                if supersedes_version_id is not None:
+                    self._require_instrument_version(supersedes_version_id, instrument_id)
                 self._assert_no_valid_overlap(
                     table="ref_instrument_version",
                     id_col="instrument_id",
@@ -333,6 +335,130 @@ class ReferenceStore:
             dict(evidence or {}),
         )
 
+    def supersede_instrument_version(
+        self,
+        version_id: str,
+        *,
+        close_known_at: datetime,
+        contract_spec: Mapping[str, Any],
+        version_seq: int | None = None,
+        new_window: BiTemporalWindow | None = None,
+        evidence: Mapping[str, Any] | None = None,
+    ) -> InstrumentVersion:
+        """Atomic knowledge-time correction of an instrument version.
+
+        Closes the prior open ``known_to`` at ``close_known_at``, inserts a
+        replacement whose ``known_from`` equals that close instant (contiguous
+        half-open knowledge windows), preserves historical as-of answers, and
+        records lineage via ``supersedes_version_id``.
+        """
+        close_at = ensure_utc(close_known_at)
+        with self._atomic():
+            row = self._conn.execute(
+                "SELECT * FROM ref_instrument_version WHERE instrument_version_id = ?",
+                (version_id,),
+            ).fetchone()
+            if row is None:
+                raise ReferenceNotFoundError(
+                    "instrument version not found",
+                    context={"instrument_version_id": version_id},
+                )
+            prior = self._row_to_instr_version(row)
+            if prior.window.known_to is not None:
+                raise ReferenceConflictError(
+                    "instrument version already closed for knowledge time",
+                    context={
+                        "instrument_version_id": version_id,
+                        "known_to": dt_to_iso(prior.window.known_to),
+                    },
+                )
+            if close_at <= prior.window.known_from:
+                raise ReferenceValidationError(
+                    "close_known_at must be > prior known_from",
+                    context={"close_known_at": dt_to_iso(close_at)},
+                )
+            self._require_instrument(prior.instrument_id)
+
+            if new_window is not None:
+                window = new_window
+            else:
+                window = BiTemporalWindow(
+                    valid_from=prior.window.valid_from,
+                    valid_to=prior.window.valid_to,
+                    known_from=close_at,
+                    known_to=None,
+                )
+            self._require_contiguous_knowledge_supersession(
+                close_at=close_at, window=window, label="instrument version"
+            )
+            seq = version_seq if version_seq is not None else prior.version_seq + 1
+            if seq < 1:
+                raise ReferenceValidationError("version_seq must be >= 1")
+            evid = dict(evidence) if evidence is not None else dict(prior.evidence)
+            evid = {
+                **evid,
+                "supersedes_version_id": version_id,
+                "knowledge_correction_at": dt_to_iso(close_at),
+            }
+            new_id = fingerprint(
+                "iv",
+                {
+                    "instrument_id": prior.instrument_id,
+                    "version_seq": seq,
+                    "valid_from": dt_to_iso(window.valid_from),
+                    "known_from": dt_to_iso(window.known_from),
+                },
+            )
+            # Close prior first so overlap checks exclude it under the new known window.
+            self._conn.execute(
+                "UPDATE ref_instrument_version SET known_to = ? "
+                "WHERE instrument_version_id = ?",
+                (dt_to_iso(close_at), version_id),
+            )
+            self._assert_no_valid_overlap(
+                table="ref_instrument_version",
+                id_col="instrument_id",
+                id_val=prior.instrument_id,
+                window=window,
+            )
+            try:
+                self._conn.execute(
+                    "INSERT INTO ref_instrument_version("
+                    "instrument_version_id, instrument_id, version_seq, contract_spec_json, "
+                    "valid_from, valid_to, known_from, known_to, supersedes_version_id, evidence_json"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        new_id,
+                        prior.instrument_id,
+                        seq,
+                        _json_dumps(dict(contract_spec)),
+                        dt_to_iso(window.valid_from),
+                        dt_to_iso(window.valid_to) if window.valid_to else None,
+                        dt_to_iso(window.known_from),
+                        dt_to_iso(window.known_to) if window.known_to else None,
+                        version_id,
+                        _json_dumps(evid),
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ReferenceConflictError(
+                    "instrument version supersession conflict",
+                    context={
+                        "instrument_id": prior.instrument_id,
+                        "version_seq": seq,
+                        "supersedes": version_id,
+                    },
+                ) from exc
+            return InstrumentVersion(
+                new_id,
+                prior.instrument_id,
+                seq,
+                dict(contract_spec),
+                window,
+                version_id,
+                evid,
+            )
+
     def add_alias(
         self,
         *,
@@ -351,11 +477,10 @@ class ReferenceStore:
         if not (0.0 <= confidence <= 1.0):
             raise ReferenceValidationError("confidence must be in [0, 1]")
         norm = normalize_alias(text)
-        self._assert_target_exists(target_kind, target_id)
-        if venue_id is not None:
-            self._require_venue(venue_id)
-        # Reject silent collisions: same norm+venue with overlapping both windows
-        # pointing at a different target.
+        # Reject silent same-scope collisions: same norm + same venue scope with
+        # overlapping both windows pointing at a different target. Global vs
+        # venue-scoped rows with different targets are not silent collisions;
+        # they surface as resolve-time ambiguity for manual resolution.
         aid = fingerprint(
             "als",
             {
@@ -369,6 +494,9 @@ class ReferenceStore:
         )
         try:
             with self._atomic():
+                self._assert_target_exists(target_kind, target_id)
+                if venue_id is not None:
+                    self._require_venue(venue_id)
                 self._assert_no_alias_collision(norm, venue_id, window, target_kind, target_id)
                 self._conn.execute(
                     "INSERT INTO ref_alias("
@@ -418,21 +546,6 @@ class ReferenceStore:
         window: BiTemporalWindow,
         evidence: Mapping[str, Any] | None = None,
     ) -> ListingEvent:
-        self._require_instrument(instrument_id)
-        self._require_venue(venue_id)
-        instr_venue = self._conn.execute(
-            "SELECT venue_id FROM ref_instrument WHERE instrument_id = ?",
-            (instrument_id,),
-        ).fetchone()
-        if instr_venue is None or instr_venue["venue_id"] != venue_id:
-            raise ReferenceValidationError(
-                "listing venue must match instrument venue",
-                context={
-                    "instrument_id": instrument_id,
-                    "listing_venue_id": venue_id,
-                    "instrument_venue_id": None if instr_venue is None else instr_venue["venue_id"],
-                },
-            )
         eid = fingerprint(
             "lst",
             {
@@ -444,6 +557,23 @@ class ReferenceStore:
             },
         )
         with self._atomic():
+            self._require_instrument(instrument_id)
+            self._require_venue(venue_id)
+            instr_venue = self._conn.execute(
+                "SELECT venue_id FROM ref_instrument WHERE instrument_id = ?",
+                (instrument_id,),
+            ).fetchone()
+            if instr_venue is None or instr_venue["venue_id"] != venue_id:
+                raise ReferenceValidationError(
+                    "listing venue must match instrument venue",
+                    context={
+                        "instrument_id": instrument_id,
+                        "listing_venue_id": venue_id,
+                        "instrument_venue_id": (
+                            None if instr_venue is None else instr_venue["venue_id"]
+                        ),
+                    },
+                )
             self._conn.execute(
                 "INSERT INTO ref_listing_event("
                 "listing_event_id, instrument_id, venue_id, event_type, "
@@ -483,12 +613,15 @@ class ReferenceStore:
         ratio_den: float | None = None,
         evidence: Mapping[str, Any] | None = None,
     ) -> MigrationEvent:
-        self._assert_target_exists(from_kind, from_id)
-        self._assert_target_exists(to_kind, to_id)
         if (ratio_num is None) ^ (ratio_den is None):
             raise ReferenceValidationError("ratio_num and ratio_den must both be set or both null")
         if ratio_den is not None and ratio_den == 0:
             raise ReferenceValidationError("ratio_den must be non-zero")
+        if from_kind is TargetKind.VENUE or to_kind is TargetKind.VENUE:
+            raise ReferenceValidationError(
+                "migration endpoints must be ASSET or INSTRUMENT",
+                context={"from_kind": from_kind.value, "to_kind": to_kind.value},
+            )
         mid = fingerprint(
             "mig",
             {
@@ -502,6 +635,9 @@ class ReferenceStore:
             },
         )
         with self._atomic():
+            # Polymorphic endpoints are not FK-enforced; validate in-unit.
+            self._assert_target_exists(from_kind, from_id)
+            self._assert_target_exists(to_kind, to_id)
             self._conn.execute(
                 "INSERT INTO ref_migration_event("
                 "migration_event_id, event_type, from_kind, from_id, to_kind, to_id, "
@@ -603,19 +739,26 @@ class ReferenceStore:
         self,
         case_id: str,
         *,
-        target_kind: TargetKind,
-        target_id: str,
+        target_kind: TargetKind | None = None,
+        target_id: str | None = None,
         resolution_note: str | None = None,
         status: AmbiguityStatus = AmbiguityStatus.RESOLVED,
     ) -> AmbiguityCase:
-        """Typed manual resolution transition with validated target lineage."""
-        if status not in (AmbiguityStatus.RESOLVED, AmbiguityStatus.REJECTED, AmbiguityStatus.DEFERRED):
+        """Typed manual resolution transition with validated target lineage.
+
+        RESOLVED requires a target that appears in the stored candidate set, still
+        exists, and is semantically compatible with the case. REJECTED / DEFERRED
+        clear any resolution target. Only QUEUED cases may transition.
+        """
+        if status not in (
+            AmbiguityStatus.RESOLVED,
+            AmbiguityStatus.REJECTED,
+            AmbiguityStatus.DEFERRED,
+        ):
             raise ReferenceResolutionError(
                 "invalid resolution status transition",
                 context={"status": status.value},
             )
-        if status is AmbiguityStatus.RESOLVED:
-            self._assert_target_exists(target_kind, target_id)
         now = datetime.now(timezone.utc)
         with self._atomic():
             row = self._conn.execute(
@@ -631,6 +774,18 @@ class ReferenceStore:
                     "only QUEUED cases can be transitioned",
                     context={"case_id": case_id, "status": row["status"]},
                 )
+            case = self._row_to_ambiguity(row)
+            res_kind: str | None = None
+            res_id: str | None = None
+            if status is AmbiguityStatus.RESOLVED:
+                if target_kind is None or target_id is None:
+                    raise ReferenceValidationError(
+                        "RESOLVED requires target_kind and target_id",
+                        context={"case_id": case_id},
+                    )
+                self._assert_resolution_target_allowed(case, target_kind, target_id)
+                res_kind = target_kind.value
+                res_id = target_id
             self._conn.execute(
                 "UPDATE ref_ambiguity_case SET "
                 "status = ?, resolution_target_kind = ?, resolution_target_id = ?, "
@@ -638,8 +793,8 @@ class ReferenceStore:
                 "WHERE case_id = ?",
                 (
                     status.value,
-                    target_kind.value if status is AmbiguityStatus.RESOLVED else None,
-                    target_id if status is AmbiguityStatus.RESOLVED else None,
+                    res_kind,
+                    res_id,
                     resolution_note,
                     dt_to_iso(now),
                     case_id,
@@ -649,8 +804,12 @@ class ReferenceStore:
                 "SELECT * FROM ref_ambiguity_case WHERE case_id = ?",
                 (case_id,),
             ).fetchone()
-        assert row2 is not None
-        return self._row_to_ambiguity(row2)
+            if row2 is None:
+                raise ReferenceResolutionError(
+                    "ambiguity case vanished after update",
+                    context={"case_id": case_id},
+                )
+            return self._row_to_ambiguity(row2)
 
     def supersede_alias(
         self,
@@ -666,8 +825,9 @@ class ReferenceStore:
     ) -> AliasRecord:
         """Atomic knowledge-time correction: close prior known_to, insert replacement.
 
-        Historical as-of queries with knowledge_time before close_known_at still
-        see the prior row; later knowledge sees the replacement.
+        Replacement ``known_from`` must equal ``close_known_at`` (contiguous half-open
+        knowledge windows: no gap, no overlap). Historical as-of queries with
+        knowledge_time before close_known_at still see the prior row.
         """
         close_at = ensure_utc(close_known_at)
         with self._atomic():
@@ -689,17 +849,13 @@ class ReferenceStore:
                     "close_known_at must be > prior known_from",
                     context={"close_known_at": dt_to_iso(close_at)},
                 )
-            # Close prior open known_to
-            self._conn.execute(
-                "UPDATE ref_alias SET known_to = ? WHERE alias_id = ?",
-                (dt_to_iso(close_at), alias_id),
-            )
-            # Build replacement
-            text = (new_alias_text or prior.alias_text).strip()
+            # Build and fully validate replacement before mutating prior.
+            text = (new_alias_text if new_alias_text is not None else prior.alias_text).strip()
+            if not text:
+                raise ReferenceValidationError("alias_text must be non-empty")
             norm = normalize_alias(text)
-            tkind = new_target_kind or prior.target_kind
-            tid = new_target_id or prior.target_id
-            self._assert_target_exists(tkind, tid)
+            tkind = new_target_kind if new_target_kind is not None else prior.target_kind
+            tid = new_target_id if new_target_id is not None else prior.target_id
             if new_window is not None:
                 window = new_window
             else:
@@ -709,9 +865,26 @@ class ReferenceStore:
                     known_from=close_at,
                     known_to=None,
                 )
+            self._require_contiguous_knowledge_supersession(
+                close_at=close_at, window=window, label="alias"
+            )
             conf = prior.confidence if new_confidence is None else new_confidence
+            if not (0.0 <= conf <= 1.0):
+                raise ReferenceValidationError("confidence must be in [0, 1]")
             evid = dict(new_evidence) if new_evidence is not None else dict(prior.evidence)
-            evid = {**evid, "supersedes_alias_id": alias_id}
+            evid = {
+                **evid,
+                "supersedes_alias_id": alias_id,
+                "knowledge_correction_at": dt_to_iso(close_at),
+            }
+            self._assert_target_exists(tkind, tid)
+            if prior.venue_id is not None:
+                self._require_venue(prior.venue_id)
+            # Close prior first so same-scope collision ignores closed known window.
+            self._conn.execute(
+                "UPDATE ref_alias SET known_to = ? WHERE alias_id = ?",
+                (dt_to_iso(close_at), alias_id),
+            )
             self._assert_no_alias_collision(norm, prior.venue_id, window, tkind, tid)
             new_id = fingerprint(
                 "als",
@@ -745,18 +918,18 @@ class ReferenceStore:
                     1 if prior.is_primary else 0,
                 ),
             )
-        return AliasRecord(
-            new_id,
-            text,
-            norm,
-            tkind,
-            tid,
-            window,
-            prior.venue_id,
-            conf,
-            evid,
-            prior.is_primary,
-        )
+            return AliasRecord(
+                new_id,
+                text,
+                norm,
+                tkind,
+                tid,
+                window,
+                prior.venue_id,
+                conf,
+                evid,
+                prior.is_primary,
+            )
 
     # ---- as-of resolution -------------------------------------------------
 
@@ -769,11 +942,29 @@ class ReferenceStore:
         venue_id: str | None = None,
         queue_if_ambiguous: bool = True,
     ) -> ResolutionResult:
-        """Resolve alias at decision_time under knowledge_time (both required)."""
+        """Resolve alias at decision_time under knowledge_time (both required).
+
+        Persisted manual decisions for the same (norm, venue, decision, knowledge)
+        key take precedence: RESOLVED returns the validated target and lineage;
+        REJECTED / DEFERRED return typed outcomes and never requeue. Only
+        undecided (missing or QUEUED) cases may enter the queue path.
+        """
         d = ensure_utc(decision_time)
         k = ensure_utc(knowledge_time)
         text = alias_text.strip()
         norm = normalize_alias(text)
+        case_key = self._ambiguity_case_id(
+            alias_text_norm=norm,
+            venue_id=venue_id,
+            decision_time=d,
+            knowledge_time=k,
+        )
+        decided = self._load_ambiguity_case(case_key)
+        if decided is not None and decided.status is not AmbiguityStatus.QUEUED:
+            return self._result_from_decided_case(
+                decided, alias_text=text, alias_text_norm=norm, decision_time=d, knowledge_time=k
+            )
+
         pred = _window_active_sql("valid_from", "valid_to", "known_from", "known_to")
         params: dict[str, Any] = {
             "norm": norm,
@@ -804,6 +995,7 @@ class ReferenceStore:
                 alias_text_norm=norm,
                 decision_time=d,
                 knowledge_time=k,
+                case_id=decided.case_id if decided is not None else None,
                 evidence={"reason": "no_active_alias"},
             )
         # Distinct targets among active matches
@@ -820,9 +1012,25 @@ class ReferenceStore:
                 target_id=best.target_id,
                 confidence=best.confidence,
                 candidates=records,
+                case_id=decided.case_id if decided is not None else None,
                 evidence=dict(best.evidence),
             )
-        # Ambiguous — optional queue
+        # Ambiguous — never requeue an already-decided or already-queued case.
+        if decided is not None and decided.status is AmbiguityStatus.QUEUED:
+            return ResolutionResult(
+                outcome=ResolutionOutcome.QUEUED,
+                alias_text=text,
+                alias_text_norm=norm,
+                decision_time=d,
+                knowledge_time=k,
+                candidates=records,
+                case_id=decided.case_id,
+                evidence={
+                    "reason": "multiple_targets",
+                    "target_count": len(targets),
+                    "status": AmbiguityStatus.QUEUED.value,
+                },
+            )
         case_id = None
         outcome = ResolutionOutcome.AMBIGUOUS
         if queue_if_ambiguous:
@@ -836,6 +1044,7 @@ class ReferenceStore:
                         "target_kind": r.target_kind.value,
                         "target_id": r.target_id,
                         "confidence": r.confidence,
+                        "venue_id": r.venue_id,
                     }
                     for r in records
                 ],
@@ -965,6 +1174,12 @@ class ReferenceStore:
         target_kind: TargetKind,
         target_id: str,
     ) -> None:
+        """Reject same-scope silent collisions independent of insertion order.
+
+        Scope is exact venue match (including both NULL for global aliases).
+        Global vs venue-scoped rows with different targets are not rejected
+        here; ``resolve_alias`` surfaces them as ambiguity for manual resolution.
+        """
         vf = dt_to_iso(window.valid_from)
         vt = dt_to_iso(window.valid_to) if window.valid_to else None
         kf = dt_to_iso(window.known_from)
@@ -973,10 +1188,10 @@ class ReferenceStore:
             venue_pred = "venue_id IS NULL"
             params: list[Any] = [norm, vt, vf, kt, kf]
         else:
-            venue_pred = "(venue_id = ? OR venue_id IS NULL)"
+            venue_pred = "venue_id = ?"
             params = [norm, venue_id, vt, vf, kt, kf]
         sql = f"""
-            SELECT alias_id, target_kind, target_id FROM ref_alias
+            SELECT alias_id, target_kind, target_id, venue_id FROM ref_alias
             WHERE alias_text_norm = ?
               AND {venue_pred}
               AND valid_from < COALESCE(?, '9999-12-31T00:00:00Z')
@@ -990,11 +1205,191 @@ class ReferenceStore:
                     "silent alias collision with different target",
                     context={
                         "alias_text_norm": norm,
+                        "venue_id": venue_id,
                         "existing_alias_id": row["alias_id"],
                         "existing_target": f"{row['target_kind']}:{row['target_id']}",
                         "new_target": f"{target_kind.value}:{target_id}",
                     },
                 )
+
+    @staticmethod
+    def _require_contiguous_knowledge_supersession(
+        *,
+        close_at: datetime,
+        window: BiTemporalWindow,
+        label: str,
+    ) -> None:
+        """Replacement known_from must equal prior close instant (no gap/overlap)."""
+        if window.known_from != close_at:
+            raise ReferenceValidationError(
+                f"{label} replacement known_from must equal close_known_at "
+                "(contiguous knowledge-time supersession)",
+                context={
+                    "close_known_at": dt_to_iso(close_at),
+                    "known_from": dt_to_iso(window.known_from),
+                },
+            )
+        if window.known_to is not None and window.known_to <= window.known_from:
+            raise ReferenceValidationError(
+                f"{label} replacement known_to must be > known_from",
+                context={
+                    "known_from": dt_to_iso(window.known_from),
+                    "known_to": dt_to_iso(window.known_to),
+                },
+            )
+
+    @staticmethod
+    def _ambiguity_case_id(
+        *,
+        alias_text_norm: str,
+        venue_id: str | None,
+        decision_time: datetime,
+        knowledge_time: datetime,
+    ) -> str:
+        return fingerprint(
+            "amb",
+            {
+                "alias_text_norm": alias_text_norm,
+                "venue_id": venue_id,
+                "decision_time": dt_to_iso(ensure_utc(decision_time)),
+                "knowledge_time": dt_to_iso(ensure_utc(knowledge_time)),
+            },
+        )
+
+    def _load_ambiguity_case(self, case_id: str) -> AmbiguityCase | None:
+        row = self._conn.execute(
+            "SELECT * FROM ref_ambiguity_case WHERE case_id = ?",
+            (case_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_ambiguity(row)
+
+    def _assert_resolution_target_allowed(
+        self,
+        case: AmbiguityCase,
+        target_kind: TargetKind,
+        target_id: str,
+    ) -> None:
+        """Candidate membership + existence + semantic compatibility (in-unit)."""
+        if not self._candidate_contains(case.candidates, target_kind, target_id):
+            raise ReferenceResolutionError(
+                "resolution target is not in the stored candidate set",
+                context={
+                    "case_id": case.case_id,
+                    "target_kind": target_kind.value,
+                    "target_id": target_id,
+                },
+            )
+        self._assert_target_exists(target_kind, target_id)
+        if target_kind is TargetKind.INSTRUMENT and case.venue_id is not None:
+            row = self._conn.execute(
+                "SELECT venue_id FROM ref_instrument WHERE instrument_id = ?",
+                (target_id,),
+            ).fetchone()
+            if row is None:
+                raise ReferenceNotFoundError(
+                    "instrument not found",
+                    context={"instrument_id": target_id},
+                )
+            if row["venue_id"] != case.venue_id:
+                raise ReferenceResolutionError(
+                    "resolution instrument venue is incompatible with ambiguity case venue",
+                    context={
+                        "case_id": case.case_id,
+                        "case_venue_id": case.venue_id,
+                        "instrument_venue_id": row["venue_id"],
+                        "target_id": target_id,
+                    },
+                )
+
+    @staticmethod
+    def _candidate_contains(
+        candidates: Sequence[Mapping[str, Any]],
+        target_kind: TargetKind,
+        target_id: str,
+    ) -> bool:
+        for c in candidates:
+            ck = c.get("target_kind")
+            ci = c.get("target_id")
+            if ci != target_id:
+                continue
+            if ck is None:
+                continue
+            if isinstance(ck, TargetKind):
+                if ck is target_kind:
+                    return True
+            elif str(ck) == target_kind.value:
+                return True
+        return False
+
+    def _result_from_decided_case(
+        self,
+        case: AmbiguityCase,
+        *,
+        alias_text: str,
+        alias_text_norm: str,
+        decision_time: datetime,
+        knowledge_time: datetime,
+    ) -> ResolutionResult:
+        """Map a non-QUEUED ambiguity decision into a typed resolution result."""
+        lineage = {
+            "source": "manual_resolution",
+            "case_id": case.case_id,
+            "status": case.status.value,
+            "resolution_note": case.resolution_note,
+            "candidates": list(case.candidates),
+            "updated_at": dt_to_iso(case.updated_at),
+        }
+        if case.status is AmbiguityStatus.RESOLVED:
+            if (
+                case.resolution_target_kind is None
+                or case.resolution_target_id is None
+            ):
+                raise ReferenceResolutionError(
+                    "RESOLVED ambiguity case missing resolution target",
+                    context={"case_id": case.case_id},
+                )
+            # Re-validate existence at query time (target may have been removed).
+            self._assert_target_exists(
+                case.resolution_target_kind, case.resolution_target_id
+            )
+            return ResolutionResult(
+                outcome=ResolutionOutcome.RESOLVED,
+                alias_text=alias_text,
+                alias_text_norm=alias_text_norm,
+                decision_time=decision_time,
+                knowledge_time=knowledge_time,
+                target_kind=case.resolution_target_kind,
+                target_id=case.resolution_target_id,
+                confidence=1.0,
+                case_id=case.case_id,
+                evidence=lineage,
+            )
+        if case.status is AmbiguityStatus.REJECTED:
+            return ResolutionResult(
+                outcome=ResolutionOutcome.REJECTED,
+                alias_text=alias_text,
+                alias_text_norm=alias_text_norm,
+                decision_time=decision_time,
+                knowledge_time=knowledge_time,
+                case_id=case.case_id,
+                evidence=lineage,
+            )
+        if case.status is AmbiguityStatus.DEFERRED:
+            return ResolutionResult(
+                outcome=ResolutionOutcome.DEFERRED,
+                alias_text=alias_text,
+                alias_text_norm=alias_text_norm,
+                decision_time=decision_time,
+                knowledge_time=knowledge_time,
+                case_id=case.case_id,
+                evidence=lineage,
+            )
+        raise ReferenceResolutionError(
+            "unexpected ambiguity status in decided path",
+            context={"case_id": case.case_id, "status": case.status.value},
+        )
 
     def _row_to_alias(self, row: sqlite3.Row) -> AliasRecord:
         window = BiTemporalWindow(

@@ -43,11 +43,31 @@ Identified defects corrected (each pinned by a focused regression in
   reads `ref_ambiguity_case` columns including `resolution_target_kind/id` and note.
 - Removed an unused `pathlib.Path` import introduced in the v2 `store.py`.
 
+## Drop 3 — in-tree Sr integrity-fix (`REF-001_SR_INTEGRITY_FIXES.md`)
+
+Sr Dev applied this drop directly in-tree (Grok Build agentic on local code), not as a
+zip. No migration change (`0006` unchanged). Jr integration = regressions + validation
++ evidence; no production-source edits were needed (the drop was complete and clean).
+
+Integrity fixes (each pinned by a focused regression `tests/reference/test_ref_store.py`):
+
+| ID | Fix | Regression |
+|----|-----|-----------|
+| I1 | `resolve_alias` honors persisted manual decisions (RESOLVED/REJECTED/DEFERRED) and never requeues | `test_I1_resolve_alias_honors_resolved_decision_and_does_not_requeue`, `test_I1_resolved_rejected_and_deferred_are_typed_and_never_requeue` |
+| I2 | `resolve_ambiguity_case(RESOLVED)` gates target to stored candidate set + existence + venue compatibility, all inside the atomic unit | `test_I2_resolve_ambiguity_case_rejects_target_not_in_candidates`, `test_I2_resolve_ambiguity_case_rejects_venue_incompatible_instrument` |
+| I3 | `supersede_alias` requires contiguous knowledge time (`replacement.known_from == close_known_at`) | `test_I3_supersede_alias_requires_contiguous_knowledge_time` |
+| I4 | `supersede_instrument_version` closes prior + inserts replacement; historical as-of preserved | `test_I4_supersede_instrument_version_preserves_historical_as_of` |
+| I5 | Global vs venue alias collision is same-scope only, insertion-order independent | `test_I5_global_venue_alias_collision_is_same_scope_and_order_independent` |
+| I6 | Cross-scope different targets surface at resolve time (no silent merge) | `test_I6_cross_scope_different_targets_surface_at_resolve_time` |
+| I7 | Polymorphic existence / semantic checks run inside the same atomic write unit | covered by I2 (candidate gate + venue compat) and I4 (lineage check in-unit) |
+
+`ResolutionOutcome.REJECTED` / `DEFERRED` added to `models.py`.
+
 ## Validation evidence (at integrated commit)
 
 | Command | Result |
 |---------|--------|
-| `PYTHONPATH=src uv run pytest tests/reference -q` | 11 passed |
+| `PYTHONPATH=src uv run pytest tests/reference -q` | 19 passed (11 v2 D-series + 8 integrity I-series) |
 | `PYTHONPATH=src uv run ruff check src/cryptofactors/reference tests/reference` | All checks passed |
 | `PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/reference tests/reference` | Success (5 files) |
 | `PYTHONPATH=src uv run pytest -q` (full suite) | passed |

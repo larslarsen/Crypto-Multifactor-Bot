@@ -65,6 +65,9 @@ class ResolutionOutcome(str, Enum):
     AMBIGUOUS = "AMBIGUOUS"
     UNRESOLVED = "UNRESOLVED"
     QUEUED = "QUEUED"
+    # Persisted manual ambiguity decisions surfaced by resolve_alias().
+    REJECTED = "REJECTED"
+    DEFERRED = "DEFERRED"
 
 
 # Fixed-width lexicographically sortable UTC: YYYY-MM-DDTHH:MM:SS.ffffffZ
