@@ -1,31 +1,25 @@
 # CURRENT_TASK
 
-Ticket: BYB-001
-State: ACCEPTED
+Ticket: EVD-001
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
-Accepted dependencies: RAW-001, MAN-001, REF-001, AUD-003, and BAR-001.
+Accepted dependency: CAT-001. The experiment identity contract requires readiness review.
 Governing documents:
-- tickets/BYB-001.md
-- docs/reviews/BYB-001_SR_SOURCE_TASK.md
-- docs/reviews/REVIEW-0044_BYB-001_SOURCE_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0045_BYB-001_SOURCE_FINAL_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0046_BYB-001_SOURCE_CORRECTNESS_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0047_BYB-001_SOURCE_FINAL_CORRECTIONS_REQUIRED.md
-- docs/reviews/REVIEW-0048_BYB-001_SOURCE_APPROVED_JR_AUTHORIZED.md
-- docs/reviews/REVIEW-0049_BYB-001_INTEGRATION_PUBLICATION_REQUIRED.md
-- docs/reviews/REVIEW-0050_BYB-001_ACCEPTED.md
-- docs/reviews/BYB-001_CHANGE_REPORT.md
+- tickets/EVD-001.md
+- docs/reviews/EVD-001_JR_READINESS_TASK.md
+- docs/reviews/EVD-001_READINESS_REPORT.md
 
 ## Authorized work (complete)
 
-BYB-001 Jr integration, all six acceptance gates, REVIEW-0049 publication correction, and
-REVIEW-0050 acceptance/closing records (ticket Decision, backlog, README, handoff) are committed
-and pushed. Do not change or rerun accepted source/tests. Exclude `.stale/`.
+Records-only EVD-001 readiness audit: created `docs/reviews/EVD-001_READINESS_REPORT.md`
+(identity/versioning rules present, migration-0002 invariants, proposed module/API/CLI surface,
+deterministic hash/append-only/snapshot/export/seed contracts, acceptance matrix + ordered
+commands, layer boundaries, excluded scope, security risks, authorization recommendation).
+Updated activation/status records. No production source, tests, migrations, or schemas.
 
 ## Stop condition
 
-All BYB-001 work for Jr Dev - Hermes is complete and pushed. Ticket is ACCEPTED under
-REVIEW-0050. Next ticket authorized: NONE. Next required actor: Reviewer. Awaiting further
-authorization; no Jr work remains.
+After pushing the readiness report and records, EVD-001 is `AWAITING_REVIEW` with the reviewer as
+next actor. Production implementation and the next ticket remain unauthorized.
