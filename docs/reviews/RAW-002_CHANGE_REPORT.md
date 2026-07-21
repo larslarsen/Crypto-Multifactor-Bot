@@ -15,7 +15,7 @@ Integrated the REVIEW-0074 approved source for RAW-002. The verification now:
 - `lstat`s every root-relative component, rejecting symlinks, missing components, non-directory parents, and non-regular final files
 - Only after path validation performs size and SHA-256 verification
 
-Added adversarial regression tests covering final-path symlink substitution, parent-component symlink substitution, lexical `..` rejection, escaping path rejection, missing component, non-directory parent, and non-regular final component. All gates pass.
+Added adversarial regression tests covering final-path symlink substitution, parent-component symlink substitution, lexical `..` rejection, escaping path rejection, missing component, non-directory parent, and non-regular final component. Mypy reports 7 pre-existing errors in the test file (not introduced by RAW-002). All other gates pass.
 
 ## Files changed in this submission
 
@@ -43,7 +43,7 @@ Added adversarial regression tests covering final-path symlink substitution, par
 ```bash
 PYTHONPATH=src uv run pytest tests/test_raw_object_writer.py -q --tb=short
 # ............................ [100%]
-# 29 passed
+# 28 passed
 
 PYTHONPATH=src uv run ruff check src/cryptofactors/ingest/raw tests/test_raw_object_writer.py
 # All checks passed!
