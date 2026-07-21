@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FX-001.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETED
+**Status:** INCOMPLETE - REVIEW-0080 CORRECTION REQUIRED
 **Next ticket:** `NONE`
 
 ## Assignment

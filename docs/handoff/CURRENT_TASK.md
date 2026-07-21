@@ -16,13 +16,15 @@ Governing documents:
 - docs/reviews/REVIEW-0079_FX-001_JR_READINESS_AUTHORIZED.md
 - docs/reviews/FX-001_JR_READINESS_TASK.md
 - docs/reviews/FX-001_READINESS_REPORT.md
+- docs/reviews/REVIEW-0080_FX-001_READINESS_CHANGES_REQUIRED.md
+- docs/reviews/FX-001_JR_READINESS_CORRECTION_TASK.md
 
 ## Authorized work
 
-FX-001 readiness report published under `docs/reviews/FX-001_READINESS_REPORT.md`. Awaiting reviewer
-acceptance. Next ticket authorized: `NONE`.
+FX-001 corrected readiness report published. Awaiting reviewer acceptance. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing the readiness report, set FX-001 to `AWAITING_REVIEW`, name Reviewer as next actor,
-and retain `Next ticket authorized: NONE`. Do not begin implementation or another ticket.
+After publishing the corrected readiness report, set FX-001 to `AWAITING_REVIEW`, name Reviewer as
+next actor, and retain `Next ticket authorized: NONE`. Do not begin implementation or another
+ticket.
