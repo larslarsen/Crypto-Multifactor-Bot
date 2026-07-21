@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: AUD-005
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -22,13 +22,16 @@ Governing documents:
 - docs/reviews/REVIEW-0068_AUD-005_SOURCE_APPROVED_JR_AUTHORIZED.md
 - docs/reviews/AUD-005_JR_INTEGRATION_TASK.md
 - docs/reviews/AUD-005_CHANGE_REPORT.md
+- docs/reviews/REVIEW-0069_AUD-005_ACCEPTED.md
+- docs/reviews/AUD-005_JR_ACCEPTANCE_PUBLICATION_TASK.md
 
 ## Authorized work
 
-AUD-005 integration is complete. The published repository contains the approved source, corrected
-research evidence, regenerated audit outputs, and review-ready records.
+AUD-005 is accepted under REVIEW-0069. Jr Dev - Hermes is authorized under
+`docs/reviews/AUD-005_JR_ACCEPTANCE_PUBLICATION_TASK.md` to publish acceptance, close ticket
+records, commit, and push. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-Return control to Reviewer with AUD-005 `AWAITING_REVIEW` and `Next ticket authorized: NONE`.
-Do not begin another ticket.
+After publishing acceptance and closing records, leave no pending Jr work and retain
+`Next ticket authorized: NONE`. Do not begin another ticket.

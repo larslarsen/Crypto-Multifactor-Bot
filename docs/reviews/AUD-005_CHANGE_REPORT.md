@@ -1,9 +1,9 @@
 # AUD-005 — Change Report: provider-candle comparison by explicit comparable dimensions
 
 **Ticket:** AUD-005
-**State:** AWAITING_REVIEW
+**State:** ACCEPTED
 **Next ticket authorized:** NONE
-**Next required actor:** Reviewer
+**Next required actor:** None
 
 ## Summary
 
