@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/RAW-002.md`
 **Actor:** Jr Dev - Hermes
-**Status:** AUTHORIZED - RECORDS AND PUBLICATION
+**Status:** COMPLETED
 **Next ticket:** `NONE`
 
 ## Assignment
