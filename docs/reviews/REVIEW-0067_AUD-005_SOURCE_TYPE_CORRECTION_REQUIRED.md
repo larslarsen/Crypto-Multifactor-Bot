@@ -1,8 +1,8 @@
 # REVIEW-0067 - AUD-005 SOURCE TYPE CORRECTION REQUIRED
 
 **Ticket:** AUD-005 - Provider-candle comparison by explicit comparable dimensions
-**Status:** CHANGES_REQUIRED - RESOLVED BY REVIEW-0068
-**Next required actor:** Jr Dev - Hermes, then Sr Dev - Sandbox
+**Status:** RESOLVED - CORRECTED AND APPROVED BY REVIEW-0068
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 
@@ -26,3 +26,6 @@ matches a dimension to bypass the intended type contract.
 - Preserve every other REVIEW-0066 source behavior unchanged.
 
 The local source assignment is `docs/reviews/AUD-005_SR_SOURCE_CORRECTION_TASK.md`.
+
+**Resolution:** The type-collection correction was completed, the source was approved under
+REVIEW-0068 and integrated under REVIEW-0069. AUD-005 is closed.

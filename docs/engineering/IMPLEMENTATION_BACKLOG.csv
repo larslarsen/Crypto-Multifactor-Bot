@@ -11,3 +11,4 @@ BYB-001,P0,ingest/market,Bybit public trade-archive normalizer (conditional cros
 EVD-001,P1,evidence,Operational Evidence Registry,CAT-001;experiment identity,NON_BLOCKING_FOR_DATA,ACCEPTED
 AUD-004,P2,source-audit/archive-precision,Native headerless support for Binance precision comparator,AUD-002,NON_BLOCKING,ACCEPTED
 AUD-005,P2,source-audit/bar-reconstruction,Provider-candle comparison by explicit comparable dimensions,AUD-002,NON_BLOCKING,ACCEPTED
+RAW-002,P3,ingest/catalog,Harden publication-receipt verification against symlink substitution,RAW-001,NON_BLOCKING,IN_PROGRESS
