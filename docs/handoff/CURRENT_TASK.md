@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: AUD-004
-State: BLOCKED
+State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Sr Dev - Sandbox
 
 Accepted dependency: AUD-002 (`ACCEPTED` at `899fb7c802dc4ba9b951118598417aef6d22cdcb`).
 Governing documents:
@@ -20,17 +20,17 @@ Governing documents:
 - docs/reviews/AUD-004_JR_INTEGRATION_TASK.md
 - docs/reviews/REVIEW-0060_AUD-004_INTEGRATION_EVIDENCE_REQUIRED.md
 - docs/reviews/AUD-004_JR_FINAL_EVIDENCE_TASK.md
+- docs/reviews/REVIEW-0061_AUD-004_RUNNER_SERIALIZATION_REQUIRED.md
+- docs/reviews/AUD-004_SR_RUNNER_SOURCE_TASK.md
+- docs/reviews/AUD-004_JR_REVIEW0061_PUBLICATION_TASK.md
 
 ## Authorized work
 
-Completed in this cycle: strengthened malformed-rate regression per REVIEW-0060; full
-suite produced truthful evidence with two categories of test outcome:
-focused AUD-004 tests 12 passed; sprint003 runner subset 5 setup errors from a
-production-source `SerializationError: float is not supported; use Decimal` in
-`source_audit/serialization.py`. Environment `/tmp/crypto_source_audit` is present.
+Jr Dev - Hermes owns the control-plane publication for REVIEW-0061 and its Sr runner-source task.
+Sr Dev - Sandbox supplies a local runner-source drop after this publication. Reviewer inspects it
+locally. Jr Dev - Hermes later integrates and publishes full-suite evidence after reviewer source
+approval.
 
 ## Stop condition
 
-Stopped at reviewer gate. Full suite cannot be reported as passing because
-sprint003 runner setup fails in a production-source defect unrelated to AUD-004.
-Do not begin the next ticket.
+After publishing the control records, retain `Next ticket authorized: NONE`. Do not begin the next ticket.
