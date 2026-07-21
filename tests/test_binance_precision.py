@@ -23,18 +23,33 @@ def _zip_csv(path: Path, member: str, header: str | None, rows: list[str]) -> No
         zf.writestr(member, body.encode("utf-8"))
 
 
-def _headerless_rows(unit: str, count: int = 7) -> list[str]:
+def _headerless_agg_rows(unit: str, count: int = 7) -> list[str]:
     # aggTrades-like: id,price,quantity,firstTradeId,lastTradeId,time,isBuyerMaker,ignore
-    # klines-like: openTime,open,high,low,close,volume,closeTime,assetVolume,trades,takerBuyBase,takerBuyQuote,ignore
     if unit == "s":
         time_base = 1_735_689_600
     elif unit == "ms":
         time_base = 1_735_689_600_000
     else:
         time_base = 1_735_689_600_000_000
-    if unit in ("s", "ms"):
-        return [f"{i},{100 + i},{1 + i},{1},{1},{time_base + i},False,False" for i in range(1, count + 1)]
-    return [f"{i},{100 + i},{1 + i},{1},{1},{time_base + i},{1},{1},{1},{1},{1},False" for i in range(1, count + 1)]
+    return [
+        f"{i},{100 + i},{1 + i},{1},{1},{time_base + i},False,False"
+        for i in range(1, count + 1)
+    ]
+
+
+def _headerless_kline_rows(unit: str, count: int = 7) -> list[str]:
+    # klines-like: openTime,open,high,low,close,volume,closeTime,assetVolume,trades,
+    #              takerBuyBase,takerBuyQuote,ignore
+    if unit == "s":
+        time_base = 1_735_689_600
+    elif unit == "ms":
+        time_base = 1_735_689_600_000
+    else:
+        time_base = 1_735_689_600_000_000
+    return [
+        f"{time_base + i},100,101,99,100,1000,{time_base + i + 1},50,5000,1,1,False"
+        for i in range(1, count + 1)
+    ]
 
 
 def _bounds() -> tuple[datetime, datetime]:
@@ -118,8 +133,8 @@ def test_single_valid_row_does_not_support_transition(tmp_path: Path) -> None:
 def test_headerless_supports_transition_agg_trades(tmp_path: Path) -> None:
     a = tmp_path / "a.zip"
     b = tmp_path / "b.zip"
-    _zip_csv(a, "old.csv", None, _headerless_rows("s"))
-    _zip_csv(b, "new.csv", None, _headerless_rows("ms"))
+    _zip_csv(a, "old.csv", None, _headerless_agg_rows("s"))
+    _zip_csv(b, "new.csv", None, _headerless_agg_rows("ms"))
     min_utc, max_utc = _bounds()
     result = compare_binance_archive_precision(
         a,
@@ -144,13 +159,13 @@ def test_headerless_supports_transition_agg_trades(tmp_path: Path) -> None:
 def test_headerless_no_transition_when_same_unit_klines(tmp_path: Path) -> None:
     a = tmp_path / "a.zip"
     b = tmp_path / "b.zip"
-    _zip_csv(a, "old.csv", None, _headerless_rows("us"))
-    _zip_csv(b, "new.csv", None, _headerless_rows("us"))
+    _zip_csv(a, "old.csv", None, _headerless_kline_rows("us"))
+    _zip_csv(b, "new.csv", None, _headerless_kline_rows("us"))
     min_utc, max_utc = _bounds()
     result = compare_binance_archive_precision(
         a,
         b,
-        timestamp_column=5,
+        timestamp_column=0,
         timestamp_min_utc=min_utc,
         timestamp_max_utc=max_utc,
         has_header=False,
@@ -169,8 +184,8 @@ def test_headerless_no_transition_when_same_unit_klines(tmp_path: Path) -> None:
 def test_headerless_string_column_rejected(tmp_path: Path) -> None:
     a = tmp_path / "a.zip"
     b = tmp_path / "b.zip"
-    _zip_csv(a, "a.csv", None, _headerless_rows("ms"))
-    _zip_csv(b, "b.csv", None, _headerless_rows("ms"))
+    _zip_csv(a, "a.csv", None, _headerless_agg_rows("ms"))
+    _zip_csv(b, "b.csv", None, _headerless_agg_rows("ms"))
     min_utc, max_utc = _bounds()
     with pytest.raises(PrecisionComparisonError, match="provide an integer column index"):
         compare_binance_archive_precision(
@@ -189,8 +204,8 @@ def test_headerless_string_column_rejected(tmp_path: Path) -> None:
 def test_headerless_out_of_range_index_rejected(tmp_path: Path) -> None:
     a = tmp_path / "a.zip"
     b = tmp_path / "b.zip"
-    _zip_csv(a, "a.csv", None, _headerless_rows("ms"))
-    _zip_csv(b, "b.csv", None, _headerless_rows("ms"))
+    _zip_csv(a, "a.csv", None, _headerless_agg_rows("ms"))
+    _zip_csv(b, "b.csv", None, _headerless_agg_rows("ms"))
     min_utc, max_utc = _bounds()
     with pytest.raises(PrecisionComparisonError, match="out of range"):
         compare_binance_archive_precision(
@@ -239,13 +254,13 @@ def test_headerless_prefix_sample_when_full_member_exceeds_bound(tmp_path: Path)
     """
     a = tmp_path / "a.zip"
     b = tmp_path / "b.zip"
-    # ~80-byte rows * 200 ≈ 16KB of CSV — above a 2KB extract bound.
     pad = "x" * 40
     rows_s = [
         f"{i},100,1,1,1,{1_735_689_600 + i},False,{pad}" for i in range(1, 201)
     ]
     rows_ms = [
-        f"{i},100,1,1,1,{1_735_689_600_000 + i},False,{pad}" for i in range(1, 201)
+        f"{i},100,1,1,1,{1_735_689_600_000 + i * 1000},False,{pad}"
+        for i in range(1, 201)
     ]
     _zip_csv(a, "old.csv", None, rows_s)
     _zip_csv(b, "new.csv", None, rows_ms)
@@ -276,8 +291,6 @@ def test_headed_integer_index_uses_schema_length(tmp_path: Path) -> None:
     """Headed path must keep schema-length bounds for integer timestamp_column."""
     a = tmp_path / "a.zip"
     b = tmp_path / "b.zip"
-    # Schema has 3 columns; first data row intentionally short (2 fields).
-    # Index 2 is in schema range; short rows are counted malformed, not rejected upfront.
     rows = ["1,1735689600000", "2,1735689600001,100", "3,1735689600002,101",
             "4,1735689600003,102", "5,1735689600004,103", "6,1735689600005,104",
             "7,1735689600006,105"]
@@ -298,3 +311,93 @@ def test_headed_integer_index_uses_schema_length(tmp_path: Path) -> None:
     assert result.schema_a == ("id", "time", "price")
     assert result.inferred_unit_a == "ms"
     assert result.valid_inferences_a >= 5
+
+
+def test_headerless_short_first_row_counts_malformed(tmp_path: Path) -> None:
+    """Reviewer constraint: max_malformed_rate must govern the transition decision.
+
+    Within the configured limit the comparison supports the timestamp-precision
+    transition. Beyond a stricter limit it must reject. Malformed counts and
+    sampled-row counts are asserted for both archives.
+    """
+    a = tmp_path / "a.zip"
+    b = tmp_path / "b.zip"
+    valid_rows_a = [
+        f"{i},100,1,1,1,{1_735_689_600 + i},False,False"
+        for i in range(1, 11)
+    ]
+    rows_a = ["1,100"] + valid_rows_a
+    _zip_csv(a, "a.csv", None, rows_a)
+    valid_rows_b = [
+        f"{i},{100 + i},{1 + i},{1},{1},{1_735_689_600_000_000 + i},False,False"
+        for i in range(1, 11)
+    ]
+    _zip_csv(b, "b.csv", None, ["X"] + valid_rows_b)
+    min_utc, max_utc = _bounds()
+    result_pass = compare_binance_archive_precision(
+        a,
+        b,
+        timestamp_column=5,
+        timestamp_min_utc=min_utc,
+        timestamp_max_utc=max_utc,
+        has_header=False,
+        member_a="a.csv",
+        member_b="b.csv",
+        min_valid_inferences=5,
+        max_malformed_rate=0.2,
+    )
+    assert result_pass.schema_a == ()
+    assert result_pass.malformed_a == 1
+    assert result_pass.sampled_rows_a == 11
+    assert result_pass.valid_inferences_a >= 5
+    assert result_pass.supports_timestamp_precision_transition is True
+    result_block = compare_binance_archive_precision(
+        a,
+        b,
+        timestamp_column=5,
+        timestamp_min_utc=min_utc,
+        timestamp_max_utc=max_utc,
+        has_header=False,
+        member_a="a.csv",
+        member_b="b.csv",
+        min_valid_inferences=5,
+        max_malformed_rate=0.05,
+    )
+    assert result_block.supports_timestamp_precision_transition is False
+    assert "max_malformed_rate" in result_block.transition_rationale
+
+
+def test_headerless_real_kline_layout_valid_index_selection(tmp_path: Path) -> None:
+    """Real 12-column Binance kline layout; timestamp index 0 or 6 must be valid."""
+    a = tmp_path / "a.zip"
+    b = tmp_path / "b.zip"
+    _zip_csv(a, "BTCUSDT-1m-2025-01-01.csv", None, _headerless_kline_rows("ms"))
+    _zip_csv(b, "BTCUSDT-1m-2025-01-02.csv", None, _headerless_kline_rows("ms"))
+    min_utc, max_utc = _bounds()
+    result = compare_binance_archive_precision(
+        a,
+        b,
+        timestamp_column=0,
+        timestamp_min_utc=min_utc,
+        timestamp_max_utc=max_utc,
+        has_header=False,
+        member_a="BTCUSDT-1m-2025-01-01.csv",
+        member_b="BTCUSDT-1m-2025-01-02.csv",
+        min_valid_inferences=5,
+    )
+    assert result.schema_a == ()
+    assert result.sampled_rows_a >= 5
+    assert result.inferred_unit_a == "ms"
+    result6 = compare_binance_archive_precision(
+        a,
+        b,
+        timestamp_column=6,
+        timestamp_min_utc=min_utc,
+        timestamp_max_utc=max_utc,
+        has_header=False,
+        member_a="BTCUSDT-1m-2025-01-01.csv",
+        member_b="BTCUSDT-1m-2025-01-02.csv",
+        min_valid_inferences=5,
+    )
+    assert result6.sampled_rows_a >= 5
+    assert result6.inferred_unit_a == "ms"

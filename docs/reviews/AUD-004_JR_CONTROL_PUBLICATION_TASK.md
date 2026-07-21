@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/AUD-004.md`
 **Actor:** Jr Dev - Hermes
-**Status:** AUTHORIZED - RECORDS AND PUBLICATION
+**Status:** COMPLETED - CONTROL RECORDS PUBLISHED
 **Next ticket:** `NONE`
 
 ## Assignment

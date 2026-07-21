@@ -21,17 +21,16 @@ Governing documents:
 - docs/reviews/REVIEW-0060_AUD-004_INTEGRATION_EVIDENCE_REQUIRED.md
 - docs/reviews/AUD-004_JR_FINAL_EVIDENCE_TASK.md
 
-## Blocker
+## Authorized work
 
-Sprint-003 runner cannot run in this environment:
-1. `ModuleNotFoundError: No module named 'httpx'`
-2. Runtime `SerializationError: float is not supported; use Decimal for numeric values | context={'value': '0.1'}` in `src/source_audit/serialization.py`
-
-Exact blocker recorded in `docs/reviews/AUD-004_CHANGE_REPORT.md`.
+Completed in this cycle: strengthened malformed-rate regression per REVIEW-0060; full
+suite produced truthful evidence with two categories of test outcome:
+focused AUD-004 tests 12 passed; sprint003 runner subset 5 setup errors from a
+production-source `SerializationError: float is not supported; use Decimal` in
+`source_audit/serialization.py`. Environment `/tmp/crypto_source_audit` is present.
 
 ## Stop condition
 
-Stopped at Reviewer gate. Ticket remains `BLOCKED` until environment is provisioned and full-suite gate passes. Do not begin the next ticket.
-
-Return control to Reviewer with truthful complete gate evidence. Keep
-`Next ticket authorized: NONE` and do not begin the next ticket.
+Stopped at reviewer gate. Full suite cannot be reported as passing because
+sprint003 runner setup fails in a production-source defect unrelated to AUD-004.
+Do not begin the next ticket.
