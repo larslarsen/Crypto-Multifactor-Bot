@@ -1,8 +1,8 @@
 # REVIEW-0070 - AUD-005 CLOSING RECORDS REQUIRED
 
 **Ticket:** AUD-005 - Provider-candle comparison by explicit comparable dimensions
-**Status:** CHANGES_REQUIRED - JR RECORDS ONLY
-**Next required actor:** Jr Dev - Hermes
+**Status:** RESOLVED - CLOSING RECORDS COMPLETED
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 

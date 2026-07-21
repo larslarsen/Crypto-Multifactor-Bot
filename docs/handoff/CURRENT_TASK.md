@@ -26,6 +26,8 @@ Governing documents:
 - docs/reviews/AUD-005_JR_ACCEPTANCE_PUBLICATION_TASK.md
 - docs/reviews/REVIEW-0070_AUD-005_CLOSING_RECORDS_REQUIRED.md
 - docs/reviews/AUD-005_JR_CLOSING_RECORDS_TASK.md
+- docs/reviews/REVIEW-0071_AUD-005_FINAL_STATUS_CORRECTION.md
+- docs/reviews/AUD-005_JR_FINAL_STATUS_TASK.md
 
 ## Authorized work
 
