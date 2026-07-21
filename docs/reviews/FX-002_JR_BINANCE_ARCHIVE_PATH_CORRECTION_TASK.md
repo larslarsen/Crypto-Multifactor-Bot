@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FX-002.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETED - ARCHIVE PATHS CORRECTED AND RECORDS PUBLISHED
+**Status:** FAILED - REVIEW-0087
 **Next ticket:** `NONE`
 
 ## Assignment

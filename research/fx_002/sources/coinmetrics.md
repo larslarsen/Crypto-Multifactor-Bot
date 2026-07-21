@@ -9,7 +9,7 @@
 - byte_size: 88
 - external_path: /tmp/fx_002_raw/coinmetrics/catalog_asset_metrics.json
 - returned_bounds: error: unauthorized
-- rate_direction: N/A
+- rate_direction: NOT_APPLICABLE: no price data returned
 - licensing_url: https://docs.coinmetrics.io
 - licensing_status: UNKNOWN: no terms evidence captured
 - notes: Unauthorized for asset-metrics catalog (not /catalog/assets). No USD price/reference-rate metric identified.

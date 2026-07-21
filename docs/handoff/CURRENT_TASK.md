@@ -24,14 +24,17 @@ Governing documents:
 - docs/reviews/FX-002_JR_BINANCE_DIRECT_USD_AUDIT_TASK.md
 - docs/reviews/REVIEW-0086_FX-002_BINANCE_ARCHIVE_PATH_INVALID.md
 - docs/reviews/FX-002_JR_BINANCE_ARCHIVE_PATH_CORRECTION_TASK.md
+- docs/reviews/REVIEW-0087_FX-002_COMMAND_EVIDENCE_REQUIRED.md
+- docs/reviews/FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md
+- docs/reviews/REVIEW-0088_FX-002_CLOSURE_INSTRUCTIONS_CORRECTED.md
 
 ## Authorized work
 
-FX-002 archive path correction completed per FX-002_JR_BINANCE_ARCHIVE_PATH_CORRECTION_TASK.md after REVIEW-0086.
+FX-002 command evidence closure completed per FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md (with REVIEW-0088 clarification).
 FX-002 set to AWAITING_REVIEW. Stablecoin-FX implementation remains unauthorized. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing corrected archive evidence and mechanically verified FX-002 records, set FX-002 to
+After publishing exact command evidence and the two record corrections, set FX-002 to
 `AWAITING_REVIEW`, name Reviewer as next actor, and retain `Next ticket authorized: NONE`. Do not
 begin implementation or another ticket.

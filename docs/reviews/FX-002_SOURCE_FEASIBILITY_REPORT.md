@@ -3,7 +3,7 @@
 **Ticket:** FX-002
 **Status:** AWAITING_REVIEW
 **Next ticket authorized:** NONE
-**Next required actor:** Lead Quantitative Finance Researcher/Engineer (reviewer)
+**Next required actor:** Jr Dev - Hermes, tool-executing model required
 **Date:** 2026-07-21
 
 ## Summary Decision
@@ -20,11 +20,9 @@ All raw in /tmp/fx_002_raw (not committed). Malformed no-/data/ archive rows del
 
 ## Mechanical Preflight (literal, exact as required)
 
-Command: (exact bad-string preflight per task)
+First preflight (per FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md): no matches; exit status 1
 
-Output:
-(no matches)
-1
+Second preflight (per FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md): no matches; exit status 1
 
 ## Per Provider (corrected)
 
@@ -70,16 +68,33 @@ See `research/fx_002/sources/`
        return self._open_to_write(zinfo, force_zip64=force_zip64)
 
    -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+   (effective -qq; summary suppressed; exit status 0)
 
-   100 passed in 0.20s (1 warning)
+Supplementary (per FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md):
+`PYTHONPATH=src uv run pytest -q --tb=short -o addopts=`
+   ........................................................................ [ 16%]
+   ........................................................................ [ 32%]
+   ........................................................................ [ 48%]
+   ........................................................................ [ 64%]
+   ........................................................................ [ 80%]
+   ........................................................................ [ 96%]
+   .................                                                        [100%]
+   ================================ warnings summary ================================
+   tests/test_archives.py::test_duplicate_member_names
+     /home/lars/.local/share/uv/python/cpython-3.13.14-linux-x86_64-gnu/lib/python3.13/zipfile/__init__.py:1661: UserWarning: Duplicate name: 'a.csv'
+       return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+   -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+   449 passed, 1 warning in 19.49s
+   (exit status 0)
 
 ## Records
 
-- FX-002_JR_BINANCE_DIRECT_USD_AUDIT_TASK.md marked FAILED - REVIEW-0086.
+- FX-002_JR_BINANCE_ARCHIVE_PATH_CORRECTION_TASK.md marked FAILED - REVIEW-0087.
 - This task marked COMPLETED.
 - FX-002 set to AWAITING_REVIEW.
 - FX-001 remains ACCEPTED.
-- Malformed archive rows/claims removed; N/A replaced with NOT_APPLICABLE/UNKNOWN; report/matrix/register/source agree on corrected evidence.
-- All other records reconciled.
-
-No implementation.
+- Record cleanups done per task (sources rate_direction fixed to NOT_APPLICABLE; no fabricated lines in report).
+- Mechanical preflights: both no matches, exit 1 (per task, cited without reproducing regex).
+- Acceptance: control PASS; original pytest exit 0 (summary suppressed by -qq); supplementary exit 0 with "449 passed, 1 warning in 19.49s".
+- No implementation.

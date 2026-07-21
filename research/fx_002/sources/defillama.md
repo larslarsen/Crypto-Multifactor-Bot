@@ -9,7 +9,7 @@
 - byte_size: 531934
 - external_path: /tmp/fx_002_raw/defillama_stablecoins.json
 - returned_bounds: peggedAssets:410, current prices USDT 0.99919 USDC 0.99992
-- rate_direction: N/A
+- rate_direction: NOT_APPLICABLE: current snapshot was rejected before historical rate use
 - licensing_url: https://defillama.com
 - licensing_status: UNKNOWN: no terms evidence captured
 - notes: Current snapshot only; no historical series or PIT timestamps in payload.
