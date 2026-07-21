@@ -1,0 +1,10 @@
+gate_id,gate_label,status,blocking,notes
+FUND002-G01,calc_time event classification,FAIL,Yes,"Observed 13-digit ms epoch in sampled archives and 13-digit fundingTime in REST; provider documentation does not classify whether this marks scheduled funding settlement, mark-price time, or provider bookkeeping timestamp"
+FUND002-G02,interval unit and effective scope,PARTIAL,Yes,"Observed 8h in all three monthly samples. Whether interval varies by instrument/contract/time remains unknown without official documentation"
+FUND002-G03,rate unit sign convention and formula,FAIL,Yes,"Numeric decimal positive in all samples. Provider unit, sign/payer convention, and formula semantics are not documented"
+FUND002-G04,provider publication time and historical availability,PARTIAL,Yes,"HTTP Last-Modified present on archive objects. Historical availability semantics not documented; local 2026 retrieval alone cannot make rows available to 2025 decisions"
+FUND002-G05,funding-specific checksum and replacement behavior,FAIL,Yes,"Provider .CHECKSUM match confirmed for sampled archives. Funding-specific replacement register and correction policy are not demonstrated"
+FUND002-G06,licensing / redistribution terms,FAIL,Yes,"Captured README states repository Licence: MIT. Exact redistribution terms for funding archive metadata/hashes are not further established by this capture"
+FUND002-G07,raw and manifest lineage,PASS,No,"Raw bytes identified via provider SHA-256 and ETag. External raw path recorded. MAN-001 manifest dataset_id lineage is defined. AES256 is server-side storage encryption, not lineage identity"
+FUND002-G08,stablecoin-FX rule,BLOCKED,N/A,"FX-002 accepted with recommendation NONE; stablecoin-FX implementation remains blocked. No USD-denominated cashflow view is allowed"
+SUMMARY,recommendation,NO_IMPLEMENTATION_AUTHORITY,Yes,"First decisive blockers: G01 calc_time meaning unclassified; G03 rate unit/sign/formula undocumented; G05 funding checksum/replacement unverified; G06 licensing scope unverified"

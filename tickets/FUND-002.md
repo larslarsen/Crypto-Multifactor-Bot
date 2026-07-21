@@ -1,7 +1,8 @@
 # FUND-002 - Binance Funding Source Semantics Audit
 
 **Priority:** P0
-**Status:** IN_PROGRESS
+**Status:** AWAITING_REVIEW
+**Recommendation:** NO_IMPLEMENTATION_AUTHORITY (source-semantics blockers)
 **Dependencies:** FUND-001 readiness accepted under REVIEW-0093
 **Layer:** research evidence / funding source semantics
 **Architecture:** no ADR, schema, migration, or production implementation authorized

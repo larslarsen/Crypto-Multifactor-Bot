@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FUND-002.md`
 **Actor:** Jr Dev - Hermes
-**Status:** AUTHORIZED - BOUNDED SOURCE EVIDENCE AND RECORDS ONLY
+**Status:** INCOMPLETE - REVIEW-0094 EVIDENCE REGISTRATION REQUIRED
 **Next ticket:** `NONE`
 
 ## Assignment
