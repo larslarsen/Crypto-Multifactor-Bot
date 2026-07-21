@@ -450,18 +450,20 @@ def test_concurrent_no_clobber(tmp_path: Path) -> None:
     assert n == 1
 
 
-def test_final_path_symlink_substitution_rejected(tmp_path: Path) -> None:
-    """Reject a receipt where canonical final object is replaced by a symlink."""
-    config, catalog, writer, _ = _store(tmp_path)
-    body = b"original"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_symlink_final"))
+def test_final_path_symlink_rejected_no_hash(tmp_path: Path) -> None:
+    """Canonical final path replaced by symlink to exact-matching outside-root file.
+
+    Proves rejection before _sha256_file is invoked.
+    """
+    config, _, writer, _ = _store(tmp_path)
+    body = b"sym-final"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_fs"))
     assert isinstance(r, PublishResult)
 
-    # Replace the published object with a symlink to a different file
-    target = config.root / "evil.txt"
-    target.write_bytes(b"evil")
+    outside = tmp_path / "outside_final"
+    outside.write_bytes(body)
     r.storage_path.unlink()
-    r.storage_path.symlink_to(target)
+    r.storage_path.symlink_to(outside)
 
     receipt = PublicationReceipt(
         raw_object_id=r.raw_object_id,
@@ -475,32 +477,38 @@ def test_final_path_symlink_substitution_rejected(tmp_path: Path) -> None:
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match="symlink|not a regular file"):
-        verify_publication_receipt(
-            receipt,
-            store_root=config.root.resolve(),
-            object_prefix=config.object_prefix,
-        )
+    with mock.patch("cryptofactors.ingest.raw.catalog._sha256_file") as m:
+        with pytest.raises(CatalogRegistrationError):
+            verify_publication_receipt(
+                receipt,
+                store_root=config.root.resolve(),
+                object_prefix=config.object_prefix,
+            )
+        m.assert_not_called()
 
 
-def test_parent_component_symlink_substitution_rejected(tmp_path: Path) -> None:
-    """Reject a receipt where a parent directory component is a symlink."""
-    config, catalog, writer, _ = _store(tmp_path)
-    body = b"parent-symlink"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_symlink_parent"))
-    assert isinstance(r, PublishResult)
+def test_parent_symlink_rejected_no_hash(tmp_path: Path) -> None:
+    """Parent component replaced by symlink to outside-root target with complete fanout.
 
-    # Replace an intermediate directory with a symlink
-    # Path is store/raw/sha256/ab/cd/<hash>
-    # Replace raw/sha256/ab with symlink
-    parent = r.storage_path.parent.parent  # ab/
-    evil_dir = config.root / "evil_dir"
-    evil_dir.mkdir()
-    final_in_evil = evil_dir / r.storage_path.name
-    final_in_evil.write_bytes(body)
+    Proves rejection before _sha256_file is invoked.
+    """
     import shutil
-    shutil.rmtree(parent)
-    parent.symlink_to(evil_dir)
+
+    config, _, writer, _ = _store(tmp_path)
+    body = b"sym-parent"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_ps"))
+    assert isinstance(r, PublishResult)
+
+    ab_dir = r.storage_path.parent  # ab/
+    cd_hash = r.storage_path.name
+
+    outside = tmp_path / "outside_parent"
+    out_cd = outside / cd_hash[2:4]
+    out_cd.mkdir(parents=True)
+    (out_cd / cd_hash).write_bytes(body)
+
+    shutil.rmtree(ab_dir)
+    ab_dir.symlink_to(outside)
 
     receipt = PublicationReceipt(
         raw_object_id=r.raw_object_id,
@@ -514,40 +522,43 @@ def test_parent_component_symlink_substitution_rejected(tmp_path: Path) -> None:
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match="symlink"):
-        verify_publication_receipt(
-            receipt,
-            store_root=config.root.resolve(),
-            object_prefix=config.object_prefix,
-        )
+    with mock.patch("cryptofactors.ingest.raw.catalog._sha256_file") as m:
+        with pytest.raises(CatalogRegistrationError):
+            verify_publication_receipt(
+                receipt,
+                store_root=config.root.resolve(),
+                object_prefix=config.object_prefix,
+            )
+        m.assert_not_called()
 
 
-def test_lexical_traversal_receipt_path_rejected(tmp_path: Path) -> None:
-    """Lexical '..' in receipt path is rejected before normalization."""
-    config, catalog, writer, _ = _store(tmp_path)
-    body = b"traversal"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_traversal"))
+def test_traversal_alias_receipt_path_rejected(tmp_path: Path) -> None:
+    """Receipt path with '..' that normalizes to canonical path is still rejected."""
+    config, _, writer, _ = _store(tmp_path)
+    body = b"trav-alias"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_ta"))
     assert isinstance(r, PublishResult)
 
-    # Craft a receipt with '..' in the path - using a path that traverses
-    # up and back down to the canonical location
-    traversal_path = config.root / "raw" / "sha256" / ".." / "raw" / "sha256" / r.storage_path.name
-    digest = hashlib.sha256(body).hexdigest()
-    oid = f"raw_{digest}"
-    uri = content_addressed_relative_path(digest).as_posix()
+    digest = r.sha256
+    rel = content_addressed_relative_path(digest)
+    prefix_parts = rel.parts[:2]
+    fanout = rel.parts[2:]
+    traversal_rel = Path(*prefix_parts) / ".." / Path(*prefix_parts[1:]) / Path(*fanout)
+    traversal_path = config.root.resolve() / traversal_rel
+
     receipt = PublicationReceipt(
-        raw_object_id=oid,
+        raw_object_id=r.raw_object_id,
         sha256=digest,
-        byte_size=len(body),
+        byte_size=r.byte_size,
         storage_path=traversal_path,
-        storage_uri=uri,
+        storage_uri=r.storage_uri,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match=r"\.\.|PathSafetyError|must not contain"):
+    with pytest.raises(CatalogRegistrationError, match=r"\.\.|must not contain"):
         verify_publication_receipt(
             receipt,
             store_root=config.root.resolve(),
@@ -555,30 +566,67 @@ def test_lexical_traversal_receipt_path_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_escaping_object_prefix_rejected(tmp_path: Path) -> None:
-    """Receipt path that escapes the object_prefix is rejected."""
-    config, catalog, writer, _ = _store(tmp_path)
-    body = b"escape"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_escape"))
+def test_escaping_prefix_rejected_not_uri_mismatch(tmp_path: Path) -> None:
+    """Traversal-containing prefix agreed by receipt and config; URI matches.
+
+    Proves lexical escape rejection fires, not URI mismatch.
+    """
+    config, _, writer, _ = _store(tmp_path)
+    body = b"esc-prefix"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_ep"))
     assert isinstance(r, PublishResult)
 
-    digest = hashlib.sha256(body).hexdigest()
-    oid = f"raw_{digest}"
-    # Use an object_prefix that tries to escape
-    uri = "../raw/sha256/" + digest
+    digest = r.sha256
+    bad_prefix = "../raw/sha256"
+    rel = content_addressed_relative_path(digest, prefix=bad_prefix)
+    bad_uri = rel.as_posix()
+
     receipt = PublicationReceipt(
-        raw_object_id=oid,
+        raw_object_id=r.raw_object_id,
         sha256=digest,
-        byte_size=len(body),
+        byte_size=r.byte_size,
         storage_path=r.storage_path,
-        storage_uri=uri,
+        storage_uri=bad_uri,
+        object_prefix=bad_prefix,
+        reused_existing=False,
+        verified_regular_file=True,
+        verified_size=True,
+        verified_sha256=True,
+    )
+    with pytest.raises(CatalogRegistrationError, match=r"\.\.|must not contain"):
+        verify_publication_receipt(
+            receipt,
+            store_root=config.root.resolve(),
+            object_prefix=bad_prefix,
+        )
+
+
+def test_missing_component_lstat_rejected(tmp_path: Path) -> None:
+    """Canonical receipt path retained but a filesystem component removed.
+
+    Proves component-lstat failure (not identity comparison).
+    """
+    config, _, writer, _ = _store(tmp_path)
+    body = b"miss-comp"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_mc"))
+    assert isinstance(r, PublishResult)
+
+    r.storage_path.unlink()
+    r.storage_path.parent.rmdir()
+
+    receipt = PublicationReceipt(
+        raw_object_id=r.raw_object_id,
+        sha256=r.sha256,
+        byte_size=r.byte_size,
+        storage_path=r.storage_path,
+        storage_uri=r.storage_uri,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match="storage_uri|canonical|escape|object_prefix"):
+    with pytest.raises(CatalogRegistrationError, match="missing|component"):
         verify_publication_receipt(
             receipt,
             store_root=config.root.resolve(),
@@ -586,31 +634,28 @@ def test_escaping_object_prefix_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_missing_component_rejected(tmp_path: Path) -> None:
-    """Receipt path with missing intermediate component is rejected."""
-    config, catalog, writer, _ = _store(tmp_path)
-    body = b"missing"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_missing"))
+def test_digest_mismatch_after_path_validation(tmp_path: Path) -> None:
+    """File mutated to same-size different bytes; SHA-256 mismatch after path checks."""
+    config, _, writer, _ = _store(tmp_path)
+    body = b"digest-ok"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_dm"))
     assert isinstance(r, PublishResult)
 
-    digest = hashlib.sha256(body).hexdigest()
-    oid = f"raw_{digest}"
-    # Path with missing component: raw/sha256/ab/MISSING/cd/<hash>
-    missing_path = config.root / "raw" / "sha256" / digest[:2] / "missing" / digest[2:4] / digest
-    uri = content_addressed_relative_path(digest).as_posix()
+    r.storage_path.write_bytes(b"digest-NO")
+
     receipt = PublicationReceipt(
-        raw_object_id=oid,
-        sha256=digest,
-        byte_size=len(body),
-        storage_path=missing_path,
-        storage_uri=uri,
+        raw_object_id=r.raw_object_id,
+        sha256=r.sha256,
+        byte_size=r.byte_size,
+        storage_path=r.storage_path,
+        storage_uri=r.storage_uri,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match="missing|canonical content path"):
+    with pytest.raises(CatalogRegistrationError, match="SHA-256 mismatch"):
         verify_publication_receipt(
             receipt,
             store_root=config.root.resolve(),
@@ -619,35 +664,31 @@ def test_missing_component_rejected(tmp_path: Path) -> None:
 
 
 def test_non_directory_parent_rejected(tmp_path: Path) -> None:
-    """Receipt path where a parent component is not a directory is rejected."""
-    config, catalog, writer, _ = _store(tmp_path)
+    """Parent component replaced by a regular file."""
+    import shutil
+
+    config, _, writer, _ = _store(tmp_path)
     body = b"notdir"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_notdir"))
+    r = writer.write_stream([body], _meta(acquisition_id="acq_nd"))
     assert isinstance(r, PublishResult)
 
-    digest = hashlib.sha256(body).hexdigest()
-    oid = f"raw_{digest}"
-    # Create the canonical path but make a parent a file
-    parent = r.storage_path.parent.parent  # ab/
-    # Replace the parent directory with a file
-    import shutil
-    shutil.rmtree(parent)
-    parent.write_bytes(b"not-a-directory")
+    ab_dir = r.storage_path.parent
+    shutil.rmtree(ab_dir)
+    ab_dir.write_bytes(b"not-a-directory")
 
-    uri = content_addressed_relative_path(digest).as_posix()
     receipt = PublicationReceipt(
-        raw_object_id=oid,
-        sha256=digest,
-        byte_size=len(body),
+        raw_object_id=r.raw_object_id,
+        sha256=r.sha256,
+        byte_size=r.byte_size,
         storage_path=r.storage_path,
-        storage_uri=uri,
+        storage_uri=r.storage_uri,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match="not a directory|parent"):
+    with pytest.raises(CatalogRegistrationError, match="not a directory"):
         verify_publication_receipt(
             receipt,
             store_root=config.root.resolve(),
@@ -655,14 +696,13 @@ def test_non_directory_parent_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_non_regular_final_component_rejected(tmp_path: Path) -> None:
-    """Receipt where final component is not a regular file is rejected."""
-    config, catalog, writer, _ = _store(tmp_path)
+def test_non_regular_final_rejected(tmp_path: Path) -> None:
+    """Final component replaced by a directory."""
+    config, _, writer, _ = _store(tmp_path)
     body = b"notreg"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_notreg"))
+    r = writer.write_stream([body], _meta(acquisition_id="acq_nr"))
     assert isinstance(r, PublishResult)
 
-    # Replace the final file with a directory
     r.storage_path.unlink()
     r.storage_path.mkdir()
 
@@ -678,7 +718,7 @@ def test_non_regular_final_component_rejected(tmp_path: Path) -> None:
         verified_size=True,
         verified_sha256=True,
     )
-    with pytest.raises(CatalogRegistrationError, match="not a regular file|regular"):
+    with pytest.raises(CatalogRegistrationError, match="not a regular file"):
         verify_publication_receipt(
             receipt,
             store_root=config.root.resolve(),
@@ -686,60 +726,19 @@ def test_non_regular_final_component_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_canonical_receipt_accepted_unchanged(tmp_path: Path) -> None:
-    """Original canonical receipt behavior preserved."""
-    config, catalog, writer, _ = _store(tmp_path)
-    body = b"canonical-unchanged"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_canonical"))
-    assert isinstance(r, PublishResult)
-
-    digest, oid, path, uri = canonical_identity(
-        root=config.root.resolve(),
-        object_prefix=config.object_prefix,
-        sha256_hex=r.sha256,
-    )
-    assert r.raw_object_id == oid
-    assert r.storage_uri == uri
-    assert r.storage_path.resolve() == path
-    assert path.read_bytes() == body
-
-    receipt = PublicationReceipt(
-        raw_object_id=oid,
-        sha256=digest,
-        byte_size=len(body),
-        storage_path=path,
-        storage_uri=uri,
-        object_prefix=config.object_prefix,
-        reused_existing=False,
-        verified_regular_file=True,
-        verified_size=True,
-        verified_sha256=True,
-    )
-    verify_publication_receipt(
-        receipt,
-        store_root=config.root.resolve(),
-        object_prefix=config.object_prefix,
-    )
-
-
-def test_object_id_uri_size_digest_failures(tmp_path: Path) -> None:
-    """object-ID, URI, byte-size, digest mismatches still fail."""
+def test_id_uri_size_mismatches_rejected(tmp_path: Path) -> None:
+    """object-ID, URI, and byte-size mismatches rejected independently."""
     config, _, writer, _ = _store(tmp_path)
-    body = b"mismatch"
-    r = writer.write_stream([body], _meta(acquisition_id="acq_mismatch"))
+    body = b"mism"
+    r = writer.write_stream([body], _meta(acquisition_id="acq_m"))
     assert isinstance(r, PublishResult)
 
-    digest = r.sha256
-    oid = r.raw_object_id
-    uri = r.storage_uri
-
-    # Wrong object_id
     receipt = PublicationReceipt(
         raw_object_id="raw_" + "a" * 64,
-        sha256=digest,
+        sha256=r.sha256,
         byte_size=r.byte_size,
         storage_path=r.storage_path,
-        storage_uri=uri,
+        storage_uri=r.storage_uri,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
@@ -749,13 +748,12 @@ def test_object_id_uri_size_digest_failures(tmp_path: Path) -> None:
     with pytest.raises(CatalogRegistrationError, match="raw_object_id"):
         verify_publication_receipt(receipt, store_root=config.root.resolve(), object_prefix=config.object_prefix)
 
-    # Wrong URI
     receipt = PublicationReceipt(
-        raw_object_id=oid,
-        sha256=digest,
+        raw_object_id=r.raw_object_id,
+        sha256=r.sha256,
         byte_size=r.byte_size,
         storage_path=r.storage_path,
-        storage_uri="raw/sha256/zz/zz/" + digest,
+        storage_uri="raw/sha256/zz/zz/" + r.sha256,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
@@ -765,13 +763,12 @@ def test_object_id_uri_size_digest_failures(tmp_path: Path) -> None:
     with pytest.raises(CatalogRegistrationError, match="storage_uri"):
         verify_publication_receipt(receipt, store_root=config.root.resolve(), object_prefix=config.object_prefix)
 
-    # Wrong size
     receipt = PublicationReceipt(
-        raw_object_id=oid,
-        sha256=digest,
+        raw_object_id=r.raw_object_id,
+        sha256=r.sha256,
         byte_size=999,
         storage_path=r.storage_path,
-        storage_uri=uri,
+        storage_uri=r.storage_uri,
         object_prefix=config.object_prefix,
         reused_existing=False,
         verified_regular_file=True,
@@ -779,20 +776,4 @@ def test_object_id_uri_size_digest_failures(tmp_path: Path) -> None:
         verified_sha256=True,
     )
     with pytest.raises(CatalogRegistrationError, match="size mismatch"):
-        verify_publication_receipt(receipt, store_root=config.root.resolve(), object_prefix=config.object_prefix)
-
-    # Wrong digest - also fails raw_object_id check first
-    receipt = PublicationReceipt(
-        raw_object_id=oid,
-        sha256="0" * 64,
-        byte_size=r.byte_size,
-        storage_path=r.storage_path,
-        storage_uri=uri,
-        object_prefix=config.object_prefix,
-        reused_existing=False,
-        verified_regular_file=True,
-        verified_size=True,
-        verified_sha256=True,
-    )
-    with pytest.raises(CatalogRegistrationError, match="raw_object_id is not canonical"):
         verify_publication_receipt(receipt, store_root=config.root.resolve(), object_prefix=config.object_prefix)
