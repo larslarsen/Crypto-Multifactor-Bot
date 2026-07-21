@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: RAW-002
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Sr Dev - Sandbox
+Next required actor: Reviewer
 
 Accepted dependency: RAW-001 (`ACCEPTED`; `docs/reviews/REVIEW-0009_RAW-001_FINAL.md`).
 Governing documents:
@@ -15,13 +15,13 @@ Governing documents:
 - docs/reviews/REVIEW-0073_RAW-002_SOURCE_TRAVERSAL_CORRECTION_REQUIRED.md
 - docs/reviews/RAW-002_SR_SOURCE_CORRECTION_TASK.md
 - docs/reviews/RAW-002_JR_REVIEW0073_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0074_RAW-002_SOURCE_APPROVED_JR_AUTHORIZED.md
+- docs/reviews/RAW-002_JR_INTEGRATION_TASK.md
 
 ## Authorized work
 
-Sr Dev - Sandbox is authorized under `docs/reviews/RAW-002_SR_SOURCE_CORRECTION_TASK.md` to implement
-the traversal-order correction in `assert_lexical_under_root`. Next ticket authorized: `NONE`.
+RAW-002 integration complete. All acceptance gates pass. Awaiting reviewer acceptance.
 
 ## Stop condition
 
-After completing the local source correction, return control for reviewer inspection. Do not begin
-another ticket.
+No pending Jr work. Reviewer to accept or request changes.

@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/RAW-002.md`
 **Actor:** Sr Dev - Sandbox
-**Status:** AUTHORIZED AFTER CONTROL PUBLICATION - SOURCE ONLY
+**Status:** COMPLETED - SOURCE APPROVED BY REVIEW-0074
 **Next ticket:** `NONE`
 
 ## Assignment

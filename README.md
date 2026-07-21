@@ -17,4 +17,4 @@ Active tickets:
 - [`EVD-001`](tickets/EVD-001.md) — Operational Evidence Registry (`ACCEPTED` at integration commit `6bd1f43`; evidence head `f774944`; `docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md`).
 - [`AUD-004`](tickets/AUD-004.md) — Native headerless support for Binance archive precision comparator (`ACCEPTED`).
 - [`AUD-005`](tickets/AUD-005.md) — Provider-candle comparison by explicit comparable dimensions (`ACCEPTED`; closed).
-- [`RAW-002`](tickets/RAW-002.md) — Harden publication-receipt verification against symlink substitution (`IN_PROGRESS`; Sr Dev - Sandbox next actor).
+- [`RAW-002`](tickets/RAW-002.md) — Harden publication-receipt verification against symlink substitution (`AWAITING_REVIEW`; Reviewer next actor).

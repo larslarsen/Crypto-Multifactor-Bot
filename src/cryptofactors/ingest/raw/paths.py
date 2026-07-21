@@ -87,7 +87,12 @@ def lexical_content_addressed_absolute_path(
 
 
 def assert_lexical_under_root(path: Path, root: Path, *, label: str) -> Path:
-    """Prove ``path`` is lexically under resolved ``root`` without following symlinks."""
+    """Prove ``path`` is lexically under resolved ``root`` without following symlinks.
+
+    Traversal components (``.`` / ``..``) are rejected on the candidate **before**
+    ``normpath`` so they cannot collapse into a false under-root match (RAW-002 /
+    REVIEW-0073).
+    """
     root_r = Path(root).resolve()
     candidate = Path(path)
     if not candidate.is_absolute():
@@ -95,7 +100,13 @@ def assert_lexical_under_root(path: Path, root: Path, *, label: str) -> Path:
             f"{label} must be absolute",
             context={"path": str(candidate)},
         )
-    # Normalize . / .. lexically without filesystem access.
+    # Reject before normpath: normpath would erase ".." and hide noncanonical receipts.
+    if any(part in (".", "..") for part in candidate.parts):
+        raise PathSafetyError(
+            f"{label} must not contain '.' or '..' components",
+            context={"path": str(candidate)},
+        )
+    # Collapse redundant separators only; no traversal tokens remain.
     normalized = Path(os.path.normpath(candidate))
     try:
         normalized.relative_to(root_r)
@@ -104,11 +115,6 @@ def assert_lexical_under_root(path: Path, root: Path, *, label: str) -> Path:
             f"{label} escapes configured root",
             context={"root": str(root_r), "path": str(normalized)},
         ) from exc
-    if any(part in (".", "..") for part in normalized.parts):
-        raise PathSafetyError(
-            f"{label} must not contain '.' or '..' components",
-            context={"path": str(normalized)},
-        )
     return normalized
 
 

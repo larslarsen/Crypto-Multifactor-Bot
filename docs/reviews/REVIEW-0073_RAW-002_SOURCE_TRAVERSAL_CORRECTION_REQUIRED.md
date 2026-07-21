@@ -1,8 +1,8 @@
 # REVIEW-0073 - RAW-002 SOURCE TRAVERSAL CORRECTION REQUIRED
 
 **Ticket:** RAW-002 - Harden publication-receipt verification against symlink substitution
-**Status:** SR SOURCE CORRECTION AUTHORIZED - JR CONTROL PUBLICATION COMPLETED
-**Next required actor:** Sr Dev - Sandbox
+**Status:** SOURCE CORRECTION COMPLETED - RESOLVED BY REVIEW-0074
+**Next required actor:** Jr Dev - Hermes
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 
