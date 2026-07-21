@@ -15,4 +15,5 @@ RAW-002,P3,ingest/catalog,Harden publication-receipt verification against symlin
 FX-001,P0,data platform / market FX,Point-in-Time Stablecoin FX Readiness,CAT-001/001A;RAW-001/002;MAN-001;REF-001;BAR-001;AUD-003,NON_BLOCKING,ACCEPTED
 FX-002,P0,research evidence / data-source feasibility,Stablecoin FX Source Feasibility Audit,FX-001,NON_BLOCKING,ACCEPTED
 FUND-001,P0,data platform / funding and costs readiness,Binance Funding-Cashflow Readiness,RAW-001/002;MAN-001;REF-001;AUD-003;RES-001,BLOCKING_FOR_DERIVATIVES,ACCEPTED
-FUND-002,P0,research evidence / funding source semantics,Binance Funding Source Semantics Audit,FUND-001,BLOCKING_FOR_FUNDING_EVENTS,IN_PROGRESS
+FUND-002,P0,research evidence / funding source semantics,Binance Funding Source Semantics Audit,FUND-001,BLOCKING_FOR_FUNDING_EVENTS,ACCEPTED - NO IMPLEMENTATION AUTHORITY
+REF-002,P0,research evidence / point-in-time reference events,Bybit Instrument Event Source Feasibility Audit,REF-001;BYB-001;AUD-003;RES-001,BLOCKING_FOR_HISTORICAL_UNIVERSE,AWAITING_REVIEW

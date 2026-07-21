@@ -1,31 +1,29 @@
 # CURRENT_TASK
 
-Ticket: FUND-002
-State: IN_PROGRESS
+Ticket: REF-002
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
-Accepted dependency: FUND-001 readiness under REVIEW-0093. FX-002 remains accepted with no viable
-primary source.
+Accepted dependencies: REF-001, BYB-001, AUD-003, RES-001. FUND-002 remains accepted with
+`NO_IMPLEMENTATION_AUTHORITY`.
 Governing documents:
-- tickets/FUND-002.md
+- tickets/REF-002.md
 - docs/architecture/02_DATA_SOURCE_PLAN.md
-- research/sprint_003/sources/binance.md
-- docs/reviews/FUND-001_READINESS_REPORT.md
-- docs/reviews/REVIEW-0093_FUND-001_ACCEPTED_FUND-002_AUTHORIZED.md
-- docs/reviews/FUND-002_JR_SOURCE_SEMANTICS_AUDIT_TASK.md
-- docs/reviews/REVIEW-0094_FUND-002_EVIDENCE_REGISTRATION_REQUIRED.md
-- docs/reviews/FUND-002_JR_EVIDENCE_REGISTRATION_CORRECTION_TASK.md
-- docs/reviews/REVIEW-0095_FUND-002_FINAL_EVIDENCE_INTEGRITY_REQUIRED.md
-- docs/reviews/FUND-002_JR_FINAL_EVIDENCE_INTEGRITY_TASK.md
+- docs/architecture/09_RISK_REGISTER.md
+- research/sprint_003/sources/bybit.md
+- research/sprint_003/04_POINT_IN_TIME_REFERENCE_PLAN.md
+- docs/reviews/REVIEW-0100_REF-002_SOURCE_AUDIT_AUTHORIZED.md
+- docs/reviews/REF-002_JR_SOURCE_AUDIT_TASK.md
+- docs/reviews/REF-002_SOURCE_FEASIBILITY_REPORT.md
+- docs/reviews/REVIEW-0101_REF-002_LICENSING_CORRECTION_REQUIRED.md
 
 ## Authorized work
 
-FUND-002 final evidence-integrity correction only under
-`docs/reviews/FUND-002_JR_FINAL_EVIDENCE_INTEGRITY_TASK.md`. No implementation, schema, migration,
-ADR, realized-cashflow, factor, portfolio, or USD-conversion work is authorized.
+REF-002 evidence and licensing correction are published and awaiting review. No implementation, schema,
+migration, ADR, universe, factor, portfolio, or live work is authorized.
 
 ## Stop condition
 
-After publishing FUND-002 evidence records, set FUND-002 to `AWAITING_REVIEW`, name Reviewer as next
-actor, retain `Next ticket authorized: NONE`, and stop. Do not begin another ticket.
+Await Reviewer disposition. Retain `Next ticket authorized: NONE`, commit, push, and stop. Do not begin
+another ticket.
