@@ -764,6 +764,60 @@ def read_zip_member_text(
             ) from exc
 
 
+def read_zip_member_text_prefix(
+    zip_path: Path,
+    member_name: str,
+    *,
+    encoding: str,
+    max_extracted_bytes: int,
+    chunk_size: int = 65536,
+) -> str:
+    """Stream-decompress a prefix of a ZIP member under a hard byte bound.
+
+    Unlike :func:`read_zip_member_text`, this does **not** require the full
+    declared member size to fit under ``max_extracted_bytes``. Only the bytes
+    actually decompressed for the sample are limited. Used when a row sample is
+    enough (e.g. headerless Binance precision comparison on large daily dumps).
+    """
+    if max_extracted_bytes <= 0:
+        raise ValueError("max_extracted_bytes must be positive")
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    if not encoding:
+        raise ValueError("encoding must be explicitly selected")
+
+    path = Path(zip_path)
+    with zipfile.ZipFile(path, "r") as zf:
+        if member_name not in zf.namelist():
+            raise UnsafeArchiveError(
+                f"Member not found: {member_name}",
+                context={"member": member_name, "path": str(path)},
+            )
+        chunks: list[bytes] = []
+        total = 0
+        with zf.open(member_name, "r") as src:
+            while total < max_extracted_bytes:
+                remain = max_extracted_bytes - total
+                piece = src.read(min(chunk_size, remain))
+                if not piece:
+                    break
+                chunks.append(piece)
+                total += len(piece)
+        raw = b"".join(chunks)
+        if not raw:
+            raise MalformedCSVError(
+                "ZIP member prefix is empty",
+                context={"member": member_name, "path": str(path)},
+            )
+        try:
+            return raw.decode(encoding)
+        except UnicodeError as exc:
+            raise MalformedCSVError(
+                f"Encoding failure decoding ZIP member with encoding={encoding!r}",
+                context={"member": member_name, "encoding": encoding},
+            ) from exc
+
+
 def iter_csv_rows_from_text(
     text: str,
     *,
@@ -774,7 +828,8 @@ def iter_csv_rows_from_text(
     """Parse CSV text into headers and data rows (in-memory helper for comparisons).
 
     In headerless mode the first row is treated as data, so the returned header
-    tuple is empty.
+    tuple is empty. Headerless mode rejects empty data. Headed mode preserves the
+    historical contract: a header-only CSV yields an empty data-row list.
     """
     previous = csv.field_size_limit()
     if max_field_size is not None and max_field_size > 0:
@@ -795,9 +850,10 @@ def iter_csv_rows_from_text(
     if has_header:
         headers = _validate_headers(rows[0])
         data_rows = [tuple(r) for r in rows[1:]]
-    else:
-        headers = ()
-        data_rows = [tuple(r) for r in rows]
+        # Headed path: empty data is allowed (historical behavior).
+        return headers, data_rows
+    headers = ()
+    data_rows = [tuple(r) for r in rows]
     if not data_rows:
         raise MalformedCSVError("CSV text contains no data rows")
     return headers, data_rows
@@ -808,5 +864,6 @@ __all__ = [
     "audit_csv_safe",
     "is_unsafe_zip_member_name",
     "read_zip_member_text",
+    "read_zip_member_text_prefix",
     "iter_csv_rows_from_text",
 ]

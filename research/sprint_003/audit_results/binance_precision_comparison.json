@@ -13,7 +13,7 @@
     "timestamp_max_utc": "2027-01-01T00:00:00+00:00",
     "timestamp_min_utc": "2017-01-01T00:00:00+00:00"
   },
-  "failure": "PrecisionComparisonError: Headerless Binance archive comparison is not supported; provide has_header=True",
+  "failure": "UnsafeArchiveError: Member extracted size exceeds bound: BTCUSDT-aggTrades-2024-12-31.csv | context={'member': 'BTCUSDT-aggTrades-2024-12-31.csv', 'file_size': 101743340, 'max': 52428800}",
   "sha256_a": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
   "sha256_b": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
   "status": "failed",

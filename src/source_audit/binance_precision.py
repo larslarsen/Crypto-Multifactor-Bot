@@ -14,6 +14,7 @@ from .archives import (
     audit_zip_safe,
     iter_csv_rows_from_text,
     read_zip_member_text,
+    read_zip_member_text_prefix,
 )
 from .errors import AmbiguousTimestampError, OutOfRangeTimestampError, PrecisionComparisonError
 from .models import BinancePrecisionComparison, SchemaFieldDiff, TimestampUnit
@@ -113,6 +114,11 @@ def compare_binance_archive_precision(
     column name cannot be resolved against a header that is not present). The
     reported schema for headerless archives is an empty tuple, because there are
     no column names to inspect.
+
+    Headerless mode streams only a bounded prefix of each ZIP member (then keeps
+    at most ``max_sample_rows`` data rows). Full-member extract is not required,
+    so real Binance daily dumps larger than ``max_extracted_bytes`` remain usable.
+    Headed mode keeps the historical full-member extract path.
     """
     if max_sample_rows <= 0:
         raise ValueError("max_sample_rows must be positive")
@@ -133,23 +139,38 @@ def compare_binance_archive_precision(
     sel_a = _select_member(path_a, member_name=member_a, member_suffix=member_suffix)
     sel_b = _select_member(path_b, member_name=member_b, member_suffix=member_suffix)
 
-    text_a = read_zip_member_text(
-        path_a, sel_a, encoding=encoding, max_extracted_bytes=max_extracted_bytes
-    )
-    text_b = read_zip_member_text(
-        path_b, sel_b, encoding=encoding, max_extracted_bytes=max_extracted_bytes
-    )
-
-    schema_a, rows_a = iter_csv_rows_from_text(
-        text_a, delimiter=delimiter, has_header=has_header
-    )
-    schema_b, rows_b = iter_csv_rows_from_text(
-        text_b, delimiter=delimiter, has_header=has_header
-    )
-
-    if not has_header:
+    if has_header:
+        # Historical headed path: full-member extract + schema-bound index.
+        text_a = read_zip_member_text(
+            path_a, sel_a, encoding=encoding, max_extracted_bytes=max_extracted_bytes
+        )
+        text_b = read_zip_member_text(
+            path_b, sel_b, encoding=encoding, max_extracted_bytes=max_extracted_bytes
+        )
+        schema_a, rows_a = iter_csv_rows_from_text(
+            text_a, delimiter=delimiter, has_header=True
+        )
+        schema_b, rows_b = iter_csv_rows_from_text(
+            text_b, delimiter=delimiter, has_header=True
+        )
+    else:
+        # Headerless path: stream a bounded prefix only (real daily dumps exceed
+        # the default full-extract bound).
+        text_a = read_zip_member_text_prefix(
+            path_a, sel_a, encoding=encoding, max_extracted_bytes=max_extracted_bytes
+        )
+        text_b = read_zip_member_text_prefix(
+            path_b, sel_b, encoding=encoding, max_extracted_bytes=max_extracted_bytes
+        )
+        schema_a, rows_a = iter_csv_rows_from_text(
+            text_a, delimiter=delimiter, has_header=False
+        )
+        schema_b, rows_b = iter_csv_rows_from_text(
+            text_b, delimiter=delimiter, has_header=False
+        )
+        rows_a = rows_a[:max_sample_rows]
+        rows_b = rows_b[:max_sample_rows]
         if isinstance(timestamp_column, str):
-            # Resolve from the first data row only so we can report a useful message.
             first_a = rows_a[0] if rows_a else ()
             first_b = rows_b[0] if rows_b else ()
             raise PrecisionComparisonError(
@@ -163,14 +184,20 @@ def compare_binance_archive_precision(
     def _ts_index(
         schema: tuple[str, ...],
         column: str | int,
+        *,
         row_width: int | None = None,
     ) -> int:
         if isinstance(column, int):
+            # Headed path: bound by schema length (historical).
+            # Headerless path: bound by observed data-row width.
             bound = row_width if row_width is not None else len(schema)
             if column < 0 or column >= bound:
                 raise PrecisionComparisonError(
                     f"timestamp_column index {column} out of range",
-                    context={"bound": bound},
+                    context={
+                        "bound": bound,
+                        "schema": list(schema),
+                    },
                 )
             return column
         if not schema:
@@ -188,8 +215,12 @@ def compare_binance_archive_precision(
 
     width_a = len(rows_a[0]) if rows_a else 0
     width_b = len(rows_b[0]) if rows_b else 0
-    idx_a = _ts_index(schema_a, timestamp_column, row_width=width_a)
-    idx_b = _ts_index(schema_b, timestamp_column, row_width=width_b)
+    if has_header:
+        idx_a = _ts_index(schema_a, timestamp_column)
+        idx_b = _ts_index(schema_b, timestamp_column)
+    else:
+        idx_a = _ts_index(schema_a, timestamp_column, row_width=width_a)
+        idx_b = _ts_index(schema_b, timestamp_column, row_width=width_b)
 
     def _analyze(
         rows: list[tuple[str, ...]],

@@ -228,3 +228,73 @@ def test_headerless_schema_diff_reported(tmp_path: Path) -> None:
     assert result.schema_a == ()
     assert result.schema_b == ()
     assert any(d.field_name == "*" for d in result.schema_differences)
+
+
+def test_headerless_prefix_sample_when_full_member_exceeds_bound(tmp_path: Path) -> None:
+    """Real daily dumps exceed the default full-extract bound; headerless must still sample.
+
+    Build members larger than a tight max_extracted_bytes so the historical
+    full-member extract path would reject them, but the headerless prefix path
+    can still collect enough rows for evidence thresholds.
+    """
+    a = tmp_path / "a.zip"
+    b = tmp_path / "b.zip"
+    # ~80-byte rows * 200 ≈ 16KB of CSV — above a 2KB extract bound.
+    pad = "x" * 40
+    rows_s = [
+        f"{i},100,1,1,1,{1_735_689_600 + i},False,{pad}" for i in range(1, 201)
+    ]
+    rows_ms = [
+        f"{i},100,1,1,1,{1_735_689_600_000 + i},False,{pad}" for i in range(1, 201)
+    ]
+    _zip_csv(a, "old.csv", None, rows_s)
+    _zip_csv(b, "new.csv", None, rows_ms)
+    min_utc, max_utc = _bounds()
+    result = compare_binance_archive_precision(
+        a,
+        b,
+        timestamp_column=5,
+        timestamp_min_utc=min_utc,
+        timestamp_max_utc=max_utc,
+        has_header=False,
+        member_a="old.csv",
+        member_b="new.csv",
+        max_sample_rows=20,
+        max_extracted_bytes=2_000,
+        min_valid_inferences=5,
+        max_malformed_rate=0.2,
+        max_ambiguous_rate=0.1,
+    )
+    assert result.sampled_rows_a >= 5
+    assert result.sampled_rows_b >= 5
+    assert result.inferred_unit_a == "s"
+    assert result.inferred_unit_b == "ms"
+    assert result.supports_timestamp_precision_transition is True
+
+
+def test_headed_integer_index_uses_schema_length(tmp_path: Path) -> None:
+    """Headed path must keep schema-length bounds for integer timestamp_column."""
+    a = tmp_path / "a.zip"
+    b = tmp_path / "b.zip"
+    # Schema has 3 columns; first data row intentionally short (2 fields).
+    # Index 2 is in schema range; short rows are counted malformed, not rejected upfront.
+    rows = ["1,1735689600000", "2,1735689600001,100", "3,1735689600002,101",
+            "4,1735689600003,102", "5,1735689600004,103", "6,1735689600005,104",
+            "7,1735689600006,105"]
+    _zip_csv(a, "a.csv", "id,time,price", rows)
+    _zip_csv(b, "b.csv", "id,time,price", rows)
+    min_utc, max_utc = _bounds()
+    result = compare_binance_archive_precision(
+        a,
+        b,
+        timestamp_column=1,  # schema index for "time"
+        timestamp_min_utc=min_utc,
+        timestamp_max_utc=max_utc,
+        has_header=True,
+        member_a="a.csv",
+        member_b="b.csv",
+        min_valid_inferences=5,
+    )
+    assert result.schema_a == ("id", "time", "price")
+    assert result.inferred_unit_a == "ms"
+    assert result.valid_inferences_a >= 5

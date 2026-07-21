@@ -11,6 +11,7 @@ from .archives import (
     is_unsafe_zip_member_name,
     iter_csv_rows_from_text,
     read_zip_member_text,
+    read_zip_member_text_prefix,
 )
 from .bars import compare_bars, normalize_trade, reconstruct_bars
 from .binance_precision import compare_binance_archive_precision
@@ -90,6 +91,7 @@ __all__ = [
     "audit_csv_safe",
     "is_unsafe_zip_member_name",
     "read_zip_member_text",
+    "read_zip_member_text_prefix",
     "iter_csv_rows_from_text",
     # timestamps
     "infer_timestamp_unit",
