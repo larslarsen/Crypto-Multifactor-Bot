@@ -16,12 +16,17 @@ Governing documents:
 - docs/reviews/REVIEW-0066_AUD-005_SCHEMA_CORRECTED_SR_AUTHORIZED.md
 - docs/reviews/AUD-005_SR_SOURCE_TASK.md
 - docs/reviews/AUD-005_JR_CONTROL_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0067_AUD-005_SOURCE_TYPE_CORRECTION_REQUIRED.md
+- docs/reviews/AUD-005_SR_SOURCE_CORRECTION_TASK.md
+- docs/reviews/AUD-005_JR_REVIEW0067_PUBLICATION_TASK.md
 
 ## Authorized work
 
-AUD-005 control publication is complete. The published handoff names Sr Dev - Sandbox as next actor.
+The initial local source drop is functionally correct but requires the typed input correction in
+REVIEW-0067. REVIEW-0067 control records are published and the handoff names Sr Dev - Sandbox as
+next actor.
 
 ## Stop condition
 
-After publishing the control records, transition the handoff to Sr Dev - Sandbox. Retain
+After publishing REVIEW-0067 control records, transition the handoff to Sr Dev - Sandbox. Retain
 `Next ticket authorized: NONE` and do not begin another ticket.
