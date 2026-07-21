@@ -18,3 +18,4 @@ Active tickets:
 - [`AUD-004`](tickets/AUD-004.md) — Native headerless support for Binance archive precision comparator (`ACCEPTED`).
 - [`AUD-005`](tickets/AUD-005.md) — Provider-candle comparison by explicit comparable dimensions (`ACCEPTED`; closed).
 - [`RAW-002`](tickets/RAW-002.md) — Harden publication-receipt verification against symlink substitution (`ACCEPTED`).
+- [`FX-001`](tickets/FX-001.md) — Point-in-Time Stablecoin FX readiness (`AWAITING_REVIEW`).

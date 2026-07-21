@@ -1,36 +1,28 @@
 # CURRENT_TASK
 
-Ticket: RAW-002
-State: ACCEPTED
+Ticket: FX-001
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
-Accepted dependency: RAW-001 (`ACCEPTED`; `docs/reviews/REVIEW-0009_RAW-001_FINAL.md`).
+Accepted dependencies: CAT-001/001A, RAW-001/002, MAN-001, REF-001, BAR-001, and AUD-003.
 Governing documents:
-- tickets/RAW-002.md
-- docs/reviews/REVIEW-0009_RAW-001_FINAL.md
-- docs/reviews/REVIEW-0072_RAW-002_SR_SOURCE_AUTHORIZED.md
-- docs/reviews/RAW-002_SR_SOURCE_TASK.md
-- docs/reviews/RAW-002_JR_CONTROL_PUBLICATION_TASK.md
-- docs/reviews/REVIEW-0073_RAW-002_SOURCE_TRAVERSAL_CORRECTION_REQUIRED.md
-- docs/reviews/RAW-002_SR_SOURCE_CORRECTION_TASK.md
-- docs/reviews/RAW-002_JR_REVIEW0073_PUBLICATION_TASK.md
-- docs/reviews/REVIEW-0074_RAW-002_SOURCE_APPROVED_JR_AUTHORIZED.md
-- docs/reviews/RAW-002_JR_INTEGRATION_TASK.md
-- docs/reviews/RAW-002_CHANGE_REPORT.md
-- docs/reviews/REVIEW-0075_RAW-002_ADVERSARIAL_EVIDENCE_REQUIRED.md
-- docs/reviews/RAW-002_JR_FINAL_TEST_TASK.md
-- docs/reviews/REVIEW-0076_RAW-002_FINAL_TEST_AND_GATES_REQUIRED.md
-- docs/reviews/RAW-002_JR_FINAL_GATE_TASK.md
-- docs/reviews/REVIEW-0077_RAW-002_ACCEPTED.md
-- docs/reviews/REVIEW-0078_RAW-002_CLOSING_RECORDS_REQUIRED.md
-- docs/reviews/RAW-002_JR_CLOSING_RECORDS_TASK.md
+- tickets/FX-001.md
+- docs/architecture/01_DATA_ARCHITECTURE.md
+- docs/architecture/02_DATA_SOURCE_PLAN.md
+- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
+- docs/architecture/09_RISK_REGISTER.md
+- docs/architecture/11_LAYER_BOUNDARIES.md
+- docs/reviews/REVIEW-0079_FX-001_JR_READINESS_AUTHORIZED.md
+- docs/reviews/FX-001_JR_READINESS_TASK.md
+- docs/reviews/FX-001_READINESS_REPORT.md
 
 ## Authorized work
 
-RAW-002 is closed under REVIEW-0078. No Jr work remains. Next ticket authorized: `NONE`.
+FX-001 readiness report published under `docs/reviews/FX-001_READINESS_REPORT.md`. Awaiting reviewer
+acceptance. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publication, set RAW-002 to `ACCEPTED`, name Reviewer as next actor, state that no Jr work
-remains, and retain `Next ticket authorized: NONE`.
+After publishing the readiness report, set FX-001 to `AWAITING_REVIEW`, name Reviewer as next actor,
+and retain `Next ticket authorized: NONE`. Do not begin implementation or another ticket.
