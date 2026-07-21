@@ -58,9 +58,7 @@ def _seed(
 ) -> tuple[sqlite3.Connection, store.ReferenceStore, str, str, str]:
     conn = _db(tmp_path)
     s = store.ReferenceStore(conn)
-    s.upsert_venue(
-        venue_code="BINANCE", display_name="Binance", venue_type=models.VenueType.CEX
-    )
+    s.upsert_venue(venue_code="BINANCE", display_name="Binance", venue_type=models.VenueType.CEX)
     s.register_asset(
         asset_class=models.AssetClass.CRYPTO,
         display_name="Bitcoin",
@@ -93,9 +91,7 @@ def test_dt_to_iso_is_fixed_width_lexicographically_sortable() -> None:
 
 def test_asset_id_for_rejects_empty_identity_key() -> None:
     with pytest.raises(errors.ReferenceValidationError):
-        store.ReferenceStore.asset_id_for(
-            asset_class=models.AssetClass.CRYPTO, identity_key="   "
-        )
+        store.ReferenceStore.asset_id_for(asset_class=models.AssetClass.CRYPTO, identity_key="   ")
 
 
 def test_instrument_registration_rejects_empty_salt(tmp_path: Path) -> None:
@@ -124,9 +120,7 @@ def test_asset_id_for_is_stable_and_display_independent() -> None:
 
 def test_listing_venue_must_match_instrument_venue(tmp_path: Path) -> None:
     conn, s, vid, aid, iid = _seed(tmp_path)
-    s.upsert_venue(
-        venue_code="COINBASE", display_name="Coinbase", venue_type=models.VenueType.CEX
-    )
+    s.upsert_venue(venue_code="COINBASE", display_name="Coinbase", venue_type=models.VenueType.CEX)
     other_vid = s.venue_id_for("coinbase")
     with pytest.raises(errors.ReferenceValidationError):
         s.add_listing_event(
@@ -190,9 +184,7 @@ def test_resolve_ambiguity_case_requires_existing_queued(tmp_path: Path) -> None
     assert resolved.status is models.AmbiguityStatus.RESOLVED
     assert resolved.resolution_target_id == iid
     with pytest.raises(errors.ReferenceResolutionError):
-        s.resolve_ambiguity_case(
-            c.case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=iid
-        )
+        s.resolve_ambiguity_case(c.case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=iid)
 
 
 def test_resolve_ambiguity_case_rejects_invalid_status(tmp_path: Path) -> None:
@@ -260,9 +252,7 @@ def test_instrument_version_overlap_rejected(tmp_path: Path) -> None:
     )
     s.add_instrument_version(instrument_id=iid, version_seq=1, contract_spec={}, window=w)
     with pytest.raises(errors.ReferenceConflictError):
-        s.add_instrument_version(
-            instrument_id=iid, version_seq=2, contract_spec={}, window=w
-        )
+        s.add_instrument_version(instrument_id=iid, version_seq=2, contract_spec={}, window=w)
 
 
 def test_alias_collision_with_different_target_rejected(tmp_path: Path) -> None:
@@ -294,9 +284,9 @@ def test_alias_collision_with_different_target_rejected(tmp_path: Path) -> None:
 # --- Sr integrity-fix drop (REF-001_SR_INTEGRITY_FIXES.md) -------------------
 
 
-def _seed_ambiguous(tmp_path: Path) -> tuple[
-    sqlite3.Connection, store.ReferenceStore, str, str, str, str
-]:
+def _seed_ambiguous(
+    tmp_path: Path,
+) -> tuple[sqlite3.Connection, store.ReferenceStore, str, str, str, str]:
     """Cross-scope ambiguity: a global alias and a venue alias, same norm,
     different instrument targets. A venue-scoped resolve then sees both
     candidates (matching the same-scope collision rule, this is allowed)."""
@@ -309,12 +299,18 @@ def _seed_ambiguous(tmp_path: Path) -> tuple[
         known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
     )
     s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
-        window=w, venue_id=None,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid,
+        window=w,
+        venue_id=None,
     )
     s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT,
-        target_id=other.instrument_id, window=w, venue_id=vid,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=other.instrument_id,
+        window=w,
+        venue_id=vid,
     )
     return conn, s, vid, aid, iid, other.instrument_id
 
@@ -327,9 +323,7 @@ def test_I1_resolve_alias_honors_resolved_decision_and_does_not_requeue(tmp_path
     assert first.outcome is models.ResolutionOutcome.QUEUED
     case_id = first.case_id
     assert case_id is not None
-    s.resolve_ambiguity_case(
-        case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=iid
-    )
+    s.resolve_ambiguity_case(case_id, target_kind=models.TargetKind.INSTRUMENT, target_id=iid)
     second = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
     assert second.outcome is models.ResolutionOutcome.RESOLVED
     assert second.target_id == iid
@@ -374,9 +368,7 @@ def test_I2_resolve_ambiguity_case_rejects_target_not_in_candidates(tmp_path: Pa
 
 def test_I2_resolve_ambiguity_case_rejects_venue_incompatible_instrument(tmp_path: Path) -> None:
     conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
-    s.upsert_venue(
-        venue_code="COINBASE", display_name="Coinbase", venue_type=models.VenueType.CEX
-    )
+    s.upsert_venue(venue_code="COINBASE", display_name="Coinbase", venue_type=models.VenueType.CEX)
     cb_vid = s.venue_id_for("coinbase")
     cb_instr = s.register_instrument(
         asset_id=aid, venue_id=cb_vid, instrument_type=models.InstrumentType.SPOT, salt="cb"
@@ -394,9 +386,12 @@ def test_I2_resolve_ambiguity_case_rejects_venue_incompatible_instrument(tmp_pat
 def test_I3_supersede_alias_requires_contiguous_knowledge_time(tmp_path: Path) -> None:
     conn, s, vid, aid, iid = _seed(tmp_path)
     al = s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid,
         window=models.BiTemporalWindow(
-            valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc), known_from=datetime(2024, 1, 1, tzinfo=timezone.utc)
+            valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+            known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
         ),
         venue_id=vid,
     )
@@ -419,7 +414,8 @@ def test_I4_supersede_instrument_version_preserves_historical_as_of(tmp_path: Pa
     w = models.BiTemporalWindow(
         valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
         valid_to=datetime(2021, 1, 1, tzinfo=timezone.utc),
-        known_from=_now(), known_to=None,
+        known_from=_now(),
+        known_to=None,
     )
     v = s.add_instrument_version(instrument_id=iid, version_seq=1, contract_spec={"a": 1}, window=w)
     close_at = w.known_from + timedelta(seconds=1)
@@ -432,36 +428,51 @@ def test_I4_supersede_instrument_version_preserves_historical_as_of(tmp_path: Pa
     )
     assert prior is not None and prior.contract_spec == {"a": 1}
     post = s.instrument_version_as_of(
-        iid, decision_time=datetime(2020, 6, 1, tzinfo=timezone.utc),
+        iid,
+        decision_time=datetime(2020, 6, 1, tzinfo=timezone.utc),
         knowledge_time=close_at + timedelta(seconds=1),
     )
     assert post is not None and post.contract_spec == {"a": 2}
 
 
-def test_I5_global_venue_alias_collision_is_same_scope_and_order_independent(tmp_path: Path) -> None:
+def test_I5_global_venue_alias_collision_is_same_scope_and_order_independent(
+    tmp_path: Path,
+) -> None:
     conn, s, vid, aid, iid, other = _seed_ambiguous(tmp_path)
     w = models.BiTemporalWindow(
         valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc), known_from=_now()
     )
     s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
-        window=w, venue_id=None,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid,
+        window=w,
+        venue_id=None,
     )
     s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=other,
-        window=w, venue_id=vid,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=other,
+        window=w,
+        venue_id=vid,
     )
     w2 = models.BiTemporalWindow(
         valid_from=datetime(2021, 1, 1, tzinfo=timezone.utc), known_from=_now()
     )
     s.add_alias(
-        alias_text="ETH", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
-        window=w2, venue_id=vid,
+        alias_text="ETH",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid,
+        window=w2,
+        venue_id=vid,
     )
     with pytest.raises(errors.ReferenceConflictError):
         s.add_alias(
-            alias_text="ETH", target_kind=models.TargetKind.INSTRUMENT, target_id=other,
-            window=w2, venue_id=vid,
+            alias_text="ETH",
+            target_kind=models.TargetKind.INSTRUMENT,
+            target_id=other,
+            window=w2,
+            venue_id=vid,
         )
 
 
@@ -473,17 +484,15 @@ def test_I6_cross_scope_different_targets_surface_at_resolve_time(tmp_path: Path
     dt = datetime(2025, 1, 1, tzinfo=timezone.utc)
     kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
     res = s.resolve_alias("BTC", decision_time=dt, knowledge_time=kt, venue_id=vid)
-    assert res.outcome in (
-        models.ResolutionOutcome.QUEUED, models.ResolutionOutcome.AMBIGUOUS
-    )
+    assert res.outcome in (models.ResolutionOutcome.QUEUED, models.ResolutionOutcome.AMBIGUOUS)
 
 
 # --- REF-001 ticket deliverable scenarios (synthetic coverage) --------------
 
 
-def _seed_two_instruments(tmp_path: Path) -> tuple[
-    sqlite3.Connection, store.ReferenceStore, str, str, str, str
-]:
+def _seed_two_instruments(
+    tmp_path: Path,
+) -> tuple[sqlite3.Connection, store.ReferenceStore, str, str, str, str]:
     """Two distinct instruments on the same asset+venue (different salts)."""
     conn, s, vid, aid, iid = _seed(tmp_path)
     iid2 = s.register_instrument(
@@ -504,18 +513,34 @@ def test_S1_ticker_reuse_resolves_correct_instrument_per_valid_window(tmp_path: 
         known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
     )
     s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid1,
-        window=w1, venue_id=vid,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid1,
+        window=w1,
+        venue_id=vid,
     )
     s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid2,
-        window=w2, venue_id=vid,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid2,
+        window=w2,
+        venue_id=vid,
     )
     kt = datetime(2025, 1, 2, tzinfo=timezone.utc)
-    early = s.resolve_alias("BTC", decision_time=datetime(2019, 6, 1, tzinfo=timezone.utc), knowledge_time=kt, venue_id=vid)
+    early = s.resolve_alias(
+        "BTC",
+        decision_time=datetime(2019, 6, 1, tzinfo=timezone.utc),
+        knowledge_time=kt,
+        venue_id=vid,
+    )
     assert early.outcome is models.ResolutionOutcome.RESOLVED
     assert early.target_id == iid1
-    late = s.resolve_alias("BTC", decision_time=datetime(2021, 6, 1, tzinfo=timezone.utc), knowledge_time=kt, venue_id=vid)
+    late = s.resolve_alias(
+        "BTC",
+        decision_time=datetime(2021, 6, 1, tzinfo=timezone.utc),
+        knowledge_time=kt,
+        venue_id=vid,
+    )
     assert late.outcome is models.ResolutionOutcome.RESOLVED
     assert late.target_id == iid2
 
@@ -523,16 +548,22 @@ def test_S1_ticker_reuse_resolves_correct_instrument_per_valid_window(tmp_path: 
 def test_S2_redenomination_event_preserves_endpoints_ratio_time_evidence(tmp_path: Path) -> None:
     conn, s, vid, aid, iid = _seed(tmp_path)
     aid2 = s.asset_id_for(asset_class=models.AssetClass.CRYPTO, identity_key="usdc|epj...")
-    s.register_asset(asset_class=models.AssetClass.CRYPTO, display_name="USD Coin", identity_key="usdc|epj...")
+    s.register_asset(
+        asset_class=models.AssetClass.CRYPTO, display_name="USD Coin", identity_key="usdc|epj..."
+    )
     w = models.BiTemporalWindow(
         valid_from=datetime(2021, 1, 1, tzinfo=timezone.utc),
         known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
     )
     ev = s.add_migration_event(
         event_type=models.MigrationEventType.REDENOMINATION,
-        from_kind=models.TargetKind.ASSET, from_id=aid,
-        to_kind=models.TargetKind.ASSET, to_id=aid2,
-        window=w, ratio_num=1.0, ratio_den=1000.0,
+        from_kind=models.TargetKind.ASSET,
+        from_id=aid,
+        to_kind=models.TargetKind.ASSET,
+        to_id=aid2,
+        window=w,
+        ratio_num=1.0,
+        ratio_den=1000.0,
         evidence={"note": "1 new == 1000 old"},
     )
     assert ev.event_type is models.MigrationEventType.REDENOMINATION
@@ -546,7 +577,9 @@ def test_S2_redenomination_event_preserves_endpoints_ratio_time_evidence(tmp_pat
 def test_S2_redenomination_rejects_zero_denominator_and_partial_ratio(tmp_path: Path) -> None:
     conn, s, vid, aid, iid = _seed(tmp_path)
     aid2 = s.asset_id_for(asset_class=models.AssetClass.CRYPTO, identity_key="usdc|epj...")
-    s.register_asset(asset_class=models.AssetClass.CRYPTO, display_name="USD Coin", identity_key="usdc|epj...")
+    s.register_asset(
+        asset_class=models.AssetClass.CRYPTO, display_name="USD Coin", identity_key="usdc|epj..."
+    )
     w = models.BiTemporalWindow(
         valid_from=datetime(2021, 1, 1, tzinfo=timezone.utc),
         known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -554,16 +587,23 @@ def test_S2_redenomination_rejects_zero_denominator_and_partial_ratio(tmp_path: 
     with pytest.raises(errors.ReferenceValidationError):
         s.add_migration_event(
             event_type=models.MigrationEventType.REDENOMINATION,
-            from_kind=models.TargetKind.ASSET, from_id=aid,
-            to_kind=models.TargetKind.ASSET, to_id=aid2,
-            window=w, ratio_num=1.0, ratio_den=0.0,
+            from_kind=models.TargetKind.ASSET,
+            from_id=aid,
+            to_kind=models.TargetKind.ASSET,
+            to_id=aid2,
+            window=w,
+            ratio_num=1.0,
+            ratio_den=0.0,
         )
     with pytest.raises(errors.ReferenceValidationError):
         s.add_migration_event(
             event_type=models.MigrationEventType.REDENOMINATION,
-            from_kind=models.TargetKind.ASSET, from_id=aid,
-            to_kind=models.TargetKind.ASSET, to_id=aid2,
-            window=w, ratio_num=1.0,
+            from_kind=models.TargetKind.ASSET,
+            from_id=aid,
+            to_kind=models.TargetKind.ASSET,
+            to_id=aid2,
+            window=w,
+            ratio_num=1.0,
         )
 
 
@@ -575,9 +615,12 @@ def test_S3_contract_migration_preserves_distinct_source_dest_and_lineage(tmp_pa
     )
     ev = s.add_migration_event(
         event_type=models.MigrationEventType.CONTRACT_MIGRATION,
-        from_kind=models.TargetKind.INSTRUMENT, from_id=iid1,
-        to_kind=models.TargetKind.INSTRUMENT, to_id=iid2,
-        window=w, evidence={"reason": "perp expiry"},
+        from_kind=models.TargetKind.INSTRUMENT,
+        from_id=iid1,
+        to_kind=models.TargetKind.INSTRUMENT,
+        to_id=iid2,
+        window=w,
+        evidence={"reason": "perp expiry"},
     )
     assert ev.event_type is models.MigrationEventType.CONTRACT_MIGRATION
     assert ev.from_id == iid1 and ev.to_id == iid2
@@ -620,7 +663,9 @@ def test_S5_late_metadata_correction_covered_by_D9_I4(tmp_path: Path) -> None:
     # test documents that coverage and pins the contract with a quick alias correction.
     conn, s, vid, aid, iid = _seed(tmp_path)
     al = s.add_alias(
-        alias_text="BTC", target_kind=models.TargetKind.INSTRUMENT, target_id=iid,
+        alias_text="BTC",
+        target_kind=models.TargetKind.INSTRUMENT,
+        target_id=iid,
         window=models.BiTemporalWindow(
             valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
             known_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -631,12 +676,16 @@ def test_S5_late_metadata_correction_covered_by_D9_I4(tmp_path: Path) -> None:
     # late correction: close prior known_to, insert replacement with contiguous knowledge time
     s.supersede_alias(al.alias_id, close_known_at=close_at)
     before = s.resolve_alias(
-        "BTC", decision_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
-        knowledge_time=al.window.known_from, venue_id=vid,
+        "BTC",
+        decision_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        knowledge_time=al.window.known_from,
+        venue_id=vid,
     )
     after = s.resolve_alias(
-        "BTC", decision_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
-        knowledge_time=close_at + timedelta(seconds=1), venue_id=vid,
+        "BTC",
+        decision_time=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        knowledge_time=close_at + timedelta(seconds=1),
+        venue_id=vid,
     )
     assert before.outcome is models.ResolutionOutcome.RESOLVED
     assert after.outcome is models.ResolutionOutcome.RESOLVED

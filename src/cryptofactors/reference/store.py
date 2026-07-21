@@ -10,8 +10,9 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any, Iterator
 
 from cryptofactors.ids import fingerprint
@@ -28,6 +29,8 @@ from cryptofactors.reference.models import (
     Asset,
     AssetClass,
     BiTemporalWindow,
+    FeeEvidenceClass,
+    FeeSchedule,
     Instrument,
     InstrumentType,
     InstrumentVersion,
@@ -47,6 +50,55 @@ from cryptofactors.reference.models import (
 )
 
 _OPEN = None  # sentinel meaning open-ended upper bound in SQL (NULL)
+
+
+def _decimal_to_store(value: Decimal) -> str:
+    """Unique numeric canonicalization for fee rates in SQLite TEXT.
+
+    Fixed-point (no exponent), no trailing fractional zeros, no trailing decimal
+    point, and exactly ``\"0\"`` for every signed/scaled zero. Numerically equal
+    Decimals map to the same string for deterministic identity (REVIEW-0104).
+    """
+    if not isinstance(value, Decimal):
+        raise TypeError("_decimal_to_store requires Decimal")
+    if value == 0:
+        return "0"
+    # format(..., 'f') avoids scientific notation; strip trailing zeros/point.
+    text = format(value, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    if text in {"", "-0", "+0"}:
+        return "0"
+    return text
+
+
+def _normalize_fee_tier_id(fee_tier_id: str) -> str:
+    tier = fee_tier_id.strip()
+    if not tier:
+        raise ReferenceValidationError("fee_tier_id must be non-empty")
+    return tier
+
+
+def _require_fee_rate(value: Any, *, field_name: str) -> Decimal:
+    """Accept finite ``Decimal`` rates in half-open [0, 1) only (REVIEW-0104)."""
+    # bool is a subclass of int — reject before any numeric handling.
+    if isinstance(value, bool) or not isinstance(value, Decimal):
+        raise ReferenceValidationError(
+            f"{field_name}: must be Decimal (got {type(value).__name__})",
+            context={"value": repr(value)},
+        )
+    dec = value
+    if not dec.is_finite():
+        raise ReferenceValidationError(
+            f"{field_name}: non-finite Decimal rejected",
+            context={"value": str(dec)},
+        )
+    if dec < 0 or dec >= 1:
+        raise ReferenceValidationError(
+            f"{field_name}: rate must be in [0, 1)",
+            context={"value": _decimal_to_store(dec)},
+        )
+    return dec
 
 
 def _json_dumps(obj: Any) -> str:
@@ -157,6 +209,43 @@ class ReferenceStore:
                 "venue_id": venue_id,
                 "instrument_type": instrument_type.value,
                 "salt": salt,
+            },
+        )
+
+    @staticmethod
+    def fee_schedule_id_for(
+        *,
+        instrument_id: str,
+        fee_tier_id: str,
+        maker_fee_rate: Decimal,
+        taker_fee_rate: Decimal,
+        evidence_class: FeeEvidenceClass,
+        valid_from: datetime,
+        known_from: datetime,
+    ) -> str:
+        """Deterministic fee-schedule id from immutable identity material.
+
+        Applies the same fee-tier normalization, fee-rate validation, and
+        evidence-class validation as insertion (REVIEW-0104).
+        """
+        tier = _normalize_fee_tier_id(fee_tier_id)
+        maker = _require_fee_rate(maker_fee_rate, field_name="maker_fee_rate")
+        taker = _require_fee_rate(taker_fee_rate, field_name="taker_fee_rate")
+        if not isinstance(evidence_class, FeeEvidenceClass):
+            raise ReferenceValidationError(
+                "evidence_class must be a FeeEvidenceClass",
+                context={"evidence_class": repr(evidence_class)},
+            )
+        return fingerprint(
+            "fee",
+            {
+                "instrument_id": instrument_id,
+                "fee_tier_id": tier,
+                "maker_fee_rate": _decimal_to_store(maker),
+                "taker_fee_rate": _decimal_to_store(taker),
+                "evidence_class": evidence_class.value,
+                "valid_from": dt_to_iso(ensure_utc(valid_from)),
+                "known_from": dt_to_iso(ensure_utc(known_from)),
             },
         )
 
@@ -411,8 +500,7 @@ class ReferenceStore:
             )
             # Close prior first so overlap checks exclude it under the new known window.
             self._conn.execute(
-                "UPDATE ref_instrument_version SET known_to = ? "
-                "WHERE instrument_version_id = ?",
+                "UPDATE ref_instrument_version SET known_to = ? WHERE instrument_version_id = ?",
                 (dt_to_iso(close_at), version_id),
             )
             self._assert_no_valid_overlap(
@@ -835,9 +923,7 @@ class ReferenceStore:
                 "SELECT * FROM ref_alias WHERE alias_id = ?", (alias_id,)
             ).fetchone()
             if row is None:
-                raise ReferenceNotFoundError(
-                    "alias not found", context={"alias_id": alias_id}
-                )
+                raise ReferenceNotFoundError("alias not found", context={"alias_id": alias_id})
             prior = self._row_to_alias(row)
             if prior.window.known_to is not None:
                 raise ReferenceConflictError(
@@ -1087,6 +1173,260 @@ class ReferenceStore:
             return None
         return self._row_to_instr_version(row)
 
+    # ---- fee schedules (FEE-001) ------------------------------------------
+
+    def add_fee_schedule(
+        self,
+        *,
+        instrument_id: str,
+        fee_tier_id: str,
+        maker_fee_rate: Decimal,
+        taker_fee_rate: Decimal,
+        evidence_class: FeeEvidenceClass,
+        window: BiTemporalWindow,
+        supersedes_fee_schedule_id: str | None = None,
+        evidence: Mapping[str, Any] | None = None,
+    ) -> FeeSchedule:
+        """Insert an immutable instrument/tier fee schedule (atomic)."""
+        # ID helper applies tier/rate/evidence-class validation and canonical rates.
+        fid = self.fee_schedule_id_for(
+            instrument_id=instrument_id,
+            fee_tier_id=fee_tier_id,
+            maker_fee_rate=maker_fee_rate,
+            taker_fee_rate=taker_fee_rate,
+            evidence_class=evidence_class,
+            valid_from=window.valid_from,
+            known_from=window.known_from,
+        )
+        tier = _normalize_fee_tier_id(fee_tier_id)
+        maker = _require_fee_rate(maker_fee_rate, field_name="maker_fee_rate")
+        taker = _require_fee_rate(taker_fee_rate, field_name="taker_fee_rate")
+        evid = dict(evidence or {})
+        try:
+            with self._atomic():
+                self._require_instrument(instrument_id)
+                if supersedes_fee_schedule_id is not None:
+                    self._require_fee_schedule(supersedes_fee_schedule_id, instrument_id, tier)
+                self._assert_no_fee_overlap(
+                    instrument_id=instrument_id,
+                    fee_tier_id=tier,
+                    window=window,
+                )
+                self._conn.execute(
+                    "INSERT INTO ref_fee_schedule("
+                    "fee_schedule_id, instrument_id, fee_tier_id, "
+                    "maker_fee_rate, taker_fee_rate, evidence_class, "
+                    "valid_from, valid_to, known_from, known_to, "
+                    "supersedes_fee_schedule_id, evidence_json"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        fid,
+                        instrument_id,
+                        tier,
+                        _decimal_to_store(maker),
+                        _decimal_to_store(taker),
+                        evidence_class.value,
+                        dt_to_iso(window.valid_from),
+                        dt_to_iso(window.valid_to) if window.valid_to else None,
+                        dt_to_iso(window.known_from),
+                        dt_to_iso(window.known_to) if window.known_to else None,
+                        supersedes_fee_schedule_id,
+                        _json_dumps(evid),
+                    ),
+                )
+        except sqlite3.IntegrityError as exc:
+            raise ReferenceConflictError(
+                "fee schedule conflict",
+                context={
+                    "instrument_id": instrument_id,
+                    "fee_tier_id": tier,
+                    "fee_schedule_id": fid,
+                },
+            ) from exc
+        return FeeSchedule(
+            fid,
+            instrument_id,
+            tier,
+            maker,
+            taker,
+            evidence_class,
+            window,
+            supersedes_fee_schedule_id,
+            evid,
+        )
+
+    def supersede_fee_schedule(
+        self,
+        fee_schedule_id: str,
+        *,
+        close_known_at: datetime,
+        maker_fee_rate: Decimal | None = None,
+        taker_fee_rate: Decimal | None = None,
+        evidence_class: FeeEvidenceClass | None = None,
+        new_window: BiTemporalWindow | None = None,
+        evidence: Mapping[str, Any] | None = None,
+    ) -> FeeSchedule:
+        """Atomic knowledge-time correction of a fee schedule.
+
+        Closes the prior open ``known_to`` at ``close_known_at`` and inserts a
+        replacement whose ``known_from`` equals that close instant (contiguous
+        half-open knowledge windows). Historical as-of queries remain stable.
+        """
+        close_at = ensure_utc(close_known_at)
+        with self._atomic():
+            row = self._conn.execute(
+                "SELECT * FROM ref_fee_schedule WHERE fee_schedule_id = ?",
+                (fee_schedule_id,),
+            ).fetchone()
+            if row is None:
+                raise ReferenceNotFoundError(
+                    "fee schedule not found",
+                    context={"fee_schedule_id": fee_schedule_id},
+                )
+            prior = self._row_to_fee_schedule(row)
+            if prior.window.known_to is not None:
+                raise ReferenceConflictError(
+                    "fee schedule already closed for knowledge time",
+                    context={
+                        "fee_schedule_id": fee_schedule_id,
+                        "known_to": dt_to_iso(prior.window.known_to),
+                    },
+                )
+            if close_at <= prior.window.known_from:
+                raise ReferenceValidationError(
+                    "close_known_at must be > prior known_from",
+                    context={"close_known_at": dt_to_iso(close_at)},
+                )
+            self._require_instrument(prior.instrument_id)
+
+            if new_window is not None:
+                window = new_window
+            else:
+                window = BiTemporalWindow(
+                    valid_from=prior.window.valid_from,
+                    valid_to=prior.window.valid_to,
+                    known_from=close_at,
+                    known_to=None,
+                )
+            self._require_contiguous_knowledge_supersession(
+                close_at=close_at, window=window, label="fee schedule"
+            )
+            maker = (
+                prior.maker_fee_rate
+                if maker_fee_rate is None
+                else _require_fee_rate(maker_fee_rate, field_name="maker_fee_rate")
+            )
+            taker = (
+                prior.taker_fee_rate
+                if taker_fee_rate is None
+                else _require_fee_rate(taker_fee_rate, field_name="taker_fee_rate")
+            )
+            eclass = prior.evidence_class if evidence_class is None else evidence_class
+            if not isinstance(eclass, FeeEvidenceClass):
+                raise ReferenceValidationError(
+                    "evidence_class must be a FeeEvidenceClass",
+                    context={"evidence_class": repr(eclass)},
+                )
+            evid = dict(evidence) if evidence is not None else dict(prior.evidence)
+            evid = {
+                **evid,
+                "supersedes_fee_schedule_id": fee_schedule_id,
+                "knowledge_correction_at": dt_to_iso(close_at),
+            }
+            new_id = self.fee_schedule_id_for(
+                instrument_id=prior.instrument_id,
+                fee_tier_id=prior.fee_tier_id,
+                maker_fee_rate=maker,
+                taker_fee_rate=taker,
+                evidence_class=eclass,
+                valid_from=window.valid_from,
+                known_from=window.known_from,
+            )
+            # Close prior first so overlap checks exclude it under the new known window.
+            self._conn.execute(
+                "UPDATE ref_fee_schedule SET known_to = ? WHERE fee_schedule_id = ?",
+                (dt_to_iso(close_at), fee_schedule_id),
+            )
+            self._assert_no_fee_overlap(
+                instrument_id=prior.instrument_id,
+                fee_tier_id=prior.fee_tier_id,
+                window=window,
+            )
+            try:
+                self._conn.execute(
+                    "INSERT INTO ref_fee_schedule("
+                    "fee_schedule_id, instrument_id, fee_tier_id, "
+                    "maker_fee_rate, taker_fee_rate, evidence_class, "
+                    "valid_from, valid_to, known_from, known_to, "
+                    "supersedes_fee_schedule_id, evidence_json"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        new_id,
+                        prior.instrument_id,
+                        prior.fee_tier_id,
+                        _decimal_to_store(maker),
+                        _decimal_to_store(taker),
+                        eclass.value,
+                        dt_to_iso(window.valid_from),
+                        dt_to_iso(window.valid_to) if window.valid_to else None,
+                        dt_to_iso(window.known_from),
+                        dt_to_iso(window.known_to) if window.known_to else None,
+                        fee_schedule_id,
+                        _json_dumps(evid),
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ReferenceConflictError(
+                    "fee schedule supersession conflict",
+                    context={
+                        "instrument_id": prior.instrument_id,
+                        "fee_tier_id": prior.fee_tier_id,
+                        "supersedes": fee_schedule_id,
+                    },
+                ) from exc
+            return FeeSchedule(
+                new_id,
+                prior.instrument_id,
+                prior.fee_tier_id,
+                maker,
+                taker,
+                eclass,
+                window,
+                fee_schedule_id,
+                evid,
+            )
+
+    def fee_schedule_as_of(
+        self,
+        instrument_id: str,
+        fee_tier_id: str,
+        *,
+        decision_time: datetime,
+        knowledge_time: datetime,
+    ) -> FeeSchedule | None:
+        """Exact instrument+tier schedule at decision/knowledge time, or None.
+
+        No venue, tier, current-state, or zero-cost fallback is performed.
+        """
+        tier = _normalize_fee_tier_id(fee_tier_id)
+        d = ensure_utc(decision_time)
+        k = ensure_utc(knowledge_time)
+        pred = _window_active_sql("valid_from", "valid_to", "known_from", "known_to")
+        row = self._conn.execute(
+            f"SELECT * FROM ref_fee_schedule "
+            f"WHERE instrument_id = :iid AND fee_tier_id = :tier AND {pred} "
+            f"ORDER BY fee_schedule_id ASC LIMIT 1",
+            {
+                "iid": instrument_id,
+                "tier": tier,
+                "decision_time": dt_to_iso(d),
+                "knowledge_time": dt_to_iso(k),
+            },
+        ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_fee_schedule(row)
+
     # ---- internals --------------------------------------------------------
 
     def _require_venue(self, venue_id: str) -> None:
@@ -1112,9 +1452,7 @@ class ReferenceStore:
                 "instrument not found", context={"instrument_id": instrument_id}
             )
 
-    def _require_instrument_version(
-        self, version_id: str, instrument_id: str
-    ) -> None:
+    def _require_instrument_version(self, version_id: str, instrument_id: str) -> None:
         row = self._conn.execute(
             "SELECT 1 FROM ref_instrument_version "
             "WHERE instrument_version_id = ? AND instrument_id = ?",
@@ -1164,6 +1502,58 @@ class ReferenceStore:
             raise ReferenceConflictError(
                 "overlapping active version windows",
                 context={id_col: id_val, "valid_from": vf},
+            )
+
+    def _assert_no_fee_overlap(
+        self,
+        *,
+        instrument_id: str,
+        fee_tier_id: str,
+        window: BiTemporalWindow,
+    ) -> None:
+        """Reject bitemporal overlap for the same instrument/tier pair."""
+        vf = dt_to_iso(window.valid_from)
+        vt = dt_to_iso(window.valid_to) if window.valid_to else None
+        kf = dt_to_iso(window.known_from)
+        kt = dt_to_iso(window.known_to) if window.known_to else None
+        sql = """
+            SELECT 1 FROM ref_fee_schedule
+            WHERE instrument_id = ?
+              AND fee_tier_id = ?
+              AND valid_from < COALESCE(?, '9999-12-31T00:00:00Z')
+              AND COALESCE(valid_to, '9999-12-31T00:00:00Z') > ?
+              AND known_from < COALESCE(?, '9999-12-31T00:00:00Z')
+              AND COALESCE(known_to, '9999-12-31T00:00:00Z') > ?
+            LIMIT 1
+        """
+        row = self._conn.execute(sql, (instrument_id, fee_tier_id, vt, vf, kt, kf)).fetchone()
+        if row is not None:
+            raise ReferenceConflictError(
+                "overlapping active fee schedule windows",
+                context={
+                    "instrument_id": instrument_id,
+                    "fee_tier_id": fee_tier_id,
+                    "valid_from": vf,
+                    "known_from": kf,
+                },
+            )
+
+    def _require_fee_schedule(
+        self, fee_schedule_id: str, instrument_id: str, fee_tier_id: str
+    ) -> None:
+        row = self._conn.execute(
+            "SELECT 1 FROM ref_fee_schedule "
+            "WHERE fee_schedule_id = ? AND instrument_id = ? AND fee_tier_id = ?",
+            (fee_schedule_id, instrument_id, fee_tier_id),
+        ).fetchone()
+        if row is None:
+            raise ReferenceNotFoundError(
+                "fee schedule not found",
+                context={
+                    "fee_schedule_id": fee_schedule_id,
+                    "instrument_id": instrument_id,
+                    "fee_tier_id": fee_tier_id,
+                },
             )
 
     def _assert_no_alias_collision(
@@ -1342,18 +1732,13 @@ class ReferenceStore:
             "updated_at": dt_to_iso(case.updated_at),
         }
         if case.status is AmbiguityStatus.RESOLVED:
-            if (
-                case.resolution_target_kind is None
-                or case.resolution_target_id is None
-            ):
+            if case.resolution_target_kind is None or case.resolution_target_id is None:
                 raise ReferenceResolutionError(
                     "RESOLVED ambiguity case missing resolution target",
                     context={"case_id": case.case_id},
                 )
             # Re-validate existence at query time (target may have been removed).
-            self._assert_target_exists(
-                case.resolution_target_kind, case.resolution_target_id
-            )
+            self._assert_target_exists(case.resolution_target_kind, case.resolution_target_id)
             return ResolutionResult(
                 outcome=ResolutionOutcome.RESOLVED,
                 alias_text=alias_text,
@@ -1446,5 +1831,24 @@ class ReferenceStore:
             contract_spec=_json_loads(row["contract_spec_json"]),
             window=window,
             supersedes_version_id=row["supersedes_version_id"],
+            evidence=_json_loads(row["evidence_json"]),
+        )
+
+    def _row_to_fee_schedule(self, row: sqlite3.Row) -> FeeSchedule:
+        window = BiTemporalWindow(
+            valid_from=iso_to_dt(row["valid_from"]),
+            valid_to=iso_to_dt(row["valid_to"]) if row["valid_to"] else None,
+            known_from=iso_to_dt(row["known_from"]),
+            known_to=iso_to_dt(row["known_to"]) if row["known_to"] else None,
+        )
+        return FeeSchedule(
+            fee_schedule_id=row["fee_schedule_id"],
+            instrument_id=row["instrument_id"],
+            fee_tier_id=row["fee_tier_id"],
+            maker_fee_rate=Decimal(row["maker_fee_rate"]),
+            taker_fee_rate=Decimal(row["taker_fee_rate"]),
+            evidence_class=FeeEvidenceClass(row["evidence_class"]),
+            window=window,
+            supersedes_fee_schedule_id=row["supersedes_fee_schedule_id"],
             evidence=_json_loads(row["evidence_json"]),
         )

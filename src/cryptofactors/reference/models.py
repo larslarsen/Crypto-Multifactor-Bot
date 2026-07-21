@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Mapping, Sequence
 
@@ -68,6 +69,13 @@ class ResolutionOutcome(str, Enum):
     # Persisted manual ambiguity decisions surfaced by resolve_alias().
     REJECTED = "REJECTED"
     DEFERRED = "DEFERRED"
+
+
+class FeeEvidenceClass(str, Enum):
+    """FEE-001 evidence provenance for an instrument fee schedule."""
+
+    OFFICIAL_SCHEDULE = "OFFICIAL_SCHEDULE"
+    ASSUMED_CONSERVATIVE = "ASSUMED_CONSERVATIVE"
 
 
 # Fixed-width lexicographically sortable UTC: YYYY-MM-DDTHH:MM:SS.ffffffZ
@@ -242,4 +250,23 @@ class ResolutionResult:
     confidence: float | None = None
     candidates: tuple[AliasRecord, ...] = ()
     case_id: str | None = None
+    evidence: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class FeeSchedule:
+    """Immutable instrument fee schedule (FEE-001).
+
+    Rates are dimensionless Decimal fractions in ``[0, 1)``. Evidence class is
+    either official schedule text or an explicit conservative assumption.
+    """
+
+    fee_schedule_id: str
+    instrument_id: str
+    fee_tier_id: str
+    maker_fee_rate: Decimal
+    taker_fee_rate: Decimal
+    evidence_class: FeeEvidenceClass
+    window: BiTemporalWindow
+    supersedes_fee_schedule_id: str | None = None
     evidence: Mapping[str, Any] = field(default_factory=dict)

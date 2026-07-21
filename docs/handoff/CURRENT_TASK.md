@@ -1,24 +1,28 @@
 # CURRENT_TASK
 
-Ticket: REF-002
-State: ACCEPTED
+Ticket: FEE-001
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
-Accepted dependencies: REF-001, BYB-001, AUD-003, RES-001. FUND-002 remains accepted with
-`NO_IMPLEMENTATION_AUTHORITY`.
+Accepted dependencies: CAT-001/CAT-001A and REF-001. FX-002, FUND-002, and REF-002 remain accepted
+with their fail-closed implementation blockers.
 Governing documents:
-- tickets/REF-002.md
-- docs/reviews/REF-002_SOURCE_FEASIBILITY_REPORT.md
-- docs/reviews/REVIEW-0102_REF-002_ACCEPTED_NO_AUTHORITY.md
+- tickets/FEE-001.md
+- docs/architecture/01_DATA_ARCHITECTURE.md
+- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
+- research/sprint_001/07_COST_AND_PORTFOLIO_PROTOCOL.md
+- docs/reviews/REVIEW-0103_FEE-001_SR_SOURCE_AUTHORIZED.md
+- docs/reviews/FEE-001_SR_IMPLEMENTATION_TASK.md
+- docs/reviews/REVIEW-0104_FEE-001_DECIMAL_IDENTITY_CORRECTION_REQUIRED.md
 
 ## Authorized work
 
-REF-002 is accepted with `NO_AUTHORITY` under
-`docs/reviews/REVIEW-0102_REF-002_ACCEPTED_NO_AUTHORITY.md`. No implementation, schema, migration, ADR,
-universe, factor, portfolio, or live work is authorized.
+FEE-001 integration complete under `docs/reviews/FEE-001_JR_INTEGRATION_TASK.md`. No further tests,
+integration, records, Git, numeric fee assumptions, source ingestion, spread/impact, portfolio, factor,
+or live work is authorized.
 
 ## Stop condition
 
-Reviewer must select and authorize any future ticket. Retain `Next ticket authorized: NONE` until then.
-Do not begin another ticket.
+After integration publication, stop and return control to Reviewer. Retain
+`Next ticket authorized: NONE`. Do not begin another ticket.
