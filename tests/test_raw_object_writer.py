@@ -499,16 +499,15 @@ def test_parent_symlink_rejected_no_hash(tmp_path: Path) -> None:
     r = writer.write_stream([body], _meta(acquisition_id="acq_ps"))
     assert isinstance(r, PublishResult)
 
-    ab_dir = r.storage_path.parent  # ab/
+    cd_dir = r.storage_path.parent  # cd/
     cd_hash = r.storage_path.name
 
     outside = tmp_path / "outside_parent"
-    out_cd = outside / cd_hash[2:4]
-    out_cd.mkdir(parents=True)
-    (out_cd / cd_hash).write_bytes(body)
+    outside.mkdir()
+    (outside / cd_hash).write_bytes(body)
 
-    shutil.rmtree(ab_dir)
-    ab_dir.symlink_to(outside)
+    shutil.rmtree(cd_dir)
+    cd_dir.symlink_to(outside)
 
     receipt = PublicationReceipt(
         raw_object_id=r.raw_object_id,

@@ -1,7 +1,7 @@
 # REVIEW-0075 - RAW-002 ADVERSARIAL EVIDENCE REQUIRED
 
 **Ticket:** RAW-002 - Harden publication-receipt verification against symlink substitution
-**Status:** RESOLVED
+**Status:** PARTIALLY RESOLVED - SUPERSEDED BY REVIEW-0076
 **Next required actor:** Jr Dev - Hermes
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20

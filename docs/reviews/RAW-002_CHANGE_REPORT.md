@@ -30,6 +30,8 @@ Added adversarial regression tests covering final-path symlink substitution, par
 - `docs/reviews/RAW-002_JR_INTEGRATION_TASK.md`
 - `docs/reviews/REVIEW-0075_RAW-002_ADVERSARIAL_EVIDENCE_REQUIRED.md`
 - `docs/reviews/RAW-002_JR_FINAL_TEST_TASK.md`
+- `docs/reviews/REVIEW-0076_RAW-002_FINAL_TEST_AND_GATES_REQUIRED.md`
+- `docs/reviews/RAW-002_JR_FINAL_GATE_TASK.md`
 - `docs/reviews/RAW-002_CHANGE_REPORT.md`
 - `docs/handoff/CURRENT_TASK.md`
 - `README.md`
@@ -43,21 +45,27 @@ PYTHONPATH=src uv run pytest tests/test_raw_object_writer.py -q --tb=short
 # ............................ [100%]
 # 29 passed
 
-PYTHONPATH=src uv run ruff check src/ tests/
+PYTHONPATH=src uv run ruff check src/cryptofactors/ingest/raw tests/test_raw_object_writer.py
 # All checks passed!
 
-PYTHONPATH=src uv run mypy src/
-# src/cryptofactors/audit/profiler.py:947: error: Unused "type: ignore" comment  [unused-ignore]
-# Found 1 error in 1 file (checked 59 source files)
-# Note: pre-existing error in profiler.py, not related to RAW-002
+PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/ingest/raw tests/test_raw_object_writer.py
+# tests/test_raw_object_writer.py:235: error: Function is missing a return type annotation  [no-untyped-def]
+# tests/test_raw_object_writer.py:240: error: Call to untyped function "gen" in typed context  [no-untyped-call]
+# tests/test_raw_object_writer.py:257: error: Value of type "Mapping[str, Any] | None" is not indexable  [index]
+# tests/test_raw_object_writer.py:267: error: Value of type "Mapping[str, Any] | None" is not indexable  [index]
+# tests/test_raw_object_writer.py:280: error: Value of type "Mapping[str, Any] | None" is not indexable  [index]
+# tests/test_raw_object_writer.py:305: error: Function is missing a return type annotation  [no-untyped-def]
+# tests/test_raw_object_writer.py:310: error: Call to untyped function "gen" in typed context  [no-untyped-call]
+# Found 7 errors in 1 file (checked 10 source files)
+# Note: all 7 errors are pre-existing in the test file, not introduced by RAW-002
 
 PYTHONPATH=src uv run pytest -q --tb=short
 # 470 passed, 1 warning
 
-uv run python scripts/check_layer_imports.py
+python3 scripts/check_layer_imports.py
 # layer import check passed
 
-uv run python scripts/check_repo_control.py
+python3 scripts/check_repo_control.py
 # Repo control check: PASS
 ```
 
