@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/AUD-004.md`
 **Actor:** Jr Dev - Hermes
-**Status:** AUTHORIZED - GATES, RECORDS, AND PUBLICATION
+**Status:** COMPLETED - BLOCKED SUBMISSION; REVIEW-0064 BASELINE REQUIRED
 **Next ticket:** `NONE`
 
 ## Assignment

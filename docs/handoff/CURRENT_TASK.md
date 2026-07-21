@@ -27,14 +27,16 @@ Governing documents:
 - docs/reviews/AUD-004_JR_FINAL_INTEGRATION_TASK.md
 - docs/reviews/REVIEW-0063_AUD-004_FINAL_EVIDENCE_REQUIRED.md
 - docs/reviews/AUD-004_JR_FINAL_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0064_AUD-004_MYPY_BASELINE_REQUIRED.md
+- docs/reviews/AUD-004_JR_MYPY_BASELINE_TASK.md
 
 ## Authorized work
 
-Final evidence was recorded under `docs/reviews/AUD-004_JR_FINAL_PUBLICATION_TASK.md`. The native
-runner correction and focused regressions are complete, but the full-suite mypy gate still reports
-pre-existing typing errors, so the ticket remains `BLOCKED` for Reviewer review.
+Jr Dev - Hermes completed `docs/reviews/AUD-004_JR_MYPY_BASELINE_TASK.md`. The current mypy
+diagnostics, baseline command, and deterministic delta are recorded in
+`docs/reviews/AUD-004_CHANGE_REPORT.md`. The ticket remains `BLOCKED` for Reviewer review.
 
 ## Stop condition
 
-Return control to Reviewer with truthful complete evidence and `Next ticket authorized: NONE`.
-Do not begin the next ticket.
+Return control to Reviewer with exact baseline evidence and `Next ticket authorized: NONE`. Do not
+begin the next ticket.

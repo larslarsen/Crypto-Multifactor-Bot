@@ -45,5 +45,36 @@ python3 scripts/check_repo_control.py
 # Repo control check: PASS
 ```
 
-## Blocker — mypy typing debt
-`PYTHONPATH=src uv run mypy --no-incremental src/source_audit scripts/audit/run_sprint003_audit.py tests/test_binance_precision.py tests/test_audit_runner_sprint003.py` reports 12 existing errors in 2 files, with 15 source files checked. The errors are the pre-existing `no-untyped-def` / `no-untyped-call` test annotations and the two runner-side type mismatches already visible in the approval history. The repository is therefore published in `BLOCKED` state for Reviewer review, with no next ticket authorized.
+## MyPy evidence
+
+### Current command
+`PYTHONPATH=src uv run mypy --no-incremental src/source_audit scripts/audit/run_sprint003_audit.py tests/test_binance_precision.py tests/test_audit_runner_sprint003.py`
+
+Current diagnostics:
+1. `tests/test_audit_runner_sprint003.py:43: error: Function is missing a return type annotation  [no-untyped-def]`
+2. `tests/test_audit_runner_sprint003.py:53: error: Function is missing a return type annotation  [no-untyped-def]`
+3. `tests/test_audit_runner_sprint003.py:57: error: Call to untyped function "_run" in typed context  [no-untyped-call]`
+4. `tests/test_audit_runner_sprint003.py:61: error: Function is missing a type annotation  [no-untyped-def]`
+5. `tests/test_audit_runner_sprint003.py:67: error: Function is missing a type annotation  [no-untyped-def]`
+6. `tests/test_audit_runner_sprint003.py:69: error: Call to untyped function "_run" in typed context  [no-untyped-call]`
+7. `tests/test_audit_runner_sprint003.py:74: error: Function is missing a type annotation  [no-untyped-def]`
+8. `tests/test_audit_runner_sprint003.py:83: error: Function is missing a type annotation  [no-untyped-def]`
+9. `tests/test_audit_runner_sprint003.py:91: error: Function is missing a type annotation  [no-untyped-def]`
+10. `tests/test_audit_runner_sprint003.py:101: error: Function is missing a type annotation  [no-untyped-def]`
+11. `scripts/audit/run_sprint003_audit.py:307: error: Argument 1 to "append" of "list" has incompatible type "dict[str, object]"; expected "dict[str, str]"  [arg-type]`
+12. `scripts/audit/run_sprint003_audit.py:592: error: Argument "mode" to "paginate" has incompatible type "str"; expected "PaginationMode"  [arg-type]`
+
+### Baseline command
+Baseline worktree: `/tmp/opencode/aud004-baseline` at parent commit `0897b11f4ed618de3dc6617391c48b01bf55b38d`.
+
+`PYTHONPATH=src /home/lars/Crypto_Multifactor_Bot/.venv/bin/mypy --no-incremental src/source_audit scripts/audit/run_sprint003_audit.py tests/test_binance_precision.py tests/test_audit_runner_sprint003.py`
+
+Baseline output:
+`mypy: error: Cannot read file 'scripts/audit/run_sprint003_audit.py': No such file or directory`
+
+### Comparison
+- Added in current vs baseline: the 12 diagnostics listed above.
+- Removed in current vs baseline: the baseline fatal file-missing error.
+- Changed diagnostics: none.
+
+The ticket remains `BLOCKED` for Reviewer review, with no next ticket authorized.
