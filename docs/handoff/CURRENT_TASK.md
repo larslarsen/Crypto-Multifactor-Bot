@@ -1,39 +1,34 @@
 # CURRENT_TASK
 
-Ticket: FX-002
-State: ACCEPTED
+Ticket: FUND-001
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
-Accepted dependency: FX-001 readiness accepted by REVIEW-0081; AUD-003 source-audit conventions.
+Accepted dependencies: RAW-001/002, MAN-001, REF-001, AUD-003, RES-001; Binance funding evidence
+from Sprint 003. FX-002 remains accepted with no viable primary source.
 Governing documents:
-- tickets/FX-002.md
-- tickets/FX-001.md
+- tickets/FUND-001.md
+- docs/architecture/01_DATA_ARCHITECTURE.md
 - docs/architecture/02_DATA_SOURCE_PLAN.md
-- docs/reviews/FX-001_READINESS_REPORT.md
-- docs/reviews/REVIEW-0081_FX-001_READINESS_ACCEPTED_FX-002_AUTHORIZED.md
-- docs/reviews/FX-002_JR_SOURCE_AUDIT_TASK.md
-- docs/reviews/FX-002_SOURCE_FEASIBILITY_REPORT.md
-- docs/reviews/REVIEW-0082_FX-002_AUDIT_CHANGES_REQUIRED.md
-- docs/reviews/FX-002_JR_AUDIT_CORRECTION_TASK.md
-- docs/reviews/REVIEW-0083_FX-002_EVIDENCE_CORRECTION_REJECTED.md
-- docs/reviews/FX-002_JR_EVIDENCE_COMPLETION_TASK.md
-- docs/reviews/REVIEW-0084_FX-002_EVIDENCE_COMPLETION_FAILED.md
-- docs/reviews/FX-002_JR_FINAL_EVIDENCE_RECOVERY_TASK.md
-- docs/reviews/REVIEW-0085_FX-002_BINANCE_DIRECT_USD_FINDING.md
-- docs/reviews/FX-002_JR_BINANCE_DIRECT_USD_AUDIT_TASK.md
-- docs/reviews/REVIEW-0086_FX-002_BINANCE_ARCHIVE_PATH_INVALID.md
-- docs/reviews/FX-002_JR_BINANCE_ARCHIVE_PATH_CORRECTION_TASK.md
-- docs/reviews/REVIEW-0087_FX-002_COMMAND_EVIDENCE_REQUIRED.md
-- docs/reviews/FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md
-- docs/reviews/REVIEW-0088_FX-002_CLOSURE_INSTRUCTIONS_CORRECTED.md
-- docs/reviews/REVIEW-0089_FX-002_ACCEPTED_NO_VIABLE_SOURCE.md
-- docs/reviews/FX-002_JR_ACCEPTANCE_PUBLICATION_TASK.md
+- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
+- docs/handoff/IMPLEMENTATION_SEQUENCE.md
+- research/sprint_003/sources/binance.md
+- research/sprint_003/02_SOURCE_OBJECT_INVENTORY.csv
+- research/sprint_003/08_RESEARCH_DATA_DECISIONS.csv
+- schemas/funding_cashflow.schema.json
+- src/cryptofactors/reference/models.py
+- src/cryptofactors/market/bars.py
+- docs/reviews/REVIEW-0090_FUND-001_READINESS_AUTHORIZED.md
+- docs/reviews/FUND-001_JR_READINESS_TASK.md
+- docs/reviews/FUND-001_READINESS_REPORT.md
+- research/fund_001/source_semantics_matrix.csv
+- research/fund_001/platform_contract_matrix.csv
 
-## Authorized work
+## Authorized work read-only
 
-FX-002 accepted-state publication only under `docs/reviews/FX-002_JR_ACCEPTANCE_PUBLICATION_TASK.md`.
-Recommendation: NONE. No implementation authorized.
+Readiness-only analysis accepted; recommendation `SOURCE_EVIDENCE_REQUIRED`. No provider calls,
+production implementation, schema, migration, ADR, factor, or USD-conversion work is authorized.
 
 ## Stop condition
 

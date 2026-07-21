@@ -14,3 +14,4 @@ AUD-005,P2,source-audit/bar-reconstruction,Provider-candle comparison by explici
 RAW-002,P3,ingest/catalog,Harden publication-receipt verification against symlink substitution,RAW-001,NON_BLOCKING,ACCEPTED
 FX-001,P0,data platform / market FX,Point-in-Time Stablecoin FX Readiness,CAT-001/001A;RAW-001/002;MAN-001;REF-001;BAR-001;AUD-003,NON_BLOCKING,ACCEPTED
 FX-002,P0,research evidence / data-source feasibility,Stablecoin FX Source Feasibility Audit,FX-001,NON_BLOCKING,ACCEPTED
+FUND-001,P0,data platform / funding and costs readiness,Binance Funding-Cashflow Readiness,RAW-001/002;MAN-001;REF-001;AUD-003;RES-001,BLOCKING_FOR_DERIVATIVES,AWAITING_REVIEW

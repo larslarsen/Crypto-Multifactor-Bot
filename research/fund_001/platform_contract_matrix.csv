@@ -1,0 +1,9 @@
+layer,current_state,accepted_contract,conflict_or_gap,funding_implication
+REF-001,dictionary with AssetClass FIAT/STABLE; Instrument uses string IDs,src/cryptofactors/reference/models.py dataclasses; bitemporal windows,None,FUND-001 must use string instrument_id/asset_id/venue_id,not integer
+BAR-001,_BarRow uses Decimal OHLC + base/quote volume; dataset_type market_bars; partition hive keys; transform canonical_bar_publisher v5,src/cryptofactors/market/bars.py; manifest/dataset identity via MAN-001,None,funding_cashflows is a separate dataset_type; do not extend market_bars schema with funding fields
+MAN-001,generic DatasetManifest with dataset_id sha256 identity; outputs/supersession/coverage/quality,src/cryptofactors/catalog/dataset/models.py,None,supports funding dataset manifests unchanged from generic contract
+CAT-001,SQLite stores control metadata only; no FX or funding tables,control_schema.sql + migrations 0001-0006,None,no new SQLite table required for funding event rows
+schemas/funding_cashflow.schema.json,non-governing draft present with integer instrument_id/venue_id string/funding_time string/long_cashflow_sign enum/quality_flags array,REVIEW-0090 declares non-governing,integer instrument_id conflicts with REF-001; funding_time string conflicts with accepted int64-microsecond convention; long_cashflow_sign present without notional/price/settlement inputs,must be replaced by non-governing proposal in readiness report; do not promote as canonical schema
+stablecoin_FX,FX-002 accepted with recommendation NONE,REVIEW-0089/REVIEW-0090,implementation blocked,any USD-denominated cashflow remains blocked until FX source authority is established
+RAW-002,publication receipt verification and symlink hardening,accepted,None,funding raw archives require the same receipt and hash verification
+control_schema.sql,no stablecoin_fx or funding tables; datasets via manifest,accepted,None,sufficient for event-only publication
