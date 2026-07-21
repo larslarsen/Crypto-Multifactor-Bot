@@ -1,7 +1,7 @@
 # AUD-004 — Change Report: native headerless support for Binance archive precision comparator
 
 **Ticket:** AUD-004
-**State:** BLOCKED
+**State:** ACCEPTED
 **Next ticket authorized:** NONE
 **Next required actor:** Reviewer
 
@@ -73,8 +73,10 @@ Baseline output:
 `mypy: error: Cannot read file 'scripts/audit/run_sprint003_audit.py': No such file or directory`
 
 ### Comparison
-- Added in current vs baseline: the 12 diagnostics listed above.
-- Removed in current vs baseline: the baseline fatal file-missing error.
-- Changed diagnostics: none.
+- REVIEW-0065 accepts that AUD-004 adds no mypy diagnostic.
+- The ten `tests/test_audit_runner_sprint003.py` diagnostics are unchanged annotation/call debt.
+- The two `scripts/audit/run_sprint003_audit.py` diagnostics are unrelated pre-existing runner sites.
+- No diagnostic targets `precision_comparison_for_report`, `precision_report`, the precision
+  comparator/archive changes, or `tests/test_binance_precision.py`.
 
-The ticket remains `BLOCKED` for Reviewer review, with no next ticket authorized.
+The ticket is accepted under REVIEW-0065, with no next ticket authorized.

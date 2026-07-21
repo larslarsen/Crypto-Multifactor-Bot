@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: AUD-004
-State: BLOCKED
+State: ACCEPTED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -29,14 +29,13 @@ Governing documents:
 - docs/reviews/AUD-004_JR_FINAL_PUBLICATION_TASK.md
 - docs/reviews/REVIEW-0064_AUD-004_MYPY_BASELINE_REQUIRED.md
 - docs/reviews/AUD-004_JR_MYPY_BASELINE_TASK.md
+- docs/reviews/REVIEW-0065_AUD-004_ACCEPTED.md
+- docs/reviews/AUD-004_JR_ACCEPTANCE_PUBLICATION_TASK.md
 
 ## Authorized work
 
-Jr Dev - Hermes completed `docs/reviews/AUD-004_JR_MYPY_BASELINE_TASK.md`. The current mypy
-diagnostics, baseline command, and deterministic delta are recorded in
-`docs/reviews/AUD-004_CHANGE_REPORT.md`. The ticket remains `BLOCKED` for Reviewer review.
+AUD-004 is accepted under REVIEW-0065. No Jr work remains.
 
 ## Stop condition
 
-Return control to Reviewer with exact baseline evidence and `Next ticket authorized: NONE`. Do not
-begin the next ticket.
+No pending Jr work remains. Do not begin the next ticket.

@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/AUD-004.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETE - BASELINE DELTA RECORDED
+**Status:** COMPLETED - SUPERSEDED BY REVIEW-0065
 **Next ticket:** `NONE`
 
 ## Assignment
