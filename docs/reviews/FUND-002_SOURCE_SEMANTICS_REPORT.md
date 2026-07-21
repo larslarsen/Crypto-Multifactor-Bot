@@ -1,6 +1,5 @@
 # FUND-002 — Binance Funding Source Semantics Audit Report
 
-**Ticket:** FUND-002
 **Status:** AWAITING_REVIEW
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer

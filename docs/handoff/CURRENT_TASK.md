@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: FUND-002
-State: AWAITING_REVIEW
+State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
 Accepted dependency: FUND-001 readiness under REVIEW-0093. FX-002 remains accepted with no viable
 primary source.
@@ -16,12 +16,14 @@ Governing documents:
 - docs/reviews/FUND-002_JR_SOURCE_SEMANTICS_AUDIT_TASK.md
 - docs/reviews/REVIEW-0094_FUND-002_EVIDENCE_REGISTRATION_REQUIRED.md
 - docs/reviews/FUND-002_JR_EVIDENCE_REGISTRATION_CORRECTION_TASK.md
+- docs/reviews/REVIEW-0095_FUND-002_FINAL_EVIDENCE_INTEGRITY_REQUIRED.md
+- docs/reviews/FUND-002_JR_FINAL_EVIDENCE_INTEGRITY_TASK.md
 
 ## Authorized work
 
-FUND-002 evidence registration correction only under
-`docs/reviews/FUND-002_JR_EVIDENCE_REGISTRATION_CORRECTION_TASK.md`. No implementation, schema,
-migration, ADR, realized-cashflow, factor, portfolio, or USD-conversion work is authorized.
+FUND-002 final evidence-integrity correction only under
+`docs/reviews/FUND-002_JR_FINAL_EVIDENCE_INTEGRITY_TASK.md`. No implementation, schema, migration,
+ADR, realized-cashflow, factor, portfolio, or USD-conversion work is authorized.
 
 ## Stop condition
 
