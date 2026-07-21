@@ -1,9 +1,9 @@
 # FX-002 — Stablecoin FX Source Feasibility Audit
 
 **Ticket:** FX-002
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0089
 **Next ticket authorized:** NONE
-**Next required actor:** Jr Dev - Hermes, tool-executing model required
+**Next required actor:** Reviewer
 **Date:** 2026-07-21
 
 ## Summary Decision

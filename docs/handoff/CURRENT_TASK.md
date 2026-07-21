@@ -1,11 +1,11 @@
 # CURRENT_TASK
 
 Ticket: FX-002
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
-Next required actor: Lead Quantitative Finance Researcher/Engineer (reviewer)
+Next required actor: Reviewer
 
-Accepted dependency: FX-001 readiness under REVIEW-0081; AUD-003 source-audit conventions.
+Accepted dependency: FX-001 readiness accepted by REVIEW-0081; AUD-003 source-audit conventions.
 Governing documents:
 - tickets/FX-002.md
 - tickets/FX-001.md
@@ -27,14 +27,14 @@ Governing documents:
 - docs/reviews/REVIEW-0087_FX-002_COMMAND_EVIDENCE_REQUIRED.md
 - docs/reviews/FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md
 - docs/reviews/REVIEW-0088_FX-002_CLOSURE_INSTRUCTIONS_CORRECTED.md
+- docs/reviews/REVIEW-0089_FX-002_ACCEPTED_NO_VIABLE_SOURCE.md
+- docs/reviews/FX-002_JR_ACCEPTANCE_PUBLICATION_TASK.md
 
 ## Authorized work
 
-FX-002 command evidence closure completed per FX-002_JR_COMMAND_EVIDENCE_CLOSURE_TASK.md (with REVIEW-0088 clarification).
-FX-002 set to AWAITING_REVIEW. Stablecoin-FX implementation remains unauthorized. Next ticket authorized: `NONE`.
+FX-002 accepted-state publication only under `docs/reviews/FX-002_JR_ACCEPTANCE_PUBLICATION_TASK.md`.
+Recommendation: NONE. No implementation authorized.
 
 ## Stop condition
 
-After publishing exact command evidence and the two record corrections, set FX-002 to
-`AWAITING_REVIEW`, name Reviewer as next actor, and retain `Next ticket authorized: NONE`. Do not
-begin implementation or another ticket.
+Return control to Reviewer. Retain `Next ticket authorized: NONE`. Do not begin implementation or another ticket.
