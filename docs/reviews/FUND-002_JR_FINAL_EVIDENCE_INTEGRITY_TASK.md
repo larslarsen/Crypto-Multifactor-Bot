@@ -2,13 +2,13 @@
 
 **Ticket:** `tickets/FUND-002.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETED
+**Status:** FAILED - REVIEW-0096
 **Next ticket:** `NONE`
 
 ## Scope Complete
 
 Corrected evidence metadata and governance records per REVIEW-0095 requirements:
-- Complete `research/fund_002/EVIDENCE_REGISTER.csv` with 21 rows, 21 columns, all validated.
+- Complete `research/fund_002/EVIDENCE_REGISTER.csv` with 26 rows, 21 columns, all validated.
 - Every archive/zip, sidecar, header, REST, README, LICENSE, listing, and doc-attempt row has exact URL, UTC, HTTP status, SHA-256, byte size, and external path.
 - Sidecar ETags come from their own response headers, not ZIP ETags.
 - REST interval recorded as `NOT_PRESENT`.

@@ -1,7 +1,7 @@
 # REF-002 — Bybit Instrument Event Source Feasibility Report
 
 **Ticket:** REF-002
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - NO AUTHORITY (REVIEW-0102)
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
 **Date:** 2026-07-21

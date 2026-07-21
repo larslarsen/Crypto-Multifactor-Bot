@@ -1,6 +1,7 @@
 # FUND-002 — Binance Funding Source Semantics Audit Report
 
-**Status:** AWAITING_REVIEW
+**Ticket:** FUND-002
+**Status:** ACCEPTED - NO IMPLEMENTATION AUTHORITY
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
 **Date:** 2026-07-21
@@ -8,8 +9,9 @@
 ## Recommendation
 **NO_IMPLEMENTATION_AUTHORITY**
 
-All eight semantic gates were evaluated against exact captured evidence. Four gates fail, two are partial,
-and one passes. Under the fail-closed rule, any unknown mandatory semantic yields `NO_IMPLEMENTATION_AUTHORITY`.
+All eight semantic gates were evaluated against exact captured evidence: four FAIL, two PARTIAL, one PASS,
+and one BLOCKED. Under the fail-closed rule, any unknown mandatory semantic yields
+`NO_IMPLEMENTATION_AUTHORITY`.
 
 Decisive blockers:
 - `calc_time` is a 13-digit ms UTC epoch in every sampled row, and REST `fundingTime` matches.
@@ -99,10 +101,11 @@ Fail-closed rule applies: one failing mandatory gate prevents canonical publicat
 ## 3. Existing Schema Critique
 
 The repo draft `schemas/funding_cashflow.schema.json` names the dataset `funding_cashflows` and uses
-integer `instrument_id` and string `venue_id`. The integer `instrument_id` conflicts with accepted REF-001
-string surrogate IDs. More importantly, the schema conflates event and realized-cashflow semantics by naming
-the dataset `funding_cashflows` while including `long_cashflow_sign` without notional, settlement, price
-basis, or sign-formula inputs. This audit cannot accept that dataset type name.
+integer `instrument_id` and string `venue_id`. The accepted contract keeps REF string IDs and integer
+fact surrogates as a deterministic mapping, not a categorical conflict. More importantly, the schema
+conflates event and realized-cashflow semantics by naming the dataset `funding_cashflows` while including
+`long_cashflow_sign` without notional, settlement, price basis, or sign-formula inputs. This audit cannot
+accept that dataset type name.
 
 A later source normalizer may emit `funding_rate_event` only after source semantics pass and the dataset
 name is reviewed.
@@ -111,7 +114,7 @@ name is reviewed.
 
 No implementation test matrix is authorized because readiness fails. If the blockers are resolved:
 
-1. Obtain или capture official Binance documentation proving `calc_time` meaning.
+1. Obtain or capture official Binance documentation proving `calc_time` meaning.
 2. Capture rate unit/sign/formula documentation for USD-M perpetual.
 3. Prove funding-specific replacement/correction applicability.
 4. Capture exact redistribution terms.
@@ -127,26 +130,36 @@ These unknowns are not inventions; they are fail-closed blockers until source ev
 
 ## 7. Records and State Transition
 
-- `tickets/FUND-002.md`: set to `AWAITING_REVIEW`, recommendation `NO_IMPLEMENTATION_AUTHORITY`.
+- `tickets/FUND-002.md`: set to `ACCEPTED - NO IMPLEMENTATION AUTHORITY`, recommendation `NO_IMPLEMENTATION_AUTHORITY`.
 - `docs/reviews/FUND-002_SOURCE_SEMANTICS_REPORT.md`: this document.
-- `research/fund_002/EVIDENCE_REGISTER.csv`: complete evidence register (14 rows, 21 columns).
+- `research/fund_002/EVIDENCE_REGISTER.csv`: complete evidence register (28 rows, 21 columns).
 - `research/fund_002/decision_matrix.csv`: eight-gate classification with recommendation.
 - `research/fund_002/sources/binance.md`: source note for Binance funding family.
-- `docs/reviews/FUND-002_JR_SOURCE_SEMANTICS_AUDIT_TASK.md`:COMPLETED.
-- `docs/reviews/FUND-002_JR_EVIDENCE_REGISTRATION_CORRECTION_TASK.md`:COMPLETED.
-- `docs/engineering/IMPLEMENTATION_BACKLOG.csv`: FUND-002 `AWAITING_REVIEW`.
-- `README.md`: FUND-002 listed as `AWAITING_REVIEW`.
+- `docs/reviews/FUND-002_JR_SOURCE_SEMANTICS_AUDIT_TASK.md`: COMPLETED - SUPERSEDED BY REVIEW-0095.
+- `docs/reviews/FUND-002_JR_EVIDENCE_REGISTRATION_CORRECTION_TASK.md`: FAILED - SUPERSEDED BY REVIEW-0095.
+- `docs/reviews/FUND-002_JR_FINAL_EVIDENCE_INTEGRITY_TASK.md`: FAILED - REVIEW-0096.
+- `docs/reviews/FUND-002_JR_VERIFIABLE_CLOSURE_TASK.md`: FAILED - REVIEW-0097.
+- `docs/reviews/FUND-002_JR_LAST_MILE_CLOSURE_TASK.md`: COMPLETED - MECHANICAL CLOSURE.
+- `docs/reviews/FUND-002_JR_ACCEPTANCE_PUBLICATION_TASK.md`: COMPLETED - ACCEPTANCE RECORDS AND PUBLICATION.
+- `docs/engineering/IMPLEMENTATION_BACKLOG.csv`: FUND-002 `ACCEPTED - NO IMPLEMENTATION AUTHORITY`.
+- `README.md`: FUND-002 listed as `ACCEPTED - NO IMPLEMENTATION AUTHORITY`.
 - `docs/handoff/CURRENT_TASK.md`: next actor `Reviewer`, next ticket `NONE`.
 
 ## 8. Acceptance Command Evidence
 
-`python3 scripts/check_repo_control.py`
-Repo control check: PASS
+- CSV validator
+  - `PASS`
+  - `Evidence rows: 28`
+- Text scan
+  - `no output`
+  - `exit status 1`
+- `python3 scripts/check_repo_control.py`
+  - `Repo control check: PASS`
 
 ----
 
 **Note on external-page limitations:** listing-page bodies under `data.binance.vision/.../fundingRate/BTCUSDT/`
-returned minimal/placeholder content in this environment. Available alternatives (live REST, archive ZIPs,
-response headers, provider `.CHECKSUM`, ETag, file `Last-Modified`, prior local binance.md sprint note,
-accepted aggregate-trade replacement evidence) are included in the evidence register. Do not invent
-doc semantics from absent page content.
+returned 404 in this environment. Available alternatives (live REST, archive ZIPs, response headers,
+provider `.CHECKSUM`, ETag, file `Last-Modified`, prior local binance.md sprint note, accepted
+aggregate-trade replacement evidence) are included in the evidence register. Do not invent doc semantics
+from absent page content.

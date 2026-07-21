@@ -22,4 +22,4 @@ Active tickets:
 - [`FX-002`](tickets/FX-002.md) — Stablecoin FX Source Feasibility Audit (`ACCEPTED`; no viable primary source, implementation remains blocked).
 - [`FUND-001`](tickets/FUND-001.md) — Binance Funding-Cashflow Readiness (`ACCEPTED`; source evidence required before implementation).
 - [`FUND-002`](tickets/FUND-002.md) — Binance Funding Source Semantics Audit (`ACCEPTED - NO IMPLEMENTATION AUTHORITY`).
-- [`REF-002`](tickets/REF-002.md) — Bybit Instrument Event Source Feasibility Audit (`AWAITING_REVIEW`; recommendation `NO_AUTHORITY`).
+- [`REF-002`](tickets/REF-002.md) — Bybit Instrument Event Source Feasibility Audit (`ACCEPTED`; recommendation `NO_AUTHORITY`, implementation blocked).
