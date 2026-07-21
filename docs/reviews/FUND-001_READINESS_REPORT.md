@@ -145,6 +145,11 @@ Accepted RAW/MAN/REF/catalog boundaries are sufficient for event-only publicatio
 - `docs/engineering/IMPLEMENTATION_BACKLOG.csv`: FUND-001 `AWAITING_REVIEW`.
 - `README.md`: FUND-001 listed as `AWAITING_REVIEW`.
 
+## Acceptance Command Evidence
+
+`python3 scripts/check_repo_control.py`
+Repo control check: PASS
+
 ## 10. Stop Condition
 
 Commit and push the readiness records. Return control to Reviewer. Retain `Next ticket authorized:
