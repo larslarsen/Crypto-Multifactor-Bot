@@ -1,18 +1,16 @@
 # REVIEW-0091 - FUND-001 READINESS CHANGES REQUIRED
 
 **Ticket:** FUND-001 - Binance Funding-Cashflow Readiness
-**Status:** CHANGES_REQUIRED - RECORDS ONLY
-**Next required actor:** Jr Dev - Hermes
+**Status:** RESOLVED - superseded by REVIEW-0093 acceptance
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-21
 
-## Decision
+## Resolution
 
-`SOURCE_EVIDENCE_REQUIRED` is directionally correct, but the readiness report is not accepted. It
-contains factual schema errors, unsupported provider semantics, and a proposed contract that still
-conflates source funding events with position-dependent cashflows.
-
-No provider calls, implementation, schema, migration, or ADR work is authorized by this correction.
+REVIEW-0091's findings were corrected by FUND-001_JR_READINESS_CORRECTION_TASK.md and
+FUND-001_JR_FINAL_READINESS_CORRECTION_TASK.md. FUND-001 is accepted under REVIEW-0093
+with recommendation `SOURCE_EVIDENCE_REQUIRED`. FUND-002 is now the active ticket.
 
 ## Blocking Findings
 

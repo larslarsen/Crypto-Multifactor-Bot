@@ -1,15 +1,16 @@
 # REVIEW-0092 - FUND-001 FINAL READINESS CORRECTION REQUIRED
 
 **Ticket:** FUND-001 - Binance Funding-Cashflow Readiness
-**Status:** CHANGES_REQUIRED - FINAL RECORD CORRECTION
-**Next required actor:** Jr Dev - Hermes
+**Status:** RESOLVED - superseded by REVIEW-0093 acceptance
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-21
 
-## Decision
+## Resolution
 
-The event-versus-cashflow boundary and `SOURCE_EVIDENCE_REQUIRED` recommendation are now correct.
-Acceptance is withheld for remaining evidence and record defects.
+REVIEW-0092's findings were corrected by FUND-001_JR_FINAL_READINESS_CORRECTION_TASK.md.
+FUND-001 is accepted under REVIEW-0093 with recommendation `SOURCE_EVIDENCE_REQUIRED`.
+FUND-002 is now the active ticket.
 
 ## Blocking Findings
 

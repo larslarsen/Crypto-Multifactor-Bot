@@ -1,9 +1,9 @@
 # FUND-001 — Binance Funding-Cashflow Readiness Report
 
 **Ticket:** FUND-001
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0093
 **Next ticket authorized:** `NONE`
-**Next required actor:** Jr Dev - Hermes
+**Next required actor:** Reviewer for FUND-002
 **Date:** 2026-07-21
 
 ## Recommendation
@@ -47,7 +47,8 @@ not prove historical provider publication or 2025 strategy availability.
 
 - `funding_time` / `calc_time`: provider event time only.
 - `availability_time`: earliest defensible availability boundary; unknown in the archive evidence.
-- `system_acquisition_time` / `source_publication_time`: not established by accepted evidence.
+- `system_acquisition_time`: established only as local raw retrieval at
+  `2026-07-18T13:00:05Z`; `source_publication_time` remains unknown.
 
 Unknown availability semantics remain fail-closed.
 
@@ -102,13 +103,12 @@ required.
 
 ## 9. Records and State Transition
 
-- `tickets/FUND-001.md`: set to `AWAITING_REVIEW`, record recommendation `SOURCE_EVIDENCE_REQUIRED`.
-- `docs/handoff/CURRENT_TASK.md`: state `AWAITING_REVIEW`, next actor `Reviewer`, next ticket `NONE`.
+- `tickets/FUND-001.md`: set to `ACCEPTED - REVIEW-0093`.
 - `docs/reviews/FUND-001_READINESS_REPORT.md`: this document.
-- `research/fund_001/source_semantics_matrix.csv`: source-semantics matrix.
-- `research/fund_001/platform_contract_matrix.csv`: platform-contract matrix.
-- `docs/engineering/IMPLEMENTATION_BACKLOG.csv`: FUND-001 `AWAITING_REVIEW`.
-- `README.md`: FUND-001 listed as `AWAITING_REVIEW`.
+- `docs/reviews/REVIEW-0093_FUND-001_ACCEPTED_FUND-002_AUTHORIZED.md`: acceptance review.
+- `docs/engineering/IMPLEMENTATION_BACKLOG.csv`: FUND-001 `ACCEPTED`.
+- `README.md`: FUND-001 listed as `ACCEPTED`.
+- FUND-002 is active under `docs/handoff/CURRENT_TASK.md`.
 
 ## Acceptance Command Evidence
 

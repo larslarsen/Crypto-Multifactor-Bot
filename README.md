@@ -20,4 +20,5 @@ Active tickets:
 - [`RAW-002`](tickets/RAW-002.md) — Harden publication-receipt verification against symlink substitution (`ACCEPTED`).
 - [`FX-001`](tickets/FX-001.md) — Point-in-Time Stablecoin FX readiness (`ACCEPTED`; implementation blocked by source authority).
 - [`FX-002`](tickets/FX-002.md) — Stablecoin FX Source Feasibility Audit (`ACCEPTED`; no viable primary source, implementation remains blocked).
-- [`FUND-001`](tickets/FUND-001.md) — Binance Funding-Cashflow Readiness (`AWAITING_REVIEW`; final readiness correction complete; recommendation `SOURCE_EVIDENCE_REQUIRED`).
+- [`FUND-001`](tickets/FUND-001.md) — Binance Funding-Cashflow Readiness (`ACCEPTED`; source evidence required before implementation).
+- [`FUND-002`](tickets/FUND-002.md) — Binance Funding Source Semantics Audit (`IN_PROGRESS`; evidence only).
