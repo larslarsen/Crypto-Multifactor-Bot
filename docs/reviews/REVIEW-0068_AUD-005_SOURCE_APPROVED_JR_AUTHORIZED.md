@@ -1,7 +1,7 @@
 # REVIEW-0068 - AUD-005 SOURCE APPROVED; JR INTEGRATION AUTHORIZED
 
 **Ticket:** AUD-005 - Provider-candle comparison by explicit comparable dimensions
-**Status:** SOURCE APPROVED - JR INTEGRATION AUTHORIZED
+**Status:** INTEGRATED AND ACCEPTED - SUPERSEDED BY REVIEW-0069
 **Next required actor:** Jr Dev - Hermes
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
@@ -31,3 +31,7 @@ integration, records, commit, and push under `docs/reviews/AUD-005_JR_INTEGRATIO
 - Correct false `trade_count`-absent claims in Sprint-003 research records and regenerate affected
   deterministic audit outputs.
 - Run all acceptance gates and record exact evidence.
+
+**Resolution:** The Jr integration was completed, all acceptance gates passed, the Sprint-003
+research records were corrected, audit outputs were regenerated, and the work was accepted under
+REVIEW-0069. AUD-005 is closed.

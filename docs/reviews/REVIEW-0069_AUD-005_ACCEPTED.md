@@ -1,8 +1,8 @@
 # REVIEW-0069 - AUD-005 FINAL REVIEW: ACCEPTED
 
 **Ticket:** AUD-005 - Provider-candle comparison by explicit comparable dimensions
-**Status:** ACCEPTED - CLOSING PUBLICATION AUTHORIZED
-**Next required actor:** Jr Dev - Hermes
+**Status:** PUBLICATION COMPLETED - AUD-005 CLOSED
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 
@@ -40,5 +40,4 @@ with aggTrades archive-record count.
 
 ## Publication
 
-Jr Dev - Hermes owns accepted-state publication under
-`docs/reviews/AUD-005_JR_ACCEPTANCE_PUBLICATION_TASK.md`. No next ticket is authorized.
+Accepted-state publication completed under REVIEW-0070. AUD-005 is closed. No next ticket is authorized.

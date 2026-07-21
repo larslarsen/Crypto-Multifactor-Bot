@@ -1,7 +1,7 @@
 # REVIEW-0066 - AUD-005 SCHEMA CORRECTED; SR SOURCE AUTHORIZED
 
 **Ticket:** AUD-005 - Provider-candle comparison by explicit comparable dimensions
-**Status:** JR CONTROL PUBLICATION, THEN SR SOURCE
+**Status:** RESOLVED - SUPERSEDED BY REVIEW-0067/0068/0069
 **Next required actor:** Jr Dev - Hermes, then Sr Dev - Sandbox
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
@@ -36,3 +36,7 @@ must never claim that the provider field is absent or substitute the aggregate-r
 
 No schema migration or architecture expansion is authorized. The local source assignment is
 `docs/reviews/AUD-005_SR_SOURCE_TASK.md`.
+
+**Resolution:** REVIEW-0066 corrected the Binance schema premise and authorized Sr Dev - Sandbox
+source work. The source was corrected under REVIEW-0067, approved under REVIEW-0068, integrated
+under the Jr integration task, and accepted under REVIEW-0069. AUD-005 is closed.

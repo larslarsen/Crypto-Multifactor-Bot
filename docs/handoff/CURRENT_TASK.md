@@ -24,14 +24,13 @@ Governing documents:
 - docs/reviews/AUD-005_CHANGE_REPORT.md
 - docs/reviews/REVIEW-0069_AUD-005_ACCEPTED.md
 - docs/reviews/AUD-005_JR_ACCEPTANCE_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0070_AUD-005_CLOSING_RECORDS_REQUIRED.md
+- docs/reviews/AUD-005_JR_CLOSING_RECORDS_TASK.md
 
 ## Authorized work
 
-AUD-005 is accepted under REVIEW-0069. Jr Dev - Hermes is authorized under
-`docs/reviews/AUD-005_JR_ACCEPTANCE_PUBLICATION_TASK.md` to publish acceptance, close ticket
-records, commit, and push. Next ticket authorized: `NONE`.
+AUD-005 is closed. No pending Jr work remains. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing acceptance and closing records, leave no pending Jr work and retain
-`Next ticket authorized: NONE`. Do not begin another ticket.
+No pending work. Do not begin another ticket.
