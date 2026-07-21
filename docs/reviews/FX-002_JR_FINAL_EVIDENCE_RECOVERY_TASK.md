@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FX-002.md`
 **Actor:** Jr Dev - Hermes, fresh reliable execution required
-**Status:** COMPLETED - EVIDENCE RECOVERED AND RECORDS PUBLISHED
+**Status:** FAILED - REVIEW-0085
 **Next ticket:** `NONE`
 
 ## Routing Constraint

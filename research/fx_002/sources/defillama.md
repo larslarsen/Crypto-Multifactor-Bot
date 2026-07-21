@@ -12,8 +12,8 @@
 - rate_direction: N/A
 - licensing_url: https://defillama.com
 - licensing_status: UNKNOWN: no terms evidence captured
-- notes: Current prices only; no historical series in payload. Proves current but not historical PIT.
+- notes: Current snapshot only; no historical series or PIT timestamps in payload.
 
 **Conclusion:**
-The payload is current snapshot. Does not prove historical USD-per-stablecoin prices.
+The payload is current snapshot. Does not prove historical USD-per-stablecoin prices or PIT.
 Source status: REJECTED (fails historical price gate).

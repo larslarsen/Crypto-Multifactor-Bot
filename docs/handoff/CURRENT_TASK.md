@@ -20,14 +20,16 @@ Governing documents:
 - docs/reviews/FX-002_JR_EVIDENCE_COMPLETION_TASK.md
 - docs/reviews/REVIEW-0084_FX-002_EVIDENCE_COMPLETION_FAILED.md
 - docs/reviews/FX-002_JR_FINAL_EVIDENCE_RECOVERY_TASK.md
+- docs/reviews/REVIEW-0085_FX-002_BINANCE_DIRECT_USD_FINDING.md
+- docs/reviews/FX-002_JR_BINANCE_DIRECT_USD_AUDIT_TASK.md
 
 ## Authorized work
 
-FX-002 evidence recovery completed per FX-002_JR_FINAL_EVIDENCE_RECOVERY_TASK.md after REVIEW-0084.
+FX-002 Binance direct-USD audit completed per FX-002_JR_BINANCE_DIRECT_USD_AUDIT_TASK.md after REVIEW-0085.
 FX-002 set to AWAITING_REVIEW. Stablecoin-FX implementation remains unauthorized. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing mechanically verified FX-002 evidence, set FX-002 to `AWAITING_REVIEW`, name
-Reviewer as next actor, and retain `Next ticket authorized: NONE`. Do not begin implementation or
-another ticket.
+After publishing the bounded direct-USD audit and mechanically verified FX-002 evidence, set FX-002
+to `AWAITING_REVIEW`, name Reviewer as next actor, and retain `Next ticket authorized: NONE`. Do not
+begin implementation or another ticket.

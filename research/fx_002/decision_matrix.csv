@@ -1,5 +1,5 @@
-provider,direct_usd_anchor,historical_depth_observed,pit_times_distinguished,revisions_observed,depeg_sample,raw_reproducible,licensing_clear,recommend
-Kraken,yes,no (REST capped to ~2024+),no (bar interval time only),UNKNOWN (no data),no (capped, no 2022),yes (for observed window),UNKNOWN (no terms citation),NONE
-Coin Metrics,UNKNOWN (no USD price/reference-rate metric identified in unauth catalog),no (no price sample),UNKNOWN (no data),UNKNOWN,no (no),no (unauthorized for catalog/price),UNKNOWN (sprint_003 unauth for supply only),NONE
-DefiLlama,yes (current prices),no (current snapshot only),no,UNKNOWN,no (current only),yes (payload captured),UNKNOWN (no terms),NONE
-Binance,no (per task: do not use USDT/USDC as proof of fiat USD; BTCUSD proves USD is fiat but Binance listed secondary only for stablecoin cross),N/A (no historical),N/A,N/A,N/A,yes (full exchangeInfo),UNKNOWN (no terms),SECONDARY ONLY
+provider,direct_usd_anchor,rate_direction,historical_depth_observed,pit_times_distinguished,revisions_observed,depeg_sample,raw_reproducible,licensing_clear,source_status,recommendation
+Kraken,yes,USD per USDT,no (REST capped to ~2024+),no (bar interval time only),UNKNOWN (no data),no (capped, no 2022),yes (for observed window),UNKNOWN (no terms citation),REJECTED,NONE
+Coin Metrics,UNKNOWN (no USD price metric in unauth asset-metrics catalog),N/A,no (no price sample),UNKNOWN (no data),UNKNOWN,no (no),no (unauthorized for asset-metrics catalog),UNKNOWN (sprint_003 unauth for supply only),REJECTED,NONE
+DefiLlama,yes (current prices),N/A,no (current snapshot only),no,UNKNOWN,no (current only),yes (payload captured),UNKNOWN (no terms),REJECTED,NONE
+Binance,yes (USDTUSD and USDCUSD have quoteAsset=USD per symbol info),USD per USDT / USD per USDC,no (404 on all daily archive objects tested),no,UNKNOWN,no (404 on 2022-05-01 depeg window),yes (live symbol info),UNKNOWN (no terms),REJECTED,NONE
