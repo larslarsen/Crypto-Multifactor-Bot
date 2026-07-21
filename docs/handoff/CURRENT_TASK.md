@@ -3,7 +3,7 @@
 Ticket: AUD-004
 State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Sr Dev - Sandbox
+Next required actor: Jr Dev - Hermes
 
 Accepted dependency: AUD-002 (`ACCEPTED` at `899fb7c802dc4ba9b951118598417aef6d22cdcb`).
 Governing documents:
@@ -23,14 +23,16 @@ Governing documents:
 - docs/reviews/REVIEW-0061_AUD-004_RUNNER_SERIALIZATION_REQUIRED.md
 - docs/reviews/AUD-004_SR_RUNNER_SOURCE_TASK.md
 - docs/reviews/AUD-004_JR_REVIEW0061_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0062_AUD-004_RUNNER_SOURCE_APPROVED_JR_AUTHORIZED.md
+- docs/reviews/AUD-004_JR_FINAL_INTEGRATION_TASK.md
 
 ## Authorized work
 
-Jr Dev - Hermes owns the control-plane publication for REVIEW-0061 and its Sr runner-source task.
-Sr Dev - Sandbox supplies a local runner-source drop after this publication. Reviewer inspects it
-locally. Jr Dev - Hermes later integrates and publishes full-suite evidence after reviewer source
-approval.
+The local runner-source correction is approved by REVIEW-0062. Jr Dev - Hermes is authorized under
+`docs/reviews/AUD-004_JR_FINAL_INTEGRATION_TASK.md` to integrate it, complete the remaining
+regression assertions, run all acceptance gates, correct records, commit, and push.
 
 ## Stop condition
 
-After publishing the control records, retain `Next ticket authorized: NONE`. Do not begin the next ticket.
+After publication, return control to Reviewer with AUD-004 `AWAITING_REVIEW` and
+`Next ticket authorized: NONE`. Do not begin the next ticket.

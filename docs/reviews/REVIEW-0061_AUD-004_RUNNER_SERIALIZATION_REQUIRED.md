@@ -1,7 +1,7 @@
 # REVIEW-0061 - AUD-004 RUNNER SERIALIZATION REQUIRED
 
 **Ticket:** AUD-004 - Native headerless support for the Binance archive precision comparator
-**Status:** CHANGES_REQUIRED - CONTROL PUBLICATION, THEN SR SOURCE
+**Status:** CHANGES_REQUIRED - RESOLVED BY REVIEW-0062
 **Next required actor:** Jr Dev - Hermes, then Sr Dev - Sandbox
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20

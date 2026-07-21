@@ -350,6 +350,9 @@ def test_headerless_short_first_row_counts_malformed(tmp_path: Path) -> None:
     assert result_pass.malformed_a == 1
     assert result_pass.sampled_rows_a == 11
     assert result_pass.valid_inferences_a >= 5
+    assert result_pass.malformed_b == 1
+    assert result_pass.sampled_rows_b == 11
+    assert result_pass.valid_inferences_b >= 5
     assert result_pass.supports_timestamp_precision_transition is True
     result_block = compare_binance_archive_precision(
         a,

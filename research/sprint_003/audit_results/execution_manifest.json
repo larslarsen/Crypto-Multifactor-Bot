@@ -41,9 +41,9 @@
     },
     {
       "output_file": "binance_precision_comparison.json",
-      "output_sha256": "e697d1992c54f23164466729b7170849e7b5b040dbb07270151f6febe2345d04",
+      "output_sha256": "7bb750e93f1890f99f1f187afa4b0850ffd2573b3b45e1d1134ad026048dcbbe",
       "report": "binance_precision_comparison",
-      "status": "failed",
+      "status": "completed",
       "tool": "source_audit.compare_binance_archive_precision"
     },
     {

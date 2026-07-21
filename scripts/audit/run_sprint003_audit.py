@@ -22,7 +22,7 @@ import csv
 import hashlib
 import sys
 import zipfile
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -43,6 +43,7 @@ from source_audit import (
     reconstruct_bars,
 )
 from source_audit.models import (
+    BinancePrecisionComparison,
     ProjectionAssumptions,
     StorageSample,
 )
@@ -58,6 +59,19 @@ def sha256_bytes(data: bytes) -> str:
 def output_hash(obj: Any) -> str:
     """Deterministic content hash of a serialized report body."""
     return sha256_bytes(dumps_json(obj).encode("utf-8"))
+
+
+def precision_comparison_for_report(result: BinancePrecisionComparison) -> dict[str, Any]:
+    """Convert a successful native precision result for deterministic serialization.
+
+    ``BinancePrecisionComparison`` stores threshold rates as floats. The global
+    serializer rejects floats (use Decimal). Convert only at the runner boundary
+    (REVIEW-0061); do not alter source-audit model contracts.
+    """
+    payload = asdict(result)
+    payload["max_malformed_rate"] = Decimal(str(result.max_malformed_rate))
+    payload["max_ambiguous_rate"] = Decimal(str(result.max_ambiguous_rate))
+    return payload
 
 
 @dataclass
@@ -367,7 +381,7 @@ class Runner:
                 timestamp_max_utc=UTC_MAX,
             )
             rec["status"] = "completed"
-            rec["result"] = res
+            rec["result"] = precision_comparison_for_report(res)
         except Exception as exc:  # noqa: BLE001
             rec["status"] = "failed"
             rec["failure"] = f"{type(exc).__name__}: {exc}"

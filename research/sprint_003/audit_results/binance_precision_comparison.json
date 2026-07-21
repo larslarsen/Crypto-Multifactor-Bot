@@ -13,9 +13,62 @@
     "timestamp_max_utc": "2027-01-01T00:00:00+00:00",
     "timestamp_min_utc": "2017-01-01T00:00:00+00:00"
   },
-  "failure": "UnsafeArchiveError: Member extracted size exceeds bound: BTCUSDT-aggTrades-2024-12-31.csv | context={'member': 'BTCUSDT-aggTrades-2024-12-31.csv', 'file_size': 101743340, 'max': 52428800}",
+  "result": {
+    "ambiguous_a": 0,
+    "ambiguous_b": 0,
+    "archive_a_path": "/tmp/crypto_source_audit/binance/BTCUSDT-aggTrades-2024-12-31.zip",
+    "archive_b_path": "/tmp/crypto_source_audit/binance/BTCUSDT-aggTrades-2025-01-01.zip",
+    "inferred_unit_a": "ms",
+    "inferred_unit_b": "us",
+    "malformed_a": 0,
+    "malformed_b": 0,
+    "max_ambiguous_rate": "0.05",
+    "max_malformed_rate": "0.1",
+    "member_a": "BTCUSDT-aggTrades-2024-12-31.csv",
+    "member_b": "BTCUSDT-aggTrades-2025-01-01.csv",
+    "min_valid_inferences": 5,
+    "representative_raw_a": [
+      "1735603200213",
+      "1735603200248",
+      "1735603200297",
+      "1735603200355",
+      "1735603200378",
+      "1735603200747",
+      "1735603200781",
+      "1735603201045",
+      "1735603201048",
+      "1735603201469"
+    ],
+    "representative_raw_b": [
+      "1735689600010866",
+      "1735689600074095",
+      "1735689600091046",
+      "1735689600266955",
+      "1735689600299766",
+      "1735689600386595",
+      "1735689600389941",
+      "1735689600616116",
+      "1735689600617496",
+      "1735689600617924"
+    ],
+    "sampled_rows_a": 50,
+    "sampled_rows_b": 50,
+    "schema_a": [],
+    "schema_b": [],
+    "schema_differences": [],
+    "supports_timestamp_precision_transition": true,
+    "transition_rationale": "sampled rows support a unit change from ms to us with valid_a=50, valid_b=50, distributions A={'ms': 50} B={'us': 50}",
+    "unit_distribution_a": {
+      "ms": 50
+    },
+    "unit_distribution_b": {
+      "us": 50
+    },
+    "valid_inferences_a": 50,
+    "valid_inferences_b": 50
+  },
   "sha256_a": "31bf57b571f0bf58bdca38bcb4cb59fe0e6b96b7a683ee2f2391c66b130394cc",
   "sha256_b": "1a8361e40b3a40a1f6606b09e31f25af9e6d3fcce187880e3639dd1a41f6ed02",
-  "status": "failed",
+  "status": "completed",
   "tool": "source_audit.compare_binance_archive_precision"
 }
