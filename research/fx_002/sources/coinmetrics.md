@@ -1,22 +1,23 @@
-# Coin Metrics - USDT/USDC (source note - corrected)
+# Coin Metrics USDT USDC
 
-**Per accepted sprint_003/sources/coin_metrics.md:**
-- Unauthenticated Community catalog and timeseries work for supported metrics (e.g. SplyCur on usdt).
-- Catalog /catalog/asset-metrics no-param returns data.
-- Timeseries uses date windows + next_page_key, rejects limit.
-- For supply metrics, community:true for usdt.
+**Capture from register:**
+- evidence_id: COINMETRICS-CATALOG-USDT-USDC
+- request_url: https://api.coinmetrics.io/v4/catalog/assets?assets=usdt,usdc
+- retrieval_utc: 2026-07-21T07:30:00Z
+- http_status: 401
+- sha256: 30845bbc9abf40738d6cbaf138699ddeff8cc36968c53aa32ae76f9c3e628e11
+- byte_size: 88
+- external_path: /tmp/fx_002_raw/coinmetrics/catalog_assets_usdt_usdc.json
+- returned_bounds: error: unauthorized
+- rate_direction: N/A
+- licensing_url: https://docs.coinmetrics.io
+- licensing_status: UNKNOWN: no terms evidence captured
+- notes: Unauthorized. Per sprint_003, unauth works for some metrics; no USD price metric identified in this unauth attempt.
 
-**For USD price/reference rate:**
-- Catalog attempt for asset-metrics on usdt showed no direct "price_usd" in unauth context or not confirmed for stable USD reference.
-- Timeseries for price_usd on usdt returned unauthorized in current test.
-- No qualifying public unauth USD-per-stable metric catalog entry confirmed for historical PIT in this audit.
-- Sprint focused on supply, not price for stables.
+**Per sprint_003:**
+Unauth catalog works for supply metrics like SplyCur.
+No USD price/reference-rate metric identified in this unauth catalog request.
 
-**Gates:**
-- direct_usd_anchor: UNKNOWN (no metric found)
-- historical: no
-- etc: NOT_EVALUATED or no
-- recommend: NONE
-
-**Evidence:** Cite sprint_003 for unauth behavior; current attempts confirm no easy USD price for FX.
-
+**Conclusion:**
+No candidate USD price metric found in unauth catalog.
+Source status: REJECTED.

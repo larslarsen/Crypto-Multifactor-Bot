@@ -3,7 +3,7 @@
 Ticket: FX-002
 State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Lead Quantitative Finance Researcher/Engineer (reviewer)
 
 Accepted dependency: FX-001 readiness under REVIEW-0081; AUD-003 source-audit conventions.
 Governing documents:
@@ -18,12 +18,16 @@ Governing documents:
 - docs/reviews/FX-002_JR_AUDIT_CORRECTION_TASK.md
 - docs/reviews/REVIEW-0083_FX-002_EVIDENCE_CORRECTION_REJECTED.md
 - docs/reviews/FX-002_JR_EVIDENCE_COMPLETION_TASK.md
+- docs/reviews/REVIEW-0084_FX-002_EVIDENCE_COMPLETION_FAILED.md
+- docs/reviews/FX-002_JR_FINAL_EVIDENCE_RECOVERY_TASK.md
 
 ## Authorized work
 
-FX-002 evidence completed. Awaiting reviewer. Next ticket authorized: `NONE`.
+FX-002 evidence recovery completed per FX-002_JR_FINAL_EVIDENCE_RECOVERY_TASK.md after REVIEW-0084.
+FX-002 set to AWAITING_REVIEW. Stablecoin-FX implementation remains unauthorized. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing complete FX-002 evidence, set FX-002 to `AWAITING_REVIEW`, name Reviewer as next
-actor, and retain `Next ticket authorized: NONE`. Do not begin implementation or another ticket.
+After publishing mechanically verified FX-002 evidence, set FX-002 to `AWAITING_REVIEW`, name
+Reviewer as next actor, and retain `Next ticket authorized: NONE`. Do not begin implementation or
+another ticket.

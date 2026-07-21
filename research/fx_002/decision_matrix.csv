@@ -1,5 +1,5 @@
 provider,direct_usd_anchor,historical_depth_observed,pit_times_distinguished,revisions_observed,depeg_sample,raw_reproducible,licensing_clear,recommend
-Kraken,yes,no (REST capped),no (bar interval time only + retrieval),UNKNOWN (no data),no (capped, no 2022),yes (for window),UNKNOWN (no terms citation),NONE
-Coin Metrics,UNKNOWN (no USD price metric confirmed in unauth catalog/timeseries),no (no sample for price),UNKNOWN,UNKNOWN,no (no),no (auth for price),UNKNOWN (sprint for supply),NONE
-DefiLlama,yes (current),no (current snapshot),no,UNKNOWN,no (current),yes (payload),UNKNOWN (no terms),NONE
-Binance,no (no direct),N/A,N/A,N/A,N/A,yes,yes,SECONDARY ONLY
+Kraken,yes,no (REST capped to ~2024+),no (bar interval time only),UNKNOWN (no data),no (capped, no 2022),yes (for observed window),UNKNOWN (no terms citation),NONE
+Coin Metrics,UNKNOWN (no USD price/reference-rate metric identified in unauth catalog),no (no price sample),UNKNOWN (no data),UNKNOWN,no (no),no (unauthorized for catalog/price),UNKNOWN (sprint_003 unauth for supply only),NONE
+DefiLlama,yes (current prices),no (current snapshot only),no,UNKNOWN,no (current only),yes (payload captured),UNKNOWN (no terms),NONE
+Binance,no (per task: do not use USDT/USDC as proof of fiat USD; BTCUSD proves USD is fiat but Binance listed secondary only for stablecoin cross),N/A (no historical),N/A,N/A,N/A,yes (full exchangeInfo),UNKNOWN (no terms),SECONDARY ONLY
