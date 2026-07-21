@@ -1,30 +1,25 @@
 # CURRENT_TASK
 
-Ticket: FX-001
+Ticket: FX-002
 State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
-Accepted dependencies: CAT-001/001A, RAW-001/002, MAN-001, REF-001, BAR-001, and AUD-003.
+Accepted dependency: FX-001 readiness under REVIEW-0081; AUD-003 source-audit conventions.
 Governing documents:
+- tickets/FX-002.md
 - tickets/FX-001.md
-- docs/architecture/01_DATA_ARCHITECTURE.md
 - docs/architecture/02_DATA_SOURCE_PLAN.md
-- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
-- docs/architecture/09_RISK_REGISTER.md
-- docs/architecture/11_LAYER_BOUNDARIES.md
-- docs/reviews/REVIEW-0079_FX-001_JR_READINESS_AUTHORIZED.md
-- docs/reviews/FX-001_JR_READINESS_TASK.md
 - docs/reviews/FX-001_READINESS_REPORT.md
-- docs/reviews/REVIEW-0080_FX-001_READINESS_CHANGES_REQUIRED.md
-- docs/reviews/FX-001_JR_READINESS_CORRECTION_TASK.md
+- docs/reviews/REVIEW-0081_FX-001_READINESS_ACCEPTED_FX-002_AUTHORIZED.md
+- docs/reviews/FX-002_JR_SOURCE_AUDIT_TASK.md
+- docs/reviews/FX-002_SOURCE_FEASIBILITY_REPORT.md
 
 ## Authorized work
 
-FX-001 corrected readiness report published. Awaiting reviewer acceptance. Next ticket authorized: `NONE`.
+FX-002 source feasibility published. Awaiting reviewer. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing the corrected readiness report, set FX-001 to `AWAITING_REVIEW`, name Reviewer as
-next actor, and retain `Next ticket authorized: NONE`. Do not begin implementation or another
-ticket.
+After publishing FX-002 evidence, set FX-002 to `AWAITING_REVIEW`, name Reviewer as next actor, and
+retain `Next ticket authorized: NONE`. Do not begin implementation or another ticket.

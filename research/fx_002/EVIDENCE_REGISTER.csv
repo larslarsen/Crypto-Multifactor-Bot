@@ -1,0 +1,3 @@
+evidence_id,provider,request_url,retrieval_utc,sha256,byte_size,local_path,notes,licensing
+KRAKEN-USDTZUSD-2022DEPEG,Kraken,https://api.kraken.com/0/public/OHLC?pair=USDTZUSD&interval=60&since=1651300000,2026-07-21T07:15:38Z,5d0b725f881e7d96b5802b1e9735495ec4c3717ce55a66aecc00981e62ff9485,62214,research/fx_002/raw/kraken/usdtzusd_depeg2022.json,"OHLC 1min around 2022 depeg period; shows ~0.9987 values",Public market data
+KRAKEN-USDTZUSD-30D,Kraken,https://api.kraken.com/0/public/OHLC?pair=USDTZUSD&interval=1440&since=...,2026-07-21T07:15:26Z,8dfd26f890d060f1a10c481e903d045c2e1424a255c948d5e5349ae54bb670b3,2744,research/fx_002/raw/kraken/usdtzusd_30d.json,"Recent 30d daily; rate ~0.998-1.00",Public
