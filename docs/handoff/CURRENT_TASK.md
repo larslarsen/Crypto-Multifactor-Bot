@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: RAW-002
-State: AWAITING_REVIEW
+State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
 Accepted dependency: RAW-001 (`ACCEPTED`; `docs/reviews/REVIEW-0009_RAW-001_FINAL.md`).
 Governing documents:
@@ -22,13 +22,16 @@ Governing documents:
 - docs/reviews/RAW-002_JR_FINAL_TEST_TASK.md
 - docs/reviews/REVIEW-0076_RAW-002_FINAL_TEST_AND_GATES_REQUIRED.md
 - docs/reviews/RAW-002_JR_FINAL_GATE_TASK.md
+- docs/reviews/REVIEW-0077_RAW-002_ACCEPTED.md
+- docs/reviews/RAW-002_JR_ACCEPTANCE_PUBLICATION_TASK.md
 
 ## Authorized work
 
-The approved source remains valid. Jr Dev - Hermes corrected the parent-symlink fixture and ran
-all six exact gates. All gates pass with truthful evidence. Awaiting reviewer acceptance.
+RAW-002 is accepted under REVIEW-0077. Jr Dev - Hermes is authorized under
+`docs/reviews/RAW-002_JR_ACCEPTANCE_PUBLICATION_TASK.md` to publish truthful acceptance and closing
+records, commit, and push. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-Return control to Reviewer with truthful exact-gate evidence and `Next ticket authorized: NONE`.
-Do not begin another ticket.
+After publication, leave no pending Jr work and retain `Next ticket authorized: NONE`. Do not begin
+another ticket.

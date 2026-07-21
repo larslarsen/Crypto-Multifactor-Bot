@@ -1,7 +1,7 @@
 # REVIEW-0076 - RAW-002 FINAL TEST AND GATES REQUIRED
 
 **Ticket:** RAW-002 - Harden publication-receipt verification against symlink substitution
-**Status:** RESOLVED
+**Status:** RESOLVED - ACCEPTED BY REVIEW-0077
 **Next required actor:** Jr Dev - Hermes
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20

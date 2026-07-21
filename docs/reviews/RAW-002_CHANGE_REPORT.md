@@ -1,9 +1,9 @@
 # RAW-002 — Change Report: harden publication-receipt verification against symlink substitution
 
 **Ticket:** RAW-002
-**State:** AWAITING_REVIEW
+**State:** ACCEPTED
 **Next ticket authorized:** NONE
-**Next required actor:** Reviewer
+**Next required actor:** (none)
 
 ## Summary
 
@@ -15,7 +15,9 @@ Integrated the REVIEW-0074 approved source for RAW-002. The verification now:
 - `lstat`s every root-relative component, rejecting symlinks, missing components, non-directory parents, and non-regular final files
 - Only after path validation performs size and SHA-256 verification
 
-Added adversarial regression tests covering final-path symlink substitution, parent-component symlink substitution, lexical `..` rejection, escaping path rejection, missing component, non-directory parent, and non-regular final component. Mypy reports 7 pre-existing errors in the test file (not introduced by RAW-002). All other gates pass.
+Added adversarial regression tests covering final-path symlink substitution, parent-component symlink substitution, lexical `..` rejection, escaping path rejection, missing component, non-directory parent, and non-regular final component.
+
+Accepted per REVIEW-0077. Mypy reports exactly seven pre-existing errors (lines 235-310 in tests/test_raw_object_writer.py, none in RAW-002 source or new tests). Zero-new-diagnostics ratchet accepted for this ticket. All other gates pass with the exact outputs below.
 
 ## Files changed in this submission
 
@@ -32,6 +34,8 @@ Added adversarial regression tests covering final-path symlink substitution, par
 - `docs/reviews/RAW-002_JR_FINAL_TEST_TASK.md`
 - `docs/reviews/REVIEW-0076_RAW-002_FINAL_TEST_AND_GATES_REQUIRED.md`
 - `docs/reviews/RAW-002_JR_FINAL_GATE_TASK.md`
+- `docs/reviews/REVIEW-0077_RAW-002_ACCEPTED.md`
+- `docs/reviews/RAW-002_JR_ACCEPTANCE_PUBLICATION_TASK.md`
 - `docs/reviews/RAW-002_CHANGE_REPORT.md`
 - `docs/handoff/CURRENT_TASK.md`
 - `README.md`
@@ -57,7 +61,6 @@ PYTHONPATH=src uv run mypy --no-incremental src/cryptofactors/ingest/raw tests/t
 # tests/test_raw_object_writer.py:305: error: Function is missing a return type annotation  [no-untyped-def]
 # tests/test_raw_object_writer.py:310: error: Call to untyped function "gen" in typed context  [no-untyped-call]
 # Found 7 errors in 1 file (checked 10 source files)
-# Note: all 7 errors are pre-existing in the test file, not introduced by RAW-002
 
 PYTHONPATH=src uv run pytest -q --tb=short
 # 470 passed, 1 warning
@@ -68,6 +71,8 @@ python3 scripts/check_layer_imports.py
 python3 scripts/check_repo_control.py
 # Repo control check: PASS
 ```
+
+Per REVIEW-0077: exact mypy output retained. RAW-002 accepted with zero-new-diagnostics ratchet (no diagnostics in approved source or RAW-002 tests).
 
 ## Notes
 
