@@ -1,5 +1,5 @@
 provider,direct_usd_anchor,historical_depth_observed,pit_times_distinguished,revisions_observed,depeg_sample,raw_reproducible,licensing_clear,recommend
-Kraken,yes,yes (API samples),partial (timestamp=obs, retrieval separate),no revision in sample,yes (0.998),yes (OHLC json),yes,PRIMARY
-Coin Metrics,yes (price_usd),limited (API test failed full),unknown,unknown,no,partial,yes (community),REJECTED (no bounded PIT)
-DefiLlama,no (supply/price current),current bias,unknown,unknown,no,limited,yes,REJECTED
-Binance,no (cross only),n/a,n/a,n/a,n/a,yes,yes,SECONDARY ONLY
+Kraken,yes,no (REST capped to recent; bulk unverified),no (bar time only + retrieval),unknown (no evidence),no (no valid 2022 sample),partial (REST yes but not historical),partial (terms not captured),NONE
+Coin Metrics,unknown (auth required),no (no sample),unknown,unknown,no,no (unauthorized),partial (community),NONE
+DefiLlama,no (no payload),no,unknown,unknown,no,no,partial, NONE
+Binance,no (no direct pair),n/a,n/a,n/a,n/a,yes,yes,SECONDARY ONLY

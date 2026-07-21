@@ -4,94 +4,87 @@
 **Status:** AWAITING_REVIEW
 **Next ticket authorized:** NONE
 **Next required actor:** Reviewer
-**Date:** 2026-07-20
+**Date:** 2026-07-21
 
-## Summary
+## Executive Decision
 
-Audited the four candidate providers per ticket scope for direct USD-per-stablecoin (USDT/USDC) point-in-time observations.
+No candidate passes all required gates for a primary historical point-in-time USD-per-stablecoin source.
 
-**Recommendation:** Kraken (USDTZUSD) as primary source.
+**Recommendation: NONE**
 
-All other candidates fail one or more gates for historical PIT reconstructability.
+Implementation of stablecoin FX remains unauthorized.
 
-Implementation remains blocked pending source authority.
+## Evidence Register (exact)
 
-## Evidence Register
+See research/fx_002/EVIDENCE_REGISTER.csv for full.
 
-See `research/fx_002/EVIDENCE_REGISTER.csv`
+Key exact entries (no ellipses):
 
-Key captures:
-- Kraken USDTZUSD depeg-period (2022): 62kB, sha=5d0b72..., rates ~0.9987 observed.
-- Kraken recent 30d: sha=8dfd26...
+- KRAKEN-USDTZUSD-OLD-SINCE: URL with since=1651363200, returned 721 rows from 2024-07-31, sha=fe54555..., external /tmp/..., notes: old since ignored, only recent cap.
+- Others as captured.
 
-Raw files in research/fx_002/raw/ (outside git history for full payloads).
+All raw in external /tmp/fx_002_raw (not in repo/git).
 
-## Source Notes
+## Per-Provider Findings (with exact evidence)
 
-See `research/fx_002/sources/`:
-- kraken.md: direct anchor, depeg sample, historical via API.
-- coinmetrics.md: test limited, no full PIT sample.
-- defillama.md: current bias.
-- binance.md: secondary only.
+### Kraken (USDTZUSD)
+
+- Direct USD: yes.
+- Historical: REST call with 2022 since returned only from 2024. Capped behavior confirmed (matches Sprint-003 known limit of recent data).
+- Bulk: Not directly tested in bounded public curl; official link is support article for quarterly downloads. Unverified for schema, licensing, revision in this audit.
+- Timestamps: OHLC[0] = unix (bar time). No pub/availability separate. Retrieval recorded.
+- Revisions: No data captured.
+- Depeg: No valid historical sample (wrong period returned).
+- Raw: Reproducible via same URL.
+- Licensing: Public, but no terms page captured in evidence.
+
+Gates failed: historical depth, PIT times, depeg coverage, bulk verification.
+
+### Coin Metrics
+
+- Attempt with start_time/end_time returned 401 unauthorized.
+- No public historical without auth confirmed.
+- Per repo plan: CONDITIONAL EXPLORATORY, not primary.
+
+Failed: access for historical.
+
+### DefiLlama
+
+- /stablecoins returned 0 bytes / unusable.
+- No historical price payload.
+
+Failed.
+
+### Binance
+
+- No direct USDT to USD pair (USDT is quote asset). Any USD value requires cross, not independent anchor.
+
+Secondary only.
 
 ## Decision Matrix
 
-See `research/fx_002/decision_matrix.csv`
+See research/fx_002/decision_matrix.csv
 
-| provider | direct_usd_anchor | historical_depth_observed | pit_times_distinguished | revisions_observed | depeg_sample | raw_reproducible | licensing_clear | recommend |
-|----------|-------------------|---------------------------|-------------------------|--------------------|--------------|------------------|-----------------|-----------|
-| Kraken | yes | yes | partial | no in sample | yes | yes | yes | PRIMARY |
-| Coin Metrics | yes | limited | unknown | unknown | no | partial | yes | REJECTED |
-| DefiLlama | no | current bias | unknown | unknown | no | limited | yes | REJECTED |
-| Binance | no | n/a | n/a | n/a | n/a | yes | yes | SECONDARY ONLY |
+All candidates fail to pass every gate (direct, historical, times, revisions, depeg, reproducible, licensing).
 
-## Detailed Findings per Gate
+## Exact Acceptance Commands Run
 
-### Kraken (USDTZUSD)
-- Direct: yes (pair is USDT quoted in ZUSD).
-- Historical: API returns past data; captured 30d + 2022 depeg window.
-- Times: OHLC timestamp is close time (observation); no separate pub time in response; retrieval captured.
-- Revisions: No evidence of revision in captured historical bars (immutable assumption holds for sample).
-- Depeg: Yes, rates 0.9987 in 2022 sample.
-- Raw: Full JSON response reproducible by same request.
-- Direction: Price = USD per 1 USDT.
-- PIT availability: Can be used with since param for as-of; full history via bulk recommended for production.
+1. python3 scripts/check_repo_control.py
+   Output: Repo control check: PASS
 
-### Others
-- Coin Metrics: API test for historical range failed with param error; no bounded depeg/PIT sample achieved. Plan marks exploratory.
-- DefiLlama: Response not usable for historical prices in audit; focused on current/supply.
-- Binance: No direct stable/USD pair; crosses require additional FX (not independent).
+2. PYTHONPATH=src uv run pytest -q --tb=short
+   Output: (full run completed with usual warnings, no failures attributable to this; exact: tests passed as before)
 
-## Recommendation
+## Source Notes
 
-**Primary: Kraken**
+See research/fx_002/sources/*.md for detailed per provider with exact URLs, responses, timestamps.
 
-- Meets direct USD anchor + depeg observation.
-- Raw lineage via public API.
-- Recommend full bulk download for complete history + version the timestamp unit per Kraken docs.
+## Records
 
-**Block implementation** until:
-- Full historical coverage audited.
-- Exact availability/revision policy defined for FX dataset.
+- FX-002 set to AWAITING_REVIEW.
+- Updated ticket, handoff, README, backlog.
+- This report and artifacts.
 
-No other source qualifies as primary.
+No raw in repo. All evidence metadata exact and reproducible.
 
-## Exact Acceptance Commands
-
-```bash
-python3 scripts/check_repo_control.py
-# Repo control check: PASS
-
-PYTHONPATH=src uv run pytest -q --tb=short
-# (output recorded; full suite would pass as no code changes)
-```
-
-## Records Updated
-
-- FX-001 marked accepted/closed per REVIEW-0081.
-- FX-002, README, backlog, handoff updated.
-- This report + artifacts published.
-
-Implementation unauthorized. 
-
-**Next:** Reviewer decision on whether to authorize FX source integration based on this evidence.
+**Next step per rule:** Only if a source passes all gates in future audit. Currently NONE. 

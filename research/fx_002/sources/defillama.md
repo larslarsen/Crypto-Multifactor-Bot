@@ -1,14 +1,14 @@
-# DefiLlama
+# DefiLlama (source note)
 
-**Candidate:** DefiLlama stablecoins / prices
+**Tested endpoint:** https://api.defillama.com/stablecoins
 
-**Fetch:** /stablecoins?includePrices=true
+**Capture:**
+- retrieval: current
+- Result: 0 bytes / empty response or non-usable for historical prices.
 
-**Result:** Call returned non-json or error in parse; likely current data focused.
+**From repo:** CONDITIONAL — EXPLORATORY_PHASE2; current bias noted.
 
-**Historical:** Plan notes current bias; no clear historical PIT for price series in free API per audit.
+**Gates:** No historical data payload captured. Cannot confirm PIT, timestamps, revisions, depeg history.
 
-**Depeg:** Not captured.
-
-**Status:** Not qualified as historical PIT source in this audit.
+**Conclusion:** Rejected for historical PIT source.
 

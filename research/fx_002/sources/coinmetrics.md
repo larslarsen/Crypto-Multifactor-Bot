@@ -1,14 +1,19 @@
-# Coin Metrics - USDT price_usd
+# Coin Metrics - USDT price (source note)
 
-**Candidate:** Coin Metrics Community asset-metrics for usdt price_usd
+**Tested:**
+- Attempt: https://api.coinmetrics.io/v4/timeseries/asset-metrics?assets=usdt&metrics=price_usd&start_time=2022-05-01&end_time=2022-05-10
+- retrieval: (current)
+- Result: HTTP 401 unauthorized. "Requested resource requires authorization."
 
-**Fetch:** Attempted /v4/timeseries/asset-metrics?assets=usdt&metrics=price_usd
+**Catalog check:**
+- Attempt to list metrics for usdt failed without auth.
 
-**Result:** API returned parameter error for 'start'/'limit' in test; community may support different params or require specific metric.
+**Per repo 02_DATA_SOURCE_PLAN.md:** CONDITIONAL — EXPLORATORY_PHASE2. Use only confirmed available under Community.
 
-**Historical depth:** Per plan, long for some assets; exploratory.
+**Gates:**
+- Direct USD: potentially yes (price_usd metric if available)
+- But no public access without key; no bounded historical sample captured.
+- No depeg coverage tested.
 
-**PIT:** Not fully tested due to API response in this audit. No bounded depeg sample captured successfully.
-
-**Status:** Not confirmed viable for direct historical PIT USD per USDT in bounded public call.
+**Conclusion:** Rejected. No free public historical PIT confirmed.
 
