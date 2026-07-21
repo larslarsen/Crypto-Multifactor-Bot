@@ -25,10 +25,10 @@ from cryptofactors.ingest.raw.models import (
     PublicationReceipt,
 )
 from cryptofactors.ingest.raw.paths import (
-    assert_no_symlink_components,
-    assert_regular_nonsymlink_file,
-    canonical_identity,
+    assert_lexical_under_root,
+    assert_store_path_components_lstat,
     content_addressed_relative_path,
+    lexical_content_addressed_absolute_path,
     raw_object_id_for_sha256,
     validate_sha256_hex,
 )
@@ -82,14 +82,27 @@ def verify_publication_receipt(
     store_root: Path,
     object_prefix: str,
 ) -> None:
-    """Fail closed unless receipt identity is fully canonical and on-disk verified."""
+    """Fail closed unless receipt identity is fully canonical and on-disk verified.
+
+    Path checks are lexical and no-follow (RAW-002 / REVIEW-0072): the expected
+    content path is built under the resolved store root without resolving the
+    final component, receipt path identity is compared without following
+    symlinks, and every root-relative component is ``lstat``'d before hashing.
+    """
     if not receipt.is_complete():
         raise CatalogRegistrationError(
             "publication receipt is incomplete",
             context={"receipt_sha256": receipt.sha256},
         )
 
-    root = Path(store_root).resolve()
+    try:
+        root = Path(store_root).resolve()
+    except OSError as exc:
+        raise CatalogRegistrationError(
+            f"cannot resolve store root: {exc}",
+            context={"store_root": str(store_root)},
+        ) from exc
+
     prefix = object_prefix or receipt.object_prefix
     if receipt.object_prefix != prefix:
         raise CatalogRegistrationError(
@@ -100,11 +113,21 @@ def verify_publication_receipt(
             },
         )
 
-    digest, expected_id, expected_path, expected_uri = canonical_identity(
-        root=root,
-        object_prefix=prefix,
-        sha256_hex=receipt.sha256,
-    )
+    try:
+        digest = validate_sha256_hex(receipt.sha256)
+        expected_id = raw_object_id_for_sha256(digest)
+        rel = content_addressed_relative_path(digest, prefix=prefix)
+        expected_uri = rel.as_posix()
+        # Lexical absolute path: resolve root only; do not resolve final component.
+        expected_path = lexical_content_addressed_absolute_path(
+            root, digest, prefix=prefix
+        )
+        expected_path = assert_lexical_under_root(
+            expected_path, root, label="expected publication path"
+        )
+    except (PathSafetyError, RawStoreError) as exc:
+        ctx = getattr(exc, "context", None) or {}
+        raise CatalogRegistrationError(exc.message, context=dict(ctx)) from exc
 
     if receipt.raw_object_id != expected_id:
         raise CatalogRegistrationError(
@@ -125,7 +148,16 @@ def verify_publication_receipt(
             },
         )
 
-    observed_path = Path(receipt.storage_path).resolve()
+    # Compare lexical identity without following receipt or final-path symlinks.
+    try:
+        observed_path = assert_lexical_under_root(
+            Path(receipt.storage_path),
+            root,
+            label="receipt storage_path",
+        )
+    except PathSafetyError as exc:
+        raise CatalogRegistrationError(exc.message, context=exc.context) from exc
+
     if observed_path != expected_path:
         raise CatalogRegistrationError(
             "receipt storage_path is not the canonical content path",
@@ -137,26 +169,22 @@ def verify_publication_receipt(
         )
 
     try:
-        assert_no_symlink_components(expected_path, stop_at=root)
+        assert_store_path_components_lstat(expected_path, root=root)
     except PathSafetyError as exc:
-        raise CatalogRegistrationError(str(exc), context=exc.context) from exc
+        raise CatalogRegistrationError(exc.message, context=exc.context) from exc
+    except OSError as exc:
+        raise CatalogRegistrationError(
+            f"publication path filesystem error: {exc}",
+            context={"path": str(expected_path)},
+        ) from exc
 
-    if expected_path.is_symlink():
-        raise CatalogRegistrationError(
-            "publication path must not be a symlink",
-            context={"path": str(expected_path)},
-        )
-    if not expected_path.exists():
-        raise CatalogRegistrationError(
-            "publication path missing",
-            context={"path": str(expected_path)},
-        )
     try:
-        assert_regular_nonsymlink_file(expected_path, label="publication path")
-    except PathSafetyError as exc:
-        raise CatalogRegistrationError(str(exc), context=exc.context) from exc
-
-    st = os.lstat(expected_path)
+        st = os.lstat(expected_path)
+    except OSError as exc:
+        raise CatalogRegistrationError(
+            f"cannot lstat publication path: {exc}",
+            context={"path": str(expected_path)},
+        ) from exc
     if not statmod.S_ISREG(st.st_mode):
         raise CatalogRegistrationError(
             "publication path is not a regular file",
@@ -171,7 +199,13 @@ def verify_publication_receipt(
                 "actual": st.st_size,
             },
         )
-    actual = _sha256_file(expected_path)
+    try:
+        actual = _sha256_file(expected_path)
+    except OSError as exc:
+        raise CatalogRegistrationError(
+            f"cannot read publication path: {exc}",
+            context={"path": str(expected_path)},
+        ) from exc
     if actual != digest:
         raise CatalogRegistrationError(
             "publication SHA-256 mismatch",
