@@ -1,27 +1,27 @@
 # Binance
 
-**Capture from register (direct symbols):**
-- BINANCE-USDTUSD-SYMBOL: https://api.binance.com/api/v3/exchangeInfo?symbol=USDTUSD , 200, sha=568add8a136f0a7b1c5ab03fc13673074ab5ba1e06953fe4048a1eb69a354c6d , size=5161
-  baseAsset=USDT, quoteAsset=USD, status=TRADING
-  rate_direction: USD per USDT
-- BINANCE-USDCUSD-SYMBOL: similar, base=USDC, quote=USD, USD per USDC
+**Corrected archive evidence (with /data/ path):**
+- USDTUSD 2022-05-01: 404 NoSuchKey (correct path). Proves absence for that depeg date.
+- USDCUSD 2022-05-01: 404 NoSuchKey. Proves absence for that depeg date.
+- USDTUSD 2026-07-20: 200, Last-Modified Tue 21 Jul 2026 02:43:50 GMT, 224 bytes. 1-row daily CSV (no header row): open_time=1784505600000000, close=0.99920. Schema confirms USD per USDT.
+- USDCUSD 2026-07-20: 200, similar, close=0.99981, USD per USDC.
+- CHECKSUM sidecars for 2026-07-20: 200, match local zip shas exactly. Integrity ok.
 
-**Archive objects:**
-- Multiple daily klines archive URLs (e.g. .../USDTUSD-1d-2022-05-01.zip) return 404 NoSuchKey. No objects observed for depeg window or any tested dates.
-- No historical depth, no depeg sample (404), no PIT, no revision data from archive.
+**Symbol info (live):**
+- USDTUSD: base=USDT, quote=USD, TRADING. rate: USD per USDT
+- USDCUSD: base=USDC, quote=USD, TRADING. rate: USD per USDC
 
 **Docs:**
-- Captured https://binance-docs.github.io/apidocs/spot/en/ (redirect page). No explicit definition of `USD` quote asset as fiat USD located.
-- Fiat-anchor semantics: UNKNOWN
+- No explicit fiat definition for USD quote found.
 
-**Conclusion for this candidate:**
-Historical depth observed: no (no archive objects for symbol).
-Direct USD anchor: yes (instrument definition shows quote=USD for base=USDT/USDC).
-PIT times: no.
-Revisions observed: UNKNOWN.
-Depeg sample: no (404 for 2022-05 window).
-Raw reproducible: yes (for live symbol; no for archive).
-Licensing clear: no.
-Fiat semantics: UNKNOWN (no doc found).
-Source status: REJECTED (fails historical depth, depeg sample, licensing, and fiat semantics gates).
-Recommend: NONE
+**Conclusions from corrected evidence:**
+- Historical depth observed: recent/partial (2026-07-20 object succeeds; 2022-05 fails).
+- Depeg sample: failed (404 on 2022-05-01 for both).
+- Direct USD anchor: yes (quote=USD).
+- PIT times: UNKNOWN (no publication/availability semantics in data).
+- Revisions: UNKNOWN.
+- Raw reproducible: yes (for successful objects and checksums).
+- Licensing: UNKNOWN.
+- Fiat semantics: UNKNOWN.
+- Source status: REJECTED (failed depeg coverage + multiple UNKNOWNs).
+- Recommendation: NONE

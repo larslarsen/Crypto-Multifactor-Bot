@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FX-002.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETED - BOUNDED DIRECT-USD AUDIT AND RECORDS PUBLISHED
+**Status:** FAILED - REVIEW-0086
 **Next ticket:** `NONE`
 
 ## Assignment

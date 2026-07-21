@@ -19,4 +19,4 @@ Active tickets:
 - [`AUD-005`](tickets/AUD-005.md) — Provider-candle comparison by explicit comparable dimensions (`ACCEPTED`; closed).
 - [`RAW-002`](tickets/RAW-002.md) — Harden publication-receipt verification against symlink substitution (`ACCEPTED`).
 - [`FX-001`](tickets/FX-001.md) — Point-in-Time Stablecoin FX readiness (`ACCEPTED`; implementation blocked by source authority).
-- [`FX-002`](tickets/FX-002.md) — Stablecoin FX Source Feasibility Audit (`AWAITING_REVIEW`; Binance direct-USD audit complete per FX-002_JR_BINANCE_DIRECT_USD_AUDIT_TASK.md; recommend NONE).
+- [`FX-002`](tickets/FX-002.md) — Stablecoin FX Source Feasibility Audit (`AWAITING_REVIEW`; archive path correction complete per FX-002_JR_BINANCE_ARCHIVE_PATH_CORRECTION_TASK.md; recommend NONE).
