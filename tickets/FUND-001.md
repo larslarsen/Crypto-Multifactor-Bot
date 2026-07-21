@@ -1,8 +1,8 @@
 # FUND-001 - Binance Funding-Cashflow Readiness
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
-**Recommendation:** SOURCE_EVIDENCE_REQUIRED (REVIEW-0090 readiness boundary)
+**Status:** AWAITING_REVIEW - READINESS CORRECTION COMPLETE
+**Recommendation:** SOURCE_EVIDENCE_REQUIRED (submitted; not yet accepted)
 **Dependencies:** RAW-001/002, MAN-001, REF-001, AUD-003, RES-001 (accepted)
 **Layer:** data platform / funding and costs readiness
 **Architecture:** readiness only; no ADR, schema, migration, or production implementation authorized

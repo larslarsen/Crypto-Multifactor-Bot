@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FUND-001.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETED
+**Status:** INCOMPLETE - REVIEW-0091 CORRECTION REQUIRED
 **Next ticket:** `NONE`
 
 ## Assignment

@@ -9,139 +9,92 @@
 ## Recommendation
 **SOURCE_EVIDENCE_REQUIRED**
 
-No audited stablecoin/USD FX source exists yet. The existing `schemas/funding_cashflow.schema.json`
-and Binance monthly-funding archive evidence alone are insufficient to publish deterministic
-`funding_cashflows` observations. The schema is non-governing and contains fields whose semantics
-are not supported by accepted repo contracts. Only the rate-event layer can be defined today;
-cashflow must remain blocked.
+Accepted repository evidence is enough to keep the readiness gate open, but not enough to publish a
+canonical funding product. The current schema is non-governing. The source layer can define a
+`funding_rate_event`, not a realized cashflow.
 
-## 1. Source-Semantics Matrix — `calc_time`, `funding_interval_hours`, `last_funding_rate`
+## 1. Source Semantics
 
-See `research/fund_001/source_semantics_matrix.csv` for the exact per-field register.
+See `research/fund_001/source_semantics_matrix.csv`.
 
-Summary:
-- `calc_time`: archive field is 13-digit ms UTC epoch (e.g. `1735689600015`). Observed type is
-  integer epoch milliseconds. Defensible meaning is the scheduled funding-event reference timestamp
-  used by Binance for bookkeeping, not yet proven to equal settlement time or mark-price time.
-  Provider semantics are not documented in accepted repo evidence.
-- `funding_interval_hours`: observed value `8` for the captured January 2025 monthly archive.
-  Unit is hours. Defensible meaning is publication interval for captured rows. Whether this value
-  can differ per instrument, time, or contract type is unknown from accepted evidence.
-- `last_funding_rate`: observed value is numeric, quoted in instrument terms (e.g. `0.00010000`
-  for perps; units are funding-rate decimal, not percent). Defensible meaning is the published
-  rate for the interval ending at or near `calc_time`. Whether this is pre-rate or post-rate
-  mark/index is not documented in accepted evidence.
+- `calc_time`: observed 13-digit UTC epoch milliseconds in Binance monthly funding rows. It is only
+  an observed provider event timestamp; repository evidence does not prove settlement time,
+  publication time, or mark-price time.
+- `funding_interval_hours`: observed value `8` in the captured BTCUSDT January 2025 sample. It is an
+  observed interval field only; other values/instruments/months are unknown.
+- `last_funding_rate`: observed numeric funding-rate decimal. It is the source rate field only;
+  repository evidence does not establish cashflow semantics, sign semantics, or formula inputs.
 
 ## 2. Event vs Cashflow
 
-The source provides funding-rate events. A realized cashflow requires position inputs that are not
-present in the archive schema and are not authorized yet:
-- position notional and sign (long/short payer/receiver);
-- settlement asset and price basis;
-- mark/index/notional formula;
-- venue sign convention for the specific instrument/contract type.
-
-Publishing a rate row under `funding_cashflows` without these inputs mislabels event as realized
-cashflow. The current schema conflates the two by naming the dataset `funding_cashflows` and
-including `long_cashflow_sign` without notional inputs.
+Source normalization may eventually publish a `funding_rate_event` product. Realized funding cashflow
+is downstream and requires position/notional, contract formula, settlement asset, price basis, and
+sign semantics. Those fields do not belong in the event-row contract.
 
 ## 3. Identifier Reconciliation with REF-001
 
-Accepted REF-001 contracts (`src/cryptofactors/reference/models.py`):
-- `AssetClass` includes `CRYPTO`, `FIAT`, `STABLE`, `DERIVATIVE_UNDERLIER`, `OTHER`.
-- `Instrument` uses string surrogate IDs (`instrument_id: str`, asset_id: str, venue_id: str).
-- `InstrumentVersion` carries contract spec, bitemporal window, and supersedes chain.
-- `ListingEvent`, `AliasRecord`, and bitemporal windows are supported.
-
-The existing schema’s integer `instrument_id` conflicts with accepted REF-001 string surrogate IDs.
-`venue_id` in the schema is correctly typed as string, but its domain is not referenced from an
-accepted venue master. Any implementation must use accepted REF instrument/venue identifiers, not
-the currently proposed integer.
+Accepted REF contracts use string identifiers. The accepted data architecture also requires compact
+integer fact surrogates in Parquet. The unresolved issue is a deterministic string-to-fact-surrogate
+mapping/public contract, not invalidation of either representation.
 
 ## 4. Time Semantics
 
-Separate four times:
-- `funding_time` / `calc_time`: provider event timestamp (currently ms epoch).
-- `source_publication_time`: not present in archive; live REST does expose a published-time field.
-- `system_acquisition_time`: raw capture time; not present in the current schema.
-- `availability_time`: earliest time this row may influence a strategy decision. Not present.
+The current schema already includes `availability_time`, `quality_flags`, and `source_dataset_id`.
+Repository evidence does not establish `source_publication_time` or raw-object lineage in the schema.
 
-Unknowns that must remain unknown:
-- whether `calc_time` equals mark-price time or settlement transfer time;
-- intra-instrument settlement latency differences.
+- `funding_time` / `calc_time`: provider event time only.
+- `availability_time`: earliest defensible availability boundary; unknown in the archive evidence.
+- `system_acquisition_time` / `source_publication_time`: not established by accepted evidence.
 
-These unknowns block implementation.
+Unknown availability semantics remain fail-closed.
 
-## 5. Coverage, Replacement, Corrections, Quarantine
+## 5. Corrections, Replacement, Quarantine
 
-- Binance archive evidence confirms real historical replacement: provider publishes
-  `updates/YYYY-MM-DD_aggregate_trade_updates.csv` with old/new checksums. Funding archives may
-  receive similar updates. Backfill must validate provider CHECKSUM per object and retain old/new
-  checksums on replacement.
-- Missing events: a failed funding transmission on the exchange side is not observable from archive
-  alone; absence of a row does not imply zero rate.
-- Corrections: a new dataset version supersedes old; old manifests and derived rows remain
-  immutable via as-of joins.
-- The schema currently lacks `quality_flags`, `source_publication_time`, `system_acquisition_time`,
-  and `availability_time`. These are required before publication.
+Accepted Binance archive evidence and provider CHECKSUM sidecars show that archive objects can be
+replaced and validated. Backfill must validate checksums and keep replacement history. Missing rows do
+not prove zero funding.
 
-## 6. Proposed Non-Governing Observation Identity
+## 6. Proposed Non-Governing Event Contract
 
-Non-governing proposal only; non-governing until source evidence and implementation review pass.
+Non-governing proposal only.
 
-- `dataset_type`: `funding_cashflows`
-- Schema name/version: `funding_event` / `1`
-- Canonical fields:
-  - `instrument_id`: string REF-001 instrument_id
-  - `venue_id`: string REF-001 venue_id
-  - `funding_time_us`: int64 epoch microseconds, event timestamp
-  - `source_publish_time_us`: int64 epoch microseconds, nullable
-  - `system_acquisition_time_us`: int64 epoch microseconds
-  - `availability_time_us`: int64 epoch microseconds
-  - `funding_rate`: decimal128(38,18), nullable
-  - `funding_interval_hours`: int64
-  - `long_cashflow_sign`: int8 enum {-1, 1}, nullable
-  - `notional_base`: decimal128(38,18), nullable
-  - `notional_quote`: decimal128(38,18), nullable
-  - `settlement_asset_id`: string REF-001 asset_id, nullable
-  - `mark_price`: decimal128(38,18), nullable
-  - `index_price`: decimal128(38,18), nullable
-  - `source_dataset_id`: string manifest dataset_id
-  - `quality_flags`: string[], nullable
-- Deterministic sort: `(instrument_id, funding_time_us, source_dataset_id)`
-- Partition path: `venue_id=.../year=YYYY/month=MM`
-- Raw/manifest lineage: source archive zip manifest → dataset manifest → this dataset
-- Quality states: `PASS`, `PASS_WITH_WARNINGS`, `QUARANTINED`
-- Failure policy: quarantined if schema fields missing or notional/settlement inputs absent when
-  cashflow rows are emitted.
+- `dataset_type`: `funding_rate_event`
+- logical key: `(venue_id, instrument_id, funding_time)`
+- lineage key: `source_dataset_id` kept separate
+- canonical fields: `instrument_id` (REF string ID), `venue_id`, `funding_time`,
+  `availability_time`, `funding_rate`, `interval_seconds`, `source_dataset_id`, `quality_flags`
+- deterministic sort: `(venue_id, instrument_id, funding_time, source_dataset_id)`
+- quality states: `PASS`, `PASS_WITH_WARNINGS`, `QUARANTINED`
+- failure policy: quarantine if availability semantics are unknown or required fields are missing
 
-`rate_direction` is not applicable here; funding rate is signed rate, not FX USD conversion.
-Do not add stablecoin-FX conversion inputs here; FX remains blocked.
+This is non-governing and does not include downstream cashflow fields.
 
 ## 7. Native Inputs and Layer Boundaries
 
-- Preserve native settlement currency (venue quote asset for perps) and native cashflow inputs.
-  Do not invent a USD conversion inside this layer.
-- Carry forward FX-002 acceptance: `FX-002` is accepted with recommendation `NONE`; stablecoin-FX
-  implementation remains blocked. Any USD-denominated cashflow view must be derived downstream
-  after FX source authority is established.
+Preserve native settlement currency and native cashflow inputs. Do not invent USD conversion in
+FUND-001. Later USD-denominated cashflow views remain blocked until FX source authority exists.
 
-## 8. Catalog Sufficiency and New Boundaries
+## 8. Follow-up Source Audit
 
-Accepted RAW/MAN/REF/catalog boundaries are sufficient for event-only publication:
-- RAW object registration, MAN-001 dataset manifests, CAT-001 catalog SQLite, and existing
-  reference assets/instruments cover event lineage, identity, and as-of availability.
-- A new public contract or layer boundary is required before cashflow rows: an ADR defining
-  position/notional/settlement/sign semantics, stablecoin-FX conversion policy, and price basis.
-  Do not write this ADR in this readiness ticket.
+Smallest next source audit, not executed here:
+
+- official Binance monthly funding archive evidence for BTCUSDT January 2025 and BTCUSDT February
+  2025
+- official Binance archive/documentation evidence for timestamp semantics, interval semantics, rate
+  unit/sign/formula, publication/availability, provider checksums/replacements, and licensing
+- explicit pass/fail gates for archive availability, checksum verification, and documentation of any
+  publication semantics
+
+If this passes and the event/cashflow boundary still needs a public contract, a later ADR may be
+required.
 
 ## 9. Records and State Transition
 
 - `tickets/FUND-001.md`: set to `AWAITING_REVIEW`, record recommendation `SOURCE_EVIDENCE_REQUIRED`.
 - `docs/handoff/CURRENT_TASK.md`: state `AWAITING_REVIEW`, next actor `Reviewer`, next ticket `NONE`.
 - `docs/reviews/FUND-001_READINESS_REPORT.md`: this document.
-- `docs/reviews/FUND-001_SEMANTICS_MATRIX.md`: source-semantics matrix.
-- `docs/reviews/FUND-001_CONTRACT_MATRIX.md`: platform-contract matrix.
+- `research/fund_001/source_semantics_matrix.csv`: source-semantics matrix.
+- `research/fund_001/platform_contract_matrix.csv`: platform-contract matrix.
 - `docs/engineering/IMPLEMENTATION_BACKLOG.csv`: FUND-001 `AWAITING_REVIEW`.
 - `README.md`: FUND-001 listed as `AWAITING_REVIEW`.
 
