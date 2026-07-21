@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: RAW-002
-State: IN_PROGRESS
+State: ACCEPTED
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted dependency: RAW-001 (`ACCEPTED`; `docs/reviews/REVIEW-0009_RAW-001_FINAL.md`).
 Governing documents:
@@ -23,15 +23,14 @@ Governing documents:
 - docs/reviews/REVIEW-0076_RAW-002_FINAL_TEST_AND_GATES_REQUIRED.md
 - docs/reviews/RAW-002_JR_FINAL_GATE_TASK.md
 - docs/reviews/REVIEW-0077_RAW-002_ACCEPTED.md
-- docs/reviews/RAW-002_JR_ACCEPTANCE_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0078_RAW-002_CLOSING_RECORDS_REQUIRED.md
+- docs/reviews/RAW-002_JR_CLOSING_RECORDS_TASK.md
 
 ## Authorized work
 
-RAW-002 is accepted under REVIEW-0077. Jr Dev - Hermes is authorized under
-`docs/reviews/RAW-002_JR_ACCEPTANCE_PUBLICATION_TASK.md` to publish truthful acceptance and closing
-records, commit, and push. Next ticket authorized: `NONE`.
+RAW-002 is closed under REVIEW-0078. No Jr work remains. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publication, leave no pending Jr work and retain `Next ticket authorized: NONE`. Do not begin
-another ticket.
+After publication, set RAW-002 to `ACCEPTED`, name Reviewer as next actor, state that no Jr work
+remains, and retain `Next ticket authorized: NONE`.

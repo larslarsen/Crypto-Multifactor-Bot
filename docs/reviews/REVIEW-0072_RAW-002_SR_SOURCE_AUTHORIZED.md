@@ -1,8 +1,8 @@
 # REVIEW-0072 - RAW-002 SR SOURCE AUTHORIZED
 
 **Ticket:** RAW-002 - Harden publication-receipt verification against symlink substitution
-**Status:** SR SOURCE AUTHORIZED - JR CONTROL PUBLICATION COMPLETED
-**Next required actor:** Sr Dev - Sandbox
+**Status:** RESOLVED - superseded by later source reviews
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 

@@ -1,8 +1,8 @@
 # REVIEW-0074 - RAW-002 SOURCE APPROVED; JR INTEGRATION AUTHORIZED
 
 **Ticket:** RAW-002 - Harden publication-receipt verification against symlink substitution
-**Status:** SOURCE APPROVED - JR INTEGRATION AUTHORIZED
-**Next required actor:** Jr Dev - Hermes
+**Status:** INTEGRATED AND ACCEPTED BY REVIEW-0077
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 

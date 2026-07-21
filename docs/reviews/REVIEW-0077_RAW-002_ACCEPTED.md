@@ -1,8 +1,8 @@
 # REVIEW-0077 - RAW-002 FINAL REVIEW: ACCEPTED
 
 **Ticket:** RAW-002 - Harden publication-receipt verification against symlink substitution
-**Status:** ACCEPTED - CLOSING PUBLICATION AUTHORIZED
-**Next required actor:** Jr Dev - Hermes
+**Status:** PUBLICATION COMPLETED - RAW-002 CLOSED
+**Next required actor:** Reviewer
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 
