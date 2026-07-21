@@ -3,7 +3,7 @@
 **Ticket:** FUND-001
 **Status:** AWAITING_REVIEW
 **Next ticket authorized:** `NONE`
-**Next required actor:** Reviewer
+**Next required actor:** Jr Dev - Hermes
 **Date:** 2026-07-21
 
 ## Recommendation
@@ -22,8 +22,8 @@ See `research/fund_001/source_semantics_matrix.csv`.
   publication time, or mark-price time.
 - `funding_interval_hours`: observed value `8` in the captured BTCUSDT January 2025 sample. It is an
   observed interval field only; other values/instruments/months are unknown.
-- `last_funding_rate`: observed numeric funding-rate decimal. It is the source rate field only;
-  repository evidence does not establish cashflow semantics, sign semantics, or formula inputs.
+- `last_funding_rate`: observed numeric field/value. Its provider unit, sign, and formula are not
+  documented in accepted evidence; repository evidence does not establish cashflow semantics.
 
 ## 2. Event vs Cashflow
 
@@ -41,6 +41,9 @@ mapping/public contract, not invalidation of either representation.
 
 The current schema already includes `availability_time`, `quality_flags`, and `source_dataset_id`.
 Repository evidence does not establish `source_publication_time` or raw-object lineage in the schema.
+The accepted inventory records the sampled funding archive at
+`retrieved_utc=2026-07-18T13:00:05Z`. That proves local raw-object acquisition time only; it does
+not prove historical provider publication or 2025 strategy availability.
 
 - `funding_time` / `calc_time`: provider event time only.
 - `availability_time`: earliest defensible availability boundary; unknown in the archive evidence.
@@ -50,9 +53,9 @@ Unknown availability semantics remain fail-closed.
 
 ## 5. Corrections, Replacement, Quarantine
 
-Accepted Binance archive evidence and provider CHECKSUM sidecars show that archive objects can be
-replaced and validated. Backfill must validate checksums and keep replacement history. Missing rows do
-not prove zero funding.
+Accepted Binance archive evidence from other archive families shows replacement-aware archive
+lineage and provider-side checksum validation. Funding-specific `.CHECKSUM` availability, match, and
+replacement applicability remain unverified. Missing rows do not prove zero funding.
 
 ## 6. Proposed Non-Governing Event Contract
 
@@ -60,7 +63,12 @@ Non-governing proposal only.
 
 - `dataset_type`: `funding_rate_event`
 - logical key: `(venue_id, instrument_id, funding_time)`
-- lineage key: `source_dataset_id` kept separate
+- logical event key is stable across source reissues.
+- raw object ID and provider checksum identify acquired bytes.
+- manifest dataset ID identifies one normalized version.
+- supersession links corrected datasets.
+- dataset/raw IDs are lineage, not part of the logical event key.
+- `source_dataset_id` is lineage and stays separate from logical identity.
 - canonical fields: `instrument_id` (REF string ID), `venue_id`, `funding_time`,
   `availability_time`, `funding_rate`, `interval_seconds`, `source_dataset_id`, `quality_flags`
 - deterministic sort: `(venue_id, instrument_id, funding_time, source_dataset_id)`
@@ -78,12 +86,16 @@ FUND-001. Later USD-denominated cashflow views remain blocked until FX source au
 
 Smallest next source audit, not executed here:
 
-- official Binance monthly funding archive evidence for BTCUSDT January 2025 and BTCUSDT February
+- `FUND-002 - Binance Funding Source Semantics Audit`
+- bounded official archive samples: BTCUSDT January 2025, BTCUSDT February 2025, ETHUSDT January
   2025
-- official Binance archive/documentation evidence for timestamp semantics, interval semantics, rate
-  unit/sign/formula, publication/availability, provider checksums/replacements, and licensing
-- explicit pass/fail gates for archive availability, checksum verification, and documentation of any
-  publication semantics
+- ZIP, `.CHECKSUM`, response-header, official-documentation, and licensing evidence
+- raw-outside-Git paths plus an evidence register with URLs, retrieval UTC, status, hashes, sizes,
+  coverage, and documentation citations
+- deterministic gates for `calc_time`, interval scope/change behavior, rate unit/sign/formula,
+  provider publication/historical availability, funding-specific checksum/replacement behavior,
+  licensing, and raw lineage
+- fail-closed rule: any unknown mandatory semantic produces `NO_IMPLEMENTATION_AUTHORITY`
 
 If this passes and the event/cashflow boundary still needs a public contract, a later ADR may be
 required.

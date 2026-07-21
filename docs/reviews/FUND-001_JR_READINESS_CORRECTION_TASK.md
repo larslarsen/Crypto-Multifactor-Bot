@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/FUND-001.md`
 **Actor:** Jr Dev - Hermes
-**Status:** COMPLETED
+**Status:** INCOMPLETE - REVIEW-0092
 **Next ticket:** `NONE`
 
 ## Scope

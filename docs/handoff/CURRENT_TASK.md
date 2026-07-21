@@ -19,14 +19,17 @@ Governing documents:
 - docs/reviews/FUND-001_READINESS_REPORT.md
 - docs/reviews/REVIEW-0091_FUND-001_READINESS_CHANGES_REQUIRED.md
 - docs/reviews/FUND-001_JR_READINESS_CORRECTION_TASK.md
+- docs/reviews/REVIEW-0092_FUND-001_FINAL_READINESS_CORRECTION_REQUIRED.md
+- docs/reviews/FUND-001_JR_FINAL_READINESS_CORRECTION_TASK.md
 
 ## Authorized work
 
-FUND-001 readiness correction completed under `docs/reviews/FUND-001_JR_READINESS_CORRECTION_TASK.md`.
-`SOURCE_EVIDENCE_REQUIRED` is retained. No provider calls, implementation, schema, migration, ADR,
-factor, or USD-conversion work is authorized.
+FUND-001 final readiness correction completed under
+`docs/reviews/FUND-001_JR_FINAL_READINESS_CORRECTION_TASK.md`. `SOURCE_EVIDENCE_REQUIRED` remains
+the sole recommendation. No provider calls, implementation, schema, migration, ADR, factor, or
+USD-conversion work is authorized.
 
 ## Stop condition
 
-After publishing corrected readiness records, set FUND-001 to `AWAITING_REVIEW`, name Reviewer as
-next actor, retain `Next ticket authorized: NONE`, and stop. Do not begin another ticket.
+After publishing final corrected readiness records, set FUND-001 to `AWAITING_REVIEW`, name Reviewer
+as next actor, retain `Next ticket authorized: NONE`, and stop. Do not begin another ticket.
