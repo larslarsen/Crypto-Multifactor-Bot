@@ -1,10 +1,15 @@
-# Binance (source note)
+# Binance (source note - corrected)
 
-**For direct USD anchor:**
-- No USDTZUSD or equivalent direct stable-to-USD pair in spot (Binance uses USDT as quote for many, but no primary USD stable pair for anchor).
-- To get USD per USDT would require cross (e.g. via BTC or other), which is not independent.
+**Capture:**
+- URL: https://api.binance.com/api/v3/exchangeInfo?symbol=USDTUSDC
+- Result: {"code":-1121,"msg":"Invalid symbol."}
+- Proof: no such direct pair.
+- To confirm no direct USD anchor: Binance uses USDT as quote for most, no primary stable-to-USD fiat pair for anchor.
+- Evidence from exchangeInfo (or cite accepted bar audit).
 
-**Evidence:** From exchangeInfo or pairs list in repo knowledge and plan: Binance primary for bars, but no direct USD FX for stables listed as such.
+**Gates:**
+- direct_usd_anchor: no
+- recommend: SECONDARY ONLY
 
-**Conclusion:** Secondary only, as stated. No independent direct USD anchor.
+**Stable pairs are cross, not independent USD.**
 

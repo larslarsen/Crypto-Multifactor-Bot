@@ -1,5 +1,5 @@
 provider,direct_usd_anchor,historical_depth_observed,pit_times_distinguished,revisions_observed,depeg_sample,raw_reproducible,licensing_clear,recommend
-Kraken,yes,no (REST capped to recent; bulk unverified),no (bar time only + retrieval),unknown (no evidence),no (no valid 2022 sample),partial (REST yes but not historical),partial (terms not captured),NONE
-Coin Metrics,unknown (auth required),no (no sample),unknown,unknown,no,no (unauthorized),partial (community),NONE
-DefiLlama,no (no payload),no,unknown,unknown,no,no,partial, NONE
-Binance,no (no direct pair),n/a,n/a,n/a,n/a,yes,yes,SECONDARY ONLY
+Kraken,yes,no (REST capped),no (bar interval time only + retrieval),UNKNOWN (no data),no (capped, no 2022),yes (for window),UNKNOWN (no terms citation),NONE
+Coin Metrics,UNKNOWN (no USD price metric confirmed in unauth catalog/timeseries),no (no sample for price),UNKNOWN,UNKNOWN,no (no),no (auth for price),UNKNOWN (sprint for supply),NONE
+DefiLlama,yes (current),no (current snapshot),no,UNKNOWN,no (current),yes (payload),UNKNOWN (no terms),NONE
+Binance,no (no direct),N/A,N/A,N/A,N/A,yes,yes,SECONDARY ONLY

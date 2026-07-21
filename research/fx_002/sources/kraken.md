@@ -1,63 +1,38 @@
-# Kraken - USDTZUSD (source note)
+# Kraken - USDTZUSD (source note - corrected)
 
-**Provider role in repo:** Spot venue, DEFER for bulk per 02_DATA_SOURCE_PLAN.md and Sprint-003 decisions. REST known to cap at recent (720 entries for some).
+**Endpoint tested:** https://api.kraken.com/0/public/OHLC
 
-**Tested endpoint:** /0/public/OHLC
+**Exact old-since capture (to prove cap):**
+- request: pair=USDTZUSD&interval=1440&since=1651363200
+- retrieval_utc: 2026-07-21T07:22:40Z
+- sha256: fe545558a74fd1e240975ff014f324107d01faf844bf18879ab8bed6048deb46
+- byte_size: 64759
+- external: /tmp/fx_002_raw/kraken/usdtzusd_old_since.json
+- returned: rows=721, min=1722384000 (2024-07-31), max=1784592000 (2026-07-21)
+- Proof: old 2022 since ignored; only recent window. Per Sprint-003, Kraken REST is not for historical backfill.
 
-**Exact calls and evidence:**
+**Timestamp semantics:**
+- The timestamp in OHLC is the bar's interval time (start or close per Kraken docs). Not labeled as publication or availability without further docs.
+- No separate provider publication time in the response.
+- Retrieval time recorded.
 
-1. Old since test (to check historical backfill):
-   - URL: https://api.kraken.com/0/public/OHLC?pair=USDTZUSD&interval=1440&since=1651363200
-   - retrieval: 2026-07-21T07:22:40Z
-   - sha256: fe545558a74fd1e240975ff014f324107d01faf844bf18879ab8bed6048deb46
-   - size: 64759
-   - external: /tmp/fx_002_raw/kraken/usdtzusd_old_since.json
-   - returned: 721 rows, min_ts=1722384000 (2024-07-31), max_ts=1784592000 (2026-07-21)
-   - Note: since=2022 ignored; only recent window returned. Confirms REST is current/incremental only. Matches known Kraken REST limit (not suitable for full historical PIT without bulk).
+**Historical depth:** REST does not provide full history; capped to recent. Bulk downloadable per support article not fully audited in this bounded test for FX (no direct stable USD in plan for Kraken FX).
 
-2. Recent sample:
-   - URL: https://api.kraken.com/0/public/OHLC?pair=USDTZUSD&interval=1440
-   - retrieval: 2026-07-21T07:15:26Z
-   - sha256: 8dfd26f890d060f1a10c481e903d045c2e1424a255c948d5e5349ae54bb670b3
-   - size: 2744
-   - external: /tmp/fx_002_raw/kraken/usdtzusd_30d.json
-   - returned recent rates ~0.998-1.00
+**Depeg:** No 2022 sample because of cap. Recent shows ~0.998 levels.
 
-**Timestamps:**
-- OHLC array[0] = unix timestamp (close time for the bar).
-- No separate publication time or availability time in response.
-- Retrieval time recorded separately.
-- For PIT: availability would be retrieval + any processing, but since capped, not historical.
+**Rate direction:** Price in response is USD per USDT (ZUSD per USDT).
 
-**Revision behavior:**
-- In captured samples, no evidence of revision (bars not changing on re-fetch in this test).
-- But no vintage or checksum for historical REST; bulk may have.
+**Licensing:** Public API, terms at kraken.com/legal (not captured in this audit, so UNKNOWN for gate).
 
-**Bulk test:**
-- Official: https://support.kraken.com/articles/360047124832-downloadable-historical-ohlcvt-open-high-low-close-volume-trades-data
-- In this audit, the direct bulk host/path not directly curlable without following (quarterly CSVs require navigation).
-- No direct access to full historical OHLCVT in bounded test; therefore historical PIT not confirmed from REST.
-- Per repo: DEFER pending successful bulk acquisition.
+**Gates status:**
+- direct_usd_anchor: yes
+- historical_depth_observed: no (capped)
+- pit_times_distinguished: no (bar time only)
+- revisions_observed: UNKNOWN
+- depeg_sample: no (no historical)
+- raw_reproducible: yes (for captured window)
+- licensing_clear: UNKNOWN (no citation)
+- recommend: NONE
 
-**Depeg coverage:**
-- No valid historical depeg sample from 2022 because of cap. The "depeg" data captured was recent (2024+).
-- Cannot claim 2022 coverage from REST.
-
-**Direction:**
-- Pair USDTZUSD: price is ZUSD (USD) per 1 USDT.
-- Matches "USD received per one unit of stablecoin".
-
-**Licensing:**
-- Public market data per Kraken docs. No terms captured in raw (no /terms page fetched in this test). Assume standard public.
-
-**PIT gates status for Kraken:**
-- Direct USD: yes
-- Historical depth: no (REST capped; bulk unverified in audit)
-- Observation/availability distinguished: no (only bar time + retrieval)
-- Revisions: unknown (no evidence captured)
-- Raw reproducible: partial (REST yes, but not historical)
-- Licensing clear: partial (no explicit terms captured)
-- Depeg historical: no
-
-**Conclusion:** Does not pass all gates. Cannot recommend as primary without bulk audit.
+**Bulk note:** Official bulk is quarterly OHLCVT downloads. Not tested for this FX candidate in this audit.
 

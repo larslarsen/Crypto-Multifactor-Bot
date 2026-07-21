@@ -1,19 +1,22 @@
-# Coin Metrics - USDT price (source note)
+# Coin Metrics - USDT/USDC (source note - corrected)
 
-**Tested:**
-- Attempt: https://api.coinmetrics.io/v4/timeseries/asset-metrics?assets=usdt&metrics=price_usd&start_time=2022-05-01&end_time=2022-05-10
-- retrieval: (current)
-- Result: HTTP 401 unauthorized. "Requested resource requires authorization."
+**Per accepted sprint_003/sources/coin_metrics.md:**
+- Unauthenticated Community catalog and timeseries work for supported metrics (e.g. SplyCur on usdt).
+- Catalog /catalog/asset-metrics no-param returns data.
+- Timeseries uses date windows + next_page_key, rejects limit.
+- For supply metrics, community:true for usdt.
 
-**Catalog check:**
-- Attempt to list metrics for usdt failed without auth.
-
-**Per repo 02_DATA_SOURCE_PLAN.md:** CONDITIONAL — EXPLORATORY_PHASE2. Use only confirmed available under Community.
+**For USD price/reference rate:**
+- Catalog attempt for asset-metrics on usdt showed no direct "price_usd" in unauth context or not confirmed for stable USD reference.
+- Timeseries for price_usd on usdt returned unauthorized in current test.
+- No qualifying public unauth USD-per-stable metric catalog entry confirmed for historical PIT in this audit.
+- Sprint focused on supply, not price for stables.
 
 **Gates:**
-- Direct USD: potentially yes (price_usd metric if available)
-- But no public access without key; no bounded historical sample captured.
-- No depeg coverage tested.
+- direct_usd_anchor: UNKNOWN (no metric found)
+- historical: no
+- etc: NOT_EVALUATED or no
+- recommend: NONE
 
-**Conclusion:** Rejected. No free public historical PIT confirmed.
+**Evidence:** Cite sprint_003 for unauth behavior; current attempts confirm no easy USD price for FX.
 

@@ -16,12 +16,14 @@ Governing documents:
 - docs/reviews/FX-002_SOURCE_FEASIBILITY_REPORT.md
 - docs/reviews/REVIEW-0082_FX-002_AUDIT_CHANGES_REQUIRED.md
 - docs/reviews/FX-002_JR_AUDIT_CORRECTION_TASK.md
+- docs/reviews/REVIEW-0083_FX-002_EVIDENCE_CORRECTION_REJECTED.md
+- docs/reviews/FX-002_JR_EVIDENCE_COMPLETION_TASK.md
 
 ## Authorized work
 
-FX-002 audit corrected and published. No primary source. Awaiting reviewer. Next ticket authorized: `NONE`.
+FX-002 evidence completed. Awaiting reviewer. Next ticket authorized: `NONE`.
 
 ## Stop condition
 
-After publishing corrected FX-002 evidence, set FX-002 to `AWAITING_REVIEW`, name Reviewer as next
+After publishing complete FX-002 evidence, set FX-002 to `AWAITING_REVIEW`, name Reviewer as next
 actor, and retain `Next ticket authorized: NONE`. Do not begin implementation or another ticket.
