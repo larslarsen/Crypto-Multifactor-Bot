@@ -47,12 +47,12 @@ and do not block acceptance:
   remains `FAILED` — the toolkit requires `has_header=True` and Binance daily dumps
   are headerless. The runner-level adapter (`binance_precision_comparison_adapter.json`)
   supplies the equivalent evidence (ms→us transition supported).
-- `bar_reconstruction_comparison.json` is `partial` — reconstruction succeeded
-  (5437 aggTrades → 10 bars) but `compare_bars` could not complete because Binance
-  klines carry no `trade_count` field (structural toolkit limitation). The
-  aggTrades record count is explicitly flagged as NOT equivalent to a kline's
-  raw-trade count.
+- `bar_reconstruction_comparison.json` now completes with explicit comparable
+  dimensions (OHLC + base/quote volume) while marking `trade_count` as not
+  comparable. Binance kline provider trade count exists, but it is not equivalent
+  to aggTrades archive record count and is never relabeled as such.
 
 Both toolkit limitations are recorded as backlog defects: `AUD-004` (headerless
 precision comparator) and `AUD-005` (provider-candle comparison without optional
-fields). Neither blocks RAW-001.
+fields). AUD-005 closes the optional-field comparison gap by explicit exclusion,
+and neither blocks RAW-001.

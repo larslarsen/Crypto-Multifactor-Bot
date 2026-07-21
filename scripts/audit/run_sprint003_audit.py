@@ -237,7 +237,8 @@ class Runner:
         "perp_trades": (["id", "price", "qty", "quote_qty", "time",
                          "is_buyer_maker"], 4),
         "klines": (["open_time", "open", "high", "low", "close", "volume",
-                    "close_time", "quote_volume"], 0),
+                    "close_time", "quote_volume", "number_of_trades",
+                    "taker_buy_base", "taker_buy_quote", "ignore"], 0),
         "funding": (["calc_time", "funding_interval_hours", "last_funding_rate"], 0),
     }
 
@@ -616,16 +617,48 @@ class Runner:
     # ---- Section 3: bounded trade-to-bar comparison ------------------------
 
     def trade_to_bar_comparison(self) -> dict[str, Any]:
+        from dataclasses import asdict
         from datetime import timedelta
+
+        from source_audit.bars import CANONICAL_BAR_DIMENSIONS
+
         z_trades = self.staging / "binance/BTCUSDT-aggTrades-2025-01-01.zip"
         z_klines = self.staging / "binance/BTCUSDT-klines-1m-2025-01-01.zip"
+        # Compare OHLC + base/quote volume only. trade_count is available on klines
+        # (column 8) but is NOT comparable to aggTrades archive record counts
+        # (REVIEW-0066 / AUD-005).
+        comparable = (
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume_base",
+            "volume_quote",
+        )
         cfg = {
-            "window_minutes": 10, "interval": "1m", "closure": "LEFT_CLOSED_RIGHT_OPEN",
-            "price_tolerance": "0.01", "volume_tolerance": "0.0001",
+            "window_minutes": 10,
+            "interval": "1m",
+            "closure": "LEFT_CLOSED_RIGHT_OPEN",
+            "price_tolerance": "0.01",
+            "volume_tolerance": "0.0001",
+            "comparable_dimensions": list(comparable),
+            "kline_schema": {
+                "open_time": 0,
+                "open": 1,
+                "high": 2,
+                "low": 3,
+                "close": 4,
+                "volume_base": 5,
+                "close_time": 6,
+                "quote_volume": 7,
+                "number_of_trades": 8,
+            },
             "utc_bounds": [UTC_MIN.isoformat(), UTC_MAX.isoformat()],
-            "note": ("Binance aggTrades count is NOT semantically equivalent to the "
-                     "provider kline's raw-trade count; aggTrades count reported "
-                     "separately, never presented as raw-trade count."),
+            "note": (
+                "Binance kline column 8 (number_of_trades) is provider raw-trade count; "
+                "reconstruction trade_count counts aggTrades archive records. These are "
+                "semantically distinct and are never equated or relabeled."
+            ),
         }
         rec: dict[str, Any] = {
             "audit": "bar_reconstruction_comparison",
@@ -650,10 +683,15 @@ class Runner:
                         break
                     trades_raw.append({
                         "timestamp_utc": dt,
-                        "price": parts[1], "quantity": parts[2],
-                        "trade_id": parts[0], "quote_quantity": parts[3],
+                        "price": parts[1],
+                        "quantity": parts[2],
+                        "trade_id": parts[0],
+                        # quote not present as a dedicated field on aggTrades; derive
+                        # inside reconstruction from price * quantity when omitted.
                     })
-            # Klines: read first 10 complete 1m rows (open_time in microseconds).
+            # Klines: first 10 complete 1m rows. Canonical layout: close_time=6,
+            # quote_volume=7, number_of_trades=8 (open_time microseconds).
+            provider_trade_counts: list[int] = []
             with zipfile.ZipFile(z_klines) as zf:
                 kmember = zf.namelist()[0]
                 klines_raw = []
@@ -663,31 +701,46 @@ class Runner:
                     dt = datetime.fromtimestamp(ot / 1_000_000, tz=timezone.utc)
                     if dt.minute >= 10:
                         break
+                    provider_tc = int(parts[8]) if len(parts) > 8 else None
+                    if provider_tc is not None:
+                        provider_trade_counts.append(provider_tc)
                     klines_raw.append({
-                        "interval_start_utc": dt, "open": parts[1], "high": parts[2],
-                        "low": parts[3], "close": parts[4], "volume_base": parts[5],
-                        "volume_quote": parts[6],
+                        "interval_start_utc": dt,
+                        "open": parts[1],
+                        "high": parts[2],
+                        "low": parts[3],
+                        "close": parts[4],
+                        "volume_base": parts[5],
+                        "volume_quote": parts[7],
+                        # number_of_trades at parts[8] intentionally not mapped into
+                        # compare_bars input — excluded as not comparable.
                     })
             trades = [normalize_trade(t) for t in trades_raw]
             origin = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-            recon = reconstruct_bars(trades, interval_duration=timedelta(minutes=1),
-                                     alignment_origin_utc=origin)
-            # Reconstruct succeeded; attempt the toolkit comparison separately so a
-            # structural provider limitation does not discard the reconstruction.
+            recon = reconstruct_bars(
+                trades,
+                interval_duration=timedelta(minutes=1),
+                alignment_origin_utc=origin,
+            )
             comparison = None
             comparison_status = "not_run"
             comparison_failure = None
             try:
                 comparison = compare_bars(
-                    recon.bars, klines_raw,
+                    recon.bars,
+                    klines_raw,
                     price_tolerance=Decimal("0.01"),
                     volume_tolerance=Decimal("0.0001"),
                     interval_duration=timedelta(minutes=1),
+                    comparable_dimensions=comparable,
                 )
                 comparison_status = "completed"
             except Exception as exc:  # noqa: BLE001
                 comparison_status = "failed"
                 comparison_failure = f"{type(exc).__name__}: {exc}"
+            comparison_payload = None
+            if comparison is not None:
+                comparison_payload = asdict(comparison)
             rec.update({
                 "status": "partial" if comparison_status == "failed" else "completed",
                 "aggTrades_records_used": len(trades_raw),
@@ -697,23 +750,24 @@ class Runner:
                 "reconstruction": "completed (trade-to-bar via source_audit.reconstruct_bars)",
                 "comparison_status": comparison_status,
                 "comparison_failure": comparison_failure,
-                "comparison": (
-                    {
-                        "bars_compared": getattr(comparison, "bars_compared", None),
-                        "match_count": getattr(comparison, "match_count", None),
-                        "mismatch_count": getattr(comparison, "mismatch_count", None),
-                        "mismatches_retained": getattr(comparison, "mismatches", []),
-                    } if comparison is not None else None
-                ),
-                # Explicit semantic separation (NOT raw-trade count):
+                "comparison": comparison_payload,
+                "canonical_bar_dimensions": list(CANONICAL_BAR_DIMENSIONS),
+                # Explicit semantic separation (NOT equated to reconstruction count):
                 "aggTrades_record_count": len(trades_raw),
-                "provider_kline_raw_trade_count": ("UNAVAILABLE — Binance kline schema "
-                    "has no raw-trade-count field; the toolkit's compare_bars hard-"
-                    "requires a trade_count field on provider bars. aggTrades record "
-                    "count is structurally DISTINCT from a kline's raw-trade count and "
-                    "is NEVER presented as one."),
-                "semantic_mismatch_flag": ("aggTrades record count != provider kline "
-                    "raw-trade count (field absent on klines; toolkit limitation)"),
+                "provider_kline_raw_trade_count_available": bool(provider_trade_counts),
+                "provider_kline_raw_trade_count_sum": (
+                    sum(provider_trade_counts) if provider_trade_counts else None
+                ),
+                "provider_kline_raw_trade_count_note": (
+                    "Binance kline column 8 (number_of_trades) is the provider raw-trade "
+                    "count. It is available but not comparable to reconstruction "
+                    "trade_count, which counts aggTrades archive records. AUD-005 "
+                    "excludes trade_count from comparable_dimensions."
+                ),
+                "semantic_mismatch_flag": (
+                    "aggTrades archive record count != provider kline number_of_trades "
+                    "(raw trades); never equate or relabel"
+                ),
             })
         except Exception as exc:  # noqa: BLE001
             rec["status"] = "failed"

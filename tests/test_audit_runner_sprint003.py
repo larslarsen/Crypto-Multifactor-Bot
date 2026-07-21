@@ -90,12 +90,23 @@ def test_headerless_precision_adapter_transition(outputs):
 
 def test_trade_to_bar_reconstruction_completes(outputs):
     doc = json.loads(outputs["bar_reconstruction_comparison.json"].read_text())
-    # Reconstruction must succeed even if the toolkit compare_bars is blocked.
-    assert doc["status"] in ("partial", "completed")
+    assert doc["status"] == "completed"
     assert doc["reconstructed_bars"] > 0
-    assert doc["comparison_status"] in ("completed", "failed")
-    # Semantic separation must be explicit.
-    assert "semantic_mismatch_flag" in doc
+    assert doc["comparison_status"] == "completed"
+    comparison = doc["comparison"]
+    assert comparison["compared_dimensions"] == [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume_base",
+        "volume_quote",
+    ]
+    assert comparison["not_comparable_dimensions"] == ["trade_count"]
+    assert doc["provider_kline_raw_trade_count_available"] is True
+    assert "aggTrades archive records" in doc["provider_kline_raw_trade_count_note"]
+    assert doc["aggTrades_record_count"] != doc["provider_kline_raw_trade_count_sum"]
+    assert doc["semantic_mismatch_flag"].startswith("aggTrades archive record count !=")
 
 
 def test_provider_coverage_present(outputs):

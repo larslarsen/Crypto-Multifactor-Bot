@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/AUD-005.md`
 **Actor:** Sr Dev - Sandbox
-**Status:** AUTHORIZED AFTER CONTROL PUBLICATION - SOURCE ONLY
+**Status:** COMPLETED - SOURCE APPROVED BY REVIEW-0068
 **Next ticket:** `NONE`
 
 ## Assignment

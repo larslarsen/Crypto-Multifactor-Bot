@@ -96,11 +96,10 @@ All JSON is deterministic (verified: identical byte hashes across two independen
   forward sequence.
 - **Bounded trade-to-bar (Binance, first 10 min 2025-01-01):** reconstruction COMPLETED —
   5437 aggTrades normalized → 10 reconstructed one-minute bars, 0 duplicate trades. The
-  toolkit `compare_bars` FAILED on the provider side because Binance klines carry **no
-  `trade_count` field** (the toolkit hard-requires it on mapping-based provider bars).
-  Status recorded as **partial**: reconstruction done, comparison blocked by a structural
-  kline limitation. The aggTrades record count is reported separately and explicitly
-  flagged as NOT equivalent to a kline's raw-trade count (field absent on klines).
+  runner now completes `compare_bars` against provider candles using explicit comparable
+  dimensions (OHLC + base/quote volume) and excludes `trade_count` as semantically
+  non-comparable. Binance klines do carry a provider raw-trade count field at index 8,
+  but it is explicitly kept distinct from the aggTrades archive record count.
 - **Bybit gzip trade archives:** both inspected within limits. Schema
   `timestamp,symbol,side,size,price,tickDirection,trdMatchID,grossValue,homeNotional,
   foreignNotional`; timestamps are Unix seconds with **microsecond fractional part**
@@ -178,12 +177,10 @@ rejection decisions; no research hypotheses were revised by this audit.
    (a) headerless support added to the toolkit, or (b) running on the headed sample
    archives (which are ms, not the transition pair).
 
-3. **`compare_bars` requires `trade_count` on provider bars:** Binance klines carry no
-   raw-trade-count field, so the toolkit's `compare_bars` cannot complete the
-   provider-side comparison. Reconstruction succeeds; the OHLCV comparison is blocked
-   structurally. Possible resolutions: (a) supply a derived/placeholder trade_count, or
-   (b) extend `compare_bars` to tolerate an absent trade_count with explicit tolerance.
-   Flagged as a potential toolkit defect.
+3. **`compare_bars` now supports explicit comparable dimensions:** Binance klines expose
+   a provider raw-trade count field at index 8, but it is not comparable to the
+   reconstruction's aggTrades record count. AUD-005 corrects the comparison contract so
+   OHLC + base/quote volume can be compared while `trade_count` is marked not comparable.
 
 4. **Kraken feasibility unassessable:** Kraken documentation URLs returned HTTP 404 and
    the bulk hosts did not resolve (DNS) — two distinct failure layers. No Kraken bulk

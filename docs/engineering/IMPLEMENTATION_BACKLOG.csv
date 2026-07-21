@@ -10,4 +10,4 @@ BAR-001,P0,market/quality,Canonical bar publisher and daily reconciliation,BIN-0
 BYB-001,P0,ingest/market,Bybit public trade-archive normalizer (conditional crosscheck),RAW-001;MAN-001;REF-001;AUD-003;BAR-001,BLOCKING,ACCEPTED
 EVD-001,P1,evidence,Operational Evidence Registry,CAT-001;experiment identity,NON_BLOCKING_FOR_DATA,ACCEPTED
 AUD-004,P2,source-audit/archive-precision,Native headerless support for Binance precision comparator,AUD-002,NON_BLOCKING,ACCEPTED
-AUD-005,P2,source-audit/bar-reconstruction,Provider-candle comparison by explicit comparable dimensions,AUD-002,NON_BLOCKING,IN_PROGRESS
+AUD-005,P2,source-audit/bar-reconstruction,Provider-candle comparison by explicit comparable dimensions,AUD-002,NON_BLOCKING,AWAITING_REVIEW

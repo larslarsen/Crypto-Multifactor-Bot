@@ -34,7 +34,7 @@
     },
     {
       "output_file": "csv_schema_timestamp.json",
-      "output_sha256": "ad70a82abe3099624a3a9ae9c2af16d562c64ef12064681ae65c85bf481ceef8",
+      "output_sha256": "5947f389a55b6806450336525fb0621c8e55216a37a9060b040e728eef07f895",
       "report": "csv_schema_timestamp",
       "status": "produced",
       "tool": "source_audit.infer_timestamp_unit / audit_csv_safe"
@@ -62,9 +62,9 @@
     },
     {
       "output_file": "bar_reconstruction_comparison.json",
-      "output_sha256": "2b47e03d74e3ad44bf00452d32d8cdcf7df88119b6a8db91e64b0791701bc68c",
+      "output_sha256": "6cec7c3db31bb2e31401aeceb6cee5e06bda7fe0898c7e9ae8bdced5d5fb8b80",
       "report": "bar_reconstruction_comparison",
-      "status": "partial",
+      "status": "completed",
       "tool": "source_audit.reconstruct_bars + compare_bars + normalize_trade"
     },
     {

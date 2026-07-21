@@ -2,13 +2,65 @@
   "aggTrades_record_count": 5437,
   "aggTrades_records_used": 5437,
   "audit": "bar_reconstruction_comparison",
-  "comparison": null,
-  "comparison_failure": "BarReconstructionError: Provider bar missing trade_count field | context={'trade_count_key': 'trade_count'}",
-  "comparison_status": "failed",
+  "canonical_bar_dimensions": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume_base",
+    "volume_quote",
+    "trade_count"
+  ],
+  "comparison": {
+    "base_volume_mismatches": [],
+    "compared_dimensions": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume_base",
+      "volume_quote"
+    ],
+    "duplicate_provider_intervals": [],
+    "duplicate_reconstructed_intervals": [],
+    "missing_from_provider": [],
+    "missing_from_reconstructed": [],
+    "not_comparable_dimensions": [
+      "trade_count"
+    ],
+    "ohlc_mismatches": [],
+    "price_tolerance": "0.01",
+    "quote_volume_mismatches": [],
+    "timestamp_alignment_mismatches": [],
+    "trade_count_mismatches": [],
+    "trade_count_tolerance": 0,
+    "volume_tolerance": "0.0001"
+  },
+  "comparison_failure": null,
+  "comparison_status": "completed",
   "config": {
     "closure": "LEFT_CLOSED_RIGHT_OPEN",
+    "comparable_dimensions": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume_base",
+      "volume_quote"
+    ],
     "interval": "1m",
-    "note": "Binance aggTrades count is NOT semantically equivalent to the provider kline's raw-trade count; aggTrades count reported separately, never presented as raw-trade count.",
+    "kline_schema": {
+      "close": 4,
+      "close_time": 6,
+      "high": 2,
+      "low": 3,
+      "number_of_trades": 8,
+      "open": 1,
+      "open_time": 0,
+      "quote_volume": 7,
+      "volume_base": 5
+    },
+    "note": "Binance kline column 8 (number_of_trades) is provider raw-trade count; reconstruction trade_count counts aggTrades archive records. These are semantically distinct and are never equated or relabeled.",
     "price_tolerance": "0.01",
     "utc_bounds": [
       "2017-01-01T00:00:00+00:00",
@@ -23,10 +75,12 @@
     "klines": "10a12909f1b0e3fcc6b7f502e5ea9be5d1ba3455dd8ab16cc61c8650640ba7c0"
   },
   "kline_bars_used": 10,
-  "provider_kline_raw_trade_count": "UNAVAILABLE — Binance kline schema has no raw-trade-count field; the toolkit's compare_bars hard-requires a trade_count field on provider bars. aggTrades record count is structurally DISTINCT from a kline's raw-trade count and is NEVER presented as one.",
+  "provider_kline_raw_trade_count_available": true,
+  "provider_kline_raw_trade_count_note": "Binance kline column 8 (number_of_trades) is the provider raw-trade count. It is available but not comparable to reconstruction trade_count, which counts aggTrades archive records. AUD-005 excludes trade_count from comparable_dimensions.",
+  "provider_kline_raw_trade_count_sum": 11613,
   "reconstructed_bars": 10,
   "reconstruction": "completed (trade-to-bar via source_audit.reconstruct_bars)",
-  "semantic_mismatch_flag": "aggTrades record count != provider kline raw-trade count (field absent on klines; toolkit limitation)",
-  "status": "partial",
+  "semantic_mismatch_flag": "aggTrades archive record count != provider kline number_of_trades (raw trades); never equate or relabel",
+  "status": "completed",
   "tool": "source_audit.reconstruct_bars + compare_bars + normalize_trade"
 }

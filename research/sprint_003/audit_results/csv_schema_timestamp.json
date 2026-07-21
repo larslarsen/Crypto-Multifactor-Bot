@@ -229,7 +229,11 @@
         "close",
         "volume",
         "close_time",
-        "quote_volume"
+        "quote_volume",
+        "number_of_trades",
+        "taker_buy_base",
+        "taker_buy_quote",
+        "ignore"
       ],
       "status": "inspected",
       "timestamp_column_index": 0,

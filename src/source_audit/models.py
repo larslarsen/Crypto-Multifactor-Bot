@@ -305,6 +305,9 @@ class BarComparisonResult:
     price_tolerance: Decimal
     volume_tolerance: Decimal
     trade_count_tolerance: int
+    # Deterministic dimension sets (AUD-005 / REVIEW-0066).
+    compared_dimensions: tuple[str, ...]
+    not_comparable_dimensions: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)

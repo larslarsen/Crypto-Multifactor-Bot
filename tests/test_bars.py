@@ -107,7 +107,7 @@ def test_reject_naive_timestamp() -> None:
         reconstruct_bars(
             [
                 Trade(
-                    timestamp_utc=datetime(2025, 1, 1, 0, 0, 0),  # type: ignore[arg-type]
+                    timestamp_utc=datetime(2025, 1, 1, 0, 0, 0),
                     price=Decimal("1"),
                     quantity=Decimal("1"),
                     trade_id="x",
@@ -196,6 +196,197 @@ def test_compare_bars_mismatches_and_missing() -> None:
     assert any(m.field_name == "open" for m in cmp.ohlc_mismatches)
     assert cmp.ohlc_mismatches[0].expected == "99"
     assert cmp.ohlc_mismatches[0].observed == "100"
+
+
+def test_compare_bars_explicit_set_orders_dimensions_and_skips_unselected_fields() -> None:
+    interval = timedelta(minutes=1)
+    recon = reconstruct_bars(
+        [_t(0, 1, "100", "1", "a"), _t(0, 2, "110", "2", "b")],
+        interval_duration=interval,
+        alignment_origin_utc=ORIGIN,
+    )
+    provider = [
+        {
+            "interval_start_utc": ORIGIN,
+            "open": Decimal("100"),
+            "volume_quote": Decimal("320"),
+            "trade_count": 2,
+        }
+    ]
+    cmp = compare_bars(
+        recon.bars,
+        provider,
+        price_tolerance=Decimal("0"),
+        volume_tolerance=Decimal("0"),
+        interval_duration=interval,
+        comparable_dimensions={"open", "volume_quote", "trade_count"},
+    )
+    assert cmp.compared_dimensions == ("open", "volume_quote", "trade_count")
+    assert cmp.not_comparable_dimensions == ("high", "low", "close", "volume_base")
+    assert cmp.trade_count_mismatches == ()
+
+
+def test_compare_bars_unselected_fields_may_be_omitted_but_selected_field_is_required() -> None:
+    interval = timedelta(minutes=1)
+    recon = reconstruct_bars(
+        [_t(0, 1, "100", "1", "a")],
+        interval_duration=interval,
+        alignment_origin_utc=ORIGIN,
+    )
+    ok_provider = [
+        {
+            "interval_start_utc": ORIGIN,
+            "open": Decimal("100"),
+            "close": Decimal("100"),
+        }
+    ]
+    cmp = compare_bars(
+        recon.bars,
+        ok_provider,
+        price_tolerance=Decimal("0"),
+        volume_tolerance=Decimal("0"),
+        interval_duration=interval,
+        comparable_dimensions={"open", "close"},
+    )
+    assert cmp.compared_dimensions == ("open", "close")
+    assert cmp.not_comparable_dimensions == ("high", "low", "volume_base", "volume_quote", "trade_count")
+
+    bad_provider = [
+        {
+            "interval_start_utc": ORIGIN,
+            "open": Decimal("100"),
+        }
+    ]
+    with pytest.raises(BarReconstructionError, match="missing required field"):
+        compare_bars(
+            recon.bars,
+            bad_provider,
+            price_tolerance=Decimal("0"),
+            volume_tolerance=Decimal("0"),
+            interval_duration=interval,
+            comparable_dimensions={"open", "close"},
+        )
+
+
+def test_compare_bars_default_requires_all_dimensions_and_matches_unchanged() -> None:
+    interval = timedelta(minutes=1)
+    recon = reconstruct_bars(
+        [_t(0, 1, "100", "1", "a")],
+        interval_duration=interval,
+        alignment_origin_utc=ORIGIN,
+    )
+    provider = [
+        OHLCVBar(
+            interval_start_utc=ORIGIN,
+            interval_end_utc=ORIGIN + interval,
+            open=Decimal("100"),
+            high=Decimal("100"),
+            low=Decimal("100"),
+            close=Decimal("100"),
+            volume_base=Decimal("1"),
+            volume_quote=Decimal("100"),
+            trade_count=1,
+        )
+    ]
+    cmp = compare_bars(
+        recon.bars,
+        provider,
+        price_tolerance=Decimal("0"),
+        volume_tolerance=Decimal("0"),
+    )
+    assert cmp.compared_dimensions == (
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume_base",
+        "volume_quote",
+        "trade_count",
+    )
+    assert cmp.not_comparable_dimensions == ()
+    assert cmp.trade_count_mismatches == ()
+
+
+def test_compare_bars_excluded_trade_count_difference_is_not_reported() -> None:
+    interval = timedelta(minutes=1)
+    recon = reconstruct_bars(
+        [_t(0, 1, "100", "1", "a")],
+        interval_duration=interval,
+        alignment_origin_utc=ORIGIN,
+    )
+    provider = [
+        {
+            "interval_start_utc": ORIGIN,
+            "open": Decimal("100"),
+            "high": Decimal("100"),
+            "low": Decimal("100"),
+            "close": Decimal("100"),
+            "volume_base": Decimal("1"),
+            "volume_quote": Decimal("100"),
+            "trade_count": 999,
+        }
+    ]
+    cmp = compare_bars(
+        recon.bars,
+        provider,
+        price_tolerance=Decimal("0"),
+        volume_tolerance=Decimal("0"),
+        interval_duration=interval,
+        comparable_dimensions={"open", "high", "low", "close", "volume_base", "volume_quote"},
+    )
+    assert cmp.trade_count_mismatches == ()
+    assert cmp.compared_dimensions == (
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume_base",
+        "volume_quote",
+    )
+
+
+@pytest.mark.parametrize(
+    ("comparable_dimensions", "match"),
+    [
+        (set(), "non-empty"),
+        ({"open", "unknown"}, "unknown comparable dimension"),
+        (["open", "open"], "duplicate comparable dimension"),
+        ("open", "scalar string or bytes"),
+        (b"open", "scalar string or bytes"),
+        ({"open", 1}, "must be str"),
+    ],
+)
+def test_compare_bars_rejects_invalid_comparable_dimension_selections(
+    comparable_dimensions: object,
+    match: str,
+) -> None:
+    interval = timedelta(minutes=1)
+    recon = reconstruct_bars(
+        [_t(0, 1, "100", "1", "a")],
+        interval_duration=interval,
+        alignment_origin_utc=ORIGIN,
+    )
+    provider = [
+        OHLCVBar(
+            interval_start_utc=ORIGIN,
+            interval_end_utc=ORIGIN + interval,
+            open=Decimal("100"),
+            high=Decimal("100"),
+            low=Decimal("100"),
+            close=Decimal("100"),
+            volume_base=Decimal("1"),
+            volume_quote=Decimal("100"),
+            trade_count=1,
+        )
+    ]
+    with pytest.raises(BarReconstructionError, match=match):
+        compare_bars(
+            recon.bars,
+            provider,
+            price_tolerance=Decimal("0"),
+            volume_tolerance=Decimal("0"),
+            comparable_dimensions=comparable_dimensions,  # type: ignore[arg-type]
+        )
 
 
 def test_compare_duplicate_provider_intervals() -> None:

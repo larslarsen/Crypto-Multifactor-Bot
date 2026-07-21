@@ -13,7 +13,13 @@ from .archives import (
     read_zip_member_text,
     read_zip_member_text_prefix,
 )
-from .bars import compare_bars, normalize_trade, reconstruct_bars
+from .bars import (
+    CANONICAL_BAR_DIMENSIONS,
+    ComparableBarDimensions,
+    compare_bars,
+    normalize_trade,
+    reconstruct_bars,
+)
 from .binance_precision import compare_binance_archive_precision
 from .download import (
     HttpxTransport,
@@ -104,6 +110,8 @@ __all__ = [
     "normalize_trade",
     "reconstruct_bars",
     "compare_bars",
+    "CANONICAL_BAR_DIMENSIONS",
+    "ComparableBarDimensions",
     # storage
     "compute_storage_stats",
     # serialization

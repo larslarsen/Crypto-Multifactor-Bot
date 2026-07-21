@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -317,54 +318,171 @@ def _dec_str(value: Decimal | int | str) -> str:
     return str(value)
 
 
+# Canonical comparable bar dimensions (deterministic order; AUD-005 / REVIEW-0066).
+CANONICAL_BAR_DIMENSIONS: tuple[str, ...] = (
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume_base",
+    "volume_quote",
+    "trade_count",
+)
+_ALLOWED_BAR_DIMENSIONS: frozenset[str] = frozenset(CANONICAL_BAR_DIMENSIONS)
+
+# Mapping keys required per selected value dimension.
+_DIM_FIELD_KEYS: dict[str, str] = {
+    "open": "open_key",
+    "high": "high_key",
+    "low": "low_key",
+    "close": "close_key",
+    "volume_base": "base_volume_key",
+    "volume_quote": "quote_volume_key",
+    "trade_count": "trade_count_key",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class _ProviderBarView:
+    """Private provider bar shape for partial-dimension comparison.
+
+    Unselected optional fields remain None and must not be accessed for comparison.
+    Does not weaken reconstructed :class:`OHLCVBar`.
+    """
+
+    interval_start_utc: datetime
+    interval_end_utc: datetime
+    open: Decimal | None = None
+    high: Decimal | None = None
+    low: Decimal | None = None
+    close: Decimal | None = None
+    volume_base: Decimal | None = None
+    volume_quote: Decimal | None = None
+    trade_count: int | None = None
+
+
+# Typed string collections accepted for comparable_dimensions (AUD-005 / REVIEW-0067).
+# Explicit union includes set/list/tuple/frozenset; excludes scalar str/bytes.
+ComparableBarDimensions = list[str] | tuple[str, ...] | set[str] | frozenset[str]
+
+
+def _resolve_comparable_dimensions(
+    comparable_dimensions: ComparableBarDimensions | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return (compared, not_comparable) in canonical order.
+
+    ``None`` preserves historical behavior: all dimensions are required/compared.
+    Accepts set/list/tuple/frozenset of ``str`` members only (no ``str()`` coercion).
+    """
+    if comparable_dimensions is None:
+        return CANONICAL_BAR_DIMENSIONS, ()
+    # str/bytes are collections of characters at runtime; reject as the collection.
+    if isinstance(comparable_dimensions, (str, bytes, bytearray)):
+        raise BarReconstructionError(
+            "comparable_dimensions must be a set, list, or tuple of strings, "
+            "not a scalar string or bytes"
+        )
+    if len(comparable_dimensions) == 0:
+        raise BarReconstructionError(
+            "comparable_dimensions must be non-empty when supplied"
+        )
+    seen: set[str] = set()
+    for raw in comparable_dimensions:
+        if not isinstance(raw, str):
+            raise BarReconstructionError(
+                "comparable dimension members must be str "
+                f"(got {type(raw).__name__})",
+                context={"value": repr(raw)},
+            )
+        if raw not in _ALLOWED_BAR_DIMENSIONS:
+            raise BarReconstructionError(
+                f"unknown comparable dimension: {raw!r}",
+                context={"allowed": list(CANONICAL_BAR_DIMENSIONS)},
+            )
+        if raw in seen:
+            raise BarReconstructionError(
+                f"duplicate comparable dimension: {raw!r}"
+            )
+        seen.add(raw)
+    compared = tuple(d for d in CANONICAL_BAR_DIMENSIONS if d in seen)
+    not_comparable = tuple(d for d in CANONICAL_BAR_DIMENSIONS if d not in seen)
+    return compared, not_comparable
+
+
 def _provider_bar_from_mapping(
     raw: Mapping[str, Any],
     *,
-    timestamp_key: str,
-    open_key: str,
-    high_key: str,
-    low_key: str,
-    close_key: str,
-    base_volume_key: str,
-    quote_volume_key: str | None,
-    trade_count_key: str | None,
+    fmap: Mapping[str, str],
     interval_duration: timedelta,
-) -> OHLCVBar:
+    compared: frozenset[str],
+) -> _ProviderBarView:
+    """Build a provider view requiring only selected comparable dimensions."""
+    timestamp_key = fmap["timestamp_key"]
+    if timestamp_key not in raw:
+        raise BarReconstructionError(
+            f"Provider bar missing timestamp field {timestamp_key!r}",
+            context={"keys": sorted(raw.keys())},
+        )
     ts = raw[timestamp_key]
     if not isinstance(ts, datetime):
         raise BarReconstructionError(
             "Provider bar timestamp must be datetime (units already resolved)"
         )
     ts_utc = _require_utc(ts, field_name=timestamp_key)
-    o = _to_decimal(raw[open_key], field_name=open_key)
-    h = _to_decimal(raw[high_key], field_name=high_key)
-    low = _to_decimal(raw[low_key], field_name=low_key)
-    c = _to_decimal(raw[close_key], field_name=close_key)
-    base = _to_decimal(raw[base_volume_key], field_name=base_volume_key)
-    if quote_volume_key is None or quote_volume_key not in raw:
-        raise BarReconstructionError(
-            "Provider bar missing quote volume field",
-            context={"quote_volume_key": quote_volume_key},
-        )
-    quote = _to_decimal(raw[quote_volume_key], field_name=quote_volume_key)
-    if trade_count_key is None or trade_count_key not in raw:
-        raise BarReconstructionError(
-            "Provider bar missing trade_count field",
-            context={"trade_count_key": trade_count_key},
-        )
-    tc_raw = raw[trade_count_key]
-    if isinstance(tc_raw, bool) or not isinstance(tc_raw, int):
-        raise InvalidNumericError("trade_count must be an int")
-    return OHLCVBar(
+
+    def _req_decimal(dim: str) -> Decimal:
+        key = fmap[_DIM_FIELD_KEYS[dim]]
+        if key not in raw or raw[key] is None:
+            raise BarReconstructionError(
+                f"Provider bar missing required field for dimension {dim!r}",
+                context={"field_key": key, "dimension": dim},
+            )
+        return _to_decimal(raw[key], field_name=key)
+
+    open_v = _req_decimal("open") if "open" in compared else None
+    high_v = _req_decimal("high") if "high" in compared else None
+    low_v = _req_decimal("low") if "low" in compared else None
+    close_v = _req_decimal("close") if "close" in compared else None
+    base_v = _req_decimal("volume_base") if "volume_base" in compared else None
+    quote_v = _req_decimal("volume_quote") if "volume_quote" in compared else None
+
+    tc_v: int | None = None
+    if "trade_count" in compared:
+        key = fmap["trade_count_key"]
+        if key not in raw or raw[key] is None:
+            raise BarReconstructionError(
+                "Provider bar missing trade_count field",
+                context={"trade_count_key": key},
+            )
+        tc_raw = raw[key]
+        if isinstance(tc_raw, bool) or not isinstance(tc_raw, int):
+            raise InvalidNumericError("trade_count must be an int")
+        tc_v = tc_raw
+
+    return _ProviderBarView(
         interval_start_utc=ts_utc,
         interval_end_utc=ts_utc + interval_duration,
-        open=o,
-        high=h,
-        low=low,
-        close=c,
-        volume_base=base,
-        volume_quote=quote,
-        trade_count=tc_raw,
+        open=open_v,
+        high=high_v,
+        low=low_v,
+        close=close_v,
+        volume_base=base_v,
+        volume_quote=quote_v,
+        trade_count=tc_v,
+    )
+
+
+def _as_provider_view(bar: OHLCVBar) -> _ProviderBarView:
+    return _ProviderBarView(
+        interval_start_utc=bar.interval_start_utc,
+        interval_end_utc=bar.interval_end_utc,
+        open=bar.open,
+        high=bar.high,
+        low=bar.low,
+        close=bar.close,
+        volume_base=bar.volume_base,
+        volume_quote=bar.volume_quote,
+        trade_count=bar.trade_count,
     )
 
 
@@ -377,10 +495,16 @@ def compare_bars(
     trade_count_tolerance: int = 0,
     interval_duration: timedelta | None = None,
     provider_field_map: Mapping[str, str] | None = None,
+    comparable_dimensions: ComparableBarDimensions | None = None,
 ) -> BarComparisonResult:
     """Compare reconstructed bars to provider candles with explicit Decimal tolerances.
 
-    Does not silently coerce units or ignore missing fields.
+    When ``comparable_dimensions`` is omitted, all value dimensions are required and
+    compared (historical AUD-002 behavior). When supplied (``set``/``list``/``tuple``/
+    ``frozenset`` of ``str``), only those dimensions are required on provider mappings
+    and compared; unselected dimensions are reported as ``not_comparable_dimensions``
+    and are not accessed on provider mappings. Scalar string/bytes collections and
+    non-string members are rejected.
     """
     if not isinstance(price_tolerance, Decimal) or price_tolerance < 0:
         raise InvalidNumericError("price_tolerance must be a non-negative Decimal")
@@ -388,6 +512,9 @@ def compare_bars(
         raise InvalidNumericError("volume_tolerance must be a non-negative Decimal")
     if trade_count_tolerance < 0:
         raise InvalidNumericError("trade_count_tolerance must be >= 0")
+
+    compared, not_comparable = _resolve_comparable_dimensions(comparable_dimensions)
+    compared_set = frozenset(compared)
 
     fmap = {
         "timestamp_key": "interval_start_utc",
@@ -402,10 +529,10 @@ def compare_bars(
     if provider_field_map:
         fmap.update(dict(provider_field_map))
 
-    provider_bars: list[OHLCVBar] = []
+    provider_bars: list[_ProviderBarView] = []
     for item in provider:
         if isinstance(item, OHLCVBar):
-            provider_bars.append(item)
+            provider_bars.append(_as_provider_view(item))
         else:
             if interval_duration is None:
                 raise BarReconstructionError(
@@ -414,25 +541,19 @@ def compare_bars(
             provider_bars.append(
                 _provider_bar_from_mapping(
                     item,
-                    timestamp_key=fmap["timestamp_key"],
-                    open_key=fmap["open_key"],
-                    high_key=fmap["high_key"],
-                    low_key=fmap["low_key"],
-                    close_key=fmap["close_key"],
-                    base_volume_key=fmap["base_volume_key"],
-                    quote_volume_key=fmap["quote_volume_key"],
-                    trade_count_key=fmap["trade_count_key"],
+                    fmap=fmap,
                     interval_duration=interval_duration,
+                    compared=compared_set,
                 )
             )
 
-    recon_by_start: dict[datetime, list[OHLCVBar]] = defaultdict(list)
+    recon_by_start: defaultdict[datetime, list[OHLCVBar]] = defaultdict(list)
     for bar in reconstructed:
         recon_by_start[bar.interval_start_utc].append(bar)
 
-    prov_by_start: dict[datetime, list[OHLCVBar]] = defaultdict(list)
-    for bar in provider_bars:
-        prov_by_start[bar.interval_start_utc].append(bar)
+    prov_by_start: defaultdict[datetime, list[_ProviderBarView]] = defaultdict(list)
+    for prov_bar in provider_bars:
+        prov_by_start[prov_bar.interval_start_utc].append(prov_bar)
 
     duplicate_provider = tuple(
         sorted(ts for ts, bars_list in prov_by_start.items() if len(bars_list) > 1)
@@ -480,6 +601,7 @@ def compare_bars(
         r = recon_by_start[ts][0]
         p = prov_by_start[ts][0]
 
+        # Interval alignment is always evaluated (independent of value dimensions).
         if r.interval_end_utc != p.interval_end_utc:
             align_m.append(
                 BarFieldMismatch(
@@ -492,37 +614,60 @@ def compare_bars(
                 )
             )
 
-        for field_name, rv, pv in (
-            ("open", r.open, p.open),
-            ("high", r.high, p.high),
-            ("low", r.low, p.low),
-            ("close", r.close, p.close),
-        ):
+        for field_name in ("open", "high", "low", "close"):
+            if field_name not in compared_set:
+                continue
+            rv = getattr(r, field_name)
+            pv = getattr(p, field_name)
+            assert pv is not None  # required when selected
             delta = rv - pv
             if abs(delta) > price_tolerance:
-                ohlc.append(
-                    _mismatch(ts, field_name, pv, rv, abs(delta), delta)
+                ohlc.append(_mismatch(ts, field_name, pv, rv, abs(delta), delta))
+
+        if "volume_base" in compared_set:
+            assert p.volume_base is not None
+            bdelta = r.volume_base - p.volume_base
+            if abs(bdelta) > volume_tolerance:
+                base_m.append(
+                    _mismatch(
+                        ts,
+                        "volume_base",
+                        p.volume_base,
+                        r.volume_base,
+                        abs(bdelta),
+                        bdelta,
+                    )
                 )
 
-        bdelta = r.volume_base - p.volume_base
-        if abs(bdelta) > volume_tolerance:
-            base_m.append(
-                _mismatch(ts, "volume_base", p.volume_base, r.volume_base, abs(bdelta), bdelta)
-            )
-
-        qdelta = r.volume_quote - p.volume_quote
-        if abs(qdelta) > volume_tolerance:
-            quote_m.append(
-                _mismatch(
-                    ts, "volume_quote", p.volume_quote, r.volume_quote, abs(qdelta), qdelta
+        if "volume_quote" in compared_set:
+            assert p.volume_quote is not None
+            qdelta = r.volume_quote - p.volume_quote
+            if abs(qdelta) > volume_tolerance:
+                quote_m.append(
+                    _mismatch(
+                        ts,
+                        "volume_quote",
+                        p.volume_quote,
+                        r.volume_quote,
+                        abs(qdelta),
+                        qdelta,
+                    )
                 )
-            )
 
-        tdelta = r.trade_count - p.trade_count
-        if abs(tdelta) > trade_count_tolerance:
-            tc_m.append(
-                _mismatch(ts, "trade_count", p.trade_count, r.trade_count, abs(tdelta), tdelta)
-            )
+        if "trade_count" in compared_set:
+            assert p.trade_count is not None
+            tdelta = r.trade_count - p.trade_count
+            if abs(tdelta) > trade_count_tolerance:
+                tc_m.append(
+                    _mismatch(
+                        ts,
+                        "trade_count",
+                        p.trade_count,
+                        r.trade_count,
+                        abs(tdelta),
+                        tdelta,
+                    )
+                )
 
     return BarComparisonResult(
         missing_from_provider=tuple(missing_from_provider),
@@ -537,4 +682,6 @@ def compare_bars(
         price_tolerance=price_tolerance,
         volume_tolerance=volume_tolerance,
         trade_count_tolerance=trade_count_tolerance,
+        compared_dimensions=compared,
+        not_comparable_dimensions=not_comparable,
     )

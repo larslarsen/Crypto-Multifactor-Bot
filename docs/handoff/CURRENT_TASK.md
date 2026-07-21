@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: AUD-005
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Sr Dev - Sandbox
+Next required actor: Reviewer
 
 Accepted dependency: AUD-002 (`ACCEPTED` at `899fb7c802dc4ba9b951118598417aef6d22cdcb`).
 Governing documents:
@@ -19,14 +19,16 @@ Governing documents:
 - docs/reviews/REVIEW-0067_AUD-005_SOURCE_TYPE_CORRECTION_REQUIRED.md
 - docs/reviews/AUD-005_SR_SOURCE_CORRECTION_TASK.md
 - docs/reviews/AUD-005_JR_REVIEW0067_PUBLICATION_TASK.md
+- docs/reviews/REVIEW-0068_AUD-005_SOURCE_APPROVED_JR_AUTHORIZED.md
+- docs/reviews/AUD-005_JR_INTEGRATION_TASK.md
+- docs/reviews/AUD-005_CHANGE_REPORT.md
 
 ## Authorized work
 
-The initial local source drop is functionally correct but requires the typed input correction in
-REVIEW-0067. REVIEW-0067 control records are published and the handoff names Sr Dev - Sandbox as
-next actor.
+AUD-005 integration is complete. The published repository contains the approved source, corrected
+research evidence, regenerated audit outputs, and review-ready records.
 
 ## Stop condition
 
-After publishing REVIEW-0067 control records, transition the handoff to Sr Dev - Sandbox. Retain
-`Next ticket authorized: NONE` and do not begin another ticket.
+Return control to Reviewer with AUD-005 `AWAITING_REVIEW` and `Next ticket authorized: NONE`.
+Do not begin another ticket.
