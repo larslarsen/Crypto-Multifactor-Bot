@@ -773,13 +773,9 @@ def iter_csv_rows_from_text(
 ) -> tuple[tuple[str, ...], list[tuple[str, ...]]]:
     """Parse CSV text into headers and data rows (in-memory helper for comparisons).
 
-    Headerless operation is explicitly rejected (``has_header`` must be True).
+    In headerless mode the first row is treated as data, so the returned header
+    tuple is empty.
     """
-    if not has_header:
-        raise MalformedCSVError(
-            "Headerless CSV is not supported by iter_csv_rows_from_text; "
-            "provide has_header=True"
-        )
     previous = csv.field_size_limit()
     if max_field_size is not None and max_field_size > 0:
         try:
@@ -796,9 +792,15 @@ def iter_csv_rows_from_text(
         csv.field_size_limit(previous)
     if not rows:
         raise MalformedCSVError("CSV text is empty")
-    headers = _validate_headers(rows[0])
-    data = [tuple(r) for r in rows[1:]]
-    return headers, data
+    if has_header:
+        headers = _validate_headers(rows[0])
+        data_rows = [tuple(r) for r in rows[1:]]
+    else:
+        headers = ()
+        data_rows = [tuple(r) for r in rows]
+    if not data_rows:
+        raise MalformedCSVError("CSV text contains no data rows")
+    return headers, data_rows
 
 
 __all__ = [

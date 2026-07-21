@@ -108,7 +108,11 @@ def compare_binance_archive_precision(
     dominant units differ. A single valid row is never enough when
     ``min_valid_inferences > 1`` (default 5).
 
-    Headerless archives are explicitly rejected (``has_header`` must be True).
+    When ``has_header`` is ``False``, the first row of each member is treated as
+    data. ``timestamp_column`` must then be an integer column index (a string
+    column name cannot be resolved against a header that is not present). The
+    reported schema for headerless archives is an empty tuple, because there are
+    no column names to inspect.
     """
     if max_sample_rows <= 0:
         raise ValueError("max_sample_rows must be positive")
@@ -118,12 +122,6 @@ def compare_binance_archive_precision(
         raise ValueError("max_malformed_rate must be in [0, 1]")
     if not (0.0 <= max_ambiguous_rate <= 1.0):
         raise ValueError("max_ambiguous_rate must be in [0, 1]")
-    if not has_header:
-        raise PrecisionComparisonError(
-            "Headerless Binance archive comparison is not supported; "
-            "provide has_header=True"
-        )
-
     path_a = Path(archive_a)
     path_b = Path(archive_b)
     if not path_a.exists() or not path_b.exists():
@@ -143,20 +141,44 @@ def compare_binance_archive_precision(
     )
 
     schema_a, rows_a = iter_csv_rows_from_text(
-        text_a, delimiter=delimiter, has_header=True
+        text_a, delimiter=delimiter, has_header=has_header
     )
     schema_b, rows_b = iter_csv_rows_from_text(
-        text_b, delimiter=delimiter, has_header=True
+        text_b, delimiter=delimiter, has_header=has_header
     )
 
-    def _ts_index(schema: tuple[str, ...], column: str | int) -> int:
+    if not has_header:
+        if isinstance(timestamp_column, str):
+            # Resolve from the first data row only so we can report a useful message.
+            first_a = rows_a[0] if rows_a else ()
+            first_b = rows_b[0] if rows_b else ()
+            raise PrecisionComparisonError(
+                "timestamp_column name cannot be resolved against a headerless archive; "
+                "provide an integer column index",
+                context={"column": timestamp_column, "sample_a": first_a, "sample_b": first_b},
+            )
+        schema_a = ()
+        schema_b = ()
+
+    def _ts_index(
+        schema: tuple[str, ...],
+        column: str | int,
+        row_width: int | None = None,
+    ) -> int:
         if isinstance(column, int):
-            if column < 0 or column >= len(schema):
+            bound = row_width if row_width is not None else len(schema)
+            if column < 0 or column >= bound:
                 raise PrecisionComparisonError(
                     f"timestamp_column index {column} out of range",
-                    context={"schema": list(schema)},
+                    context={"bound": bound},
                 )
             return column
+        if not schema:
+            raise PrecisionComparisonError(
+                "timestamp_column name cannot be resolved against a headerless archive; "
+                "provide an integer index",
+                context={"column": column},
+            )
         if column not in schema:
             raise PrecisionComparisonError(
                 f"timestamp column {column!r} not in schema",
@@ -164,8 +186,10 @@ def compare_binance_archive_precision(
             )
         return schema.index(column)
 
-    idx_a = _ts_index(schema_a, timestamp_column)
-    idx_b = _ts_index(schema_b, timestamp_column)
+    width_a = len(rows_a[0]) if rows_a else 0
+    width_b = len(rows_b[0]) if rows_b else 0
+    idx_a = _ts_index(schema_a, timestamp_column, row_width=width_a)
+    idx_b = _ts_index(schema_b, timestamp_column, row_width=width_b)
 
     def _analyze(
         rows: list[tuple[str, ...]],
@@ -240,6 +264,17 @@ def compare_binance_archive_precision(
     ) = _analyze(rows_b, idx_b)
 
     diffs = _schema_diff(schema_a, schema_b)
+    if schema_a == () and schema_b == () and width_a != width_b:
+        diffs = tuple(
+            list(diffs)
+            + [
+                SchemaFieldDiff(
+                    field_name="*",
+                    side="both",
+                    detail=f"Column count differs: A={width_a}, B={width_b}",
+                )
+            ]
+        )
 
     supports = False
     rationale_parts: list[str] = []

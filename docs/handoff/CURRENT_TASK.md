@@ -1,32 +1,29 @@
 # CURRENT_TASK
 
-Ticket: EVD-001
-State: ACCEPTED
-Next ticket authorized: NONE
-Next required actor: Reviewer (EVD-001 closed; no pending Jr work)
+Ticket: AUD-004
+State: AWAITING_REVIEW
+Next ticket authorized: NONE (until reviewer accepts AUD-004)
+Next required actor: Reviewer
 
-Accepted dependency: CAT-001. Experiment-link identity is explicitly deferred.
+Accepted dependency: AUD-002 (`ACCEPTED` at `899fb7c802dc4ba9b951118598417aef6d22cdcb`).
 Governing documents:
-- tickets/EVD-001.md
-- docs/reviews/EVD-001_JR_READINESS_TASK.md
-- docs/reviews/EVD-001_READINESS_REPORT.md
-- docs/reviews/REVIEW-0051_EVD-001_READINESS_ACCEPTED_SR_AUTHORIZED.md
-- docs/reviews/EVD-001_SR_SOURCE_TASK.md
-- docs/reviews/REVIEW-0052_EVD-001_SOURCE_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0053_EVD-001_SOURCE_FINAL_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0054_EVD-001_SOURCE_LAST_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0055_EVD-001_SOURCE_APPROVED_JR_AUTHORIZED.md
-- docs/reviews/REVIEW-0056_EVD-001_INTEGRATION_EVIDENCE_REQUIRED.md
-- docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md
-- docs/reviews/EVD-001_CHANGE_REPORT.md
+- tickets/AUD-004.md
+- docs/reviews/REVIEW-0007_AUD-002_FINAL.md
+- docs/reviews/REVIEW-0006_AUD-002_INTEGRATION.md
+- research/sprint_003/13_RESEARCH_LEAD_DECISIONS.md
+- research/sprint_003/12_AUDIT_EXECUTION.md (headerless precision failure / adapter evidence)
 
-## Authorized work (complete)
+## Authorized work
 
-Published REVIEW-0057 and the EVD-001 accepted/closed ticket, backlog, README, and handoff
-records. EVD-001 is `ACCEPTED` (integration commit `6bd1f43`; evidence head `f774944`;
-acceptance `docs/reviews/REVIEW-0057_EVD-001_ACCEPTED.md`). No pending Jr work remains.
+Add native headerless support to `source_audit.compare_binance_archive_precision` so the
+adjacent-archive precision-transition check runs on real Binance daily dumps (aggTrades / klines),
+which are headerless CSVs. Preserve the existing explicit minimum-evidence and quality thresholds.
+Add focused tests covering headerless aggTrades/klines precision pairs. Document the headerless
+invocation path.
+
+Do not modify production behavior outside the headerless path. Do not bypass existing thresholds.
+AUD-004 is non-blocking for RAW-001.
 
 ## Stop condition
 
-After pushing the acceptance and closing records, return the closing commit evidence and stop.
-Next ticket remains unauthorized.
+After the acceptance commands pass, produce a change report and stop. Do not begin the next ticket.
