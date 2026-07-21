@@ -1,8 +1,8 @@
 # REVIEW-0060 - AUD-004 INTEGRATION EVIDENCE REQUIRED
 
 **Ticket:** AUD-004 - Native headerless support for the Binance archive precision comparator
-**Status:** CHANGES_REQUIRED - JR TESTS AND EVIDENCE
-**Next required actor:** Jr Dev - Hermes
+**Status:** RESOLVED - superseded by REVIEW-0061
+**Next required actor:** Sr Dev - Sandbox
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20
 

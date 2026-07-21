@@ -1,7 +1,7 @@
 # REVIEW-0058 - AUD-004 SOURCE CORRECTION REQUIRED
 
 **Ticket:** AUD-004 - Native headerless support for the Binance archive precision comparator
-**Status:** CHANGES_REQUIRED - JR RECORD PUBLICATION, THEN SR SOURCE
+**Status:** CHANGES_REQUIRED - RESOLVED BY REVIEW-0059
 **Next required actor:** Jr Dev - Hermes, then Sr Dev - Sandbox
 **Next ticket authorized:** `NONE`
 **Date:** 2026-07-20

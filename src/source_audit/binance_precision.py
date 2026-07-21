@@ -189,7 +189,8 @@ def compare_binance_archive_precision(
     ) -> int:
         if isinstance(column, int):
             # Headed path: bound by schema length (historical).
-            # Headerless path: bound by observed data-row width.
+            # Headerless path: bound by max observed width across the sample
+            # (REVIEW-0058). Short rows still reach _analyze as malformed.
             bound = row_width if row_width is not None else len(schema)
             if column < 0 or column >= bound:
                 raise PrecisionComparisonError(
@@ -213,8 +214,16 @@ def compare_binance_archive_precision(
             )
         return schema.index(column)
 
-    width_a = len(rows_a[0]) if rows_a else 0
-    width_b = len(rows_b[0]) if rows_b else 0
+    def _max_row_width(rows: list[tuple[str, ...]]) -> int:
+        """Max field count across an already-bounded sample; 0 if empty."""
+        if not rows:
+            return 0
+        return max(len(row) for row in rows)
+
+    # Headerless: max width across the sample (not rows[0] only — REVIEW-0058).
+    # Headed: widths are only used for optional column-count reporting below.
+    width_a = _max_row_width(rows_a)
+    width_b = _max_row_width(rows_b)
     if has_header:
         idx_a = _ts_index(schema_a, timestamp_column)
         idx_b = _ts_index(schema_b, timestamp_column)

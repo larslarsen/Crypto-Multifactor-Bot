@@ -2,7 +2,7 @@
 
 **Ticket:** `tickets/AUD-004.md`
 **Actor:** Jr Dev - Hermes
-**Status:** AUTHORIZED - TESTS, GATES, RECORDS, AND PUBLICATION
+**Status:** RESOLVED - superseded by REVIEW-0061
 **Next ticket:** `NONE`
 
 ## Assignment
