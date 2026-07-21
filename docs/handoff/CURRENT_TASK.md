@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: AUD-004
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted dependency: AUD-002 (`ACCEPTED` at `899fb7c802dc4ba9b951118598417aef6d22cdcb`).
 Governing documents:
