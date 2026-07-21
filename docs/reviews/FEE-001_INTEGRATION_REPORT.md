@@ -1,6 +1,6 @@
 # FEE-001 - Integration Report
 
-**Status:** COMPLETED - JR INTEGRATION AND PUBLICATION
+**Status:** ACCEPTED - REVIEW-0105
 **Ticket:** FEE-001 - Point-in-Time Fee Schedules and Conservative Assumptions
 **Date:** 2026-07-21
 
@@ -47,5 +47,6 @@
 
 - No network calls were used.
 - No production SQL logic was edited beyond the accepted FEE-001 migration.
-- The integration pass only added the targeted synthetic fee-schedule tests and record updates.
+- The integration pass added targeted synthetic fee-schedule tests and record updates; it also applied
+  formatter-only changes to the pre-existing `tests/reference/test_ref_store.py`.
 - The final worktree remains governed by `Next ticket authorized: NONE`.

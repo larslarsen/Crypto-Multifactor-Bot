@@ -23,4 +23,4 @@ Active tickets:
 - [`FUND-001`](tickets/FUND-001.md) — Binance Funding-Cashflow Readiness (`ACCEPTED`; source evidence required before implementation).
 - [`FUND-002`](tickets/FUND-002.md) — Binance Funding Source Semantics Audit (`ACCEPTED - NO IMPLEMENTATION AUTHORITY`).
 - [`REF-002`](tickets/REF-002.md) — Bybit Instrument Event Source Feasibility Audit (`ACCEPTED`; recommendation `NO_AUTHORITY`, implementation blocked).
-- [`FEE-001`](tickets/FEE-001.md) — Point-in-Time Fee Schedules and Conservative Assumptions (`AWAITING_REVIEW`; JR integration complete).
+- [`FEE-001`](tickets/FEE-001.md) — Point-in-Time Fee Schedules and Conservative Assumptions (`ACCEPTED`; no numeric fee assumptions authorized).
