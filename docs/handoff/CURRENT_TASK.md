@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: AUD-004
-State: AWAITING_REVIEW
+State: BLOCKED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -25,14 +25,16 @@ Governing documents:
 - docs/reviews/AUD-004_JR_REVIEW0061_PUBLICATION_TASK.md
 - docs/reviews/REVIEW-0062_AUD-004_RUNNER_SOURCE_APPROVED_JR_AUTHORIZED.md
 - docs/reviews/AUD-004_JR_FINAL_INTEGRATION_TASK.md
+- docs/reviews/REVIEW-0063_AUD-004_FINAL_EVIDENCE_REQUIRED.md
+- docs/reviews/AUD-004_JR_FINAL_PUBLICATION_TASK.md
 
 ## Authorized work
 
-The local runner-source correction is approved by REVIEW-0062. Jr Dev - Hermes is authorized under
-`docs/reviews/AUD-004_JR_FINAL_INTEGRATION_TASK.md` to integrate it, complete the remaining
-regression assertions, run all acceptance gates, correct records, commit, and push.
+Final evidence was recorded under `docs/reviews/AUD-004_JR_FINAL_PUBLICATION_TASK.md`. The native
+runner correction and focused regressions are complete, but the full-suite mypy gate still reports
+pre-existing typing errors, so the ticket remains `BLOCKED` for Reviewer review.
 
 ## Stop condition
 
-After publication, return control to Reviewer with AUD-004 `AWAITING_REVIEW` and
-`Next ticket authorized: NONE`. Do not begin the next ticket.
+Return control to Reviewer with truthful complete evidence and `Next ticket authorized: NONE`.
+Do not begin the next ticket.
