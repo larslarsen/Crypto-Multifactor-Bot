@@ -1,6 +1,6 @@
 # DF-08 — Survivorship-Free Universe Source Authority Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0127
 **Recommendation:** NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY
 **Priority:** P0
 **Next ticket authorized:** `NONE`
@@ -26,8 +26,9 @@ price, and failure cause per asset). Evidence synthesis only.
 `NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY`.
 
 ## Rationale
-Sprint-003 listing/delivery exemplars remain useful observations but do not constitute
-implementation authority. Later accepted REF-002 (REVIEW-0102, NO AUTHORITY) and REF-003
+Sprint-003 launch/scheduled-delivery metadata and bounded trade observations remain useful
+observations but do not constitute implementation authority. Later accepted REF-002
+(REVIEW-0102, NO AUTHORITY) and REF-003
 (REVIEW-0118, NO_AUTHORITY) decisions block Bybit historical and prospective authority
 respectively; no accepted cross-venue source closes the remaining gaps (G04–G08).
 
