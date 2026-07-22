@@ -30,4 +30,4 @@ Active tickets:
 - [`DF-08`](tickets/DF-08.md) — Survivorship-Free Universe Source Authority Audit (`ACCEPTED - NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY`; REVIEW-0125/0126/0127).
 - [`DF-02`](tickets/DF-02.md) — Point-in-Time Token Unlock Authority Audit (`ACCEPTED - NO_POINT_IN_TIME_UNLOCK_AUTHORITY`; REVIEW-0128/0129/0130/0131).
 - [`DF-03`](tickets/DF-03.md) — Point-in-Time Funding Cashflow Authority Audit (`ACCEPTED - NO_POINT_IN_TIME_FUNDING_CASHFLOW_AUTHORITY`; REVIEW-0132/0133/0134).
-- [`DF-07`](tickets/DF-07.md) — Point-in-Time On-Chain Observation Authority Audit (`AWAITING_REVIEW`; NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY, REVIEW-0135).
+- [`DF-07`](tickets/DF-07.md) — Point-in-Time On-Chain Observation Authority Audit (`IN_PROGRESS`; evidence synthesis, REVIEW-0135/0136).
