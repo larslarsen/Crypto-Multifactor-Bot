@@ -23,9 +23,19 @@ Governing documents:
 
 1. Sr Dev — Grok Build produces `src/cryptofactors/validation/experiment.py` per EXP-001 contract.
    Stop for Reviewer after source only. No tests, no commits, no pushes.
+   **Flag:** Sr source drop requires verification by DeepSeek V4 Pro (or equivalent strong
+   engineering model) before Reviewer acceptance.
 2. Jr Dev — Hermes integrates after Reviewer approves source: tests + gates + change report +
    governance updates; all states AWAITING_REVIEW.
 
 ## Stop condition
 
 After Jr: AWAITING_REVIEW, Reviewer next, NONE. Stop after push.
+
+## Reminder (next week)
+
+Re-verify Sr source drops with a strong engineering model (DeepSeek V4 Pro or equivalent).
+Starting with LABEL-001 (labels.py, integrated at 2786537)
+Then EXP-001 (experiment.py, pending Sr drop)
+And all future drops. Big Pickle's reviews are governance-only — code quality needs a
+stronger model check when budget allows.
