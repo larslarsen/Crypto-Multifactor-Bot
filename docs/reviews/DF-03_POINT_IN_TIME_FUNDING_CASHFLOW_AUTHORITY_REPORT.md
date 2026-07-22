@@ -1,6 +1,6 @@
 # DF-03 — Point-in-Time Funding Cashflow Authority Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0134
 **Recommendation:** NO_POINT_IN_TIME_FUNDING_CASHFLOW_AUTHORITY
 **Priority:** P0
 **Next ticket authorized:** `NONE`
@@ -14,7 +14,7 @@ synthesis only.
 
 ## Gate results (8, all blocking)
 - **G01 FAIL_PARTIAL** (blocking Yes) — Binance archive fields are `calc_time`, `funding_interval_hours`, `last_funding_rate` (matched against REST `fundingRate`/`fundingTime`, not relabeled); `calc_time` classification remains incomplete. OKX `fundingTime` settlement semantics pass only for its accepted scope.
-- **G02 FAIL_PARTIAL** (blocking Yes) — Binance archive rate field `last_funding_rate` (REPO, not relabeled as `fundingRate`) unit/sign/formula fail (not a normalized, position-dependent cashflow). OKX archive predicted-vs-realized distinction remains partial.
+- **G02 FAIL_PARTIAL** (blocking Yes) — Binance archive rate field `last_funding_rate` (not relabeled as `fundingRate`) unit/sign/formula fail (not a normalized, position-dependent cashflow). OKX archive predicted-vs-realized distinction remains partial.
 - **G03 FAIL_PARTIAL** (blocking Yes) — interval and formula history are incompletely versioned; observed intervals do not establish historical rules.
 - **G04 FAIL_PARTIAL** (blocking Yes) — Binance historical availability remains partial; OKX only has a conservative 2026 bound, not historical publication-time authority.
 - **G05 FAIL_UNKNOWN** (blocking Yes) — funding-specific replacement/correction history is not established.

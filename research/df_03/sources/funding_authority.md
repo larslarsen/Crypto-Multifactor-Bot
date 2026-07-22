@@ -20,7 +20,7 @@ FX-003 ticket/REVIEW-0114/matrix.
 
 ## Gate results (all blocking)
 - G01 FAIL_PARTIAL: Binance archive fields are `calc_time`, `funding_interval_hours`, `last_funding_rate` (matched against REST `fundingRate`/`fundingTime`, not relabeled); `calc_time` classification remains incomplete. OKX `fundingTime` settlement semantics pass only for accepted scope.
-- G02 FAIL_PARTIAL: Binance archive rate field `last_funding_rate` (REPO, not relabeled as `fundingRate`) unit/sign/formula fail; OKX archive predicted-vs-realized distinction partial.
+- G02 FAIL_PARTIAL: Binance archive rate field `last_funding_rate` (not relabeled as `fundingRate`) unit/sign/formula fail; OKX archive predicted-vs-realized distinction partial.
 - G03 FAIL_PARTIAL: interval/formula history incompletely versioned; observed intervals do not establish historical rules.
 - G04 FAIL_PARTIAL: Binance historical availability partial; OKX only conservative 2026 bound, not historical publication-time authority.
 - G05 FAIL_UNKNOWN: funding-specific replacement/correction history not established.
