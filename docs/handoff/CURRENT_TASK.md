@@ -1,37 +1,31 @@
 # CURRENT_TASK
 
-Ticket: DF-07
-State: ACCEPTED
-Next ticket authorized: NONE
+Ticket: ASOF-001
+State: AWAITING_REVIEW
 Next required actor: Reviewer
+Next ticket authorized: NONE
 
-Accepted/blocked context: SRC-006 (accepted REFERENCE_METADATA; NET-01 conditional), SRC-006b
-(CONDITIONAL, publication-time/revision unbounded), SRC-010 (CONDITIONAL, not queried), Coin
-Metrics Community (CONDITIONAL — EXPLORATORY_PHASE2), RD-05 (conditional finding/next action),
-RD-07 (does not authorize on-chain data), DF-01 (accepted NO_PRIMARY_PIT_SUPPLY_AUTHORITY, does
-not resolve DF-07). Staged raw provider datasets (incl. Coin Metrics response objects) were not
-committed to the repo (REVIEW-0008 lines 17-20); only bounded observations/catalog/metadata are
-retained.
+Accepted/blocked context: Sr production source drop `src/cryptofactors/catalog/as_of.py` (769
+lines) + `__init__.py` exports approved under REVIEW-0138 (SOURCE APPROVED - JR INTEGRATION
+AUTHORIZED). Jr added focused tests, change report, and governance records; no Sr-source edits;
+no new features beyond the approved AsOfStore contract. All eight gate runs green (pytest 22
+passed; ruff clean; mypy clean for the new file modulo pre-existing repo-wide import-untyped;
+repo-control PASS).
+
 Governing documents:
-- tickets/DF-07.md
-- docs/reviews/REVIEW-0135_DF-07_ON_CHAIN_OBSERVATION_AUDIT_AUTHORIZED.md
-- docs/reviews/REVIEW-0136_DF-07_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0137_DF-07_ACCEPTED_NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY.md
-- docs/reviews/DF-07_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY_REPORT.md
-- research/df_07/EVIDENCE_REGISTER.csv
-- research/df_07/decision_matrix.csv
-- research/df_07/sources/on_chain_authority.md
+- tickets/ASOF-001.md
+- docs/reviews/REVIEW-0138_ASOF-001_SOURCE_APPROVED_JR_AUTHORIZED.md
+- docs/reviews/ASOF-001_CHANGE_REPORT.md
+- tests/catalog/test_asof001_integration.py
+- src/cryptofactors/catalog/as_of.py (approved drop, unchanged)
+- src/cryptofactors/catalog/__init__.py (approved exports, unchanged)
 
 ## Authorized work
 
-DF-07 Point-in-Time On-Chain Observation Authority Audit (authorized REVIEW-0135; governance
-REVIEW-0136; corrected REVIEW-0136; accepted REVIEW-0137). Decision
-NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY. No NET-01, DIL-01, collection, procurement,
-implementation, schema, tests, or next ticket authorized.
+ASOF-001 Jr integration after REVIEW-0138: tests + gates + change report + governance updates;
+all states AWAITING_REVIEW. No further Jr work authorized.
 
 ## Stop condition
 
-DF-07 ACCEPTED; Reviewer is next actor; Next ticket authorized remains NONE. All authorized
-source-authority tickets (DF-01, DF-08, DF-02, DF-03, DF-07) are now ACCEPTED with NO authority.
-No further DF-0x ticket is currently authorized. Other DF-0x feasibility items remain governed by
-their existing records and are not resolved by DF-07. Stop.
+ASOF-001 returned to AWAITING_REVIEW; Reviewer is next actor; Next ticket authorized remains
+NONE. Stop after push.

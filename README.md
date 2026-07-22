@@ -25,6 +25,7 @@ Active tickets:
 - [`FUND-003`](tickets/FUND-003.md) — OKX Funding Archive Source Semantics Audit (`ACCEPTED - NO_IMPLEMENTATION_AUTHORITY`).
 - [`REF-003`](tickets/REF-003.md) — Bybit Prospective Instrument Snapshot Authority Audit (`ACCEPTED - NO_AUTHORITY`).
 - [`FEE-001`](tickets/FEE-001.md) — Point-in-Time Fee Schedules and Conservative Assumptions (`ACCEPTED`; no numeric fee assumptions authorized).
+- [`ASOF-001`](tickets/ASOF-001.md) — As-Of Access API (`AWAITING_REVIEW`; source approved REVIEW-0138).
 - [`GOV-002`](tickets/GOV-002.md) — Repository Status Index Reconciliation (`ACCEPTED`; RECONCILIATION_COMPLETE, REVIEW-0119/0120/0121).
 - [`DF-01`](tickets/DF-01.md) — Coin Metrics Point-in-Time Supply Authority Audit (`ACCEPTED - NO_PRIMARY_PIT_SUPPLY_AUTHORITY`; REVIEW-0122/0123/0124).
 - [`DF-08`](tickets/DF-08.md) — Survivorship-Free Universe Source Authority Audit (`ACCEPTED - NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY`; REVIEW-0125/0126/0127).
