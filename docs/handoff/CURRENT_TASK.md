@@ -1,28 +1,23 @@
 # CURRENT_TASK
 
-Ticket: REF-003
-State: ACCEPTED
+Ticket: GOV-002
+State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
-Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO_AUTHORITY). REF-003 is prospective-only; historical transitions and REF-002 G04/G05 remain blocked and out of scope.
+Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO_AUTHORITY), REF-003 (accepted, NO_AUTHORITY). GOV-002 reconciles status indexes from final review records only.
 Governing documents:
-- tickets/REF-003.md
-- docs/reviews/REF-003_BYBIT_PROSPECTIVE_AUTHORITY_REPORT.md
-- research/ref_003/EVIDENCE_REGISTER.csv
-- research/ref_003/decision_matrix.csv
-- research/ref_003/sources/bybit.md
-- docs/reviews/REVIEW-0118_REF-003_ACCEPTED_NO_AUTHORITY.md
-- docs/reviews/REVIEW-0117_REF-003_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0116_REF-003_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0115_REF-003_PROSPECTIVE_AUDIT_AUTHORIZED.md
+- tickets/GOV-002.md
+- docs/reviews/REVIEW-0119_GOV-002_STATUS_RECONCILIATION_AUTHORIZED.md
 
 ## Authorized work
 
-REF-003 Bybit prospective instrument-snapshot authority audit (authorized under REVIEW-0115).
-No implementation, collector, code, schema, migration, ADR, historical reconstruction, factor, portfolio, or live work is authorized.
+GOV-002 Repository Status Index Reconciliation (authorized under REVIEW-0119).
+Reconcile ticket, backlog, README, and handoff statuses strictly from final review
+records; never infer acceptance. No production code, tests, architecture, or accepted
+research findings may be modified.
 
 ## Stop condition
 
-REF-003 completed under REVIEW-0115 with recommendation NO_AUTHORITY.
+Return GOV-002 to AWAITING_REVIEW (or BLOCKED if ambiguous) after reconciliation;
 Reviewer is next actor; Next ticket authorized remains NONE. Stop.
