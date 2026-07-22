@@ -20,6 +20,6 @@ FUND-003,P0,research evidence / funding source semantics,OKX Funding Archive Sou
 REF-003,P0,research evidence / data-source authority,Bybit Prospective Instrument Snapshot Authority Audit,REF-002;AUD-003,BLOCKING_FOR_PROSPECTIVE_SNAPSHOT,ACCEPTED - NO_AUTHORITY
 GOV-002,P1,repository control / governance,Repository Status Index Reconciliation,NONE,GOVERNANCE,ACCEPTED
 DF-01,P0,research evidence / data-source authority,Coin Metrics Point-in-Time Supply Authority Audit,Sprint-003 Coin Metrics Community,BLOCKING_FOR_SUPPLY_FACTORS,ACCEPTED - NO_PRIMARY_PIT_SUPPLY_AUTHORITY
-DF-08,P0,research evidence / universe source authority,Survivorship-Free Universe Source Authority Audit,REF-001;REF-002;REF-003;Sprint-003,BLOCKING_FOR_SURVIVORSHIP_FREE_UNIVERSE,IN_PROGRESS
+DF-08,P0,research evidence / universe source authority,Survivorship-Free Universe Source Authority Audit,REF-001;REF-002;REF-003;Sprint-003,BLOCKING_FOR_SURVIVORSHIP_FREE_UNIVERSE,AWAITING_REVIEW
 REF-002,P0,research evidence / point-in-time reference events,Bybit Instrument Event Source Feasibility Audit,REF-001;BYB-001;AUD-003;RES-001,BLOCKING_FOR_HISTORICAL_UNIVERSE,ACCEPTED - NO AUTHORITY
 FEE-001,P0,reference data / fee schedules,Point-in-Time Fee Schedules and Conservative Assumptions,CAT-001/CAT-001A;REF-001,BLOCKING_FOR_COSTED_RESEARCH,ACCEPTED
