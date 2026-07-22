@@ -18,6 +18,6 @@ FUND-001,P0,data platform / funding and costs readiness,Binance Funding-Cashflow
 FUND-002,P0,research evidence / funding source semantics,Binance Funding Source Semantics Audit,FUND-001,BLOCKING_FOR_FUNDING_EVENTS,ACCEPTED - NO IMPLEMENTATION AUTHORITY
 FUND-003,P0,research evidence / funding source semantics,OKX Funding Archive Source Semantics Audit,FUND-001,BLOCKING_FOR_FUNDING_EVENTS,ACCEPTED - NO_IMPLEMENTATION_AUTHORITY
 REF-003,P0,research evidence / data-source authority,Bybit Prospective Instrument Snapshot Authority Audit,REF-002;AUD-003,BLOCKING_FOR_PROSPECTIVE_SNAPSHOT,ACCEPTED - NO_AUTHORITY
-GOV-002,P1,repository control / governance,Repository Status Index Reconciliation,NONE,GOVERNANCE,AWAITING_REVIEW
+GOV-002,P1,repository control / governance,Repository Status Index Reconciliation,NONE,GOVERNANCE,ACCEPTED
 REF-002,P0,research evidence / point-in-time reference events,Bybit Instrument Event Source Feasibility Audit,REF-001;BYB-001;AUD-003;RES-001,BLOCKING_FOR_HISTORICAL_UNIVERSE,ACCEPTED - NO AUTHORITY
 FEE-001,P0,reference data / fee schedules,Point-in-Time Fee Schedules and Conservative Assumptions,CAT-001/CAT-001A;REF-001,BLOCKING_FOR_COSTED_RESEARCH,ACCEPTED

@@ -1,6 +1,6 @@
 # GOV-002 — Repository Status Index Reconciliation Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0121
 **Recommendation:** RECONCILIATION_COMPLETE
 **Authorized under:** REVIEW-0119 (corrected under REVIEW-0120)
 **Date:** 2026-07-21
@@ -29,7 +29,7 @@ or accepted research findings were modified. Harmless wording/style was not norm
 | AUD-004 | AWAITING_REVIEW | `**Status:** ACCEPTED`; REVIEW-0065 | ACCEPTED | Yes | tickets/AUD-004.md + REVIEW-0065_AUD-004_ACCEPTED.md |
 | AUD-005 | ACCEPTED | `**Status:** ACCEPTED` (closed) | ACCEPTED | No | tickets/AUD-005.md |
 | RAW-002 | ACCEPTED | `**Status:** ACCEPTED` | ACCEPTED | No | tickets/RAW-002.md |
-| FX-001 | ACCEPTED | readiness-only; implementation blocked by source authority | ACCEPTED - READINESS ONLY; IMPLEMENTATION BLOCKED BY SOURCE AUTHORITY | Yes (restriction added) | docs/reviews/FX-001_READINESS_REPORT.md; REVIEW-0080_FX-001_READINESS_CHANGES_REQUIRED.md |
+| FX-001 | ACCEPTED | readiness-only; implementation blocked by source authority | ACCEPTED - READINESS ONLY; IMPLEMENTATION BLOCKED BY SOURCE AUTHORITY | Yes (restriction added) | tickets/FX-001.md; docs/reviews/FX-001_READINESS_REPORT.md; docs/reviews/REVIEW-0081_FX-001_READINESS_ACCEPTED_FX-002_AUTHORIZED.md |
 | FX-003 | ACCEPTED - NO_PRIMARY_SOURCE_AUTHORITY | `**Status:** ACCEPTED` | ACCEPTED - NO_PRIMARY_SOURCE_AUTHORITY | No | tickets/FX-003.md + REVIEW-0114 |
 | FUND-001 | ACCEPTED | accepted REVIEW-0093; implementation blocked by source evidence | ACCEPTED - REVIEW-0093; IMPLEMENTATION BLOCKED BY SOURCE EVIDENCE | Yes (restriction added) | tickets/FUND-001.md; docs/reviews/FUND-001_READINESS_REPORT.md; REVIEW-0093 |
 | FUND-002 | ACCEPTED - NO IMPLEMENTATION AUTHORITY | `**Status:** ACCEPTED` | ACCEPTED - NO IMPLEMENTATION AUTHORITY | No | tickets/FUND-002.md + REVIEW chain |
