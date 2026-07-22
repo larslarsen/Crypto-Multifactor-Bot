@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: REF-003
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -12,6 +12,7 @@ Governing documents:
 - research/ref_003/EVIDENCE_REGISTER.csv
 - research/ref_003/decision_matrix.csv
 - research/ref_003/sources/bybit.md
+- docs/reviews/REVIEW-0118_REF-003_ACCEPTED_NO_AUTHORITY.md
 - docs/reviews/REVIEW-0117_REF-003_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0116_REF-003_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0115_REF-003_PROSPECTIVE_AUDIT_AUTHORIZED.md

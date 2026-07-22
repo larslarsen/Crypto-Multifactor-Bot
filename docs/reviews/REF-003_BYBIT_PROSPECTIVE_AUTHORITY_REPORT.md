@@ -1,6 +1,6 @@
 # REF-003 — Bybit Prospective Instrument Snapshot Authority Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0118
 **Recommendation:** NO_AUTHORITY
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
