@@ -3,7 +3,7 @@
 **Status:** AWAITING_REVIEW
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
-**Date:** 2026-07-21 (corrected under REVIEW-0106, REVIEW-0107)
+**Date:** 2026-07-21 (corrected under REVIEW-0106, REVIEW-0107, REVIEW-0108, REVIEW-0109)
 
 ## Recommendation
 **NO_IMPLEMENTATION_AUTHORITY**
@@ -54,8 +54,8 @@ literally, not claimed as captured).
 - Official announcement (RFA) states the new formula rolled out in 3 batches from April 10, 2025, but
   no archive carries the field, so the boundary cannot be verified from archive data.
 - Changelog (RCL) 2025-04-28 entry is AWS-domain cessation, not the formula transition.
-- BTC transition-boundary archives around 2025-04-24 could NOT be acquired (all probed
-  BTC transition-boundary dates around April 24 returned 404). Transition-boundary verification incomplete.
+- BTC transition-boundary archives around April 24, 2025 were NOT acquired in this audit.
+  Transition-boundary verification incomplete.
 
 ### G04 — Interval derivation (PARTIAL, blocking)
 - 2026-07-19 archive distribution (by funding_time differences): 231 instruments at 8h, 194 at 4h,
@@ -69,18 +69,18 @@ literally, not claimed as captured).
 ### G05 — Integrity and replacement (FAIL)
 - ETag/Content-MD5 verify current-object bytes for R01/R02/R12 (integrity PASS).
 - Provider replacement/correction behavior is undocumented.
-- R01 object Last-Modified `2026-02-02` and R12 object Last-Modified `2025-12-17` show objects were
-  replaced after their archive dates. **Last-Modified alone does NOT prove replacement semantics or
-  provide a correction/changelog policy.** Replacement/correction behavior unknown.
+- R01 object Last-Modified `2026-02-02` and R12 object Last-Modified `2025-12-17` show
+  objects were replaced after their archive dates. **Last-Modified dates the current
+  representation but cannot distinguish initial backfill from replacement.** Replacement/correction
+  behavior unknown.
 
 ### G06 — Availability (PASS with 2026 bound)
 - Historical endpoint exists (landing page R05 confirms module 3; introduction date not stated on
   page — the prior "September 2025" claim was unsourced and is removed).
 - PASS only with conservative **2026 availability bound**: R02 (2026-07-19) and R12 (2025-04-15)
-  objects are post-endpoint. **Do NOT claim 2022 availability** — R01 Last-Modified is 2026-02-02
-  with no proof of 2022 publication.
-- BTC transition-boundary archives around 2025-04-24 could not be acquired (404 for all probed
-  April 2025 dates).
+  - Do NOT claim 2022 availability — R01 Last-Modified is 2026-02-02 with no proof of 2022
+    publication.
+  - BTC transition-boundary archives around April 24, 2025 were NOT acquired in this audit.
 
 ### G07 — Licensing (FAIL, intended internal scope)
 - Evaluated strictly against intended internal research use: acquisition of publicly available

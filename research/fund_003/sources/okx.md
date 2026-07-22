@@ -11,8 +11,8 @@
 - Endpoint introduction date is NOT stated on the historical-data landing page (the prior "September 2025"
   claim was unsourced and is removed).
 - Object `Last-Modified` dates the current representation of the object (R01: 2026-02-02;
-  R12: 2025-12-17). It does NOT prove replacement, and alone does not establish a
-  replacement/correction policy.
+  R12: 2025-12-17). Last-Modified dates the current representation but cannot distinguish
+  initial backfill from replacement.
 
 ## REST API
 
@@ -24,8 +24,11 @@
 
 ## Interval semantics
 
-- Mechanism article (R06B): cycles are 1h / 2h / 4h / 8h (interval factor N = 1,2,4,8; rate
-  scaled by ÷N).
+- Mechanism article (R06B): cycles are 1h / 2h / 4h / 8h. Here **N is the settlement
+  interval in hours** (N = 1, 2, 4, 8). The funding rate is scaled by dividing by
+  **(8 / N)** — e.g. an 8h cycle divides by 1, a 4h cycle by 2, a 2h cycle by 4,
+  a 1h cycle by 8. (The "÷N" wording in the prior note was inverted; the correct factor
+  is 8/N, not N.)
 - API documentation (R04B): default 8h, "may be adjusted to higher frequencies such as 6 hours,
   4 hours, 2 hours, or 1 hour" — i.e. additionally mentions a possible 6h adjustment not present
   in the mechanism article.
@@ -39,9 +42,8 @@
 - Official formula-change announcement captured (RFA):
   `https://www.okx.com/en-eu/help/okx-to-change-the-funding-rate-formula-for-perpetual-futures`
   — states the new formula rolled out in 3 batches from April 10, 2025.
-- BTC transition-boundary archives around April 24, 2025 were UNAVAILABLE: all probed BTC
-  transition-boundary dates around April 24 (20250422, 20250423, 20250424, 20250425, plus
-  20250401/08/10/15/18/20/28/30) returned 404. Transition boundary not verifiable from archives.
+- BTC transition-boundary archives around April 24, 2025 were NOT acquired in this audit.
+  Transition boundary not verifiable from archives.
 
 ## Licensing
 

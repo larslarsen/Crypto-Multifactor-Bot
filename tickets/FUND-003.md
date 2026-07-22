@@ -3,7 +3,7 @@
 **Priority:** P0
 **Status:** AWAITING_REVIEW
 **Recommendation:** NO_IMPLEMENTATION_AUTHORITY
-**Dependencies:** FUND-001 (Binance funding source semantics baseline; FEE-001 substrate accepted)
+**Dependencies:** FUND-001 (Binance funding readiness baseline; FEE-001 substrate accepted)
 **Layer:** research evidence / funding source semantics
 **Architecture:** no ADR, schema, migration, or production implementation authorized
 
