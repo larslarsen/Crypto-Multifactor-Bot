@@ -9,6 +9,7 @@ Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-0
 Governing documents:
 - tickets/DF-02.md
 - docs/reviews/REVIEW-0130_DF-02_ACCEPTED_NO_POINT_IN_TIME_UNLOCK_AUTHORITY.md
+- docs/reviews/REVIEW-0131_DF-02_ACCEPTED_STATE_HANDOFF_CORRECTION.md
 - docs/reviews/REVIEW-0129_DF-02_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0128_DF-02_UNLOCK_AUDIT_AUTHORIZED.md
 - docs/reviews/DF-02_POINT_IN_TIME_UNLOCK_AUTHORITY_REPORT.md
@@ -27,4 +28,5 @@ schema, implementation, procurement, or next ticket authorized.
 
 DF-02 ACCEPTED; Reviewer is next actor; Next ticket authorized remains NONE. All authorized
 source-authority tickets (DF-01, DF-08, DF-02) are now ACCEPTED with NO authority. No further
-DF-0x tickets pending. Stop.
+ticket is currently authorized. Other DF-0x feasibility items remain governed by their existing
+records and are not resolved by DF-02. Stop.
