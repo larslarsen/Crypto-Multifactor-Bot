@@ -13,22 +13,21 @@ schedules (historical unlock-schedule vintages, announcement/revision known-time
 on-chain unlock execution). Evidence synthesis only.
 
 ## Gate results (8, all blocking)
-- **G01 FAIL_ACCESS** (blocking Yes) — Tokenomist was TLS-unreachable in the audited environment; Messari required account/key access; DefiLlama emissions returned HTTP 402. Not universal unreachability.
+- **G01 FAIL_ACCESS** (blocking Yes) — Tokenomist TLS-unreachable in the audited environment (E03 inventory + E11 details); Messari required account/key (E03 + E11); DefiLlama emissions HTTP 402 (E12). Trial prerequisites: E07. Not universal unreachability.
 - **G02 FAIL_UNKNOWN** (blocking Yes) — historical unlock-schedule vintage preservation is unproven.
 - **G03 FAIL_UNKNOWN** (blocking Yes) — announcement/revision publication-known-time history is unproven.
 - **G04 FAIL_UNKNOWN** (blocking Yes) — actual on-chain unlock execution was not queried or reconciled.
 - **G05 FAIL_UNKNOWN** (blocking Yes) — token/contract/chain mapping across schedule and execution evidence is unproven.
-- **G06 FAIL_PARTIAL** (blocking Yes) — some adapter artifacts exist, but representative token/asset output coverage is not demonstrated.
-- **G07 FAIL_UNKNOWN** (blocking Yes) — licensing and internal raw-retention authority are unproven.
+- **G06 FAIL_PARTIAL** (blocking Yes) — some adapter artifacts exist (E12 DefiLlama adapter code, E13 reconciliation), with E11 as a partial bridge, but representative token/asset output coverage is not demonstrated. E03 is not retained adapter evidence.
+- **G07 FAIL_UNKNOWN** (blocking Yes) — licensing and internal raw-retention authority are unproven (E07 vendor requirements + E11 licensing warning; E10 is the Research Lead decision record, not licensing evidence).
 - **G08 FAIL_UNKNOWN** (blocking Yes) — the required known-unlock test did not reconcile announcement, revision history, and actual execution.
 
 ## Decision
 `NO_POINT_IN_TIME_UNLOCK_AUTHORITY`.
 
 ## Preserved accepted roles (exact)
-- Tokenomist — DEFERRED for the audited environment.
-- Messari — CONDITIONAL / EXPLORATORY_PHASE2.
-- DefiLlama unlock adapters — CONDITIONAL / REFERENCE_METADATA.
+- Source-register roles (E02 — 01_SOURCE_DECISION_REGISTER.csv): Tokenomist DEFERRED; Messari CONDITIONAL / EXPLORATORY_PHASE2; DefiLlama unlock adapters CONDITIONAL / REFERENCE_METADATA.
+- Research Lead decisions (E10 — 13_RESEARCH_LEAD_DECISIONS.md): DefiLlama = CONDITIONAL - EXPLORATORY_PHASE2 (emissions access not established as free); Tokenomist / Messari = DEFER pending authorized access or vendor trial; DIL-01 remains deferred.
 
 ## No historical vintages
 Current schedules or adapter code cannot be treated as historical vintages.

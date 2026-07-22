@@ -13,22 +13,36 @@ revision audit, vendor trial requirements, research data decisions, open questio
 lead decisions), sprint_003/sources (token_unlocks.md, defillama.md), and audit_results
 (evidence_reconciliation.csv, hash_verification.json).
 
-## Preserved accepted roles (must not be altered)
-- Tokenomist — DEFERRED for the audited environment.
+## Source-specific roles (preserved from E02 — 01_SOURCE_DECISION_REGISTER.csv)
+- Tokenomist — DEFERRED.
 - Messari — CONDITIONAL / EXPLORATORY_PHASE2.
 - DefiLlama unlock adapters — CONDITIONAL / REFERENCE_METADATA.
 
+## Research Lead decisions (E10 — 13_RESEARCH_LEAD_DECISIONS.md, verbatim)
+- DefiLlama = CONDITIONAL - EXPLORATORY_PHASE2; emissions access not established as free.
+- Tokenomist / Messari = DEFER pending authorized access or vendor trial.
+- DIL-01 remains deferred.
+E10 is the Research Lead decision record; the separate source-register roles above are from E02.
+
 ## Access facts (not universal unreachability)
-Tokenomist was TLS-unreachable in the audited environment; Messari required account/key
-access; DefiLlama emissions returned HTTP 402. These are audited-environment access failures
-only. G01 FAIL_ACCESS (blocking) — do not claim universal unreachability.
+- E03 (object inventory) records: Tokenomist TLS error (TLSV1_UNRECOGNIZED_NAME), Messari
+  404/429 no-key gap, and the old DefiLlama SDK path returning 404 (INVALID_NONQUALIFYING).
+  E03 does NOT record the DefiLlama emissions HTTP 402 (that is E12) and does NOT establish
+  retained adapter artifacts.
+- E11 (token_unlocks source note) details Tokenomist/Messari; E12 (defillama source note)
+  records the DefiLlama emissions HTTP 402 (paid); E07 records trial prerequisites.
+G01 FAIL_ACCESS (blocking) — audited-environment access failures only; do not claim universal
+unreachability.
 
 ## No historical vintages
-Current schedules or adapter code cannot be treated as historical vintages. Vintage
-preservation (G02), announcement/revision known-time (G03), actual on-chain execution (G04),
-token/contract/chain mapping (G05), licensing/retention (G07), and the known-unlock
-reconciliation test (G08) are all unproven. Coverage (G06) is partial: some adapter artifacts
-exist but representative token/asset output coverage is not demonstrated.
+E04 (schema/semantics audit) records Tokenomist's expected schema as unconfirmed, vintage
+preservation as unknown (CANNOT CONFIRM vintage preservation), and on-chain vesting as required
+but unqueried. No observed on-chain execution fields are described. Current schedules or
+adapter code cannot be treated as historical vintages. Vintage preservation (G02),
+announcement/revision known-time (G03), actual on-chain execution (G04), token/contract/chain
+mapping (G05), licensing/retention (G07), and the known-unlock reconciliation test (G08) are
+all unproven. Coverage (G06) is partial: some adapter artifacts exist (E12/E13) with E11 as a
+partial bridge, but representative token/asset output coverage is not demonstrated.
 
 ## Downstream
 - DIL-01 remains DEFERRED/UNTESTED.
