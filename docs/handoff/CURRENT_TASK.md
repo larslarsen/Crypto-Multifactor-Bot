@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: FUND-003
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -13,6 +13,7 @@ Governing documents:
 - research/fund_003/EVIDENCE_REGISTER.csv
 - research/fund_003/decision_matrix.csv
 - research/fund_003/sources/okx.md
+- docs/reviews/REVIEW-0110_FUND-003_ACCEPTED_NO_IMPLEMENTATION_AUTHORITY.md
 
 ## Authorized work
 
@@ -21,5 +22,5 @@ funding cashflow, USD-conversion, factor, portfolio, or live work is authorized.
 
 ## Stop condition
 
-After publishing FUND-003 evidence records, set FUND-003 to `AWAITING_REVIEW`, name Reviewer as
-next actor, retain `Next ticket authorized: NONE`, and stop.
+FUND-003 accepted under REVIEW-0110 with recommendation NO_IMPLEMENTATION_AUTHORITY.
+Reviewer is next actor; Next ticket authorized remains NONE. Stop.

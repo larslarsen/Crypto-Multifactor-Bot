@@ -1,4 +1,4 @@
-# Source note — OKX (FUND-003, corrected under REVIEW-0106/0107/0108)
+# Source note — OKX (FUND-003, corrected under REVIEW-0106/0107/0108/0109)
 
 **Environment:** captures 2026-07-21 (retained `/tmp/opencode/source_recheck_20260721/`) and
 2026-07-22 (re-fetched `/tmp/okx_cap/`). All raw payloads preserved outside Git.

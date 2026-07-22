@@ -1,7 +1,7 @@
 # FUND-003 - OKX Funding Archive Source Semantics Audit
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - NO_IMPLEMENTATION_AUTHORITY
 **Recommendation:** NO_IMPLEMENTATION_AUTHORITY
 **Dependencies:** FUND-001 (Binance funding readiness baseline; FEE-001 substrate accepted)
 **Layer:** research evidence / funding source semantics

@@ -1,6 +1,6 @@
 # FUND-003 — OKX Funding Archive Source Semantics Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0110
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
 **Date:** 2026-07-21 (corrected under REVIEW-0106, REVIEW-0107, REVIEW-0108, REVIEW-0109)
@@ -69,17 +69,14 @@ literally, not claimed as captured).
 ### G05 — Integrity and replacement (FAIL)
 - ETag/Content-MD5 verify current-object bytes for R01/R02/R12 (integrity PASS).
 - Provider replacement/correction behavior is undocumented.
-- R01 object Last-Modified `2026-02-02` and R12 object Last-Modified `2025-12-17` show
-  objects were replaced after their archive dates. **Last-Modified dates the current
-  representation but cannot distinguish initial backfill from replacement.** Replacement/correction
+- R01 Last-Modified 2026-02-02 and R12 Last-Modified 2025-12-17 date the current
+  representations. They cannot distinguish initial backfill from replacement. Replacement/correction
   behavior unknown.
 
 ### G06 — Availability (PASS with 2026 bound)
 - Historical endpoint exists (landing page R05 confirms module 3; introduction date not stated on
-  page — the prior "September 2025" claim was unsourced and is removed).
-- PASS only with conservative **2026 availability bound**: R02 (2026-07-19) and R12 (2025-04-15)
-  - Do NOT claim 2022 availability — R01 Last-Modified is 2026-02-02 with no proof of 2022
-    publication.
+  - PASS only with a conservative 2026 availability bound based on the audit/acquisition context.
+    Do not claim 2022 availability; R01 provides no proof of 2022 availability.
   - BTC transition-boundary archives around April 24, 2025 were NOT acquired in this audit.
 
 ### G07 — Licensing (FAIL, intended internal scope)
