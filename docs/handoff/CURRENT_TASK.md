@@ -1,13 +1,14 @@
 # CURRENT_TASK
 
 Ticket: DF-08
-State: AWAITING_REVIEW
+State: CHANGES_REQUIRED
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
-Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO AUTHORITY), REF-003 (accepted, NO_AUTHORITY), GOV-002 (accepted, RECONCILIATION_COMPLETE), DF-01 (accepted, NO_PRIMARY_PIT_SUPPLY_AUTHORITY), DF-08 (AWAITING_REVIEW, NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY). Accepted market-bar and REF-001 substrate authority preserved.
+Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO AUTHORITY), REF-003 (accepted, NO_AUTHORITY), GOV-002 (accepted, RECONCILIATION_COMPLETE), DF-01 (accepted, NO_PRIMARY_PIT_SUPPLY_AUTHORITY), DF-08 (CHANGES_REQUIRED, NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY). Accepted market-bar and REF-001 substrate authority preserved.
 Governing documents:
 - tickets/DF-08.md
+- docs/reviews/REVIEW-0126_DF-08_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0125_DF-08_UNIVERSE_AUDIT_AUTHORIZED.md
 - docs/reviews/DF-08_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY_REPORT.md
 - research/df_08/EVIDENCE_REGISTER.csv
