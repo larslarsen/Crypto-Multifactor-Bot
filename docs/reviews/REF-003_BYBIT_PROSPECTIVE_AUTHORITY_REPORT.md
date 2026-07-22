@@ -4,7 +4,7 @@
 **Recommendation:** NO_AUTHORITY
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
-**Date:** 2026-07-21 (audited under REVIEW-0115; corrected under REVIEW-0116)
+**Date:** 2026-07-21 (audited REVIEW-0115; corrected REVIEW-0116; REVIEW-0117)
 **Auditor:** Jr Dev — Hermes (Hy3:free)
 
 ## Scope
@@ -14,43 +14,48 @@ remain blocked and out of scope. No collector, code, schema, migration, historic
 reconstruction, factor, portfolio, or live work.
 
 ## Recommendation: NO_AUTHORITY (fail-closed)
-Blocking gates: **G04 (unknown), G05 (unknown)**. PASS: G01, G02, G03, G06, G07, G08.
+**Final blockers: G01, G04, G05, G08.** PASS: G02, G03, G06, G07 (G02/G03 content-level,
+unable to cure G01).
 
-## Key findings (corrected REVIEW-0116)
-- **G01 PASS:** Platform Terms v15 PDF (400,739B, 42pp, LM 2026-07-15) docLink identity
-  `8f54e9463ad3fa8ab9c0a39c0fc25f3a.pdf` matches the official legal-terms listing entry
-  (version 15, updateTime 2026-07-15). API Terms v1 is a distinct 7-page document
-  (LM 2025-09-08, internal Title "EN - API Terms & Conditions") not in the listing.
-- **G02 PASS:** APIA §1.1 applies "in addition to" TOU; §1.2 APIA prevails on
-  inconsistency. Distinct and cumulative.
-- **G03 PASS:** APIA §5.1 grants a limited, non-exclusive, non-sublicensable,
+## Key findings (REVIEW-0117)
+- **G01 FAIL_UNKNOWN (blocking):** official API Terms identity/version and PDF retrieval
+  binding are unproven. The API Terms PDF artifact has a local filename and internal
+  Title but **no proven official Bybit version or legal-chain binding**. The Platform
+  Terms docLink is present in the listing, but the **retained PDF headers do NOT bind
+  the PDF response to that retrieval URL**.
+- **G02 PASS (blocking No):** APIA §1.1 applies "in addition to" TOU; §1.2 APIA prevails
+  on inconsistency. Content-level/conditional on the captured artifact; unable to cure G01.
+- **G03 PASS (blocking No):** APIA §5.1 grants a limited, non-exclusive, non-sublicensable,
   non-transferable, non-assignable and revocable license to use the API; §2.2 permits
-  automated query/request. Automated public-API acquisition is within the license.
-- **G04 FAIL-UNKNOWN:** No explicit internal non-commercial raw-snapshot retention
-  grant in either document; Bybit's 7-year clause is its own obligation.
-- **G05 FAIL-UNKNOWN:** Legal-terms listing API is deterministic (ret_code 0), but no
-  instruments-info (v5/market) request/response was captured; pagination/request
+  automated query/request. Content-level/conditional on the captured artifact; unable to
+  cure G01.
+- **G04 FAIL_UNKNOWN (blocking):** No explicit internal non-commercial raw-snapshot
+  retention grant in either document; Bybit's 7-year clause is its own obligation.
+- **G05 FAIL_UNKNOWN (blocking):** Legal-terms listing API is deterministic (ret_code 0),
+  but no instruments-info (v5/market) request/response was captured; pagination/request
   identity for instruments-info is unverified.
-- **G06 PASS:** Prospective semantics committed — known_from = retrieved_at only;
-  knowledge is never backdated. Historical transitions explicitly out of scope.
-- **G07 PASS:** G07 asks whether the proposed scope *assumes* redistribution/commercial
-  rights. The prospective scope (internal non-commercial raw retention, no
-  redistribution) does NOT assume those rights. A provider prohibition alone is not a
-  gate failure. §6.7 (no repackage/resell of Service Data) and §6.9 (no commercial
-  exploitation) are recorded as future-use constraints, not gate failures.
-- **G08 PASS:** Evidence-lineage only. Immutable snapshot/version lineage established
-  for both PDFs (SHA-256, version, docLink/filename identity) and the legal-terms
-  listing (retained body+headers, ret_code 0). G08 does not fail on redistribution
-  terms. (Retrieval URLs not retained in headers is a lineage limitation, noted.)
+- **G06 PASS (blocking No):** Prospective semantics committed — known_from = retrieved_at
+  only; knowledge is never backdated. Historical transitions explicitly out of scope.
+- **G07 PASS (blocking No):** G07 asks whether the proposed scope *assumes*
+  redistribution/commercial rights. The prospective scope does NOT assume those rights.
+  A provider prohibition alone is not a gate failure. §6.7/§6.9 recorded as future-use
+  constraints.
+- **G08 FAIL_UNKNOWN (blocking):** evaluated against **prospective instrument-snapshot
+  lineage**, not legal-document hashes. **No prospective instruments-info request, body,
+  headers, pagination, hashes, status, or object-version lineage exists.** Therefore the
+  instrument-snapshot lineage is unproven.
 
-## Evidence provenance (corrected)
-- Legal-terms listing registered against its **actual endpoint**
-  `https://api.bybit.com/compliance/v1/wall/site-legal-terms` (R03B/R03H).
+## Evidence provenance
+- Legal-terms listing registered at its actual endpoint
+  `https://api.bybit.com/compliance/v1/wall/site-legal-terms` (R03B/R03H). **The retained
+  response header proves status/time only and contains NO URL**; the endpoint identity is
+  recorded in the register, not proven by the header.
 - Platform/API Terms PDF document identities derived from JSON docLink / filename +
   internal Title. The retained headers do **not** contain the request line, so exact
-  retrieval URLs are **not retained** — fail closed on provenance (not on licensing).
-- Unsupported `api2.bybit.com` proxy URLs and a generic `api-terms-v1.pdf` URL were
-  removed. No false R01/R03 duplication (each row has distinct bytes/headers).
+  retrieval URLs are **not retained** — fail closed on provenance/binding.
+- API Terms PDF renamed to unverified **"API Terms PDF artifact"**; official version set to
+  **UNPROVEN** (local filename + internal Title do not prove an official Bybit version or
+  legal chain).
 - Legacy help-page shells (R04H/R05H, HTTP 403) registered only to document the block;
   not used as terms evidence.
 
@@ -66,9 +71,8 @@ header rows).
 - path / SHA-256 / size for all 8 rows: **valid**.
 - final HTTP status present in retained headers for all 5 header rows (R01H/R02H/R03H
   = 200; R04H/R05H = 403): **valid**.
-- PDF identity / page count: Platform v15 = 42pp, API v1 = 7pp: **valid**.
-- Absence of unsupported URLs / false §5.1 quotation: **verified**.
-- `python3 scripts/check_repo_control.py`: **PASS**.
+- PDF identity / page count: Platform v15 = 42pp, API artifact = 7pp: **valid**.
+- `python3 scripts/check_repo_control.py`: **PASS** (state AWAITING_REVIEW).
 - `git diff --check`: **clean** (0 CR bytes in register).
 
 ## Note

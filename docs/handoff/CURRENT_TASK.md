@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: REF-003
-State: CHANGES_REQUIRED
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
