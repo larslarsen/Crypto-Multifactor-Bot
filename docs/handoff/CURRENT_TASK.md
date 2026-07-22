@@ -1,23 +1,27 @@
 # CURRENT_TASK
 
 Ticket: DF-03
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001 (accepted readiness/substrate), FUND-002 (accepted, NO_IMPLEMENTATION_AUTHORITY), FUND-003 (accepted, NO_IMPLEMENTATION_AUTHORITY), GOV-002 (accepted, RECONCILIATION_COMPLETE), DF-01/DF-08/DF-02 (accepted, NO authority). FUND-001 readiness/substrate accepted; Binance and OKX bounded observations valid; Sprint-003 RD-02 feasibility only, not implementation authority.
 Governing documents:
 - tickets/DF-03.md
 - docs/reviews/REVIEW-0132_DF-03_FUNDING_AUDIT_AUTHORIZED.md
+- docs/reviews/DF-03_POINT_IN_TIME_FUNDING_CASHFLOW_AUTHORITY_REPORT.md
+- research/df_03/EVIDENCE_REGISTER.csv
+- research/df_03/decision_matrix.csv
+- research/df_03/sources/funding_authority.md
 
 ## Authorized work
 
-DF-03 Point-in-Time Funding Cashflow Authority Audit (authorized under REVIEW-0132).
-Evidence synthesis only: no network, production code, tests, schema, funding normalizer,
-cashflow implementation, or new factual inference. No funding-event normalizer, realized
-cashflow, CARRY factor, USD conversion, schema, migration, or next ticket authorized.
+DF-03 Point-in-Time Funding Cashflow Authority Audit (authorized under REVIEW-0132). Evidence
+synthesis complete; awaiting Reviewer. Decision NO_POINT_IN_TIME_FUNDING_CASHFLOW_AUTHORITY.
+No funding-event normalizer, realized cashflow, CARRY factor, USD conversion, schema,
+migration, or next ticket authorized.
 
 ## Stop condition
 
-Return DF-03 to AWAITING_REVIEW after synthesis; Reviewer is next actor; Next ticket
-authorized remains NONE. Stop.
+DF-03 returned to AWAITING_REVIEW; Reviewer is next actor; Next ticket authorized remains
+NONE. Stop.
