@@ -12,6 +12,7 @@ Governing documents:
 - research/fx_003/EVIDENCE_REGISTER.csv
 - research/fx_003/decision_matrix.csv
 - research/fx_003/sources/kraken.md
+- docs/reviews/REVIEW-0113_FX-003_VERIFIABLE_CLOSURE.md
 - docs/reviews/REVIEW-0112_FX-003_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0111_FX-003_KRAKEN_BULK_AUDIT_AUTHORIZED.md
 

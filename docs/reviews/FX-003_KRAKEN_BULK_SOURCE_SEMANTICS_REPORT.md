@@ -22,9 +22,9 @@ G01 (direction) and G02 (depth/depeg) PASS; G06 (member integrity) PASS.
 - **Depth + depeg (G02 PASS):** **headerless** CSV, **3,200** daily (24h) rows
   2017-03-29 → 2025-12-31. May 12 2022 depeg bar O=.9953 H=.9989 L=.92 C=.9971.
   Full depeg window covered at daily resolution.
-- **Timestamps (G03 FAIL-PARTIAL):** Unix seconds, 24h-aligned to 00:00:00 UTC;
-  col0 = bar open time. No header row / tz doc in archive; bar-time vs publication-time
-  ambiguity not fully resolved.
+- **Timestamps (G03 FAIL-PARTIAL):** Column 0 is an observed Unix-second OHLC interval
+  timestamp aligned to 00:00 UTC. Provider evidence does not establish interval-start
+  versus interval-end semantics. FAIL-PARTIAL.
 - **Times (G04 FAIL-PARTIAL):** object Last-Modified 2026-01-24 (not data-end, not bar
   time); view page has no Last-Modified; support/terms pages 2026-07-21. Point-in-time
   availability of historical rows not pinned.
@@ -37,26 +37,30 @@ G01 (direction) and G02 (depth/depeg) PASS; G06 (member integrity) PASS.
   EEA Terms restrict copying and automated extraction; no explicit bulk-redistribution
   grant. Unresolved conflict => fail-closed.
 - **Lineage (G08 FAIL-PARTIAL):** member reproducible via exact byte-range GET + retained
-  headers; Google Drive warning/confirmation (virus-scan) flow captured (R05B).
-  Whole-archive byte-range/SHA not captured (ZIP64 offset=0xFFFFFFFF).
+  headers; Google Drive warning/confirmation (virus-scan) page captured (R05B), but the
+  exact warning/confirmation request-flow parameters (e.g. confirm token) were NOT
+  retained. Whole-archive byte-range/SHA not captured (ZIP64 offset=0xFFFFFFFF).
 
 ## ZIP64 facts (corrected)
 Local file header = **88 bytes** (30 + 26 filename + 32 extra). Captured range
 `6080252262-6080252461` = 88-byte header + **112 compressed bytes**; compressed data
 starts at **6080252350**. R02's 200 bytes = header + 112 compressed bytes.
+The central-directory **32-bit offset field = `0xFFFFFFFF`** (ZIP64 marker);
+the **ZIP64 extra field (0x0001) was captured** and carries the **actual
+local-header offset = 6080252262**.
 
 ## Decision matrix
 See `research/fx_003/decision_matrix.csv` (gates G01-G08).
 
 ## Evidence register
-See `research/fx_003/EVIDENCE_REGISTER.csv` (16 rows: bodies + headers registered
-separately with exact URLs — actual file ID — statuses, hashes, sizes, external paths;
-warning/confirmation flow and quarterly-folder rows added).
+See `research/fx_003/EVIDENCE_REGISTER.csv` (16 evidence rows: bodies + headers
+registered separately with exact URLs — actual file ID `1ptNqWYidLkhb2VAKuLCxmp2OXEfGO-AP`
+— statuses, hashes, sizes, external paths; warning/confirmation and quarterly-folder
+rows added).
 
 ## Validation performed
-- path / SHA-256 / size for all 16 rows: **valid**.
-- final HTTP status present in retained headers for all 6 archive header rows
-  (R01H/R02H/R03H/R04H = 206; R05H/R06H = 200) and terms (R08H = 200): **valid**.
+- path / SHA-256 / size for all 16 evidence rows: **valid**.
+- final HTTP status present in retained headers for all **8 header rows** (R01H/R02H/R03H/R04H = 206; R05H/R06H/R07H/R08H = 200): **valid**.
 - inflated member SHA-256 / CRC-32 / rows (3,200) / bounds: **valid**.
 - `python3 scripts/check_repo_control.py`: **PASS**.
 - `git diff --check`: **clean** (0 CR bytes in register).

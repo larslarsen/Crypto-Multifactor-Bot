@@ -14,24 +14,28 @@ hosted on Google Drive. Actual file ID: `1ptNqWYidLkhb2VAKuLCxmp2OXEfGO-AP`
   (76,401) / uncompressed (201,200) sizes match; inflated SHA-256 `9dafa48...`.
 - Local file header is **88 bytes** (30 + 26 filename + 32 extra). Captured range
   `6080252262-6080252461` = 88-byte header + **112 compressed bytes**; compressed
-  data starts at **6080252350**. Central-directory `offset` = `0xFFFFFFFF` (ZIP64),
-  real offset in ZIP64 extra (not captured).
+  data starts at **6080252350**. The central-directory 32-bit offset field = `0xFFFFFFFF`
+  (ZIP64 marker); the **ZIP64 extra field (0x0001) was captured** and carries the
+  **actual local-header offset = 6080252262**.
 - Archive object Last-Modified: **2026-01-24**. Captures 2026-07-21. All archive
   captures HTTP 206 (ranged) / 200 (view/support/terms). Six header rows carry
   Last-Modified: R01H/R02H/R03H/R04H = 2026-01-24; R06H = 2026-07-21; R08H = 2026-07-21.
   R05H (view) has no Last-Modified.
 
 ## Failed / unknown (fail-closed)
-- **G03 bar semantics**: 24h UTC-aligned confirmed, but no header row / tz doc in
-  archive; bar-time vs publication-time ambiguity not fully resolved.
+- **G03 bar semantics**: Column 0 is an observed Unix-second OHLC interval timestamp
+  aligned to 00:00 UTC. Provider evidence does not establish interval-start versus
+  interval-end semantics. FAIL-PARTIAL.
 - **G04 times**: Last-Modified is object date, not data-end or bar time; view page
-  has no LM; point-in-time availability of historical rows not pinned.
+  has no LM; point-in-time availability of historical rows not pinned. FAIL-PARTIAL.
 - **G05 vintages/correction**: central dir + quarterly folder (Q1-2023..Q1-2026)
-  captured, but no published correction/replacement policy; ZIP CRC ≠ historical immutability.
+  captured, but no published correction/replacement policy; ZIP CRC ≠ historical immutability. FAIL-PARTIAL.
 - **G07 licensing conflict**: support page permits "use in code / conversion"; EEA Terms
-  restrict copying and automated extraction. Unresolved => fail-closed.
+  restrict copying and automated extraction. Unresolved => fail-closed. FAIL-CONFLICT.
 - **G08 lineage**: member reproducible via exact byte-range GET + retained headers;
-  Google Drive warning/confirmation flow captured. Whole-archive SHA not captured.
+  Google Drive warning/confirmation page captured (R05B) but the exact
+  warning/confirmation request-flow parameters (e.g. confirm token) were NOT retained.
+  Whole-archive SHA not captured. FAIL-PARTIAL.
 
 ## What was NOT done
 - No REST backfill used. No "fair use" licensing asserted. No code/schema/normalizer.
