@@ -54,14 +54,15 @@ literally, not claimed as captured).
 - Official announcement (RFA) states the new formula rolled out in 3 batches from April 10, 2025, but
   no archive carries the field, so the boundary cannot be verified from archive data.
 - Changelog (RCL) 2025-04-28 entry is AWS-domain cessation, not the formula transition.
-- BTC transition-boundary archives around 2025-04-24 could NOT be acquired (all probed April 2025
-  dates returned 404). Transition-boundary verification incomplete.
+- BTC transition-boundary archives around 2025-04-24 could NOT be acquired (all probed
+  BTC transition-boundary dates around April 24 returned 404). Transition-boundary verification incomplete.
 
 ### G04 — Interval derivation (PARTIAL, blocking)
 - 2026-07-19 archive distribution (by funding_time differences): 231 instruments at 8h, 194 at 4h,
   **1 at 2h**, **1 at 1h**.
-- Docs: default 8h; variable 6h/4h/2h/1h for volatile altcoins; use fundingTime/nextFundingTime
-  difference.
+- Mechanism article (R06B): cycles are 1h / 2h / 4h / 8h. API documentation (R04B) additionally
+  mentions a possible 6h adjustment ("may be adjusted to higher frequencies such as 6 hours, 4 hours,
+  2 hours, or 1 hour"). Use fundingTime/nextFundingTime difference.
 - Missing formal rules: adjacent-event handling, cross-day boundaries, tolerance for interval
   jitter, and frequency-transition encoding (how a 4h→8h switch is recorded). PARTIAL and blocking.
 
