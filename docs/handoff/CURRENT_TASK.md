@@ -1,29 +1,25 @@
 # CURRENT_TASK
 
-Ticket: FEE-001
-State: ACCEPTED
+Ticket: FUND-003
+State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
-Accepted dependencies: CAT-001/CAT-001A and REF-001. FX-002, FUND-002, and REF-002 remain accepted
-with their fail-closed implementation blockers.
+Accepted dependencies: FEE-001 (fee-schedule substrate). FX-002, FUND-002, and REF-002 remain
+accepted with their fail-closed implementation blockers.
 Governing documents:
-- tickets/FEE-001.md
-- docs/architecture/01_DATA_ARCHITECTURE.md
-- docs/architecture/07_IMPLEMENTATION_ROADMAP.md
-- research/sprint_001/07_COST_AND_PORTFOLIO_PROTOCOL.md
-- docs/reviews/REVIEW-0103_FEE-001_SR_SOURCE_AUTHORIZED.md
-- docs/reviews/FEE-001_SR_IMPLEMENTATION_TASK.md
-- docs/reviews/REVIEW-0104_FEE-001_DECIMAL_IDENTITY_CORRECTION_REQUIRED.md
-- docs/reviews/FEE-001_INTEGRATION_REPORT.md
-- docs/reviews/REVIEW-0105_FEE-001_ACCEPTED.md
+- tickets/FUND-003.md
+- docs/reviews/FUND-003_OKX_SOURCE_SEMANTICS_REPORT.md
+- research/fund_003/EVIDENCE_REGISTER.csv
+- research/fund_003/decision_matrix.csv
+- research/fund_003/sources/okx.md
 
 ## Authorized work
 
-FEE-001 is accepted under `docs/reviews/REVIEW-0105_FEE-001_ACCEPTED.md`. No numeric fee assumptions,
-source ingestion, spread/impact, route, cost simulation, portfolio, factor, or live work is authorized.
+FUND-003 evidence capture and source-semantics audit. No implementation, schema, migration, ADR,
+funding cashflow, USD-conversion, factor, portfolio, or live work is authorized.
 
 ## Stop condition
 
-Reviewer must select and authorize any future ticket. Retain `Next ticket authorized: NONE` until then.
-Do not begin another ticket.
+After publishing FUND-003 evidence records, set FUND-003 to `AWAITING_REVIEW`, name Reviewer as
+next actor, retain `Next ticket authorized: NONE`, and stop.
