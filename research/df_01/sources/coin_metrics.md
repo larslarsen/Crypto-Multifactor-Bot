@@ -18,14 +18,22 @@ repository. Only their accepted inventory rows, request identities, SHA-256 hash
 audit conclusions remain. Do not claim the original API bodies are repository-native.
 
 ## Accepted role (must not be overruled)
-Across Sprint-003, Coin Metrics Community is accepted only as conditional
-`REFERENCE_METADATA` / `EXPLORATORY_PHASE2`. It is not a primary point-in-time supply
-authority. This synthesis preserves that accepted status and adds no new factual inference.
+Across Sprint-003 (AUD-003 acceptance, REVIEW-0008_AUD-003_FINAL.md), Coin Metrics
+Community is accepted only as `CONDITIONAL - EXPLORATORY_PHASE2` and DIL-01 remains
+deferred. It is not a primary point-in-time supply authority. This synthesis preserves
+that accepted status and adds no new factual inference. The new DF-01
+NO_PRIMARY_PIT_SUPPLY_AUTHORITY decision is derived from the DF-01 evidence synthesis, not
+from that prior record.
 
 ## Semantic notes (from accepted audits)
 - `SplyCur` is an issued/current supply field, not circulating float.
-- Future unissued / max supply series are absent from the retained inventory.
-- Server-side revisions/backfills exist; no historical vintages retained.
+- Max/future-unissued supply series are absent from the retained DF-01 evidence (the
+  provider is not claimed to universally lack them).
+- Server-side revisions/backfills exist; no historical vintages retained. Past-value
+  reproducibility is not demonstrated from the repository-retained evidence (not claimed
+  universally impossible).
+- E03 records request URLs, retrieval/status, and observations; E08/E09 record the accepted
+  hashes. E03 does not contain a hash for every timeseries request.
 - Licensing and internal raw-retention authority were not established.
 
 ## Decision

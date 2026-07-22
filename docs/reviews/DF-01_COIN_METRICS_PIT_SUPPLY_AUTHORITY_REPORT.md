@@ -20,11 +20,11 @@ All eight gates block. No primary point-in-time supply authority is granted.
 - **G01 FAIL_SEMANTIC** — `SplyCur` is issued supply, not circulating float.
 - **G02 FAIL_PARTIAL** — BTC/SUSHI observations exist; BONK/micro-cap Community coverage absent.
 - **G03 FAIL_UNKNOWN** — publication/known-time lag is unbounded.
-- **G04 FAIL_UNKNOWN** — server-side revisions/backfills exist with no retained historical vintages.
-- **G05 FAIL_PARTIAL** — request identities/hashes are recorded, but original raw response bodies are not repository-retained.
+- **G04 FAIL_UNKNOWN** — server-side revisions/backfills exist with no retained historical vintages; past-value reproducibility is not demonstrated from the repository-retained evidence (not claimed universally impossible).
+- **G05 FAIL_PARTIAL** — E03 records request URLs, retrieval/status, and observations; E08/E09 record the accepted hashes (E03 does not contain a hash for every timeseries request); original raw response bodies are not repository-retained.
 - **G06 FAIL_UNKNOWN** — licensing and internal raw-retention authority were not established.
 - **G07 FAIL_UNKNOWN** — no contemporaneously published historical value was reproduced.
-- **G08 FAIL_SEMANTIC** — future unissued/max supply is absent, so FDV and required denominator history cannot be constructed.
+- **G08 FAIL_SEMANTIC** — max/future-unissued supply is absent from the retained DF-01 evidence, so FDV and required denominator history cannot be constructed from it (the provider is not claimed to universally lack such series).
 
 ## Evidence provenance
 - Ten repository-native artifacts used (hashes/sizes in `EVIDENCE_REGISTER.csv`): the
