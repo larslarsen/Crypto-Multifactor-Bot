@@ -14,8 +14,8 @@ price, and failure cause per asset). Evidence synthesis only.
 
 ## Gate results (8)
 - **G01 PASS** (blocking No) — REF-001 provides an accepted bitemporal identity/event-storage substrate only.
-- **G02 PASS_PARTIAL** (blocking Yes) — bounded listing/launch/delivery observations exist but do not establish complete event authority.
-- **G03 PASS_PARTIAL** (blocking Yes) — first/last trade edges exist but must not be equated with exact listing/delisting events.
+- **G02 PASS_PARTIAL** (blocking Yes) — launch/scheduled-delivery metadata (Bybit launchTime; BTCUSDU26 scheduled future deliveryTime, not an observed completed delivery) and bounded trade observations exist but do not establish complete event authority.
+- **G03 PASS_PARTIAL** (blocking Yes) — retained evidence contains bounded earliest/latest timestamps within sampled/archive objects, not proven asset-lifetime first/last trades; sample/archive edges must never be equated with exact listing/delisting events.
 - **G04 FAIL_UNKNOWN** (blocking Yes) — announcement known-time and effective-time history are unproven.
 - **G05 FAIL_UNKNOWN** (blocking Yes) — historical state-transition and revision/vintage history are unproven.
 - **G06 FAIL_PARTIAL** (blocking Yes) — representative delisted/failed-asset coverage, final tradable price, and failure cause are not demonstrated.
@@ -33,12 +33,15 @@ respectively; no accepted cross-venue source closes the remaining gaps (G04–G0
 
 ## Preserved authority (not downgraded)
 - REF-001 accepted bitemporal identity/event-storage substrate (G01 PASS).
-- Accepted market-bar authority.
+- BAR-001 accepted canonical-bar authority (E15 tickets/BAR-001.md, E16
+  REVIEW-0042_BAR-001_ACCEPTED.md) — preserved market-bar boundary only; DF-08 does not
+  downgrade accepted canonical-bar authority.
 
 ## Evidence provenance
-Fourteen repository-native accepted artifacts used (paths/hashes/sizes in
+Sixteen repository-native accepted artifacts used (paths/hashes/sizes in
 `EVIDENCE_REGISTER.csv`): sprint_002/06; sprint_003/01, /02, /04, /08; REVIEW-0017
-(REF-001); REF-002 ticket/report/REVIEW-0102/matrix; REF-003 ticket/report/REVIEW-0118/matrix.
+(REF-001); REF-002 ticket/report/REVIEW-0102/matrix; REF-003 ticket/report/REVIEW-0118/matrix;
+and, for the preserved market-bar boundary only, E15/E16 (BAR-001 ticket + REVIEW-0042).
 No original raw source bodies are claimed as repository-native beyond these accepted records.
 
 ## Downstream
@@ -47,6 +50,6 @@ collector, schema, universe implementation, or next ticket authorized.
 
 ## Validation
 - Repo control: PASS; `git diff --check`: clean.
-- Evidence register: 14 rows, hashes/sizes verified; 0 CR bytes.
+- Evidence register: 16 rows, hashes/sizes verified; 0 CR bytes.
 - Decision matrix: 8 gates (G01 PASS non-blocking; G02–G08 blocking) as specified.
 - Allowed-file scope only; no gate results or historical Sprint evidence altered.
