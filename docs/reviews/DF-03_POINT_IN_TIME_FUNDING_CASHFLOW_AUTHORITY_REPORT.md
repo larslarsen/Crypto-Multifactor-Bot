@@ -13,14 +13,14 @@ Determine whether accepted repository evidence authorizes point-in-time funding 
 synthesis only.
 
 ## Gate results (8, all blocking)
-- **G01 FAIL_PARTIAL** (blocking Yes) — Binance `calc_time` remains unclassified; OKX `fundingTime` settlement semantics pass only for its accepted scope.
-- **G02 FAIL_PARTIAL** (blocking Yes) — Binance rate unit/sign/formula fail; OKX archive predicted-vs-realized distinction remains partial.
+- **G01 FAIL_PARTIAL** (blocking Yes) — Binance archive fields are `calc_time`, `funding_interval_hours`, `last_funding_rate` (matched against REST `fundingRate`/`fundingTime`, not relabeled); `calc_time` classification remains incomplete. OKX `fundingTime` settlement semantics pass only for its accepted scope.
+- **G02 FAIL_PARTIAL** (blocking Yes) — Binance archive rate field `last_funding_rate` (REPO, not relabeled as `fundingRate`) unit/sign/formula fail (not a normalized, position-dependent cashflow). OKX archive predicted-vs-realized distinction remains partial.
 - **G03 FAIL_PARTIAL** (blocking Yes) — interval and formula history are incompletely versioned; observed intervals do not establish historical rules.
 - **G04 FAIL_PARTIAL** (blocking Yes) — Binance historical availability remains partial; OKX only has a conservative 2026 bound, not historical publication-time authority.
 - **G05 FAIL_UNKNOWN** (blocking Yes) — funding-specific replacement/correction history is not established.
 - **G06 FAIL_PARTIAL** (blocking Yes) — Binance raw lineage passes its bounded samples; OKX full request identity fails.
-- **G07 FAIL_UNKNOWN** (blocking Yes) — intended internal acquisition/retention licensing remains unestablished or ambiguous.
-- **G08 FAIL_BLOCKED** (blocking Yes) — provider funding-rate events are not position-dependent realized cashflows; required notional/side/mark/index inputs are absent, and accepted FX-003 evidence does not authorize USD conversion.
+- **G07 FAIL_UNKNOWN** (blocking Yes) — intended internal acquisition/retention licensing remains unestablished or ambiguous (Binance E07/E08; OKX E11/E12). Tickets/acceptances record final status but are not the primary legal-semantics evidence.
+- **G08 FAIL_BLOCKED** (blocking Yes) — provider funding-rate events are not position-dependent realized cashflows (FUND-001 E03/E04/E05). Required notional/side/mark/index inputs are absent (provider rate-event evidence E07/E11), and accepted FX-003 evidence (E14/E15/E16) does not authorize USD conversion.
 
 ## Decision
 `NO_POINT_IN_TIME_FUNDING_CASHFLOW_AUTHORITY`.
