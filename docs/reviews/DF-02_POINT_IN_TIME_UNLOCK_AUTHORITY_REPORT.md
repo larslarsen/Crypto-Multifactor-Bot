@@ -1,6 +1,6 @@
 # DF-02 — Point-in-Time Token Unlock Authority Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0130
 **Recommendation:** NO_POINT_IN_TIME_UNLOCK_AUTHORITY
 **Priority:** P0
 **Next ticket authorized:** `NONE`
@@ -18,8 +18,8 @@ on-chain unlock execution). Evidence synthesis only.
 - **G03 FAIL_UNKNOWN** (blocking Yes) — announcement/revision publication-known-time history is unproven.
 - **G04 FAIL_UNKNOWN** (blocking Yes) — actual on-chain unlock execution was not queried or reconciled.
 - **G05 FAIL_UNKNOWN** (blocking Yes) — token/contract/chain mapping across schedule and execution evidence is unproven.
-- **G06 FAIL_PARTIAL** (blocking Yes) — some adapter artifacts exist (E12 DefiLlama adapter code, E13 reconciliation), with E11 as a partial bridge, but representative token/asset output coverage is not demonstrated. E03 is not retained adapter evidence.
-- **G07 FAIL_UNKNOWN** (blocking Yes) — licensing and internal raw-retention authority are unproven (E07 vendor requirements + E11 licensing warning; E10 is the Research Lead decision record, not licensing evidence).
+- **G06 FAIL_PARTIAL** (blocking Yes) — E13 proves retained adapter-file artifacts (paths/sizes/hashes); E12 provides DefiLlama adapter/access context (HTTP 402, repo located); E11 describes a partial bridge. Representative token/asset output coverage remains unproven.
+- **G07 FAIL_UNKNOWN** (blocking Yes) — E07 records vendor/licensing prerequisites; E11 warns that unlock aggregators may have commercial/licensed terms and requires confirmation before retention or redistribution. Not all unlock data is proven commercially licensed.
 - **G08 FAIL_UNKNOWN** (blocking Yes) — the required known-unlock test did not reconcile announcement, revision history, and actual execution.
 
 ## Decision

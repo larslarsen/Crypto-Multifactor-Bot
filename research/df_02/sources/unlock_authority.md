@@ -41,8 +41,12 @@ but unqueried. No observed on-chain execution fields are described. Current sche
 adapter code cannot be treated as historical vintages. Vintage preservation (G02),
 announcement/revision known-time (G03), actual on-chain execution (G04), token/contract/chain
 mapping (G05), licensing/retention (G07), and the known-unlock reconciliation test (G08) are
-all unproven. Coverage (G06) is partial: some adapter artifacts exist (E12/E13) with E11 as a
-partial bridge, but representative token/asset output coverage is not demonstrated.
+all unproven. Coverage (G06) is partial: E13 proves retained adapter-file artifacts
+(paths/sizes/hashes), E12 provides DefiLlama adapter/access context, and E11 describes a
+partial bridge, but representative token/asset output coverage is not demonstrated. G07: E07
+records vendor/licensing prerequisites; E11 warns that unlock aggregators may have
+commercial/licensed terms requiring confirmation before retention or redistribution — not all
+unlock data is proven commercially licensed.
 
 ## Downstream
 - DIL-01 remains DEFERRED/UNTESTED.
