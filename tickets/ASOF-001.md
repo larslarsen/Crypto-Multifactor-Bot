@@ -1,7 +1,7 @@
 # ASOF-001 — As-Of Access API
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0139
 **Dependencies:** CAT-001/CAT-001A, REF-001, BAR-001, FEE-001 (accepted)
 **Layer:** catalog (as-of access)
 **Architecture:** implements existing Phase 3 AsOfStore contract (`docs/architecture/03_DOMAIN_INTERFACES.md` §6; eligibility from `01_DATA_ARCHITECTURE.md` §12); no ADR required
