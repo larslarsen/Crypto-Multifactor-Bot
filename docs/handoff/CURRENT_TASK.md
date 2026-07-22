@@ -1,27 +1,23 @@
 # CURRENT_TASK
 
-Ticket: DF-01
-State: ACCEPTED
+Ticket: DF-08
+State: IN_PROGRESS
 Next ticket authorized: NONE
-Next required actor: Reviewer
+Next required actor: Jr Dev - Hermes
 
-Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO_AUTHORITY), REF-003 (accepted, NO_AUTHORITY), GOV-002 (accepted, RECONCILIATION_COMPLETE), DF-01 (accepted, NO_PRIMARY_PIT_SUPPLY_AUTHORITY; BLOCKING_FOR_SUPPLY_FACTORS). Coin Metrics Community retained as conditional REFERENCE_METADATA / EXPLORATORY_PHASE2 only.
+Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO AUTHORITY), REF-003 (accepted, NO_AUTHORITY), GOV-002 (accepted, RECONCILIATION_COMPLETE), DF-01 (accepted, NO_PRIMARY_PIT_SUPPLY_AUTHORITY), DF-08 (IN_PROGRESS). Coin Metrics Community conditional REFERENCE_METADATA / EXPLORATORY_PHASE2 only. Accepted market-bar and REF-001 substrate authority preserved.
 Governing documents:
-- tickets/DF-01.md
-- docs/reviews/REVIEW-0124_DF-01_ACCEPTED_NO_PRIMARY_PIT_SUPPLY_AUTHORITY.md
-- docs/reviews/REVIEW-0123_DF-01_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0122_DF-01_SUPPLY_AUDIT_AUTHORIZED.md
-- docs/reviews/DF-01_COIN_METRICS_PIT_SUPPLY_AUTHORITY_REPORT.md
-- research/df_01/EVIDENCE_REGISTER.csv
-- research/df_01/decision_matrix.csv
-- research/df_01/sources/coin_metrics.md
+- tickets/DF-08.md
+- docs/reviews/REVIEW-0125_DF-08_UNIVERSE_AUDIT_AUTHORIZED.md
 
 ## Authorized work
 
-None. DF-01 accepted under REVIEW-0124 (NO_PRIMARY_PIT_SUPPLY_AUTHORITY). SIZE-01, DIL-01,
-and supply-dependent NET-01 remain blocked. No production implementation or next ticket
-authorized.
+DF-08 Survivorship-Free Universe Source Authority Audit (authorized under REVIEW-0125).
+Evidence synthesis only: no network, production code, tests, schema, universe
+implementation, or new factual inference. Historical universe construction and dependent
+factor work remain blocked.
 
 ## Stop condition
 
-DF-01 accepted; Reviewer is next actor; Next ticket authorized remains NONE. Stop.
+Return DF-08 to AWAITING_REVIEW after synthesis; Reviewer is next actor; Next ticket
+authorized remains NONE. Stop.
