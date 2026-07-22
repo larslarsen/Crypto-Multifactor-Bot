@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: GOV-002
-State: CHANGES_REQUIRED
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted/blocked context: FX-003 (accepted, NO_PRIMARY_SOURCE_AUTHORITY), FUND-001/FUND-002/FUND-003 (accepted), REF-002 (accepted, NO_AUTHORITY), REF-003 (accepted, NO_AUTHORITY). GOV-002 reconciles status indexes from final review records only.
 Governing documents:

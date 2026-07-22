@@ -25,4 +25,4 @@ Active tickets:
 - [`FUND-003`](tickets/FUND-003.md) — OKX Funding Archive Source Semantics Audit (`ACCEPTED - NO_IMPLEMENTATION_AUTHORITY`).
 - [`REF-003`](tickets/REF-003.md) — Bybit Prospective Instrument Snapshot Authority Audit (`ACCEPTED - NO_AUTHORITY`).
 - [`FEE-001`](tickets/FEE-001.md) — Point-in-Time Fee Schedules and Conservative Assumptions (`ACCEPTED`; no numeric fee assumptions authorized).
-- [`GOV-002`](tickets/GOV-002.md) — Repository Status Index Reconciliation (`CHANGES_REQUIRED`; governance, REVIEW-0119/0120).
+- [`GOV-002`](tickets/GOV-002.md) — Repository Status Index Reconciliation (`AWAITING_REVIEW`; governance, RECONCILIATION_COMPLETE, REVIEW-0119/0120).

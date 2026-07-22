@@ -1,5 +1,5 @@
 ticket_id,priority,layer,title,dependencies,gate_role,status
-CAT-001,P0,catalog,Initialize SQLite control catalog and migrations,NONE,BLOCKING,
+CAT-001,P0,catalog,Initialize SQLite control catalog and migrations,NONE,BLOCKING,SUPERSEDED BY CAT-001A (ACCEPTED)
 RAW-001,P0,ingest/catalog,Content-addressed immutable raw object writer,CAT-001,BLOCKING,ACCEPTED
 MAN-001,P0,catalog,Immutable dataset manifest publisher,CAT-001;RAW-001,BLOCKING,ACCEPTED
 LEG-001,P0,ingest,Legacy local file census,RAW-001,BLOCKING,ACCEPTED
@@ -12,12 +12,12 @@ EVD-001,P1,evidence,Operational Evidence Registry,CAT-001;experiment identity,NO
 AUD-004,P2,source-audit/archive-precision,Native headerless support for Binance precision comparator,AUD-002,NON_BLOCKING,ACCEPTED
 AUD-005,P2,source-audit/bar-reconstruction,Provider-candle comparison by explicit comparable dimensions,AUD-002,NON_BLOCKING,ACCEPTED
 RAW-002,P3,ingest/catalog,Harden publication-receipt verification against symlink substitution,RAW-001,NON_BLOCKING,ACCEPTED
-FX-001,P0,data platform / market FX,Point-in-Time Stablecoin FX Readiness,CAT-001/001A;RAW-001/002;MAN-001;REF-001;BAR-001;AUD-003,NON_BLOCKING,ACCEPTED
+FX-001,P0,data platform / market FX,Point-in-Time Stablecoin FX Readiness,CAT-001/001A;RAW-001/002;MAN-001;REF-001;BAR-001;AUD-003,NON_BLOCKING,ACCEPTED - READINESS ONLY; IMPLEMENTATION BLOCKED BY SOURCE AUTHORITY
 FX-003,P0,research evidence / data-source semantics,Kraken Bulk Stablecoin FX Source Semantics Audit,FX-002,BLOCKING_FOR_FX_EVENTS,ACCEPTED - NO_PRIMARY_SOURCE_AUTHORITY
-FUND-001,P0,data platform / funding and costs readiness,Binance Funding-Cashflow Readiness,RAW-001/002;MAN-001;REF-001;AUD-003;RES-001,BLOCKING_FOR_DERIVATIVES,ACCEPTED
+FUND-001,P0,data platform / funding and costs readiness,Binance Funding-Cashflow Readiness,RAW-001/002;MAN-001;REF-001;AUD-003;RES-001,BLOCKING_FOR_DERIVATIVES,ACCEPTED - REVIEW-0093; IMPLEMENTATION BLOCKED BY SOURCE EVIDENCE
 FUND-002,P0,research evidence / funding source semantics,Binance Funding Source Semantics Audit,FUND-001,BLOCKING_FOR_FUNDING_EVENTS,ACCEPTED - NO IMPLEMENTATION AUTHORITY
 FUND-003,P0,research evidence / funding source semantics,OKX Funding Archive Source Semantics Audit,FUND-001,BLOCKING_FOR_FUNDING_EVENTS,ACCEPTED - NO_IMPLEMENTATION_AUTHORITY
 REF-003,P0,research evidence / data-source authority,Bybit Prospective Instrument Snapshot Authority Audit,REF-002;AUD-003,BLOCKING_FOR_PROSPECTIVE_SNAPSHOT,ACCEPTED - NO_AUTHORITY
-GOV-002,P1,repository control / governance,Repository Status Index Reconciliation,NONE,GOVERNANCE,CHANGES_REQUIRED
+GOV-002,P1,repository control / governance,Repository Status Index Reconciliation,NONE,GOVERNANCE,AWAITING_REVIEW
 REF-002,P0,research evidence / point-in-time reference events,Bybit Instrument Event Source Feasibility Audit,REF-001;BYB-001;AUD-003;RES-001,BLOCKING_FOR_HISTORICAL_UNIVERSE,ACCEPTED - NO AUTHORITY
 FEE-001,P0,reference data / fee schedules,Point-in-Time Fee Schedules and Conservative Assumptions,CAT-001/CAT-001A;REF-001,BLOCKING_FOR_COSTED_RESEARCH,ACCEPTED
