@@ -5,8 +5,8 @@ State: AWAITING_REVIEW
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
-Accepted dependencies: FEE-001 (fee-schedule substrate). FX-002, FUND-002, and REF-002 remain
-accepted with their fail-closed implementation blockers.
+Accepted dependencies: FUND-001 (Binance funding source semantics baseline). FX-002, FUND-002, and
+REF-002 remain accepted with their fail-closed implementation blockers.
 Governing documents:
 - tickets/FUND-003.md
 - docs/reviews/FUND-003_OKX_SOURCE_SEMANTICS_REPORT.md
