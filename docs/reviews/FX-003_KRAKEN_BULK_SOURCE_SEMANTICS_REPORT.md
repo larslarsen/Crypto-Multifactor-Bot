@@ -4,48 +4,60 @@
 **Recommendation:** NO_PRIMARY_SOURCE_AUTHORITY
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
-**Date:** 2026-07-21 (audited under REVIEW-0111)
+**Date:** 2026-07-21 (audited under REVIEW-0111; corrected under REVIEW-0112)
 **Auditor:** Jr Dev — Hermes (Hy3:free)
 
 ## Scope
 Source-semantics audit of one archive member only:
 `master_q4/USDTUSD_1440.csv` inside `Kraken_OHLCVT.zip`
-(Google Drive, 7,885,068,519 bytes, 24,056 members).
+(Google Drive, file ID `1ptNqWYidLkhb2VAKuLCxmp2OXEfGO-AP`, 7,885,068,519 bytes).
 No code, schema, normalizer, factor, portfolio, or live work.
 
 ## Recommendation: NO_PRIMARY_SOURCE_AUTHORITY
-Fail-closed. Blocking gates: **G02 (partial), G05 (unknown), G06 (partial), G07 (FAIL), G08 (partial)**.
-G01 (direction) and G03 (timestamps) PASS; G04 passes only within its stated limitation.
+Fail-closed. Blocking gates: **G03, G04, G05, G07, G08**.
+G01 (direction) and G02 (depth/depeg) PASS; G06 (member integrity) PASS.
 
-## Key findings
-- **Direction (G01 PASS):** `USDTUSD` = USD per USDT; col4 close ≈ 0.999. Unambiguous.
-- **Depth + depeg (G02 FAIL-PARTIAL):** 3,199 daily rows 2017-03-30 → 2025-12-31.
-  May 9-15 2022 window present (7 daily bars, closes 0.9953-0.9997) but the intraday
-  sub-$0.95 trough is NOT resolvable at daily resolution. Event depth under-resolved.
-- **Timestamps (G03 PASS):** Unix seconds aligned to 00:00:00 UTC; col0 = bar open time.
-  Bar time is NOT publication time.
-- **Times (G04 PASS-with-limit):** object Last-Modified 2026-01-24 (not data-end, not bar time).
-- **Vintages/correction (G05 FAIL-UNKNOWN):** no published correction/replacement policy;
+## Key findings (corrected REVIEW-0112)
+- **Direction (G01 PASS):** `USDTUSD` = USD per USDT; col4 close ≈ 0.9991. Unambiguous.
+- **Depth + depeg (G02 PASS):** **headerless** CSV, **3,200** daily (24h) rows
+  2017-03-29 → 2025-12-31. May 12 2022 depeg bar O=.9953 H=.9989 L=.92 C=.9971.
+  Full depeg window covered at daily resolution.
+- **Timestamps (G03 FAIL-PARTIAL):** Unix seconds, 24h-aligned to 00:00:00 UTC;
+  col0 = bar open time. No header row / tz doc in archive; bar-time vs publication-time
+  ambiguity not fully resolved.
+- **Times (G04 FAIL-PARTIAL):** object Last-Modified 2026-01-24 (not data-end, not bar
+  time); view page has no Last-Modified; support/terms pages 2026-07-21. Point-in-time
+  availability of historical rows not pinned.
+- **Vintages/correction (G05 FAIL-PARTIAL):** central dir + quarterly folder
+  (Q1-2023..Q1-2026) captured; no published correction/replacement policy;
   ZIP CRC proves current-member bytes only, not historical immutability.
-- **Integrity (G06 PASS-PARTIAL):** member CRC-32 / comp / uncomp match central directory;
-  complete-archive SHA-256 NOT captured. A ranged member is NOT the complete-archive SHA-256.
-- **Licensing (G07 FAIL):** Google Drive host; Kraken EE/A Terms lack an explicit
-  bulk-data redistribution or API-commercial-use clause. Fail-closed.
-- **Lineage (G08 PASS-PARTIAL):** member reproducible via exact byte-range GET + retained
-  headers/bodies; whole-archive byte-range/SHA not captured (ZIP64 offset=0xFFFFFFFF).
+- **Integrity (G06 PASS):** member CRC-32 / comp / uncomp match central directory;
+  inflated SHA-256 `9dafa48...` computed. Complete-archive SHA-256 NOT captured.
+- **Licensing (G07 FAIL-CONFLICT):** support page permits "use in code / conversion";
+  EEA Terms restrict copying and automated extraction; no explicit bulk-redistribution
+  grant. Unresolved conflict => fail-closed.
+- **Lineage (G08 FAIL-PARTIAL):** member reproducible via exact byte-range GET + retained
+  headers; Google Drive warning/confirmation (virus-scan) flow captured (R05B).
+  Whole-archive byte-range/SHA not captured (ZIP64 offset=0xFFFFFFFF).
+
+## ZIP64 facts (corrected)
+Local file header = **88 bytes** (30 + 26 filename + 32 extra). Captured range
+`6080252262-6080252461` = 88-byte header + **112 compressed bytes**; compressed data
+starts at **6080252350**. R02's 200 bytes = header + 112 compressed bytes.
 
 ## Decision matrix
 See `research/fx_003/decision_matrix.csv` (gates G01-G08).
 
 ## Evidence register
-See `research/fx_003/EVIDENCE_REGISTER.csv` (12 rows: bodies + headers registered
-separately with exact URLs, statuses, hashes, sizes, external paths).
+See `research/fx_003/EVIDENCE_REGISTER.csv` (16 rows: bodies + headers registered
+separately with exact URLs — actual file ID — statuses, hashes, sizes, external paths;
+warning/confirmation flow and quarterly-folder rows added).
 
 ## Validation performed
-- path / SHA-256 / size for all 12 rows: **valid**.
-- final HTTP status present in retained headers for all 7 header rows: **valid**
-  (R01H/R02H/R03H/R04H = 206; R05H/R06H = 200).
-- ZIP member CRC-32 / comp / uncomp match central directory: **valid**.
+- path / SHA-256 / size for all 16 rows: **valid**.
+- final HTTP status present in retained headers for all 6 archive header rows
+  (R01H/R02H/R03H/R04H = 206; R05H/R06H = 200) and terms (R08H = 200): **valid**.
+- inflated member SHA-256 / CRC-32 / rows (3,200) / bounds: **valid**.
 - `python3 scripts/check_repo_control.py`: **PASS**.
 - `git diff --check`: **clean** (0 CR bytes in register).
 
