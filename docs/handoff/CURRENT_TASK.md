@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: FUND-003
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted dependencies: FEE-001 (fee-schedule substrate). FX-002, FUND-002, and REF-002 remain
 accepted with their fail-closed implementation blockers.

@@ -1,9 +1,9 @@
 # FUND-003 - OKX Funding Archive Source Semantics Audit
 
 **Priority:** P0
-**Status:** IN_PROGRESS
-**Recommendation:** PENDING
-**Dependencies:** FEE-001 accepted (fee-schedule substrate available)
+**Status:** AWAITING_REVIEW
+**Recommendation:** NO_IMPLEMENTATION_AUTHORITY
+**Dependencies:** FUND-001 (Binance funding source semantics baseline; FEE-001 substrate accepted)
 **Layer:** research evidence / funding source semantics
 **Architecture:** no ADR, schema, migration, or production implementation authorized
 
