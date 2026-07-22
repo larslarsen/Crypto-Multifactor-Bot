@@ -1,7 +1,7 @@
 # SPLIT-001 — Purged Chronological Split Engine
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0142
 **Dependencies:** CAT-001/CAT-001A, REF-001, BAR-001, ASOF-001 (accepted)
 **Layer:** validation / splits
 **Architecture:** implements architecture §6/11/12 requirements for purged event-time splits; no ADR required

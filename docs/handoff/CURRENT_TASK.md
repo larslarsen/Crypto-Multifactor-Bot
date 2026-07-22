@@ -1,33 +1,31 @@
 # CURRENT_TASK
 
-Ticket: LABEL-001
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+Ticket: EXP-001
+State: IN_PROGRESS
+Next required actor: Sr Dev — Grok Build (source)
 Next ticket authorized: NONE
 
-Accepted/blocked context: Sr production source drop `src/cryptofactors/validation/labels.py`
-(401 lines) approved under REVIEW-0144 (SOURCE APPROVED - JR INTEGRATION AUTHORIZED;
-authorized REVIEW-0143). Jr added 16 focused tests, change report, and governance records; no
-Sr-source edits; no new features beyond the approved LABEL-001 contract. Depends on ASOF-001
-(accepted) for the injected AsOfStore and SPLIT-001 (accepted) for the to_event_interval bridge.
-All gates green: validation suite 37 passed (21 SPLIT + 16 LABEL); ruff clean; mypy clean for
-the new files (pre-existing unused-ignore only inside the Sr drops); repo-control PASS.
+Accepted foundation context: ASOF-001 + SPLIT-001 + LABEL-001 all ACCEPTED.
+LABEL-001 accepted under REVIEW-0145 (integrated at 2786537). Implementation Sequence #14 + #13
+done; #15 (costed portfolio simulation) deferred until DF-08 universe snapshots unblocked.
+
+EXP-001 authorized under REVIEW-0146 as Implementation Sequence #16: experiment bundles & fingerprints.
+Unblocked — does not require survivorship-free universe. Provides reproducibility scaffold:
+immutable ExperimentBundle with deterministic SHA-256 fingerprint, validated by a registry.
 
 Governing documents:
-- tickets/LABEL-001.md
-- docs/reviews/REVIEW-0143_LABEL-001_AUTHORIZED.md
-- docs/reviews/REVIEW-0144_LABEL-001_SOURCE_APPROVED_JR_AUTHORIZED.md
-- docs/reviews/LABEL-001_CHANGE_REPORT.md
-- src/cryptofactors/validation/labels.py (approved drop, unchanged)
-- src/cryptofactors/validation/__init__.py (approved exports, unchanged)
-- tests/validation/test_label001_integration.py
+- tickets/EXP-001.md (authorized)
+- docs/reviews/REVIEW-0146_EXP-001_AUTHORIZED.md
+- docs/reviews/REVIEW-0145_LABEL-001_ACCEPTED.md
+- all accepted foundation tickets (ASOF-001, SPLIT-001, LABEL-001)
 
 ## Authorized work
 
-LABEL-001 Jr integration after REVIEW-0144: tests + gates + change report + governance updates;
-all states AWAITING_REVIEW. No further Jr work authorized.
+1. Sr Dev — Grok Build produces `src/cryptofactors/validation/experiment.py` per EXP-001 contract.
+   Stop for Reviewer after source only. No tests, no commits, no pushes.
+2. Jr Dev — Hermes integrates after Reviewer approves source: tests + gates + change report +
+   governance updates; all states AWAITING_REVIEW.
 
 ## Stop condition
 
-LABEL-001 returned to AWAITING_REVIEW; Reviewer is next actor; Next ticket authorized remains
-NONE. Stop after push.
+After Jr: AWAITING_REVIEW, Reviewer next, NONE. Stop after push.

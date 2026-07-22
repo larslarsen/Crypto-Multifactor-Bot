@@ -1,7 +1,7 @@
 # LABEL-001 — Label / Event Interval Separation Engine
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0145
 **Dependencies:** ASOF-001, SPLIT-001 (accepted)
 **Layer:** validation / labels
 **Architecture:** implements architecture requirement for label / event-interval separation; no ADR required
