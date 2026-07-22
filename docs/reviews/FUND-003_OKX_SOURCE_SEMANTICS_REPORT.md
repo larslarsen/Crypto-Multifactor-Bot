@@ -74,10 +74,10 @@ literally, not claimed as captured).
   behavior unknown.
 
 ### G06 — Availability (PASS with 2026 bound)
-- Historical endpoint exists (landing page R05 confirms module 3; introduction date not stated on
-  - PASS only with a conservative 2026 availability bound based on the audit/acquisition context.
-    Do not claim 2022 availability; R01 provides no proof of 2022 availability.
-  - BTC transition-boundary archives around April 24, 2025 were NOT acquired in this audit.
+- Historical endpoint exists; R05 confirms module 3. Its introduction date is not stated on the landing page.
+- Availability passes only with a conservative 2026 bound based on the audit/acquisition context.
+- Do not claim 2022 availability; R01 provides no proof of 2022 publication.
+- BTC transition-boundary archives around April 24, 2025 were not acquired in this audit.
 
 ### G07 — Licensing (FAIL, intended internal scope)
 - Evaluated strictly against intended internal research use: acquisition of publicly available
