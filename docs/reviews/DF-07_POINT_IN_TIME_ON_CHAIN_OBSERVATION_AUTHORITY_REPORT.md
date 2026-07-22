@@ -1,6 +1,6 @@
 # DF-07 — Point-in-Time On-Chain Observation Authority Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0137
 **Recommendation:** NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY
 **Priority:** P1
 **Next ticket authorized:** `NONE`

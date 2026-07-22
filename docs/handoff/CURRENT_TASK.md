@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: DF-07
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -16,6 +16,7 @@ Governing documents:
 - tickets/DF-07.md
 - docs/reviews/REVIEW-0135_DF-07_ON_CHAIN_OBSERVATION_AUDIT_AUTHORIZED.md
 - docs/reviews/REVIEW-0136_DF-07_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0137_DF-07_ACCEPTED_NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY.md
 - docs/reviews/DF-07_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY_REPORT.md
 - research/df_07/EVIDENCE_REGISTER.csv
 - research/df_07/decision_matrix.csv
@@ -24,11 +25,13 @@ Governing documents:
 ## Authorized work
 
 DF-07 Point-in-Time On-Chain Observation Authority Audit (authorized REVIEW-0135; governance
-REVIEW-0136; attribution corrections applied). Decision
+REVIEW-0136; corrected REVIEW-0136; accepted REVIEW-0137). Decision
 NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY. No NET-01, DIL-01, collection, procurement,
 implementation, schema, tests, or next ticket authorized.
 
 ## Stop condition
 
-DF-07 returned to AWAITING_REVIEW; Reviewer is next actor; Next ticket authorized remains
-NONE. Stop.
+DF-07 ACCEPTED; Reviewer is next actor; Next ticket authorized remains NONE. All authorized
+source-authority tickets (DF-01, DF-08, DF-02, DF-03, DF-07) are now ACCEPTED with NO authority.
+No further DF-0x ticket is currently authorized. Other DF-0x feasibility items remain governed by
+their existing records and are not resolved by DF-07. Stop.
