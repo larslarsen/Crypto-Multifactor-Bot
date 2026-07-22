@@ -1,6 +1,6 @@
 # DF-01 — Coin Metrics Point-in-Time Supply Authority Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0124
 **Recommendation:** NO_PRIMARY_PIT_SUPPLY_AUTHORITY
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer
