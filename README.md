@@ -28,4 +28,4 @@ Active tickets:
 - [`GOV-002`](tickets/GOV-002.md) — Repository Status Index Reconciliation (`ACCEPTED`; RECONCILIATION_COMPLETE, REVIEW-0119/0120/0121).
 - [`DF-01`](tickets/DF-01.md) — Coin Metrics Point-in-Time Supply Authority Audit (`ACCEPTED - NO_PRIMARY_PIT_SUPPLY_AUTHORITY`; REVIEW-0122/0123/0124).
 - [`DF-08`](tickets/DF-08.md) — Survivorship-Free Universe Source Authority Audit (`ACCEPTED - NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY`; REVIEW-0125/0126/0127).
-- [`DF-02`](tickets/DF-02.md) — Point-in-Time Token Unlock Authority Audit (`AWAITING_REVIEW`; NO_POINT_IN_TIME_UNLOCK_AUTHORITY, REVIEW-0128).
+- [`DF-02`](tickets/DF-02.md) — Point-in-Time Token Unlock Authority Audit (`CHANGES_REQUIRED`; NO_POINT_IN_TIME_UNLOCK_AUTHORITY, REVIEW-0128/0129).
