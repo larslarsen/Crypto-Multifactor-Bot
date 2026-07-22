@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: DF-07
-State: IN_PROGRESS
+State: AWAITING_REVIEW
 Next ticket authorized: NONE
-Next required actor: Jr Dev - Hermes
+Next required actor: Reviewer
 
 Accepted/blocked context: SRC-006 (accepted REFERENCE_METADATA; NET-01 conditional), SRC-006b
 (CONDITIONAL, publication-time/revision unbounded), SRC-010 (CONDITIONAL, not queried), Coin
@@ -24,10 +24,11 @@ Governing documents:
 ## Authorized work
 
 DF-07 Point-in-Time On-Chain Observation Authority Audit (authorized REVIEW-0135; governance
-REVIEW-0136). Decision NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY. No NET-01, DIL-01,
-collection, procurement, implementation, schema, tests, or next ticket authorized.
+REVIEW-0136; attribution corrections applied). Decision
+NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY. No NET-01, DIL-01, collection, procurement,
+implementation, schema, tests, or next ticket authorized.
 
 ## Stop condition
 
-DF-07 IN_PROGRESS (REVIEW-0136); Jr Dev - Hermes is next actor; Next ticket authorized remains
+DF-07 returned to AWAITING_REVIEW; Reviewer is next actor; Next ticket authorized remains
 NONE. Stop.

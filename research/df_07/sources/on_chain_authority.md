@@ -15,9 +15,10 @@ the accepted DF-01 ticket/matrix/REVIEW-0124. No prior accepted evidence artifac
 - **Block/event timestamp**: the on-chain time of the block/transaction/event itself.
 - **Provider/indexer publication timestamp**: when an indexer or API published/served the observation.
 - **Repository retrieval timestamp**: when the accepted metadata/catalog was captured into the repo.
-The accepted inventory records bounded observations and catalog/metadata; original API response
-bodies are NOT repository-retained, so only retrieval-time metadata (and stored retrieval
-timestamps where recorded) are available — block/event vs publication/known time is not resolved.
+The accepted inventory records bounded observations and catalog/metadata; per REVIEW-0008 (lines
+17-20) the staged raw provider datasets (incl. Coin Metrics response objects) were NOT committed,
+so only retrieval-time metadata (and stored retrieval timestamps where recorded) are available —
+block/event vs publication/known time is not resolved.
 
 ## Preserved exact boundaries
 - SRC-006 observations/catalog accepted REFERENCE_METADATA; NET-01 use remains conditional.
@@ -31,12 +32,12 @@ timestamps where recorded) are available — block/event vs publication/known ti
 ## Gate results (all blocking; authority requires all eight PASS)
 - G01 FAIL_UNKNOWN: no accepted source grants on-chain blocks/addresses/fees authority (SRC-010 CONDITIONAL/not queried; Coin Metrics reference metadata; DF-01 no supply authority).
 - G02 FAIL_UNKNOWN: on-chain metric semantics, chain mappings, entity/spam treatment unestablished.
-- G03 FAIL_UNKNOWN: block/event time vs indexer publication/known time not resolved (SRC-010 differs, not queried).
+- G03 FAIL_UNKNOWN: block/event time vs indexer publication/known time not resolved (SRC-010 records differences but was not queried; E03/E05/E06).
 - G04 FAIL_UNKNOWN: on-chain revisions/backfills unbounded (SRC-010 none recorded; SRC-006b CONDITIONAL); no vintage preservation retained.
-- G05 FAIL_UNKNOWN: chain/asset/metric coverage and archival depth not established (SRC-010 not queried; Coin Metrics limited).
-- G06 FAIL_UNKNOWN: retained artifacts are catalog/metadata with hashes; original API bodies not retained; no raw on-chain provenance.
-- G07 FAIL_UNKNOWN: SRC-010 separate procurement (keys/limits); Coin Metrics CONDITIONAL; licensing unestablished/ambiguous.
-- G08 FAIL_BLOCKED: required known-block publication/revision audit test NOT executed (SRC-010 not queried; AUD-003 no on-chain test). Hard blocker.
+- G05 FAIL_UNKNOWN: chain/asset/metric coverage and archival depth not established (Coin Metrics inventory limited, Issued != float; no SRC-010 observation retained; E04/E05).
+- G06 FAIL_PARTIAL: request identities, staged-object hashes, and bounded observations exist; but per REVIEW-0008 (lines 17-20) the staged raw provider datasets (incl. Coin Metrics response objects) were NOT committed, so raw response bodies are not repository-retained and full PIT provenance (request identity/version/retrieval time) is unavailable.
+- G07 FAIL_UNKNOWN: SRC-010 separate procurement (keys/limits); Coin Metrics CONDITIONAL — EXPLORATORY_PHASE2; licensing unestablished/ambiguous.
+- G08 FAIL_BLOCKED: required known-block publication/revision audit test NOT executed (SRC-010 not queried; AUD-003 bounded observations without running the test; E06/E12). Hard blocker.
 
 ## Decision
 `NO_POINT_IN_TIME_ON_CHAIN_OBSERVATION_AUTHORITY`. No NET-01, DIL-01, collection, procurement,
