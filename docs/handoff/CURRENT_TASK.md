@@ -1,7 +1,7 @@
 # CURRENT_TASK
 
 Ticket: FX-003
-State: AWAITING_REVIEW
+State: ACCEPTED
 Next ticket authorized: NONE
 Next required actor: Reviewer
 
@@ -12,6 +12,7 @@ Governing documents:
 - research/fx_003/EVIDENCE_REGISTER.csv
 - research/fx_003/decision_matrix.csv
 - research/fx_003/sources/kraken.md
+- docs/reviews/REVIEW-0114_FX-003_ACCEPTED_NO_PRIMARY_SOURCE_AUTHORITY.md
 - docs/reviews/REVIEW-0113_FX-003_VERIFIABLE_CLOSURE.md
 - docs/reviews/REVIEW-0112_FX-003_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0111_FX-003_KRAKEN_BULK_AUDIT_AUTHORIZED.md

@@ -1,6 +1,6 @@
 # FX-003 — Kraken Bulk Stablecoin FX Source Semantics Audit Report
 
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED - REVIEW-0114
 **Recommendation:** NO_PRIMARY_SOURCE_AUTHORITY
 **Next ticket authorized:** `NONE`
 **Next required actor:** Reviewer

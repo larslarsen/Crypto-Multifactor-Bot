@@ -19,7 +19,7 @@ Active tickets:
 - [`AUD-005`](tickets/AUD-005.md) — Provider-candle comparison by explicit comparable dimensions (`ACCEPTED`; closed).
 - [`RAW-002`](tickets/RAW-002.md) — Harden publication-receipt verification against symlink substitution (`ACCEPTED`).
 - [`FX-001`](tickets/FX-001.md) — Point-in-Time Stablecoin FX readiness (`ACCEPTED`; implementation blocked by source authority).
-- [`FX-003`](tickets/FX-003.md) — Kraken Bulk Stablecoin FX Source Semantics Audit (`AWAITING_REVIEW - NO_PRIMARY_SOURCE_AUTHORITY`).
+- [`FX-003`](tickets/FX-003.md) — Kraken Bulk Stablecoin FX Source Semantics Audit (`ACCEPTED - NO_PRIMARY_SOURCE_AUTHORITY`).
 - [`FUND-001`](tickets/FUND-001.md) — Binance Funding-Cashflow Readiness (`ACCEPTED`; source evidence required before implementation).
 - [`FUND-002`](tickets/FUND-002.md) — Binance Funding Source Semantics Audit (`ACCEPTED - NO IMPLEMENTATION AUTHORITY`).
 - [`FUND-003`](tickets/FUND-003.md) — OKX Funding Archive Source Semantics Audit (`ACCEPTED - NO_IMPLEMENTATION_AUTHORITY`).
