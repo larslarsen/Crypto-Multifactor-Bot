@@ -1,7 +1,7 @@
 # PROMO-002 — Paper Promotion and Paper Execution for MOM-TS-01
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** PROMO-001 (ACCEPTED), EXEC-001 (ACCEPTED), EXP-002 (ACCEPTED)
 **Layer:** promotion / execution
 **Architecture:** Model artifact promotion to PAPER_APPROVED and forward-walking paper broker session.
