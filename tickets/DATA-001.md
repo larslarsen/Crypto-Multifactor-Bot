@@ -1,7 +1,7 @@
 # DATA-001 — Live Market Data Acquisition Pipeline
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** HARDEN-001 (ACCEPTED), PAPER-004 (accepted), RAW-001 (accepted), MAN-001 (accepted), UNIVERSE-001 (accepted)
 **Layer:** data platform / acquisition
 **Architecture:** must use existing RAW-001 content-addressed store and MAN-001 publisher; no new storage layer

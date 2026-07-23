@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: DATA-001
-State: READY
-Next required actor: Sr Dev (Strong Model) — Binance klines through RAW-001/MAN-001
-Next ticket authorized: DATA-001
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review Binance kline acquisition & backfill pipeline
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 

@@ -6,6 +6,8 @@ layers:
     may_import: [core]
   ingest:
     may_import: [core, catalog]
+  acquisition:
+    may_import: [core, catalog, ingest]
   reference:
     may_import: [core, catalog]
   quality:
@@ -32,6 +34,7 @@ layers:
     may_import: [core, catalog, reference, market, portfolio, serving, promotion]
 network_allowed:
   ingest: true
+  acquisition: true
   execution: true
   core: false
   catalog: false
