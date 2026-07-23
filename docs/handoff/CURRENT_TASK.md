@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXEC-001
-State: READY
-Next required actor: Sr Dev (Strong Model) — implementation of Sequence #25
-Next ticket authorized: EXEC-001
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review Sr Dev implementation
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 With the completion of UNIVERSE-002, the data and research foundations are sealed. We are now officially entering the **Execution** phase defined in `IMPLEMENTATION_SEQUENCE.md`.
@@ -13,7 +13,7 @@ This transitions our evaluation capability from purely historical backtesting (`
 
 ## Governing documents
 
-- tickets/EXEC-001.md (READY)
+- tickets/EXEC-001.md (AWAITING_REVIEW)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)

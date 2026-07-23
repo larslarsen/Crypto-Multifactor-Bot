@@ -29,7 +29,7 @@ layers:
   serving:
     may_import: [core, catalog, reference, market, universe, factors, portfolio]
   execution:
-    may_import: [core, catalog, reference, market, portfolio, serving]
+    may_import: [core, catalog, reference, market, portfolio, serving, promotion]
 network_allowed:
   ingest: true
   execution: true
