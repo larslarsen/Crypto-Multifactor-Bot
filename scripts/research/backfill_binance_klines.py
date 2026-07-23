@@ -135,6 +135,7 @@ def main() -> int:
     parser.add_argument("--store-root", type=str, default="data/store", help="Path to dataset store root")
     parser.add_argument("--start-time", type=str, default="2026-01-01T00:00:00Z", help="Start time ISO 8601 (UTC)")
     parser.add_argument("--end-time", type=str, default="2026-06-30T00:00:00Z", help="End time ISO 8601 (UTC)")
+    parser.add_argument("--report-path", type=str, default="research/sprint_004/11_REAL_DATA_PATH_REPORT.json", help="Path to write the real data path report")
     parser.add_argument("--dry-run", action="store_true", help="Run with mocked HTTP response and temp directories")
     args = parser.parse_args()
 
@@ -235,7 +236,7 @@ def main() -> int:
     assert ds_row["dataset_type"] == "market_bars", f"Expected dataset_type 'market_bars', got {ds_row['dataset_type']}"
     print(f"SUCCESS: Verified canonical dataset {canonical_ds.dataset_id} in catalog", file=sys.stderr)
 
-    # Write report artifact: research/sprint_004/11_REAL_DATA_PATH_REPORT.json
+    # Write report artifact
     report_data = {
         "data_mode": data_mode,
         "source_dataset_ids": source_ids,
@@ -247,7 +248,7 @@ def main() -> int:
         "generated_at": datetime.now(UTC).isoformat(),
     }
 
-    report_path = Path("research/sprint_004/11_REAL_DATA_PATH_REPORT.json")
+    report_path = Path(args.report_path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report_data, indent=2), encoding="utf-8")
     print(f"Real data path report written to {report_path}", file=sys.stderr)
