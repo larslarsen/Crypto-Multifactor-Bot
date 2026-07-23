@@ -1,40 +1,40 @@
 # CURRENT_TASK
 
-Ticket: EXEC-002
-State: ACCEPTED
-Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
-Next ticket authorized: NONE
+Ticket: MOMTS-001
+State: READY
+Next required actor: Sr Dev (Strong Model) — MOM-TS-01 factor + confirmatory runner
+Next ticket authorized: MOMTS-001
 
-**Reviewer Decision:**
+**Reviewer Decision (Architecture — Research Execution Path):**
 
-I have reviewed `src/cryptofactors/execution/live.py` against the AUD-006 hard constraints.
+Implementation sequence #1–#26 is complete. Registered confirmatory experiments
+**EXP-2026-019** and **EXP-2026-020** (MOM-TS-01, 30-7 and 90-7 time-series momentum)
+remain `BLOCKED_DATA` only as a registry stale state — not because the substrate is
+missing.
 
-**EXEC-002 Verdict: ACCEPT**
+**Survivorship (locked):** ADR-0012 / UNIVERSE-003 CMC proxy death dates are accepted
+as sufficient for Aware-level research. Do **not** re-litigate DF-08 final price /
+failure-cause residuals on this ticket.
 
-All AUD-006 constraints satisfied:
-- `LiveBroker` is fully isolated from `PaperBroker` (separate module, no shared state, no dual-mode flag).
-- `LIVE_APPROVED` gate enforced on init and every `submit_order` call; fail-closed.
-- Pre-trade risk checks (gross leverage ≤ 1.0, single-asset ≤ 0.15) run before any network call.
-- Credentials from environment only; injectable for tests.
-- Kill-switch blocks new orders; registry revocation auto-activates kill.
-- Read-only promotion registry access.
-- Mocked venue only in unit tests.
+**Authorized work:** **MOMTS-001** — implement MOM-TS-01 skip-window log signals
+(`tsmom_30_7`, `tsmom_90_7`), confirmatory runners for EXP-2026-019/020, spot long/cash
++ raw exposure + PORT-001 costs, EXP-001 bundles with distinct fingerprints. Lift
+registry status off `BLOCKED_DATA` when code lands.
 
-Sequence #26 fully implemented and accepted.
+**Explicitly deferred:** perpetual L/S, funding events, liquidations, vol-managed cells
+(follow-on after FUND-* / richer execution realism).
 
 ## Governing documents
 
-- tickets/EXEC-002.md (ACCEPTED)
-- tickets/AUD-006.md (ACCEPTED)
-- docs/reviews/AUD-006_RISK_REPORT.md
-- docs/handoff/IMPLEMENTATION_SEQUENCE.md
+- tickets/MOMTS-001.md (READY)
+- research/sprint_004/factor_cards/MOM-TS-01_time_series_momentum.md
+- research/sprint_004/05_EXPERIMENT_REGISTRATIONS.csv
+- research/sprint_004/01_MOMENTUM_OPERATIONALIZATION.md
+- docs/adr/0012-cmc-survivorship-backfill.md
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution tests/execution
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution tests/execution
-4. python3 scripts/check_repo_control.py
-5. Unapproved artifact fails before any HTTP call
-6. Leverage / single-asset pre-trade limits enforced
-7. Mocked HTTP only in unit tests
+1. pytest on factors + experiments paths
+2. ruff + mypy on touched packages
+3. python3 scripts/check_repo_control.py
+4. Formula + missing-history + dual-fingerprint tests
