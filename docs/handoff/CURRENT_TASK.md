@@ -1,30 +1,27 @@
 # CURRENT_TASK
 
-Ticket: DATA-003
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer (reviewer)
-Next ticket authorized: NONE
+Ticket: PAPER-005
+State: READY
+Next required actor: Sr Dev (Strong Model) — real as-of paper session evidence
+Next ticket authorized: PAPER-005
 
-**Reviewer Decision (REVIEW-0187): CHANGES_REQUIRED**
+**Reviewer Decision (Architecture & Ticket Selection):**
 
-B2–B4 OK. **B5 blocker:** `PaperSymbolAsOfAdapter` calls nonexistent `table.replace_column`. Factor requests `instrument_id` in fields → real factor path broken. B4 only tested `["close"]` (false green).
+DATA-003 ACCEPTED (REVIEW-0188). B5 fixed; factor compute works on adapter + real bars.
 
-## Fixed
+Authorizing **PAPER-005**: non-dry-run paper session on published real (or durable real-published) as-of bars; artifact `13_REAL_PAPER_SESSION.json`; `live_eligible: false` always in this ticket.
 
-1. `PaperSymbolAsOfAdapter._maybe_translate_instrument_id` now uses `pyarrow.Table.set_column` (valid PyArrow API) instead of nonexistent `replace_column`.
-2. Added `test_adapter_translates_instrument_id_with_factor_field_list` in `tests/execution/test_paper_asof_real.py` querying `["instrument_id", "close"]` via the adapter and asserting translated string `instrument_id` and finite `close`.
-3. No LIVE; `live_eligible: false` retained.
+**Policy:** LIVE blocked until profitable real paper — this ticket only measures; does not promote LIVE.
 
 ## Governing documents
 
-- tickets/DATA-003.md (IN_PROGRESS)
-- docs/reviews/REVIEW-0187_DATA-003_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0186_DATA-003_CHANGES_REQUIRED.md
+- tickets/PAPER-005.md (READY)
+- tickets/DATA-003.md (ACCEPTED)
+- docs/reviews/REVIEW-0188_DATA-003_ACCEPTED.md
 
 ## Acceptance (Jr)
 
 1. .venv/bin/python -m pytest tests/acquisition/ tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/acquisition src/cryptofactors/execution scripts/
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/acquisition src/cryptofactors/execution
-4. New adapter/factor-field test passes
-5. python3 scripts/check_repo_control.py
+2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
+3. research/sprint_004/13_REAL_PAPER_SESSION.json present
+4. python3 scripts/check_repo_control.py
