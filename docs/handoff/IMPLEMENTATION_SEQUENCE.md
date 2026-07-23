@@ -41,4 +41,9 @@ No source normalizer starts before the foundation gate passes.
 23. Explicit paper promotion.
 24. Prospective holdout.
 
-No live trading work is authorized by this sequence.
+## Execution (New)
+
+25. Paper execution runtime (simulated broker/routing for PAPER_APPROVED models).
+26. Live execution routing (requires explicit risk-board authorization).
+
+No live trading work is authorized by this sequence until step 25 completes and a risk audit passes.

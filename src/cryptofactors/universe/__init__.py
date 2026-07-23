@@ -1,5 +1,13 @@
 """Cryptofactors universe module."""
 
+from cryptofactors.universe.birdeye_listings import (
+    BIRDEYE_LISTINGS_DATASET_ID,
+    BIRDEYE_LISTINGS_SCHEMA,
+    BirdeyeListingsError,
+    BirdeyeListingsProvider,
+    build_birdeye_listings_table,
+    normalize_listing_event,
+)
 from cryptofactors.universe.cmc_survivorship import (
     CMC_SURVIVORSHIP_DATASET_ID,
     CMC_SURVIVORSHIP_SCHEMA,
@@ -26,4 +34,10 @@ __all__ = [
     "CMCSurvivorshipProvider",
     "build_cmc_survivorship_table",
     "normalize_coin_record",
+    "BIRDEYE_LISTINGS_DATASET_ID",
+    "BIRDEYE_LISTINGS_SCHEMA",
+    "BirdeyeListingsError",
+    "BirdeyeListingsProvider",
+    "build_birdeye_listings_table",
+    "normalize_listing_event",
 ]

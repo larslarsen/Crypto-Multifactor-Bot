@@ -1,8 +1,8 @@
 # UNIVERSE-002 — Birdeye DEX New-Listing Event Feed
 
 **Priority:** P1
-**Status:** DRAFT — awaiting reviewer authorization
-**Decision:** (reviewer to set)
+**Status:** AWAITING_REVIEW
+**Decision:** AUTHORIZED
 **Dependencies:** ASOF-001 (accepted), REF-001 (accepted substrate), UNIVERSE-001 (accepted), EXP-001 (accepted)
 **Layer:** universe / event source
 **Architecture:** extends research substrate gate item #11 (historical universe snapshots) with a forward DEX listing-event stream; ADR required (new external source — see DF-08 authority boundary)
