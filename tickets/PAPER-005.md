@@ -1,7 +1,7 @@
 # PAPER-005 — Real As-Of Paper Session Evidence
 
 **Priority:** P0  
-**Status:** AWAITING_REVIEW  
+**Status:** ACCEPTED  
 **Dependencies:** DATA-003 (ACCEPTED), PAPER-004, HARDEN-001  
 **Layer:** execution / research evidence  
 **Architecture:** use existing backfill + paper loop. **No LIVE. No LIVE_APPROVED.**
