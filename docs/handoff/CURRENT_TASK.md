@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: AUD-006
-State: READY
-Next required actor: Sr Dev (Strong Model) — perform the execution risk audit
-Next ticket authorized: AUD-006
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review execution risk audit
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 We have completed Sequence #25 (Paper Execution Runtime). According to `IMPLEMENTATION_SEQUENCE.md`, Sequence #26 (Live Execution Routing) requires an explicit risk-board authorization.
@@ -14,7 +14,7 @@ I am drafting and authorizing **AUD-006** (Execution Risk & Live Authority Audit
 
 ## Governing documents
 
-- tickets/AUD-006.md (READY)
+- tickets/AUD-006.md (AWAITING_REVIEW)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
