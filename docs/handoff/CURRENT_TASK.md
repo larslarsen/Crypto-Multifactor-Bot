@@ -1,25 +1,31 @@
 # CURRENT_TASK
 
-Ticket: MOMTS-001
-State: ACCEPTED
-Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
-Next ticket authorized: NONE
+Ticket: FUND-005
+State: READY
+Next required actor: Sr Dev (Strong Model) — implementation of BitMEX funding ingestion
+Next ticket authorized: FUND-005
 
-**Reviewer Decision:**
+**Reviewer Decision (Architecture & Ticket Selection):**
 
-MOMTS-001 reviewed and accepted. `TimeSeriesMomentumFactor` (tsmom_30_7 / tsmom_90_7) and confirmatory runner for EXP-2026-019 / EXP-2026-020 are implemented, all gates pass (15 tests). All implementation sequences #1–#26 plus MOM-TS-01 research execution path are complete.
+I have reviewed the `FUND-004` source sweep and validation findings. 
+
+**Decision: PRAGMATIC ACCEPTANCE**
+- **BitMEX Funding:** Accepted as the primary pragmatic source. Its clear G01/G02 semantics (documented timestamp=settlement, clear formula) exceed the quality of Binance/OKX data. The 2016+ history provides deep coverage for BTC/ETH.
+- **Quote FX (USDT=USD):** Accepted. The on-chain DEX validation (within 1% of peg 99.4% of days) is sufficient for Aware-level research implementation without requiring a massive tick-level DEX reconciliation engine. Inverse contracts (XBTUSD) will convert their base-currency funding payouts to quote-currency using the matching point-in-time price bar.
+
+With these decisions locked, we can now complete Step #10 (Funding, fees, quote FX) by ingesting the data.
+
+I am authorizing **FUND-005** (BitMEX Funding Cashflow Provider).
 
 ## Governing documents
 
-- tickets/MOMTS-001.md (ACCEPTED)
-- research/sprint_004/factor_cards/MOM-TS-01_time_series_momentum.md
-- research/sprint_004/05_EXPERIMENT_REGISTRATIONS.csv
-- research/sprint_004/01_MOMENTUM_OPERATIONALIZATION.md
-- docs/adr/0012-cmc-survivorship-backfill.md
+- tickets/FUND-005.md (READY)
+- tickets/FUND-004.md (ACCEPTED)
+- docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. pytest on factors + experiments paths
-2. ruff + mypy on touched packages
-3. python3 scripts/check_repo_control.py
-4. Formula + missing-history + dual-fingerprint tests
+1. .venv/bin/python -m pytest tests/ingest/ tests/market/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/ingest/bitmex_funding.py
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/ingest/bitmex_funding.py
+4. python3 scripts/check_repo_control.py
