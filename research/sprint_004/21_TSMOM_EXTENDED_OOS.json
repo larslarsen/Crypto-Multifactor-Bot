@@ -2,8 +2,8 @@
   "experiment_id": "EXP-006",
   "data_mode": "real_asof",
   "model_artifact_id": "mod_tsmom_30_7_v1",
-  "protocol": "expanding_window_holdout",
-  "protocol_note": "Three sequential expanding-window holdout folds with weekly decisions on DATA-004 extended market_bars (2024-01-01 -> 2026-07-23). 90-day warmup from bar_start before first decision. Frozen configs from EXP-004 / EXP-005 / baseline evaluated out-of-sample; no lookback/skip re-optimization on test folds. DATA-004 canonical dataset quality is REJECTED due to BAR-001 native-1d daily resample policy; intraday 1d bars are used directly (same as EXP-005).",
+  "protocol": "sequential_holdout",
+  "protocol_note": "Three sequential holdout folds with weekly decisions on DATA-004 extended market_bars (2024-01-01 -> 2026-07-23). 90-day warmup from bar_start before first decision. Frozen configs from EXP-004 / EXP-005 / baseline are evaluated out-of-sample on each test window; no lookback/skip re-optimization on test folds. Train windows are recorded for context only and are not used for config selection (configs are frozen). Research OOS gate flags are derived from period-log risk metrics and fold completeness, decoupled from paper promotion effective_time. DATA-004 canonical dataset quality is REJECTED due to BAR-001 native-1d daily resample policy; intraday 1d bars are used directly (same as EXP-005).",
   "control_database": "exp003.db",
   "dataset_store_root": "data/exp003_store",
   "canonical_dataset_id": "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
@@ -90,9 +90,9 @@
           "avg_gross_leverage": 0.5385615384615384,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.19243846153846153,
-          "meets_risk_limits": false,
-          "is_complete": false,
-          "live_gate_satisfied": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
+          "live_gate_satisfied": true,
           "live_eligible": false
         },
         {
@@ -109,8 +109,8 @@
           "avg_gross_leverage": 0.5808615384615384,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.1732,
-          "meets_risk_limits": false,
-          "is_complete": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
           "live_gate_satisfied": false,
           "live_eligible": false
         },
@@ -128,8 +128,8 @@
           "avg_gross_leverage": 0.5693153846153846,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.19242307692307692,
-          "meets_risk_limits": false,
-          "is_complete": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
           "live_gate_satisfied": false,
           "live_eligible": false
         },
@@ -147,9 +147,9 @@
           "avg_gross_leverage": 0.5961884615384615,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.23083461538461536,
-          "meets_risk_limits": false,
-          "is_complete": false,
-          "live_gate_satisfied": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
+          "live_gate_satisfied": true,
           "live_eligible": false
         },
         {
@@ -166,9 +166,9 @@
           "avg_gross_leverage": 0.6730846153846154,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.23085384615384616,
-          "meets_risk_limits": false,
-          "is_complete": false,
-          "live_gate_satisfied": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
+          "live_gate_satisfied": true,
           "live_eligible": false
         }
       ],
@@ -179,8 +179,8 @@
           "skip_days": 7,
           "factor_id": "tsmom_30_7",
           "total_net_return": 0.211814,
-          "meets_risk_limits": false,
-          "live_gate_satisfied": false
+          "meets_risk_limits": true,
+          "live_gate_satisfied": true
         },
         {
           "rank": 2,
@@ -188,8 +188,8 @@
           "skip_days": 0,
           "factor_id": "tsmom_60_0",
           "total_net_return": 0.133914,
-          "meets_risk_limits": false,
-          "live_gate_satisfied": false
+          "meets_risk_limits": true,
+          "live_gate_satisfied": true
         },
         {
           "rank": 3,
@@ -197,8 +197,8 @@
           "skip_days": 0,
           "factor_id": "tsmom_14_0",
           "total_net_return": 0.118559,
-          "meets_risk_limits": false,
-          "live_gate_satisfied": false
+          "meets_risk_limits": true,
+          "live_gate_satisfied": true
         },
         {
           "rank": 4,
@@ -206,7 +206,7 @@
           "skip_days": 3,
           "factor_id": "tsmom_14_3",
           "total_net_return": -0.073695,
-          "meets_risk_limits": false,
+          "meets_risk_limits": true,
           "live_gate_satisfied": false
         },
         {
@@ -215,7 +215,7 @@
           "skip_days": 0,
           "factor_id": "tsmom_7_0",
           "total_net_return": -0.095842,
-          "meets_risk_limits": false,
+          "meets_risk_limits": true,
           "live_gate_satisfied": false
         }
       ],
@@ -233,9 +233,9 @@
         "avg_gross_leverage": 0.6730846153846154,
         "max_abs_net_exposure": 0.5,
         "avg_abs_net_exposure": 0.23085384615384616,
-        "meets_risk_limits": false,
-        "is_complete": false,
-        "live_gate_satisfied": false,
+        "meets_risk_limits": true,
+        "is_complete": true,
+        "live_gate_satisfied": true,
         "live_eligible": false
       }
     },
@@ -261,8 +261,8 @@
           "avg_gross_leverage": 0.655611111111111,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.14824814814814816,
-          "meets_risk_limits": false,
-          "is_complete": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
           "live_gate_satisfied": false,
           "live_eligible": false
         },
@@ -280,9 +280,9 @@
           "avg_gross_leverage": 0.5889222222222222,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.22230000000000003,
-          "meets_risk_limits": false,
-          "is_complete": false,
-          "live_gate_satisfied": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
+          "live_gate_satisfied": true,
           "live_eligible": false
         },
         {
@@ -299,9 +299,9 @@
           "avg_gross_leverage": 0.5852518518518518,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.14825925925925926,
-          "meets_risk_limits": false,
-          "is_complete": false,
-          "live_gate_satisfied": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
+          "live_gate_satisfied": true,
           "live_eligible": false
         },
         {
@@ -318,8 +318,8 @@
           "avg_gross_leverage": 0.5815703703703703,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.16678518518518518,
-          "meets_risk_limits": false,
-          "is_complete": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
           "live_gate_satisfied": false,
           "live_eligible": false
         },
@@ -337,8 +337,8 @@
           "avg_gross_leverage": 0.7000296296296297,
           "max_abs_net_exposure": 0.5,
           "avg_abs_net_exposure": 0.12970370370370368,
-          "meets_risk_limits": false,
-          "is_complete": false,
+          "meets_risk_limits": true,
+          "is_complete": true,
           "live_gate_satisfied": false,
           "live_eligible": false
         }
@@ -350,8 +350,8 @@
           "skip_days": 3,
           "factor_id": "tsmom_14_3",
           "total_net_return": 0.143956,
-          "meets_risk_limits": false,
-          "live_gate_satisfied": false
+          "meets_risk_limits": true,
+          "live_gate_satisfied": true
         },
         {
           "rank": 2,
@@ -359,8 +359,8 @@
           "skip_days": 0,
           "factor_id": "tsmom_7_0",
           "total_net_return": 0.065179,
-          "meets_risk_limits": false,
-          "live_gate_satisfied": false
+          "meets_risk_limits": true,
+          "live_gate_satisfied": true
         },
         {
           "rank": 3,
@@ -368,7 +368,7 @@
           "skip_days": 0,
           "factor_id": "tsmom_14_0",
           "total_net_return": -0.028508,
-          "meets_risk_limits": false,
+          "meets_risk_limits": true,
           "live_gate_satisfied": false
         },
         {
@@ -377,7 +377,7 @@
           "skip_days": 7,
           "factor_id": "tsmom_30_7",
           "total_net_return": -0.070084,
-          "meets_risk_limits": false,
+          "meets_risk_limits": true,
           "live_gate_satisfied": false
         },
         {
@@ -386,7 +386,7 @@
           "skip_days": 0,
           "factor_id": "tsmom_60_0",
           "total_net_return": -0.174336,
-          "meets_risk_limits": false,
+          "meets_risk_limits": true,
           "live_gate_satisfied": false
         }
       ],
@@ -404,9 +404,9 @@
         "avg_gross_leverage": 0.5889222222222222,
         "max_abs_net_exposure": 0.5,
         "avg_abs_net_exposure": 0.22230000000000003,
-        "meets_risk_limits": false,
-        "is_complete": false,
-        "live_gate_satisfied": false,
+        "meets_risk_limits": true,
+        "is_complete": true,
+        "live_gate_satisfied": true,
         "live_eligible": false
       }
     },
@@ -595,5 +595,5 @@
     "research/sprint_004/19_TSMOM_OOS_VALIDATION.json",
     "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json"
   ],
-  "generated_at": "2026-07-23T21:53:26.102164+00:00"
+  "generated_at": "2026-07-23T22:02:41.882621+00:00"
 }

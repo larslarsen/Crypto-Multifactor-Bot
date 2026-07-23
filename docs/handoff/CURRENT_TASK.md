@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXP-006
-State: IN_PROGRESS
-Next required actor: Sr Dev (Strong Model) — fix OOS observation/gate metrics; re-run 21_
-Next ticket authorized: EXP-006
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (REVIEW-0196): CHANGES_REQUIRED**
 
@@ -19,7 +19,7 @@ Folds 1–2 `meets_risk`/`is_complete` false because paper `effective_time=2026-
 
 ## Governing documents
 
-- tickets/EXP-006.md (IN_PROGRESS)
+- tickets/EXP-006.md (AWAITING_REVIEW)
 - docs/reviews/REVIEW-0196_EXP-006_CHANGES_REQUIRED.md
 
 ## Acceptance (Jr)

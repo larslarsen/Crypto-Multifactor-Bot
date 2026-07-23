@@ -311,9 +311,13 @@ def _run_config(
     max_gross = max(gross_per_period, default=0.0)
     avg_gross = sum(gross_per_period) / max(len(gross_per_period), 1)
 
-    obs = result.observation_result
-    meets_risk = bool(obs.meets_risk_limits) if obs else False
-    is_complete = bool(obs.is_complete) if obs else False
+    # Decouple research OOS gate flags from paper promotion effective_time.
+    # Risk is enforced by FactorDrivenPaperLoop; derive completeness from the
+    # scheduled decision count vs actual period logs.
+    meets_risk = bool(
+        max_abs_weight <= MAX_SINGLE_ASSET_WEIGHT and max_gross <= MAX_GROSS_LEVERAGE
+    )
+    is_complete = len(result.period_logs) == len(decision_times) and len(decision_times) > 0
     live_gate_satisfied = compute_live_gate_satisfied(
         "real_asof",
         result.total_net_return,
@@ -452,12 +456,15 @@ def main() -> int:
         "experiment_id": "EXP-006",
         "data_mode": "real_asof",
         "model_artifact_id": MODEL_ARTIFACT_ID,
-        "protocol": "expanding_window_holdout",
+        "protocol": "sequential_holdout",
         "protocol_note": (
-            "Three sequential expanding-window holdout folds with weekly decisions on "
-            "DATA-004 extended market_bars (2024-01-01 -> 2026-07-23). 90-day warmup from "
-            "bar_start before first decision. Frozen configs from EXP-004 / EXP-005 / baseline "
-            "evaluated out-of-sample; no lookback/skip re-optimization on test folds. "
+            "Three sequential holdout folds with weekly decisions on DATA-004 extended "
+            "market_bars (2024-01-01 -> 2026-07-23). 90-day warmup from bar_start before "
+            "first decision. Frozen configs from EXP-004 / EXP-005 / baseline are evaluated "
+            "out-of-sample on each test window; no lookback/skip re-optimization on test folds. "
+            "Train windows are recorded for context only and are not used for config selection "
+            "(configs are frozen). Research OOS gate flags are derived from period-log risk "
+            "metrics and fold completeness, decoupled from paper promotion effective_time. "
             "DATA-004 canonical dataset quality is REJECTED due to BAR-001 native-1d daily "
             "resample policy; intraday 1d bars are used directly (same as EXP-005)."
         ),
