@@ -1,7 +1,7 @@
 # PORT-002 — Perpetual Long/Short Portfolio Simulator
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** PORT-001 (ACCEPTED), FUND-005 (ACCEPTED)
 **Layer:** portfolio
 **Architecture:** Extends the portfolio domain to support perpetual contracts, funding costs, and liquidations.

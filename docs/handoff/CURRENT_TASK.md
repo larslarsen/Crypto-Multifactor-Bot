@@ -1,25 +1,26 @@
 # CURRENT_TASK
 
 Ticket: PORT-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review Perpetual Long/Short Portfolio Simulator
+State: ACCEPTED
+Next required actor: Jr Dev (Weak Model) — closing records and git handoff
 Next ticket authorized: NONE
 
-**Reviewer Decision (Architecture & Ticket Selection):**
+**Reviewer Decision (Code Review):**
 
-The user requested: "Do whatever gets experiments happening the fastest". 
-`EXP-2026-019` and `020` are in `READY_TO_RUN` state, but they require "shortable perpetual cells" and "liquidations" which are not yet supported by our basic `PortfolioSimulator` (PORT-001). We now have BitMEX funding (FUND-005).
+I have reviewed the `PORT-002` Perpetual Long/Short Portfolio Simulator implementation.
+**Decision: ACCEPT**
 
-I am authorizing **PORT-002** (Perpetual Long/Short Portfolio Simulator) to bridge this final mechanical gap. Once this is implemented, the Sr Dev will update the `momts_runner.py` to run the true perpetual L/S experiment, fulfilling the registration requirements.
+The `LongShortRankAllocator` and `PerpetualSimulator` correctly introduce margin maintenance limits (liquidations) and funding cost integration. The update to `momts_runner.py` properly wires these up so that experiments `EXP-2026-019` and `EXP-2026-020` can be executed under realistic conditions. All acceptance criteria and gates pass.
+
+We are now mechanically capable of fulfilling the registered requirements for the Time-Series Momentum experiments.
 
 ## Governing documents
 
-- tickets/PORT-002.md (READY)
+- tickets/PORT-002.md (ACCEPTED)
+- docs/reviews/REVIEW-0176_PORT-002_ACCEPTED.md
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/portfolio/ tests/experiments/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/portfolio src/cryptofactors/experiments
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/portfolio src/cryptofactors/experiments
-4. python3 scripts/check_repo_control.py
+1. python3 scripts/check_repo_control.py
+2. Commit and push the review records.
