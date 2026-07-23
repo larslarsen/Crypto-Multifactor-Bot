@@ -1,7 +1,7 @@
 # PAPER-009 — Re-Validate Frozen tsmom_14_3 on PASS Bars + Pin Dataset
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** ACCEPTED  
 **Dependencies:** DATA-005 (ACCEPTED), PAPER-008  
 **Layer:** paper evidence / catalog discovery  
 **Architecture:** frozen config only; PASS dataset pin. **No LIVE. No lookback/skip change.**
