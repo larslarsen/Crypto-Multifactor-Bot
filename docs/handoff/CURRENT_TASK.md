@@ -1,23 +1,39 @@
 # CURRENT_TASK
 
-Ticket: AUD-006
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review execution risk audit
-Next ticket authorized: NONE
+Ticket: EXEC-002
+State: READY
+Next required actor: Sr Dev (Strong Model) — implement Sequence #26 Live Execution Routing
+Next ticket authorized: EXEC-002
 
-**Reviewer Decision (Architecture & Ticket Selection):**
-We have completed Sequence #25 (Paper Execution Runtime). According to `IMPLEMENTATION_SEQUENCE.md`, Sequence #26 (Live Execution Routing) requires an explicit risk-board authorization.
+**Reviewer Decision (AUD-006 + Ticket Selection):**
 
-Before we write any code that touches live exchange APIs or loads real API keys, we must formally audit the execution and promotion gates to ensure live trading cannot be accidentally triggered by research or paper artifacts.
+I have reviewed `docs/reviews/AUD-006_RISK_REPORT.md` against the live codebase.
 
-I am drafting and authorizing **AUD-006** (Execution Risk & Live Authority Audit). This ticket will produce a risk report and determine if we are clear to proceed to Sequence #26.
+**AUD-006 Verdict: ACCEPT / PASS**
+
+Confirmed:
+- `PaperBroker` has no live credentials or exchange HTTP paths.
+- `LIVE_APPROVED` requires owner authority + paper observation reference; discovery fails closed.
+- Terminal states are sealed.
+- Gross leverage ≤ 1.0 is enforced in paper rebalance; single-asset ≤ 0.15 remains a mandatory pre-trade check for live.
+
+No blocking FX tickets. Sequence #26 is authorized under the hard constraints recorded in `tickets/EXEC-002.md`.
+
+I am authorizing **EXEC-002** (Live Execution Routing, Sequence #26).
 
 ## Governing documents
 
-- tickets/AUD-006.md (AWAITING_REVIEW)
+- tickets/EXEC-002.md (READY)
+- tickets/AUD-006.md (to be marked ACCEPTED on handoff)
+- docs/reviews/AUD-006_RISK_REPORT.md
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. Audit report committed to `docs/reviews/`.
-2. python3 scripts/check_repo_control.py
+1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/execution tests/execution
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution tests/execution
+4. python3 scripts/check_repo_control.py
+5. Unapproved artifact fails before any HTTP call
+6. Leverage / single-asset pre-trade limits enforced
+7. Mocked HTTP only in unit tests
