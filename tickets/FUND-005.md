@@ -1,7 +1,7 @@
 # FUND-005 — BitMEX Funding Cashflow Provider
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** FUND-004 (PASSED - BitMEX approved as pragmatic primary)
 **Layer:** ingest / market / execution
 **Architecture:** Implements the BitMEX REST paginator for funding and the internal provider for executing funding cashflows on perpetual positions.
