@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: DATA-003
-State: IN_PROGRESS
-Next required actor: Sr Dev (Strong Model) — fix real as-of instrument keys + tests (REVIEW-0186)
-Next ticket authorized: DATA-003
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review real as-of path correctness (REVIEW-0186 rework)
+Next ticket authorized: NONE
 
 **Reviewer Decision (REVIEW-0186): CHANGES_REQUIRED**
 

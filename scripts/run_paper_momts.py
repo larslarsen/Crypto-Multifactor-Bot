@@ -34,7 +34,12 @@ from cryptofactors.execution.paper_harden import (
 from cryptofactors.execution.paper_loop import FactorDrivenPaperLoop, PaperLoopResult
 from cryptofactors.execution.paper_monitor import PaperOpsMonitor
 from cryptofactors.execution.paper_store import PaperSessionStore
-from cryptofactors.execution.symbols import PAPER_TO_BINANCE_MAP, to_binance_symbol
+from cryptofactors.execution.symbols import (
+    PAPER_TO_BINANCE_MAP,
+    PAPER_TO_INSTRUMENT_ID,
+    PaperSymbolAsOfAdapter,
+    to_instrument_id,
+)
 from cryptofactors.execution.venue_probe import ReadOnlyVenueProbeAdapter
 from cryptofactors.factors.tsmom import make_tsmom_30_7
 from cryptofactors.promotion import (
@@ -303,29 +308,46 @@ def main() -> int:
         try:
             row = cat.get_dataset(args.market_dataset_id)
             if row is None:
-                raise PaperExecutionError(
-                    f"market_bars dataset '{args.market_dataset_id}' not found in catalog. Run backfill or specify --market-dataset-id.",
-                    context={"db_path": str(db_path), "market_dataset_id": args.market_dataset_id},
-                )
-            dataset_id = args.market_dataset_id
+                resolved = cat.resolve_latest_by_type("market_bars")
+                if resolved is None:
+                    raise PaperExecutionError(
+                        "No published 'market_bars' dataset found in catalog. "
+                        "Run backfill (see canonical_dataset_id in "
+                        "research/sprint_004/11_REAL_DATA_PATH_REPORT.json).",
+                        context={"db_path": str(db_path)},
+                    )
+                dataset_id = resolved
+            else:
+                dataset_id = args.market_dataset_id
         finally:
             cat.close()
 
-        as_of_store = CatalogAsOfStore(control_database=db_path, dataset_store_root=store_root)
-        price_store = as_of_store
+        raw_as_of_store = CatalogAsOfStore(control_database=db_path, dataset_store_root=store_root)
+        price_store = PaperSymbolAsOfAdapter(raw_as_of_store)
 
         def get_real_prices(dt: datetime, univ: Sequence[str]) -> dict[str, float]:
             res: dict[str, float] = {}
             for sym in univ:
-                binance_sym = to_binance_symbol(sym)
                 try:
-                    tbl = as_of_store.latest_available(dataset_id, [binance_sym], ["close"], dt)
+                    int_key = to_instrument_id(sym)
+                except KeyError as exc:
+                    raise PaperExecutionError(
+                        f"Symbol {sym!r} not in instrument_id map; cannot resolve bar key",
+                        context={"symbol": sym},
+                    ) from exc
+                try:
+                    tbl = raw_as_of_store.latest_available(dataset_id, [int_key], ["close"], dt)
                     if tbl is not None and tbl.num_rows > 0:
                         res[sym] = float(tbl.column("close")[0].as_py())
+                    else:
+                        raise PaperExecutionError(
+                            f"No bar found for instrument_id={int_key} at {dt.isoformat()}",
+                            context={"symbol": sym, "instrument_id": int_key, "decision_time": dt.isoformat()},
+                        )
                 except AsOfAccessError as exc:
                     raise PaperExecutionError(
-                        f"AsOf access error looking up price for '{sym}' ({binance_sym}) at {dt.isoformat()}: {exc}",
-                        context={"symbol": sym, "binance_symbol": binance_sym, "decision_time": dt.isoformat()},
+                        f"AsOf access error looking up price for '{sym}' (id={int_key}) at {dt.isoformat()}: {exc}",
+                        context={"symbol": sym, "instrument_id": int_key, "decision_time": dt.isoformat()},
                     ) from exc
 
             if not res:
@@ -405,6 +427,7 @@ def main() -> int:
         "dataset_store_root": str(store_root),
         "market_dataset_id": dataset_id,
         "symbol_map": PAPER_TO_BINANCE_MAP,
+        "instrument_id_map": PAPER_TO_INSTRUMENT_ID,
         "watermark_last_decision_time": decision_times[-1].isoformat(),
         "total_periods": len(result.period_logs),
         "gate_status": ops_status.gate_status,

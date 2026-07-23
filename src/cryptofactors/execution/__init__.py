@@ -43,17 +43,24 @@ from cryptofactors.execution.paper_monitor import PaperOpsMonitor
 from cryptofactors.execution.paper_store import PaperSessionStore
 from cryptofactors.execution.symbols import (
     BINANCE_TO_PAPER_MAP,
+    INSTRUMENT_ID_TO_PAPER,
     PAPER_TO_BINANCE_MAP,
+    PAPER_TO_INSTRUMENT_ID,
+    PaperSymbolAsOfAdapter,
+    from_instrument_id,
     to_binance_symbol,
+    to_instrument_id,
     to_paper_symbol,
+    translate_keys_to_int,
 )
 from cryptofactors.execution.venue_probe import ReadOnlyVenueProbeAdapter
 
 __all__ = [
-    "BINANCE_TO_PAPER_MAP",
+"BINANCE_TO_PAPER_MAP",
     "DrawdownLimitExceededError",
     "FactorDrivenPaperLoop",
     "FlattenSignal",
+    "INSTRUMENT_ID_TO_PAPER",
     "KillSwitchActiveError",
     "LiveBroker",
     "LiveExecutionError",
@@ -63,6 +70,7 @@ __all__ = [
     "MAX_GROSS_LEVERAGE",
     "MAX_SINGLE_ASSET_WEIGHT",
     "PAPER_TO_BINANCE_MAP",
+    "PAPER_TO_INSTRUMENT_ID",
     "PaperAccountState",
     "PaperBroker",
     "PaperExecutionError",
@@ -74,6 +82,7 @@ __all__ = [
     "PaperOpsStatus",
     "PaperOrder",
     "PaperSessionStore",
+    "PaperSymbolAsOfAdapter",
     "PaperTrade",
     "PreTradeRiskValidator",
     "ReadOnlyVenueProbeAdapter",
@@ -81,9 +90,12 @@ __all__ = [
     "UnapprovedArtifactError",
     "VenueAdapter",
     "build_harden_report",
+    "from_instrument_id",
     "load_credentials_from_env",
     "new_live_order",
     "to_binance_symbol",
+    "to_instrument_id",
     "to_paper_symbol",
+    "translate_keys_to_int",
     "write_harden_report_artifact",
 ]

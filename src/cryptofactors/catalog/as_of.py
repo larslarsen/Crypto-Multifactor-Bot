@@ -298,6 +298,7 @@ class CatalogAsOfStore:
         cat = SqliteDatasetCatalog(self.control_database)
         try:
             files = list(cat.list_files(dataset_id))
+            ds_row = cat.get_dataset(dataset_id)
         finally:
             cat.close()
         if not files:
@@ -308,14 +309,32 @@ class CatalogAsOfStore:
         root = Path(self.dataset_store_root).expanduser()
         if not root.is_absolute():
             root = Path.cwd() / root
+
+        # Resolve the dataset's base directory from manifest_uri if available.
+        # MAN-001 publishes files under store_root/datasets/sha256/<prefix>/<id>/<relative_path>,
+        # and storage_uri is the relative_path within that dataset directory.
+        # The manifest_uri (e.g. "datasets/sha256/<prefix>/<id>/manifest.json") tells us
+        # the dataset directory relative to store_root.
+        dataset_base = root
+        if ds_row is not None:
+            manifest_uri = str(ds_row.get("manifest_uri") or "")
+            if manifest_uri:
+                dataset_dir = str(Path(manifest_uri).parent)
+                try:
+                    dataset_base = lexical_join(root, dataset_dir)
+                except UnsafePathError as exc:
+                    raise AsOfAccessError(
+                        f"unsafe dataset manifest path: {exc}",
+                        context={"manifest_uri": manifest_uri},
+                    ) from exc
+
         paths: list[Path] = []
         for f in files:
             uri = str(f.get("storage_uri") or "")
             if not uri:
                 continue
-            # storage_uri is relative to store root (MAN-001).
             try:
-                paths.append(lexical_join(root, uri))
+                paths.append(lexical_join(dataset_base, uri))
             except UnsafePathError as exc:
                 raise AsOfAccessError(
                     f"unsafe dataset file path: {exc}",

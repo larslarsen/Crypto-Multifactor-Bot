@@ -1,8 +1,8 @@
 {
   "data_mode": "synthetic",
   "model_artifact_id": "mod_tsmom_30_7_v1",
-  "control_database": "/tmp/tmpci8cgkxf/control.db",
-  "dataset_store_root": "/tmp/tmpci8cgkxf/store",
+  "control_database": "/tmp/tmp_fdo8a4s/control.db",
+  "dataset_store_root": "/tmp/tmp_fdo8a4s/store",
   "market_dataset_id": "ds_market_bars",
   "symbol_map": {
     "XBTUSD": "BTCUSDT",
@@ -17,9 +17,21 @@
     "LTCUSD": "LTCUSDT",
     "BCHUSD": "BCHUSDT"
   },
+  "instrument_id_map": {
+    "XBTUSD": 1,
+    "ETHUSD": 2,
+    "SOLUSD": 3,
+    "XRPUSD": 4,
+    "ADAUSD": 5,
+    "AVAXUSD": 6,
+    "DOTUSD": 7,
+    "LINKUSD": 8,
+    "LTCUSD": 9,
+    "BCHUSD": 10
+  },
   "watermark_last_decision_time": "2026-05-30T00:00:00+00:00",
   "total_periods": 8,
   "gate_status": "OK",
   "live_eligible": false,
-  "generated_at": "2026-07-23T14:13:20.267899+00:00"
+  "generated_at": "2026-07-23T14:36:57.445375+00:00"
 }

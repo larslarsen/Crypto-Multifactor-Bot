@@ -88,6 +88,18 @@ class SqliteDatasetCatalog:
     def dataset_exists(self, dataset_id: str) -> bool:
         return self.get_dataset(dataset_id) is not None
 
+    def resolve_latest_by_type(self, dataset_type: str) -> str | None:
+        """Return the most recently created dataset_id with the given dataset_type, or None.
+
+        Used to discover content-addressed ``ds_<sha256>`` ids by logical type
+        (e.g. ``market_bars``) without requiring the caller to know the hash.
+        """
+        row = self._conn.execute(
+            "SELECT dataset_id FROM dataset WHERE dataset_type = ? ORDER BY created_at DESC, dataset_id DESC LIMIT 1",
+            (dataset_type,),
+        ).fetchone()
+        return str(row["dataset_id"]) if row is not None else None
+
     def raw_object_exists(self, raw_object_id: str) -> bool:
         row = self._conn.execute(
             "SELECT 1 FROM raw_object WHERE raw_object_id = ?",
