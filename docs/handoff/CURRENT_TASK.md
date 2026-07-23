@@ -5,10 +5,11 @@ State: BLOCKED
 Next required actor: Sr Dev (corrections required)
 Next ticket authorized: NONE
 
-NULL-001 source rejected (REVIEW-0151). P1 finding: test bypasses research substrate. P2 findings: contracts in wrong module, string universe treated as character sequence, scores change with universe.
+NULL-001 source rejected again (REVIEW-0152). P1: tests fail (mean Sharpes 0.86 and 0.55 exceed ±0.5). P1: _SubstrateAsOf stand-in, not real CatalogAsOfStore. P2: unused type: ignore.
 
 Governing documents:
 - tickets/NULL-001.md (BLOCKED)
+- docs/reviews/REVIEW-0152_NULL-001_REJECTED.md
 - docs/reviews/REVIEW-0151_NULL-001_REJECTED.md
 - docs/reviews/REVIEW-0150_UNIVERSE-001_REJECTED.md
 - docs/reviews/REVIEW-0148_EXP-001_ACCEPTED.md
@@ -16,35 +17,27 @@ Governing documents:
 ## Sr Dev Correction Prompt
 
 ```
-Correct NULL-001 source per REVIEW-0151 findings.
+Correct NULL-001 source per REVIEW-0152 findings.
 
-P1 — Test bypasses research substrate:
-- tests/test_null_factor.py:58-75 uses synthetic independent Gaussian returns directly, bypassing ASOF/LABEL/EXP.
-- Rebuild test to exercise accepted research substrate (CatalogAsOfStore → AsOfLabelEngine → PurgedChronologicalSplitter → ExperimentBundle) or document why current synthetic approach is acceptable for this specific validation step.
+P1 — Tests fail:
+- test_null_factor_sharpe_near_zero_ten_trials: mean_sharpe=0.861 (exceeds ±0.5)
+- test_null_factor_ten_trials_consistent: mean_sharpe=0.554 (exceeds ±0.5)
+- Either widen tolerance with documented justification or fix synthetic pipeline bias.
 
-P2 — Contracts in wrong module:
-- src/cryptofactors/factors/null.py:50-78 defines FactorValue, FactorFrame, Factor protocol.
-- Move to src/cryptofactors/factors/contract.py (neutral contract module).
-- Update imports in null.py and tests.
+P1 — Substrate stand-in:
+- tests/test_null_factor.py:53-131 uses hand-rolled _SubstrateAsOf, not real CatalogAsOfStore.
+- Option A: inject CatalogAsOfStore with synthetic Parquet (see tests/catalog/test_asof001_integration.py for pattern).
+- Option B: document why stand-in is accepted for null-baseline validation and add separate integration test.
 
-P2 — String universe treated as character sequence:
-- NullFactor.compute("btc", as_of) iterates string as instruments "b", "t", "c".
-- Reject string/bytes universe inputs with clear error.
-
-P2 — Scores change when universe changes:
-- null.py:121-126 seeds PRNG with sorted unique universe.
-- Consider per-instrument seeding if universe-stable scores required.
+P2 — Mypy unused type: ignore:
+- tests/test_null_factor.py:339 — remove unused # type: ignore[arg-type].
 
 Files to modify:
-- src/cryptofactors/factors/contract.py (new)
-- src/cryptofactors/factors/null.py (updated)
-- tests/test_null_factor.py (updated)
+- tests/test_null_factor.py (primary)
 
 Acceptance:
-1. All tests pass
-2. ruff clean
-3. mypy clean
-4. check_repo_control.py PASS
+1. All tests pass (pytest, ruff, mypy)
+2. check_repo_control.py PASS
 
 After completion: set status to AWAITING_REVIEW.
 ```
