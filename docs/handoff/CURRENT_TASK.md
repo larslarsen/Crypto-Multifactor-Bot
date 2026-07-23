@@ -1,27 +1,28 @@
 # CURRENT_TASK
 
-Ticket: EXP-005
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer
-Next ticket authorized: NONE
+Ticket: DATA-004
+State: READY
+Next required actor: Sr Dev (Strong Model) — extend real market bar history
+Next ticket authorized: DATA-004
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-EXP-004 ACCEPTED (REVIEW-0193). In-sample grid: best `tsmom_14_0` **+31.12%**, baseline `30_7` **−6.52%**. Multiple-testing risk high. **No LIVE.**
+EXP-005 ACCEPTED (REVIEW-0194). Holdout: all train winners **negative OOS**. LIVE blocked.  
+Store bars only **2026-01-01→2026-07-23**; EXP-004 “12m from 2025-08” is not supported by data.
 
-Authorizing **EXP-005**: holdout or walk-forward validation of frozen top configs + baseline; artifact `19_TSMOM_OOS_VALIDATION.json`; `live_eligible: false`. Do not mutate artifacts 08–17.
+Authorizing **DATA-004**: extend Binance→canonical history to ≥24 months (or document venue max); artifact `20_EXTENDED_HISTORY_REPORT.json`; `live_eligible: false`. Do not mutate 08–19.
 
-**Policy:** No LIVE. In-sample `recommend_live_path` is not authorization.
+**Policy:** No LIVE.
 
 ## Governing documents
 
-- tickets/EXP-005.md (AWAITING_REVIEW)
-- tickets/EXP-004.md (ACCEPTED)
-- docs/reviews/REVIEW-0193_EXP-004_ACCEPTED.md
+- tickets/DATA-004.md (READY)
+- tickets/EXP-005.md (ACCEPTED)
+- docs/reviews/REVIEW-0194_EXP-005_ACCEPTED.md
 
 ## Acceptance (Jr)
 
 1. .venv/bin/python -m pytest tests/execution/ tests/acquisition/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
-3. 19_TSMOM_OOS_VALIDATION.json present
+2. .venv/bin/python -m ruff check src/cryptofactors/execution src/cryptofactors/acquisition scripts/
+3. 20_EXTENDED_HISTORY_REPORT.json present
 4. python3 scripts/check_repo_control.py
