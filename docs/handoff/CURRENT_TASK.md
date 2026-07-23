@@ -1,29 +1,23 @@
 # CURRENT_TASK
 
-Ticket: PROMO-001
+Ticket: HOLDOUT-001
 State: ACCEPTED
-Next required actor: Lead Quant (Strong Model) — next-ticket selection
+Next required actor: Jr Engineer (Weak Model) — gates, records, commit, push
 Next ticket authorized: NONE
 
 **Reviewer Decision (Authorization):**
-With PORT-001 (costed portfolio simulation) accepted, all necessary upstream prerequisites (catalog, experiments, serving, and portfolio domains) for Sequence #23 are complete. 
-While UNIVERSE-002 (DEX side) remains in draft, the CEX survivorship backfill (UNIVERSE-003) sufficiently resolves the DF-08 blocker for CEX-based candidate strategies. 
+With PROMO-001 accepted, the Promotion Registry enforces the state machine up to `PAPER_APPROVED`. To satisfy the `LIVE_APPROVED` gate, we must fulfill the prospective paper observation requirement (Sequence #24).
 
-I am formally unblocking and authorizing **PROMO-001** (Explicit Paper Promotion, Sequence #23).
-
-**Policy Parameters (fulfilling PROMO-001 prerequisite):**
-- Prospective observation requirement: 14 days minimum before LIVE_APPROVED.
-- Risk limits: Max gross leverage 1.0, single asset max weight 0.15.
-- Kill-switch: Must be documented in registry schema or code before paper start.
+I have drafted and authorized **HOLDOUT-001** (Prospective Holdout Evaluation, Sequence #24). This will implement the evaluation harness for out-of-sample paper trading validation.
 
 ## Governing documents
 
-- tickets/PROMO-001.md (ACCEPTED)
+- tickets/HOLDOUT-001.md (ACCEPTED)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors tests
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors tests
+1. .venv/bin/python -m pytest tests/serving/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/serving tests/serving
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/serving tests/serving
 4. python3 scripts/check_repo_control.py
