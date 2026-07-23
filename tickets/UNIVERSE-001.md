@@ -1,7 +1,7 @@
 # UNIVERSE-001 — CoinGecko Survivorship-Free Universe Provider
 
 **Priority:** P0
-**Status:** IN_PROGRESS
+**Status:** BLOCKED
 **Dependencies:** ASOF-001 (accepted), BAR-001 (accepted), EXP-001 (accepted)
 **Layer:** universe
 **Architecture:** implements research substrate gate item #11 (historical universe snapshots); no ADR required
