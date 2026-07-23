@@ -1,26 +1,31 @@
 # CURRENT_TASK
 
-Ticket: PROMO-002
-State: ACCEPTED
-Next required actor: Lead Quant (Reviewer) — next ticket authorization
-Next ticket authorized: NONE
+Ticket: PAPER-001
+State: READY
+Next required actor: Sr Dev (Strong Model) — factor-driven paper trading loop
+Next ticket authorized: PAPER-001
 
-**Reviewer Decision (Code Review):**
+**Reviewer Decision (Architecture & Ticket Selection):**
 
-I have reviewed the `PROMO-002` paper promotion and paper execution script.
-**Decision: ACCEPT**
+Paper promotion works (`PROMO-002` / REVIEW-0178), but the demo session used **hardcoded** L/S weights. That is not production paper trading.
 
-`mod_tsmom_30_7_v1` promotes cleanly to `PAPER_APPROVED` and runs under `PaperBroker` with strict gating. Results artifact: `research/sprint_004/07_PAPER_TRADING_RESULTS.json`.
+I am authorizing **PAPER-001** (Factor-Driven Paper Trading Loop for MOM-TS-01):
+1. Wire `tsmom_30_7` → `LongShortRankAllocator` → `PaperBroker` under strict `PAPER_APPROVED` gate.
+2. Dry-run path + results artifact `08_PAPER_FACTOR_LOOP_RESULTS.json`.
+3. Lightweight holdout/observation snapshot for future LIVE eligibility.
 
-Paper trading path is operational. Next direction (live holdout observation, new factor families, or paper ops hardening) is open.
+No new factor families until this paper loop is real. LIVE remains blocked until paper observation evidence exists.
 
 ## Governing documents
 
+- tickets/PAPER-001.md (READY)
 - tickets/PROMO-002.md (ACCEPTED)
 - docs/reviews/REVIEW-0178_PROMO-002_ACCEPTED.md
-- research/sprint_004/07_PAPER_TRADING_RESULTS.json
 
 ## Acceptance (Jr)
 
-1. python3 scripts/check_repo_control.py
-2. Commit and push the review records.
+1. .venv/bin/python -m pytest tests/execution/ tests/promotion/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/run_paper_momts.py
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution scripts/run_paper_momts.py
+4. .venv/bin/python scripts/run_paper_momts.py --dry-run
+5. python3 scripts/check_repo_control.py
