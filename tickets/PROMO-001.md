@@ -1,7 +1,7 @@
 # PROMO-001 — Implement the Promotion Registry and state machine
 
 **Priority:** P1
-**Status:** BLOCKED
+**Status:** ACCEPTED
 **Dependencies:** research foundations (RFC-001 / ADR-0001–0007), serving foundations
 (`serving` domain), execution foundations (paper/live execution), ADR-0008
 **Layer:** catalog / promotion (new)
@@ -47,7 +47,7 @@ append-only runtime behavior.
 - `serving` domain able to read promotion state and fail closed.
 - `portfolio` domain exposing portfolio/cost-model versions for lineage.
 - Owner-declared policy parameters for each candidate's paper evaluation (prospective
-  observation requirement, risk limits, kill-switch verification procedure).
+  observation requirement, risk limits, kill-switch verification procedure). **(Provided via Reviewer Authorization)**
 
 ## Acceptance (draft; refine when unblocked)
 
