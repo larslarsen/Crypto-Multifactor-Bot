@@ -1,29 +1,25 @@
 # CURRENT_TASK
 
 Ticket: PAPER-004
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review paper ops equity and resume fixes
+State: ACCEPTED
+Next required actor: Jr Dev (Weak Model) — closing records and git handoff
 Next ticket authorized: NONE
 
-**Reviewer Decision (Architecture & Ticket Selection):**
+**Reviewer Decision (Code Review):**
 
-Paper path: 3 (ops fixes) → 4 (hardening toward LIVE). LIVE blocked until paper trading is profitable on real data.
+I have reviewed the `PAPER-004` MTM equity and broker resume fixes.
+**Decision: ACCEPT**
 
-Authorizing **PAPER-004** to close the two REVIEW-0181 caveats:
-1. Fix `PaperOpsMonitor` to use MTM equity not cash.
-2. Add broker resume-from-store.
+`PaperOpsMonitor` now reports mark-to-market equity when prices are supplied. `PaperBroker.restore_from_store` enables session resume. Both REVIEW-0181 caveats closed.
 
-Next ticket after this (HARDEN-001 or LIVE-PREP) will wire exchange API stubs and run on real as-of store data.
+Policy remains: no LIVE until paper trading is profitable on real data. Next phase is HARDEN (real as-of path / exchange stubs).
 
 ## Governing documents
 
-- tickets/PAPER-004.md (READY)
-- tickets/PAPER-003.md (ACCEPTED)
-- docs/reviews/REVIEW-0181_PAPER-003_ACCEPTED.md
+- tickets/PAPER-004.md (ACCEPTED)
+- docs/reviews/REVIEW-0182_PAPER-004_ACCEPTED.md
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution
-4. python3 scripts/check_repo_control.py
+1. python3 scripts/check_repo_control.py
+2. Commit and push the review records.
