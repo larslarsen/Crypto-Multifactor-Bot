@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: PAPER-008
-State: READY
-Next required actor: Sr Dev (Strong Model) — formal tsmom_14_3 paper package + freeze
-Next ticket authorized: PAPER-008
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -15,7 +15,7 @@ Authorizing **PAPER-008**: dedicated paper package for `tsmom_14_3`; artifact `2
 
 ## Governing documents
 
-- tickets/PAPER-008.md (READY)
+- tickets/PAPER-008.md (AWAITING_REVIEW)
 - tickets/EXP-007.md (ACCEPTED)
 - docs/reviews/REVIEW-0199_EXP-007_ACCEPTED.md
 

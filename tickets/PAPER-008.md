@@ -1,7 +1,7 @@
 # PAPER-008 — Formal Paper Package for tsmom_14_3 (Freeze Candidate)
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** EXP-007 (ACCEPTED), DATA-004, ALLOC-001  
 **Layer:** paper / promotion evidence / research  
 **Architecture:** same path as PAPER-007. **No LIVE.**

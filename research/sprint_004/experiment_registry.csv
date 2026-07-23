@@ -1,2 +1,3 @@
 experiment_id,status,artifacts_json,generated_at
 EXP-003,EXECUTED,{"diagnosis": "research/sprint_004/15_MOMTS_RISK_DIAGNOSIS.json", "long_session": "research/sprint_004/16_MOMTS_LONG_SESSION.json", "real_data_path_report": "research/sprint_004/11_REAL_DATA_PATH_REPORT_EXP003.json"},2026-07-23T15:42:14.890485+00:00
+PAPER-008,EXECUTED,"{""paper_session"":""research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json""}",2026-07-23T22:34:17.626028+00:00
