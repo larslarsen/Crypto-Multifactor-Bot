@@ -1,31 +1,24 @@
 # CURRENT_TASK
 
 Ticket: PAPER-003
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review paper ops monitoring and hardening
+State: ACCEPTED
+Next required actor: Jr Dev (Weak Model) — closing records and git handoff
 Next ticket authorized: NONE
 
-**Reviewer Decision (Architecture & Ticket Selection):**
+**Reviewer Decision (Code Review):**
 
-Owner selected option **3** — paper ops monitoring / hardening (not LIVE, not new families).
+I have reviewed the `PAPER-003` paper ops monitoring and hardening work.
+**Decision: ACCEPT**
 
-I am authorizing **PAPER-003**:
-1. Persist paper session state and trades.
-2. Health/status report artifact for `PAPER_APPROVED` models.
-3. Structured fail-closed errors + optional drawdown alert stub.
-
-LIVE remains blocked until explicit owner authority ticket. New factor families deferred.
+`PaperSessionStore`, drawdown alerts in the paper loop, and `PaperOpsMonitor` status artifact (`09_PAPER_OPS_STATUS.json`) satisfy the ticket. Caveats in REVIEW-0181: status equity uses cash not MTM; no broker resume from store yet.
 
 ## Governing documents
 
-- tickets/PAPER-003.md (READY)
-- tickets/PAPER-002.md (ACCEPTED)
-- docs/reviews/REVIEW-0180_PAPER-002_ACCEPTED.md
+- tickets/PAPER-003.md (ACCEPTED)
+- docs/reviews/REVIEW-0181_PAPER-003_ACCEPTED.md
+- research/sprint_004/09_PAPER_OPS_STATUS.json
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution
-4. Status artifact / dry-run path
-5. python3 scripts/check_repo_control.py
+1. python3 scripts/check_repo_control.py
+2. Commit and push the review records.

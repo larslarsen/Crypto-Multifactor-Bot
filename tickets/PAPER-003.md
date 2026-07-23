@@ -1,7 +1,7 @@
 # PAPER-003 — Paper Ops Monitoring and Hardening
 
 **Priority:** P1
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** PAPER-002 (ACCEPTED), PROMO-002 (ACCEPTED)
 **Layer:** execution / serving / ops
 **Architecture:** Operational hardening of the factor-driven paper loop — persistence, health checks, and a minimal monitoring surface. No LIVE routing.
