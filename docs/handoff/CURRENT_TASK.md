@@ -1,23 +1,19 @@
 # CURRENT_TASK
 
 Ticket: SERV-001
-State: READY
-Next required actor: Sr Dev (Grok / Strong Model)
-Next ticket authorized: SERV-001
+State: ACCEPTED
+Next required actor: Reviewer (architecture decision)
+Next ticket authorized: NONE
 
-**Reviewer Decision (Architecture):**
-Experiments #18–21 are complete, successfully concluding the primary research iteration.
-We are now moving to the Serving phase (Sequence #22).
-Ticket SERV-001 (Artifact/representation parity) is AUTHORIZED.
+SERV-001 (sequence #22, artifact/representation parity) accepted under REVIEW-0166.
+Sequence #22 complete. #23 (paper promotion) and #24 (prospective holdout) remain.
 
 ## Governing documents
 
-- tickets/SERV-001.md (READY)
+- tickets/SERV-001.md (ACCEPTED)
+- docs/reviews/REVIEW-0166_SERV-001_ACCEPTED.md
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
-## Acceptance (Jr)
+## Acceptance — last pass
 
-1. .venv/bin/python -m pytest tests/serving/ -q --tb=short
-2. .venv/bin/python -m ruff check tests/serving/
-3. .venv/bin/python -m mypy --no-incremental tests/serving/
-4. python3 scripts/check_repo_control.py
+1. python3 scripts/check_repo_control.py

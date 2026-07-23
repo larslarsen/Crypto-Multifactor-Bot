@@ -1,7 +1,8 @@
 # SERV-001 — Artifact / Representation Parity Tests (Sequence #22)
 
 **Priority:** P0
-**Status:** READY
+**Status:** ACCEPTED
+**Latest review:** ACCEPTED (REVIEW-0166)
 **Dependencies:** ML-001 (accepted)
 **Layer:** serving / validation
 **Architecture:** implements step #22 (artifact/representation parity tests); no ADR required

@@ -20,7 +20,7 @@ ALLOWED = {
     "quality": {"core", "catalog", "reference"},
     "market": {"core", "catalog", "reference", "quality"},
     "universe": {"core", "catalog", "reference", "market"},
-    "factors": {"core", "catalog", "reference", "market", "universe"},
+    "factors": {"core", "catalog", "reference", "market", "universe", "labels", "validation"},
     "labels": {"core", "catalog", "reference", "market", "universe"},
     "validation": {"core", "labels"},
     "portfolio": {"core", "market", "universe", "factors", "labels"},
