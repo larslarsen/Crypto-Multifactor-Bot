@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXEC-002
-State: READY
-Next required actor: Sr Dev (Strong Model) — implement Sequence #26 Live Execution Routing
-Next ticket authorized: EXEC-002
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review live execution routing
+Next ticket authorized: NONE
 
 **Reviewer Decision (AUD-006 + Ticket Selection):**
 
@@ -23,8 +23,8 @@ I am authorizing **EXEC-002** (Live Execution Routing, Sequence #26).
 
 ## Governing documents
 
-- tickets/EXEC-002.md (READY)
-- tickets/AUD-006.md (to be marked ACCEPTED on handoff)
+- tickets/EXEC-002.md (AWAITING_REVIEW)
+- tickets/AUD-006.md (ACCEPTED)
 - docs/reviews/AUD-006_RISK_REPORT.md
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
