@@ -1,24 +1,29 @@
 # CURRENT_TASK
 
-Ticket: PAPER-003
-State: ACCEPTED
-Next required actor: Jr Dev (Weak Model) — closing records and git handoff
-Next ticket authorized: NONE
+Ticket: PAPER-004
+State: READY
+Next required actor: Sr Dev (Strong Model) — paper ops equity and resume fixes
+Next ticket authorized: PAPER-004
 
-**Reviewer Decision (Code Review):**
+**Reviewer Decision (Architecture & Ticket Selection):**
 
-I have reviewed the `PAPER-003` paper ops monitoring and hardening work.
-**Decision: ACCEPT**
+Paper path: 3 (ops fixes) → 4 (hardening toward LIVE). LIVE blocked until paper trading is profitable on real data.
 
-`PaperSessionStore`, drawdown alerts in the paper loop, and `PaperOpsMonitor` status artifact (`09_PAPER_OPS_STATUS.json`) satisfy the ticket. Caveats in REVIEW-0181: status equity uses cash not MTM; no broker resume from store yet.
+Authorizing **PAPER-004** to close the two REVIEW-0181 caveats:
+1. Fix `PaperOpsMonitor` to use MTM equity not cash.
+2. Add broker resume-from-store.
+
+Next ticket after this (HARDEN-001 or LIVE-PREP) will wire exchange API stubs and run on real as-of store data.
 
 ## Governing documents
 
+- tickets/PAPER-004.md (READY)
 - tickets/PAPER-003.md (ACCEPTED)
 - docs/reviews/REVIEW-0181_PAPER-003_ACCEPTED.md
-- research/sprint_004/09_PAPER_OPS_STATUS.json
 
 ## Acceptance (Jr)
 
-1. python3 scripts/check_repo_control.py
-2. Commit and push the review records.
+1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/execution
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution
+4. python3 scripts/check_repo_control.py
