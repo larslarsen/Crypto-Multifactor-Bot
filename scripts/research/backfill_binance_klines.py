@@ -133,8 +133,17 @@ def main() -> int:
     parser.add_argument("--interval", type=str, default="1d", help="Kline interval (e.g. 1d, 1h)")
     parser.add_argument("--db-path", type=str, default="control.db", help="Path to control SQLite DB")
     parser.add_argument("--store-root", type=str, default="data/store", help="Path to dataset store root")
+    parser.add_argument("--start-time", type=str, default="2026-01-01T00:00:00Z", help="Start time ISO 8601 (UTC)")
+    parser.add_argument("--end-time", type=str, default="2026-06-30T00:00:00Z", help="End time ISO 8601 (UTC)")
     parser.add_argument("--dry-run", action="store_true", help="Run with mocked HTTP response and temp directories")
     args = parser.parse_args()
+
+    def _parse_iso(value: str) -> datetime:
+        value = value.strip().upper().replace("Z", "+00:00")
+        return datetime.fromisoformat(value)
+
+    start_time = _parse_iso(args.start_time)
+    end_time = _parse_iso(args.end_time)
 
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
 
@@ -182,6 +191,8 @@ def main() -> int:
             catalog_path=db_path,
             dataset_store_root=store_root,
             client=client,
+            start_time=start_time,
+            end_time=end_time,
             instrument_int_id=idx + 1,
         )
         source_ids.append(source_ds.dataset_id)

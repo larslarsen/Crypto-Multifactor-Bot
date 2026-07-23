@@ -1,9 +1,9 @@
 {
-  "data_mode": "synthetic",
+  "data_mode": "real_asof",
   "model_artifact_id": "mod_tsmom_30_7_v1",
-  "control_database": "/tmp/tmp_fdo8a4s/control.db",
-  "dataset_store_root": "/tmp/tmp_fdo8a4s/store",
-  "market_dataset_id": "ds_market_bars",
+  "control_database": "control.db",
+  "dataset_store_root": "data/store",
+  "market_dataset_id": "ds_b92eb297f62313d9b0c7efc7dde5d6434891ae2dc37ea5e0cd7a8830bda2552f",
   "symbol_map": {
     "XBTUSD": "BTCUSDT",
     "BTCUSD": "BTCUSDT",
@@ -33,5 +33,5 @@
   "total_periods": 8,
   "gate_status": "OK",
   "live_eligible": false,
-  "generated_at": "2026-07-23T14:36:57.445375+00:00"
+  "generated_at": "2026-07-23T14:52:14.472721+00:00"
 }

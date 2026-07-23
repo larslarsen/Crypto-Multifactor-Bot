@@ -1,5 +1,10 @@
 {
   "data_mode": "real_asof",
+  "model_artifact_id": "mod_tsmom_30_7_v1",
+  "factor_id": "tsmom_30_7",
+  "control_database": "control.db",
+  "dataset_store_root": "data/store",
+  "canonical_dataset_id": "ds_b92eb297f62313d9b0c7efc7dde5d6434891ae2dc37ea5e0cd7a8830bda2552f",
   "source_dataset_ids": [
     "ds_aee4c2593b2788c62f7357cb0cb62fb0d44d7770939dbf552f7785f5b3a9702a",
     "ds_5213c9c90343976f0def5371ad427834802eefc0753d868928f5659c9d423404",
@@ -12,9 +17,19 @@
     "ds_0be8230394cf8439e9f31a85dbc97e7f31626af01077eca709978d33564ddd70",
     "ds_6f12e29550021395b33e504e652dd93ac0e61102b0fe443909f7593d8bd39d4f"
   ],
-  "canonical_dataset_id": "ds_b92eb297f62313d9b0c7efc7dde5d6434891ae2dc37ea5e0cd7a8830bda2552f",
-  "total_bar_count": 5430,
   "symbols_covered": [
+    "XBTUSD",
+    "ETHUSD",
+    "SOLUSD",
+    "XRPUSD",
+    "ADAUSD",
+    "AVAXUSD",
+    "DOTUSD",
+    "LINKUSD",
+    "LTCUSD",
+    "BCHUSD"
+  ],
+  "venue_symbols": [
     "BTCUSDT",
     "ETHUSDT",
     "SOLUSDT",
@@ -26,7 +41,20 @@
     "LTCUSDT",
     "BCHUSDT"
   ],
-  "gate_status": "OK",
+  "session_start": "2026-04-11T00:00:00+00:00",
+  "session_end": "2026-05-30T00:00:00+00:00",
+  "observation_start": "2026-04-01T00:00:00+00:00",
+  "observation_end": "2026-05-30T00:00:00+00:00",
+  "duration_days": 59.0,
+  "decision_count": 8,
+  "total_trades_executed": 80,
+  "initial_cash": 100000.0,
+  "final_cash": 101374.5,
+  "final_equity": 101374.5,
+  "total_net_return": 0.013745,
+  "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
+  "meets_risk_limits": false,
+  "live_gate_satisfied": true,
   "live_eligible": false,
-  "generated_at": "2026-07-23T14:52:07.926037+00:00"
+  "generated_at": "2026-07-23T14:52:14.315679+00:00"
 }
