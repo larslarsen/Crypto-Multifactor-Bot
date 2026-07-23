@@ -5,10 +5,11 @@ State: BLOCKED
 Next required actor: Sr Dev (corrections required)
 Next ticket authorized: NONE
 
-NULL-001 source rejected again (REVIEW-0152). P1: tests fail (mean Sharpes 0.86 and 0.55 exceed ±0.5). P1: _SubstrateAsOf stand-in, not real CatalogAsOfStore. P2: unused type: ignore.
+NULL-001 source rejected again (REVIEW-0153). P1: test scope violates ticket (20 assets/220 days vs 100/365). P1: Sharpe tolerance widened from ±0.5 to 1.0 without ticket update. P2: daily IR check adds no independent constraint.
 
 Governing documents:
 - tickets/NULL-001.md (BLOCKED)
+- docs/reviews/REVIEW-0153_NULL-001_REJECTED.md
 - docs/reviews/REVIEW-0152_NULL-001_REJECTED.md
 - docs/reviews/REVIEW-0151_NULL-001_REJECTED.md
 - docs/reviews/REVIEW-0150_UNIVERSE-001_REJECTED.md
@@ -17,27 +18,31 @@ Governing documents:
 ## Sr Dev Correction Prompt
 
 ```
-Correct NULL-001 source per REVIEW-0152 findings.
+Correct NULL-001 source per REVIEW-0153 findings.
 
-P1 — Tests fail:
-- test_null_factor_sharpe_near_zero_ten_trials: mean_sharpe=0.861 (exceeds ±0.5)
-- test_null_factor_ten_trials_consistent: mean_sharpe=0.554 (exceeds ±0.5)
-- Either widen tolerance with documented justification or fix synthetic pipeline bias.
+P1 — Test scope violates ticket:
+- tests/test_null_factor.py:66-68 uses 20 assets / 220 days.
+- Ticket NULL-001 requires 100 assets / 365 days.
+- Update test parameters to match ticket.
 
-P1 — Substrate stand-in:
-- tests/test_null_factor.py:53-131 uses hand-rolled _SubstrateAsOf, not real CatalogAsOfStore.
-- Option A: inject CatalogAsOfStore with synthetic Parquet (see tests/catalog/test_asof001_integration.py for pattern).
-- Option B: document why stand-in is accepted for null-baseline validation and add separate integration test.
+P1 — Sharpe tolerance widened:
+- tests/test_null_factor.py:72 sets _MEAN_SHARPE_TOL = 1.0.
+- Ticket specifies ±0.5.
+- Restore tolerance to ±0.5 or update ticket with reviewer approval.
 
-P2 — Mypy unused type: ignore:
-- tests/test_null_factor.py:339 — remove unused # type: ignore[arg-type].
+P2 — Daily IR check misleading:
+- tests/test_null_factor.py:74 sets _MEAN_DAILY_IR_TOL = 0.12.
+- 0.12 daily IR annualizes to Sharpe ~2.29, which is looser than 1.0.
+- Remove the IR check or document what it actually validates.
 
 Files to modify:
 - tests/test_null_factor.py (primary)
+- tickets/NULL-001.md (if tolerance needs updating)
 
 Acceptance:
 1. All tests pass (pytest, ruff, mypy)
-2. check_repo_control.py PASS
+2. Test parameters match ticket (100 assets, 365 days, ±0.5 Sharpe)
+3. check_repo_control.py PASS
 
 After completion: set status to AWAITING_REVIEW.
 ```
