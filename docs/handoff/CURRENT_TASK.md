@@ -1,32 +1,32 @@
 # CURRENT_TASK
 
-Ticket: DATA-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review canonical bars and real as-of paper path
-Next ticket authorized: NONE
+Ticket: DATA-003  
+State: READY  
+Next required actor: Sr Dev (Strong Model) — real as-of path correctness  
+Next ticket authorized: DATA-003  
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-DATA-001 ACCEPTED (REVIEW-0184). Fetcher → RAW-001 → MAN-001 source path works. Canonical bars, as-of eligibility, and real paper path deferred.
+DATA-002 ACCEPTED (REVIEW-0185). Canonical dry-run path and report OK. Real paper path not yet trustworthy.
 
-Authorizing **DATA-002**:
-1. Source dataset → `VerifiedSourceBarDataset` → `publish_canonical_bars` → MAN-001
-2. Wire `CatalogAsOfStore` / paper non-dry-run to real published bars (fail closed)
-3. Report artifact `11_REAL_DATA_PATH_REPORT.json` with `live_eligible: false`
-4. Tests: mocked E2E + paper fail-closed
+Authorizing **DATA-003**:
+1. `CatalogAsOfStore(..., dataset_store_root=...)` + fail closed
+2. Symbol map Binance ↔ paper universe
+3. Required tests (E2E canonical + paper fail-closed; no bare except)
+4. Watermark + correctness artifact; `live_eligible: false`
 
-**Policy:** No LIVE. LIVE blocked until paper profitable on real data.
+**Policy:** No LIVE. LIVE blocked until paper profitable on real as-of data.
 
 ## Governing documents
 
-- tickets/DATA-002.md (READY)
-- tickets/DATA-001.md (ACCEPTED)
-- docs/reviews/REVIEW-0184_DATA-001_ACCEPTED.md
+- tickets/DATA-003.md (READY)
+- tickets/DATA-002.md (ACCEPTED)
+- docs/reviews/REVIEW-0185_DATA-002_ACCEPTED.md
 
 ## Acceptance (Jr)
 
 1. .venv/bin/python -m pytest tests/acquisition/ tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/acquisition src/cryptofactors/execution scripts/research/
+2. .venv/bin/python -m ruff check src/cryptofactors/acquisition src/cryptofactors/execution scripts/
 3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/acquisition src/cryptofactors/execution
-4. Dry-run canonical dataset + report
+4. Fail-closed tests + report
 5. python3 scripts/check_repo_control.py
