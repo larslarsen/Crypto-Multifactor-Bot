@@ -3,6 +3,7 @@
 import tempfile
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,10 @@ import pytest
 from cryptofactors.execution import (
     FactorDrivenPaperLoop,
     UnapprovedArtifactError,
+)
+from cryptofactors.execution.risk_limits import (
+    compute_live_gate_satisfied,
+    enforce_risk_limits,
 )
 from cryptofactors.factors.tsmom import TimeSeriesMomentumFactor
 from cryptofactors.promotion import (
@@ -270,8 +275,8 @@ def test_observation_incomplete_when_window_short() -> None:
         assert res.observation_result.is_complete is False
 
 
-def test_risk_breach_when_single_asset_weight_exceeds_limit() -> None:
-    """PAPER-002: Observation reports meets_risk_limits=False when single-asset weight > 0.15."""
+def test_risk_limits_enforced_even_with_small_universe() -> None:
+    """PAPER-006: With 4 assets raw weights are 0.25, but enforcement clips to 0.15 and scales."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "control.db"
         registry = PromotionRegistry(db_path)
@@ -279,7 +284,7 @@ def test_risk_breach_when_single_asset_weight_exceeds_limit() -> None:
         eff_time = datetime(2026, 4, 1, tzinfo=UTC)
         promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
 
-        # 4 assets -> single asset weight is 0.25 > 0.15 limit
+        # 4 assets -> raw single asset weight is 0.25, but enforcement should cap it.
         universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
         store = _StubPriceStore(universe)
         factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
@@ -302,4 +307,73 @@ def test_risk_breach_when_single_asset_weight_exceeds_limit() -> None:
         )
 
         assert res.observation_result is not None
-        assert res.observation_result.meets_risk_limits is False
+        assert res.observation_result.meets_risk_limits is True
+        assert res.observation_result.max_single_asset_weight <= Decimal("0.15")
+        assert res.observation_result.max_leverage_observed <= Decimal("1.0")
+
+
+# ---------------------------------------------------------------------------
+# PAPER-006 — Risk enforcement helpers
+# ---------------------------------------------------------------------------
+
+
+class TestRiskLimitEnforcement:
+    """Unit tests for clip-and-renormalize risk enforcement."""
+
+    def test_single_weight_clipped_to_cap(self) -> None:
+        weights = {"BTC": 0.5}
+        out = enforce_risk_limits(weights)
+        assert abs(out["BTC"]) == pytest.approx(0.15)
+
+    def test_gross_scaled_after_clipping(self) -> None:
+        # Two weights at 0.5 -> gross 1.0, after clip each at 0.15 -> gross 0.3
+        weights = {"BTC": 0.5, "ETH": 0.5}
+        out = enforce_risk_limits(weights)
+        assert abs(out["BTC"]) == pytest.approx(0.15)
+        assert abs(out["ETH"]) == pytest.approx(0.15)
+        assert sum(abs(w) for w in out.values()) == pytest.approx(0.3)
+
+    def test_long_short_balanced_unchanged_when_compliant(self) -> None:
+        weights = {"BTC": 0.1, "ETH": 0.1, "SOL": -0.1, "XRP": -0.1}
+        out = enforce_risk_limits(weights)
+        assert out == pytest.approx(weights)
+
+    def test_excess_gross_scaled_uniformly(self) -> None:
+        # 10 assets at 0.15 -> gross 1.5, scale to 1.0 -> each 0.10
+        weights = {f"A{i}": 0.15 for i in range(10)}
+        out = enforce_risk_limits(weights)
+        assert sum(abs(w) for w in out.values()) == pytest.approx(1.0)
+        for w in out.values():
+            assert w == pytest.approx(0.1)
+
+    def test_negative_weights_clipped(self) -> None:
+        weights = {"BTC": -0.4, "ETH": -0.6}
+        out = enforce_risk_limits(weights)
+        assert out["BTC"] == pytest.approx(-0.15)
+        assert out["ETH"] == pytest.approx(-0.15)
+        assert sum(abs(w) for w in out.values()) == pytest.approx(0.3)
+
+    def test_zero_weights_dropped(self) -> None:
+        weights = {"BTC": 0.0, "ETH": 0.1}
+        out = enforce_risk_limits(weights)
+        assert "BTC" not in out
+        assert out["ETH"] == pytest.approx(0.1)
+
+
+class TestComputeLiveGateSatisfied:
+    """Unit tests for honest live_gate_satisfied predicate."""
+
+    def test_all_prongs_true(self) -> None:
+        assert compute_live_gate_satisfied("real_asof", 0.01, True, True) is True
+
+    def test_fails_when_synthetic(self) -> None:
+        assert compute_live_gate_satisfied("synthetic", 0.01, True, True) is False
+
+    def test_fails_when_return_negative(self) -> None:
+        assert compute_live_gate_satisfied("real_asof", -0.01, True, True) is False
+
+    def test_fails_when_risk_not_met(self) -> None:
+        assert compute_live_gate_satisfied("real_asof", 0.01, False, True) is False
+
+    def test_fails_when_incomplete(self) -> None:
+        assert compute_live_gate_satisfied("real_asof", 0.01, True, False) is False

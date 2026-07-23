@@ -277,7 +277,7 @@ def test_drawdown_alert_callback_triggers() -> None:
             def get_prices_at(self, dt: datetime, universe: Sequence[str]) -> dict[str, float]:
                 if dt < datetime(2026, 5, 1, tzinfo=UTC):
                     return {"BTC": 50000.0}
-                return {"BTC": 30000.0}
+                return {"BTC": 10000.0}
 
         store = MockDroppingStore()
         factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds1")

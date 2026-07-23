@@ -1,7 +1,7 @@
 # PAPER-006 — Risk-Compliant Real Paper Gate
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** PAPER-005 (ACCEPTED), DATA-003 (ACCEPTED)  
 **Layer:** execution / portfolio allocation / research evidence  
 **Architecture:** tighten paper path risk; **no LIVE orders; live_eligible stays false** unless all gate prongs met (still no LIVE promotion without separate LIVE ticket).

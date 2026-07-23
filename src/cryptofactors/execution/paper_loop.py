@@ -14,7 +14,9 @@ from decimal import Decimal
 from typing import Any
 
 from cryptofactors.execution.errors import PaperExecutionError
+from cryptofactors.execution.live import MAX_GROSS_LEVERAGE, MAX_SINGLE_ASSET_WEIGHT
 from cryptofactors.execution.paper import PaperBroker
+from cryptofactors.execution.risk_limits import enforce_risk_limits
 from cryptofactors.portfolio.perpetual_simulation import LongShortRankAllocator
 from cryptofactors.portfolio.simulation import SimulationPeriod, SimulationResult
 from cryptofactors.promotion import PromotionError, PromotionRegistry, PromotionTarget
@@ -71,6 +73,8 @@ class FactorDrivenPaperLoop:
         max_drawdown_threshold: float = 0.10,
         alert_callback: Callable[[str, float, float], None] | None = None,
         resume_from_store: bool = True,
+        max_single_weight: float = MAX_SINGLE_ASSET_WEIGHT,
+        max_gross_leverage: float = MAX_GROSS_LEVERAGE,
     ) -> None:
         self.model_artifact_id = model_artifact_id
         self.promotion_registry = promotion_registry
@@ -80,6 +84,8 @@ class FactorDrivenPaperLoop:
         self.initial_cash = initial_cash
         self.max_drawdown_threshold = max_drawdown_threshold
         self.alert_callback = alert_callback
+        self.max_single_weight = max_single_weight
+        self.max_gross_leverage = max_gross_leverage
 
         # PaperBroker verifies PAPER_APPROVED state on init and fails closed if unapproved
         self.broker = PaperBroker(
@@ -120,7 +126,11 @@ class FactorDrivenPaperLoop:
 
             # 2. Allocate target weights from factor scores
             dec_weights = self.allocator.allocate(frame.values)
-            target_weights = {k: float(v) for k, v in dec_weights.items()}
+            target_weights = enforce_risk_limits(
+                {k: float(v) for k, v in dec_weights.items()},
+                max_gross_leverage=self.max_gross_leverage,
+                max_single_weight=self.max_single_weight,
+            )
 
             gross_leverage = sum(abs(w) for w in target_weights.values())
             max_single_weight = max((abs(w) for w in target_weights.values()), default=0.0)
