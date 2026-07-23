@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from cryptofactors.ingest.bitmex_funding import (
+    BITMEX_FUNDING_SCHEMA,
+    BitMEXFundingClient,
+    BitMEXFundingError,
+    BitMEXFundingProvider,
+    build_funding_table,
+    normalize_funding_record,
+)
 from cryptofactors.ingest.legacy_local import (
     ClassificationRule,
     DuplicateGroup,
@@ -81,6 +89,12 @@ __all__ = [
     "SqliteRawObjectCatalog",
     "content_addressed_relative_path",
     "reconcile_orphan_temps",
+    "BITMEX_FUNDING_SCHEMA",
+    "BitMEXFundingClient",
+    "BitMEXFundingError",
+    "BitMEXFundingProvider",
+    "build_funding_table",
+    "normalize_funding_record",
     "ClassificationRule",
     "DuplicateGroup",
     "EntryType",

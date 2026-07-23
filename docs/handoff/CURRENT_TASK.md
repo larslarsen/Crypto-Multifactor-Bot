@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: FUND-005
-State: READY
-Next required actor: Sr Dev (Strong Model) — implementation of BitMEX funding ingestion
-Next ticket authorized: FUND-005
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review BitMEX funding cashflow provider
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
