@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: UNIVERSE-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Strong Model) — code review of Sr Dev implementation
+State: ACCEPTED
+Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
 Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Authorization):**

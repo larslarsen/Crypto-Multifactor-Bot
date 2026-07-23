@@ -1,7 +1,7 @@
 # UNIVERSE-002 — Birdeye DEX New-Listing Event Feed
 
 **Priority:** P1
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Decision:** AUTHORIZED
 **Dependencies:** ASOF-001 (accepted), REF-001 (accepted substrate), UNIVERSE-001 (accepted), EXP-001 (accepted)
 **Layer:** universe / event source
