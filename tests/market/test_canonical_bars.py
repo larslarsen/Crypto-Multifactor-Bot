@@ -253,9 +253,9 @@ def _publish(tmp_path: Path, sources, *, native_daily=None, **kwargs) -> Canonic
 # Item 1: module header is v5 (asserted by file docstring above);
 # plus transform-version constant confirmation in a real publish.
 # ------------------------------------------------------------------
-def test_transform_version_constant_is_v5() -> None:
+def test_transform_version_constant_is_v6() -> None:
     from cryptofactors.market.bars import CANONICAL_BAR_TRANSFORM_VERSION
-    assert CANONICAL_BAR_TRANSFORM_VERSION == "5"
+    assert CANONICAL_BAR_TRANSFORM_VERSION == "6"
 
 
 # ------------------------------------------------------------------
@@ -1159,3 +1159,23 @@ def test_whitespace_equivalent_daily_source_timeframe_identity(tmp_path: Path) -
     res_strict = build("1m")
     res_whitespace = build(" 1m ")
     assert res_strict.publish_plan.config.config_sha256 == res_whitespace.publish_plan.config.config_sha256
+
+
+def test_native_daily_1d_source_promotes_pass(tmp_path: Path) -> None:
+    """DATA-005: native 1d source bars are promoted directly to daily without resampling."""
+    base = _us(datetime(2025, 1, 1, tzinfo=UTC))
+    rows = [_source_row(base + i * 86_400_000_000, interval="1d") for i in range(3)]
+    src = _source_dataset(
+        tmp_path,
+        rows=rows,
+        relative_path="d1/bars.parquet",
+        interval="1d",
+        dataset_id="ds_native_1d",
+    )
+    res = _publish(tmp_path, [src])
+    assert res.publish_plan.quality_status is QualityStatus.PASS
+    assert len(res.daily_paths) == 1
+    daily = pq.read_table(str(res.daily_paths[0]))
+    assert daily.num_rows == 3
+    assert all(tf == "1d" for tf in daily.column("timeframe").to_pylist())
+    assert not any(i.severity.name == "ERROR" for i in res.issues)

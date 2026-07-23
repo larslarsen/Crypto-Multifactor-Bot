@@ -63,7 +63,7 @@ MARKET_BARS_DATASET_TYPE = "market_bars"
 CANONICAL_BAR_SCHEMA_NAME = "market_bar"
 CANONICAL_BAR_SCHEMA_VERSION = "2"
 CANONICAL_BAR_TRANSFORM_NAME = "canonical_bar_publisher"
-CANONICAL_BAR_TRANSFORM_VERSION = "5"
+CANONICAL_BAR_TRANSFORM_VERSION = "6"
 
 # Accepted BIN-001 source identity (BAR-001 currently depends on this contract only).
 _SUPPORTED_SOURCE_DATASET_TYPE = "binance_kline_source"
@@ -104,7 +104,8 @@ _FIXED_INTERVALS: dict[str, timedelta] = {
     "1w": timedelta(weeks=1),
 }
 
-# Sub-day intervals that exactly divide 24h — only these may feed daily resampling.
+# Intervals that may feed daily resampling: sub-day intervals that exactly divide
+# 24h, plus native 1d bars (promoted directly without resampling).
 _DAILY_RESAMPLE_INTERVALS = frozenset(
     {
         "1s",
@@ -119,6 +120,7 @@ _DAILY_RESAMPLE_INTERVALS = frozenset(
         "6h",
         "8h",
         "12h",
+        "1d",
     }
 )
 

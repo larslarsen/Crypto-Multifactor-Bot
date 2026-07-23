@@ -1,0 +1,135 @@
+{
+  "experiment_id": "DATA-005",
+  "data_mode": "real_asof",
+  "approach": "A",
+  "approach_note": "Extended BAR-001 daily eligibility to include native 1d source bars. 1d source rows are now treated as complete daily bars and promoted directly to the daily partition without sub-day resampling.",
+  "old_canonical_dataset_id": "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
+  "old_canonical_quality_status": "REJECTED",
+  "new_canonical_dataset_id": "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa",
+  "new_canonical_quality_status": "PASS",
+  "source_dataset_ids": [
+    "ds_1acde2d4117425c258f7263305a86e19895a1f9b56b088e2a943900e82907925",
+    "ds_1f56852890a22fe787adfad67765ba2af63b02634f6d849ef3c2fc432b80d45a",
+    "ds_3287907e249843f6bf762b6c4326fef71d70d11cbaccf7ca548b338348a0c128",
+    "ds_3e17ee388bde9eb7fba684275932675d9f5937bd2032eb89c2a79f566e511173",
+    "ds_5f30c41aa294f2fc8e768ee57dbc048bc701e601b32b54faf06f72bcf823814e",
+    "ds_6ab3c403aab813264a167085c5349b6b2cab5e2763db911be32635e6448c817e",
+    "ds_adf00660b948d26f0caafe4092c93994d15c2f7378340adb3c7e476cba90bbc0",
+    "ds_bb8da50d1df861ea9599906d22cccee0be40cad66a6848bbbcebda237b277166",
+    "ds_e0ba72a27675a02096c95422fdbd14ebf37c1580658bdd3c74fd58d00e67fa8e",
+    "ds_fa9aff92e81ec9a7828b7168cbe50a0ef3173af4f4af442775d6d6bfdc6c1d47"
+  ],
+  "store_root": "data/exp003_store",
+  "db_path": "exp003.db",
+  "bar_start": "2024-01-01T00:00:00+00:00",
+  "bar_end": "2026-07-23T00:00:00+00:00",
+  "span_days": 934,
+  "span_months": 30.69,
+  "total_bar_count": 18700,
+  "symbols_covered": [
+    "ADAUSD",
+    "AVAXUSD",
+    "BCHUSD",
+    "DOTUSD",
+    "ETHUSD",
+    "LINKUSD",
+    "LTCUSD",
+    "SOLUSD",
+    "XBTUSD",
+    "XRPUSD"
+  ],
+  "per_symbol": [
+    {
+      "paper_symbol": "XBTUSD",
+      "instrument_id": 1,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "ETHUSD",
+      "instrument_id": 2,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "SOLUSD",
+      "instrument_id": 3,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "XRPUSD",
+      "instrument_id": 4,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "ADAUSD",
+      "instrument_id": 5,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "AVAXUSD",
+      "instrument_id": 6,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "DOTUSD",
+      "instrument_id": 7,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "LINKUSD",
+      "instrument_id": 8,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "LTCUSD",
+      "instrument_id": 9,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    },
+    {
+      "paper_symbol": "BCHUSD",
+      "instrument_id": 10,
+      "row_count": 1870,
+      "bar_start": "2024-01-01T00:00:00+00:00",
+      "bar_end": "2026-07-23T00:00:00+00:00"
+    }
+  ],
+  "frozen_config_note": "tsmom_14_3 parameters remain unchanged; this is a dataset-quality fix only.",
+  "live_eligible": false,
+  "live_eligible_note": "DATA-005 is a quality-clearing dataset ticket; no LIVE authorization.",
+  "cross_references": [
+    "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json",
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json"
+  ],
+  "prior_artifacts": [
+    "research/sprint_004/13_REAL_PAPER_SESSION.json",
+    "research/sprint_004/14_RISK_COMPLIANT_PAPER_SESSION.json",
+    "research/sprint_004/15_MOMTS_RISK_DIAGNOSIS.json",
+    "research/sprint_004/16_MOMTS_LONG_SESSION.json",
+    "research/sprint_004/17_NEUTRAL_RISK_SESSION.json",
+    "research/sprint_004/18_TSMOM_GRID_RESULTS.json",
+    "research/sprint_004/19_TSMOM_OOS_VALIDATION.json",
+    "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json",
+    "research/sprint_004/21_TSMOM_EXTENDED_OOS.json",
+    "research/sprint_004/22_TSMOM_14_0_PAPER_SESSION.json",
+    "research/sprint_004/23_TSMOM_FULLWINDOW_SCREEN.json",
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json"
+  ],
+  "generated_at": "2026-07-23T22:56:11.310405+00:00"
+}

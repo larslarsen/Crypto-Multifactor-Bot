@@ -1,7 +1,7 @@
 # DATA-005 — Quality-Cleared Bars for Frozen TSMOM Candidate Path
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** PAPER-008 (ACCEPTED), DATA-004, BAR-001  
 **Layer:** market bars / catalog quality / acquisition  
 **Architecture:** fix or extend BAR-001 path so frozen-candidate research can cite **non-REJECTED** `market_bars`. **No LIVE. No lookback/skip changes.**

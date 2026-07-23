@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: DATA-005
-State: READY
-Next required actor: Sr Dev (Strong Model) — quality-cleared market bars
-Next ticket authorized: DATA-005
+State: AWAITING_REVIEW
+Next required actor: Reviewer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
