@@ -10,6 +10,12 @@ from cryptofactors.validation.labels import (
     LabelError,
     LabelType,
 )
+from cryptofactors.validation.experiment import (
+    ExperimentBundle,
+    ExperimentError,
+    ExperimentRegistry,
+    InMemoryExperimentRegistry,
+)
 from cryptofactors.validation.split import (
     AsOfDataAccess,
     ChronologicalSplitter,
@@ -28,6 +34,10 @@ __all__ = [
     "ChronologicalSplitter",
     "DecisionEvent",
     "EventInterval",
+    "ExperimentBundle",
+    "ExperimentError",
+    "ExperimentRegistry",
+    "InMemoryExperimentRegistry",
     "LabelConfig",
     "LabelEngine",
     "LabelError",
