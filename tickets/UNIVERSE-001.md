@@ -1,34 +1,34 @@
 # UNIVERSE-001 — CoinGecko Survivorship-Free Universe Provider
 
 **Priority:** P0
-**Status:** BLOCKED
+**Status:** ACCEPTED
+**Decision:** Option C — Bounded non-survivorship-free universe with current BAR-001 instruments
+**Rationale:** CoinGecko doesn't provide listing/delisting dates (even on paid plans). $35/mo Basic gives 2yr price history but not historical membership. CoinMarketCap needed for true survivorship-free.
 **Dependencies:** ASOF-001 (accepted), BAR-001 (accepted), EXP-001 (accepted)
 **Layer:** universe
 **Architecture:** implements research substrate gate item #11 (historical universe snapshots); no ADR required
 
 ## Objective
 
-Provide a point-in-time universe of crypto instruments using CoinGecko's free tier. Include both active and delisted coins to avoid survivorship bias. Use existing BAR-001 price data for market bars; CoinGecko provides only the universe membership (which instruments existed at each point in time).
+Provide a point-in-time universe of crypto instruments. **Revised:** Use current BAR-001 instruments without survivorship-free guarantee. Accept survivorship bias for initial experiments (#18, #19). Upgrade to CoinMarketCap ($79-299/mo) when proper survivorship-free research is needed.
 
 ## Required Contract
 
-- `CoinGeckoUniverseProvider` fetches full coin list (active + delisted) from CoinGecko `/coins/list?status=inactive`
-- `universe_at(decision_time)` returns all instruments that were listed at `decision_time` (listing_date <= decision_time)
-- Delisted instruments included up to their last known active date
-- Store universe snapshots in the control catalog (MAN-001 compatible)
+- `universe_at(decision_time)` returns instruments from current BAR-001 data
+- **Note:** This is NOT survivorship-free. Delisted coins are missing.
+- Future upgrade: CoinMarketCap historical snapshots for proper survivorship-free universe
 - Deterministic: same inputs → same universe
-- Fail-closed on API errors or missing data
+- Fail-closed on missing data
 
 ## Data Source
 
-- CoinGecko free tier: `/coins/list?include_platform=false&status=active,inactive`
-- Returns: id, symbol, name, (active/inactive status)
-- Limitation: 365 days of OHLCV history only (close/volume/market_cap)
-- Price data comes from existing BAR-001 (Binance/Bybit bars)
+- Current BAR-001 instruments (Binance/Bybit bars)
+- **No historical membership reconstruction** (requires CoinMarketCap or similar)
+- Future: CoinMarketCap ($79/mo for 3yr, $299/mo for all-time)
 
 ## Deliverables
 
-- `src/cryptofactors/universe/coingecko.py` (or similar)
+- `src/cryptofactors/universe/bar001.py` (or similar)
 - Public exports from `cryptofactors.universe`
 - Ticket + governance
 - Tests + gates (Jr)
@@ -38,7 +38,16 @@ Provide a point-in-time universe of crypto instruments using CoinGecko's free ti
 - Full historical OHLCV (requires paid plan, future upgrade)
 - Factor computation
 - Portfolio simulation
-- New data sources beyond CoinGecko universe list
+- New data sources beyond BAR-001 instruments
+- Historical membership reconstruction (requires CoinMarketCap)
+
+## Upgrade Path
+
+When proper survivorship-free research is needed:
+1. Subscribe to CoinMarketCap ($79-299/mo)
+2. Implement historical universe snapshots
+3. Upgrade UNIVERSE-001 to use CoinMarketCap data
+4. Re-run experiments with survivorship-free universe
 
 ## Acceptance (Jr)
 

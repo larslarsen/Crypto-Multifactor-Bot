@@ -1,33 +1,51 @@
 # CURRENT_TASK
 
-Ticket: UNIVERSE-001
-State: BLOCKED
-Next required actor: Reviewer (decision required)
+Ticket: NULL-001
+State: READY
+Next required actor: Sr Dev (Grok Build)
 Next ticket authorized: NONE
 
-Sr source rejected (not yet reviewed by strong engineering model). P0 findings:
-1. CoinGecko free tier restricts inactive-coin access — required active+inactive fetch infeasible free.
-2. No listing/delisting dates in free API — historical membership reconstruction impossible.
-3. Published coingecko_universe dataset incompatible with CatalogAsOfStore (market bars/reference only).
-4. Network access in universe layer violates NETWORK_ALLOWED boundary.
+Reviewer decision recorded: UNIVERSE-001 accepted with Option C (bounded non-survivorship-free universe with current BAR-001 instruments). CoinGecko doesn't provide listing/delisting dates. CoinMarketCap needed for true survivorship-free.
 
 Governing documents:
-- tickets/UNIVERSE-001.md (BLOCKED)
-- docs/reviews/REVIEW-0149_UNIVERSE-001_AUTHORIZED.md
+- tickets/NULL-001.md (READY)
+- tickets/UNIVERSE-001.md (ACCEPTED, Option C)
 - docs/reviews/REVIEW-0150_UNIVERSE-001_REJECTED.md
+- docs/reviews/REVIEW-0148_EXP-001_ACCEPTED.md
 
-## Reviewer decision required
+## Sr Dev Prompt
 
-Three options for unblocking universe construction:
+```
+Implement NULL-001: Null factor test for experiment #18.
 
-A) **Prospective free snapshots only** — accept current free API, accumulate snapshots forward. No historical universe reconstruction. Bounded by what we can capture from today.
+Goal: Test that a random/unpredictable factor has no edge.
 
-B) **Paid historical source** — use CoinGecko Analyst ($129/mo) or similar for full historical universe. Requires budget decision.
+Requirements:
+1. `NullFactor` class implementing minimal factor protocol
+2. `NullFactor.compute(universe, as_of)` returns random noise values
+3. No signal, no edge
+4. Test: null factor Sharpe ratio should be ~0 (within ±0.5)
+5. Test: null factor win rate should be within 45-55%
+6. Run 10 trials, check consistency
 
-C) **Bounded non-survivorship-free universe** — use current BAR-001 instruments for experiments. Accept survivorship bias for initial research. Fastest path to functionality.
+Reference implementations:
+- EXP-001: src/cryptofactors/validation/experiment.py (ExperimentBundle, fingerprinting)
+- LABEL-001: src/cryptofactors/validation/labels.py (AsOfLabelEngine)
+- ASOF-001: src/cryptofactors/catalog/as_of.py (CatalogAsOfStore)
 
-No next ticket authorized. No further work on UNIVERSE-001 until Reviewer selects option.
+Files to create:
+- src/cryptofactors/factors/null.py
+- tests/test_null_factor.py
+
+Acceptance:
+1. All tests pass
+2. ruff clean
+3. mypy clean
+4. check_repo_control.py PASS
+
+After completion: set status to AWAITING_REVIEW.
+```
 
 ## Stop condition
 
-Reviewer selects option, updates ticket status, authorizes next work. No commits until decision.
+Sr Dev produces source, stops for Reviewer. No commits until Reviewer accepts.
