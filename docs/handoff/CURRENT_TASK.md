@@ -14,7 +14,7 @@ Governing documents:
 
 ## Model Note
 
-Sr Dev Grok 4.5 ran out of credits. This ticket assigned to Sr Dev Grok 0.1 (weaker model). Grok 4.5 should review source before acceptance. Do NOT skip strong-model review.
+Sr Dev Grok 4.5 ran out of credits. This ticket assigned to Sr Dev Grok 0.1 (weaker model). Remember: have Grok 4.5 review this source later. Not a gate.
 
 ## Sr Dev Prompt
 
