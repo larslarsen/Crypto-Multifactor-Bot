@@ -1,7 +1,7 @@
 # EXEC-001 — Paper Execution Runtime (Sequence #25)
 
 **Priority:** P1
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** PROMO-001 (Promotion Registry), PORT-001 (Costed Simulation)
 **Layer:** execution
 **Architecture:** Implements step #25 (Paper Execution Runtime). No ADR required as it follows the existing execution architecture separation.

@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: EXEC-001
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review Sr Dev implementation
+State: ACCEPTED
+Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
 Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
@@ -13,7 +13,7 @@ This transitions our evaluation capability from purely historical backtesting (`
 
 ## Governing documents
 
-- tickets/EXEC-001.md (AWAITING_REVIEW)
+- tickets/EXEC-001.md (ACCEPTED)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
