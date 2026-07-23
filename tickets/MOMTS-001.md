@@ -1,7 +1,7 @@
 # MOMTS-001 — MOM-TS-01 Factor + Confirmatory Run Path (EXP-2026-019 / EXP-2026-020)
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** EXP-001, BASE-001, LABEL-001, SPLIT-001, PORT-001, SERV-001, HOLDOUT-001, EXEC-001, UNIVERSE-003 (CMC proxy accepted for Aware-level)
 **Layer:** factors / experiments / research execution
 **Architecture:** Implements registered confirmatory experiments; no new ADR required. Survivorship posture locked by reviewer (see below).

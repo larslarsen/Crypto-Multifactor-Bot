@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: MOMTS-001
-State: READY
-Next required actor: Sr Dev (Strong Model) — MOM-TS-01 factor + confirmatory runner
-Next ticket authorized: MOMTS-001
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review MOM-TS-01 factor + confirmatory runner
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture — Research Execution Path):**
 
@@ -26,7 +26,7 @@ registry status off `BLOCKED_DATA` when code lands.
 
 ## Governing documents
 
-- tickets/MOMTS-001.md (READY)
+- tickets/MOMTS-001.md (AWAITING_REVIEW)
 - research/sprint_004/factor_cards/MOM-TS-01_time_series_momentum.md
 - research/sprint_004/05_EXPERIMENT_REGISTRATIONS.csv
 - research/sprint_004/01_MOMENTUM_OPERATIONALIZATION.md
