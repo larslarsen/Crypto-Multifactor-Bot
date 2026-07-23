@@ -2,7 +2,7 @@
 
 Ticket: PROMO-001
 State: ACCEPTED
-Next required actor: Jr Dev (Weak Model) — gates, records, commit, push
+Next required actor: Lead Quant (Strong Model) — next-ticket selection
 Next ticket authorized: NONE
 
 **Reviewer Decision (Authorization):**
@@ -18,7 +18,7 @@ I am formally unblocking and authorizing **PROMO-001** (Explicit Paper Promotion
 
 ## Governing documents
 
-- tickets/PROMO-001.md (READY)
+- tickets/PROMO-001.md (ACCEPTED)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
