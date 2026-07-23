@@ -96,7 +96,7 @@ def observation_eligible(
     """Observation row eligibility at decision time ``t`` (UTC µs).
 
     Requires ``availability_time <= t``. When valid bounds are supplied:
-    ``valid_from <= t < valid_to`` (open upper bound when ``valid_to`` is None).
+    ``valid_from <= t <= valid_to`` (closed upper bound when ``valid_to`` is None).
     """
     if availability_time_us is None:
         return False
@@ -104,7 +104,7 @@ def observation_eligible(
         return False
     if valid_from_us is not None and valid_from_us > decision_time_us:
         return False
-    if valid_to_us is not None and decision_time_us >= valid_to_us:
+    if valid_to_us is not None and decision_time_us > valid_to_us:
         return False
     return True
 

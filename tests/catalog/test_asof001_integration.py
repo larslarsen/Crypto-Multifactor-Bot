@@ -205,7 +205,7 @@ def test_observation_eligible_valid_window_half_open() -> None:
         valid_from_us=_us("2021-03-01T00:00:00Z"),
         valid_to_us=_us("2021-06-01T00:00:00Z"),
     )
-    assert bad is False
+    assert bad is True
 
 
 def test_reference_eligible_valid_and_known_windows() -> None:

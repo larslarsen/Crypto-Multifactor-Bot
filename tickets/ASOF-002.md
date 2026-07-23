@@ -1,7 +1,7 @@
 # ASOF-002 — Fix CatalogAsOfStore Half-Open Window for Completed Bars
 
 **Priority:** P0
-**Status:** READY
+**Status:** ACCEPTED
 **Dependencies:** ASOF-001 (accepted), BAR-001 (accepted)
 **Layer:** catalog
 **Architecture:** fixes production bug; ADR required (docs/adr/ADR-001_COMPLETED_BAR_WINDOW.md)
