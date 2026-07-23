@@ -1,26 +1,25 @@
 # CURRENT_TASK
 
-Ticket: FUND-005
-State: ACCEPTED
-Next required actor: Lead Quant (Reviewer) — next ticket authorization
-Next ticket authorized: NONE
+Ticket: PORT-002
+State: READY
+Next required actor: Sr Dev (Strong Model) — implement Perpetual Long/Short Portfolio Simulator
+Next ticket authorized: PORT-002
 
-**Reviewer Decision (Code Review):**
+**Reviewer Decision (Architecture & Ticket Selection):**
 
-I have reviewed the `FUND-005` BitMEX funding implementation.
-**Decision: ACCEPT**
+The user requested: "Do whatever gets experiments happening the fastest". 
+`EXP-2026-019` and `020` are in `READY_TO_RUN` state, but they require "shortable perpetual cells" and "liquidations" which are not yet supported by our basic `PortfolioSimulator` (PORT-001). We now have BitMEX funding (FUND-005).
 
-The `BitMEXFundingClient` and `BitMEXFundingProvider` correctly implement the pagination, normalization, and cashflow semantics for BitMEX perpetuals. Inverse contract math is correct (yielding USD cashflow equivalent). All gates pass.
-
-The funding provider resolves Step #10 of the implementation sequence. We are now unblocked to introduce funding costs into the portfolio simulation for our next iteration of strategies.
+I am authorizing **PORT-002** (Perpetual Long/Short Portfolio Simulator) to bridge this final mechanical gap. Once this is implemented, the Sr Dev will update the `momts_runner.py` to run the true perpetual L/S experiment, fulfilling the registration requirements.
 
 ## Governing documents
 
-- tickets/FUND-005.md (ACCEPTED)
-- docs/reviews/REVIEW-0175_FUND-005_ACCEPTED.md
+- tickets/PORT-002.md (READY)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. python3 scripts/check_repo_control.py
-2. Commit and push the review records.
+1. .venv/bin/python -m pytest tests/portfolio/ tests/experiments/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/portfolio src/cryptofactors/experiments
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/portfolio src/cryptofactors/experiments
+4. python3 scripts/check_repo_control.py
