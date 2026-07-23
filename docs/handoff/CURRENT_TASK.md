@@ -1,27 +1,30 @@
 # CURRENT_TASK
 
 Ticket: EXP-006
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer
-Next ticket authorized: NONE
+State: IN_PROGRESS
+Next required actor: Sr Dev (Strong Model) — fix OOS observation/gate metrics; re-run 21_
+Next ticket authorized: EXP-006
 
-**Reviewer Decision (Architecture & Ticket Selection):**
+**Reviewer Decision (REVIEW-0196): CHANGES_REQUIRED**
 
-DATA-004 ACCEPTED (REVIEW-0195). Bars **2024-01-01→2026-07-23** (~30.7m). Quality REJECTED is structural for native 1d BAR-001 path (same as prior research set). **No LIVE.**
+Folds 1–2 `meets_risk`/`is_complete` false because paper `effective_time=2026-04-01` makes `ProspectiveEvaluator` fail before test end; period logs show risk was enforced (max |w|=0.15, gross≤1.0). Artifact gates unusable as written.
 
-Authorizing **EXP-006**: frozen TSMOM multi-fold/long OOS on DATA-004 dataset; artifact `21_TSMOM_EXTENDED_OOS.json`; `live_eligible: false`. Do not mutate 08–20.
+## Must fix
 
-**Policy:** No LIVE.
+1. Derive research OOS `meets_risk_limits` / `is_complete` without depending on paper effective_time (period-log risk + fold completeness), **or** set effective_time ≤ each fold’s first decision and align obs window to the test fold
+2. Re-run all folds; rewrite only `21_TSMOM_EXTENDED_OOS.json`
+3. Accurate protocol name (train unused → sequential holdout, not expanding selection)
+4. `live_eligible: false`; `oos_supports_live_path` from corrected gates only
+5. No LIVE; do not mutate 08–20
 
 ## Governing documents
 
-- tickets/EXP-006.md (AWAITING_REVIEW)
-- tickets/DATA-004.md (ACCEPTED)
-- docs/reviews/REVIEW-0195_DATA-004_ACCEPTED.md
+- tickets/EXP-006.md (IN_PROGRESS)
+- docs/reviews/REVIEW-0196_EXP-006_CHANGES_REQUIRED.md
 
 ## Acceptance (Jr)
 
 1. .venv/bin/python -m pytest tests/execution/ tests/acquisition/ -q --tb=short
 2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
-3. 21_TSMOM_EXTENDED_OOS.json present
+3. 21_TSMOM_EXTENDED_OOS.json present with corrected flags
 4. python3 scripts/check_repo_control.py
