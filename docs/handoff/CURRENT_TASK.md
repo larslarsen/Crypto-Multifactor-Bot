@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXP-007
-State: READY
-Next required actor: Sr Dev (Strong Model) — full-window screen of remaining TSMOM candidates
-Next ticket authorized: EXP-007
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -15,7 +15,7 @@ Authorizing **EXP-007**: full-window paper screen for `tsmom_14_3` and `tsmom_60
 
 ## Governing documents
 
-- tickets/EXP-007.md (READY)
+- tickets/EXP-007.md (AWAITING_REVIEW)
 - tickets/PAPER-007.md (ACCEPTED)
 - docs/reviews/REVIEW-0198_PAPER-007_ACCEPTED.md
 
