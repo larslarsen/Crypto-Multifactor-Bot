@@ -12,8 +12,8 @@ Round 3 fix applied: tautological rank assertion corrected in integration test.
 
 ## Next in Sequence
 
-Experiment #21 — ML challengers. Ticket not yet written. Reviewer must
-authorize before work begins.
+ML-001 (experiment #21 — ML challengers) in READY. Ticket skeleton created.
+Sr Dev (Grok) fills technical content, then stops for reviewer.
 
 ## Governing documents
 
