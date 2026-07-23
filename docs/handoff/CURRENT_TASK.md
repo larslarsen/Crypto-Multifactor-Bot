@@ -1,29 +1,30 @@
 # CURRENT_TASK
 
 Ticket: EXEC-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review live execution routing
+State: ACCEPTED
+Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
 Next ticket authorized: NONE
 
-**Reviewer Decision (AUD-006 + Ticket Selection):**
+**Reviewer Decision:**
 
-I have reviewed `docs/reviews/AUD-006_RISK_REPORT.md` against the live codebase.
+I have reviewed `src/cryptofactors/execution/live.py` against the AUD-006 hard constraints.
 
-**AUD-006 Verdict: ACCEPT / PASS**
+**EXEC-002 Verdict: ACCEPT**
 
-Confirmed:
-- `PaperBroker` has no live credentials or exchange HTTP paths.
-- `LIVE_APPROVED` requires owner authority + paper observation reference; discovery fails closed.
-- Terminal states are sealed.
-- Gross leverage ≤ 1.0 is enforced in paper rebalance; single-asset ≤ 0.15 remains a mandatory pre-trade check for live.
+All AUD-006 constraints satisfied:
+- `LiveBroker` is fully isolated from `PaperBroker` (separate module, no shared state, no dual-mode flag).
+- `LIVE_APPROVED` gate enforced on init and every `submit_order` call; fail-closed.
+- Pre-trade risk checks (gross leverage ≤ 1.0, single-asset ≤ 0.15) run before any network call.
+- Credentials from environment only; injectable for tests.
+- Kill-switch blocks new orders; registry revocation auto-activates kill.
+- Read-only promotion registry access.
+- Mocked venue only in unit tests.
 
-No blocking FX tickets. Sequence #26 is authorized under the hard constraints recorded in `tickets/EXEC-002.md`.
-
-I am authorizing **EXEC-002** (Live Execution Routing, Sequence #26).
+Sequence #26 fully implemented and accepted.
 
 ## Governing documents
 
-- tickets/EXEC-002.md (AWAITING_REVIEW)
+- tickets/EXEC-002.md (ACCEPTED)
 - tickets/AUD-006.md (ACCEPTED)
 - docs/reviews/AUD-006_RISK_REPORT.md
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md

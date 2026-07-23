@@ -1,7 +1,7 @@
 # EXEC-002 — Live Execution Routing (Sequence #26)
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** AUD-006 (PASSED), EXEC-001 (PaperBroker), PROMO-001 (Promotion Registry)
 **Layer:** execution
 **Architecture:** Implements step #26 (Live Execution Routing). Requires explicit risk-board authorization (AUD-006).
