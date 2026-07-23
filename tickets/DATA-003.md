@@ -1,7 +1,7 @@
 # DATA-003 — Real As-Of Path Correctness
 
 **Priority:** P0  
-**Status:** IN_PROGRESS  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** DATA-002 (ACCEPTED)  
 **Layer:** catalog / execution / acquisition scripts  
 **Architecture:** fix wiring only; no LIVE; no new storage layer.

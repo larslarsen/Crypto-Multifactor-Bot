@@ -1,20 +1,19 @@
 # CURRENT_TASK
 
 Ticket: DATA-003
-State: IN_PROGRESS
-Next required actor: Sr Dev (Strong Model) — fix PaperSymbolAsOfAdapter PyArrow rewrite (REVIEW-0187)
-Next ticket authorized: DATA-003
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer (reviewer)
+Next ticket authorized: NONE
 
 **Reviewer Decision (REVIEW-0187): CHANGES_REQUIRED**
 
 B2–B4 OK. **B5 blocker:** `PaperSymbolAsOfAdapter` calls nonexistent `table.replace_column`. Factor requests `instrument_id` in fields → real factor path broken. B4 only tested `["close"]` (false green).
 
-## Must fix
+## Fixed
 
-1. Valid PyArrow column update (or skip rewrite)
-2. Test adapter with `["instrument_id", "close"]` (factor field list)
-3. Optional: factor compute smoke on temp bars
-4. No LIVE; `live_eligible: false`
+1. `PaperSymbolAsOfAdapter._maybe_translate_instrument_id` now uses `pyarrow.Table.set_column` (valid PyArrow API) instead of nonexistent `replace_column`.
+2. Added `test_adapter_translates_instrument_id_with_factor_field_list` in `tests/execution/test_paper_asof_real.py` querying `["instrument_id", "close"]` via the adapter and asserting translated string `instrument_id` and finite `close`.
+3. No LIVE; `live_eligible: false` retained.
 
 ## Governing documents
 

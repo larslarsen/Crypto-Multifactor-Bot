@@ -288,6 +288,101 @@ def test_asof_price_hit_with_int_instrument_id() -> None:
 
 
 # ---------------------------------------------------------------------------
+# B5 — Factor field list hits instrument_id column translation
+# ---------------------------------------------------------------------------
+
+
+def test_adapter_translates_instrument_id_with_factor_field_list() -> None:
+    """B5: PaperSymbolAsOfAdapter returns instrument_id + close; factor field list works."""
+    rows = _mock_kline_rows()
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=rows)
+
+    transport = httpx.MockTransport(mock_handler)
+    client = httpx.Client(transport=transport)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "control.db"
+        store_root = Path(tmpdir) / "store"
+        raw_root = store_root / "raw"
+
+        apply_migrations(db_path)
+
+        raw_catalog = SqliteRawObjectCatalog(db_path)
+        raw_writer = RawObjectWriter(RawObjectStoreConfig(root=raw_root), raw_catalog)
+
+        fetcher = BinanceKlineFetcher(raw_writer, client=client)
+        raw_obj = fetcher.fetch_and_write_raw("BTCUSDT", "1d")
+
+        stage_dir = store_root / "staged" / "BTCUSDT"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+        norm_res = normalize_binance_kline(
+            raw_objects=[raw_obj],
+            market_type="spot",
+            interval="1d",
+            venue_id="binance",
+            instrument_id="1",
+            output_dir=stage_dir,
+            code_commit="DATA-003",
+        )
+
+        config = DatasetStoreConfig(root=store_root)
+        ds_cat = SqliteDatasetCatalog(db_path)
+        publisher = DatasetPublisher(config, ds_cat)
+        source_ds = publisher.publish(norm_res.publish_plan, register_catalog=True)
+
+        local_files = {
+            f.relative_path: source_ds.dataset_path / f.relative_path
+            for f in source_ds.manifest.files
+        }
+        verified_src = VerifiedSourceBarDataset(
+            local_files=local_files,
+            manifest=source_ds.manifest,
+            receipt=source_ds.receipt,
+            venue_id="binance",
+            instrument_id=1,
+            market_type="spot",
+            interval="1d",
+            schema_variant="quote_notional",
+        )
+
+        canonical_stage = store_root / "staged" / "canonical"
+        canonical_stage.mkdir(parents=True, exist_ok=True)
+        canonical_res = publish_canonical_bars(
+            source_datasets=[verified_src],
+            output_dir=canonical_stage,
+            code_commit="DATA-003",
+        )
+
+        publisher2 = DatasetPublisher(config, SqliteDatasetCatalog(db_path))
+        canonical_ds = publisher2.publish(canonical_res.publish_plan, register_catalog=True)
+
+        adapter = PaperSymbolAsOfAdapter(
+            CatalogAsOfStore(control_database=db_path, dataset_store_root=store_root)
+        )
+        decision_time = datetime(2026, 1, 30, tzinfo=UTC)
+        tbl = adapter.latest_available(
+            canonical_ds.dataset_id,
+            ["XBTUSD"],
+            ["instrument_id", "close"],
+            decision_time,
+        )
+
+        assert tbl is not None
+        assert tbl.num_rows > 0
+        assert "instrument_id" in tbl.column_names
+        assert "close" in tbl.column_names
+
+        instrument_ids = tbl.column("instrument_id").to_pylist()
+        assert all(isinstance(v, str) for v in instrument_ids)
+        assert instrument_ids[0] == "XBTUSD"
+
+        close_val = float(tbl.column("close")[0].as_py())
+        assert close_val > 0 and close_val == pytest.approx(close_val)
+
+
+# ---------------------------------------------------------------------------
 # Fail-closed subprocess tests
 # ---------------------------------------------------------------------------
 

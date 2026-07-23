@@ -184,4 +184,5 @@ class PaperSymbolAsOfAdapter:
                     new_vals.append(v)
         if not translated:
             return table
-        return table.replace_column("instrument_id", [pa.array(new_vals, type=pa.string())])
+        idx = col_names.index("instrument_id")
+        return table.set_column(idx, "instrument_id", pa.array(new_vals, type=pa.string()))
