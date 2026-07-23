@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: HARDEN-001
-State: READY
-Next required actor: Sr Dev (Strong Model) — paper path hardening (real as-of + venue stubs)
-Next ticket authorized: HARDEN-001
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review paper path hardening and venue probe
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -30,3 +30,7 @@ Authorizing **HARDEN-001**:
 3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution
 4. Dry-run harden report path
 5. python3 scripts/check_repo_control.py
+
+## Next Pending (not yet authorized)
+
+- **DATA-001** — Live Market Data Acquisition Pipeline (Binance klines through RAW-001/MAN-001). Ticket drafted, ready for authorization once HARDEN-001 is accepted.

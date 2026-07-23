@@ -1,0 +1,13 @@
+{
+  "model_artifact_id": "mod_tsmom_30_7_v1",
+  "data_mode": "synthetic",
+  "promotion_state": "PAPER_APPROVED",
+  "gate_status": "OK",
+  "initial_cash": 100000.0,
+  "final_equity": 104894.79,
+  "total_net_return": 0.048948,
+  "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
+  "venue_probe_result": null,
+  "live_eligible": false,
+  "report_generated_at": "2026-07-23T13:31:38.354757+00:00"
+}

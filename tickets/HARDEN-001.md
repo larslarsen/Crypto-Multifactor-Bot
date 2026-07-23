@@ -1,7 +1,7 @@
 # HARDEN-001 — Paper Path Hardening (Real As-Of + Venue Stubs)
 
 **Priority:** P1
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** PAPER-004 (ACCEPTED), EXEC-002 (ACCEPTED), ASOF / catalog stack
 **Layer:** execution / catalog / ops
 **Architecture:** Hardens paper trading toward production readiness. **No LIVE promotion. No real order submission.**

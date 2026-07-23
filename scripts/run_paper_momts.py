@@ -24,9 +24,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from cryptofactors.execution.errors import PaperExecutionError
+from cryptofactors.execution.paper_harden import (
+    build_harden_report,
+    write_harden_report_artifact,
+)
 from cryptofactors.execution.paper_loop import FactorDrivenPaperLoop, PaperLoopResult
 from cryptofactors.execution.paper_monitor import PaperOpsMonitor
 from cryptofactors.execution.paper_store import PaperSessionStore
+from cryptofactors.execution.venue_probe import ReadOnlyVenueProbeAdapter
 from cryptofactors.factors.tsmom import make_tsmom_30_7
 from cryptofactors.promotion import (
     PromotionIdentityPayload,
@@ -252,9 +258,13 @@ def format_loop_result(res: PaperLoopResult) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run factor-driven paper trading loop for MOM-TS-01.")
     parser.add_argument("--db-path", type=str, default="control.db", help="Path to control SQLite DB")
+    parser.add_argument("--market-dataset-id", type=str, default="ds_market_bars", help="Market bars dataset ID")
     parser.add_argument("--dry-run", action="store_true", help="Run with temporary SQLite DB and synthetic store")
+    parser.add_argument("--venue-probe", action="store_true", help="Perform read-only venue reachability ping probe")
     parser.add_argument("--out", type=str, default="", help="Path to write JSON results summary")
     args = parser.parse_args()
+
+    data_mode = "synthetic" if args.dry_run else "real_asof"
 
     if args.dry_run:
         print("Running factor-driven paper loop in DRY-RUN mode...", file=sys.stderr)
@@ -262,6 +272,11 @@ def main() -> int:
         db_path = Path(tmpdir.name) / "control.db"
     else:
         db_path = Path(args.db_path)
+        if not db_path.exists():
+            raise PaperExecutionError(
+                f"Control database missing at {db_path}. Non-dry-run mode requires an existing control DB.",
+                context={"db_path": str(db_path)},
+            )
 
     registry = PromotionRegistry(db_path)
     ensure_paper_approved(registry, MODEL_ARTIFACT_ID)
@@ -270,12 +285,19 @@ def main() -> int:
         "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
         "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
     ]
-    price_store = _SyntheticPriceStore(universe, days=160)
+    price_store: Any = _SyntheticPriceStore(universe, days=160)
 
     session_store = PaperSessionStore(db_path)
     monitor = PaperOpsMonitor(registry)
 
-    factor = make_tsmom_30_7(price_store, market_dataset_id="ds_market_bars")
+    # Optional venue reachability probe
+    probe_result: dict[str, Any] | None = None
+    if args.venue_probe:
+        print("Executing read-only venue connectivity probe...", file=sys.stderr)
+        probe_adapter = ReadOnlyVenueProbeAdapter()
+        probe_result = probe_adapter.ping_venue()
+
+    factor = make_tsmom_30_7(price_store, market_dataset_id=args.market_dataset_id)
 
     loop = FactorDrivenPaperLoop(
         model_artifact_id=MODEL_ARTIFACT_ID,
@@ -311,6 +333,16 @@ def main() -> int:
     status_path = Path("research/sprint_004/09_PAPER_OPS_STATUS.json")
     monitor.write_status_artifact(ops_status, status_path)
     print(f"Paper ops health/status report written to {status_path}", file=sys.stderr)
+
+    # Generate and write PaperHardenReport artifact (HARDEN-001)
+    harden_report = build_harden_report(
+        ops_status,
+        data_mode=data_mode,
+        venue_probe_result=probe_result,
+    )
+    harden_path = Path("research/sprint_004/10_PAPER_HARDEN_REPORT.json")
+    write_harden_report_artifact(harden_report, harden_path)
+    print(f"Hardening report written to {harden_path} (live_eligible={harden_report.live_eligible})", file=sys.stderr)
 
     formatted = format_loop_result(result)
     out_json = json.dumps(formatted, indent=2)
