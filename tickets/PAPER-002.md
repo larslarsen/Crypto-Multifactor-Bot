@@ -1,7 +1,7 @@
 # PAPER-002 — Paper Holdout Observation Hardening
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** PAPER-001 (ACCEPTED), HOLDOUT-001 (ACCEPTED)
 **Layer:** execution / serving
 **Architecture:** Fixes ProspectiveEvaluator integration so paper sessions emit a real `paper_observation_reference`.

@@ -106,7 +106,7 @@ def ensure_paper_approved(
             cost_model_version="cost_v1_binance_spot",
             risk_policy_version="risk_lev1.0_w0.15_v1",
             target_stage=PromotionTarget.PAPER,
-            effective_time=datetime.now(UTC) - timedelta(days=20),  # effective 20 days ago for holdout
+            effective_time=datetime(2026, 4, 1, tzinfo=UTC),  # Effective before paper decision window
             approving_authority="Lead Quantitative Researcher",
             evidence_reference="REVIEW-0177",
         )
@@ -264,7 +264,10 @@ def main() -> int:
     registry = PromotionRegistry(db_path)
     ensure_paper_approved(registry, MODEL_ARTIFACT_ID)
 
-    universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
+    universe = [
+        "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
+        "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
+    ]
     price_store = _SyntheticPriceStore(universe, days=160)
 
     factor = make_tsmom_30_7(price_store, market_dataset_id="ds_market_bars")

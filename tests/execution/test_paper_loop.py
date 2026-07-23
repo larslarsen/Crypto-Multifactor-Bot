@@ -1,4 +1,4 @@
-"""Tests for PAPER-001 Factor-Driven Paper Trading Loop."""
+"""Tests for PAPER-001 & PAPER-002 Factor-Driven Paper Trading Loop & Holdout Observation."""
 
 import tempfile
 from collections.abc import Sequence
@@ -94,7 +94,13 @@ class _StubPriceStore:
         return res
 
 
-def promote_to_paper(registry: PromotionRegistry, artifact_id: str = MODEL_ARTIFACT_ID) -> None:
+def promote_to_paper(
+    registry: PromotionRegistry,
+    artifact_id: str = MODEL_ARTIFACT_ID,
+    effective_time: datetime | None = None,
+) -> None:
+    eff_time = effective_time or datetime(2026, 4, 1, tzinfo=UTC)
+
     payload_cand = PromotionIdentityPayload(
         model_artifact_id=artifact_id,
         experiment_fingerprint=FINGERPRINT,
@@ -108,7 +114,7 @@ def promote_to_paper(registry: PromotionRegistry, artifact_id: str = MODEL_ARTIF
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.RESEARCH,
-        effective_time=datetime.now(UTC),
+        effective_time=eff_time,
         approving_authority="Lead Quant",
         evidence_reference="rev_001",
     )
@@ -127,7 +133,7 @@ def promote_to_paper(registry: PromotionRegistry, artifact_id: str = MODEL_ARTIF
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.PAPER,
-        effective_time=datetime.now(UTC) - timedelta(days=20),
+        effective_time=eff_time,
         approving_authority="Lead Quant",
         evidence_reference="rev_001",
     )
@@ -186,3 +192,114 @@ def test_paper_loop_execution_and_metrics() -> None:
         assert res.initial_cash == 100_000.0
         assert res.total_trades_executed > 0
         assert len(res.period_logs) == len(decision_times)
+
+
+def test_observation_non_null_when_window_complete() -> None:
+    """PAPER-002: Observation result is non-null and complete when duration >= min_observation_days."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "control.db"
+        registry = PromotionRegistry(db_path)
+
+        eff_time = datetime(2026, 4, 1, tzinfo=UTC)
+        promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
+
+        # 10 assets so single asset weight is 0.10 <= 0.15
+        universe = [
+            "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
+            "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
+        ]
+        store = _StubPriceStore(universe)
+        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+
+        loop = FactorDrivenPaperLoop(
+            model_artifact_id=MODEL_ARTIFACT_ID,
+            promotion_registry=registry,
+            factor=factor,
+            initial_cash=100_000.0,
+        )
+
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
+        decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]  # 2026-04-11 to 2026-05-30 (59 days)
+
+        res = loop.run_loop(
+            universe=universe,
+            decision_times=decision_times,
+            get_prices_at=store.get_prices_at,
+            min_observation_days=14,
+        )
+
+        assert res.observation_result is not None
+        obs = res.observation_result
+        assert obs.is_complete is True
+        assert obs.meets_risk_limits is True
+        assert obs.duration_days >= 14.0
+        assert obs.reference_id.startswith("obs_mod_tsmom_30_7_v1_")
+
+
+def test_observation_incomplete_when_window_short() -> None:
+    """PAPER-002: Observation is marked incomplete (is_complete=False) when duration < min_observation_days."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "control.db"
+        registry = PromotionRegistry(db_path)
+
+        eff_time = datetime(2026, 5, 20, tzinfo=UTC)  # Only 10 days before evaluation at May 30
+        promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
+
+        universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
+        store = _StubPriceStore(universe)
+        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+
+        loop = FactorDrivenPaperLoop(
+            model_artifact_id=MODEL_ARTIFACT_ID,
+            promotion_registry=registry,
+            factor=factor,
+            initial_cash=100_000.0,
+        )
+
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
+        decision_times = [t0 + timedelta(days=d) for d in range(140, 150, 7)]  # May 20 to May 30
+
+        res = loop.run_loop(
+            universe=universe,
+            decision_times=decision_times,
+            get_prices_at=store.get_prices_at,
+            min_observation_days=14,
+        )
+
+        assert res.observation_result is not None
+        assert res.observation_result.is_complete is False
+
+
+def test_risk_breach_when_single_asset_weight_exceeds_limit() -> None:
+    """PAPER-002: Observation reports meets_risk_limits=False when single-asset weight > 0.15."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "control.db"
+        registry = PromotionRegistry(db_path)
+
+        eff_time = datetime(2026, 4, 1, tzinfo=UTC)
+        promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
+
+        # 4 assets -> single asset weight is 0.25 > 0.15 limit
+        universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
+        store = _StubPriceStore(universe)
+        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+
+        loop = FactorDrivenPaperLoop(
+            model_artifact_id=MODEL_ARTIFACT_ID,
+            promotion_registry=registry,
+            factor=factor,
+            initial_cash=100_000.0,
+        )
+
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
+        decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]
+
+        res = loop.run_loop(
+            universe=universe,
+            decision_times=decision_times,
+            get_prices_at=store.get_prices_at,
+            min_observation_days=14,
+        )
+
+        assert res.observation_result is not None
+        assert res.observation_result.meets_risk_limits is False

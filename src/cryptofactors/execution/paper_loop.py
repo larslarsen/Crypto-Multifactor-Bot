@@ -17,8 +17,12 @@ from cryptofactors.execution.errors import PaperExecutionError
 from cryptofactors.execution.paper import PaperBroker
 from cryptofactors.portfolio.perpetual_simulation import LongShortRankAllocator
 from cryptofactors.portfolio.simulation import SimulationPeriod, SimulationResult
-from cryptofactors.promotion import PromotionRegistry, PromotionTarget
-from cryptofactors.serving.holdout import PaperObservationResult, ProspectiveEvaluator
+from cryptofactors.promotion import PromotionError, PromotionRegistry, PromotionTarget
+from cryptofactors.serving.holdout import (
+    PaperObservationResult,
+    ProspectiveEvaluator,
+    ProspectiveHoldoutError,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +97,9 @@ class FactorDrivenPaperLoop:
 
         logs: list[PaperLoopPeriodLog] = []
         sim_periods: list[SimulationPeriod] = []
+        prev_equity = self.initial_cash
+        max_leverage_seen = 0.0
+        max_weight_seen = 0.0
 
         for dt in decision_times:
             # 1. Compute factor frame
@@ -102,6 +109,13 @@ class FactorDrivenPaperLoop:
             dec_weights = self.allocator.allocate(frame.values)
             target_weights = {k: float(v) for k, v in dec_weights.items()}
 
+            gross_leverage = sum(abs(w) for w in target_weights.values())
+            max_single_weight = max((abs(w) for w in target_weights.values()), default=0.0)
+            if gross_leverage > max_leverage_seen:
+                max_leverage_seen = gross_leverage
+            if max_single_weight > max_weight_seen:
+                max_weight_seen = max_single_weight
+
             # 3. Get point-in-time prices
             current_prices = get_prices_at(dt, universe)
 
@@ -109,7 +123,10 @@ class FactorDrivenPaperLoop:
             trades = self.broker.rebalance(target_weights, current_prices, dt)
             state = self.broker.get_account_state(current_prices, dt)
 
-            period_net_ret = Decimal(str(round((state.equity - self.initial_cash) / self.initial_cash, 6)))
+            period_net_ret_val = (state.equity - prev_equity) / prev_equity if prev_equity > 0 else 0.0
+            prev_equity = state.equity
+
+            period_net_ret = Decimal(str(round(period_net_ret_val, 6)))
             sim_periods.append(
                 SimulationPeriod(
                     decision_time=dt,
@@ -153,8 +170,10 @@ class FactorDrivenPaperLoop:
                     paper_promotion_event=event,
                     simulation_result=sim_res,
                     evaluation_time=last_dt,
+                    observed_max_leverage=Decimal(str(round(max_leverage_seen, 4))),
+                    observed_max_single_weight=Decimal(str(round(max_weight_seen, 4))),
                 )
-        except Exception:  # noqa: BLE001
+        except (ProspectiveHoldoutError, PromotionError):
             obs_result = None
 
         net_return = (final_state.equity - self.initial_cash) / self.initial_cash
