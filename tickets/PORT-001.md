@@ -1,8 +1,8 @@
 # PORT-001 — Costed Portfolio Simulation (Sequence #15)
 
 **Priority:** P0
-**Status:** READY
-**Dependencies:** SPLIT-001 (accepted), EXP-001 (accepted)
+**Status:** BLOCKED
+**Dependencies:** SPLIT-001 (accepted), EXP-001 (accepted), DF-08 (universe survivorship authority)
 **Layer:** portfolio
 **Architecture:** implements step #15 (costed portfolio simulation); no ADR required
 

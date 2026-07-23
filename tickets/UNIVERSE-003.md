@@ -1,8 +1,8 @@
 # UNIVERSE-003 — CoinMarketCap Survivorship Backfill (CEX Dead-Coin Universe)
 
 **Priority:** P1
-**Status:** DRAFT — awaiting reviewer source-authority decision
-**Decision:** (reviewer to set)
+**Status:** READY
+**Decision:** AUTHORIZED
 **Dependencies:** ASOF-001 (accepted), REF-001 (accepted substrate), UNIVERSE-001 (accepted),
 DF-08 (`NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY` — this ticket seeks to partially close the
 CEX side)
