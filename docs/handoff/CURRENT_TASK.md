@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXP-006
-State: READY
-Next required actor: Sr Dev (Strong Model) — multi-fold OOS on extended history
-Next ticket authorized: EXP-006
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -15,7 +15,7 @@ Authorizing **EXP-006**: frozen TSMOM multi-fold/long OOS on DATA-004 dataset; a
 
 ## Governing documents
 
-- tickets/EXP-006.md (READY)
+- tickets/EXP-006.md (AWAITING_REVIEW)
 - tickets/DATA-004.md (ACCEPTED)
 - docs/reviews/REVIEW-0195_DATA-004_ACCEPTED.md
 
