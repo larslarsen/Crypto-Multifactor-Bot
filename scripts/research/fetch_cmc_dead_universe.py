@@ -71,7 +71,8 @@ DETAIL_URL = "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/detail?id
 HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 FIELDS = [
     "id", "name", "symbol", "slug", "is_active",
-    "dateLaunched", "dateAdded", "latestUpdateTime", "status",
+    "dateLaunched", "dateAdded", "latestUpdateTime",
+    "birth_date", "death_proxy_date", "status",
     "death_date_is_proxy", "source", "retrieved_at",
 ]
 RETRIEVED_AT = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -80,7 +81,7 @@ RETRIEVED_AT = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 def _get(url: str, timeout: int = 40) -> dict[str, Any]:
     req = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+        return json.loads(r.read())  # type: ignore[no-any-return]
 
 
 def fetch_inactive_map() -> list[dict[str, Any]]:
@@ -117,6 +118,8 @@ def main() -> int:
     rows = []
     for i, c in enumerate(targets, 1):
         det = fetch_detail(c["id"], sleep=args.sleep)
+        birth_date = det.get("dateAdded") or det.get("dateLaunched") or c.get("dateAdded") or c.get("dateLaunched")
+        death_proxy = det.get("latestUpdateTime") or c.get("latestUpdateTime")
         rows.append({
             "id": c.get("id"),
             "name": c.get("name"),
@@ -126,10 +129,12 @@ def main() -> int:
             "dateLaunched": det.get("dateLaunched"),
             "dateAdded": det.get("dateAdded"),
             "latestUpdateTime": det.get("latestUpdateTime"),
+            "birth_date": birth_date,
+            "death_proxy_date": death_proxy,
             "status": det.get("status"),
             # provenance labels — these are CMC-observed proxy dates from an UNDOCUMENTED
             # endpoint, not authoritative exchange delisting records. Never launder.
-            "death_date_is_proxy": "true" if det.get("latestUpdateTime") else "false",
+            "death_date_is_proxy": "true",
             "source": "cmc_data_api_unofficial",
             "retrieved_at": RETRIEVED_AT,
         })

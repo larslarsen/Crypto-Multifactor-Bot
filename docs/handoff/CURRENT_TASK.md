@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: UNIVERSE-003
-State: READY
-Next required actor: Sr Dev (Grok / Strong Model)
-Next ticket authorized: UNIVERSE-003
+State: ACCEPTED
+Next required actor: Jr Dev (Hermes / Weak Model) — gates, records, commit, push
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture Pivot):**
 PORT-001 has been marked BLOCKED. While portfolio simulation is required for PROMO-001, honest portfolio simulation and paper promotion are structurally impossible while the universe survivorship gate (DF-08) remains red. 
@@ -12,7 +12,7 @@ The CMC backfill data prototype (`scripts/research/fetch_cmc_dead_universe.py`) 
 
 ## Governing documents
 
-- tickets/UNIVERSE-003.md (READY)
+- tickets/UNIVERSE-003.md (ACCEPTED)
 - tickets/DF-08.md (Current Blocker)
 
 ## Acceptance (Jr)
