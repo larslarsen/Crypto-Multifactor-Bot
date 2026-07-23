@@ -4,10 +4,10 @@
   "promotion_state": "PAPER_APPROVED",
   "gate_status": "OK",
   "initial_cash": 100000.0,
-  "final_equity": 101374.5,
-  "total_net_return": 0.013745,
+  "final_equity": 96687.37,
+  "total_net_return": -0.033126,
   "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
   "venue_probe_result": null,
   "live_eligible": false,
-  "report_generated_at": "2026-07-23T14:52:14.472556+00:00"
+  "report_generated_at": "2026-07-23T15:08:33.677349+00:00"
 }

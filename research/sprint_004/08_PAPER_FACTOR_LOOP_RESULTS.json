@@ -2,10 +2,10 @@
   "model_artifact_id": "mod_tsmom_30_7_v1",
   "factor_id": "tsmom_30_7",
   "initial_cash": 100000.0,
-  "final_cash": 101374.5,
-  "final_equity": 101374.5,
-  "total_net_return": 0.013745,
-  "total_trades_executed": 80,
+  "final_cash": 96687.37,
+  "final_equity": 96687.37,
+  "total_net_return": -0.033126,
+  "total_trades_executed": 160,
   "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
   "observation_summary": {
     "model_artifact_id": "mod_tsmom_30_7_v1",
@@ -13,18 +13,18 @@
     "observation_start": "2026-04-01T00:00:00+00:00",
     "observation_end": "2026-05-30T00:00:00+00:00",
     "duration_days": 59.0,
-    "net_return": 0.013745352712793297,
+    "net_return": -0.0331268106095829,
     "is_complete": true,
-    "meets_risk_limits": false
+    "meets_risk_limits": true
   },
   "period_logs": [
     {
       "decision_time": "2026-04-11T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 99900.0,
-      "equity": 99900.0,
+      "cash": 131616.79,
+      "equity": 97462.93,
       "target_weights": {
-        "ETHUSD": 0.5,
+        "ETHUSD": 0.15,
         "DOTUSD": -0.0556,
         "SOLUSD": -0.0556,
         "AVAXUSD": -0.0556,
@@ -36,26 +36,26 @@
         "BCHUSD": -0.0556
       },
       "open_positions": {
-        "ADAUSD": -21855.05726,
-        "AVAXUSD": -591.645959,
-        "BCHUSD": -12.518151,
-        "DOTUSD": -4257.130694,
-        "ETHUSD": 22.271219,
-        "LINKUSD": -611.172228,
-        "LTCUSD": -101.083616,
-        "SOLUSD": -65.490458,
-        "XBTUSD": -0.076142,
-        "XRPUSD": -4097.319534
+        "ADAUSD": -21326.701074,
+        "AVAXUSD": -577.342642,
+        "BCHUSD": -12.215519,
+        "DOTUSD": -4154.212577,
+        "ETHUSD": 6.519841,
+        "LINKUSD": -596.396855,
+        "LTCUSD": -98.639873,
+        "SOLUSD": -63.907196,
+        "XBTUSD": -0.074302,
+        "XRPUSD": -3998.264926
       }
     },
     {
       "decision_time": "2026-04-18T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 101645.04,
-      "equity": 101645.04,
+      "cash": 115874.09,
+      "equity": 96557.62,
       "target_weights": {
-        "ETHUSD": 0.25,
-        "XBTUSD": 0.25,
+        "ETHUSD": 0.15,
+        "XBTUSD": 0.15,
         "DOTUSD": -0.0625,
         "XRPUSD": -0.0625,
         "ADAUSD": -0.0625,
@@ -66,23 +66,23 @@
         "LINKUSD": -0.0625
       },
       "open_positions": {
-        "ADAUSD": -24581.74856,
-        "AVAXUSD": -653.995903,
-        "BCHUSD": -14.02038,
-        "DOTUSD": -4765.24751,
-        "ETHUSD": 10.511517,
-        "LINKUSD": -660.794197,
-        "LTCUSD": -112.72992,
-        "SOLUSD": -71.618299,
-        "XBTUSD": 0.329917,
-        "XRPUSD": -4307.677833
+        "ADAUSD": -23342.59927,
+        "AVAXUSD": -621.028413,
+        "BCHUSD": -13.313622,
+        "DOTUSD": -4525.034611,
+        "ETHUSD": 5.988983,
+        "LINKUSD": -627.484009,
+        "LTCUSD": -107.047281,
+        "SOLUSD": -68.008069,
+        "XBTUSD": 0.187972,
+        "XRPUSD": -4090.530712
       }
     },
     {
       "decision_time": "2026-04-25T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 101837.65,
-      "equity": 101837.65,
+      "cash": 97128.74,
+      "equity": 97128.74,
       "target_weights": {
         "AVAXUSD": 0.1,
         "LINKUSD": 0.1,
@@ -96,23 +96,23 @@
         "LTCUSD": -0.1
       },
       "open_positions": {
-        "ADAUSD": -40725.586469,
-        "AVAXUSD": 1084.427052,
-        "BCHUSD": -22.344617,
-        "DOTUSD": -8128.879022,
-        "ETHUSD": 4.403308,
-        "LINKUSD": 1086.739264,
-        "LTCUSD": -180.290313,
-        "SOLUSD": -118.28283,
-        "XBTUSD": 0.131637,
-        "XRPUSD": 7111.493158
+        "ADAUSD": -38834.826807,
+        "AVAXUSD": 1034.080548,
+        "BCHUSD": -21.307227,
+        "DOTUSD": -7751.480981,
+        "ETHUSD": 4.198877,
+        "LINKUSD": 1036.28541,
+        "LTCUSD": -171.920006,
+        "SOLUSD": -112.791334,
+        "XBTUSD": 0.125526,
+        "XRPUSD": 6781.329113
       }
     },
     {
       "decision_time": "2026-05-02T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 101852.61,
-      "equity": 101852.61,
+      "cash": 63135.06,
+      "equity": 97177.04,
       "target_weights": {
         "BCHUSD": 0.0556,
         "ADAUSD": 0.0556,
@@ -123,26 +123,26 @@
         "XRPUSD": 0.0556,
         "ETHUSD": 0.0556,
         "XBTUSD": 0.0556,
-        "DOTUSD": -0.5
+        "DOTUSD": -0.15
       },
       "open_positions": {
-        "ADAUSD": 22826.174678,
-        "AVAXUSD": 623.94896,
-        "BCHUSD": 12.57593,
-        "DOTUSD": -42349.758302,
-        "ETHUSD": 2.467931,
-        "LINKUSD": 622.577643,
-        "LTCUSD": 102.264559,
-        "SOLUSD": 67.639166,
-        "XBTUSD": 0.072419,
-        "XRPUSD": 4088.220923
+        "ADAUSD": 21770.701055,
+        "AVAXUSD": 595.097798,
+        "BCHUSD": 11.994424,
+        "DOTUSD": -12117.456483,
+        "ETHUSD": 2.353815,
+        "LINKUSD": 593.78989,
+        "LTCUSD": 97.535885,
+        "SOLUSD": 64.511557,
+        "XBTUSD": 0.069071,
+        "XRPUSD": 3899.183145
       }
     },
     {
       "decision_time": "2026-05-09T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 97611.09,
-      "equity": 97611.09,
+      "cash": 78375.3,
+      "equity": 97975.64,
       "target_weights": {
         "AVAXUSD": 0.0625,
         "SOLUSD": 0.0625,
@@ -152,27 +152,27 @@
         "XRPUSD": 0.0625,
         "ETHUSD": 0.0625,
         "XBTUSD": 0.0625,
-        "DOTUSD": -0.25,
-        "ADAUSD": -0.25
+        "DOTUSD": -0.15,
+        "ADAUSD": -0.15
       },
       "open_positions": {
-        "ADAUSD": -89317.52117,
-        "AVAXUSD": 616.029523,
-        "BCHUSD": 13.551282,
-        "DOTUSD": -17772.496571,
-        "ETHUSD": 2.646161,
-        "LINKUSD": 590.411274,
-        "LTCUSD": 104.678542,
-        "SOLUSD": 66.349881,
-        "XBTUSD": 0.076127,
-        "XRPUSD": 4304.648549
+        "ADAUSD": -53768.308591,
+        "AVAXUSD": 618.073308,
+        "BCHUSD": 13.596241,
+        "DOTUSD": -10698.87596,
+        "ETHUSD": 2.65494,
+        "LINKUSD": 592.370066,
+        "LTCUSD": 105.025831,
+        "SOLUSD": 66.570009,
+        "XBTUSD": 0.076379,
+        "XRPUSD": 4318.929973
       }
     },
     {
       "decision_time": "2026-05-16T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 98369.19,
-      "equity": 98369.19,
+      "cash": 63647.15,
+      "equity": 97952.84,
       "target_weights": {
         "XRPUSD": 0.0556,
         "BCHUSD": 0.0556,
@@ -183,26 +183,26 @@
         "ADAUSD": 0.0556,
         "LINKUSD": 0.0556,
         "DOTUSD": 0.0556,
-        "ETHUSD": -0.5
+        "ETHUSD": -0.15
       },
       "open_positions": {
-        "ADAUSD": 20915.192829,
-        "AVAXUSD": 573.523527,
-        "BCHUSD": 12.819621,
-        "DOTUSD": 4157.60976,
-        "ETHUSD": -22.134946,
-        "LINKUSD": 543.338078,
-        "LTCUSD": 95.155034,
-        "SOLUSD": 61.311233,
-        "XBTUSD": 0.069159,
-        "XRPUSD": 3815.491244
+        "ADAUSD": 20815.547045,
+        "AVAXUSD": 570.791101,
+        "BCHUSD": 12.758545,
+        "DOTUSD": 4137.801753,
+        "ETHUSD": -6.608847,
+        "LINKUSD": 540.749464,
+        "LTCUSD": 94.701689,
+        "SOLUSD": 61.019129,
+        "XBTUSD": 0.06883,
+        "XRPUSD": 3797.313185
       }
     },
     {
       "decision_time": "2026-05-23T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 98376.36,
-      "equity": 98376.36,
+      "cash": 76428.88,
+      "equity": 95542.71,
       "target_weights": {
         "XRPUSD": 0.0625,
         "XBTUSD": 0.0625,
@@ -212,27 +212,27 @@
         "LTCUSD": 0.0625,
         "ADAUSD": 0.0625,
         "LINKUSD": 0.0625,
-        "BCHUSD": -0.25,
-        "ETHUSD": -0.25
+        "BCHUSD": -0.15,
+        "ETHUSD": -0.15
       },
       "open_positions": {
-        "ADAUSD": 25380.249086,
-        "AVAXUSD": 672.074763,
-        "BCHUSD": -68.224812,
-        "DOTUSD": 4890.439093,
-        "ETHUSD": -11.912138,
-        "LINKUSD": 653.096855,
-        "LTCUSD": 116.850378,
-        "SOLUSD": 72.893038,
-        "XBTUSD": 0.081443,
-        "XRPUSD": 4610.09545
+        "ADAUSD": 24641.382523,
+        "AVAXUSD": 652.509408,
+        "BCHUSD": -39.743196,
+        "DOTUSD": 4748.069256,
+        "ETHUSD": -6.939212,
+        "LINKUSD": 634.083983,
+        "LTCUSD": 113.448644,
+        "SOLUSD": 70.770985,
+        "XBTUSD": 0.079072,
+        "XRPUSD": 4475.886942
       }
     },
     {
       "decision_time": "2026-05-30T00:00:00+00:00",
       "trades_count": 10,
-      "cash": 101374.5,
-      "equity": 101374.5,
+      "cash": 96687.37,
+      "equity": 96687.37,
       "target_weights": {
         "AVAXUSD": 0.125,
         "SOLUSD": 0.125,
@@ -246,18 +246,18 @@
         "XBTUSD": -0.0833
       },
       "open_positions": {
-        "ADAUSD": -36312.874185,
-        "AVAXUSD": 1437.170341,
-        "BCHUSD": -27.976409,
-        "DOTUSD": 10624.709042,
-        "ETHUSD": -4.198114,
-        "LINKUSD": 1406.107581,
-        "LTCUSD": -162.984552,
-        "SOLUSD": 154.6307,
-        "XBTUSD": -0.115126,
-        "XRPUSD": -6358.848419
+        "ADAUSD": -34627.990116,
+        "AVAXUSD": 1370.486954,
+        "BCHUSD": -26.678329,
+        "DOTUSD": 10131.732284,
+        "ETHUSD": -4.003325,
+        "LINKUSD": 1340.865478,
+        "LTCUSD": -155.422218,
+        "SOLUSD": 147.455977,
+        "XBTUSD": -0.109785,
+        "XRPUSD": -6063.803683
       }
     }
   ],
-  "session_run_at": "2026-07-23T14:52:14.315679+00:00"
+  "session_run_at": "2026-07-23T15:08:33.524036+00:00"
 }

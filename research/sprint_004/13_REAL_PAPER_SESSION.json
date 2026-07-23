@@ -54,7 +54,9 @@
   "total_net_return": 0.013745,
   "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
   "meets_risk_limits": false,
-  "live_gate_satisfied": true,
+  "live_gate_satisfied": false,
   "live_eligible": false,
+  "superseded_by": "research/sprint_004/14_RISK_COMPLIANT_PAPER_SESSION.json",
+  "note": "PAPER-005 baseline real-asof session. live_gate_satisfied corrected to false because meets_risk_limits is false (max single weight 0.5 > 0.15). See 14_RISK_COMPLIANT_PAPER_SESSION.json for risk-compliant re-run.",
   "generated_at": "2026-07-23T14:52:14.315679+00:00"
 }

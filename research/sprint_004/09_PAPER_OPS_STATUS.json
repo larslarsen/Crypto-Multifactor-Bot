@@ -3,14 +3,14 @@
   "promotion_state": "PAPER_APPROVED",
   "gate_status": "OK",
   "last_rebalance_time": "2026-05-30T00:00:00+00:00",
-  "last_equity": 101374.5,
+  "last_equity": 96687.37,
   "initial_cash": 100000.0,
-  "total_net_return": 0.013745,
-  "peak_equity": 101374.5,
-  "current_drawdown": 0.0,
+  "total_net_return": -0.033126,
+  "peak_equity": 100000.0,
+  "current_drawdown": 0.033126,
   "open_positions_count": 10,
-  "total_trades_count": 80,
+  "total_trades_count": 160,
   "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
   "drawdown_alert_triggered": false,
-  "report_generated_at": "2026-07-23T14:52:14.472292+00:00"
+  "report_generated_at": "2026-07-23T15:08:33.677132+00:00"
 }

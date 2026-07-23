@@ -48,3 +48,4 @@ logs/
 
 # Local control databases and scratch dirs
 .local/
+*.db
