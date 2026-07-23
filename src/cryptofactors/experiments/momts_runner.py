@@ -21,6 +21,11 @@ from cryptofactors.factors.tsmom import (
     TimeSeriesMomentumFactor,
 )
 from cryptofactors.portfolio.cost import CostConfig
+from cryptofactors.portfolio.perpetual_simulation import (
+    LongShortRankAllocator,
+    PerpetualSimulationResult,
+    PerpetualSimulator,
+)
 from cryptofactors.portfolio.simulation import (
     PortfolioSimulator,
     RankWeightAllocator,
@@ -176,6 +181,7 @@ class MOMTSRunner:
         market_dataset_id: str,
         registry: InMemoryExperimentRegistry | None = None,
         cost_config: CostConfig | None = None,
+        funding_provider: Any | None = None,
     ) -> None:
         if as_of_store is None:
             raise ValueError("as_of_store must not be None")
@@ -185,6 +191,7 @@ class MOMTSRunner:
         self._market_dataset_id: str = market_dataset_id
         self._registry: InMemoryExperimentRegistry = registry or InMemoryExperimentRegistry()
         self._cost_config: CostConfig = cost_config or _default_cost_config()
+        self._funding_provider: Any | None = funding_provider
         self._label_engine: AsOfLabelEngine = AsOfLabelEngine(as_of_store)
         self._splitter: PurgedChronologicalSplitter = PurgedChronologicalSplitter(as_of_store)
 
@@ -313,3 +320,40 @@ class MOMTSRunner:
             universe=universe,
             decision_times=decision_times,
         )
+
+    def run_perpetual_experiment(
+        self,
+        *,
+        experiment_id: str,
+        factor: TimeSeriesMomentumFactor,
+        bundle: ExperimentBundle,
+        universe: Sequence[str],
+        decision_times: Sequence[datetime],
+    ) -> PerpetualSimulationResult:
+        """Run perpetual L/S experiment with funding cashflows and margin checks."""
+        self._registry.register(bundle)
+
+        frames: list[FactorFrame] = []
+        for dt in decision_times:
+            frame = factor.compute(universe, dt)
+            if frame.values:
+                frames.append(frame)
+
+        events: list[DecisionEvent] = self._label_engine.compute(
+            instruments=list(universe),
+            decision_times=list(decision_times),
+            config=bundle.label_config,
+        )
+        self._splitter.split(
+            events=[e.to_event_interval() for e in events],
+            config=bundle.split_config,
+        )
+
+        allocator = LongShortRankAllocator(target_leverage=1.0)
+        simulator = PerpetualSimulator(
+            allocator=allocator,
+            cost_config=self._cost_config,
+            funding_provider=self._funding_provider,
+            portfolio_version="perp_ls_v1",
+        )
+        return simulator.simulate(frames, events)
