@@ -1,7 +1,7 @@
 # COMP-001 — Simple Composites (Experiment #20)
 
 **Priority:** P0
-**Status:** READY
+**Status:** IN_PROGRESS
 **Dependencies:** BASE-001 (accepted), EXP-001 (accepted), LABEL-001 (accepted), SPLIT-001 (accepted), ASOF-001 (accepted)
 **Layer:** factors
 **Architecture:** implements experiment #20 (simple composites); no ADR required

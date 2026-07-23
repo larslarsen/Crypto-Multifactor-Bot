@@ -1,66 +1,36 @@
 # CURRENT_TASK
 
 Ticket: COMP-001
-State: READY
+State: IN_PROGRESS
 Next required actor: Sr Dev (Grok 0.1)
 Next ticket authorized: NONE
 
-BASE-001 accepted. Experiment #20 (simple composites) authorized.
+COMP-001 rejected (REVIEW-0162). Two P1 corrections required.
 
 ## Sr Dev Prompt
 
 ```
-Create COMP-001: Simple equal-weight rank composite factor.
+COMP-001 round 2 fixups (3 items):
 
-File: src/cryptofactors/factors/composite.py
+1. Invert score direction in src/cryptofactors/factors/composite.py:170-176
+   score must be higher-is-better (descending-sort convention for portfolio).
+   Example: score = -avg_rank. raw_value can stay avg_rank.
 
-Implement EqualWeightRankComposite that combines multiple baseline factors
-(momentum, mean_reversion, volume) into a single composite score.
+2. Reject duplicate child factor_ids in constructor
+   composite.py:102-120. Raise CompositeFactorError if any two children
+   have the same factor_id.
 
-Requirements:
-- Implements Factor protocol from cryptofactors.factors.contract
-- factor_id = "composite_equal_rank"
-- factor_version = "1"
-- Constructor takes a list of Factor implementations (the baseline factors)
-- compute(universe, as_of):
-  1. Call each factor's compute(universe, as_of) to get FactorFrames
-  2. For each instrument, rank its score cross-sectionally within each factor
-     (rank 1 = best, N = worst; higher score = better rank)
-  3. Average the ranks across all factors
-  4. score = average rank (lower = better)
-  5. raw_value = average rank
-  6. Return FactorFrame with factor_id="composite_equal_rank"
-- Deterministic given (universe, as_of)
-- No hyperparameter tuning
-- Handle edge cases: single asset (rank=1), ties (use average rank),
-  missing instrument in a factor (skip that factor in the average)
-
-Use the same patterns as baseline.py:
-- _require_utc for as_of validation
-- _normalize_universe for universe validation
-- FactorValue/FactorFrame from contract.py
-- BaselineFactorError for errors (reuse or create CompositeFactorError)
-
-Create tests/test_composite_factors.py:
-- Unit tests with _FakeAsOf (same as baseline tests) for deterministic computation
-- Test with 2+ assets: verify ranks are correct
-- Test single asset: rank = 1
-- Test ties: average rank assigned
-- Test missing instrument in one factor: skipped in average
-- Integration test: CatalogAsOfStore → composite → Label → Split → ExperimentBundle
-  (same pattern as test_baseline_substrate_integration)
-
-Imports: follow existing patterns in baseline.py. No new dependencies.
+3. Add assertion in test_composite_substrate_integration
+   After factor.compute(), verify the instrument with the strongest baseline
+   performance gets the highest composite score (assert scores are
+   descending-sort-orderable).
 
 After: run tests, stop for reviewer.
 ```
 
 Governing documents:
-- tickets/COMP-001.md (READY)
-- tickets/BASE-001.md (ACCEPTED)
-- src/cryptofactors/factors/contract.py (39 lines, Factor protocol)
-- src/cryptofactors/factors/baseline.py (515 lines, reference implementation)
-- tests/test_baseline_factors.py (reference test patterns)
+- docs/reviews/REVIEW-0162_COMP-001_REJECTED.md
+- tickets/COMP-001.md (IN_PROGRESS)
 
 ## Acceptance (Jr)
 
