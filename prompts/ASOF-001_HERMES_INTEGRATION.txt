@@ -1,0 +1,55 @@
+MODEL: Hy3:free
+ROLE: Jr Dev - Hermes
+BASE: 0099bbf
+
+Activate ASOF-001 and complete Jr integration in one commit.
+
+1. Governance handoff (must pass repo control):
+   - Set docs/handoff/CURRENT_TASK.md:
+     Ticket: ASOF-001
+     State: IN_PROGRESS
+     Next required actor: Jr Dev - Hermes
+     Next ticket authorized: NONE
+   - Add to docs/engineering/IMPLEMENTATION_BACKLOG.csv:
+     ASOF-001,P0,catalog,As-Of Access API,CAT-001/CAT-001A;REF-001;BAR-001;FEE-001,BLOCKING,IN_PROGRESS - JR INTEGRATION
+   - Update tickets/ASOF-001.md status to IN_PROGRESS - JR INTEGRATION
+   - Update README.md line for ASOF-001 to show IN_PROGRESS
+   - Add reference to REVIEW-0138 in governing docs.
+
+2. Integrate the approved source drop:
+   - Keep src/cryptofactors/catalog/as_of.py and __init__.py exactly as dropped (no changes to production source).
+   - Add focused tests under tests/catalog/ for:
+     - observation_eligible / reference_eligible rules
+     - CatalogAsOfStore.latest_available and as_of on ref_instrument_version, ref_fee_schedule, and a market_bars dataset
+     - bitemporal boundaries, max_age, empty results, error cases
+     - No ad-hoc joins in factor paths (smoke only)
+
+3. Run in order and capture exact output:
+   - .venv/bin/python -m pytest tests/catalog/ -q --tb=line
+   - .venv/bin/python -m ruff check src/cryptofactors/catalog tests/catalog
+   - .venv/bin/python -m mypy --no-error-summary src/cryptofactors/catalog tests/catalog
+   - python3 scripts/check_repo_control.py
+   - Full relevant test suite if needed for layer imports.
+
+4. Create docs/reviews/ASOF-001_CHANGE_REPORT.md with:
+   - Source approved under REVIEW-0138
+   - Exact gate results
+   - List of new test files
+   - Commit will include the Sr drop + tests + records
+
+5. Update all states to AWAITING_REVIEW:
+   - tickets/ASOF-001.md
+   - IMPLEMENTATION_BACKLOG.csv
+   - README.md
+   - CURRENT_TASK.md (State: AWAITING_REVIEW, Reviewer next, Next ticket NONE, reference REVIEW-0138)
+
+6. Commit message: "ASOF-001: JR integration after REVIEW-0138 source approval"
+   - Include the source drop files, tests, report, and all governance updates.
+   - Push.
+
+7. Return ONLY:
+   - Full commit hash
+   - Short validation summary (pytest count, ruff/mypy clean, repo-control PASS, states consistent)
+   - No extra text.
+
+Do not touch any other tickets. No new features beyond the approved contract. Stop after push.

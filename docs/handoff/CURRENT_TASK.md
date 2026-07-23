@@ -21,7 +21,7 @@ Governing documents:
 
 ## Authorized work
 
-1. Sr Dev — Grok Build produces `src/cryptofactors/validation/experiment.py` per EXP-001 contract.
+1. Sr Dev — Grok Build produces corrected `src/cryptofactors/validation/experiment.py` per EXP-001 contract.
    Stop for Reviewer after source only. No tests, no commits, no pushes.
    **Flag:** Sr source drop requires verification by DeepSeek V4 Pro (or equivalent strong
    engineering model) before Reviewer acceptance.
@@ -39,3 +39,10 @@ Starting with LABEL-001 (labels.py, integrated at 2786537)
 Then EXP-001 (experiment.py, pending Sr drop)
 And all future drops. Big Pickle's reviews are governance-only — code quality needs a
 stronger model check when budget allows.
+
+### LABEL-001 retrospective P1 findings (2026-07-22)
+
+- P1: With min_gap > 0, entry price is taken at decision_time but label interval starts at
+  event_start. The return and purge interval disagree.
+- P1: Incompatible with canonical BAR-001 timing. Bars become available at period_end, but
+  AsOf eligibility requires decision_time < period_end. Boundary lookups can return empty.
