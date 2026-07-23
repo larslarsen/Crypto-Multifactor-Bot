@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
-Ticket: DATA-003  
-State: READY  
-Next required actor: Sr Dev (Strong Model) — real as-of path correctness  
-Next ticket authorized: DATA-003  
+Ticket: DATA-003
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review real as-of path correctness
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 

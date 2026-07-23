@@ -24,7 +24,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from cryptofactors.catalog.as_of import CatalogAsOfStore
+from cryptofactors.catalog.as_of import AsOfAccessError, CatalogAsOfStore
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.execution.errors import PaperExecutionError
 from cryptofactors.execution.paper_harden import (
@@ -34,6 +34,7 @@ from cryptofactors.execution.paper_harden import (
 from cryptofactors.execution.paper_loop import FactorDrivenPaperLoop, PaperLoopResult
 from cryptofactors.execution.paper_monitor import PaperOpsMonitor
 from cryptofactors.execution.paper_store import PaperSessionStore
+from cryptofactors.execution.symbols import PAPER_TO_BINANCE_MAP, to_binance_symbol
 from cryptofactors.execution.venue_probe import ReadOnlyVenueProbeAdapter
 from cryptofactors.factors.tsmom import make_tsmom_30_7
 from cryptofactors.promotion import (
@@ -260,6 +261,7 @@ def format_loop_result(res: PaperLoopResult) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run factor-driven paper trading loop for MOM-TS-01.")
     parser.add_argument("--db-path", type=str, default="control.db", help="Path to control SQLite DB")
+    parser.add_argument("--store-root", type=str, default="data/store", help="Path to dataset store root")
     parser.add_argument("--market-dataset-id", type=str, default="ds_market_bars", help="Market bars dataset ID")
     parser.add_argument("--dry-run", action="store_true", help="Run with temporary SQLite DB and synthetic store")
     parser.add_argument("--venue-probe", action="store_true", help="Perform read-only venue reachability ping probe")
@@ -278,6 +280,7 @@ def main() -> int:
         print("Running factor-driven paper loop in DRY-RUN mode...", file=sys.stderr)
         tmpdir = tempfile.TemporaryDirectory()
         db_path = Path(tmpdir.name) / "control.db"
+        store_root = Path(tmpdir.name) / "store"
         synthetic_store = _SyntheticPriceStore(universe, days=160)
         price_store: Any = synthetic_store
         get_prices_fn = synthetic_store.get_prices_at
@@ -289,37 +292,47 @@ def main() -> int:
                 f"Control database missing at {db_path}. Non-dry-run mode requires an existing control DB.",
                 context={"db_path": str(db_path)},
             )
+        store_root = Path(args.store_root)
+        if not store_root.exists() or not store_root.is_dir():
+            raise PaperExecutionError(
+                f"Dataset store root missing or not a directory at {store_root}.",
+                context={"store_root": str(store_root)},
+            )
+
         cat = SqliteDatasetCatalog(db_path)
         try:
             row = cat.get_dataset(args.market_dataset_id)
             if row is None:
-                rows = list(cat.list_datasets())
-                bar_rows = [r for r in rows if r.get("dataset_type") == "market_bars"]
-                if not bar_rows:
-                    raise PaperExecutionError(
-                        "No published 'market_bars' dataset found in catalog. Run backfill first.",
-                        context={"db_path": str(db_path)},
-                    )
-                dataset_id = str(bar_rows[-1]["dataset_id"])
-            else:
-                dataset_id = args.market_dataset_id
+                raise PaperExecutionError(
+                    f"market_bars dataset '{args.market_dataset_id}' not found in catalog. Run backfill or specify --market-dataset-id.",
+                    context={"db_path": str(db_path), "market_dataset_id": args.market_dataset_id},
+                )
+            dataset_id = args.market_dataset_id
         finally:
             cat.close()
 
-        as_of_store = CatalogAsOfStore(control_database=db_path)
+        as_of_store = CatalogAsOfStore(control_database=db_path, dataset_store_root=store_root)
         price_store = as_of_store
 
         def get_real_prices(dt: datetime, univ: Sequence[str]) -> dict[str, float]:
             res: dict[str, float] = {}
             for sym in univ:
+                binance_sym = to_binance_symbol(sym)
                 try:
-                    tbl = as_of_store.latest_available(dataset_id, [sym], ["close"], dt)
+                    tbl = as_of_store.latest_available(dataset_id, [binance_sym], ["close"], dt)
                     if tbl is not None and tbl.num_rows > 0:
                         res[sym] = float(tbl.column("close")[0].as_py())
-                except Exception:
-                    pass
+                except AsOfAccessError as exc:
+                    raise PaperExecutionError(
+                        f"AsOf access error looking up price for '{sym}' ({binance_sym}) at {dt.isoformat()}: {exc}",
+                        context={"symbol": sym, "binance_symbol": binance_sym, "decision_time": dt.isoformat()},
+                    ) from exc
+
             if not res:
-                raise PaperExecutionError(f"No real bar prices found at {dt.isoformat()} for dataset {dataset_id}")
+                raise PaperExecutionError(
+                    f"No real bar prices found at {dt.isoformat()} for dataset {dataset_id}",
+                    context={"dataset_id": dataset_id, "decision_time": dt.isoformat()},
+                )
             return res
 
         get_prices_fn = get_real_prices
@@ -383,6 +396,25 @@ def main() -> int:
     harden_path = Path("research/sprint_004/10_PAPER_HARDEN_REPORT.json")
     write_harden_report_artifact(harden_report, harden_path)
     print(f"Hardening report written to {harden_path} (live_eligible={harden_report.live_eligible})", file=sys.stderr)
+
+    # Generate and write Real AsOf Correctness Report artifact (DATA-003)
+    correctness_report = {
+        "data_mode": data_mode,
+        "model_artifact_id": MODEL_ARTIFACT_ID,
+        "control_database": str(db_path),
+        "dataset_store_root": str(store_root),
+        "market_dataset_id": dataset_id,
+        "symbol_map": PAPER_TO_BINANCE_MAP,
+        "watermark_last_decision_time": decision_times[-1].isoformat(),
+        "total_periods": len(result.period_logs),
+        "gate_status": ops_status.gate_status,
+        "live_eligible": False,  # ALWAYS false per DATA-003 policy
+        "generated_at": datetime.now(UTC).isoformat(),
+    }
+    correctness_path = Path("research/sprint_004/12_REAL_ASOF_CORRECTNESS.json")
+    correctness_path.parent.mkdir(parents=True, exist_ok=True)
+    correctness_path.write_text(json.dumps(correctness_report, indent=2), encoding="utf-8")
+    print(f"Real as-of correctness report written to {correctness_path}", file=sys.stderr)
 
     formatted = format_loop_result(result)
     out_json = json.dumps(formatted, indent=2)

@@ -1,10 +1,10 @@
 {
   "data_mode": "synthetic",
   "source_dataset_ids": [
-    "ds_5339fbb1593113277446a4e469e8e893749df898d72ac4915ca7943fd9fc3b50",
-    "ds_630903496890433c4d03fdc2f87f694f99dde0ff40a97561b279d57c733861d1"
+    "ds_dc12cabbaca7b464a489fd789467a3a3a96870dc380e660ebf2870e5746973e8",
+    "ds_1939b1bec07b40d8c9eafe966f8195dadd9dfb722d9b19175f4fc6171441f34d"
   ],
-  "canonical_dataset_id": "ds_2e8f3836ab55154b17289415ef78195a4ec0d92108d11fcc55b29346add40187",
+  "canonical_dataset_id": "ds_7eeedd9e9bf1ef1165019f98494cac3e845ef3b23bb8811d6f32dcf951288db5",
   "total_bar_count": 180,
   "symbols_covered": [
     "BTCUSDT",
@@ -12,5 +12,5 @@
   ],
   "gate_status": "OK",
   "live_eligible": false,
-  "generated_at": "2026-07-23T14:06:05.740104+00:00"
+  "generated_at": "2026-07-23T14:17:11.223392+00:00"
 }

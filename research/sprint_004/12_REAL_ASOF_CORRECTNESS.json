@@ -1,0 +1,25 @@
+{
+  "data_mode": "synthetic",
+  "model_artifact_id": "mod_tsmom_30_7_v1",
+  "control_database": "/tmp/tmpci8cgkxf/control.db",
+  "dataset_store_root": "/tmp/tmpci8cgkxf/store",
+  "market_dataset_id": "ds_market_bars",
+  "symbol_map": {
+    "XBTUSD": "BTCUSDT",
+    "BTCUSD": "BTCUSDT",
+    "ETHUSD": "ETHUSDT",
+    "SOLUSD": "SOLUSDT",
+    "XRPUSD": "XRPUSDT",
+    "ADAUSD": "ADAUSDT",
+    "AVAXUSD": "AVAXUSDT",
+    "DOTUSD": "DOTUSDT",
+    "LINKUSD": "LINKUSDT",
+    "LTCUSD": "LTCUSDT",
+    "BCHUSD": "BCHUSDT"
+  },
+  "watermark_last_decision_time": "2026-05-30T00:00:00+00:00",
+  "total_periods": 8,
+  "gate_status": "OK",
+  "live_eligible": false,
+  "generated_at": "2026-07-23T14:13:20.267899+00:00"
+}

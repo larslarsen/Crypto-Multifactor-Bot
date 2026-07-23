@@ -41,9 +41,16 @@ from cryptofactors.execution.paper_loop import (
 )
 from cryptofactors.execution.paper_monitor import PaperOpsMonitor
 from cryptofactors.execution.paper_store import PaperSessionStore
+from cryptofactors.execution.symbols import (
+    BINANCE_TO_PAPER_MAP,
+    PAPER_TO_BINANCE_MAP,
+    to_binance_symbol,
+    to_paper_symbol,
+)
 from cryptofactors.execution.venue_probe import ReadOnlyVenueProbeAdapter
 
 __all__ = [
+    "BINANCE_TO_PAPER_MAP",
     "DrawdownLimitExceededError",
     "FactorDrivenPaperLoop",
     "FlattenSignal",
@@ -55,6 +62,7 @@ __all__ = [
     "LiveOrderStatus",
     "MAX_GROSS_LEVERAGE",
     "MAX_SINGLE_ASSET_WEIGHT",
+    "PAPER_TO_BINANCE_MAP",
     "PaperAccountState",
     "PaperBroker",
     "PaperExecutionError",
@@ -75,5 +83,7 @@ __all__ = [
     "build_harden_report",
     "load_credentials_from_env",
     "new_live_order",
+    "to_binance_symbol",
+    "to_paper_symbol",
     "write_harden_report_artifact",
 ]
