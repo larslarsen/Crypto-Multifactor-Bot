@@ -1,26 +1,27 @@
 # CURRENT_TASK
 
-Ticket: PORT-002
-State: ACCEPTED
-Next required actor: Jr Dev (Weak Model) — closing records and git handoff
-Next ticket authorized: NONE
+Ticket: EXP-002
+State: READY
+Next required actor: Sr Dev (Strong Model) — implement EXP-002 runner wiring and execution script
+Next ticket authorized: EXP-002
 
-**Reviewer Decision (Code Review):**
+**Reviewer Decision (Architecture & Ticket Selection):**
 
-I have reviewed the `PORT-002` Perpetual Long/Short Portfolio Simulator implementation.
-**Decision: ACCEPT**
+To actually execute `EXP-2026-019` and `EXP-2026-020`, we need to wire the new `PerpetualSimulator` (from PORT-002) into the `momts_runner.py`'s main entry points (`run_30_7` and `run_90_7`), which are currently still pointing at the spot placeholder. 
 
-The `LongShortRankAllocator` and `PerpetualSimulator` correctly introduce margin maintenance limits (liquidations) and funding cost integration. The update to `momts_runner.py` properly wires these up so that experiments `EXP-2026-019` and `EXP-2026-020` can be executed under realistic conditions. All acceptance criteria and gates pass.
+Furthermore, we need a concrete execution script (`scripts/run_momts_experiments.py`) that loads the environment, the funding provider, and executes the backtest over the decision times, outputting the metrics (liquidations, long/short attribution, net return) required by the registration.
 
-We are now mechanically capable of fulfilling the registered requirements for the Time-Series Momentum experiments.
+I am authorizing **EXP-002** (MOM-TS-01 Perpetual Execution and Results) to complete this final wiring and execution step.
 
 ## Governing documents
 
-- tickets/PORT-002.md (ACCEPTED)
-- docs/reviews/REVIEW-0176_PORT-002_ACCEPTED.md
+- tickets/EXP-002.md (READY)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
+- research/sprint_004/05_EXPERIMENT_REGISTRATIONS.csv
 
 ## Acceptance (Jr)
 
-1. python3 scripts/check_repo_control.py
-2. Commit and push the review records.
+1. .venv/bin/python -m pytest tests/experiments/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/experiments scripts/
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/experiments scripts/
+4. python3 scripts/check_repo_control.py
