@@ -1,19 +1,23 @@
 # CURRENT_TASK
 
-Ticket: SERV-001
-State: ACCEPTED
-Next required actor: Reviewer (architecture decision)
-Next ticket authorized: NONE
+Ticket: PORT-001
+State: READY
+Next required actor: Sr Dev (Grok / Strong Model)
+Next ticket authorized: PORT-001
 
-SERV-001 (sequence #22, artifact/representation parity) accepted under REVIEW-0166.
-Sequence #22 complete. #23 (paper promotion) and #24 (prospective holdout) remain.
+**Reviewer Decision (Architecture):**
+Sequence #22 (SERV-001) is complete. The next step is #23 (PROMO-001). However, PROMO-001 is strictly blocked by the lack of the `portfolio` domain (Sequence #15), which was skipped earlier. We cannot do explicit paper promotion without costed portfolio acceptance and portfolio/cost-model version lineage.
+
+I am authorizing PORT-001 to implement the missing portfolio simulation layer before we can unblock PROMO-001.
 
 ## Governing documents
 
-- tickets/SERV-001.md (ACCEPTED)
-- docs/reviews/REVIEW-0166_SERV-001_ACCEPTED.md
+- tickets/PORT-001.md (READY)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
-## Acceptance — last pass
+## Acceptance (Jr)
 
-1. python3 scripts/check_repo_control.py
+1. .venv/bin/python -m pytest tests/portfolio/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/portfolio tests/portfolio
+3. .venv/bin/python -m mypy --no-incremental src/cryptofactors/portfolio tests/portfolio
+4. python3 scripts/check_repo_control.py
