@@ -1,7 +1,7 @@
 # PROMO-003 — PAPER_APPROVED Promotion for Frozen tsmom_14_3
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** ACCEPTED  
 **Dependencies:** PAPER-009 (ACCEPTED), PAPER-008 (ACCEPTED), PROMO-001 (ACCEPTED)  
 **Layer:** promotion / registry  
 **Architecture:** ADR-0008 state machine only. **No LIVE. No parameter change.**
