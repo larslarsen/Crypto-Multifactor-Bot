@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: DATA-004
-State: READY
-Next required actor: Sr Dev (Strong Model) — extend real market bar history
-Next ticket authorized: DATA-004
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -16,7 +16,7 @@ Authorizing **DATA-004**: extend Binance→canonical history to ≥24 months (or
 
 ## Governing documents
 
-- tickets/DATA-004.md (READY)
+- tickets/DATA-004.md (AWAITING_REVIEW)
 - tickets/EXP-005.md (ACCEPTED)
 - docs/reviews/REVIEW-0194_EXP-005_ACCEPTED.md
 

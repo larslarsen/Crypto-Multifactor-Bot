@@ -1,7 +1,7 @@
 # DATA-004 — Extend Real Market Bar History for Credible OOS
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** DATA-003, EXP-005 (ACCEPTED)  
 **Layer:** acquisition / catalog / research evidence  
 **Architecture:** reuse Binance fetcher + RAW→MAN→canonical bars path. **No LIVE. No risk-limit changes.**
