@@ -1,31 +1,25 @@
 # CURRENT_TASK
 
-Ticket: UNIVERSE-002
-State: ACCEPTED
-Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
-Next ticket authorized: NONE
+Ticket: EXEC-001
+State: READY
+Next required actor: Sr Dev (Strong Model) — implementation of Sequence #25
+Next ticket authorized: EXEC-001
 
-**Reviewer Decision (Architecture & Authorization):**
-We have successfully completed the original implementation sequence (#1 through #24), culminating in the Prospective Holdout evaluation engine. 
+**Reviewer Decision (Architecture & Ticket Selection):**
+With the completion of UNIVERSE-002, the data and research foundations are sealed. We are now officially entering the **Execution** phase defined in `IMPLEMENTATION_SEQUENCE.md`.
 
-Before we move into execution (Sequence #25: Paper Execution Runtime), we must close the remaining gap in our universe definition: the DEX side. UNIVERSE-001 gave us CEX bars, and UNIVERSE-003 gave us the historical CEX dead-coin backfill. We now need the forward-looking DEX new-listing event stream.
-
-I have reviewed the constraints on **UNIVERSE-002** (Birdeye DEX New-Listing Event Feed). 
-1. Licensing/ToS is acceptable for internal research storage.
-2. We accept that this is forward-only (from ingestion start) and does NOT contain delistings/deaths (meaning it is not survivorship-free). 
-3. The CU budget (30k/mo) is strict: the implementation must NEVER attempt to fetch OHLCV bars.
-
-I am formally authorizing **UNIVERSE-002**. I have also updated the `IMPLEMENTATION_SEQUENCE.md` to append the **Execution** phase (Step #25: Paper execution runtime).
+I am drafting and authorizing **EXEC-001** (Paper Execution Runtime, Sequence #25). 
+This transitions our evaluation capability from purely historical backtesting (`PORT-001`) into a stateful, forward-walking paper trading environment. Crucially, this execution layer must be strongly coupled to `PROMO-001`: it may only execute artifacts verified to be in the `PAPER_APPROVED` state by the Promotion Registry.
 
 ## Governing documents
 
-- tickets/UNIVERSE-002.md (READY)
+- tickets/EXEC-001.md (READY)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/universe/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/universe tests/universe
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/universe tests/universe
+1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
+2. .venv/bin/python -m ruff check src/cryptofactors/execution tests/execution
+3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution tests/execution
 4. python3 scripts/check_repo_control.py
-5. Test asserting no OHLCV/bar endpoint is ever constructed by this module.
+5. Test asserting PaperBroker raises explicit error if artifact is not PAPER_APPROVED.
