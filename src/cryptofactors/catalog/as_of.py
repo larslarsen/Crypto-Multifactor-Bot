@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
@@ -410,13 +409,55 @@ class CatalogAsOfStore:
         decision_time_us: int,
         min_availability_us: int | None,
     ) -> pa.Table:
-        eligible = self._filter_market_bars(table, keys, fields=table.column_names, decision_time_us=decision_time_us)
-        if eligible.num_rows == 0:
-            return self._project(eligible, fields)
-        if min_availability_us is not None:
-            avail = eligible.column("availability_time")
-            mask = pc.greater_equal(avail, pa.scalar(min_availability_us, type=avail.type))
-            eligible = eligible.filter(mask)
+        """Latest completed bar per key at ``decision_time``.
+
+        Completed-bar access uses availability only (plus optional ``period_start``
+        lower bound): ``availability_time <= t`` and ``period_start <= t``. The
+        period upper bound is intentionally not applied — a bar remains selectable
+        after ``period_end`` once it has become available (production BAR-001 sets
+        ``availability_time = period_end``).
+        """
+        if table.num_rows == 0:
+            return self._project(table, fields)
+        required = ("instrument_id", "period_start", "period_end", "availability_time")
+        for col in required:
+            if col not in table.column_names:
+                raise AsOfAccessError(
+                    f"market_bars table missing column {col!r}",
+                    context={"columns": list(table.column_names)},
+                )
+        key_set = {int(k) for k in keys}
+        if not key_set:
+            return self._project(table.slice(0, 0), fields)
+
+        inst = table.column("instrument_id").to_pylist()
+        p_start = table.column("period_start").to_pylist()
+        avail = table.column("availability_time").to_pylist()
+        keep: list[bool] = []
+        for i in range(table.num_rows):
+            iid = inst[i]
+            if iid is None or int(iid) not in key_set:
+                keep.append(False)
+                continue
+            a = avail[i]
+            vf = p_start[i]
+            if a is None or vf is None:
+                keep.append(False)
+                continue
+            a_us = int(a)
+            vf_us = int(vf)
+            if a_us > decision_time_us:
+                keep.append(False)
+                continue
+            if vf_us > decision_time_us:
+                keep.append(False)
+                continue
+            if min_availability_us is not None and a_us < min_availability_us:
+                keep.append(False)
+                continue
+            keep.append(True)
+        mask = pa.array(keep, type=pa.bool_())
+        eligible = table.filter(mask)
         if eligible.num_rows == 0:
             return self._project(eligible, fields)
 

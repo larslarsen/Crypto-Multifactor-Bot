@@ -345,124 +345,6 @@ def test_all_baselines_are_factors() -> None:
 # ---------------------------------------------------------------------------
 
 
-class _CompletedBarCatalogAsOf:
-    """CatalogAsOfStore wrapper for production BAR-001 timestamps.
-
-    Production sets ``availability_time = period_end``. CatalogAsOfStore's
-    half-open ``period_start <= t < period_end`` rule then makes completed bars
-    unselectable at their availability time. This wrapper keeps REF ``as_of``
-    on the real store and selects market bars by completed-bar eligibility:
-    ``availability_time <= decision_time`` (and ``period_start`` for ranking).
-    """
-
-    def __init__(self, store: CatalogAsOfStore, market_dataset_id: str) -> None:
-        self._store = store
-        self._market_dataset_id = market_dataset_id
-        self._bars: dict[int, list[tuple[int, int, int | None, float, float]]] | None = (
-            None
-        )
-
-    def as_of(
-        self,
-        dataset_id: str,
-        keys: Sequence[int | str],
-        fields: Sequence[str],
-        decision_time: datetime,
-        knowledge_time: datetime | None = None,
-    ) -> pa.Table:
-        return self._store.as_of(
-            dataset_id, keys, fields, decision_time, knowledge_time
-        )
-
-    def _ensure_index(self) -> None:
-        if self._bars is not None:
-            return
-        paths = self._store._dataset_file_paths(self._market_dataset_id)
-        tables = [pq.read_table(p) for p in paths]
-        table = (
-            pa.concat_tables(tables, promote_options="default")
-            if len(tables) > 1
-            else tables[0]
-        )
-        by_inst: dict[int, list[tuple[int, int, int | None, float, float]]] = {}
-        inst = table.column("instrument_id").to_pylist()
-        p_start = table.column("period_start").to_pylist()
-        p_end = table.column("period_end").to_pylist()
-        avail = table.column("availability_time").to_pylist()
-        close = table.column("close").to_pylist()
-        vol = table.column("base_volume").to_pylist()
-        for i in range(table.num_rows):
-            iid = int(inst[i])
-            by_inst.setdefault(iid, []).append(
-                (
-                    int(avail[i]),
-                    int(p_start[i]),
-                    int(p_end[i]) if p_end[i] is not None else None,
-                    float(close[i]),
-                    float(vol[i]),
-                )
-            )
-        for iid in by_inst:
-            by_inst[iid].sort(key=lambda r: (r[1], r[0]))
-        self._bars = by_inst
-
-    def latest_available(
-        self,
-        dataset_id: str,
-        keys: Sequence[int | str],
-        fields: Sequence[str],
-        decision_time: datetime,
-        max_age: timedelta | None = None,
-    ) -> pa.Table:
-        if dataset_id != self._market_dataset_id:
-            return self._store.latest_available(
-                dataset_id, keys, fields, decision_time, max_age
-            )
-        self._ensure_index()
-        assert self._bars is not None
-        t_us = _us(decision_time)
-        min_av: int | None = None
-        if max_age is not None:
-            min_av = t_us - int(max_age.total_seconds() * _US)
-
-        out_ids: list[int] = []
-        out_close: list[float] = []
-        out_vol: list[float] = []
-        out_avail: list[int] = []
-        out_pstart: list[int] = []
-        for key in keys:
-            iid = int(key)
-            best: tuple[int, int, int | None, float, float] | None = None
-            for row in self._bars.get(iid, []):
-                avail_us, vf, _vt, close_px, vol_px = row
-                if min_av is not None and avail_us < min_av:
-                    continue
-                # Completed-bar access: available once availability_time <= t.
-                # Do not require t < period_end (production availability = period_end).
-                if avail_us > t_us:
-                    continue
-                if vf > t_us:
-                    continue
-                if best is None or (vf, avail_us) > (best[1], best[0]):
-                    best = row
-            if best is not None:
-                out_ids.append(iid)
-                out_close.append(best[3])
-                out_vol.append(best[4])
-                out_avail.append(best[0])
-                out_pstart.append(best[1])
-
-        cols: dict[str, pa.Array] = {
-            "instrument_id": pa.array(out_ids, pa.int64()),
-            "close": pa.array(out_close, pa.float64()),
-            "base_volume": pa.array(out_vol, pa.float64()),
-            "availability_time": pa.array(out_avail, pa.int64()),
-            "period_start": pa.array(out_pstart, pa.int64()),
-        }
-        names = [f for f in fields if f in cols] or list(cols.keys())
-        return pa.table({n: cols[n] for n in names})
-
-
 def _build_catalog_asof(
     root: Path,
     *,
@@ -471,7 +353,7 @@ def _build_catalog_asof(
     n_days: int,
     price_seed: int,
     market_dataset_id: str = _DATASET,
-) -> tuple[CatalogAsOfStore, _CompletedBarCatalogAsOf]:
+) -> CatalogAsOfStore:
     db = root / "control.db"
     store_root = root / "datasets"
     apply_migrations(db, migrations_dir=MIGRATIONS_DIR)
@@ -614,7 +496,7 @@ def _build_catalog_asof(
     conn.commit()
     conn.close()
     raw = CatalogAsOfStore(control_database=db, dataset_store_root=store_root)
-    return raw, _CompletedBarCatalogAsOf(raw, market_dataset_id)
+    return raw
 
 
 @pytest.mark.parametrize(
@@ -635,7 +517,7 @@ def test_baseline_substrate_integration(
     if root.exists():
         shutil.rmtree(root)
     root.mkdir(parents=True)
-    _raw, store = _build_catalog_asof(
+    store = _build_catalog_asof(
         root,
         instruments=instruments,
         start=start,
@@ -701,7 +583,7 @@ def test_catalog_asof_raw_store_ref_and_completed_bar_access(tmp_path: Path) -> 
     """
     root = tmp_path / "smoke"
     root.mkdir(parents=True)
-    raw, completed = _build_catalog_asof(
+    store = _build_catalog_asof(
         root,
         instruments=[1, 2],
         start=datetime(2020, 1, 1, tzinfo=UTC),
@@ -709,8 +591,8 @@ def test_catalog_asof_raw_store_ref_and_completed_bar_access(tmp_path: Path) -> 
         price_seed=1,
     )
     t = datetime(2020, 1, 6, tzinfo=UTC)
-    assert isinstance(raw, CatalogAsOfStore)
-    ref = raw.as_of(
+    assert isinstance(store, CatalogAsOfStore)
+    ref = store.as_of(
         _INSTRUMENT_DATASET_ID,
         ["1", "2"],
         ["instrument_id"],
@@ -718,11 +600,11 @@ def test_catalog_asof_raw_store_ref_and_completed_bar_access(tmp_path: Path) -> 
         knowledge_time=t,
     )
     assert ref.num_rows == 2
-    raw_bars = raw.latest_available(
+    raw_bars = store.latest_available(
         _DATASET, [1], ["instrument_id", "close", "period_start"], t
     )
     assert raw_bars.num_rows == 1
-    completed_bars = completed.latest_available(
+    completed_bars = store.latest_available(
         _DATASET,
         [1],
         ["instrument_id", "close", "period_start", "availability_time"],

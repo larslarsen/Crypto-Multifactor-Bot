@@ -1,7 +1,7 @@
 # BASE-001 — Transparent Factor Baselines (Experiment #19)
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** ASOF-002 (accepted), NULL-001 (accepted), EXP-001 (accepted), LABEL-001 (accepted), ASOF-001 (accepted)
 **Layer:** factors
 **Architecture:** implements experiment #19 (transparent factor baselines in preregistered order); no ADR required

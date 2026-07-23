@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: BASE-001
-State: IN_PROGRESS
-Next required actor: Sr Dev (Grok 0.1)
+State: AWAITING_REVIEW
+Next required actor: Reviewer (strong model)
 Next ticket authorized: NONE
 
 Round 4 rejected (REVIEW-0160). Two fixups required. The `_latest_market_bars`
