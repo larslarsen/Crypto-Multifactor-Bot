@@ -1,33 +1,29 @@
 # CURRENT_TASK
 
-Ticket: EXP-001
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+Ticket: UNIVERSE-001
+State: IN_PROGRESS
+Next required actor: Sr Dev — Grok Build (source)
 Next ticket authorized: NONE
 
-Accepted/blocked context: Sr production source drop `src/cryptofactors/validation/experiment.py`
-(167 lines) approved under REVIEW-0147 (SOURCE APPROVED - JR INTEGRATION AUTHORIZED;
-authorized REVIEW-0146). Jr owns focused tests, acceptance gates, change report, package
-exports, and governance records only. No Sr-source edits; no new features beyond the approved
-EXP-001 contract. Depends on ASOF-001 / SPLIT-001 / LABEL-001 (all accepted) for the config
-types used inside ExperimentBundle.
+Accepted foundation context: ASOF-001 + SPLIT-001 + LABEL-001 + EXP-001 all ACCEPTED.
+Implementation Sequence #12, #13, #14, #16 done. #11 (universe snapshots) in progress via UNIVERSE-001.
+
+UNIVERSE-001 authorized under REVIEW-0149: CoinGecko survivorship-free universe provider.
+Uses CoinGecko free tier (365 days OHLCV). Unblocks #11 and #15 (costed simulation).
 
 Governing documents:
-- tickets/EXP-001.md
-- docs/reviews/REVIEW-0146_EXP-001_AUTHORIZED.md
-- docs/reviews/REVIEW-0147_EXP-001_SOURCE_APPROVED_JR_AUTHORIZED.md
-- docs/reviews/EXP-001_CHANGE_REPORT.md
-- src/cryptofactors/validation/experiment.py (approved drop, unchanged)
-- src/cryptofactors/validation/__init__.py (exports added by Jr)
-- tests/validation/test_exp001_integration.py
+- tickets/UNIVERSE-001.md (authorized)
+- docs/reviews/REVIEW-0149_UNIVERSE-001_AUTHORIZED.md
+- docs/reviews/REVIEW-0148_EXP-001_ACCEPTED.md
+- all accepted foundation tickets (ASOF-001, SPLIT-001, LABEL-001, EXP-001)
 
 ## Authorized work
 
-EXP-001 Jr integration after REVIEW-0147: add package exports, focused tests (fingerprint
-tampering, non-string factor IDs, non-string metadata keys, register/duplicate/load/list/has),
-run gates, record change report, set states to AWAITING_REVIEW.
+1. Sr Dev — Grok Build produces `src/cryptofactors/universe/coingecko.py` per UNIVERSE-001 contract.
+   Stop for Reviewer after source only. No tests, no commits, no pushes.
+2. Jr Dev — Hermes integrates after Reviewer approves source: tests + gates + change report +
+   governance updates; all states AWAITING_REVIEW.
 
 ## Stop condition
 
-After tests + gates + report + governance updates, set EXP-001 to AWAITING_REVIEW (Reviewer
-next, Next ticket NONE); commit and push; stop.
+After Jr: AWAITING_REVIEW, Reviewer next, NONE. Stop after push.
