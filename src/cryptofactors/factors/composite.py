@@ -94,7 +94,12 @@ def _cross_sectional_ranks(scores: dict[str, float]) -> dict[str, float]:
 
 
 class EqualWeightRankComposite:
-    """Average cross-sectional ranks across child factors (lower score = better)."""
+    """Average cross-sectional ranks across child factors (higher score = better).
+
+    ``score = -avg_rank`` so the best instrument (rank 1) gets the highest
+    score (``-1``), consistent with the descending-sort portfolio convention.
+    ``raw_value`` remains the plain average rank.
+    """
 
     factor_id: str = COMPOSITE_EQUAL_RANK_FACTOR_ID
     factor_version: str = COMPOSITE_FACTOR_VERSION
@@ -108,12 +113,20 @@ class EqualWeightRankComposite:
                 context={"type": type(factors).__name__},
             )
         children: list[Factor] = []
+        seen_ids: set[str] = set()
         for item in factors:
             if not isinstance(item, Factor):
                 raise CompositeFactorError(
                     "each child must implement Factor",
                     context={"type": type(item).__name__},
                 )
+            fid = item.factor_id
+            if fid in seen_ids:
+                raise CompositeFactorError(
+                    "duplicate child factor_id",
+                    context={"factor_id": fid},
+                )
+            seen_ids.add(fid)
             children.append(item)
         if not children:
             raise CompositeFactorError("factors must be non-empty")
@@ -173,7 +186,7 @@ class EqualWeightRankComposite:
                     instrument_id=instrument_id,
                     decision_time=decision_time,
                     raw_value=avg_rank,
-                    score=avg_rank,
+                    score=-avg_rank,
                     availability_time=decision_time,
                     factor_id=self.factor_id,
                     factor_version=self.factor_version,

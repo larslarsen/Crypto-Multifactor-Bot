@@ -98,6 +98,13 @@ def test_composite_rejects_empty_factors() -> None:
         EqualWeightRankComposite([])
 
 
+def test_composite_rejects_duplicate_factor_ids() -> None:
+    dup_a = _ConstFactor({"a": 1.0}, factor_id="same")
+    dup_b = _ConstFactor({"b": 2.0}, factor_id="same")
+    with pytest.raises(CompositeFactorError, match="duplicate child factor_id"):
+        EqualWeightRankComposite([dup_a, dup_b])
+
+
 def test_composite_two_assets_ranks_correct() -> None:
     """Higher child score → better (lower) rank; average across factors."""
     # Factor A: a=10, b=20 → ranks a=2, b=1
@@ -110,9 +117,9 @@ def test_composite_two_assets_ranks_correct() -> None:
     frame = comp.compute(("b", "a"), as_of)
     assert [v.instrument_id for v in frame.values] == ["a", "b"]
     by_id = {v.instrument_id: v for v in frame.values}
-    assert by_id["a"].score == pytest.approx(1.5)
-    assert by_id["b"].score == pytest.approx(1.5)
-    assert by_id["a"].raw_value == by_id["a"].score
+    assert by_id["a"].score == pytest.approx(-1.5)
+    assert by_id["b"].score == pytest.approx(-1.5)
+    assert by_id["a"].raw_value == pytest.approx(1.5)
     assert frame.factor_id == COMPOSITE_EQUAL_RANK_FACTOR_ID
 
 
@@ -123,7 +130,7 @@ def test_composite_three_assets_rank_order() -> None:
         ("y", "z", "x"), datetime(2020, 1, 1, tzinfo=UTC)
     )
     by_id = {v.instrument_id: v.score for v in frame.values}
-    assert by_id == {"x": 1.0, "z": 2.0, "y": 3.0}
+    assert by_id == {"x": -1.0, "z": -2.0, "y": -3.0}
 
 
 def test_composite_single_asset_rank_one() -> None:
@@ -132,7 +139,8 @@ def test_composite_single_asset_rank_one() -> None:
         ("solo",), datetime(2020, 1, 1, tzinfo=UTC)
     )
     assert len(frame.values) == 1
-    assert frame.values[0].score == pytest.approx(1.0)
+    assert frame.values[0].score == pytest.approx(-1.0)
+    assert frame.values[0].raw_value == pytest.approx(1.0)
 
 
 def test_composite_ties_get_average_rank() -> None:
@@ -142,9 +150,9 @@ def test_composite_ties_get_average_rank() -> None:
         ("a", "b", "c"), datetime(2020, 1, 1, tzinfo=UTC)
     )
     by_id = {v.instrument_id: v.score for v in frame.values}
-    assert by_id["a"] == pytest.approx(1.5)
-    assert by_id["b"] == pytest.approx(1.5)
-    assert by_id["c"] == pytest.approx(3.0)
+    assert by_id["a"] == pytest.approx(-1.5)
+    assert by_id["b"] == pytest.approx(-1.5)
+    assert by_id["c"] == pytest.approx(-3.0)
 
 
 def test_composite_missing_instrument_skipped_in_average() -> None:
@@ -157,8 +165,8 @@ def test_composite_missing_instrument_skipped_in_average() -> None:
         ("a", "b"), datetime(2020, 1, 1, tzinfo=UTC)
     )
     by_id = {v.instrument_id: v.score for v in frame.values}
-    assert by_id["a"] == pytest.approx(1.5)
-    assert by_id["b"] == pytest.approx(1.0)
+    assert by_id["a"] == pytest.approx(-1.5)
+    assert by_id["b"] == pytest.approx(-1.0)
 
 
 def test_composite_deterministic_universe_order_independent() -> None:
@@ -232,6 +240,11 @@ def test_composite_substrate_integration(tmp_path: Path) -> None:
     assert len(frame.values) == n_assets
     assert all(math.isfinite(v.score) for v in frame.values)
     assert frame.factor_id == COMPOSITE_EQUAL_RANK_FACTOR_ID
+    # Best instrument (lowest avg_rank) gets the highest score (score = -avg_rank).
+    scores = {v.instrument_id: v.score for v in frame.values}
+    top_iid = max(scores, key=scores.__getitem__)
+    assert scores[top_iid] == max(scores.values())
+    assert min(scores.values()) < max(scores.values())
 
     decision_times = [
         start + timedelta(days=d) for d in range(window + 2, n_days + 1)
