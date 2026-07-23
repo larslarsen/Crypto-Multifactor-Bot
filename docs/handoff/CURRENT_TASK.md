@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: PAPER-007
-State: READY
-Next required actor: Sr Dev (Strong Model) — tsmom_14_0 paper session on extended history
-Next ticket authorized: PAPER-007
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -15,7 +15,7 @@ Authorizing **PAPER-007**: risk-compliant real paper session for `tsmom_14_0` on
 
 ## Governing documents
 
-- tickets/PAPER-007.md (READY)
+- tickets/PAPER-007.md (AWAITING_REVIEW)
 - tickets/EXP-006.md (ACCEPTED)
 - docs/reviews/REVIEW-0197_EXP-006_ACCEPTED.md
 

@@ -1,0 +1,83 @@
+{
+  "experiment_id": "PAPER-007",
+  "data_mode": "real_asof",
+  "model_artifact_id": "mod_tsmom_14_0_v1",
+  "factor_id": "tsmom_14_0",
+  "lookback_days": 14,
+  "skip_days": 0,
+  "protocol": "paper_session",
+  "protocol_note": "Single risk-compliant real as-of paper session for tsmom_14_0 on the full DATA-04 usable window (90-day warmup from bar_start, weekly decisions). A new model artifact id is registered and promoted to PAPER_APPROVED with effective_time aligned to the first decision. DATA-04 canonical dataset quality is REJECTED due to BAR-001 native-1d daily resample policy; intraday 1d bars are used directly. This is promotion-grade evidence, not LIVE.",
+  "control_database": "exp003.db",
+  "dataset_store_root": "data/exp003_store",
+  "canonical_dataset_id": "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
+  "canonical_dataset_quality_status": "REJECTED",
+  "canonical_dataset_quality_note": "BAR-001 quarantines all native 1d rows; intraday partition is used.",
+  "universe": [
+    "XBTUSD",
+    "ETHUSD",
+    "SOLUSD",
+    "XRPUSD",
+    "ADAUSD",
+    "AVAXUSD",
+    "DOTUSD",
+    "LINKUSD",
+    "LTCUSD",
+    "BCHUSD"
+  ],
+  "venue_symbols": [
+    "ADAUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BTCUSDT",
+    "DOTUSDT",
+    "ETHUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "risk_policy": {
+    "max_single_weight": 0.15,
+    "max_gross_leverage": 1.0,
+    "enforcement": "neutrality_preserving_leg_rescale"
+  },
+  "session": {
+    "start": "2024-04-01T00:00:00+00:00",
+    "end": "2026-07-23T00:00:00+00:00",
+    "decision_count": 121,
+    "total_trades_executed": 1210,
+    "initial_cash": 100000.0,
+    "final_equity": 99371.38,
+    "total_net_return": -0.006286,
+    "max_abs_single_weight": 0.15,
+    "max_gross_leverage": 1.0,
+    "avg_gross_leverage": 0.6140809917355372,
+    "max_abs_net_exposure": 0.5,
+    "avg_abs_net_exposure": 0.219099173553719,
+    "meets_risk_limits": true,
+    "is_complete": true,
+    "meets_risk_limits_derived": true,
+    "is_complete_derived": true,
+    "live_gate_satisfied": false,
+    "live_eligible": false
+  },
+  "live_eligible": false,
+  "live_eligible_note": "PAPER-007 is promotion-grade paper evidence; no LIVE authorization.",
+  "oos_supports_live_path": false,
+  "oos_supports_live_path_note": "Paper session gate not satisfied; LIVE path not supported by this evidence.",
+  "cross_references": [
+    "research/sprint_004/21_TSMOM_EXTENDED_OOS.json"
+  ],
+  "prior_artifacts": [
+    "research/sprint_004/13_REAL_PAPER_SESSION.json",
+    "research/sprint_004/14_RISK_COMPLIANT_PAPER_SESSION.json",
+    "research/sprint_004/15_MOMTS_RISK_DIAGNOSIS.json",
+    "research/sprint_004/16_MOMTS_LONG_SESSION.json",
+    "research/sprint_004/17_NEUTRAL_RISK_SESSION.json",
+    "research/sprint_004/18_TSMOM_GRID_RESULTS.json",
+    "research/sprint_004/19_TSMOM_OOS_VALIDATION.json",
+    "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json",
+    "research/sprint_004/21_TSMOM_EXTENDED_OOS.json"
+  ],
+  "generated_at": "2026-07-23T22:09:22.551489+00:00"
+}

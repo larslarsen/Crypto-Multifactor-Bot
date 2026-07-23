@@ -1,7 +1,7 @@
 # PAPER-007 — Risk-Compliant Paper Evidence for tsmom_14_0 on Extended History
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** EXP-006 (ACCEPTED), DATA-004, ALLOC-001  
 **Layer:** execution / paper / research evidence  
 **Architecture:** ALLOC-001 risk; real as-of on DATA-004 dataset. **No LIVE.**
