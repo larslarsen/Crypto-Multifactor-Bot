@@ -1,25 +1,23 @@
 # CURRENT_TASK
 
-Ticket: EXEC-001
-State: ACCEPTED
-Next required actor: Sr Engineer (Weak Model) — record review and next-ticket selection
-Next ticket authorized: NONE
+Ticket: AUD-006
+State: READY
+Next required actor: Sr Dev (Strong Model) — perform the execution risk audit
+Next ticket authorized: AUD-006
 
 **Reviewer Decision (Architecture & Ticket Selection):**
-With the completion of UNIVERSE-002, the data and research foundations are sealed. We are now officially entering the **Execution** phase defined in `IMPLEMENTATION_SEQUENCE.md`.
+We have completed Sequence #25 (Paper Execution Runtime). According to `IMPLEMENTATION_SEQUENCE.md`, Sequence #26 (Live Execution Routing) requires an explicit risk-board authorization.
 
-I am drafting and authorizing **EXEC-001** (Paper Execution Runtime, Sequence #25). 
-This transitions our evaluation capability from purely historical backtesting (`PORT-001`) into a stateful, forward-walking paper trading environment. Crucially, this execution layer must be strongly coupled to `PROMO-001`: it may only execute artifacts verified to be in the `PAPER_APPROVED` state by the Promotion Registry.
+Before we write any code that touches live exchange APIs or loads real API keys, we must formally audit the execution and promotion gates to ensure live trading cannot be accidentally triggered by research or paper artifacts.
+
+I am drafting and authorizing **AUD-006** (Execution Risk & Live Authority Audit). This ticket will produce a risk report and determine if we are clear to proceed to Sequence #26.
 
 ## Governing documents
 
-- tickets/EXEC-001.md (ACCEPTED)
+- tickets/AUD-006.md (READY)
 - docs/handoff/IMPLEMENTATION_SEQUENCE.md
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution tests/execution
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution tests/execution
-4. python3 scripts/check_repo_control.py
-5. Test asserting PaperBroker raises explicit error if artifact is not PAPER_APPROVED.
+1. Audit report committed to `docs/reviews/`.
+2. python3 scripts/check_repo_control.py
