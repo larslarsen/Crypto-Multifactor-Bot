@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: EXP-001
-State: IN_PROGRESS
-Next required actor: Sr Dev — Grok Build (source)
+State: AWAITING_REVIEW
+Next required actor: Jr Dev — Hermes (integration)
 Next ticket authorized: NONE
 
 Accepted foundation context: ASOF-001 + SPLIT-001 + LABEL-001 all ACCEPTED.
@@ -16,17 +16,14 @@ immutable ExperimentBundle with deterministic SHA-256 fingerprint, validated by 
 Governing documents:
 - tickets/EXP-001.md (authorized)
 - docs/reviews/REVIEW-0146_EXP-001_AUTHORIZED.md
+- docs/reviews/REVIEW-0147_EXP-001_SOURCE_APPROVED_JR_AUTHORIZED.md
 - docs/reviews/REVIEW-0145_LABEL-001_ACCEPTED.md
-- all accepted foundation tickets (ASOF-001, SPLIT-001, LABEL-001)
+- src/cryptofactors/validation/experiment.py (approved drop, unchanged)
 
 ## Authorized work
 
-1. Sr Dev — Grok Build produces corrected `src/cryptofactors/validation/experiment.py` per EXP-001 contract.
-   Stop for Reviewer after source only. No tests, no commits, no pushes.
-   **Flag:** Sr source drop requires verification by DeepSeek V4 Pro (or equivalent strong
-   engineering model) before Reviewer acceptance.
-2. Jr Dev — Hermes integrates after Reviewer approves source: tests + gates + change report +
-   governance updates; all states AWAITING_REVIEW.
+EXP-001 Jr integration after REVIEW-0147: tests + gates + change report + governance updates.
+No further work authorized.
 
 ## Stop condition
 

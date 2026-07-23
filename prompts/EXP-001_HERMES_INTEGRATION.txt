@@ -1,0 +1,25 @@
+MODEL: Hy3:free  ROLE: Jr Dev — Hermes  BASE: c8c2f45
+
+EXP-001 corrected Sr source approved (REVIEW-0147). Integrate in one commit.
+
+1. Set CURRENT_TASK: EXP-001, AWAITING_REVIEW, Jr next, NONE.
+   Tickets/EXP-001.md status → AWAITING_REVIEW.
+   Backlog → AWAITING_REVIEW. README updated.
+
+2. Add tests/tests/validation/ for:
+   - Fingerprint tampering: tamper with factor_defs after construction → ExperimentError on register
+   - Non-string factor IDs: int in factor_defs → ExperimentError
+   - Non-string metadata keys: int key → ExperimentError
+   - register/duplicate detection/load/list/has happy paths
+
+3. Run: pytest tests/validation/ -q --tb=line
+         ruff check src/cryptofactors/validation tests/validation
+         mypy --no-error-summary src/cryptofactors/validation tests/validation
+         python3 scripts/check_repo_control.py
+
+4. Create docs/reviews/EXP-001_CHANGE_REPORT.md with results.
+
+5. All states → AWAITING_REVIEW. Reference REVIEW-0147.
+
+6. Commit "EXP-001: JR integration after REVIEW-0147" + push.
+   Return: hash + (pytest count / ruff+mypy clean / repo PASS / states consistent).

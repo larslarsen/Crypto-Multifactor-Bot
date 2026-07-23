@@ -28,7 +28,7 @@ Active tickets:
 - [`ASOF-001`](tickets/ASOF-001.md) — As-Of Access API (`ACCEPTED - REVIEW-0139`; source approved REVIEW-0138).
 - [`SPLIT-001`](tickets/SPLIT-001.md) — Purged Chronological Split Engine (`ACCEPTED - REVIEW-0142`; authorized REVIEW-0140, source REVIEW-0141).
 - [`LABEL-001`](tickets/LABEL-001.md) — Label / Event Interval Separation (`ACCEPTED - REVIEW-0145`; authorized REVIEW-0143, source REVIEW-0144, integrated commit 2786537).
-- [`EXP-001`](tickets/EXP-001.md) — Experiment Bundles & Fingerprints (`IN_PROGRESS - REVIEW-0146`; Sr Dev next).
+- [`EXP-001`](tickets/EXP-001.md) — Experiment Bundles & Fingerprints (`AWAITING_REVIEW`; authorized REVIEW-0146, source REVIEW-0147).
 - [`GOV-002`](tickets/GOV-002.md) — Repository Status Index Reconciliation (`ACCEPTED`; RECONCILIATION_COMPLETE, REVIEW-0119/0120/0121).
 - [`DF-01`](tickets/DF-01.md) — Coin Metrics Point-in-Time Supply Authority Audit (`ACCEPTED - NO_PRIMARY_PIT_SUPPLY_AUTHORITY`; REVIEW-0122/0123/0124).
 - [`DF-08`](tickets/DF-08.md) — Survivorship-Free Universe Source Authority Audit (`ACCEPTED - NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY`; REVIEW-0125/0126/0127).
