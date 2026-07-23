@@ -1,36 +1,34 @@
 # CURRENT_TASK
 
-Ticket: HARDEN-001
-State: AWAITING_REVIEW
-Next required actor: Lead Quant (Reviewer) — review paper path hardening and venue probe
-Next ticket authorized: NONE
+Ticket: DATA-001
+State: READY
+Next required actor: Sr Dev (Strong Model) — Binance klines through RAW-001/MAN-001
+Next ticket authorized: DATA-001
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-Phase order: ops fixes (done) → **hardening** → LIVE only if paper is profitable on real data.
+HARDEN-001 ACCEPTED (REVIEW-0183). Hardening, paper path, and funding resolution are complete. The system runs end-to-end on **synthetic** data only.
 
-Authorizing **HARDEN-001**:
-1. Real `CatalogAsOfStore` paper path (fail closed if no data).
-2. Read-only venue connectivity stub (no orders).
-3. Hardening report artifact with `live_eligible: false`.
+Authorizing **DATA-001**:
+1. Binance spot klines fetcher → RAW-001 content-addressed store
+2. Wire existing `ingest/binance.py` normalizer + MAN-001 publish
+3. Canonical bars via existing market/bars path
+4. Backfill U50 history (target from ~2020 or earliest available)
+5. Incremental watermark updates
 
-**Policy:** No LIVE promotion in this ticket. LIVE stays blocked until paper shows profitable results on real as-of data.
+**Policy:** No LIVE promotion. Paper on real data comes after DATA-001 lands non-empty published datasets. LIVE still blocked until paper is profitable on real data.
 
 ## Governing documents
 
-- tickets/HARDEN-001.md (READY)
-- tickets/PAPER-004.md (ACCEPTED)
-- docs/reviews/REVIEW-0182_PAPER-004_ACCEPTED.md
-- docs/reviews/AUD-006_RISK_REPORT.md
+- tickets/DATA-001.md (READY)
+- tickets/HARDEN-001.md (ACCEPTED)
+- docs/reviews/REVIEW-0183_HARDEN-001_ACCEPTED.md
+- tickets/RAW-001.md, tickets/MAN-001.md, tickets/UNIVERSE-001.md (accepted)
 
 ## Acceptance (Jr)
 
-1. .venv/bin/python -m pytest tests/execution/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
-3. .venv/bin/python -m mypy --no-error-summary src/cryptofactors/execution
-4. Dry-run harden report path
+1. python3 -m pytest tests/acquisition/ -q --tb=short
+2. python3 -m ruff check src/cryptofactors/acquisition/
+3. python3 -m mypy --no-error-summary src/cryptofactors/acquisition/
+4. Backfill script fetches ≥1 asset daily klines; published dataset in catalog
 5. python3 scripts/check_repo_control.py
-
-## Next Pending (not yet authorized)
-
-- **DATA-001** — Live Market Data Acquisition Pipeline (Binance klines through RAW-001/MAN-001). Ticket drafted, ready for authorization once HARDEN-001 is accepted.
