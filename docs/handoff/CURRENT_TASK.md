@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXP-002
-State: READY
-Next required actor: Sr Dev (Strong Model) — implement EXP-002 runner wiring and execution script
-Next ticket authorized: EXP-002
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review MOM-TS-01 perpetual execution wiring and script
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 

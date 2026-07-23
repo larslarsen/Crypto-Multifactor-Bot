@@ -161,7 +161,7 @@ def test_bundle_metadata_documents_experiment_id_and_formula() -> None:
     assert meta["lookback_days"] == 30
     assert meta["skip_days"] == 7
     assert meta["horizon_days"] == 7
-    assert meta["portfolio_cell"] == "spot_long_cash"
+    assert meta["portfolio_cell"] == "perp_ls"
     assert meta["survivorship_source"] == "cmc_data_api_unofficial_proxy"
 
 
@@ -210,6 +210,10 @@ def test_runner_produces_distinct_results_for_both_experiments() -> None:
     assert result_019.fingerprint != result_020.fingerprint
     assert result_019.n_periods > 0
     assert result_020.n_periods > 0
+    assert hasattr(result_019, "liquidation_count")
+    assert hasattr(result_019, "long_return")
+    assert hasattr(result_019, "short_return")
+    assert hasattr(result_019, "total_funding_cost")
 
 
 def test_runner_rejects_unknown_experiment_id() -> None:

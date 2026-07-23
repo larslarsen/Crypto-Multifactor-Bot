@@ -26,11 +26,7 @@ from cryptofactors.portfolio.perpetual_simulation import (
     PerpetualSimulationResult,
     PerpetualSimulator,
 )
-from cryptofactors.portfolio.simulation import (
-    PortfolioSimulator,
-    RankWeightAllocator,
-    SimulationResult,
-)
+from cryptofactors.portfolio.simulation import SimulationResult
 from cryptofactors.validation.experiment import (
     ExperimentBundle,
     InMemoryExperimentRegistry,
@@ -87,7 +83,7 @@ def build_momts_30_7_bundle(
     market_dataset_id: str,
     *,
     universe_source: str = "audited_u50_best_available_pit",
-    portfolio_version: str = "spot_long_cash_v1",
+    portfolio_version: str = "perp_ls_v1",
     cost_version: str = DEFAULT_COST_VERSION,
 ) -> ExperimentBundle:
     """Build the EXP-001 ExperimentBundle for EXP-2026-019 (tsmom_30_7)."""
@@ -99,7 +95,7 @@ def build_momts_30_7_bundle(
         "skip_days": 7,
         "horizon_days": 7,
         "universe_source": universe_source,
-        "portfolio_cell": "spot_long_cash",
+        "portfolio_cell": "perp_ls",
         "portfolio_version": portfolio_version,
         "cost_version": cost_version,
         "survivorship_source": "cmc_data_api_unofficial_proxy",
@@ -116,7 +112,7 @@ def build_momts_90_7_bundle(
     market_dataset_id: str,
     *,
     universe_source: str = "audited_u50_best_available_pit",
-    portfolio_version: str = "spot_long_cash_v1",
+    portfolio_version: str = "perp_ls_v1",
     cost_version: str = DEFAULT_COST_VERSION,
 ) -> ExperimentBundle:
     """Build the EXP-001 ExperimentBundle for EXP-2026-020 (tsmom_90_7)."""
@@ -128,7 +124,7 @@ def build_momts_90_7_bundle(
         "skip_days": 7,
         "horizon_days": 7,
         "universe_source": universe_source,
-        "portfolio_cell": "spot_long_cash",
+        "portfolio_cell": "perp_ls",
         "portfolio_version": portfolio_version,
         "cost_version": cost_version,
         "survivorship_source": "cmc_data_api_unofficial_proxy",
@@ -150,11 +146,15 @@ class MOMTSRunnerResult:
     factor_version: str
     bundle: ExperimentBundle
     fingerprint: str
-    simulation: SimulationResult
+    simulation: PerpetualSimulationResult | SimulationResult
     n_periods: int
     net_return: Decimal
     mean_turnover: Decimal
     total_cost: Decimal
+    liquidation_count: int = 0
+    long_return: Decimal = Decimal("0")
+    short_return: Decimal = Decimal("0")
+    total_funding_cost: Decimal = Decimal("0")
     run_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -246,11 +246,12 @@ class MOMTSRunner:
             config=bundle.split_config,
         )
 
-        allocator = RankWeightAllocator(long_only=True)
-        simulator = PortfolioSimulator(
+        allocator = LongShortRankAllocator(target_leverage=1.0)
+        simulator = PerpetualSimulator(
             allocator=allocator,
             cost_config=self._cost_config,
-            portfolio_version="spot_long_cash_v1",
+            funding_provider=self._funding_provider,
+            portfolio_version="perp_ls_v1",
         )
         simulation = simulator.simulate(frames, events)
 
@@ -262,7 +263,13 @@ class MOMTSRunner:
             if n_periods > 0
             else Decimal("0")
         )
-        total_cost = sum((p.cost for p in periods), Decimal("0"))
+        total_trading_cost = sum((p.trading_cost for p in periods), Decimal("0"))
+        total_funding_cost = sum((p.funding_cost for p in periods), Decimal("0"))
+        total_cost = total_trading_cost + total_funding_cost
+
+        long_return = sum((p.long_return for p in periods), Decimal("0"))
+        short_return = sum((p.short_return for p in periods), Decimal("0"))
+        liquidation_count = simulation.liquidation_count
 
         return MOMTSRunnerResult(
             experiment_id=experiment_id,
@@ -275,6 +282,10 @@ class MOMTSRunner:
             net_return=net_return,
             mean_turnover=mean_turnover,
             total_cost=total_cost,
+            liquidation_count=liquidation_count,
+            long_return=long_return,
+            short_return=short_return,
+            total_funding_cost=total_funding_cost,
         )
 
     def run_30_7(
