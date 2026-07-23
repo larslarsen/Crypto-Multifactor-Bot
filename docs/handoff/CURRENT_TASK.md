@@ -1,27 +1,27 @@
 # CURRENT_TASK
 
-Ticket: PAPER-008
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer
-Next ticket authorized: NONE
+Ticket: DATA-005
+State: READY
+Next required actor: Sr Dev (Strong Model) — quality-cleared market bars
+Next ticket authorized: DATA-005
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-EXP-007 ACCEPTED (REVIEW-0199). Full-window winner **tsmom_14_3 +16.70%** (gate true). Selection-path + quality caveats. **No LIVE.**
+PAPER-008 ACCEPTED (REVIEW-0200). `tsmom_14_3` frozen, gate true, **live_eligible false**. LIVE blocked on **REJECTED** bar quality + selection caveats.
 
-Authorizing **PAPER-008**: dedicated paper package for `tsmom_14_3`; artifact `24_TSMOM_14_3_PAPER_SESSION.json`; `candidate_frozen: true`; `live_eligible: false`.
+Authorizing **DATA-005**: quality-cleared `market_bars` (PASS/PASS_WITH_WARNINGS) for same universe/span; artifact `25_QUALITY_CLEARED_BARS_REPORT.json`; no LIVE; no TSMOM re-tune.
 
 **Policy:** No LIVE.
 
 ## Governing documents
 
-- tickets/PAPER-008.md (AWAITING_REVIEW)
-- tickets/EXP-007.md (ACCEPTED)
-- docs/reviews/REVIEW-0199_EXP-007_ACCEPTED.md
+- tickets/DATA-005.md (READY)
+- tickets/PAPER-008.md (ACCEPTED)
+- docs/reviews/REVIEW-0200_PAPER-008_ACCEPTED.md
 
 ## Acceptance (Jr)
 
 1. .venv/bin/python -m pytest tests/execution/ tests/acquisition/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
-3. 24_TSMOM_14_3_PAPER_SESSION.json present
+2. .venv/bin/python -m ruff check src/cryptofactors scripts/
+3. 25_QUALITY_CLEARED_BARS_REPORT.json present with PASS or PASS_WITH_WARNINGS
 4. python3 scripts/check_repo_control.py
