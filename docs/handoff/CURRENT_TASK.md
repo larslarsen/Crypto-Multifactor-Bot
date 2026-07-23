@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: EXP-005
-State: READY
-Next required actor: Sr Dev (Strong Model) — OOS / walk-forward TSMOM validation
-Next ticket authorized: EXP-005
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
@@ -15,7 +15,7 @@ Authorizing **EXP-005**: holdout or walk-forward validation of frozen top config
 
 ## Governing documents
 
-- tickets/EXP-005.md (READY)
+- tickets/EXP-005.md (AWAITING_REVIEW)
 - tickets/EXP-004.md (ACCEPTED)
 - docs/reviews/REVIEW-0193_EXP-004_ACCEPTED.md
 
