@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
-from typing import Final
+from typing import Any, Final
 
 from cryptofactors.execution.errors import (
     PaperExecutionError,
@@ -93,6 +93,27 @@ class PaperBroker:
                 f"Model artifact '{self.model_artifact_id}' failed paper promotion gate: {exc}",
                 context={"model_artifact_id": self.model_artifact_id, "error": str(exc)},
             ) from exc
+
+    def restore_from_state(self, state: PaperAccountState) -> None:
+        """Restore broker cash balance and open positions from a PaperAccountState snapshot."""
+        self._cash = float(state.cash)
+        self._positions = {k: float(v) for k, v in state.positions.items()}
+
+    def restore_from_store(self, store: Any, model_artifact_id: str | None = None) -> bool:
+        """Load latest snapshot and trades from a PaperSessionStore and restore broker state.
+
+        Returns True if a prior snapshot was loaded and applied, False if no snapshot was found.
+        """
+        art_id = model_artifact_id or self.model_artifact_id
+        snapshot = store.load_latest_snapshot(art_id)
+        if snapshot is None:
+            return False
+
+        self.restore_from_state(snapshot)
+        trades = store.load_trade_history(art_id)
+        if trades:
+            self._trades = list(trades)
+        return True
 
     def get_cash(self) -> float:
         """Return current unallocated cash balance."""

@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: PAPER-004
-State: READY
-Next required actor: Sr Dev (Strong Model) — paper ops equity and resume fixes
-Next ticket authorized: PAPER-004
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review paper ops equity and resume fixes
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 

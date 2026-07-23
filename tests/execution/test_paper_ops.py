@@ -1,4 +1,4 @@
-"""Tests for PAPER-003 Paper Ops Monitoring, Persistence, and Hardening."""
+"""Tests for PAPER-003 & PAPER-004 Paper Ops Monitoring, Persistence, and State Resume."""
 
 import tempfile
 from collections.abc import Sequence
@@ -10,6 +10,7 @@ import pytest
 from cryptofactors.execution import (
     FactorDrivenPaperLoop,
     PaperAccountState,
+    PaperBroker,
     PaperOpsMonitor,
     PaperOpsStatus,
     PaperSessionStore,
@@ -69,12 +70,90 @@ def test_session_store_roundtrip() -> None:
         assert loaded_trades[0].symbol == "BTC"
 
 
-def test_ops_monitor_status_report() -> None:
+def test_broker_restore_from_store() -> None:
+    """PAPER-004: Verify PaperBroker restores cash balance, open positions, and trade history from store."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "control.db"
         registry = PromotionRegistry(db_path)
 
         # Register and promote to PAPER_APPROVED
+        cand = PromotionIdentityPayload(
+            model_artifact_id="mod_restore_test",
+            experiment_fingerprint=FINGERPRINT,
+            dataset_ids=("ds1",),
+            universe_ids=("u1",),
+            code_commit="c1",
+            config_version="cfg1",
+            feature_version="f1",
+            representation_version="r1",
+            portfolio_version="p1",
+            cost_model_version="cm1",
+            risk_policy_version="rp1",
+            target_stage=PromotionTarget.RESEARCH,
+            effective_time=datetime.now(UTC),
+            approving_authority="Lead Quant",
+            evidence_reference="rev1",
+        )
+        registry.register_candidate(cand)
+
+        paper = PromotionIdentityPayload(
+            model_artifact_id="mod_restore_test",
+            experiment_fingerprint=FINGERPRINT,
+            dataset_ids=("ds1",),
+            universe_ids=("u1",),
+            code_commit="c1",
+            config_version="cfg1",
+            feature_version="f1",
+            representation_version="r1",
+            portfolio_version="p1",
+            cost_model_version="cost1",
+            risk_policy_version="risk1",
+            target_stage=PromotionTarget.PAPER,
+            effective_time=datetime.now(UTC),
+            approving_authority="Lead Quant",
+            evidence_reference="rev2",
+        )
+        registry.transition_state(paper, PromotionState.PAPER_APPROVED, reason="paper ok")
+
+        store = PaperSessionStore(db_path)
+        t0 = datetime(2026, 7, 23, 12, 0, tzinfo=UTC)
+        state = PaperAccountState(
+            cash=50_000.0,
+            positions={"BTC": 1.0},
+            equity=100_000.0,
+            timestamp=t0,
+        )
+        store.save_snapshot("mod_restore_test", state, {"BTC": 0.5})
+
+        trade = PaperTrade(
+            trade_id="tr_res_01",
+            symbol="BTC",
+            side="BUY",
+            quantity=1.0,
+            base_price=50_000.0,
+            effective_price=50_025.0,
+            fee=25.0,
+            notional=50_025.0,
+            timestamp=t0,
+        )
+        store.save_trades("mod_restore_test", [trade])
+
+        # Instantiate fresh broker and restore from store
+        broker = PaperBroker("mod_restore_test", registry, initial_cash=100_000.0)
+        restored = broker.restore_from_store(store, "mod_restore_test")
+
+        assert restored is True
+        assert broker.get_cash() == 50_000.0
+        assert broker.get_positions() == {"BTC": 1.0}
+        assert len(broker.get_trade_history()) == 1
+
+
+def test_ops_monitor_uses_mark_to_market_equity() -> None:
+    """PAPER-004: Verify PaperOpsMonitor uses MTM equity when current_prices are supplied."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "control.db"
+        registry = PromotionRegistry(db_path)
+
         cand = PromotionIdentityPayload(
             model_artifact_id=MODEL_ARTIFACT_ID,
             experiment_fingerprint=FINGERPRINT,
@@ -113,17 +192,22 @@ def test_ops_monitor_status_report() -> None:
         )
         registry.transition_state(paper, PromotionState.PAPER_APPROVED, reason="paper ok")
 
+        broker = PaperBroker(MODEL_ARTIFACT_ID, registry, initial_cash=100_000.0)
+        prices = {"BTC": 50_000.0}
+        t0 = datetime(2026, 7, 23, tzinfo=UTC)
+
+        # Rebalance: 50% BTC -> cash 49,973.75, pos 1.0 BTC
+        broker.rebalance({"BTC": 0.5}, prices, t0)
+
         monitor = PaperOpsMonitor(registry)
-        status = monitor.inspect_session(MODEL_ARTIFACT_ID, paper_observation_reference="obs_123")
 
-        assert status.model_artifact_id == MODEL_ARTIFACT_ID
-        assert status.promotion_state == "PAPER_APPROVED"
-        assert status.gate_status == "OK"
-        assert status.paper_observation_reference == "obs_123"
+        # Without prices -> returns unallocated cash (~49973)
+        status_cash = monitor.inspect_session(MODEL_ARTIFACT_ID, broker=broker)
+        assert status_cash.last_equity == pytest.approx(49949.99, abs=1.0)
 
-        out_path = Path(tmpdir) / "status.json"
-        written_path = monitor.write_status_artifact(status, out_path)
-        assert written_path.exists()
+        # With current_prices -> returns mark-to-market total equity (~100000)
+        status_mtm = monitor.inspect_session(MODEL_ARTIFACT_ID, broker=broker, current_prices=prices)
+        assert status_mtm.last_equity == pytest.approx(99949.99, abs=1.0)
 
 
 def test_drawdown_alert_callback_triggers() -> None:

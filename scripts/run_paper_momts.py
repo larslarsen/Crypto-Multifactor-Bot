@@ -300,9 +300,11 @@ def main() -> int:
 
     # Generate and write PaperOpsStatus report artifact
     obs_ref = result.observation_result.reference_id if result.observation_result else None
+    final_prices = price_store.get_prices_at(decision_times[-1], universe)
     ops_status = monitor.inspect_session(
         MODEL_ARTIFACT_ID,
         broker=loop.broker,
+        current_prices=final_prices,
         paper_observation_reference=obs_ref,
         drawdown_alert_triggered=result.drawdown_alert_triggered,
     )

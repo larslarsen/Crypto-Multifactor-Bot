@@ -7,6 +7,7 @@ summarizing promotion gate status, equity curve, drawdown, open positions, and o
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ class PaperOpsMonitor:
         model_artifact_id: str,
         broker: PaperBroker | None = None,
         *,
+        current_prices: Mapping[str, float] | None = None,
         paper_observation_reference: str | None = None,
         drawdown_alert_triggered: bool = False,
     ) -> PaperOpsStatus:
@@ -67,8 +69,13 @@ class PaperOpsMonitor:
 
             positions = broker.get_positions()
             open_pos_count = len(positions)
-            last_equity = broker.get_cash()  # Base unallocated cash or mark-to-market
+            if current_prices is not None:
+                last_equity = broker.get_equity(current_prices)
+            else:
+                last_equity = broker.get_cash()
             initial_cash = 100_000.0
+            if last_equity > peak_equity:
+                peak_equity = last_equity
 
         net_return = (last_equity - initial_cash) / initial_cash
         drawdown = max(0.0, (peak_equity - last_equity) / peak_equity) if peak_equity > 0 else 0.0

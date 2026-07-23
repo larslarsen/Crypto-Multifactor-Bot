@@ -1,7 +1,7 @@
 # PAPER-004 — Paper Ops Equity and Resume Fixes
 
 **Priority:** P1
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** PAPER-003 (ACCEPTED)
 **Layer:** execution
 **Architecture:** Fixes two REVIEW-0181 caveats.

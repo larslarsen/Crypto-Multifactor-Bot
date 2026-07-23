@@ -70,6 +70,7 @@ class FactorDrivenPaperLoop:
         slippage_rate: float = 0.0005,
         max_drawdown_threshold: float = 0.10,
         alert_callback: Callable[[str, float, float], None] | None = None,
+        resume_from_store: bool = True,
     ) -> None:
         self.model_artifact_id = model_artifact_id
         self.promotion_registry = promotion_registry
@@ -89,6 +90,9 @@ class FactorDrivenPaperLoop:
             slippage_rate=slippage_rate,
             strict_promotion_gate=True,
         )
+
+        if resume_from_store and session_store is not None:
+            self.broker.restore_from_store(session_store, model_artifact_id)
 
     def run_loop(
         self,
