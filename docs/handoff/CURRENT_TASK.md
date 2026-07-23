@@ -1,53 +1,46 @@
 # CURRENT_TASK
 
 Ticket: BASE-001
-State: READY
-Next required actor: Sr Dev (Grok Build)
+State: BLOCKED
+Next required actor: Sr Dev (corrections required)
 Next ticket authorized: NONE
 
-Transparent factor baselines (experiment #19): momentum, mean reversion, volume. Each implements Factor protocol. Deterministic, no tuning.
+BASE-001 source rejected again (REVIEW-0157). P1: history walk incompatible with production BAR-001 timestamps (availability_time = period_end). P1: integration tests use noncanonical timestamps. P2: smoke test uses cached store.
 
 Governing documents:
-- tickets/BASE-001.md (READY)
-- tickets/NULL-001.md (ACCEPTED)
-- docs/reviews/REVIEW-0154_NULL-001_ACCEPTED.md
+- tickets/BASE-001.md (BLOCKED)
+- docs/reviews/REVIEW-0157_BASE-001_REJECTED.md
+- docs/reviews/REVIEW-0156_BASE-001_REJECTED.md
 
-## Sr Dev Prompt
+## Sr Dev Correction Prompt
 
 ```
-Implement BASE-001: Transparent factor baselines for experiment #19.
+Correct BASE-001 source per REVIEW-0157 findings.
 
-Goal: Implement simple, transparent factor baselines using the Factor protocol.
+P1 — History walk incompatible with production BAR-001 timestamps:
+- baseline.py:296-325 rewinds cursor to period_start - 1µs.
+- Production bars set availability_time = period_end (market/bars.py:1133-1143).
+- This makes the preceding bar unavailable; skips valid observations.
+- Fix: use availability_time instead of period_start for cursor rewinding.
+- The cursor should be set to availability_time - 1µs (i.e., period_end - 1µs).
 
-Factors (in order):
-1. MomentumFactor — N-day forward return (configurable window, default 20)
-2. MeanReversionFactor — z-score vs rolling N-day mean/std (default 20)
-3. VolumeFactor — N-day volume ratio vs rolling mean (default 20)
+P1 — Integration tests use noncanonical timestamps:
+- test_baseline_factors.py:532-544 sets availability_time = period_start.
+- Must use production-like availability_time = period_end.
 
-Requirements:
-- Each factor implements Factor protocol from cryptofactors.factors.contract
-- Deterministic given universe + as_of
-- No hyperparameter optimization, just fixed defaults
-- Use as-of access (AsOfDataAccess) for price/volume data
+P2 — Smoke test uses cached store:
+- test_baseline_factors.py:613-614,691-705 uses _CachedCatalogAsOf.
+- Either use raw CatalogAsOfStore or rename to reflect what it tests.
 
-Reference implementations:
-- NULL-001: src/cryptofactors/factors/null.py (Factor protocol usage)
-- NULL-001: tests/test_null_factor.py (substrate integration pattern)
-- ASOF-001: src/cryptofactors/catalog/as_of.py (CatalogAsOfStore API)
+Files to modify:
+- src/cryptofactors/factors/baseline.py (history walk fix)
+- tests/test_baseline_factors.py (timestamps + smoke test)
 
-Files to create:
-- src/cryptofactors/factors/baseline.py
-- tests/test_baseline_factors.py
-
-Acceptance:
-1. All tests pass
-2. ruff clean
-3. mypy clean
-4. check_repo_control.py PASS
+Reference: market/bars.py:1133-1143 (production bar timestamps).
 
 After completion: set status to AWAITING_REVIEW.
 ```
 
 ## Stop condition
 
-Sr Dev produces source, stops for Reviewer. No commits until Reviewer accepts.
+Sr Dev produces corrected source, stops for Reviewer. No commits until Reviewer accepts.
