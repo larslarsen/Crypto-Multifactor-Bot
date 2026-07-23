@@ -1,28 +1,27 @@
 # CURRENT_TASK
 
-Ticket: DATA-004
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer
-Next ticket authorized: NONE
+Ticket: EXP-006
+State: READY
+Next required actor: Sr Dev (Strong Model) — multi-fold OOS on extended history
+Next ticket authorized: EXP-006
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-EXP-005 ACCEPTED (REVIEW-0194). Holdout: all train winners **negative OOS**. LIVE blocked.  
-Store bars only **2026-01-01→2026-07-23**; EXP-004 “12m from 2025-08” is not supported by data.
+DATA-004 ACCEPTED (REVIEW-0195). Bars **2024-01-01→2026-07-23** (~30.7m). Quality REJECTED is structural for native 1d BAR-001 path (same as prior research set). **No LIVE.**
 
-Authorizing **DATA-004**: extend Binance→canonical history to ≥24 months (or document venue max); artifact `20_EXTENDED_HISTORY_REPORT.json`; `live_eligible: false`. Do not mutate 08–19.
+Authorizing **EXP-006**: frozen TSMOM multi-fold/long OOS on DATA-004 dataset; artifact `21_TSMOM_EXTENDED_OOS.json`; `live_eligible: false`. Do not mutate 08–20.
 
 **Policy:** No LIVE.
 
 ## Governing documents
 
-- tickets/DATA-004.md (AWAITING_REVIEW)
-- tickets/EXP-005.md (ACCEPTED)
-- docs/reviews/REVIEW-0194_EXP-005_ACCEPTED.md
+- tickets/EXP-006.md (READY)
+- tickets/DATA-004.md (ACCEPTED)
+- docs/reviews/REVIEW-0195_DATA-004_ACCEPTED.md
 
 ## Acceptance (Jr)
 
 1. .venv/bin/python -m pytest tests/execution/ tests/acquisition/ -q --tb=short
-2. .venv/bin/python -m ruff check src/cryptofactors/execution src/cryptofactors/acquisition scripts/
-3. 20_EXTENDED_HISTORY_REPORT.json present
+2. .venv/bin/python -m ruff check src/cryptofactors/execution scripts/
+3. 21_TSMOM_EXTENDED_OOS.json present
 4. python3 scripts/check_repo_control.py
