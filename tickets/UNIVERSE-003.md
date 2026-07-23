@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Status:** ACCEPTED
-**Decision:** AUTHORIZED
+**Decision:** AUTHORIZED — AWARE-LEVEL PROXY AUTHORITY
 **Dependencies:** ASOF-001 (accepted), REF-001 (accepted substrate), UNIVERSE-001 (accepted),
 DF-08 (`NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY` — this ticket seeks to partially close the
 CEX side)
@@ -39,18 +39,18 @@ no key, Python stdlib only. Prototype: `scripts/research/fetch_cmc_dead_universe
 - Example: Devcoin (id 7) — dateLaunched 2011-07-22, dateAdded 2013-04-28,
   latestUpdateTime 2017-11-23. Bytecoin, BBQCoin, Yacoin, Franko, etc. all resolve.
 
-## Date Semantics (must be reviewed — this is the crux)
+## Date Semantics (reviewer decision: ACCEPTED at Aware-level)
 
 - `dateAdded` / `dateLaunched` → birth (first_historical_data proxy). Adequate for
   point-in-time membership start.
 - `latestUpdateTime` → **death-date PROXY** = when CMC stopped updating the coin. It is
   **NOT** an authoritative exchange delisting/halt time and carries **no final tradable
   price and no failure cause**.
-- Consequence for DF-08: this likely satisfies G08 (reconstruction of historical membership)
-  and materially improves G06 (delisted coverage), but does **NOT** fully satisfy G06's
-  final-tradable-price / failure-cause requirement. Reviewer decides whether membership +
-  death-proxy dates constitute sufficient authority for the intended experiments, or whether
-  final-price/failure-cause is required (would need a different/paid source).
+- **Reviewer Decision:** Death-proxy dates are accepted at **Aware-level** — sufficient for
+  research use (G08 satisfied, G06 materially improved) but explicitly NOT authoritative
+  for final-tradable-price or failure-cause analysis. The `death_date_is_proxy` provenance
+  label remains required on every registry row. DF-08 partially resolved to Aware-tier;
+  full survivorship-free authority remains open for a future paid source.
 
 ## Open Source-Authority Gates (reviewer)
 
@@ -60,8 +60,9 @@ no key, Python stdlib only. Prototype: `scripts/research/fetch_cmc_dead_universe
    is precedent but not clearance.)
 2. **Endpoint stability:** undocumented endpoint; may change without notice. Acceptable for a
    one-shot backfill; NOT for a recurring live dependency.
-3. **Date authority:** is `latestUpdateTime` acceptable as a death proxy for the research
-   use-case, given no final price / failure cause? (See above.)
+3. **Date authority:** [RESOLVED — Aware-level] Death-proxy dates (latestUpdateTime) are
+   accepted at Aware-level for research membership queries. No final price/failure-cause
+   authority. See Date Semantics section.
 4. **Coverage bound:** universe = CMC-tracked coins only. Coins that lived and died without
    ever being on CMC remain invisible (smaller residual graveyard — must be documented, not
    silently ignored).
@@ -116,5 +117,6 @@ no key, Python stdlib only. Prototype: `scripts/research/fetch_cmc_dead_universe
 
 Draft only. Return control to Reviewer for source-authority decision
 (`Next ticket authorized: NONE`). No production source, ingestion, or commit until authorized.
-DF-08 `NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY` remains in force; this ticket proposes a
-partial CEX-side closure subject to the gates above, and does not by itself override DF-08.
+DF-08 `NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY` remains in force; this ticket achieves
+**partial Aware-level closure** of the CEX survivorship gap (G08 satisfied, G06 materially
+improved). Full survivorship-free authority (final price, failure cause) remains open.

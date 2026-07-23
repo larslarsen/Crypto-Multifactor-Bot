@@ -1,6 +1,6 @@
 # ADR 0012 — CoinMarketCap Survivorship Backfill & Graveyard Ingestion
 
-- **Status:** Accepted
+- **Status:** Accepted — AWARE-LEVEL PROXY AUTHORITY
 - **Date:** 2026-07-22
 
 ## Context
@@ -17,6 +17,7 @@ CoinMarketCap maintains historical records for inactive/dead coins via website b
    - `dateAdded` / `dateLaunched` serve as `birth_date` proxies (point-in-time membership start).
    - `latestUpdateTime` serves as `death_proxy_date` (the time CMC ceased tracking updates). It carries NO final tradable price and NO failure cause.
    - Every registry row MUST explicitly retain provenance labels: `death_date_is_proxy = True` and `source = "cmc_data_api_unofficial"`. Downstream consumers must never launder proxy dates as authoritative exchange delisting times.
+   - **Authority level:** Accepted at **Aware-level** — sufficient for research membership queries but NOT authoritative for final-price or failure-cause analysis. Full survivorship-free authority remains open.
 4. **DF-08 Scope & Boundary:** This backfill satisfies gap G08 (reconstruction of historical membership) and materially improves G06 (delisted coverage). However, DF-08 remains partially open due to the lack of final tradable prices and failure-cause classifications.
 
 ## Consequences

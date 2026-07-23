@@ -27,7 +27,8 @@ membership stream **from the ingestion start date forward**.
 - **NOT survivorship-free.** Birdeye provides listing/creation events but **no
   delisting / token-death feed**. This closes the *listing-side* gap forward only; it
   does **not** resolve DF-08 (`NO_SURVIVORSHIP_FREE_UNIVERSE_AUTHORITY`). Dead-token
-  reconstruction remains blocked. This feed must be labeled non-survivorship-free
+  reconstruction on the CEX side is partially resolved at Aware-level via UNIVERSE-003
+  (CMC survivorship backfill). This feed must be labeled non-survivorship-free
   everywhere it is surfaced.
 - **Forward-only.** No historical membership reconstruction prior to ingestion start.
 
