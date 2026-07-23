@@ -1,7 +1,7 @@
 # ALLOC-001 — Neutrality-Preserving Risk Enforcement
 
 **Priority:** P0  
-**Status:** READY  
+**Status:** AWAITING_REVIEW  
 **Dependencies:** EXP-003 (ACCEPTED), PAPER-006 (ACCEPTED)  
 **Layer:** execution / portfolio  
 **Architecture:** fix `enforce_risk_limits` (and paper loop usage). **No LIVE.**

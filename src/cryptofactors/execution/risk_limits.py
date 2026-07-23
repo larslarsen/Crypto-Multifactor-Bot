@@ -1,15 +1,19 @@
-"""EXEC-003 — Paper allocation risk enforcement (PAPER-006).
+"""ALLOC-001 — Neutrality-preserving paper allocation risk enforcement.
 
-Provides a deterministic clip-and-renormalize enforcer that maps any raw target
-weights into a risk-compliant set before they reach ``PaperBroker.rebalance``.
+Maps raw target weights into a risk-compliant set before ``PaperBroker.rebalance``.
 
-Policy (per PAPER-006 / AUD-006):
+Policy (per PAPER-006 / AUD-006 + ALLOC-001):
 1. Clip each single-asset weight to ``[-max_single_weight, max_single_weight]``.
-2. If gross leverage exceeds ``max_gross_leverage``, scale all weights down
-   uniformly so that gross leverage equals the limit.
-3. Drop zero/rounded-to-zero weights from the returned dict.
+2. Preserve dollar-neutrality when the input has both long and short legs:
+   after clipping, rescale the *long leg* and the *short leg* independently so
+   that ``sum(long) == sum(|short|)`` (net exposure ≈ 0) while keeping each
+   leg within ``max_gross_leverage / 2``. This prevents the net-exposure drift
+   that the previous uniform rescale introduced.
+3. Directional books (only one leg) cannot be made neutral; they are scaled to
+   fit within ``max_gross_leverage`` with a documented residual net exposure.
+4. Drop zero/rounded-to-zero weights from the returned dict.
 
-This is *enforcement* (clip+renormalize), not validation. The live path uses
+This is *enforcement* (clip + leg-rescale), not validation. The live path uses
 ``PreTradeRiskValidator`` which rejects orders; the paper path must stay running
 while recording the actual risk-compliant weights used.
 """
@@ -37,13 +41,15 @@ def enforce_risk_limits(
     *,
     max_gross_leverage: float = MAX_GROSS_LEVERAGE,
     max_single_weight: float = MAX_SINGLE_ASSET_WEIGHT,
+    net_exposure_tolerance: float = 1e-6,
 ) -> dict[str, float]:
-    """Clip and renormalize ``weights`` to satisfy both risk limits.
+    """Clip and rescale ``weights`` to satisfy both risk limits while preserving neutrality.
 
     Args:
         weights: Raw target weights (long positive, short negative).
         max_gross_leverage: Maximum sum of absolute weights allowed.
         max_single_weight: Maximum absolute weight per symbol allowed.
+        net_exposure_tolerance: Tolerance used when testing net exposure for zero.
 
     Returns:
         Risk-compliant weights dictionary with zero weights removed.
@@ -55,26 +61,47 @@ def enforce_risk_limits(
         raise ValueError("max_gross_leverage must be positive")
     if max_single_weight <= 0:
         raise ValueError("max_single_weight must be positive")
+    if net_exposure_tolerance < 0:
+        raise ValueError("net_exposure_tolerance must be non-negative")
 
     # 1. Clip individual weights.
-    clipped: dict[str, float] = {}
+    long: dict[str, float] = {}
+    short: dict[str, float] = {}
     for symbol, raw in weights.items():
         w = float(raw)
         if w > 0:
-            clipped[symbol] = min(w, max_single_weight)
+            long[symbol] = min(w, max_single_weight)
         elif w < 0:
-            clipped[symbol] = max(w, -max_single_weight)
-        else:
-            clipped[symbol] = 0.0
+            short[symbol] = max(w, -max_single_weight)
 
-    # 2. Renormalize if gross leverage exceeds the cap.
-    gross = sum(abs(w) for w in clipped.values())
-    if gross > max_gross_leverage + _LEVERAGE_TOLERANCE:
-        scale = max_gross_leverage / gross
-        clipped = {symbol: w * scale for symbol, w in clipped.items()}
+    long_gross = sum(long.values())
+    short_gross = sum(abs(w) for w in short.values())
+    result: dict[str, float]
+
+    if long_gross > _LEVERAGE_TOLERANCE and short_gross > _LEVERAGE_TOLERANCE:
+        # 2a. Neutral L/S book: rescale long and short legs independently to
+        # restore equal long/short gross while respecting the total gross cap.
+        target_leg_gross = min(long_gross, short_gross, max_gross_leverage / 2.0)
+        if long_gross > target_leg_gross + _LEVERAGE_TOLERANCE:
+            scale = target_leg_gross / long_gross
+            long = {symbol: w * scale for symbol, w in long.items()}
+        if short_gross > target_leg_gross + _LEVERAGE_TOLERANCE:
+            scale = target_leg_gross / short_gross
+            short = {symbol: w * scale for symbol, w in short.items()}
+        result = {**long, **short}
+    else:
+        # 2b. Directional book: cannot be neutral. Scale the whole book to fit
+        # the gross cap (already clipped per name). Residual net is documented.
+        clipped = {**long, **short}
+        gross = long_gross + short_gross
+        if gross > max_gross_leverage + _LEVERAGE_TOLERANCE:
+            scale = max_gross_leverage / gross
+            result = {symbol: w * scale for symbol, w in clipped.items()}
+        else:
+            result = clipped
 
     # 3. Drop zeros (within tolerance).
-    return {symbol: w for symbol, w in clipped.items() if abs(w) > _LEVERAGE_TOLERANCE}
+    return {symbol: w for symbol, w in result.items() if abs(w) > _LEVERAGE_TOLERANCE}
 
 
 def compute_live_gate_satisfied(

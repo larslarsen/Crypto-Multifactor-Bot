@@ -318,7 +318,7 @@ def test_risk_limits_enforced_even_with_small_universe() -> None:
 
 
 class TestRiskLimitEnforcement:
-    """Unit tests for clip-and-renormalize risk enforcement."""
+    """Unit tests for neutrality-preserving risk enforcement (ALLOC-001)."""
 
     def test_single_weight_clipped_to_cap(self) -> None:
         weights = {"BTC": 0.5}
@@ -358,6 +358,74 @@ class TestRiskLimitEnforcement:
         out = enforce_risk_limits(weights)
         assert "BTC" not in out
         assert out["ETH"] == pytest.approx(0.1)
+
+    def test_neutral_ls_preserved_when_one_leg_clipped(self) -> None:
+        """ALLOC-001: concentrated long leg clipped; short leg scaled down to match."""
+        # Long: 2 names -> raw 0.25 each -> clipped 0.15 each -> gross 0.30
+        # Short: 8 names -> raw 0.0625 each -> not clipped -> gross 0.50
+        # Expected: short leg scaled to 0.30 gross, net ≈ 0.
+        weights = {
+            "A1": 0.25,
+            "A2": 0.25,
+            "B1": -0.0625,
+            "B2": -0.0625,
+            "B3": -0.0625,
+            "B4": -0.0625,
+            "B5": -0.0625,
+            "B6": -0.0625,
+            "B7": -0.0625,
+            "B8": -0.0625,
+        }
+        out = enforce_risk_limits(weights)
+        assert max(abs(w) for w in out.values()) == pytest.approx(0.15)
+        assert sum(abs(w) for w in out.values()) <= 1.0 + 1e-9
+        long_gross = sum(w for w in out.values() if w > 0)
+        short_gross = sum(abs(w) for w in out.values() if w < 0)
+        assert long_gross == pytest.approx(short_gross)
+        assert sum(out.values()) == pytest.approx(0.0, abs=1e-6)
+        assert out["A1"] == pytest.approx(0.15)
+        assert out["A2"] == pytest.approx(0.15)
+        assert out["B1"] == pytest.approx(-0.0375)
+
+    def test_neutral_ls_preserved_when_both_legs_clipped(self) -> None:
+        """ALLOC-001: both legs concentrated; post-enforcement net ≈ 0."""
+        weights = {"A1": 0.5, "A2": 0.5, "B1": -0.5, "B2": -0.5}
+        out = enforce_risk_limits(weights)
+        assert max(abs(w) for w in out.values()) == pytest.approx(0.15)
+        assert sum(out.values()) == pytest.approx(0.0, abs=1e-6)
+        long_gross = sum(w for w in out.values() if w > 0)
+        short_gross = sum(abs(w) for w in out.values() if w < 0)
+        assert long_gross == pytest.approx(short_gross)
+        assert sum(abs(w) for w in out.values()) == pytest.approx(0.6)
+
+    def test_neutral_ls_maximizes_gross_within_caps(self) -> None:
+        """ALLOC-001: when legs are unequal, target is the smaller clipped gross."""
+        weights = {"A1": 0.5, "A2": 0.1, "B1": -0.5, "B2": -0.1, "B3": -0.1}
+        out = enforce_risk_limits(weights)
+        long_gross = sum(w for w in out.values() if w > 0)
+        short_gross = sum(abs(w) for w in out.values() if w < 0)
+        assert long_gross == pytest.approx(short_gross)
+        assert long_gross <= 0.5 + 1e-9
+        assert sum(abs(w) for w in out.values()) <= 1.0 + 1e-9
+
+    def test_directional_book_scaled_to_gross_cap(self) -> None:
+        """ALLOC-001: single-leg book cannot be neutral; scaled to gross cap."""
+        weights = {"A1": 0.2, "A2": 0.2, "A3": 0.2, "A4": 0.2, "A5": 0.2, "A6": 0.2, "A7": 0.2}
+        out = enforce_risk_limits(weights)
+        assert sum(abs(w) for w in out.values()) == pytest.approx(1.0)
+        assert sum(out.values()) == pytest.approx(1.0)
+        assert max(abs(w) for w in out.values()) == pytest.approx(1.0 / 7)
+
+    def test_neutral_book_gross_cap_enforced(self) -> None:
+        """ALLOC-001: if both legs exceed half gross, each leg scaled to max_gross/2."""
+        weights = {"A1": 0.5, "A2": 0.5, "A3": 0.5, "A4": 0.5, "B1": -0.5, "B2": -0.5, "B3": -0.5, "B4": -0.5}
+        out = enforce_risk_limits(weights)
+        long_gross = sum(w for w in out.values() if w > 0)
+        short_gross = sum(abs(w) for w in out.values() if w < 0)
+        assert long_gross == pytest.approx(0.5)
+        assert short_gross == pytest.approx(0.5)
+        assert sum(abs(w) for w in out.values()) == pytest.approx(1.0)
+        assert sum(out.values()) == pytest.approx(0.0, abs=1e-6)
 
 
 class TestComputeLiveGateSatisfied:
