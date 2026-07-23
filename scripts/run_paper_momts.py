@@ -24,6 +24,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from cryptofactors.catalog.as_of import CatalogAsOfStore
+from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.execution.errors import PaperExecutionError
 from cryptofactors.execution.paper_harden import (
     build_harden_report,
@@ -265,11 +267,21 @@ def main() -> int:
     args = parser.parse_args()
 
     data_mode = "synthetic" if args.dry_run else "real_asof"
+    tmpdir: tempfile.TemporaryDirectory[str] | None = None
+
+    universe = [
+        "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
+        "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
+    ]
 
     if args.dry_run:
         print("Running factor-driven paper loop in DRY-RUN mode...", file=sys.stderr)
         tmpdir = tempfile.TemporaryDirectory()
         db_path = Path(tmpdir.name) / "control.db"
+        synthetic_store = _SyntheticPriceStore(universe, days=160)
+        price_store: Any = synthetic_store
+        get_prices_fn = synthetic_store.get_prices_at
+        dataset_id = args.market_dataset_id
     else:
         db_path = Path(args.db_path)
         if not db_path.exists():
@@ -277,15 +289,43 @@ def main() -> int:
                 f"Control database missing at {db_path}. Non-dry-run mode requires an existing control DB.",
                 context={"db_path": str(db_path)},
             )
+        cat = SqliteDatasetCatalog(db_path)
+        try:
+            row = cat.get_dataset(args.market_dataset_id)
+            if row is None:
+                rows = list(cat.list_datasets())
+                bar_rows = [r for r in rows if r.get("dataset_type") == "market_bars"]
+                if not bar_rows:
+                    raise PaperExecutionError(
+                        "No published 'market_bars' dataset found in catalog. Run backfill first.",
+                        context={"db_path": str(db_path)},
+                    )
+                dataset_id = str(bar_rows[-1]["dataset_id"])
+            else:
+                dataset_id = args.market_dataset_id
+        finally:
+            cat.close()
+
+        as_of_store = CatalogAsOfStore(control_database=db_path)
+        price_store = as_of_store
+
+        def get_real_prices(dt: datetime, univ: Sequence[str]) -> dict[str, float]:
+            res: dict[str, float] = {}
+            for sym in univ:
+                try:
+                    tbl = as_of_store.latest_available(dataset_id, [sym], ["close"], dt)
+                    if tbl is not None and tbl.num_rows > 0:
+                        res[sym] = float(tbl.column("close")[0].as_py())
+                except Exception:
+                    pass
+            if not res:
+                raise PaperExecutionError(f"No real bar prices found at {dt.isoformat()} for dataset {dataset_id}")
+            return res
+
+        get_prices_fn = get_real_prices
 
     registry = PromotionRegistry(db_path)
     ensure_paper_approved(registry, MODEL_ARTIFACT_ID)
-
-    universe = [
-        "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
-        "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
-    ]
-    price_store: Any = _SyntheticPriceStore(universe, days=160)
 
     session_store = PaperSessionStore(db_path)
     monitor = PaperOpsMonitor(registry)
@@ -297,7 +337,7 @@ def main() -> int:
         probe_adapter = ReadOnlyVenueProbeAdapter()
         probe_result = probe_adapter.ping_venue()
 
-    factor = make_tsmom_30_7(price_store, market_dataset_id=args.market_dataset_id)
+    factor = make_tsmom_30_7(price_store, market_dataset_id=dataset_id)
 
     loop = FactorDrivenPaperLoop(
         model_artifact_id=MODEL_ARTIFACT_ID,
@@ -316,13 +356,13 @@ def main() -> int:
     result = loop.run_loop(
         universe=universe,
         decision_times=decision_times,
-        get_prices_at=price_store.get_prices_at,
+        get_prices_at=get_prices_fn,
         min_observation_days=14,
     )
 
     # Generate and write PaperOpsStatus report artifact
     obs_ref = result.observation_result.reference_id if result.observation_result else None
-    final_prices = price_store.get_prices_at(decision_times[-1], universe)
+    final_prices = get_prices_fn(decision_times[-1], universe)
     ops_status = monitor.inspect_session(
         MODEL_ARTIFACT_ID,
         broker=loop.broker,
@@ -353,7 +393,7 @@ def main() -> int:
     out_file.write_text(out_json, encoding="utf-8")
     print(f"Paper factor loop results written to {out_file}", file=sys.stderr)
 
-    if args.dry_run:
+    if tmpdir is not None:
         tmpdir.cleanup()
 
     return 0

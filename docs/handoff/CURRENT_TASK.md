@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: DATA-002
-State: READY
-Next required actor: Sr Dev (Strong Model) — canonical bars + real as-of paper path
-Next ticket authorized: DATA-002
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review canonical bars and real as-of paper path
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 

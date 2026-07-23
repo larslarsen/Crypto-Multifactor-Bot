@@ -1,0 +1,16 @@
+{
+  "data_mode": "synthetic",
+  "source_dataset_ids": [
+    "ds_5339fbb1593113277446a4e469e8e893749df898d72ac4915ca7943fd9fc3b50",
+    "ds_630903496890433c4d03fdc2f87f694f99dde0ff40a97561b279d57c733861d1"
+  ],
+  "canonical_dataset_id": "ds_2e8f3836ab55154b17289415ef78195a4ec0d92108d11fcc55b29346add40187",
+  "total_bar_count": 180,
+  "symbols_covered": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ],
+  "gate_status": "OK",
+  "live_eligible": false,
+  "generated_at": "2026-07-23T14:06:05.740104+00:00"
+}

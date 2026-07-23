@@ -1,7 +1,7 @@
 # DATA-002 — Canonical Bars + Real As-Of Paper Path
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** DATA-001 (ACCEPTED), BAR-001 / market bars stack, ASOF catalog, PAPER-004, HARDEN-001
 **Layer:** market / catalog / execution
 **Architecture:** use existing `publish_canonical_bars`, `DatasetPublisher`, `CatalogAsOfStore`. No new storage layer. **No LIVE.**
