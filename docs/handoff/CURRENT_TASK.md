@@ -1,41 +1,44 @@
 # CURRENT_TASK
 
 Ticket: NULL-001
-State: READY
-Next required actor: Sr Dev (Grok Build)
+State: BLOCKED
+Next required actor: Sr Dev (corrections required)
 Next ticket authorized: NONE
 
-Reviewer decision recorded: UNIVERSE-001 accepted with Option C (bounded non-survivorship-free universe with current BAR-001 instruments). CoinGecko doesn't provide listing/delisting dates. CoinMarketCap needed for true survivorship-free.
+NULL-001 source rejected (REVIEW-0151). P1 finding: test bypasses research substrate. P2 findings: contracts in wrong module, string universe treated as character sequence, scores change with universe.
 
 Governing documents:
-- tickets/NULL-001.md (READY)
-- tickets/UNIVERSE-001.md (ACCEPTED, Option C)
+- tickets/NULL-001.md (BLOCKED)
+- docs/reviews/REVIEW-0151_NULL-001_REJECTED.md
 - docs/reviews/REVIEW-0150_UNIVERSE-001_REJECTED.md
 - docs/reviews/REVIEW-0148_EXP-001_ACCEPTED.md
 
-## Sr Dev Prompt
+## Sr Dev Correction Prompt
 
 ```
-Implement NULL-001: Null factor test for experiment #18.
+Correct NULL-001 source per REVIEW-0151 findings.
 
-Goal: Test that a random/unpredictable factor has no edge.
+P1 — Test bypasses research substrate:
+- tests/test_null_factor.py:58-75 uses synthetic independent Gaussian returns directly, bypassing ASOF/LABEL/EXP.
+- Rebuild test to exercise accepted research substrate (CatalogAsOfStore → AsOfLabelEngine → PurgedChronologicalSplitter → ExperimentBundle) or document why current synthetic approach is acceptable for this specific validation step.
 
-Requirements:
-1. `NullFactor` class implementing minimal factor protocol
-2. `NullFactor.compute(universe, as_of)` returns random noise values
-3. No signal, no edge
-4. Test: null factor Sharpe ratio should be ~0 (within ±0.5)
-5. Test: null factor win rate should be within 45-55%
-6. Run 10 trials, check consistency
+P2 — Contracts in wrong module:
+- src/cryptofactors/factors/null.py:50-78 defines FactorValue, FactorFrame, Factor protocol.
+- Move to src/cryptofactors/factors/contract.py (neutral contract module).
+- Update imports in null.py and tests.
 
-Reference implementations:
-- EXP-001: src/cryptofactors/validation/experiment.py (ExperimentBundle, fingerprinting)
-- LABEL-001: src/cryptofactors/validation/labels.py (AsOfLabelEngine)
-- ASOF-001: src/cryptofactors/catalog/as_of.py (CatalogAsOfStore)
+P2 — String universe treated as character sequence:
+- NullFactor.compute("btc", as_of) iterates string as instruments "b", "t", "c".
+- Reject string/bytes universe inputs with clear error.
 
-Files to create:
-- src/cryptofactors/factors/null.py
-- tests/test_null_factor.py
+P2 — Scores change when universe changes:
+- null.py:121-126 seeds PRNG with sorted unique universe.
+- Consider per-instrument seeding if universe-stable scores required.
+
+Files to modify:
+- src/cryptofactors/factors/contract.py (new)
+- src/cryptofactors/factors/null.py (updated)
+- tests/test_null_factor.py (updated)
 
 Acceptance:
 1. All tests pass
@@ -48,4 +51,4 @@ After completion: set status to AWAITING_REVIEW.
 
 ## Stop condition
 
-Sr Dev produces source, stops for Reviewer. No commits until Reviewer accepts.
+Sr Dev produces corrected source, stops for Reviewer. No commits until Reviewer accepts.

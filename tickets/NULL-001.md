@@ -1,7 +1,7 @@
 # NULL-001 — Null Factor Test (Experiment #18)
 
 **Priority:** P0
-**Status:** READY
+**Status:** BLOCKED
 **Dependencies:** EXP-001 (accepted), LABEL-001 (accepted), ASOF-001 (accepted), UNIVERSE-001 (accepted)
 **Layer:** validation
 **Architecture:** implements experiment #18 (null/noise factor test); no ADR required
