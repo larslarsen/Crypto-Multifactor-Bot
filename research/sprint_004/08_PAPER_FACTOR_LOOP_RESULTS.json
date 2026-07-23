@@ -1,0 +1,158 @@
+{
+  "model_artifact_id": "mod_tsmom_30_7_v1",
+  "factor_id": "tsmom_30_7",
+  "initial_cash": 100000.0,
+  "final_cash": 104894.79,
+  "final_equity": 104894.79,
+  "total_net_return": 0.048948,
+  "total_trades_executed": 32,
+  "paper_observation_reference": null,
+  "observation_summary": null,
+  "period_logs": [
+    {
+      "decision_time": "2026-04-11T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 99900.0,
+      "equity": 99900.0,
+      "target_weights": {
+        "SOLUSD": 0.25,
+        "XBTUSD": 0.25,
+        "ETHUSD": -0.25,
+        "XRPUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -230.255461,
+        "SOLUSD": 161.586184,
+        "XBTUSD": 226.220658,
+        "XRPUSD": -172.691596
+      }
+    },
+    {
+      "decision_time": "2026-04-18T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 100599.3,
+      "equity": 100599.3,
+      "target_weights": {
+        "SOLUSD": 0.25,
+        "XBTUSD": 0.25,
+        "ETHUSD": -0.25,
+        "XRPUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -233.264967,
+        "SOLUSD": 161.422355,
+        "XBTUSD": 225.991297,
+        "XRPUSD": -174.948725
+      }
+    },
+    {
+      "decision_time": "2026-04-25T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 101302.8,
+      "equity": 101302.8,
+      "target_weights": {
+        "XBTUSD": 0.25,
+        "SOLUSD": 0.25,
+        "XRPUSD": -0.25,
+        "ETHUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -236.547077,
+        "SOLUSD": 161.417873,
+        "XBTUSD": 225.985023,
+        "XRPUSD": -177.410308
+      }
+    },
+    {
+      "decision_time": "2026-05-02T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 102011.22,
+      "equity": 102011.22,
+      "target_weights": {
+        "SOLUSD": 0.25,
+        "XBTUSD": 0.25,
+        "ETHUSD": -0.25,
+        "XRPUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -239.87537,
+        "SOLUSD": 161.413393,
+        "XBTUSD": 225.978751,
+        "XRPUSD": -179.906527
+      }
+    },
+    {
+      "decision_time": "2026-05-09T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 102724.6,
+      "equity": 102724.6,
+      "target_weights": {
+        "SOLUSD": 0.25,
+        "XBTUSD": 0.25,
+        "ETHUSD": -0.25,
+        "XRPUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -243.250492,
+        "SOLUSD": 161.408913,
+        "XBTUSD": 225.972479,
+        "XRPUSD": -182.437869
+      }
+    },
+    {
+      "decision_time": "2026-05-16T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 103442.96,
+      "equity": 103442.96,
+      "target_weights": {
+        "SOLUSD": 0.25,
+        "XBTUSD": 0.25,
+        "ETHUSD": -0.25,
+        "XRPUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -246.673104,
+        "SOLUSD": 161.404433,
+        "XBTUSD": 225.966207,
+        "XRPUSD": -185.004828
+      }
+    },
+    {
+      "decision_time": "2026-05-23T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 104166.34,
+      "equity": 104166.34,
+      "target_weights": {
+        "SOLUSD": 0.25,
+        "XBTUSD": 0.25,
+        "XRPUSD": -0.25,
+        "ETHUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -250.143873,
+        "SOLUSD": 161.399954,
+        "XBTUSD": 225.959935,
+        "XRPUSD": -187.607905
+      }
+    },
+    {
+      "decision_time": "2026-05-30T00:00:00+00:00",
+      "trades_count": 4,
+      "cash": 104894.79,
+      "equity": 104894.79,
+      "target_weights": {
+        "XBTUSD": 0.25,
+        "SOLUSD": 0.25,
+        "ETHUSD": -0.25,
+        "XRPUSD": -0.25
+      },
+      "open_positions": {
+        "ETHUSD": -253.663477,
+        "SOLUSD": 161.395474,
+        "XBTUSD": 225.953664,
+        "XRPUSD": -190.247607
+      }
+    }
+  ],
+  "session_run_at": "2026-07-23T12:33:48.926668+00:00"
+}

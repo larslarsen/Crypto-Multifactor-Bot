@@ -1,7 +1,7 @@
 # PAPER-001 — Factor-Driven Paper Trading Loop for MOM-TS-01
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** PROMO-002 (ACCEPTED), PORT-002 (ACCEPTED), MOMTS-001 (ACCEPTED), HOLDOUT-001 (ACCEPTED)
 **Layer:** execution / serving / experiments
 **Architecture:** Wires promoted artifact → factor scores → allocator → PaperBroker; optional holdout observation snapshot.

@@ -1,9 +1,9 @@
 # CURRENT_TASK
 
 Ticket: PAPER-001
-State: READY
-Next required actor: Sr Dev (Strong Model) — factor-driven paper trading loop
-Next ticket authorized: PAPER-001
+State: AWAITING_REVIEW
+Next required actor: Lead Quant (Reviewer) — review factor-driven paper trading loop
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 

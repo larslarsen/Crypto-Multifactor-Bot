@@ -26,8 +26,14 @@ from cryptofactors.execution.models import (
     PaperTrade,
 )
 from cryptofactors.execution.paper import PaperBroker
+from cryptofactors.execution.paper_loop import (
+    FactorDrivenPaperLoop,
+    PaperLoopPeriodLog,
+    PaperLoopResult,
+)
 
 __all__ = [
+    "FactorDrivenPaperLoop",
     "FlattenSignal",
     "KillSwitchActiveError",
     "LiveBroker",
@@ -40,6 +46,8 @@ __all__ = [
     "PaperAccountState",
     "PaperBroker",
     "PaperExecutionError",
+    "PaperLoopPeriodLog",
+    "PaperLoopResult",
     "PaperOrder",
     "PaperTrade",
     "PreTradeRiskValidator",
