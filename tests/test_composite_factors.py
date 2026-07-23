@@ -240,11 +240,12 @@ def test_composite_substrate_integration(tmp_path: Path) -> None:
     assert len(frame.values) == n_assets
     assert all(math.isfinite(v.score) for v in frame.values)
     assert frame.factor_id == COMPOSITE_EQUAL_RANK_FACTOR_ID
-    # Best instrument (lowest avg_rank) gets the highest score (score = -avg_rank).
-    scores = {v.instrument_id: v.score for v in frame.values}
-    top_iid = max(scores, key=scores.__getitem__)
-    assert scores[top_iid] == max(scores.values())
-    assert min(scores.values()) < max(scores.values())
+    # Best instrument (lowest avg_rank) must have the highest score (-avg_rank).
+    by_id = {v.instrument_id: v for v in frame.values}
+    best_by_rank = min(by_id, key=lambda k: by_id[k].raw_value)
+    best_by_score = max(by_id, key=lambda k: by_id[k].score)
+    assert best_by_rank == best_by_score
+    assert min(v.score for v in frame.values) < max(v.score for v in frame.values)
 
     decision_times = [
         start + timedelta(days=d) for d in range(window + 2, n_days + 1)

@@ -1,8 +1,9 @@
 # COMP-001 — Simple Composites (Experiment #20)
 
 **Priority:** P0
-**Status:** IN_PROGRESS
-**Latest review:** REJECTED (REVIEW-0163)
+**Status:** ACCEPTED
+**Latest review:** ACCEPTED (REVIEW-0164)
+**Next ticket:** #21 — ML challengers (pending reviewer authorization)
 **Dependencies:** BASE-001 (accepted), EXP-001 (accepted), LABEL-001 (accepted), SPLIT-001 (accepted), ASOF-001 (accepted)
 **Layer:** factors
 **Architecture:** implements experiment #20 (simple composites); no ADR required
