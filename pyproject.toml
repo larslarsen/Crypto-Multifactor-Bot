@@ -44,5 +44,5 @@ strict = true
 # pyarrow ships without a py.typed marker in this environment; treat as untyped
 # third-party dependency (strict type-checking still applies to first-party code).
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*"]
+module = ["pyarrow", "pyarrow.*", "numpy", "sklearn.*", "xgboost"]
 ignore_missing_imports = true
