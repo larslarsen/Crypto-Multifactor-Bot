@@ -2,7 +2,7 @@
 
 Ticket: EXP-002
 State: ACCEPTED
-Next required actor: Jr Dev (Weak Model) — closing records and git handoff
+Next required actor: Lead Quant (Reviewer) — next ticket authorization
 Next ticket authorized: NONE
 
 **Reviewer Decision (Code Review):**

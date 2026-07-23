@@ -1,0 +1,30 @@
+{
+  "EXP-2026-019": {
+    "experiment_id": "EXP-2026-019",
+    "factor_id": "tsmom_30_7",
+    "fingerprint": "87469a44a18449bee23de76b1312413fd3e5a649a6677e3509a8c270caea3318",
+    "n_periods": 8,
+    "net_return": 0.049047560696738025,
+    "long_return": 0.028084140140081003,
+    "short_return": 0.02791613986008401,
+    "mean_turnover": 0.13108864166307782,
+    "total_cost": -0.004826936300043067,
+    "total_funding_cost": -0.006400000000000001,
+    "liquidation_count": 0,
+    "run_at": "2026-07-23T11:55:02.254902+00:00"
+  },
+  "EXP-2026-020": {
+    "experiment_id": "EXP-2026-020",
+    "factor_id": "tsmom_90_7",
+    "fingerprint": "0e3d9c51fab1c2b6e42577009a5833f3baa71ac65413932b62cbdc168b8c61c4",
+    "n_periods": 8,
+    "net_return": 0.049047560696738025,
+    "long_return": 0.028084140140081003,
+    "short_return": 0.02791613986008401,
+    "mean_turnover": 0.13108864166307782,
+    "total_cost": -0.004826936300043067,
+    "total_funding_cost": -0.006400000000000001,
+    "liquidation_count": 0,
+    "run_at": "2026-07-23T11:55:02.319284+00:00"
+  }
+}
