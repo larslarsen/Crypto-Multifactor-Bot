@@ -1,26 +1,46 @@
 # CURRENT_TASK
 
-Ticket: BASE-001
-State: BLOCKED
-Next required actor: Reviewer (decision required)
+Ticket: ASOF-002
+State: READY
+Next required actor: Sr Dev (Grok Build)
 Next ticket authorized: NONE
 
-BASE-001 source rejected again (REVIEW-0158). P1: no production completed-bar access. Raw CatalogAsOfStore returns zero rows for completed bars when availability_time = period_end. Test uses test-only wrapper.
+Reviewer decision: Option A — fix CatalogAsOfStore half-open window. One-character fix unblocks all factor computations. BASE-001 resumes after ASOF-002 accepted.
 
 Governing documents:
-- tickets/BASE-001.md (BLOCKED)
+- tickets/ASOF-002.md (READY)
+- tickets/BASE-001.md (BLOCKED, awaiting ASOF-002)
 - docs/reviews/REVIEW-0158_BASE-001_REJECTED.md
-- docs/reviews/REVIEW-0157_BASE-001_REJECTED.md
-- docs/reviews/REVIEW-0156_BASE-001_REJECTED.md
 
-## Reviewer decision required
+## Sr Dev Prompt
 
-Three options for unblocking baseline factors:
+```
+Fix ASOF-002: Completed-bar window in observation_eligible.
 
-A) **Implement completed-bar access in CatalogAsOfStore** — fix the production store to handle completed bars (availability_time = period_end). Production fix.
+Bug: src/cryptofactors/catalog/as_of.py:131 uses >= valid_to_us.
+Production BAR-001 sets availability_time = period_end, so bars are
+ineligible at their exact availability time (decision_time == period_end).
 
-B) **Create a production CompletedBarAsOf adapter** — add `src/cryptofactors/factors/completed_bar_asof.py` that wraps CatalogAsOfStore for completed-bar semantics.
+One-character fix: change >= to > at line 131.
+This makes the period window [period_start, period_end] inclusive.
 
-C) **Document the limitation** — accept the test-only wrapper for now, document that baseline factors require completed-bar semantics that CatalogAsOfStore doesn't support.
+Before:
+    if decision_time_us >= valid_to_us:
+        return False
 
-No next ticket authorized. No further work on BASE-001 until Reviewer selects option.
+After:
+    if decision_time_us > valid_to_us:
+        return False
+
+Verification: test_catalog_asof_raw_store_ref_and_completed_bar_access
+should change from 0 rows to 1 row for completed bars.
+
+Files to modify:
+- src/cryptofactors/catalog/as_of.py (line 131, one char)
+
+After completion: set status to AWAITING_REVIEW.
+```
+
+## Stop condition
+
+Sr Dev produces source, stops for Reviewer. No commits until Reviewer accepts.

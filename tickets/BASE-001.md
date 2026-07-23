@@ -2,7 +2,8 @@
 
 **Priority:** P0
 **Status:** BLOCKED
-**Dependencies:** NULL-001 (accepted), EXP-001 (accepted), LABEL-001 (accepted), ASOF-001 (accepted)
+**Dependencies:** ASOF-002 (READY), NULL-001 (accepted), EXP-001 (accepted), LABEL-001 (accepted), ASOF-001 (accepted)
+**Blocked by:** ASOF-002 — CatalogAsOfStore half-open window excludes completed bars at availability_time
 **Layer:** factors
 **Architecture:** implements experiment #19 (transparent factor baselines in preregistered order); no ADR required
 
