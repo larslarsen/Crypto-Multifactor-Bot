@@ -123,3 +123,28 @@ class FlattenSignal:
 
     def __post_init__(self) -> None:
         _require_utc(self.timestamp, field_name="timestamp")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperOpsStatus:
+    """Health/status report artifact for a PAPER_APPROVED model session (PAPER-003)."""
+
+    model_artifact_id: str
+    promotion_state: str
+    gate_status: str  # "OK" or "FAIL"
+    last_rebalance_time: datetime | None
+    last_equity: float
+    initial_cash: float
+    total_net_return: float
+    peak_equity: float
+    current_drawdown: float
+    open_positions_count: int
+    total_trades_count: int
+    paper_observation_reference: str | None
+    drawdown_alert_triggered: bool
+    report_generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def __post_init__(self) -> None:
+        _require_utc(self.report_generated_at, field_name="report_generated_at")
+        if self.last_rebalance_time is not None:
+            _require_utc(self.last_rebalance_time, field_name="last_rebalance_time")

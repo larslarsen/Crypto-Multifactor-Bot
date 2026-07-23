@@ -50,6 +50,7 @@ class PaperLoopResult:
     total_trades_executed: int
     period_logs: tuple[PaperLoopPeriodLog, ...]
     observation_result: PaperObservationResult | None = None
+    drawdown_alert_triggered: bool = False
     session_run_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -63,15 +64,21 @@ class FactorDrivenPaperLoop:
         factor: Any,
         *,
         allocator: LongShortRankAllocator | None = None,
+        session_store: Any | None = None,
         initial_cash: float = 100_000.0,
         fee_rate: float = 0.0005,
         slippage_rate: float = 0.0005,
+        max_drawdown_threshold: float = 0.10,
+        alert_callback: Callable[[str, float, float], None] | None = None,
     ) -> None:
         self.model_artifact_id = model_artifact_id
         self.promotion_registry = promotion_registry
         self.factor = factor
         self.allocator = allocator or LongShortRankAllocator(target_leverage=1.0)
+        self.session_store = session_store
         self.initial_cash = initial_cash
+        self.max_drawdown_threshold = max_drawdown_threshold
+        self.alert_callback = alert_callback
 
         # PaperBroker verifies PAPER_APPROVED state on init and fails closed if unapproved
         self.broker = PaperBroker(
@@ -98,8 +105,10 @@ class FactorDrivenPaperLoop:
         logs: list[PaperLoopPeriodLog] = []
         sim_periods: list[SimulationPeriod] = []
         prev_equity = self.initial_cash
+        peak_equity = self.initial_cash
         max_leverage_seen = 0.0
         max_weight_seen = 0.0
+        alert_triggered = False
 
         for dt in decision_times:
             # 1. Compute factor frame
@@ -122,6 +131,21 @@ class FactorDrivenPaperLoop:
             # 4. Rebalance via PaperBroker
             trades = self.broker.rebalance(target_weights, current_prices, dt)
             state = self.broker.get_account_state(current_prices, dt)
+
+            # Persist if store configured
+            if self.session_store is not None:
+                self.session_store.save_snapshot(self.model_artifact_id, state, target_weights)
+                if trades:
+                    self.session_store.save_trades(self.model_artifact_id, trades)
+
+            # Drawdown check
+            if state.equity > peak_equity:
+                peak_equity = state.equity
+            curr_drawdown = (peak_equity - state.equity) / peak_equity if peak_equity > 0 else 0.0
+            if curr_drawdown >= self.max_drawdown_threshold:
+                alert_triggered = True
+                if self.alert_callback is not None:
+                    self.alert_callback(self.model_artifact_id, curr_drawdown, state.equity)
 
             period_net_ret_val = (state.equity - prev_equity) / prev_equity if prev_equity > 0 else 0.0
             prev_equity = state.equity
@@ -188,4 +212,5 @@ class FactorDrivenPaperLoop:
             total_trades_executed=len(all_trades),
             period_logs=tuple(logs),
             observation_result=obs_result,
+            drawdown_alert_triggered=alert_triggered,
         )

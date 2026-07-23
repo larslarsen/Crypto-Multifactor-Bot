@@ -1,9 +1,11 @@
 """Execution domain module (EXEC-001, EXEC-002)."""
 
 from cryptofactors.execution.errors import (
+    DrawdownLimitExceededError,
     KillSwitchActiveError,
     LiveExecutionError,
     PaperExecutionError,
+    PaperOpsError,
     RiskLimitViolationError,
     UnapprovedArtifactError,
 )
@@ -22,6 +24,7 @@ from cryptofactors.execution.models import (
     LiveOrderState,
     LiveOrderStatus,
     PaperAccountState,
+    PaperOpsStatus,
     PaperOrder,
     PaperTrade,
 )
@@ -31,8 +34,11 @@ from cryptofactors.execution.paper_loop import (
     PaperLoopPeriodLog,
     PaperLoopResult,
 )
+from cryptofactors.execution.paper_monitor import PaperOpsMonitor
+from cryptofactors.execution.paper_store import PaperSessionStore
 
 __all__ = [
+    "DrawdownLimitExceededError",
     "FactorDrivenPaperLoop",
     "FlattenSignal",
     "KillSwitchActiveError",
@@ -48,7 +54,11 @@ __all__ = [
     "PaperExecutionError",
     "PaperLoopPeriodLog",
     "PaperLoopResult",
+    "PaperOpsError",
+    "PaperOpsMonitor",
+    "PaperOpsStatus",
     "PaperOrder",
+    "PaperSessionStore",
     "PaperTrade",
     "PreTradeRiskValidator",
     "RiskLimitViolationError",

@@ -25,6 +25,8 @@ from pathlib import Path
 from typing import Any
 
 from cryptofactors.execution.paper_loop import FactorDrivenPaperLoop, PaperLoopResult
+from cryptofactors.execution.paper_monitor import PaperOpsMonitor
+from cryptofactors.execution.paper_store import PaperSessionStore
 from cryptofactors.factors.tsmom import make_tsmom_30_7
 from cryptofactors.promotion import (
     PromotionIdentityPayload,
@@ -270,12 +272,16 @@ def main() -> int:
     ]
     price_store = _SyntheticPriceStore(universe, days=160)
 
+    session_store = PaperSessionStore(db_path)
+    monitor = PaperOpsMonitor(registry)
+
     factor = make_tsmom_30_7(price_store, market_dataset_id="ds_market_bars")
 
     loop = FactorDrivenPaperLoop(
         model_artifact_id=MODEL_ARTIFACT_ID,
         promotion_registry=registry,
         factor=factor,
+        session_store=session_store,
         initial_cash=100_000.0,
         fee_rate=0.0005,
         slippage_rate=0.0005,
@@ -291,6 +297,18 @@ def main() -> int:
         get_prices_at=price_store.get_prices_at,
         min_observation_days=14,
     )
+
+    # Generate and write PaperOpsStatus report artifact
+    obs_ref = result.observation_result.reference_id if result.observation_result else None
+    ops_status = monitor.inspect_session(
+        MODEL_ARTIFACT_ID,
+        broker=loop.broker,
+        paper_observation_reference=obs_ref,
+        drawdown_alert_triggered=result.drawdown_alert_triggered,
+    )
+    status_path = Path("research/sprint_004/09_PAPER_OPS_STATUS.json")
+    monitor.write_status_artifact(ops_status, status_path)
+    print(f"Paper ops health/status report written to {status_path}", file=sys.stderr)
 
     formatted = format_loop_result(result)
     out_json = json.dumps(formatted, indent=2)

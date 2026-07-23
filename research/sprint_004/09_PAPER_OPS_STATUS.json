@@ -1,0 +1,16 @@
+{
+  "model_artifact_id": "mod_tsmom_30_7_v1",
+  "promotion_state": "PAPER_APPROVED",
+  "gate_status": "OK",
+  "last_rebalance_time": "2026-05-30T00:00:00+00:00",
+  "last_equity": 104894.79,
+  "initial_cash": 100000.0,
+  "total_net_return": 0.048948,
+  "peak_equity": 100000.0,
+  "current_drawdown": 0.0,
+  "open_positions_count": 10,
+  "total_trades_count": 80,
+  "paper_observation_reference": "obs_mod_tsmom_30_7_v1_1780099200",
+  "drawdown_alert_triggered": false,
+  "report_generated_at": "2026-07-23T13:05:23.324572+00:00"
+}

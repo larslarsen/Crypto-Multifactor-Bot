@@ -29,6 +29,14 @@ class UnapprovedArtifactError(PaperExecutionError):
     """Raised when an execution operation is attempted on an unapproved artifact."""
 
 
+class PaperOpsError(PaperExecutionError):
+    """Raised when paper session persistence or monitoring fails."""
+
+
+class DrawdownLimitExceededError(PaperExecutionError):
+    """Raised when equity drawdown exceeds the configured maximum threshold."""
+
+
 class LiveExecutionError(RuntimeError):
     """Base error for live execution operations (EXEC-002)."""
 
