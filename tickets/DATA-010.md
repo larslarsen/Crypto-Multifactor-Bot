@@ -1,7 +1,7 @@
 # DATA-010 — DEX Universe Asset OHLCV Backfill (U50+ Trading Assets)
 
 **Priority:** P1
-**Status:** DRAFT
+**Status:** ACCEPTED
 **Dependencies:** DATA-007 (ACCEPTED), DEX-002 (ACCEPTED), UNIVERSE-004 (ACCEPTED), DATA-006 (ACCEPTED)
 **Layer:** acquisition / dex
 **Architecture:** extend existing `dex_multi_provider_fanout.py` fan-out engine; use DATA-007 `recommended_fanout` sources. **No LIVE. No Birdeye OHLCV.**

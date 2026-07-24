@@ -26,7 +26,6 @@ from typing import Any, Final
 import httpx
 
 from cryptofactors.ingest.dex_ohlcv import (
-    DEFAULT_NETWORK,
     GeckoTerminalClient,
 )
 
@@ -189,6 +188,8 @@ class GeckoTerminalProvider(DexOHLCVProvider):
     The GeckoTerminal public API only permits data within the most recent
     180 days. We clip the request window to that range so pagination never
     asks the API for a ``before_timestamp`` beyond the free tier.
+
+    Supports multi-chain backfill by lazily creating a chain-specific client.
     """
 
     _MAX_FREE_LOOKBACK_DAYS: int = 180
@@ -199,14 +200,28 @@ class GeckoTerminalProvider(DexOHLCVProvider):
         gecko_client: GeckoTerminalClient | None = None,
         http_client: httpx.Client | None = None,
         rate_limiter: TokenBucketRateLimiter | None = None,
+        requests_per_minute: int | None = None,
     ) -> None:
+        self._clients: dict[str, GeckoTerminalClient] = {}
         if gecko_client is not None:
-            self._client: GeckoTerminalClient = gecko_client
-        else:
-            self._client = GeckoTerminalClient(network=DEFAULT_NETWORK, client=http_client)
+            # Backward compatibility: single injected client defaults to the
+            # legacy network, but we still allow multi-chain lookups by using
+            # the client's configured network.
+            self._clients[gecko_client._network] = gecko_client
+        self._http_client: httpx.Client | None = http_client
+        self._requests_per_minute: int | None = requests_per_minute
         self._rate_limiter: TokenBucketRateLimiter = rate_limiter or TokenBucketRateLimiter(
             tokens_per_second=DEFAULT_PRIMARY_RATE,
         )
+
+    def _client_for_chain(self, chain: str) -> GeckoTerminalClient:
+        chain = chain.strip()
+        if chain not in self._clients:
+            kwargs: dict[str, Any] = {"network": chain, "client": self._http_client}
+            if self._requests_per_minute is not None:
+                kwargs["requests_per_minute"] = self._requests_per_minute
+            self._clients[chain] = GeckoTerminalClient(**kwargs)
+        return self._clients[chain]
 
     @property
     def provider_id(self) -> str:
@@ -231,10 +246,11 @@ class GeckoTerminalProvider(DexOHLCVProvider):
             end_time - timedelta(days=self._MAX_FREE_LOOKBACK_DAYS),
         )
         self._rate_limiter.acquire(provider=self.provider_id, chain=chain, pool_address=pool_address)
+        client = self._client_for_chain(chain)
         try:
-            records = self._client.fetch_pool_ohlcv(
+            records = client.fetch_pool_ohlcv(
                 pool_address=pool_address,
-                fee_tier=fee_tier or "",
+                fee_tier=fee_tier or "0.05%",
                 start_time=clipped_start,
                 end_time=end_time,
             )
@@ -367,6 +383,13 @@ class DexScreenerProvider(DexOHLCVProvider):
 
         # DexScreener returns current pair stats; synthesize one daily point if
         # we have any pair. This is intentionally limited — used only for gap-fill.
+        if not isinstance(data, dict):
+            return ProviderResult(
+                provider=self.provider_id,
+                chain=chain,
+                pool_address=pool_address,
+                records=[],
+            )
         out: list[PoolOhlcvRecord] = []
         pairs = data.get("pairs") or []
         for pair in pairs:
@@ -662,6 +685,7 @@ class WorkItem:
     fee_tier: str | None
     start_time: datetime
     end_time: datetime
+    gecko_network: str | None = None
 
 
 @dataclass
@@ -673,6 +697,7 @@ class PoolBackfillResult:
     providers_used: list[str]
     incidents: list[RateLimitIncident]
     last_timestamp: datetime | None
+    gecko_network: str | None = None
 
 
 class DEXFanOutEngine:
@@ -703,6 +728,7 @@ class DEXFanOutEngine:
         work: list[WorkItem] = []
         for pool in candidate_pools:
             chain = str(pool.get("chain") or "arbitrum").strip().lower()
+            gecko_network = str(pool.get("gecko_network") or chain).strip().lower()
             address = str(pool.get("address") or "").strip().lower()
             fee_tier = str(pool.get("fee_tier") or "").strip() or None
             if not address:
@@ -742,6 +768,7 @@ class DEXFanOutEngine:
                         fee_tier=fee_tier,
                         start_time=start,
                         end_time=end_time,
+                        gecko_network=gecko_network,
                     )
                 )
         return work
@@ -749,18 +776,20 @@ class DEXFanOutEngine:
     def run_work_items(self, work_items: Sequence[WorkItem]) -> list[PoolBackfillResult]:
         """Fetch OHLCV for all work items and merge per pool."""
         by_pool: dict[tuple[str, str], list[ProviderResult]] = {}
+        gecko_network_by_key: dict[tuple[str, str], str] = {}
         for item in work_items:
             provider = self._providers.get(item.provider)
             if provider is None:
                 continue
+            key = (item.chain, item.pool_address)
+            gecko_network_by_key[key] = item.gecko_network or item.chain
             result = provider.fetch_pool_ohlcv(
-                chain=item.chain,
+                chain=item.gecko_network or item.chain,
                 pool_address=item.pool_address,
                 fee_tier=item.fee_tier,
                 start_time=item.start_time,
                 end_time=item.end_time,
             )
-            key = (item.chain, item.pool_address)
             by_pool.setdefault(key, []).append(result)
 
         pool_results: list[PoolBackfillResult] = []
@@ -778,6 +807,7 @@ class DEXFanOutEngine:
                     providers_used=providers_used,
                     incidents=incidents,
                     last_timestamp=last_ts,
+                    gecko_network=gecko_network_by_key.get((chain, pool_address)),
                 )
             )
         return pool_results

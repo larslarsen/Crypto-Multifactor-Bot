@@ -1,0 +1,720 @@
+{
+  "experiment_id": "DATA-010-DEX-UNIVERSE-BACKFILL",
+  "data_mode": "real_asof",
+  "real_asof": "2026-07-24T05:48:32.555711+00:00",
+  "assets": [
+    "BTC",
+    "ETH",
+    "SOL",
+    "XRP",
+    "ADA",
+    "AVAX",
+    "DOT",
+    "LINK",
+    "LTC",
+    "BCH",
+    "DOGE",
+    "UNI",
+    "AAVE",
+    "CRV",
+    "APE",
+    "NEAR",
+    "FIL",
+    "ARB",
+    "OP",
+    "SUI",
+    "SEI",
+    "WLD",
+    "PEPE"
+  ],
+  "screening_config": {
+    "min_liquidity_usd": 5000.0,
+    "min_volume_24h_usd": 1000.0,
+    "max_pools": null
+  },
+  "pools_backfilled": [
+    {
+      "symbol": "BTC",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x5969efdde3cf5c0d9a88ae51e47d721096a97203",
+      "fee_tier": null,
+      "score": 6647333.783343511,
+      "rank": 1,
+      "liquidity_usd": 8222232.23,
+      "volume_24h_usd": 5374093.7
+    },
+    {
+      "symbol": "BTC",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x0e4831319a50228b9e450861297ab92dee15b44f",
+      "fee_tier": null,
+      "score": 6064254.700711875,
+      "rank": 2,
+      "liquidity_usd": 8104248.82,
+      "volume_24h_usd": 4537766.04
+    },
+    {
+      "symbol": "ETH",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x641c00a822e8b671738d32a431a4fb6074e5c79d",
+      "fee_tier": null,
+      "score": 4601995.875920739,
+      "rank": 3,
+      "liquidity_usd": 6437034.2,
+      "volume_24h_usd": 3290081.33
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x3470447f3cecffac709d3e783a307790b0208d60",
+      "fee_tier": null,
+      "score": 1138878.2430298477,
+      "rank": 4,
+      "liquidity_usd": 2712628.35,
+      "volume_24h_usd": 478150.15
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
+      "fee_tier": null,
+      "score": 881584.0644559907,
+      "rank": 5,
+      "liquidity_usd": 2229032.59,
+      "volume_24h_usd": 348667.16
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x9a5c1d2f4a7a7962a63259de6fcc1afb1d0aa1abdf5d19c23d22fd78953c5167",
+      "fee_tier": null,
+      "score": 878580.2492218218,
+      "rank": 6,
+      "liquidity_usd": 1875809.48,
+      "volume_24h_usd": 411504.08
+    },
+    {
+      "symbol": "ETH",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
+      "fee_tier": null,
+      "score": 592982.255151692,
+      "rank": 7,
+      "liquidity_usd": 966806.01,
+      "volume_24h_usd": 363700.63
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
+      "fee_tier": null,
+      "score": 131077.98334199376,
+      "rank": 8,
+      "liquidity_usd": 559717.94,
+      "volume_24h_usd": 30696.6
+    },
+    {
+      "symbol": "OP",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0x069c637cc3dc68aab4cd785df4da7137c717cf3f",
+      "fee_tier": null,
+      "score": 127593.7639947282,
+      "rank": 9,
+      "liquidity_usd": 50906.72,
+      "volume_24h_usd": 319803.92
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x5d059911b0fe3f9f72c701772cb7826f32fad07a0fccbf0c90d899b6bb407710",
+      "fee_tier": null,
+      "score": 102645.52046346689,
+      "rank": 10,
+      "liquidity_usd": 212012.45,
+      "volume_24h_usd": 49695.68
+    },
+    {
+      "symbol": "ETH",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x4d1576158518dd61924218446c1057cf03138d57",
+      "fee_tier": null,
+      "score": 93615.60932290726,
+      "rank": 11,
+      "liquidity_usd": 418398.83,
+      "volume_24h_usd": 20946.24
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xcda53b1f66614552f834ceef361a8d12a0b8dad8",
+      "fee_tier": null,
+      "score": 88515.74943282128,
+      "rank": 12,
+      "liquidity_usd": 217069.05,
+      "volume_24h_usd": 36094.68
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
+      "fee_tier": null,
+      "score": 80791.92536117208,
+      "rank": 13,
+      "liquidity_usd": 200034.36,
+      "volume_24h_usd": 32631.07
+    },
+    {
+      "symbol": "NEAR",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
+      "fee_tier": null,
+      "score": 64717.768179884726,
+      "rank": 14,
+      "liquidity_usd": 360955.73,
+      "volume_24h_usd": 11603.61
+    },
+    {
+      "symbol": "LINK",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x32a5746ba6826828716cc1a394bc33301ebc7656",
+      "fee_tier": null,
+      "score": 43148.209963378555,
+      "rank": 15,
+      "liquidity_usd": 187165.41,
+      "volume_24h_usd": 9947.18
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xd0fc8ba7e267f2bc56044a7715a489d851dc6d78",
+      "fee_tier": null,
+      "score": 36648.87787065247,
+      "rank": 16,
+      "liquidity_usd": 387033.08,
+      "volume_24h_usd": 3470.35
+    },
+    {
+      "symbol": "OP",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0xb533c12fb4e7b53b5524eab9b47d93ff6c7a456f",
+      "fee_tier": null,
+      "score": 33877.93099806716,
+      "rank": 17,
+      "liquidity_usd": 87666.58,
+      "volume_24h_usd": 13091.81
+    },
+    {
+      "symbol": "LINK",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xbbe36e6f0331c6a36ab44bc8421e28e1a1871c1e",
+      "fee_tier": null,
+      "score": 29547.887015199583,
+      "rank": 18,
+      "liquidity_usd": 38150.3,
+      "volume_24h_usd": 22885.21
+    },
+    {
+      "symbol": "BTC",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x53c6ca2597711ca7a73b6921faf4031eedf71339",
+      "fee_tier": null,
+      "score": 25276.293103663364,
+      "rank": 19,
+      "liquidity_usd": 137271.63,
+      "volume_24h_usd": 4654.21
+    },
+    {
+      "symbol": "WLD",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0x4e5541815227e3272c405886149f45d2f437c7ff",
+      "fee_tier": null,
+      "score": 10166.167672987693,
+      "rank": 20,
+      "liquidity_usd": 13498.69,
+      "volume_24h_usd": 7656.37
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1",
+      "fee_tier": null,
+      "score": 9759.763754804724,
+      "rank": 21,
+      "liquidity_usd": 62347.32,
+      "volume_24h_usd": 1527.78
+    }
+  ],
+  "pool_results": [
+    {
+      "symbol": "BTC",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x5969efdde3cf5c0d9a88ae51e47d721096a97203",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "BTC",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x0e4831319a50228b9e450861297ab92dee15b44f",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "ETH",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x641c00a822e8b671738d32a431a4fb6074e5c79d",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x3470447f3cecffac709d3e783a307790b0208d60",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x9a5c1d2f4a7a7962a63259de6fcc1afb1d0aa1abdf5d19c23d22fd78953c5167",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "ETH",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "OP",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0x069c637cc3dc68aab4cd785df4da7137c717cf3f",
+      "fee_tier": null,
+      "record_count": 74,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-05-12T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x5d059911b0fe3f9f72c701772cb7826f32fad07a0fccbf0c90d899b6bb407710",
+      "fee_tier": null,
+      "record_count": 110,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-03-07T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "ETH",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x4d1576158518dd61924218446c1057cf03138d57",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xcda53b1f66614552f834ceef361a8d12a0b8dad8",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "NEAR",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "LINK",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x32a5746ba6826828716cc1a394bc33301ebc7656",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xd0fc8ba7e267f2bc56044a7715a489d851dc6d78",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "OP",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0xb533c12fb4e7b53b5524eab9b47d93ff6c7a456f",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "LINK",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xbbe36e6f0331c6a36ab44bc8421e28e1a1871c1e",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "BTC",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x53c6ca2597711ca7a73b6921faf4031eedf71339",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "WLD",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0x4e5541815227e3272c405886149f45d2f437c7ff",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    }
+  ],
+  "rejected_pools": [],
+  "dataset_id": "ds_e562d724e89c6735df6a499c6beedfd59fc1a8c55f978b253e5e53897041a0f1",
+  "dataset_type": "dex_ohlcv_fanout",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_e562d724e89c6735df6a499c6beedfd59fc1a8c55f978b253e5e53897041a0f1",
+    "resolve_latest_by_type": "ds_e562d724e89c6735df6a499c6beedfd59fc1a8c55f978b253e5e53897041a0f1",
+    "match": true
+  },
+  "total_records": 3604,
+  "coverage": {
+    "start": "2026-01-26T00:00:00+00:00",
+    "end": "2026-07-24T00:00:00+00:00"
+  },
+  "rate_limit": {
+    "geckoterminal": {
+      "tokens_per_second": 0.1,
+      "burst": 1,
+      "total_requests": 21,
+      "incidents": []
+    },
+    "dexscreener": {
+      "tokens_per_second": 1.0,
+      "burst": 1,
+      "total_requests": 21,
+      "incidents": [
+        {
+          "timestamp": "2026-07-24T05:50:22.751058+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0x3470447f3cecffac709d3e783a307790b0208d60",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        },
+        {
+          "timestamp": "2026-07-24T05:50:32.996221+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        },
+        {
+          "timestamp": "2026-07-24T05:50:43.007486+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0x9a5c1d2f4a7a7962a63259de6fcc1afb1d0aa1abdf5d19c23d22fd78953c5167",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        },
+        {
+          "timestamp": "2026-07-24T05:52:08.335147+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0x5d059911b0fe3f9f72c701772cb7826f32fad07a0fccbf0c90d899b6bb407710",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        },
+        {
+          "timestamp": "2026-07-24T05:52:43.157370+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        },
+        {
+          "timestamp": "2026-07-24T05:52:52.861058+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        },
+        {
+          "timestamp": "2026-07-24T05:53:17.728530+00:00",
+          "provider": "dexscreener",
+          "chain": "eth",
+          "pool_address": "0xd0fc8ba7e267f2bc56044a7715a489d851dc6d78",
+          "status_code": 400,
+          "backoff_seconds": 0.0,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    "defillama": {
+      "tokens_per_second": 2.0,
+      "burst": 1,
+      "total_requests": 0,
+      "incidents": []
+    }
+  },
+  "live_eligible": false,
+  "live_eligible_note": "DATA-010 is a research DEX universe backfill; no LIVE authorization.",
+  "generated_at": "2026-07-24T05:54:17.278013+00:00"
+}

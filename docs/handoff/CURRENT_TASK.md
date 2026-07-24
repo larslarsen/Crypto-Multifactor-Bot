@@ -1,18 +1,27 @@
 # CURRENT_TASK
 
-Ticket: DATA-009
+Ticket: DATA-010
 State: ACCEPTED
 Next required actor: Reviewer (Lead Quant) — authorize next ticket
-Next ticket authorized: DATA-010
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-DATA-009 ACCEPTED — 45 BitMEX perp symbols, 2016-05-14 to 2026-07-23, 0 incidents. Dataset `ds_ee8e9cd9...`.
+DATA-010 ACCEPTED — 21 U50+ DEX pools backfilled via multi-provider fan-out, 2026-01-26 to 2026-07-24. Dataset `ds_e562d724...`.
 
-Sr Dev drafted DATA-010: DEX Universe Asset OHLCV backfill for U50+ trading assets using the DEX-002 fan-out.
+All data acquisition tickets now delivered:
+| Ticket | Result |
+|--------|--------|
+| DATA-007 | Free source rate-limit matrix |
+| DATA-008 | Binance expansion (23→52 symbols) |
+| DEX-002 | Multi-provider DEX OHLCV fan-out |
+| UNIVERSE-004 | Birdeye listings → screen → queue |
+| DATA-009 | BitMEX full backfill (45 perps, 2016+) |
+| DATA-010 | DEX universe OHLCV backfill (21 pools) |
+
+Next direction TBD by reviewer.
 
 ## Governing documents
 
-- tickets/DATA-009.md (ACCEPTED)
-- tickets/DATA-010.md (DRAFT — ready to authorize)
+- tickets/DATA-010.md (ACCEPTED)
 - all prior ACCEPTED tickets
