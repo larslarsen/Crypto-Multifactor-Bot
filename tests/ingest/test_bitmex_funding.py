@@ -1,5 +1,6 @@
 """Tests for FUND-005 BitMEX funding rate ingestion and provider."""
 
+import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -157,3 +158,56 @@ def test_invalid_records_fail_closed() -> None:
 
     with pytest.raises(BitMEXFundingError, match="missing symbol"):
         normalize_funding_record({"timestamp": "2026-07-22T04:00:00Z", "fundingRate": 0.0001})
+
+
+def test_fetch_perp_symbols() -> None:
+    instruments = [
+        {"symbol": "XBTUSD", "typ": "FFWCSX", "state": "Open"},
+        {"symbol": "ETHUSD", "typ": "FFWCSX", "state": "Open"},
+        {"symbol": "SPYUSD", "typ": "FFCCSX", "state": "Open"},
+        {"symbol": "UNLISTED", "typ": "FFWCSX", "state": "Unlisted"},
+    ]
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        if "/instrument/active" in str(request.url):
+            return httpx.Response(200, json=instruments)
+        return httpx.Response(200, json=[])
+
+    transport = httpx.MockTransport(mock_handler)
+    client = BitMEXFundingClient(client=httpx.Client(transport=transport), requests_per_minute=1000)
+    symbols = client.fetch_perp_symbols()
+    assert symbols == ["ETHUSD", "XBTUSD"]
+
+
+def test_fetch_perp_symbols_can_include_all_states() -> None:
+    instruments = [
+        {"symbol": "XBTUSD", "typ": "FFWCSX", "state": "Unlisted"},
+    ]
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=instruments)
+
+    transport = httpx.MockTransport(mock_handler)
+    client = BitMEXFundingClient(client=httpx.Client(transport=transport), requests_per_minute=1000)
+    assert client.fetch_perp_symbols(state=None) == ["XBTUSD"]
+    assert client.fetch_perp_symbols(state="Open") == []
+
+
+def test_full_backfill_script_dry_run() -> None:
+    import subprocess
+
+    result = subprocess.run(
+        [".venv/bin/python", "scripts/research/backfill_bitmex_funding.py", "--dry-run", "--report-path", "/tmp/39_BITMEX_FULL_BACKFILL.json"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    report = json.loads(Path("/tmp/39_BITMEX_FULL_BACKFILL.json").read_text())
+    assert report["data_mode"] == "synthetic"
+    assert report["dataset_type"] == "bitmex_funding_full"
+    assert len(report["symbols"]) == 5
+    assert report["row_count"] == 500
+    assert report["catalog_reconciliation"]["match"] is True
+    assert report["rate_limit_incidents"] == []
+

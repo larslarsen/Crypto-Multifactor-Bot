@@ -1,0 +1,527 @@
+{
+  "experiment_id": "DATA-009-BITMEX-FULL-BACKFILL",
+  "data_mode": "real_asof",
+  "real_asof": "2026-07-24T04:00:41.848374+00:00",
+  "symbols": [
+    "AAVEUSDT",
+    "ADAUSD",
+    "ADAUSDT",
+    "APEUSDT",
+    "ARBUSDT",
+    "AVAXUSDT",
+    "BCHUSD",
+    "BCHUSDT",
+    "BNBUSD",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DOGEUSD",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "ETHUSD",
+    "ETHUSDT",
+    "FILUSDT",
+    "GRAMUSDT",
+    "HYPEUSDT",
+    "LINKUSD",
+    "LINKUSDT",
+    "LOTUSDT",
+    "LTCUSD",
+    "LTCUSDT",
+    "NEARUSDT",
+    "OPNUSDT",
+    "PEPEUSD",
+    "PEPEUSDT",
+    "SEIUSDT",
+    "SHIBUSDT",
+    "SOLUSD",
+    "SOLUSDT",
+    "SUIUSDT",
+    "UNIUSDT",
+    "WLDUSD",
+    "WLDUSDT",
+    "XAUTUSDT",
+    "XBTETH",
+    "XBTEUR",
+    "XBTUSD",
+    "XBTUSDT",
+    "XMRUSDT",
+    "XRPUSD",
+    "XRPUSDT",
+    "ZECUSDT"
+  ],
+  "symbols_backfilled": [
+    "AAVEUSDT",
+    "ADAUSD",
+    "ADAUSDT",
+    "APEUSDT",
+    "ARBUSDT",
+    "AVAXUSDT",
+    "BCHUSD",
+    "BCHUSDT",
+    "BNBUSD",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DOGEUSD",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "ETHUSD",
+    "ETHUSDT",
+    "FILUSDT",
+    "GRAMUSDT",
+    "HYPEUSDT",
+    "LINKUSD",
+    "LINKUSDT",
+    "LOTUSDT",
+    "LTCUSD",
+    "LTCUSDT",
+    "NEARUSDT",
+    "OPNUSDT",
+    "PEPEUSD",
+    "PEPEUSDT",
+    "SEIUSDT",
+    "SHIBUSDT",
+    "SOLUSD",
+    "SOLUSDT",
+    "SUIUSDT",
+    "UNIUSDT",
+    "WLDUSD",
+    "WLDUSDT",
+    "XAUTUSDT",
+    "XBTETH",
+    "XBTEUR",
+    "XBTUSD",
+    "XBTUSDT",
+    "XMRUSDT",
+    "XRPUSD",
+    "XRPUSDT",
+    "ZECUSDT"
+  ],
+  "symbols_skipped": [],
+  "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+  "dataset_type": "bitmex_funding_full",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+    "resolve_latest_by_type": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+    "match": true
+  },
+  "quality_status": "PASS",
+  "row_count": 189570,
+  "byte_size": 1187191,
+  "symbol_rows": [
+    {
+      "symbol": "AAVEUSDT",
+      "record_count": 2396,
+      "first_timestamp": "2021-07-14T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "ADAUSD",
+      "record_count": 5276,
+      "first_timestamp": "2021-09-29T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "ADAUSDT",
+      "record_count": 5697,
+      "first_timestamp": "2021-03-10T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "APEUSDT",
+      "record_count": 4754,
+      "first_timestamp": "2022-03-22T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "ARBUSDT",
+      "record_count": 3655,
+      "first_timestamp": "2023-03-23T20:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "record_count": 4835,
+      "first_timestamp": "2022-02-23T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "BCHUSD",
+      "record_count": 6686,
+      "first_timestamp": "2020-06-16T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "BCHUSDT",
+      "record_count": 5150,
+      "first_timestamp": "2021-11-10T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "BNBUSD",
+      "record_count": 5276,
+      "first_timestamp": "2021-09-29T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "BNBUSDT",
+      "record_count": 5484,
+      "first_timestamp": "2021-05-20T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "CRVUSDT",
+      "record_count": 1094,
+      "first_timestamp": "2025-07-24T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "DOGEUSD",
+      "record_count": 5276,
+      "first_timestamp": "2021-09-29T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "record_count": 5901,
+      "first_timestamp": "2021-02-05T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "DOTUSDT",
+      "record_count": 5634,
+      "first_timestamp": "2021-03-03T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "record_count": 8738,
+      "first_timestamp": "2018-08-02T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "ETHUSDT",
+      "record_count": 5150,
+      "first_timestamp": "2021-11-10T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "FILUSDT",
+      "record_count": 3507,
+      "first_timestamp": "2021-06-09T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "GRAMUSDT",
+      "record_count": 65,
+      "first_timestamp": "2026-07-02T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "record_count": 1730,
+      "first_timestamp": "2024-12-24T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "LINKUSD",
+      "record_count": 5213,
+      "first_timestamp": "2021-10-20T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "LINKUSDT",
+      "record_count": 4939,
+      "first_timestamp": "2020-10-16T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "LOTUSDT",
+      "record_count": 1183,
+      "first_timestamp": "2025-06-24T20:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "LTCUSD",
+      "record_count": 6554,
+      "first_timestamp": "2020-07-30T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "LTCUSDT",
+      "record_count": 5150,
+      "first_timestamp": "2021-11-10T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "NEARUSDT",
+      "record_count": 3474,
+      "first_timestamp": "2022-05-05T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "OPNUSDT",
+      "record_count": 419,
+      "first_timestamp": "2026-03-06T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "PEPEUSD",
+      "record_count": 3533,
+      "first_timestamp": "2023-05-03T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "PEPEUSDT",
+      "record_count": 3533,
+      "first_timestamp": "2023-05-03T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "SEIUSDT",
+      "record_count": 3219,
+      "first_timestamp": "2023-08-16T04:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "SHIBUSDT",
+      "record_count": 4104,
+      "first_timestamp": "2021-12-15T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "SOLUSD",
+      "record_count": 5213,
+      "first_timestamp": "2021-10-20T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "SOLUSDT",
+      "record_count": 5613,
+      "first_timestamp": "2021-06-01T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "SUIUSDT",
+      "record_count": 3532,
+      "first_timestamp": "2023-05-03T20:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "UNIUSDT",
+      "record_count": 2166,
+      "first_timestamp": "2021-03-03T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "WLDUSD",
+      "record_count": 3284,
+      "first_timestamp": "2023-07-25T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "WLDUSDT",
+      "record_count": 2648,
+      "first_timestamp": "2024-02-22T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "record_count": 533,
+      "first_timestamp": "2026-01-27T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XBTETH",
+      "record_count": 3263,
+      "first_timestamp": "2023-08-01T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XBTEUR",
+      "record_count": 5591,
+      "first_timestamp": "2021-06-16T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XBTUSD",
+      "record_count": 11126,
+      "first_timestamp": "2016-05-14T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XBTUSDT",
+      "record_count": 5150,
+      "first_timestamp": "2021-11-10T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XMRUSDT",
+      "record_count": 797,
+      "first_timestamp": "2025-10-31T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XRPUSD",
+      "record_count": 7082,
+      "first_timestamp": "2020-02-05T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "XRPUSDT",
+      "record_count": 5150,
+      "first_timestamp": "2021-11-10T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    },
+    {
+      "symbol": "ZECUSDT",
+      "record_count": 797,
+      "first_timestamp": "2025-10-31T12:00:00Z",
+      "last_timestamp": "2026-07-23T20:00:00Z",
+      "watermark": "2026-07-23T20:00:00+00:00",
+      "resumed_from": null
+    }
+  ],
+  "coverage": {
+    "start": "2016-05-14T12:00:00+00:00",
+    "end": "2026-07-23T20:00:00+00:00"
+  },
+  "rate_limit_incidents": [],
+  "watermarks": {
+    "AAVEUSDT": "2026-07-23T20:00:00+00:00",
+    "ADAUSD": "2026-07-23T20:00:00+00:00",
+    "ADAUSDT": "2026-07-23T20:00:00+00:00",
+    "APEUSDT": "2026-07-23T20:00:00+00:00",
+    "ARBUSDT": "2026-07-23T20:00:00+00:00",
+    "AVAXUSDT": "2026-07-23T20:00:00+00:00",
+    "BCHUSD": "2026-07-23T20:00:00+00:00",
+    "BCHUSDT": "2026-07-23T20:00:00+00:00",
+    "BNBUSD": "2026-07-23T20:00:00+00:00",
+    "BNBUSDT": "2026-07-23T20:00:00+00:00",
+    "CRVUSDT": "2026-07-23T20:00:00+00:00",
+    "DOGEUSD": "2026-07-23T20:00:00+00:00",
+    "DOGEUSDT": "2026-07-23T20:00:00+00:00",
+    "DOTUSDT": "2026-07-23T20:00:00+00:00",
+    "ETHUSD": "2026-07-23T20:00:00+00:00",
+    "ETHUSDT": "2026-07-23T20:00:00+00:00",
+    "FILUSDT": "2026-07-23T20:00:00+00:00",
+    "GRAMUSDT": "2026-07-23T20:00:00+00:00",
+    "HYPEUSDT": "2026-07-23T20:00:00+00:00",
+    "LINKUSD": "2026-07-23T20:00:00+00:00",
+    "LINKUSDT": "2026-07-23T20:00:00+00:00",
+    "LOTUSDT": "2026-07-23T20:00:00+00:00",
+    "LTCUSD": "2026-07-23T20:00:00+00:00",
+    "LTCUSDT": "2026-07-23T20:00:00+00:00",
+    "NEARUSDT": "2026-07-23T20:00:00+00:00",
+    "OPNUSDT": "2026-07-23T20:00:00+00:00",
+    "PEPEUSD": "2026-07-23T20:00:00+00:00",
+    "PEPEUSDT": "2026-07-23T20:00:00+00:00",
+    "SEIUSDT": "2026-07-23T20:00:00+00:00",
+    "SHIBUSDT": "2026-07-23T20:00:00+00:00",
+    "SOLUSD": "2026-07-23T20:00:00+00:00",
+    "SOLUSDT": "2026-07-23T20:00:00+00:00",
+    "SUIUSDT": "2026-07-23T20:00:00+00:00",
+    "UNIUSDT": "2026-07-23T20:00:00+00:00",
+    "WLDUSD": "2026-07-23T20:00:00+00:00",
+    "WLDUSDT": "2026-07-23T20:00:00+00:00",
+    "XAUTUSDT": "2026-07-23T20:00:00+00:00",
+    "XBTETH": "2026-07-23T20:00:00+00:00",
+    "XBTEUR": "2026-07-23T20:00:00+00:00",
+    "XBTUSD": "2026-07-23T20:00:00+00:00",
+    "XBTUSDT": "2026-07-23T20:00:00+00:00",
+    "XMRUSDT": "2026-07-23T20:00:00+00:00",
+    "XRPUSD": "2026-07-23T20:00:00+00:00",
+    "XRPUSDT": "2026-07-23T20:00:00+00:00",
+    "ZECUSDT": "2026-07-23T20:00:00+00:00"
+  },
+  "live_eligible": false,
+  "scope": "all BitMEX perpetuals from 2016-05-13 (or symbol inception) to present; 8-hour funding",
+  "generated_at": "2026-07-24T04:00:41.848497+00:00"
+}

@@ -27,6 +27,7 @@ import pyarrow.parquet as pq
 
 DEFAULT_BASE_URL: Final[str] = "https://www.bitmex.com/api/v1"
 FUNDING_ENDPOINT: Final[str] = "/funding"
+INSTRUMENT_ENDPOINT: Final[str] = "/instrument/active"
 PROVENANCE_SOURCE: Final[str] = "bitmex_funding"
 _US_PER_SECOND: Final[int] = 1_000_000
 _MAX_COUNT_PER_REQ: Final[int] = 500
@@ -262,6 +263,34 @@ class BitMEXFundingClient:
 
         ordered = [all_records[k] for k in sorted(all_records.keys())]
         return ordered
+
+    def fetch_perp_symbols(self, *, state: str | None = "Open") -> list[str]:
+        """Discover all active perpetual contract symbols from BitMEX.
+
+        Filters instruments by type ``FFWCSX`` (perpetual contract) and optionally
+        by ``state``. Returns sorted uppercase symbols.
+        """
+        url = f"{self._base_url}{INSTRUMENT_ENDPOINT}"
+        res = self._get(url, {})
+        if not isinstance(res, list):
+            raise BitMEXFundingError(
+                "BitMEX /instrument/active endpoint returned non-list response",
+                context={"response": res},
+            )
+
+        symbols: set[str] = set()
+        for item in res:
+            if not isinstance(item, dict):
+                continue
+            typ = str(item.get("typ") or "").strip()
+            if typ != "FFWCSX":
+                continue
+            if state is not None and str(item.get("state") or "").strip() != state:
+                continue
+            sym = str(item.get("symbol") or "").strip().upper()
+            if sym:
+                symbols.add(sym)
+        return sorted(symbols)
 
     def _get(self, url: str, params: dict[str, Any]) -> Any:
         self._throttle()

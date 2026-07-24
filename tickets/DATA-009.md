@@ -1,7 +1,8 @@
 # DATA-009 — BitMEX Full Backfill: All Perps + 2016 History
 
 **Priority:** P1  
-**Status:** READY  
+**Status:** ACCEPTED
+**Next:** NONE  
 **Dependencies:** DATA-006 (ACCEPTED), DATA-007 (ACCEPTED), FUND-005 (ACCEPTED)  
 **Layer:** acquisition / funding  
 **Architecture:** extend existing `backfill_bitmex_funding.py`; publish new canonical dataset. **No LIVE.**
