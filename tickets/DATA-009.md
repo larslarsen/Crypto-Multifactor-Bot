@@ -1,7 +1,7 @@
 # DATA-009 — BitMEX Full Backfill: All Perps + 2016 History
 
 **Priority:** P1  
-**Status:** ACCEPTED
+**Status:** READY
 **Next:** NONE  
 **Dependencies:** DATA-006 (ACCEPTED), DATA-007 (ACCEPTED), FUND-005 (ACCEPTED)  
 **Layer:** acquisition / funding  
