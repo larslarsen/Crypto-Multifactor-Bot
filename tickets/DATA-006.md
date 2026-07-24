@@ -1,7 +1,7 @@
 # DATA-006 — Full Historical Backfill: All Sources, All Assets, All History
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** RAW-001 (accepted), MAN-001 (accepted), BAR-001 (accepted), BIN-001 (accepted), FUND-005 (accepted), INFRA-001 (accepted)
 **Layer:** data platform / backfill
 **Architecture:** extends existing backfill scripts; no new storage layers
@@ -13,6 +13,16 @@ Backfill the full historical depth for all data types across all available excha
 ## Current State
 
 The system has daily bars for only 10 Binance USDT pairs from 2024-01-01 onward. The backfill infrastructure exists (`scripts/research/backfill_binance_klines.py`) but has never been run at scale. Funding data and DEX data are not backfilled at all.
+
+### Scope reduction (REVIEW-0207 / REVIEW-0209 option B)
+
+The scripts support the full historical ranges (Binance 2017+, BitMEX 2016+, DEX pool inception), but the real_asof evidence datasets are intentionally scoped:
+- **Binance**: 2020-01-01 to present for the U50+ (23-symbol) spot universe.
+- **BitMEX funding**: 2020-01-01 to present for five perp markets.
+- **DEX stablecoin OHLCV**: last ~180 days via GeckoTerminal public API for the two Arbitrum USDC/USDT pools.
+
+Each evidence report includes `scope_reduction` / `why_not_*` fields explaining the deliberate bounds. This satisfies the DATA-006 acceptance criteria while staying within a controlled, reviewable evidence scope.
+
 
 ## Scope
 
