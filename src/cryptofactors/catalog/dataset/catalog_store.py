@@ -89,13 +89,32 @@ class SqliteDatasetCatalog:
         return self.get_dataset(dataset_id) is not None
 
     def resolve_latest_by_type(self, dataset_type: str) -> str | None:
-        """Return the most recently created dataset_id with the given dataset_type, or None.
+        """Return the preferred dataset_id with the given dataset_type, or None.
+
+        Preference order: PASS first, then PASS_WITH_WARNINGS, then QUARANTINED,
+        then REJECTED/other, followed by created_at DESC and dataset_id DESC as
+        tie-breakers. This prevents an older REJECTED dataset from being preferred
+        over a PASS dataset solely because of epoch created_at or a larger hash.
 
         Used to discover content-addressed ``ds_<sha256>`` ids by logical type
         (e.g. ``market_bars``) without requiring the caller to know the hash.
         """
         row = self._conn.execute(
-            "SELECT dataset_id FROM dataset WHERE dataset_type = ? ORDER BY created_at DESC, dataset_id DESC LIMIT 1",
+            """
+            SELECT dataset_id FROM dataset
+            WHERE dataset_type = ?
+            ORDER BY
+                CASE quality_status
+                    WHEN 'PASS' THEN 0
+                    WHEN 'PASS_WITH_WARNINGS' THEN 1
+                    WHEN 'QUARANTINED' THEN 2
+                    WHEN 'REJECTED' THEN 3
+                    ELSE 4
+                END ASC,
+                created_at DESC,
+                dataset_id DESC
+            LIMIT 1
+            """,
             (dataset_type,),
         ).fetchone()
         return str(row["dataset_id"]) if row is not None else None

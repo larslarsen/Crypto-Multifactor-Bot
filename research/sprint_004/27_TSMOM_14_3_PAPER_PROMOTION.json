@@ -1,0 +1,98 @@
+{
+  "experiment_id": "PROMO-003",
+  "model_artifact_id": "mod_tsmom_14_3_v1",
+  "factor_id": "tsmom_14_3",
+  "lookback_days": 14,
+  "skip_days": 3,
+  "canonical_dataset_id": "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa",
+  "canonical_dataset_quality_status": "PASS",
+  "canonical_dataset_quality_note": "Pinned PASS canonical dataset from DATA-005 (BAR-001 native 1d daily promotion).",
+  "promotion_state": {
+    "final_state": "PAPER_APPROVED",
+    "final_event_id": "pme_aff59f0dfbe64698",
+    "final_event_at": "2026-07-23T22:19:52.950031+00:00"
+  },
+  "promotion_trail": [
+    {
+      "event_index": 0,
+      "promotion_event_id": "pme_d75dce84b8074ff5",
+      "promotion_state": "RESEARCH_CANDIDATE",
+      "target_stage": "RESEARCH",
+      "event_at": "2026-07-23T22:19:52.941562+00:00",
+      "reason": "EXP-007 candidate",
+      "effective_time": "2024-04-01T00:00:00+00:00",
+      "approving_authority": "Lead Quantitative Researcher",
+      "evidence_reference": "REVIEW-0198",
+      "dataset_ids": [
+        "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
+        "coingecko_universe"
+      ]
+    },
+    {
+      "event_index": 1,
+      "promotion_event_id": "pme_abcea81799d442c4",
+      "promotion_state": "RESEARCH_ACCEPTED",
+      "target_stage": "RESEARCH",
+      "event_at": "2026-07-23T22:19:52.946347+00:00",
+      "reason": "EXP-007 research accepted",
+      "effective_time": "2024-04-01T00:00:00+00:00",
+      "approving_authority": "Lead Quantitative Researcher",
+      "evidence_reference": "REVIEW-0198",
+      "dataset_ids": [
+        "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
+        "coingecko_universe"
+      ]
+    },
+    {
+      "event_index": 2,
+      "promotion_event_id": "pme_aff59f0dfbe64698",
+      "promotion_state": "PAPER_APPROVED",
+      "target_stage": "PAPER",
+      "event_at": "2026-07-23T22:19:52.950031+00:00",
+      "reason": "EXP-007 PAPER_APPROVED",
+      "effective_time": "2024-04-01T00:00:00+00:00",
+      "approving_authority": "Lead Quantitative Researcher",
+      "evidence_reference": "REVIEW-0198",
+      "dataset_ids": [
+        "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
+        "coingecko_universe"
+      ]
+    }
+  ],
+  "paper_009_session": {
+    "artifact_path": "research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json",
+    "total_net_return": 0.166999,
+    "final_equity": 116699.87
+  },
+  "candidate_frozen": true,
+  "candidate_frozen_note": "tsmom_14_3 lookback=14/skip=3 remains frozen. No further lookback/skip optimization or re-selection on this path is permitted without a new ticket and reviewer authorization.",
+  "live_eligible": false,
+  "live_eligible_note": "PROMO-003 is PAPER_APPROVED only. LIVE_APPROVED is explicitly out of scope; multiple-testing / selection-path risk and owner policy still block live promotion.",
+  "cross_references": [
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json",
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json",
+    "research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json",
+    "research/sprint_004/29_HOLDOUT_RESERVATION.json"
+  ],
+  "prior_artifacts": [
+    "research/sprint_004/13_REAL_PAPER_SESSION.json",
+    "research/sprint_004/14_RISK_COMPLIANT_PAPER_SESSION.json",
+    "research/sprint_004/15_MOMTS_RISK_DIAGNOSIS.json",
+    "research/sprint_004/16_MOMTS_LONG_SESSION.json",
+    "research/sprint_004/17_NEUTRAL_RISK_SESSION.json",
+    "research/sprint_004/18_TSMOM_GRID_RESULTS.json",
+    "research/sprint_004/19_TSMOM_OOS_VALIDATION.json",
+    "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json",
+    "research/sprint_004/21_TSMOM_EXTENDED_OOS.json",
+    "research/sprint_004/22_TSMOM_14_0_PAPER_SESSION.json",
+    "research/sprint_004/23_TSMOM_FULLWINDOW_SCREEN.json",
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json",
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json",
+    "research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json"
+  ],
+  "generated_at": "2026-07-23T23:14:30.886134+00:00",
+  "archived": true,
+  "archive_note": "ARCH-001: mod_tsmom_14_3_v1 has been rejected as a false discovery following EXP-008 multiple-testing analysis. This artifact is preserved for audit and reproducibility but is no longer valid evidence for LIVE promotion.",
+  "archived_at": "2026-07-23T23:52:45.001009+00:00",
+  "archived_by_ticket": "ARCH-001"
+}

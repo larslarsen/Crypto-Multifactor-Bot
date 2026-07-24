@@ -1,17 +1,17 @@
 {
-  "experiment_id": "PAPER-008",
+  "experiment_id": "PAPER-009",
   "data_mode": "real_asof",
   "model_artifact_id": "mod_tsmom_14_3_v1",
   "factor_id": "tsmom_14_3",
   "lookback_days": 14,
   "skip_days": 3,
   "protocol": "paper_session",
-  "protocol_note": "Formal paper package for the tsmom_14_3 freeze candidate on the full DATA-04 usable window (2024-04-01 -> 2026-07-23, weekly decisions). Same protocol as PAPER-007/EXP-007. The candidate is frozen for forward observation; no further lookback/skip search on this path without a new ticket. DATA-04 canonical dataset quality is REJECTED due to BAR-001 native-1d daily resample policy; intraday 1d bars are used directly. This is promotion-grade paper evidence, not LIVE.",
+  "protocol_note": "Re-validation of the frozen tsmom_14_3 candidate on the DATA-005 quality-cleared PASS canonical dataset (native 1d promoted to daily). Same window, protocol, and risk policy as PAPER-008. No parameter changes. This is promotion-grade paper evidence, not LIVE.",
   "control_database": "exp003.db",
   "dataset_store_root": "data/exp003_store",
-  "canonical_dataset_id": "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
-  "canonical_dataset_quality_status": "REJECTED",
-  "canonical_dataset_quality_note": "BAR-001 quarantines all native 1d rows; intraday partition is used.",
+  "canonical_dataset_id": "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa",
+  "canonical_dataset_quality_status": "PASS",
+  "canonical_dataset_quality_note": "DATA-005 quality-cleared canonical bars via Approach A: BAR-001 extended to accept native 1d source bars as complete daily bars.",
   "universe": [
     "XBTUSD",
     "ETHUSD",
@@ -62,15 +62,22 @@
     "live_eligible": false
   },
   "candidate_frozen": true,
-  "candidate_frozen_note": "tsmom_14_3 lookback=14/skip=3 is frozen as the selected research candidate. No further lookback/skip optimization or re-selection on this path is permitted without a new ticket and reviewer authorization.",
+  "candidate_frozen_note": "tsmom_14_3 lookback=14/skip=3 remains frozen as the selected research candidate. No further lookback/skip optimization or re-selection on this path is permitted without a new ticket and reviewer authorization.",
   "live_eligible": false,
-  "live_eligible_note": "PAPER-008 is promotion-grade paper evidence; no LIVE authorization.",
+  "live_eligible_note": "PAPER-009 is promotion-grade paper evidence; no LIVE authorization.",
   "oos_supports_live_path": true,
   "oos_supports_live_path_note": "Paper session gate satisfied, but LIVE promotion requires a separate ticket and owner policy.",
+  "comparison_to_paper_008": {
+    "paper_008_canonical_dataset_id": "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd",
+    "paper_008_canonical_dataset_quality_status": "REJECTED",
+    "paper_008_total_net_return": 0.166999,
+    "paper_009_total_net_return": 0.166999,
+    "total_net_return_delta": 0.0,
+    "delta_note": "Return is identical to PAPER-008 because the daily PASS partition and the intraday partition used under the REJECTED dataset contain the same native 1d source data. Economic signal and parameters are unchanged."
+  },
   "cross_references": [
-    "research/sprint_004/21_TSMOM_EXTENDED_OOS.json",
-    "research/sprint_004/22_TSMOM_14_0_PAPER_SESSION.json",
-    "research/sprint_004/23_TSMOM_FULLWINDOW_SCREEN.json",
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json",
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json",
     "research/sprint_004/29_HOLDOUT_RESERVATION.json"
   ],
   "prior_artifacts": [
@@ -84,11 +91,13 @@
     "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json",
     "research/sprint_004/21_TSMOM_EXTENDED_OOS.json",
     "research/sprint_004/22_TSMOM_14_0_PAPER_SESSION.json",
-    "research/sprint_004/23_TSMOM_FULLWINDOW_SCREEN.json"
+    "research/sprint_004/23_TSMOM_FULLWINDOW_SCREEN.json",
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json",
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json"
   ],
-  "generated_at": "2026-07-23T22:34:17.625865+00:00",
+  "generated_at": "2026-07-23T23:06:33.876742+00:00",
   "archived": true,
   "archive_note": "ARCH-001: mod_tsmom_14_3_v1 has been rejected as a false discovery following EXP-008 multiple-testing analysis. This artifact is preserved for audit and reproducibility but is no longer valid evidence for LIVE promotion.",
-  "archived_at": "2026-07-23T23:52:45.000569+00:00",
+  "archived_at": "2026-07-23T23:52:45.000829+00:00",
   "archived_by_ticket": "ARCH-001"
 }

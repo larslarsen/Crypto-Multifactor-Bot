@@ -1,0 +1,50 @@
+{
+  "experiment_id": "ARCH-001",
+  "data_mode": "real_asof",
+  "model_artifact_id": "mod_tsmom_14_3_v1",
+  "canonical_dataset_id": "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa",
+  "dataset_quality_status": "PASS",
+  "holdout": {
+    "start": "2026-07-24T00:00:00+00:00",
+    "end": null,
+    "end_note": "Open-ended: holdout consists of all future bars after the last contaminated date."
+  },
+  "contamination": {
+    "contaminated_start": "2024-01-01T00:00:00+00:00",
+    "contaminated_end": "2026-07-23T00:00:00+00:00",
+    "contamination_note": "Every bar through 2026-07-23 was used in one or more of: grid search (EXP-004/EXP-008), full-window selection (EXP-007), formal paper sessions (PAPER-008/PAPER-009), promotion evidence (PROMO-003), and the multiple-testing analysis (EXP-008). The dataset is therefore fully contaminated for the purpose of selecting or validating a TSMOM-style candidate. Any future single-hypothesis test must use data from 2026-07-24 onward, or a fresh data stream.",
+    "fresh_data_required": true
+  },
+  "policy": {
+    "no_exploration_before_holdout": true,
+    "policy_note": "No new factor exploration, grid search, or parameter tuning may be performed on the contaminated window (2024-01-01 -> 2026-07-23). A pre-registered single-hypothesis test (see tickets/templates/PRE_REGISTERED_TEST.md) must be filed and accepted before any code touches the holdout data.",
+    "pre_registration_required": true
+  },
+  "live_eligible": false,
+  "live_eligible_note": "ARCH-001 establishes the methodological reset. LIVE is not authorized; the prior candidate is rejected and any future candidate must pass a pre-registered holdout test.",
+  "cross_references": [
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json",
+    "research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json",
+    "research/sprint_004/27_TSMOM_14_3_PAPER_PROMOTION.json",
+    "research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json"
+  ],
+  "prior_artifacts": [
+    "research/sprint_004/13_REAL_PAPER_SESSION.json",
+    "research/sprint_004/14_RISK_COMPLIANT_PAPER_SESSION.json",
+    "research/sprint_004/15_MOMTS_RISK_DIAGNOSIS.json",
+    "research/sprint_004/16_MOMTS_LONG_SESSION.json",
+    "research/sprint_004/17_NEUTRAL_RISK_SESSION.json",
+    "research/sprint_004/18_TSMOM_GRID_RESULTS.json",
+    "research/sprint_004/19_TSMOM_OOS_VALIDATION.json",
+    "research/sprint_004/20_EXTENDED_HISTORY_REPORT.json",
+    "research/sprint_004/21_TSMOM_EXTENDED_OOS.json",
+    "research/sprint_004/22_TSMOM_14_0_PAPER_SESSION.json",
+    "research/sprint_004/23_TSMOM_FULLWINDOW_SCREEN.json",
+    "research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json",
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json",
+    "research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json",
+    "research/sprint_004/27_TSMOM_14_3_PAPER_PROMOTION.json",
+    "research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json"
+  ],
+  "generated_at": "2026-07-23T23:52:45.008567+00:00"
+}

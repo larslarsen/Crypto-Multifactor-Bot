@@ -1,3 +1,8 @@
 experiment_id,status,artifacts_json,generated_at
-EXP-003,EXECUTED,{"diagnosis": "research/sprint_004/15_MOMTS_RISK_DIAGNOSIS.json", "long_session": "research/sprint_004/16_MOMTS_LONG_SESSION.json", "real_data_path_report": "research/sprint_004/11_REAL_DATA_PATH_REPORT_EXP003.json"},2026-07-23T15:42:14.890485+00:00
-PAPER-008,EXECUTED,"{""paper_session"":""research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json""}",2026-07-23T22:34:17.626028+00:00
+EXP-003,EXECUTED,"{""paper_session"":""research/sprint_004/16_MOMTS_LONG_SESSION.json""}",2026-07-23T15:42:14.890347+00:00
+PAPER-008,EXECUTED,"{""paper_session"":""research/sprint_004/24_TSMOM_14_3_PAPER_SESSION.json""}",2026-07-23T22:34:17.625865+00:00
+PAPER-009,EXECUTED,"{""paper_session"":""research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json""}",2026-07-23T23:06:33.876742+00:00
+PROMO-003,EXECUTED,"{""promotion_artifact"":""research/sprint_004/27_TSMOM_14_3_PAPER_PROMOTION.json""}",2026-07-23T23:14:30.886305+00:00
+EXP-008,EXECUTED,"{""analysis"":""research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json""}",2026-07-23T23:28:43.267825+00:00
+ARCH-001,EXECUTED,"{""archive_artifact"":""research/sprint_004/29_HOLDOUT_RESERVATION.json""}",2026-07-23T23:52:45.008786+00:00
+INFRA-001,EXECUTED,"{""ops_report"":""/tmp/pytest-of-lars/pytest-1248/test_dry_run_emits_ops_report0/research/30_DAILY_OPS_REPORT.json""}",2026-07-24T00:29:50.376899+00:00

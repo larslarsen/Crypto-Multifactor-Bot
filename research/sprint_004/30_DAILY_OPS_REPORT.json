@@ -1,0 +1,81 @@
+{
+  "experiment_id": "INFRA-001",
+  "run_at": "2026-07-24T00:23:33.424584+00:00",
+  "mode": "dry-run",
+  "control_database": "exp003.db",
+  "dataset_store_root": "data/exp003_store",
+  "raw_store_root": "data/exp003_store/raw",
+  "canonical_dataset_id": "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa",
+  "prior_canonical_dataset_id": "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa",
+  "canonical_dataset_quality_status": "PASS",
+  "universe": [
+    "ADAUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BTCUSDT",
+    "DOTUSDT",
+    "ETHUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "paper_symbols": [
+    "ADAUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BTCUSDT",
+    "DOTUSDT",
+    "ETHUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "holdout_start": "2026-07-24T00:00:00+00:00",
+  "holdout_policy": "Bars from 2026-07-24 onward are reserved for pre-registered single-hypothesis tests. No factor exploration or selection may use the contaminated window through 2026-07-23.",
+  "bars": {
+    "bar_start": "2024-01-01T00:00:00+00:00",
+    "bar_end": "2026-07-23T00:00:00+00:00",
+    "total_bar_count": 9350,
+    "bars_in_holdout_count": 0,
+    "daily_partition_count": 31,
+    "intraday_partition_count": 31
+  },
+  "fetch": {
+    "symbols_requested": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "AVAXUSDT",
+      "DOTUSDT",
+      "LINKUSDT",
+      "LTCUSDT",
+      "BCHUSDT"
+    ],
+    "symbols_fetched": [],
+    "new_bars_fetched": 0
+  },
+  "paper": {
+    "paper_skipped": true,
+    "paper_skip_reason": "Paper loop disabled by default; no pre-registered active factor."
+  },
+  "archived_factor_note": "The archived tsmom_14_3 / mod_tsmom_14_3_v1 (REJECTED) is never run by this ops runner. A future paper loop requires a pre-registered factor committed before any data is touched.",
+  "live_eligible": false,
+  "live_eligible_note": "INFRA-001 is an ops refresh and scheduler; no LIVE authorization.",
+  "cross_references": [
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json",
+    "research/sprint_004/29_HOLDOUT_RESERVATION.json",
+    "tickets/templates/PRE_REGISTERED_TEST.md"
+  ],
+  "prior_artifacts": [
+    "research/sprint_004/25_QUALITY_CLEARED_BARS_REPORT.json",
+    "research/sprint_004/26_TSMOM_14_3_PASS_BARS_PAPER.json",
+    "research/sprint_004/27_TSMOM_14_3_PAPER_PROMOTION.json",
+    "research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json",
+    "research/sprint_004/29_HOLDOUT_RESERVATION.json"
+  ],
+  "generated_at": "2026-07-24T00:23:33.622089+00:00"
+}
