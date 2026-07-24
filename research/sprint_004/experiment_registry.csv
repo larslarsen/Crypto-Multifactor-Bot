@@ -8,3 +8,4 @@ ARCH-001,EXECUTED,"{""archive_artifact"":""research/sprint_004/29_HOLDOUT_RESERV
 DATA-006,EXECUTED,"{""rework"":""research/sprint_004/34_DATA006_REVIEW0209_REWORK.json"",""binance"":""research/sprint_004/31_BINANCE_FULL_BACKFILL_REPORT.json"",""bitmex"":""research/sprint_004/32_BITMEX_FUNDING_BACKFILL_REPORT.json"",""dex"":""research/sprint_004/33_DEX_STABLECOIN_BACKFILL_REPORT.json""}",2026-07-24T02:00:29.706768+00:00
 INFRA-001,EXECUTED,"{""ops_report"":""research/sprint_004/30_DAILY_OPS_REPORT.json""}",2026-07-24T02:20:53.296951+00:00
 DATA-007,EXECUTED,"{""matrix"":""research/sprint_004/35_FREE_SOURCE_RATE_LIMIT_MATRIX.json""}",2026-07-24T02:20:39.886735+00:00
+DATA-008,EXECUTED,"{""expansion"":""research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json""}",2026-07-24T02:53:43.048542+00:00

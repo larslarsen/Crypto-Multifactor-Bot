@@ -1,0 +1,348 @@
+{
+  "experiment_id": "DATA-008-BINANCE-UNIVERSE-EXPANSION",
+  "data_mode": "real_asof",
+  "base_canonical_dataset_id": "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988",
+  "expanded_canonical_dataset_id": "ds_c094b7c9b6ba825d0d0585a2c51e03ae5ce0992fac4c7b57dd74ba21f77dfcf8",
+  "canonical_dataset_quality_status": "PASS",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_c094b7c9b6ba825d0d0585a2c51e03ae5ce0992fac4c7b57dd74ba21f77dfcf8",
+    "resolve_latest_by_type": "ds_c094b7c9b6ba825d0d0585a2c51e03ae5ce0992fac4c7b57dd74ba21f77dfcf8",
+    "match": true
+  },
+  "base_symbol_count": 23,
+  "added_symbols": [
+    "AEROUSDT",
+    "BANKUSDT",
+    "BNBUSDT",
+    "DEXEUSDT",
+    "ENAUSDT",
+    "ERAUSDT",
+    "EURUSDT",
+    "KAITOUSDT",
+    "KITEUSDT",
+    "LAUSDT",
+    "ONDOUSDT",
+    "OPNUSDT",
+    "PAXGUSDT",
+    "REUSDT",
+    "RIFUSDT",
+    "RLUSDUSDT",
+    "SNDKBUSDT",
+    "SPCXBUSDT",
+    "SYNUSDT",
+    "TRUMPUSDT",
+    "TRXUSDT",
+    "USD1USDT",
+    "UUSDT",
+    "VANAUSDT",
+    "WLFIUSDT",
+    "XAUTUSDT",
+    "XLMUSDT",
+    "ZAMAUSDT",
+    "ZECUSDT"
+  ],
+  "added_symbol_count": 29,
+  "total_symbols": 52,
+  "total_bar_count": 70325,
+  "bar_start": "2020-01-01T00:00:00+00:00",
+  "bar_end": "2026-07-24T00:00:00+00:00",
+  "symbol_rows": [
+    {
+      "symbol": "AEROUSDT",
+      "instrument_id": 24,
+      "source_dataset_id": "ds_11dd50b55259ef846a0dc52b2e3b7b9d19aceb0f098201de06239d675b788d30",
+      "row_count": 8,
+      "event_start": "2026-07-17T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "KITEUSDT",
+      "instrument_id": 25,
+      "source_dataset_id": "ds_edc7614b85f3e1566c032e3f72233551ddda7c99a7ec371febdb5a5a2dc8bdc1",
+      "row_count": 264,
+      "event_start": "2025-11-03T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "USD1USDT",
+      "instrument_id": 26,
+      "source_dataset_id": "ds_9ab99e79d659936509f9b9197774f1d9c11aa3139b04357cbf15b6b8c4cba70b",
+      "row_count": 429,
+      "event_start": "2025-05-22T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "BANKUSDT",
+      "instrument_id": 27,
+      "source_dataset_id": "ds_c2a61e64d5f8c788e7934712e5f0bd9177e476c25e76ecb51e88bcbd9300e968",
+      "row_count": 254,
+      "event_start": "2025-11-13T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "DEXEUSDT",
+      "instrument_id": 28,
+      "source_dataset_id": "ds_af742013f63106fd847e9de55fbe76c6939539e0f0577742a75cf3dc4e381336",
+      "row_count": 1828,
+      "event_start": "2021-07-23T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "ZECUSDT",
+      "instrument_id": 29,
+      "source_dataset_id": "ds_a79d73b53dce058c035d0e7f0f74c8d195a5080da32de6f674e85b9ef1a60173",
+      "row_count": 2397,
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "instrument_id": 30,
+      "source_dataset_id": "ds_6e79caf91defeeff8bdb521c3170a478447a7b84f8c42d145e63142146fda38b",
+      "row_count": 2397,
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "ZAMAUSDT",
+      "instrument_id": 31,
+      "source_dataset_id": "ds_7a4348173bc930e117381e1ddbbf34c53066260e31be68390e74072d5889d7ba",
+      "row_count": 173,
+      "event_start": "2026-02-02T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "OPNUSDT",
+      "instrument_id": 32,
+      "source_dataset_id": "ds_d96e9c56bc7ee71a485a05fbd930b54ecb7047be77c4c79258e124cd62203a27",
+      "row_count": 142,
+      "event_start": "2026-03-05T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "WLFIUSDT",
+      "instrument_id": 33,
+      "source_dataset_id": "ds_c2ae996198bce29f178a3f64816c6b62d37eb2ba05a09d03538799736fdb12ca",
+      "row_count": 327,
+      "event_start": "2025-09-01T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "RIFUSDT",
+      "instrument_id": 34,
+      "source_dataset_id": "ds_1e82578321696d3104947dd378a84a3ec332a5686ea478283ccc7185ce36c1e1",
+      "row_count": 2025,
+      "event_start": "2021-01-07T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "TRXUSDT",
+      "instrument_id": 35,
+      "source_dataset_id": "ds_5f275bcf6417570ca6e8cc5180eac42cffccf4a51e7f634ae623db65abb0f57e",
+      "row_count": 2397,
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "RLUSDUSDT",
+      "instrument_id": 36,
+      "source_dataset_id": "ds_2b2bc332800e926b536e2b252d23f71f2e2640e31d94fab2cc561cbe28c7b47f",
+      "row_count": 184,
+      "event_start": "2026-01-22T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "EURUSDT",
+      "instrument_id": 37,
+      "source_dataset_id": "ds_9dd5fd7fa6e05ba8c5de00a0af25ab89a7357645772dfcb7691823811171510b",
+      "row_count": 2395,
+      "event_start": "2020-01-03T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "REUSDT",
+      "instrument_id": 38,
+      "source_dataset_id": "ds_9a83937eca9bd2dd2f8f5a7fe293e7d1be2b0c14a0b4db1a32f5bb231cb9f5f3",
+      "row_count": 37,
+      "event_start": "2026-06-18T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "VANAUSDT",
+      "instrument_id": 39,
+      "source_dataset_id": "ds_0e6ba6a954a86fda44d35d9a5fa48b34dd28b71a5dc6f8ba631e4da13b4c2810",
+      "row_count": 586,
+      "event_start": "2024-12-16T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "SPCXBUSDT",
+      "instrument_id": 40,
+      "source_dataset_id": "ds_afd1aeb1f3c95372c03743bc418c2c7722d0c21dc0ac36b2a69fbfda99d067a5",
+      "row_count": 43,
+      "event_start": "2026-06-12T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "UUSDT",
+      "instrument_id": 41,
+      "source_dataset_id": "ds_6dbd2c425748677c0459ed68b2ff9d21bd46ef706aa8c3add97d1cbd45c91f01",
+      "row_count": 193,
+      "event_start": "2026-01-13T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "ENAUSDT",
+      "instrument_id": 42,
+      "source_dataset_id": "ds_6e845ff1895307db190dd160849f243b48ebaaccae41c0a2159160d48b237788",
+      "row_count": 844,
+      "event_start": "2024-04-02T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "SNDKBUSDT",
+      "instrument_id": 43,
+      "source_dataset_id": "ds_24ff7960ddae1990556a8b0200659cd8dac4779d3f00576172a4badbcef67d31",
+      "row_count": 44,
+      "event_start": "2026-06-11T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "XAUTUSDT",
+      "instrument_id": 44,
+      "source_dataset_id": "ds_34408ff6a7e25c1d309d104362ac5f1d571b58747ba1951e6795a243c82dad04",
+      "row_count": 121,
+      "event_start": "2026-03-26T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "SYNUSDT",
+      "instrument_id": 45,
+      "source_dataset_id": "ds_85c5a61a4c7a6e89b17150b4997fe984785ca463e25efc558d03ed4661937173",
+      "row_count": 1249,
+      "event_start": "2023-02-22T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "KAITOUSDT",
+      "instrument_id": 46,
+      "source_dataset_id": "ds_03feb42823479492c2effce6effd98cb3ee00ba110f4b34cbdb833365eba55d3",
+      "row_count": 520,
+      "event_start": "2025-02-20T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "ONDOUSDT",
+      "instrument_id": 47,
+      "source_dataset_id": "ds_666ff65442d4788aea13960376e0c4b7342fedeb882d09f496612e9eace5919f",
+      "row_count": 470,
+      "event_start": "2025-04-11T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "XLMUSDT",
+      "instrument_id": 49,
+      "source_dataset_id": "ds_346b3abb3dd5f1a0b0573427f762a274b400dadf33e415e036f98c7e9b58ae74",
+      "row_count": 2397,
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "PAXGUSDT",
+      "instrument_id": 50,
+      "source_dataset_id": "ds_19d7a061dc54564b0432c6c551219b78a213fc16cf90de6f0357aaa159d69eea",
+      "row_count": 2157,
+      "event_start": "2020-08-28T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "LAUSDT",
+      "instrument_id": 51,
+      "source_dataset_id": "ds_b585496585192d70b491f6b74678aed83b57370d0d322dd5d91c0c28da30f049",
+      "row_count": 381,
+      "event_start": "2025-07-09T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "TRUMPUSDT",
+      "instrument_id": 52,
+      "source_dataset_id": "ds_6a37fbe4546eb81e9cc752410c5b8d20d676e478aebd887a260f99205cd96337",
+      "row_count": 552,
+      "event_start": "2025-01-19T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    },
+    {
+      "symbol": "ERAUSDT",
+      "instrument_id": 53,
+      "source_dataset_id": "ds_91f558108fbce49f84498005be8f77047e7b9bf049398cbd2f462fd85da8448e",
+      "row_count": 373,
+      "event_start": "2025-07-17T00:00:00+00:00",
+      "event_end": "2026-07-24T00:00:00+00:00"
+    }
+  ],
+  "rate_limit": {
+    "symbols_per_day": 20000,
+    "processed_today": 29,
+    "day_start": "2026-07-24T00:00:00+00:00",
+    "remaining_today": 19971,
+    "incidents": []
+  },
+  "incident_count": 0,
+  "watermarks": {
+    "AAVEUSDT": "2026-07-24T00:00:00+00:00",
+    "ADAUSDT": "2026-07-24T00:00:00+00:00",
+    "APEUSDT": "2026-07-24T00:00:00+00:00",
+    "ARBUSDT": "2026-07-24T00:00:00+00:00",
+    "AVAXUSDT": "2026-07-24T00:00:00+00:00",
+    "BCHUSDT": "2026-07-24T00:00:00+00:00",
+    "BTCUSDT": "2026-07-24T00:00:00+00:00",
+    "CRVUSDT": "2026-07-24T00:00:00+00:00",
+    "DOGEUSDT": "2026-07-24T00:00:00+00:00",
+    "DOTUSDT": "2026-07-24T00:00:00+00:00",
+    "ETHUSDT": "2026-07-24T00:00:00+00:00",
+    "FILUSDT": "2026-07-24T00:00:00+00:00",
+    "LINKUSDT": "2026-07-24T00:00:00+00:00",
+    "LTCUSDT": "2026-07-24T00:00:00+00:00",
+    "NEARUSDT": "2026-07-24T00:00:00+00:00",
+    "OPUSDT": "2026-07-24T00:00:00+00:00",
+    "PEPEUSDT": "2026-07-24T00:00:00+00:00",
+    "SEIUSDT": "2026-07-24T00:00:00+00:00",
+    "SOLUSDT": "2026-07-24T00:00:00+00:00",
+    "SUIUSDT": "2026-07-24T00:00:00+00:00",
+    "UNIUSDT": "2026-07-24T00:00:00+00:00",
+    "WLDUSDT": "2026-07-24T00:00:00+00:00",
+    "XRPUSDT": "2026-07-24T00:00:00+00:00",
+    "AEROUSDT": "2026-07-24T00:00:00+00:00",
+    "KITEUSDT": "2026-07-24T00:00:00+00:00",
+    "USD1USDT": "2026-07-24T00:00:00+00:00",
+    "BANKUSDT": "2026-07-24T00:00:00+00:00",
+    "DEXEUSDT": "2026-07-24T00:00:00+00:00",
+    "ZECUSDT": "2026-07-24T00:00:00+00:00",
+    "BNBUSDT": "2026-07-24T00:00:00+00:00",
+    "ZAMAUSDT": "2026-07-24T00:00:00+00:00",
+    "OPNUSDT": "2026-07-24T00:00:00+00:00",
+    "WLFIUSDT": "2026-07-24T00:00:00+00:00",
+    "RIFUSDT": "2026-07-24T00:00:00+00:00",
+    "TRXUSDT": "2026-07-24T00:00:00+00:00",
+    "RLUSDUSDT": "2026-07-24T00:00:00+00:00",
+    "EURUSDT": "2026-07-24T00:00:00+00:00",
+    "REUSDT": "2026-07-24T00:00:00+00:00",
+    "VANAUSDT": "2026-07-24T00:00:00+00:00",
+    "SPCXBUSDT": "2026-07-24T00:00:00+00:00",
+    "UUSDT": "2026-07-24T00:00:00+00:00",
+    "ENAUSDT": "2026-07-24T00:00:00+00:00",
+    "SNDKBUSDT": "2026-07-24T00:00:00+00:00",
+    "XAUTUSDT": "2026-07-24T00:00:00+00:00",
+    "SYNUSDT": "2026-07-24T00:00:00+00:00",
+    "KAITOUSDT": "2026-07-24T00:00:00+00:00",
+    "ONDOUSDT": "2026-07-24T00:00:00+00:00",
+    "XLMUSDT": "2026-07-24T00:00:00+00:00",
+    "PAXGUSDT": "2026-07-24T00:00:00+00:00",
+    "LAUSDT": "2026-07-24T00:00:00+00:00",
+    "TRUMPUSDT": "2026-07-24T00:00:00+00:00",
+    "ERAUSDT": "2026-07-24T00:00:00+00:00"
+  },
+  "live_eligible": false,
+  "live_eligible_note": "DATA-008 is a data acquisition report; no LIVE authorization.",
+  "generated_at": "2026-07-24T02:53:43.048542+00:00"
+}

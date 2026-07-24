@@ -1,7 +1,7 @@
 # DATA-008 — Free CEX Universe Expansion (Binance-first)
 
 **Priority:** P1  
-**Status:** READY  
+**Status:** ACCEPTED  
 **Dependencies:** DATA-006 (ACCEPTED), DATA-007 (ACCEPTED)  
 **Layer:** acquisition / bars  
 **Architecture:** free Binance REST + watermarks. **No LIVE.**
