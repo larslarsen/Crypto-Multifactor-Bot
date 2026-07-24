@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts" / "ops"))
+import daily_refresh
 from daily_refresh import (
     HOLDOUT_START,
     _paper_step,
@@ -33,6 +34,12 @@ def test_dry_run_emits_ops_report(tmp_path: Path) -> None:
     output_dir = tmp_path / "research"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Redirect the global registry to a temp file so the test cannot
+    # corrupt the real experiment_registry.csv.
+    original_registry = daily_refresh.EXPERIMENT_REGISTRY
+    temp_registry = tmp_path / "experiment_registry.csv"
+    daily_refresh.EXPERIMENT_REGISTRY = temp_registry
+
     # Run main in dry-run mode by patching argv
     original_argv = sys.argv
     try:
@@ -48,6 +55,7 @@ def test_dry_run_emits_ops_report(tmp_path: Path) -> None:
         assert main() == 0
     finally:
         sys.argv = original_argv
+        daily_refresh.EXPERIMENT_REGISTRY = original_registry
 
     report_path = output_dir / "30_DAILY_OPS_REPORT.json"
     assert report_path.exists()

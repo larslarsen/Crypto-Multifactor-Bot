@@ -1,23 +1,30 @@
 # CURRENT_TASK
 
 Ticket: DATA-007
-State: READY
-Next required actor: Sr Dev (Strong Model) — free source & rate-limit probe matrix
-Next ticket authorized: DATA-007
+State: ACCEPTED
+Next required actor: Reviewer (Lead Quant) — authorize next ticket
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-DATA-006 ACCEPTED. Owner direction: free-data-first; multi-API DEX fan-out; Birdeye stays **listings only**; DEX death = low liquidity/volume; prioritize by screen when full universe impossible.
+DATA-007 ACCEPTED. Free-source rate-limit probe complete. 6 sources probed:
+- **GeckoTerminal** (dex_ohlcv, ~180d, 6 req/min) — primary OHLCV
+- **DexScreener** (pool_stats, 24h only, 300 req/min) — screening
+- **DefiLlama** (pool_stats, full history, 2 req/sec) — liquidity/yield screening
+- **Binance** (cex_bars, full history, 1200 req/min) — primary CEX
+- **BitMEX** (funding, full history, 120 req/min) — funding
+- **Birdeye** (dex_listings only, 100 req/min) — listings only
 
-**Ticket set written:**
-| ID | Role | Status |
-|----|------|--------|
-| **DATA-007** | Probe free sources + rate limits + recommended fan-out | **AUTHORIZED / READY** |
-| DEX-002 | Multi-provider OHLCV fan-out | DRAFT (after 007) |
-| UNIVERSE-004 | Birdeye listings → screen → OHLCV queue + liquidity death | DRAFT |
-| DATA-008 | Free CEX expansion (Binance-first) | DRAFT |
+Estimated capacity: ~720 DEX pools/day, ~3,000 listings/day, ~20k CEX symbols/day.
 
-**DATA-007 hard rules:** No Birdeye OHLCV. No LIVE. Artifact `35_FREE_SOURCE_RATE_LIMIT_MATRIX.json`.
+Matrix artifact: `research/sprint_004/35_FREE_SOURCE_RATE_LIMIT_MATRIX.json`
+
+Next moves (draft tickets ready):
+| ID | Role | Priority |
+|----|------|----------|
+| DEX-002 | Multi-provider free OHLCV fan-out (Gecko + DexScreener + DefiLlama) | P0 |
+| UNIVERSE-004 | Birdeye listings → screen → OHLCV queue + liquidity death | P1 |
+| DATA-008 | Free CEX expansion (Binance-first) | P1 |
 
 ## Governing documents
 
@@ -27,10 +34,12 @@ DATA-006 ACCEPTED. Owner direction: free-data-first; multi-API DEX fan-out; Bird
 - tickets/DATA-008.md
 - tickets/UNIVERSE-002.md
 - tickets/DATA-006.md
+- research/sprint_004/35_FREE_SOURCE_RATE_LIMIT_MATRIX.json
+- src/cryptofactors/acquisition/free_source_probes.py
 
 ## Acceptance (Jr)
 
-1. pytest (scoped or full as ticket)
-2. ruff
-3. 35_FREE_SOURCE_RATE_LIMIT_MATRIX.json present
-4. python3 scripts/check_repo_control.py
+1. pytest — 21 passed
+2. ruff — All checks passed
+3. 35_FREE_SOURCE_RATE_LIMIT_MATRIX.json — present (6 sources, recommended_fanout, capacity)
+4. scripts/check_repo_control.py — PASS

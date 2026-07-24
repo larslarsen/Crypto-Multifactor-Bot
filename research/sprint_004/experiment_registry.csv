@@ -5,5 +5,6 @@ PAPER-009,EXECUTED,"{""paper_session"":""research/sprint_004/26_TSMOM_14_3_PASS_
 PROMO-003,EXECUTED,"{""promotion_artifact"":""research/sprint_004/27_TSMOM_14_3_PAPER_PROMOTION.json""}",2026-07-23T23:14:30.886305+00:00
 EXP-008,EXECUTED,"{""analysis"":""research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json""}",2026-07-23T23:28:43.267825+00:00
 ARCH-001,EXECUTED,"{""archive_artifact"":""research/sprint_004/29_HOLDOUT_RESERVATION.json""}",2026-07-23T23:52:45.008786+00:00
-INFRA-001,EXECUTED,"{""ops_report"":""/tmp/pytest-of-lars/pytest-1276/test_dry_run_emits_ops_report0/research/30_DAILY_OPS_REPORT.json""}",2026-07-24T02:00:20.940090+00:00
 DATA-006,EXECUTED,"{""rework"":""research/sprint_004/34_DATA006_REVIEW0209_REWORK.json"",""binance"":""research/sprint_004/31_BINANCE_FULL_BACKFILL_REPORT.json"",""bitmex"":""research/sprint_004/32_BITMEX_FUNDING_BACKFILL_REPORT.json"",""dex"":""research/sprint_004/33_DEX_STABLECOIN_BACKFILL_REPORT.json""}",2026-07-24T02:00:29.706768+00:00
+INFRA-001,EXECUTED,"{""ops_report"":""research/sprint_004/30_DAILY_OPS_REPORT.json""}",2026-07-24T02:20:53.296951+00:00
+DATA-007,EXECUTED,"{""matrix"":""research/sprint_004/35_FREE_SOURCE_RATE_LIMIT_MATRIX.json""}",2026-07-24T02:20:39.886735+00:00

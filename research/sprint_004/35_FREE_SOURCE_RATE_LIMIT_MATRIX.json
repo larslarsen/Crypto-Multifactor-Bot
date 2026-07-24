@@ -1,0 +1,262 @@
+{
+  "experiment_id": "DATA-007-FREE-SOURCE-RATE-LIMIT-MATRIX",
+  "sources": [
+    {
+      "source_id": "geckoterminal",
+      "role": "dex_ohlcv",
+      "free_tier": "public API, no key",
+      "auth_model": "none",
+      "env_key_name": null,
+      "endpoints": [
+        {
+          "path": "/networks/{network}/pools/{pool}/ohlcv/{timeframe}",
+          "purpose": "pool OHLCV/bars",
+          "free_tier_supported": true,
+          "note": "Public endpoint; no API key. ~180 days of history on free plan."
+        },
+        {
+          "path": "/networks/{network}/pools/{pool}",
+          "purpose": "pool metadata (liquidity, volume, chain)",
+          "free_tier_supported": true,
+          "note": "Pool attributes include reserve and volume metadata."
+        }
+      ],
+      "rate_limit": {
+        "requests_per_second": null,
+        "requests_per_minute": 6.0,
+        "daily_cu": null,
+        "burst": null,
+        "note": "Conservative 6 req/min observed; 429 triggers exponential backoff."
+      },
+      "history_depth": "~180 days for OHLCV on free plan",
+      "cost_per_call_cu": null,
+      "supports_screening_fields": true,
+      "screening_fields": [
+        "liquidity",
+        "volume",
+        "chain",
+        "pool_address",
+        "fee_tier"
+      ],
+      "probe_status": "ok",
+      "probe_method": "live",
+      "birdeye_ohlcv_forbidden": false,
+      "notes": "HTTP 200 on pool metadata probe."
+    },
+    {
+      "source_id": "birdeye_listings",
+      "role": "dex_listings",
+      "free_tier": "free key required (env only)",
+      "auth_model": "env_key",
+      "env_key_name": "BIRDEYE_API_KEY",
+      "endpoints": [
+        {
+          "path": "/defi/v2/tokens/new_listing",
+          "purpose": "token listing/creation events",
+          "free_tier_supported": true,
+          "note": "Only allowed free endpoint. No OHLCV/price/bar calls."
+        }
+      ],
+      "rate_limit": {
+        "requests_per_second": null,
+        "requests_per_minute": 100.0,
+        "daily_cu": null,
+        "burst": null,
+        "note": "Birdeye free tier is 100 requests/minute per docs; enforce 50 req/min polite."
+      },
+      "history_depth": "forward-only new listings (no historical OHLCV)",
+      "cost_per_call_cu": null,
+      "supports_screening_fields": true,
+      "screening_fields": [
+        "liquidity",
+        "chain",
+        "address",
+        "symbol",
+        "listing_time"
+      ],
+      "probe_status": "fail",
+      "probe_method": "live",
+      "birdeye_ohlcv_forbidden": true,
+      "notes": "Live probe requires BIRDEYE_API_KEY env variable."
+    },
+    {
+      "source_id": "dexscreener",
+      "role": "pool_stats",
+      "free_tier": "public API, no key",
+      "auth_model": "none",
+      "env_key_name": null,
+      "endpoints": [
+        {
+          "path": "/api/latest/dex/pairs/{chain}/{pair}",
+          "purpose": "pair/pool stats (price, liquidity, volume)",
+          "free_tier_supported": true,
+          "note": "Returns latest profile and pair data; OHLCV history is limited."
+        },
+        {
+          "path": "/api/latest/dex/tokens/{token}",
+          "purpose": "token pair enumeration",
+          "free_tier_supported": true,
+          "note": "Lists pairs for a token address across DEXs."
+        }
+      ],
+      "rate_limit": {
+        "requests_per_second": null,
+        "requests_per_minute": 300.0,
+        "daily_cu": null,
+        "burst": null,
+        "note": "Docs suggest 300 requests/minute; use 60 req/min polite to avoid bans."
+      },
+      "history_depth": "current/24h stats only; no deep free OHLCV history",
+      "cost_per_call_cu": null,
+      "supports_screening_fields": true,
+      "screening_fields": [
+        "liquidity",
+        "volume",
+        "chain",
+        "address",
+        "price"
+      ],
+      "probe_status": "ok",
+      "probe_method": "live",
+      "birdeye_ohlcv_forbidden": false,
+      "notes": "HTTP 200 on token pairs probe."
+    },
+    {
+      "source_id": "defillama",
+      "role": "pool_stats",
+      "free_tier": "public API, no key",
+      "auth_model": "none",
+      "env_key_name": null,
+      "endpoints": [
+        {
+          "path": "/pools",
+          "purpose": "yield pool enumeration (tvl, apy, chain, project)",
+          "free_tier_supported": true,
+          "note": "Paginated pool list; useful for liquidity screening."
+        },
+        {
+          "path": "/chart/{pool}",
+          "purpose": "historical pool data (tvl, apy)",
+          "free_tier_supported": true,
+          "note": "Historical charts available; daily granularity."
+        }
+      ],
+      "rate_limit": {
+        "requests_per_second": 2.0,
+        "requests_per_minute": null,
+        "daily_cu": null,
+        "burst": null,
+        "note": "DefiLlama asks for ~20 requests per 10 seconds; use 2 req/sec polite."
+      },
+      "history_depth": "full historical chart data available for tracked pools",
+      "cost_per_call_cu": null,
+      "supports_screening_fields": true,
+      "screening_fields": [
+        "tvl",
+        "apy",
+        "volume",
+        "chain",
+        "project",
+        "pool"
+      ],
+      "probe_status": "ok",
+      "probe_method": "live",
+      "birdeye_ohlcv_forbidden": false,
+      "notes": "HTTP 200 on pools endpoint probe."
+    },
+    {
+      "source_id": "binance_public",
+      "role": "cex_bars",
+      "free_tier": "public API, no key",
+      "auth_model": "none",
+      "env_key_name": null,
+      "endpoints": [
+        {
+          "path": "/api/v3/klines",
+          "purpose": "spot klines (OHLCV)",
+          "free_tier_supported": true,
+          "note": "1,000 candles per request; full history from 2017."
+        },
+        {
+          "path": "/api/v3/exchangeInfo",
+          "purpose": "symbol metadata and trading status",
+          "free_tier_supported": true,
+          "note": "Lists active trading pairs and filters."
+        }
+      ],
+      "rate_limit": {
+        "requests_per_second": null,
+        "requests_per_minute": 1200.0,
+        "daily_cu": null,
+        "burst": null,
+        "note": "IP-weight limit ~1200 request weight/minute; klines weight=1."
+      },
+      "history_depth": "full from 2017-08-17 for spot pairs",
+      "cost_per_call_cu": null,
+      "supports_screening_fields": true,
+      "screening_fields": [
+        "symbol",
+        "volume",
+        "quote_volume",
+        "trade_count",
+        "status"
+      ],
+      "probe_status": "ok",
+      "probe_method": "live",
+      "birdeye_ohlcv_forbidden": false,
+      "notes": "HTTP 200 on exchangeInfo probe."
+    },
+    {
+      "source_id": "bitmex_funding",
+      "role": "funding",
+      "free_tier": "public API, no key",
+      "auth_model": "none",
+      "env_key_name": null,
+      "endpoints": [
+        {
+          "path": "/api/v1/funding",
+          "purpose": "perpetual funding rate history",
+          "free_tier_supported": true,
+          "note": "No auth required for public funding endpoint."
+        }
+      ],
+      "rate_limit": {
+        "requests_per_second": null,
+        "requests_per_minute": 120.0,
+        "daily_cu": null,
+        "burst": null,
+        "note": "BitMEX asks ~120 requests/minute for unauthenticated IPs."
+      },
+      "history_depth": "funding from 2016-05-13 for XBTUSD",
+      "cost_per_call_cu": null,
+      "supports_screening_fields": true,
+      "screening_fields": [
+        "symbol",
+        "funding_rate",
+        "timestamp"
+      ],
+      "probe_status": "ok",
+      "probe_method": "live",
+      "birdeye_ohlcv_forbidden": false,
+      "notes": "HTTP 200 on funding probe."
+    }
+  ],
+  "recommended_fanout": [
+    "geckoterminal",
+    "dexscreener",
+    "defillama"
+  ],
+  "estimated_daily_capacity": {
+    "dex_ohlcv_pools_per_day": 720,
+    "dex_ohlcv_notes": "GeckoTerminal at 6 req/min = 8,640 calls/day, but each pool needs pagination across ~180 days. Assume 12 calls/pool => ~720 pools/day.",
+    "dex_listings_per_day": 3000,
+    "dex_listings_notes": "Birdeye polite 50 req/min * 60 min * 24 h = 72,000 calls/day; each chain/page yields up to 50 listings => ~3,000+ listings/day.",
+    "cex_symbols_per_day": 20000,
+    "cex_symbols_notes": "Binance at 1 req/min polite per symbol = 1,440 symbols/day per IP; with multiple IPs and full weight budget could reach 20k/day.",
+    "funding_symbols_per_day": 5000,
+    "funding_notes": "BitMEX polite 60 req/min; single funding call covers 500 records; easily covers all perp markets historically in one day."
+  },
+  "live_eligible": false,
+  "live_eligible_note": "DATA-007 is a research probe; no LIVE authorization.",
+  "generated_at": "2026-07-24T02:20:39.886735+00:00"
+}
