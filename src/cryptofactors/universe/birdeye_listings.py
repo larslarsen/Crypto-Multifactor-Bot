@@ -144,6 +144,12 @@ def normalize_listing_event(
     except (ValueError, TypeError):
         liquidity = 0.0
 
+    raw_volume = item.get("volume_24h") or item.get("volume24h")
+    try:
+        volume_24h = float(raw_volume) if raw_volume is not None else None
+    except (ValueError, TypeError):
+        volume_24h = None
+
     raw_liq_time = (
         item.get("liquidityAddedAt")
         or item.get("liquidity_added_at")
@@ -181,6 +187,7 @@ def normalize_listing_event(
         "liquidity_added_at": liq_added_iso,
         "liquidity_added_at_us": liq_added_us,
         "liquidity": liquidity,
+        "volume_24h": volume_24h,
         "survivorship_free": False,  # Explicitly False per UNIVERSE-002
         "source": PROVENANCE_SOURCE,
         "retrieved_at": retrieved_at_str,
@@ -279,7 +286,7 @@ class BirdeyeListingsProvider:
         if self._api_key:
             headers["X-API-KEY"] = self._api_key
 
-        params = {"limit": min(limit, 50)}
+        params = {"limit": min(max(1, limit), 20)}
 
         if self._client:
             res = self._client.get(url, headers=headers, params=params)

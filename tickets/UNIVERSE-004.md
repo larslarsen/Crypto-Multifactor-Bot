@@ -1,8 +1,9 @@
 # UNIVERSE-004 — Birdeye Listings → Screen → OHLCV Queue + Liquidity Death
 
 **Priority:** P1  
-**Status:** DRAFT (authorize after DATA-007; implement with or after DEX-002)  
-**Dependencies:** UNIVERSE-002, DATA-007; DEX-002 for OHLCV dequeue  
+**Status:** ACCEPTED
+**Next:** NONE  
+**Dependencies:** UNIVERSE-002 (ACCEPTED), DATA-007 (ACCEPTED), DEX-002 (ACCEPTED)  
 **Layer:** universe  
 **Architecture:** events drive bar requests. **No Birdeye OHLCV.**
 

@@ -1,32 +1,28 @@
 # CURRENT_TASK
 
 Ticket: UNIVERSE-004
-State: READY
-Next required actor: Sr Dev (Strong Model) — Birdeye listings → screen → OHLCV queue + liquidity death
+State: ACCEPTED
+Next required actor: Reviewer (Lead Quant) — authorize next ticket
 Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-DEX-002 ACCEPTED. Multi-provider free DEX OHLCV fan-out implemented: GeckoTerminal primary, DexScreener/DefiLlama secondary, token-bucket rate limiters, merge/dedupe, screening gate, pragmatic death. 357 records across 2 Arbitrum pools, 0 rate-limit incidents.
+UNIVERSE-004 ACCEPTED. Birdeye listings → screen → OHLCV queue complete. 60 new listings fetched, 14 screened survivors (46 rejected low liquidity), 0 rate-limit incidents. Pragmatic DEX death defined (liq+vol below thresholds for 7d). Pipeline end-to-end: listings → screen → queue → DEX-002 fan-out → OHLCV.
 
-Queue now:
-1. **UNIVERSE-004** (active) — Birdeye listings → screen → OHLCV queue + liquidity death
-2. (next TBD)
+**All expansion tickets delivered:**
+| Ticket | Result |
+|--------|--------|
+| DATA-007 | Free source rate-limit matrix (6 sources) |
+| DATA-008 | Binance universe 23→52 symbols, 70k bars |
+| DEX-002 | Multi-provider free DEX OHLCV fan-out |
+| UNIVERSE-004 | Birdeye listings → screen → queue + death |
 
-Rules: No Birdeye OHLCV. No LIVE. Screen-prioritize.
+No further tickets queued. Next direction TBD by reviewer.
 
 ## Governing documents
 
-- tickets/UNIVERSE-004.md
+- tickets/UNIVERSE-004.md (ACCEPTED)
 - tickets/DEX-002.md (ACCEPTED)
 - tickets/DATA-008.md (ACCEPTED)
 - tickets/DATA-007.md (ACCEPTED)
-- tickets/UNIVERSE-002.md (ACCEPTED)
-- research/sprint_004/35_FREE_SOURCE_RATE_LIMIT_MATRIX.json
-- research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json
-- research/sprint_004/37_DEX_MULTI_PROVIDER_FANOUT.json
-- src/cryptofactors/ingest/dex_fanout.py
-
-## Acceptance (Jr)
-
-per tickets/UNIVERSE-004.md
+- all prior ACCEPTED tickets

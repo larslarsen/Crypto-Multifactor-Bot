@@ -1,0 +1,614 @@
+{
+  "experiment_id": "UNIVERSE-004-BIRDEYE-LISTINGS-SCREEN-QUEUE",
+  "data_mode": "real_asof",
+  "real_asof": "2026-07-24T03:42:53.805254+00:00",
+  "screening_config": {
+    "min_liquidity_usd": 10000.0,
+    "min_volume_24h_usd": 1000.0,
+    "chain_allowlist": [
+      "arbitrum",
+      "ethereum",
+      "solana"
+    ],
+    "death_consecutive_days": 7
+  },
+  "listed_count": 60,
+  "screened_count": 14,
+  "rejected_count": 46,
+  "dead_count": 0,
+  "survivor_count": 14,
+  "ohlcv_request_queue": [
+    {
+      "chain": "arbitrum",
+      "address": "0x7E4c4ED7a74389D0D04b58FfCDA4c766eFeb3767",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=37619.79,volume_24h=n/a,chain=arbitrum",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x1625b719873a77a1cf9b3008f26003dF4A5646C8",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=24566.46,volume_24h=n/a,chain=ethereum",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x94642736A1FeE42C8295A9d4b4d6C5d941Cee4C6",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=12732.49,volume_24h=n/a,chain=ethereum",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "4yEBDnxtWo9w8e81nZv4RGF6itW6EpugZV1PjsTfFz9Y",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=21213.80,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "7YS9tyX5yhwAa5BLBMJ1qacMjiEV5TGMMZ7E7LtU2Swj",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=12318.66,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "2kjjnE5S3nJuqEwFzAVtKtMyJDFHBNUt6SZ6j9SWrtTq",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=13178.16,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "77CNxvt8iwFikUYwajFHwzCavGboisBee7F1V9RFuyg7",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=40284.70,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "hKSAZ2wqNMScBsq6oJAFw57tEh3EJwVAFuWoBoum4W1",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=19690.43,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "8fBJvpTwZktt998rmDv7xWYqPNHwedFo6gWNtCj2pump",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=47903.74,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "zQ4V6xW4qdi4Pip53UvuqjnfxmXeXczJbFpQ37UdyWM",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=45470.50,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "73FfXcBAH86Ki1fsU2KthxK2NAi1jz5YPDncYi3yN6XD",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=18459.15,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "EWRu5d8oCYt4PG6fGzEMfAs8cKZE79LgMKtv28erWpYM",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=18067.01,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "GwAAtzbSXuv55LWdZ55UnL6FVGBrNxH5ALpXo71UCCsC",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=17189.93,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    },
+    {
+      "chain": "solana",
+      "address": "8qwD9eE1Mgdy8iRZNM3AQ2LbWxuELHDiAMezNQEVR9f6",
+      "fee_tier": null,
+      "reason": "screen_pass:liquidity=15931.58,volume_24h=n/a,chain=solana",
+      "enqueued_at": "2026-07-24T03:42:53.805254+00:00"
+    }
+  ],
+  "universe_membership": [
+    {
+      "chain": "arbitrum",
+      "address": "0x7E4c4ED7a74389D0D04b58FfCDA4c766eFeb3767",
+      "listed_at": "2026-07-23T08:00:02+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x1625b719873a77a1cf9b3008f26003dF4A5646C8",
+      "listed_at": "2026-07-24T02:36:23+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x94642736A1FeE42C8295A9d4b4d6C5d941Cee4C6",
+      "listed_at": "2026-07-24T00:13:59+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "4yEBDnxtWo9w8e81nZv4RGF6itW6EpugZV1PjsTfFz9Y",
+      "listed_at": "2026-07-24T03:42:53+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "7YS9tyX5yhwAa5BLBMJ1qacMjiEV5TGMMZ7E7LtU2Swj",
+      "listed_at": "2026-07-24T03:42:53+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "2kjjnE5S3nJuqEwFzAVtKtMyJDFHBNUt6SZ6j9SWrtTq",
+      "listed_at": "2026-07-24T03:41:09+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "77CNxvt8iwFikUYwajFHwzCavGboisBee7F1V9RFuyg7",
+      "listed_at": "2026-07-24T03:40:14+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "hKSAZ2wqNMScBsq6oJAFw57tEh3EJwVAFuWoBoum4W1",
+      "listed_at": "2026-07-24T03:40:05+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "8fBJvpTwZktt998rmDv7xWYqPNHwedFo6gWNtCj2pump",
+      "listed_at": "2026-07-24T03:39:08+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "zQ4V6xW4qdi4Pip53UvuqjnfxmXeXczJbFpQ37UdyWM",
+      "listed_at": "2026-07-24T03:38:10+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "73FfXcBAH86Ki1fsU2KthxK2NAi1jz5YPDncYi3yN6XD",
+      "listed_at": "2026-07-24T03:36:25+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "EWRu5d8oCYt4PG6fGzEMfAs8cKZE79LgMKtv28erWpYM",
+      "listed_at": "2026-07-24T03:35:24+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "GwAAtzbSXuv55LWdZ55UnL6FVGBrNxH5ALpXo71UCCsC",
+      "listed_at": "2026-07-24T03:35:12+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    },
+    {
+      "chain": "solana",
+      "address": "8qwD9eE1Mgdy8iRZNM3AQ2LbWxuELHDiAMezNQEVR9f6",
+      "listed_at": "2026-07-24T03:34:30+00:00",
+      "is_dead": false,
+      "death_reason": null,
+      "member": true
+    }
+  ],
+  "rejected_listings": [
+    {
+      "chain": "arbitrum",
+      "address": "0x91727d69139ef923CA57b5D7e31cE03d3F723a61",
+      "symbol": "CHIYN",
+      "liquidity": 4e-06,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xe8576FF2D11c42083acA64bc43a955fAa69D17ba",
+      "symbol": "IDFNBKRE",
+      "liquidity": 500.10547,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xfe2FD32C22bFFC084156F64ab1012E59749dfF3B",
+      "symbol": "LREGJISO",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x44882EDE5caE6B85f5059A545dB8e780bC934555",
+      "symbol": "ODFBKRE",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x4dDf7Db2947964F4B2A18Fd1A4f2442ab24E87a7",
+      "symbol": "HDRIOXSD",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xd1b5e3bbE86701dfCA709AE55e9e698a5A071dfc",
+      "symbol": "UDFIBOER",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xdA91968cE3AE3b8c848de3f045716D77728A088C",
+      "symbol": "VFGGYJJKKK",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x583270EDaB5025560bc55152eF7a7CBAD202ef86",
+      "symbol": "FREGNJW",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xB15C92D91cD9B190DCc1fB7A08A91c76F8618153",
+      "symbol": "ISEONGKW",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x1E4cEE0b8dD7FA2518f0955A13260294E5BBf56e",
+      "symbol": "WKGKLDKG",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x075201388FaEb60060386813C3F901c1325C7322",
+      "symbol": "VIERGKAS",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x6B5F6D76749FdD92a6E750e013D4F955c562010d",
+      "symbol": "UDGOTEK",
+      "liquidity": 2.7e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xcDe3319735C76ddD5E5de66b67d6F7eB0D43EbCf",
+      "symbol": "SNIERVK",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x857d5e04b9b39e83eb96c0aA70cd23fe8D3e1cc1",
+      "symbol": "WKSFNJER",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x9Dea0eA76F15DFa206A015A14cBe2f34eCB944b5",
+      "symbol": "DIERNOXCK",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa56FF4d0BEAbAd58b9C2847aF9c3bBA5538cbF83",
+      "symbol": "ENGDITEO",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x8B811c2842Ecf1B6b638a824129c95fF97bA8610",
+      "symbol": "NDFKREOT",
+      "liquidity": 2.7e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xb5a52620eB699D639AA8bB596932914A2f44DB39",
+      "symbol": "YVXJERIDG",
+      "liquidity": 1.4e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x1E4D8bB2f8348679Ac32f89C0dE36729c7f89eeD",
+      "symbol": "NXCKRODF",
+      "liquidity": 4.2e-05,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x047AC1FAAC60512e7f2d231CB6F0451D39488Fa9",
+      "symbol": "SHIBGROW",
+      "liquidity": 96.6850445573264,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x5D97BA792df1cfECeb0556aF20982755D534B11e",
+      "symbol": "SKEW",
+      "liquidity": 9443.744816222348,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xa1f71DB96A6dd413adAC1303F83aab97Ab695105",
+      "symbol": "VLAD",
+      "liquidity": 0.0,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x50454571B2FD14A2fd9fC94f933732aa533C977e",
+      "symbol": "TYUO",
+      "liquidity": 5.997913593462558,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xf677A91Ad2A804406a3BD2E10490DbAbdE237Dfc",
+      "symbol": "TEST",
+      "liquidity": 0.18516409870763692,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x7891D0C37B9073dEC4B4E2643426a690E8B34094",
+      "symbol": "AR",
+      "liquidity": 11.995827186925116,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x6ec1705A8815C6816E376743bcF6CB82eAbd505C",
+      "symbol": "CASHDOG",
+      "liquidity": 0.0,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x877780375D19D08b399298e52ad633d0B905981D",
+      "symbol": "SFTL",
+      "liquidity": 2374.184346091642,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x0d9F9b147AD313bec8c6347B91f3342ECc4fB4D2",
+      "symbol": "LUINI",
+      "liquidity": 5.103767358896506,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xD968650C37d2fd1Ff53eA36b1FB645F3e0db17bB",
+      "symbol": "LILUNI",
+      "liquidity": 0.0,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xCcd8bA52febad563b0a783923aC34DF2985c961C",
+      "symbol": "LILUNI",
+      "liquidity": 5460.535139565035,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xCA2E39eeD9b5C92d15320D94209BbB23b51a6022",
+      "symbol": "$VARN",
+      "liquidity": 0.0003387036376224165,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x00FC36aC84a6FAA99f3aff3B8ff4ac4b8524C33d",
+      "symbol": "WCWR",
+      "liquidity": 793.8661816028753,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x695Ff0D73Fde106D156428FDE76B5b05D1cAF2E6",
+      "symbol": "LILUNI",
+      "liquidity": 1313.2175823097298,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x0596b841F092247B5Bef922F578659e52037Fed7",
+      "symbol": "KIY",
+      "liquidity": 18.830574311316422,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x329C601Eb9019fE7adb4105e0CbF31E7efB41570",
+      "symbol": "$VESN",
+      "liquidity": 0.00034846920729149133,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x371C6778d8B52Ff46DC2329AbE6C7933B8Ebf34B",
+      "symbol": "ROY-ST-SNUSD",
+      "liquidity": 0.1,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xA3Dd9f2E3ff6532038d190942Ad834B9396420Ff",
+      "symbol": "ODRN",
+      "liquidity": 0.0003612252820841102,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "BQgFjWAgdMYkMyyzmZnRhn9cg8eTntkqktavaAUcJ4fP",
+      "symbol": "GROOT",
+      "liquidity": 1.5226916808211752,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "FL3mP2hXEwnAonKDS81McSak1vSnRHTkbjXE2zjoJWsm",
+      "symbol": "bellhat",
+      "liquidity": 665.3113138380106,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "CyhNzgCXcaj6YPCYRrYE1sGNH6YaBDLWkaxTd5TJWyDx",
+      "symbol": "SUNSTONE",
+      "liquidity": 0.32521943106497225,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "7o2ANfxqf4FV5RuqVWA4Lgfa2ohj3CvsszfecQ4SkfFY",
+      "symbol": "UNIPCS",
+      "liquidity": 757.6822294249531,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "2L78GR8GrVDVWY5ut1CAThhQDa7vvwANnCDJe4H25eEp",
+      "symbol": "Ninja",
+      "liquidity": 7.019523974426418,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "57U2rhwpzfvF7sA59NwQ2JvcXRujgDg3cTsyCaf1k9DN",
+      "symbol": "COIN",
+      "liquidity": 20.6640877717486,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "FMxgCgEZJmd234ph9QimfhWHKDnfJdkSjwy7aTo48u3D",
+      "symbol": "looong",
+      "liquidity": 2100.1888438121,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "2tq1cHNQv9CvNZYdT95Ak6FyZ5x1GSy1zn6PzV9vtJFJ",
+      "symbol": "00",
+      "liquidity": 2103.7485622,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    },
+    {
+      "chain": "solana",
+      "address": "8NvCJUDuqBeX416mboisBxYzMMEz8SvUHUT3E66qfc6H",
+      "symbol": "CODE",
+      "liquidity": 34.693049696316834,
+      "volume_24h": 0.0,
+      "reason": "low_liquidity"
+    }
+  ],
+  "rate_limit": {
+    "tokens_per_second": 0.1,
+    "burst": 1,
+    "total_requests": 3,
+    "incidents": []
+  },
+  "death_rule": "Pragmatic DEX death: pool marked inactive when both liquidity and volume_24h are below thresholds for 7 consecutive days, derived from DEX-002 pool stats.",
+  "live_eligible": false,
+  "live_eligible_note": "UNIVERSE-004 is a research screening queue; no LIVE authorization.",
+  "generated_at": "2026-07-24T03:43:14.470327+00:00"
+}
