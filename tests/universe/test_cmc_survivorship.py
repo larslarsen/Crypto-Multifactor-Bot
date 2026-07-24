@@ -130,3 +130,49 @@ def test_csv_and_parquet_io() -> None:
 def test_empty_records_fails_closed() -> None:
     with pytest.raises(CMCSurvivorshipError, match="cannot build registry table from empty records"):
         build_cmc_survivorship_table([])
+
+
+def test_csv_provenance_on_all_rows() -> None:
+    """Load the real published CSV and verify provenance labels on every row."""
+    csv_path = Path("data/survivorship/cmc_dead_universe_full.csv")
+    if not csv_path.exists():
+        pytest.skip("CMC survivorship CSV not found")
+    provider = CMCSurvivorshipProvider.from_csv(csv_path)
+    rows = provider.records()
+    assert len(rows) >= 1500
+    for row in rows:
+        assert row["death_date_is_proxy"] is True
+        assert row["source"] == PROVENANCE_SOURCE
+        assert row["source"] == "cmc_data_api_unofficial"
+
+
+def test_csv_universe_at_membership() -> None:
+    """Test as-of membership snapshots against the real CSV."""
+    csv_path = Path("data/survivorship/cmc_dead_universe_full.csv")
+    if not csv_path.exists():
+        pytest.skip("CMC survivorship CSV not found")
+    provider = CMCSurvivorshipProvider.from_csv(csv_path)
+
+    t_2020 = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    t_2026 = datetime(2026, 7, 1, tzinfo=timezone.utc)
+
+    univ_2020 = provider.universe_at(t_2020)
+    univ_2026 = provider.universe_at(t_2026)
+
+    # Both should have results
+    assert len(univ_2020) > 0
+    assert len(univ_2026) > 0
+
+    # 2020 and 2026 should differ (coins died between)
+    assert len(univ_2020) != len(univ_2026), (
+        f"universe_at should differ: 2020={len(univ_2020)} vs 2026={len(univ_2026)}"
+    )
+
+    # All instrument_ids should be strings starting with 'cmc_'
+    for iid in univ_2020:
+        assert isinstance(iid, str)
+        assert iid.startswith("cmc_"), f"Expected cmc_ prefix, got {iid}"
+
+    # Devcoin (cmc_7) died 2017 — should NOT be in 2020 or 2026
+    assert "cmc_7" not in univ_2026, "Devcoin died 2017, should not be in 2026"
+    assert "cmc_7" not in univ_2020, "Devcoin died 2017, should not be in 2020"

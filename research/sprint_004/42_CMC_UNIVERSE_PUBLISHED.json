@@ -1,0 +1,23 @@
+{
+  "experiment_id": "UNIVERSE-006",
+  "data_mode": "csv_asof",
+  "csv_path": "data/survivorship/cmc_dead_universe_full.csv",
+  "row_count": 1756,
+  "dataset_id": "ds_6513138a734c59c38beb29a29d761a506d0a1e25ce554aa57551e2bbfe1dea62",
+  "dataset_type": "cmc_survivorship_universe",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_6513138a734c59c38beb29a29d761a506d0a1e25ce554aa57551e2bbfe1dea62",
+    "resolve_latest_by_type": null,
+    "match": true
+  },
+  "universe_at_2020_01_01_count": 115,
+  "universe_at_2026_07_01_count": 153,
+  "birth_dates_present": 1756,
+  "death_proxy_dates_present": 1603,
+  "all_provenance_labels_present": true,
+  "all_rows_have_source": true,
+  "all_dead_coins_have_proxy_label": true,
+  "quality_status": "PASS",
+  "live_eligible": false,
+  "generated_at": "2026-07-24T20:35:25.327427+00:00"
+}
