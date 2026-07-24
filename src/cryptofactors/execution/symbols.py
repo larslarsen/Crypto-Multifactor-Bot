@@ -31,6 +31,19 @@ PAPER_TO_BINANCE_MAP: Final[dict[str, str]] = {
     "LINKUSD": "LINKUSDT",
     "LTCUSD": "LTCUSDT",
     "BCHUSD": "BCHUSDT",
+    "DOGEUSD": "DOGEUSDT",
+    "UNIUSD": "UNIUSDT",
+    "AAVEUSD": "AAVEUSDT",
+    "CRVUSD": "CRVUSDT",
+    "APEUSD": "APEUSDT",
+    "NEARUSD": "NEARUSDT",
+    "FILUSD": "FILUSDT",
+    "ARBUSD": "ARBUSDT",
+    "OPUSD": "OPUSDT",
+    "SUIUSD": "SUIUSDT",
+    "SEIUSD": "SEIUSDT",
+    "WLDUSD": "WLDUSDT",
+    "PEPEUSD": "PEPEUSDT",
 }
 
 BINANCE_TO_PAPER_MAP: Final[dict[str, str]] = {
@@ -44,6 +57,19 @@ BINANCE_TO_PAPER_MAP: Final[dict[str, str]] = {
     "LINKUSDT": "LINKUSD",
     "LTCUSDT": "LTCUSD",
     "BCHUSDT": "BCHUSD",
+    "DOGEUSDT": "DOGEUSD",
+    "UNIUSDT": "UNIUSD",
+    "AAVEUSDT": "AAVEUSD",
+    "CRVUSDT": "CRVUSD",
+    "APEUSDT": "APEUSD",
+    "NEARUSDT": "NEARUSD",
+    "FILUSDT": "FILUSD",
+    "ARBUSDT": "ARBUSD",
+    "OPUSDT": "OPUSD",
+    "SUIUSDT": "SUIUSD",
+    "SEIUSDT": "SEIUSD",
+    "WLDUSDT": "WLDUSD",
+    "PEPEUSDT": "PEPEUSD",
 }
 
 PAPER_TO_INSTRUMENT_ID: Final[dict[str, int]] = {
@@ -57,6 +83,19 @@ PAPER_TO_INSTRUMENT_ID: Final[dict[str, int]] = {
     "LINKUSD": 8,
     "LTCUSD": 9,
     "BCHUSD": 10,
+    "DOGEUSD": 11,
+    "UNIUSD": 12,
+    "AAVEUSD": 13,
+    "CRVUSD": 14,
+    "APEUSD": 15,
+    "NEARUSD": 16,
+    "FILUSD": 17,
+    "ARBUSD": 18,
+    "OPUSD": 19,
+    "SUIUSD": 20,
+    "SEIUSD": 21,
+    "WLDUSD": 22,
+    "PEPEUSD": 23,
 }
 
 INSTRUMENT_ID_TO_PAPER: Final[dict[int, str]] = {v: k for k, v in PAPER_TO_INSTRUMENT_ID.items()}

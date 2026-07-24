@@ -1,0 +1,48 @@
+{
+  "experiment_id": "DATA-006-DEX-STABLECOIN",
+  "data_mode": "real_asof",
+  "network": "arbitrum",
+  "pools": [
+    {
+      "address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+      "fee_tier": "0.01%"
+    },
+    {
+      "address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
+      "fee_tier": "0.05%"
+    }
+  ],
+  "pools_backfilled": [
+    "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+    "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5"
+  ],
+  "dataset_id": "ds_214c4d035f35d4be1c15b7b1c7f9305ffa03b84c6358f29239359104a55c6943",
+  "dataset_type": "dex_stablecoin_ohlcv",
+  "quality_status": "PASS",
+  "row_count": 356,
+  "byte_size": 24056,
+  "pool_rows": [
+    {
+      "address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+      "fee_tier": "0.01%",
+      "network": "arbitrum",
+      "record_count": 180,
+      "first_timestamp": "2026-01-26T00:00:00Z",
+      "last_timestamp": "2026-07-24T00:00:00Z"
+    },
+    {
+      "address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
+      "fee_tier": "0.05%",
+      "network": "arbitrum",
+      "record_count": 176,
+      "first_timestamp": "2026-01-26T00:00:00Z",
+      "last_timestamp": "2026-07-23T00:00:00Z"
+    }
+  ],
+  "coverage": {
+    "start": "2026-01-25T01:19:18.802874+00:00",
+    "end": "2026-07-24T01:19:18.802874+00:00"
+  },
+  "live_eligible": false,
+  "generated_at": "2026-07-24T01:19:31.403376+00:00"
+}
