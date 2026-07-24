@@ -379,10 +379,11 @@ def _paper_step(
 
 
 def _append_registry_row(report_path: Path) -> None:
-    """Append an INFRA-001 row to experiment_registry.csv (idempotent)."""
-    if not EXPERIMENT_REGISTRY.exists():
-        return
+    """Append an INFRA-001 row to experiment_registry.csv (idempotent).
 
+    Hardened against empty/None keys, CRLF, and rows with missing fieldnames.
+    """
+    fieldnames = ["experiment_id", "status", "artifacts_json", "generated_at"]
     artifacts_json = json.dumps(
         {"ops_report": str(report_path)},
         separators=(",", ":"),
@@ -398,13 +399,19 @@ def _append_registry_row(report_path: Path) -> None:
     rows: list[dict[str, str]] = []
     if EXPERIMENT_REGISTRY.exists():
         with EXPERIMENT_REGISTRY.open("r", newline="", encoding="utf-8") as f:
-            rows = list(csv.DictReader(f))
+            for raw in csv.DictReader(f):
+                if raw is None:
+                    continue
+                # Drop any None keys and normalize to the expected fieldnames.
+                cleaned = {k: str(raw.get(k) or "") for k in fieldnames}
+                if cleaned["experiment_id"] == "INFRA-001":
+                    continue
+                rows.append(cleaned)
 
-    rows = [r for r in rows if r.get("experiment_id") != "INFRA-001"]
     rows.append(new_row)
 
     with EXPERIMENT_REGISTRY.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["experiment_id", "status", "artifacts_json", "generated_at"])
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
@@ -551,6 +558,11 @@ def main() -> int:
         "canonical_dataset_id": new_canonical_dataset_id,
         "prior_canonical_dataset_id": canonical_dataset_id,
         "canonical_dataset_quality_status": quality_status,
+        "catalog_reconciliation": {
+            "report_pinned_dataset_id": new_canonical_dataset_id,
+            "resolve_latest_by_type": canonical_dataset_id,
+            "match": new_canonical_dataset_id == canonical_dataset_id,
+        },
         "universe": sorted(symbols),
         "paper_symbols": sorted(BINANCE_TO_PAPER_MAP.values()),
         "holdout_start": HOLDOUT_START,

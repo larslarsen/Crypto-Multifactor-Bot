@@ -179,6 +179,7 @@ def main() -> int:
         quality_summary={"record_count": row_count, "symbols": symbols},
         row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
         row_counters={relative_path: lambda p: row_count},
+        created_at=datetime.now(UTC),
     )
 
     config = DatasetStoreConfig(root=store_root)
@@ -186,6 +187,7 @@ def main() -> int:
     try:
         publisher = DatasetPublisher(config, catalog)
         result = publisher.publish(plan, register_catalog=True)
+        resolved_latest = catalog.resolve_latest_by_type("bitmex_funding")
     finally:
         catalog.close()
 
@@ -198,6 +200,11 @@ def main() -> int:
         "symbols_backfilled": [r["symbol"] for r in symbol_rows],
         "dataset_id": result.dataset_id,
         "dataset_type": "bitmex_funding",
+        "catalog_reconciliation": {
+            "report_pinned_dataset_id": result.dataset_id,
+            "resolve_latest_by_type": resolved_latest,
+            "match": result.dataset_id == resolved_latest,
+        },
         "quality_status": result.manifest.quality_status.value,
         "row_count": row_count,
         "byte_size": byte_size,
@@ -207,6 +214,14 @@ def main() -> int:
             "end": end_time.isoformat(),
         },
         "live_eligible": False,
+        "scope_reduction": {
+            "why_not_earliest_2016": (
+                "BitMEX historical funding is available from 2016-05-13. The real_asof "
+                "backfill was run from 2020-01-01 to align with the Binance spot evidence and "
+                "avoid over-broad data acquisition while the dataset is still experimental."
+            ),
+            "symbols_scope": "XBTUSD, ETHUSD, XRPUSD, LTCUSD, BCHUSD — the five high-liquidity perp markets used in the strategy universe.",
+        },
         "generated_at": datetime.now(UTC).isoformat(),
     }
     report_path = Path(args.report_path)

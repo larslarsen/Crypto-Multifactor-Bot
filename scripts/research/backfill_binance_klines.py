@@ -333,6 +333,7 @@ def main() -> int:
         source_datasets=verified_sources,
         output_dir=canonical_stage_dir,
         code_commit="DATA-006",
+        created_at=datetime.now(UTC),
     )
 
     config = DatasetStoreConfig(root=store_root)
@@ -340,6 +341,7 @@ def main() -> int:
     try:
         publisher = DatasetPublisher(config, catalog)
         canonical_ds = publisher.publish(canonical_plan_res.publish_plan, register_catalog=True)
+        resolved_latest = catalog.resolve_latest_by_type("market_bars")
     finally:
         catalog.close()
     print(f"BAR-001 canonical market_bars published: {canonical_ds.dataset_id}", file=sys.stderr)
@@ -360,8 +362,27 @@ def main() -> int:
         "total_bar_count": canonical_ds.manifest.statistics.row_count,
         "symbol_rows": symbol_rows,
         "watermarks": watermarks,
+        "catalog_reconciliation": {
+            "report_pinned_dataset_id": canonical_ds.dataset_id,
+            "resolve_latest_by_type": resolved_latest,
+            "match": canonical_ds.dataset_id == resolved_latest,
+        },
         "gate_status": "OK",
         "live_eligible": False,
+        "scope_reduction": {
+            "why_not_earliest_2017": (
+                "The script supports the Binance earliest listing date (2017-08-17) via "
+                "DEFAULT_EARLIEST_START and watermarks. The real_asof backfill was intentionally "
+                "run from 2020-01-01 to (a) satisfy the DATA-006 acceptance criterion that "
+                "BTCUSDT and ETHUSDT cover >=2020, and (b) avoid REJECTED source datasets caused "
+                "by listing-day partial bars on assets that began trading intra-day after 2020-01-01."
+            ),
+            "universe_scope": (
+                "U50+ spot universe as listed in DATA-006 (23 symbols). The canonical bars use "
+                "instrument_id 1..23 and match the universe approved in the ticket."
+            ),
+            "interval_scope": "Daily (1d) only for this evidence. Hourly support is present in the script via --interval 1h.",
+        },
         "generated_at": datetime.now(UTC).isoformat(),
     }
 

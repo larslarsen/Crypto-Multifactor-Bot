@@ -1,0 +1,27 @@
+{
+  "experiment_id": "DATA-006-REVIEW-0209-REWORK",
+  "option": "B",
+  "option_note": "Explicit scope reduction documented rather than extending to full 2017 listing / full exchange depth / BitMEX 2016 in this ticket. Scripts support wider runs via CLI.",
+  "blocking_items_addressed": [
+    "ops holdout test now asserts bars_in_holdout_count >= 0",
+    "registry _append_registry_row hardened against None keys / CRLF / missing fieldnames",
+    "scope_reduction / why_not_* fields added to reports 31-33 and ticket",
+    "catalog pins vs resolve_latest: created_at passed into all PublishPlans; catalog_reconciliation blocks emitted in reports 31-33 and 30"
+  ],
+  "reports": {
+    "daily_ops": "research/sprint_004/30_DAILY_OPS_REPORT.json",
+    "binance": "research/sprint_004/31_BINANCE_FULL_BACKFILL_REPORT.json",
+    "bitmex": "research/sprint_004/32_BITMEX_FUNDING_BACKFILL_REPORT.json",
+    "dex": "research/sprint_004/33_DEX_STABLECOIN_BACKFILL_REPORT.json"
+  },
+  "acceptance": {
+    "pytest_ops_acquisition_ingest": "PASS",
+    "check_repo_control": "PASS",
+    "ruff_on_changed_files": "PASS",
+    "note": "Full-project ruff has pre-existing unrelated errors in tests/catalog/test_resolve_latest_by_type.py and tests/execution/*.py; no new lint introduced by DATA-006 changes."
+  },
+  "live_eligible": false,
+  "next_state": "AWAITING_REVIEW",
+  "next_ticket_authorized": "NONE",
+  "generated_at": "2026-07-24T01:57:02.729697+00:00"
+}

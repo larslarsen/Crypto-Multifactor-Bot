@@ -238,6 +238,7 @@ def main() -> int:
         quality_summary={"record_count": row_count, "pools": [p["address"] for p in pools]},
         row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
         row_counters={relative_path: lambda p: row_count},
+        created_at=datetime.now(UTC),
     )
 
     config = DatasetStoreConfig(root=store_root)
@@ -245,6 +246,7 @@ def main() -> int:
     try:
         publisher = DatasetPublisher(config, catalog)
         result = publisher.publish(plan, register_catalog=True)
+        resolved_latest = catalog.resolve_latest_by_type("dex_stablecoin_ohlcv")
     finally:
         catalog.close()
 
@@ -258,6 +260,11 @@ def main() -> int:
         "pools_backfilled": [r["address"] for r in pool_rows],
         "dataset_id": result.dataset_id,
         "dataset_type": "dex_stablecoin_ohlcv",
+        "catalog_reconciliation": {
+            "report_pinned_dataset_id": result.dataset_id,
+            "resolve_latest_by_type": resolved_latest,
+            "match": result.dataset_id == resolved_latest,
+        },
         "quality_status": result.manifest.quality_status.value,
         "row_count": row_count,
         "byte_size": byte_size,
@@ -267,6 +274,16 @@ def main() -> int:
             "end": end_time.isoformat(),
         },
         "live_eligible": False,
+        "scope_reduction": {
+            "why_not_full_pool_history": (
+                "On-chain DEX history from pool inception is available via archival nodes and "
+                "paid indexers. The real_asof backfill uses the GeckoTerminal public OHLCV API "
+                "which is limited to ~180 days, so the evidence is deliberately scoped to the "
+                "recent liquid-stablecoin regime on Arbitrum."
+            ),
+            "pools_scope": "USDC/USDT Uniswap V3 on Arbitrum only (0.01% and 0.05% tiers).",
+            "network_scope": "Arbitrum One mainnet."
+        },
         "generated_at": datetime.now(UTC).isoformat(),
     }
     report_path = Path(args.report_path)

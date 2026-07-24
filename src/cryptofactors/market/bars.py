@@ -1861,12 +1861,17 @@ def publish_canonical_bars(
     price_tolerance: Decimal | str = Decimal("0"),
     volume_tolerance: Decimal | str = Decimal("0"),
     daily_source_timeframe: str | None = None,
+    created_at: datetime | None = None,
 ) -> CanonicalBarPublishResult:
     """Publish canonical intraday + daily bars from verified MAN-001 sources.
 
     ``daily_source_timeframe`` selects the single intraday cadence used for
     daily resampling when multiple complete timeframes are present. If omitted
     and more than one complete timeframe exists, publication fails closed.
+
+    ``created_at`` is an optional catalog bookkeeping timestamp; when omitted the
+    publication uses a deterministic epoch timestamp and may not win
+    resolve_latest_by_type against a dataset with a newer timestamp.
     """
     if not source_datasets:
         raise ValueError("at least one verified source_dataset is required")
@@ -2223,6 +2228,7 @@ def publish_canonical_bars(
         },
         row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
         row_counters=row_counters,
+        created_at=created_at,
     )
 
     return CanonicalBarPublishResult(

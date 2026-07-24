@@ -1,13 +1,18 @@
 {
   "experiment_id": "INFRA-001",
-  "run_at": "2026-07-24T01:19:41.877663+00:00",
+  "run_at": "2026-07-24T01:56:17.347948+00:00",
   "mode": "dry-run",
   "control_database": "exp003.db",
   "dataset_store_root": "data/exp003_store",
   "raw_store_root": "data/exp003_store/raw",
-  "canonical_dataset_id": "ds_890b365e24c929429d6e28d3d7839b3fa467f44831fda66d2098628d42e16fb4",
-  "prior_canonical_dataset_id": "ds_890b365e24c929429d6e28d3d7839b3fa467f44831fda66d2098628d42e16fb4",
+  "canonical_dataset_id": "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988",
+  "prior_canonical_dataset_id": "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988",
   "canonical_dataset_quality_status": "PASS",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988",
+    "resolve_latest_by_type": "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988",
+    "match": true
+  },
   "universe": [
     "AAVEUSDT",
     "ADAUSDT",
@@ -116,5 +121,5 @@
     "research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json",
     "research/sprint_004/29_HOLDOUT_RESERVATION.json"
   ],
-  "generated_at": "2026-07-24T01:19:42.112956+00:00"
+  "generated_at": "2026-07-24T01:56:17.565167+00:00"
 }

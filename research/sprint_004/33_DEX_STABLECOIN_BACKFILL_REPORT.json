@@ -16,11 +16,16 @@
     "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
     "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5"
   ],
-  "dataset_id": "ds_214c4d035f35d4be1c15b7b1c7f9305ffa03b84c6358f29239359104a55c6943",
+  "dataset_id": "ds_c1191a396fac72828689175b00c20988053827e3342859c96c2b4ad62021ee5d",
   "dataset_type": "dex_stablecoin_ohlcv",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_c1191a396fac72828689175b00c20988053827e3342859c96c2b4ad62021ee5d",
+    "resolve_latest_by_type": "ds_c1191a396fac72828689175b00c20988053827e3342859c96c2b4ad62021ee5d",
+    "match": true
+  },
   "quality_status": "PASS",
-  "row_count": 356,
-  "byte_size": 24056,
+  "row_count": 357,
+  "byte_size": 24085,
   "pool_rows": [
     {
       "address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
@@ -34,15 +39,20 @@
       "address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
       "fee_tier": "0.05%",
       "network": "arbitrum",
-      "record_count": 176,
+      "record_count": 177,
       "first_timestamp": "2026-01-26T00:00:00Z",
-      "last_timestamp": "2026-07-23T00:00:00Z"
+      "last_timestamp": "2026-07-24T00:00:00Z"
     }
   ],
   "coverage": {
-    "start": "2026-01-25T01:19:18.802874+00:00",
-    "end": "2026-07-24T01:19:18.802874+00:00"
+    "start": "2026-01-25T01:49:24.933975+00:00",
+    "end": "2026-07-24T01:49:24.933975+00:00"
   },
   "live_eligible": false,
-  "generated_at": "2026-07-24T01:19:31.403376+00:00"
+  "scope_reduction": {
+    "why_not_full_pool_history": "On-chain DEX history from pool inception is available via archival nodes and paid indexers. The real_asof backfill uses the GeckoTerminal public OHLCV API which is limited to ~180 days, so the evidence is deliberately scoped to the recent liquid-stablecoin regime on Arbitrum.",
+    "pools_scope": "USDC/USDT Uniswap V3 on Arbitrum only (0.01% and 0.05% tiers).",
+    "network_scope": "Arbitrum One mainnet."
+  },
+  "generated_at": "2026-07-24T01:49:36.479077+00:00"
 }
