@@ -355,6 +355,25 @@ def _validate_interval(ot: int, ct: int, spec: _IntervalSpec, unit: str) -> bool
     return ct == _expected_close_inclusive(ot, spec, unit)
 
 
+def _is_open_at_interval_boundary(ot: int, spec: _IntervalSpec, unit: str) -> bool:
+    """Return True if open_time is aligned to the interval boundary in UTC.
+
+    Used to identify the first partial bar on a symbol's listing day, where the
+    open_time is aligned to the boundary but the close_time is not.
+    """
+    if spec.kind != "fixed" or spec.delta is None:
+        return False
+    dt = _us_to_datetime(_to_utc_us(ot, unit))
+    total_seconds = int(spec.delta.total_seconds())
+    if total_seconds >= 86400:  # 1d, 3d, 1w
+        return dt.hour == 0 and dt.minute == 0 and dt.second == 0
+    if total_seconds >= 3600:  # 1h, 2h, 4h, 6h, 8h, 12h
+        return dt.minute == 0 and dt.second == 0
+    if total_seconds >= 60:  # 1m, 3m, 5m, 15m, 30m
+        return dt.second == 0
+    return True  # 1s
+
+
 def _volume_field_names(market: _MarketTypeSpec) -> tuple[str, str, str, str]:
     """Physical Parquet column names for the four volume fields by market."""
     if market.schema_variant == "coin_margined":
@@ -400,6 +419,7 @@ def _parse_kline_row(
     market: _MarketTypeSpec,
     *,
     raw_object_id: str,
+    is_first: bool = False,
 ) -> tuple[dict[str, Any], str | None, list[QualityIssue]]:
     """Parse one row. Normalize with the row's own detected unit."""
     issues: list[QualityIssue] = []
@@ -427,10 +447,23 @@ def _parse_kline_row(
         eff_unit = detected
 
         if not _validate_interval(ot, ct, interval_spec, eff_unit):
+            # The first bar on a symbol's listing day may start at the interval
+            # boundary but close early because trading began intra-interval. Treat
+            # this specific case as a warning; malformed bars (off-boundary open)
+            # remain errors.
+            is_listing_day_partial = (
+                is_first
+                and _is_open_at_interval_boundary(ot, interval_spec, eff_unit)
+            )
+            severity = (
+                IssueSeverity.WARNING
+                if is_listing_day_partial
+                else IssueSeverity.ERROR
+            )
             issues.append(
                 QualityIssue(
                     code="binance_kline_interval_mismatch",
-                    severity=IssueSeverity.ERROR,
+                    severity=severity,
                     message=(
                         "provider close_time does not match inclusive interval "
                         "(expected open_time + interval - 1 source unit)"
@@ -444,6 +477,8 @@ def _parse_kline_row(
                         "interval": interval_spec.label,
                         "unit": eff_unit,
                         "raw_object_id": raw_object_id,
+                        "is_first": is_first,
+                        "is_listing_day_partial": is_listing_day_partial,
                     },
                 )
             )
@@ -888,13 +923,16 @@ def normalize_binance_kline(
         )
         works[ro.raw_object_id] = work
 
-        def _consume_row(row: list[str], *, _work: _ObjectWork = work) -> None:
+        def _consume_row(
+            row: list[str], *, _work: _ObjectWork = work, _row_idx: int = 0
+        ) -> None:
             nonlocal min_event, max_event
             parsed, detected, row_issues = _parse_kline_row(
                 row,
                 interval_spec,
                 market,
                 raw_object_id=_work.raw_object_id,
+                is_first=(_row_idx == 0),
             )
             for issue in row_issues:
                 _work.issues.append(issue)
@@ -959,9 +997,9 @@ def normalize_binance_kline(
                             if _is_header_row(first):
                                 pass  # skip explicit header only
                             else:
-                                _consume_row(first)
-                            for data_row in reader:
-                                _consume_row(data_row)
+                                _consume_row(first, _row_idx=0)
+                            for row_idx, data_row in enumerate(reader, start=1):
+                                _consume_row(data_row, _row_idx=row_idx)
         except zipfile.BadZipFile as exc:
             work.issues.append(
                 QualityIssue(
