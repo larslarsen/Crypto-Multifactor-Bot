@@ -50,10 +50,7 @@ from cryptofactors.catalog.dataset import (
 )
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.paths import lexical_join
-from cryptofactors.execution.symbols import (
-    BINANCE_TO_PAPER_MAP,
-    PAPER_TO_INSTRUMENT_ID,
-)
+from cryptofactors.execution.symbols import PAPER_TO_INSTRUMENT_ID
 from cryptofactors.ingest.binance import normalize_binance_kline
 from cryptofactors.ingest.raw.writer import (  # type: ignore[attr-defined]
     RawObjectStoreConfig,
@@ -67,19 +64,23 @@ UTC = timezone.utc
 PASS_DATASET_ID = "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa"
 HOLDOUT_START = "2026-07-24T00:00:00+00:00"
 
-DEFAULT_SYMBOLS = [
-    "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT",
-    "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT", "BCHUSDT",
-    "DOGEUSDT", "UNIUSDT", "AAVEUSDT", "CRVUSDT", "APEUSDT",
-    "NEARUSDT", "FILUSDT", "ARBUSDT", "OPUSDT", "SUIUSDT",
-    "SEIUSDT", "WLDUSDT", "PEPEUSDT",
-]
+DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT",
+                 "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT", "BCHUSDT"]
 
-BINANCE_TO_INSTRUMENT_ID = {
-    sym: PAPER_TO_INSTRUMENT_ID[BINANCE_TO_PAPER_MAP[sym]]
-    for sym in DEFAULT_SYMBOLS
-    if sym in BINANCE_TO_PAPER_MAP
+PAPER_TO_BINANCE = {
+    "XBTUSD": "BTCUSDT",
+    "ETHUSD": "ETHUSDT",
+    "SOLUSD": "SOLUSDT",
+    "XRPUSD": "XRPUSDT",
+    "ADAUSD": "ADAUSDT",
+    "AVAXUSD": "AVAXUSDT",
+    "DOTUSD": "DOTUSDT",
+    "LINKUSD": "LINKUSDT",
+    "LTCUSD": "LTCUSDT",
+    "BCHUSD": "BCHUSDT",
 }
+BINANCE_TO_PAPER = {v: k for k, v in PAPER_TO_BINANCE.items()}
+BINANCE_TO_INSTRUMENT_ID = {v: PAPER_TO_INSTRUMENT_ID[k] for k, v in PAPER_TO_BINANCE.items()}
 
 EXPERIMENT_REGISTRY = Path("research/sprint_004/experiment_registry.csv")
 
@@ -552,7 +553,7 @@ def main() -> int:
         "prior_canonical_dataset_id": canonical_dataset_id,
         "canonical_dataset_quality_status": quality_status,
         "universe": sorted(symbols),
-        "paper_symbols": sorted(BINANCE_TO_PAPER_MAP.values()),
+        "paper_symbols": sorted(BINANCE_TO_PAPER.keys()),
         "holdout_start": HOLDOUT_START,
         "holdout_policy": (
             "Bars from 2026-07-24 onward are reserved for pre-registered single-hypothesis tests. "

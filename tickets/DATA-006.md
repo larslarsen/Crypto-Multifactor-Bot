@@ -1,7 +1,7 @@
 # DATA-006 — Full Historical Backfill: All Sources, All Assets, All History
 
 **Priority:** P0
-**Status:** ACCEPTED
+**Status:** READY
 **Dependencies:** RAW-001 (accepted), MAN-001 (accepted), BAR-001 (accepted), BIN-001 (accepted), FUND-005 (accepted), INFRA-001 (accepted)
 **Layer:** data platform / backfill
 **Architecture:** extends existing backfill scripts; no new storage layers
