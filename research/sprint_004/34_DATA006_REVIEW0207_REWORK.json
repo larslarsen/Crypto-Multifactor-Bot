@@ -1,0 +1,11 @@
+{
+  "experiment_id": "DATA-006-REVIEW-0207-REWORK",
+  "option": "B",
+  "option_note": "Explicit scope reduction documented rather than extending to full 2017 listing / full exchange depth / BitMEX 2016 in this ticket. Scripts support wider runs via CLI.",
+  "ops_test": "bars_in_holdout_count >= 0 (holdout boundary bars after DATA-006 are valid)",
+  "binance_report": "research/sprint_004/31_BINANCE_FULL_BACKFILL_REPORT.json",
+  "bitmex_report": "research/sprint_004/32_BITMEX_FUNDING_BACKFILL_REPORT.json",
+  "dex_report": "research/sprint_004/33_DEX_STABLECOIN_BACKFILL_REPORT.json",
+  "live_eligible": false,
+  "generated_at": "2026-07-24T01:32:30.702282+00:00"
+}

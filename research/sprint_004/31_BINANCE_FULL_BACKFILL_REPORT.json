@@ -53,38 +53,38 @@
   ],
   "symbols_failed": [],
   "source_dataset_ids": [
-    "ds_c6a23f75d28b7f13101c1f5192c564829c51c4a2517b1f74056fe85e3ddb1d86",
-    "ds_4789ddc23d281ac05adb760189ec4ce9e8c21e4932fb1e638b915a0954cc6c50",
-    "ds_e26ebbd89f0cad1dcc3c2b90117b075a3a01edb1c7d7882fc1ad0b99cb2fb3e1",
-    "ds_6cb7de05dd46be3175d9293f946f6352ae743be761005de3bf2032d1b48130be",
-    "ds_9471afee902984ca8e8bd4089e7cfe768b12752e25dd85497ae892bf718816dd",
-    "ds_490a45547961bc04eb6e68fa4905409a3156ef15265e557d3e2e3b07db42e47c",
-    "ds_d380aa20c8f5413f2bc0925623e18fa0634b749d349f9aba0db46985a8ea883b",
-    "ds_b6a46e7bf4130e69987529ccf702008511221151a85a08dac735cc0915be301f",
-    "ds_aa285cc74d6e4066af0cb9fe80e13faabc45334a9b729565bdd38e2975671b42",
-    "ds_6955ab19ad55c23ca1c5e90fc0f1f75debfcf0c39be5d363e9b5962861fc8767",
-    "ds_3083ac8155c51e0983582b1e9eff1222e5826515ece657967c37f6f19de95780",
-    "ds_805be25229b7aaf2416e4e9d8d1a01fb43f9d8ec588577065a80fd356e5cd370",
-    "ds_1137e36ad1780fc57b58034031789699119b48f15185f95bdf0aea8177e800f4",
-    "ds_10a4544b9dbb21028ca0396b5423424c6475811b4c7ed2c9e49ba3ad370853a6",
-    "ds_192e633e05a59c2e9287dca7277560f2e8f2821b84bd7617172fc7c9e7aacb5a",
-    "ds_b939c354379fa4617e0d205e0c929a7127cf5bbf96013bb2bd7d3f54a27ca879",
-    "ds_78bfd986028d598140d224ce46545382ae33bf37aa41ba117149ef3442ce571e",
-    "ds_db70d697fe79d0ce67b25d4f91bd8669b4c89993584ddf41a20bc9cb54f3cf68",
-    "ds_ceafbefb6d86578606f0cb3d46b3863a2b4ef62110874e4165bba381ce1da898",
-    "ds_f54ad2f8f29be0bb7e53d2ebd62e24bbc327d2fc0fb6e883d49dabd437bc2487",
-    "ds_df3991afb9b8d7d0ff04d5d5ba94833b44f5d11b60ea4d26577909a1d849ff08",
-    "ds_d7207cc7ea12d73a21e1169db81cffde07ac12aa04644be4646af46e39332c70",
-    "ds_7f035119459893ece351604544b54f1de089fd3e721ea09a4aea58879fa83f3c"
+    "ds_a2f06df81a08a7af8162b237f9690dec5805e10225e28ad95b0c4edcbc8dd834",
+    "ds_44762ac372b2880357ea0ca9ab6167a9ea1b5900bacd8c7369b9c10bd078a5eb",
+    "ds_6e2301e9c76d277be2173043d0e6ac2412a09155db3a054f688f468e5611a98d",
+    "ds_8cba0ceb0978bd47d209714023ce14b91e5f85fc5475e9edc16c12d041dc42e3",
+    "ds_02744046fff0286035a15af786da799cb1208c341e58fdb76f1c53b379aebe85",
+    "ds_4a56c5e8b998397b931e1a623b9b76cc8c8baef6c3e432862e09861faf762a97",
+    "ds_acd7e60e925624771ec0e0f2902757e1764d51c0d9ca4f825d8fc0c5251819f6",
+    "ds_4a425d299d4c3e49a75ed4614a36a1a2113644a3863b226a41d320829514b777",
+    "ds_1ceab222a225e28f5eeae38b6480e44ddd6d9eed1e11b8e5ae109e760d9037fd",
+    "ds_bb5d1c55d1747efa8c054ac80fde6d1bdc4ab796591fb70ac81e43faa2a647ab",
+    "ds_879a2c97cd18397d0ca82d501a200583c95627111f02a138f9956870793b65be",
+    "ds_839f3227021267b9c74253b92897e1392b113a5d85afd368fabed70ec5e31faf",
+    "ds_01572b78e2d123514cb35791958760b3782437b7805a0719c11a47b6ba4051d3",
+    "ds_9adb7cfdcb94e86165e9f3385e282c2a15fb90754c1a72f241fdd383523278aa",
+    "ds_76fe624a564ed26702888c32e25f253e789c224819fc721556a532894cb451d2",
+    "ds_ad195426fe03b32fc105e5b6da984113d7a251ed461b0695f7746dd14cc69184",
+    "ds_fcbe13fb76768e0860cc1acc3e1e253e0a393aa49b78fd89a22cb0481e186a45",
+    "ds_c12788f88535671649e4e4232aa1bffb1f90745ddf19aeab4d3bed6a854c9190",
+    "ds_ae12e92098261af07e46f3c3840be01659dad09fa66e44762c0764340cd21398",
+    "ds_e133c4ee005dbabe77a1359d9a337342cd3add1bd08bfb3ec02532b9bc64325f",
+    "ds_b4d66705b92a4b04eced5bb726c7b0176ab6ae4ac0174125e85b9ce8fa2f85d1",
+    "ds_1c4cdd2da0ec865ae252b420497619a23f40e0d1dd2926bceffa82c19abc6dd2",
+    "ds_f7703f478d6d1e0adff3942f226ed922914dd24f669055bdfc0ddf5f55b56dac"
   ],
-  "canonical_dataset_id": "ds_890b365e24c929429d6e28d3d7839b3fa467f44831fda66d2098628d42e16fb4",
+  "canonical_dataset_id": "ds_5578bfc1c483df215552526dfe0884582e8c77f2e0dbd4e7fcbc62e35e2e2957",
   "canonical_dataset_quality_status": "PASS",
   "total_bar_count": 90276,
   "symbol_rows": [
     {
       "symbol": "BTCUSDT",
       "instrument_id": 1,
-      "source_dataset_id": "ds_c6a23f75d28b7f13101c1f5192c564829c51c4a2517b1f74056fe85e3ddb1d86",
+      "source_dataset_id": "ds_a2f06df81a08a7af8162b237f9690dec5805e10225e28ad95b0c4edcbc8dd834",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -92,7 +92,7 @@
     {
       "symbol": "ETHUSDT",
       "instrument_id": 2,
-      "source_dataset_id": "ds_4789ddc23d281ac05adb760189ec4ce9e8c21e4932fb1e638b915a0954cc6c50",
+      "source_dataset_id": "ds_44762ac372b2880357ea0ca9ab6167a9ea1b5900bacd8c7369b9c10bd078a5eb",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -100,7 +100,7 @@
     {
       "symbol": "SOLUSDT",
       "instrument_id": 3,
-      "source_dataset_id": "ds_e26ebbd89f0cad1dcc3c2b90117b075a3a01edb1c7d7882fc1ad0b99cb2fb3e1",
+      "source_dataset_id": "ds_6e2301e9c76d277be2173043d0e6ac2412a09155db3a054f688f468e5611a98d",
       "event_start": "2020-08-11T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2174
@@ -108,7 +108,7 @@
     {
       "symbol": "XRPUSDT",
       "instrument_id": 4,
-      "source_dataset_id": "ds_6cb7de05dd46be3175d9293f946f6352ae743be761005de3bf2032d1b48130be",
+      "source_dataset_id": "ds_8cba0ceb0978bd47d209714023ce14b91e5f85fc5475e9edc16c12d041dc42e3",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -116,7 +116,7 @@
     {
       "symbol": "ADAUSDT",
       "instrument_id": 5,
-      "source_dataset_id": "ds_9471afee902984ca8e8bd4089e7cfe768b12752e25dd85497ae892bf718816dd",
+      "source_dataset_id": "ds_02744046fff0286035a15af786da799cb1208c341e58fdb76f1c53b379aebe85",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -124,7 +124,7 @@
     {
       "symbol": "AVAXUSDT",
       "instrument_id": 6,
-      "source_dataset_id": "ds_490a45547961bc04eb6e68fa4905409a3156ef15265e557d3e2e3b07db42e47c",
+      "source_dataset_id": "ds_4a56c5e8b998397b931e1a623b9b76cc8c8baef6c3e432862e09861faf762a97",
       "event_start": "2020-09-22T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2132
@@ -132,7 +132,7 @@
     {
       "symbol": "DOTUSDT",
       "instrument_id": 7,
-      "source_dataset_id": "ds_d380aa20c8f5413f2bc0925623e18fa0634b749d349f9aba0db46985a8ea883b",
+      "source_dataset_id": "ds_acd7e60e925624771ec0e0f2902757e1764d51c0d9ca4f825d8fc0c5251819f6",
       "event_start": "2020-08-18T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2167
@@ -140,7 +140,7 @@
     {
       "symbol": "LINKUSDT",
       "instrument_id": 8,
-      "source_dataset_id": "ds_b6a46e7bf4130e69987529ccf702008511221151a85a08dac735cc0915be301f",
+      "source_dataset_id": "ds_4a425d299d4c3e49a75ed4614a36a1a2113644a3863b226a41d320829514b777",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -148,7 +148,7 @@
     {
       "symbol": "LTCUSDT",
       "instrument_id": 9,
-      "source_dataset_id": "ds_aa285cc74d6e4066af0cb9fe80e13faabc45334a9b729565bdd38e2975671b42",
+      "source_dataset_id": "ds_1ceab222a225e28f5eeae38b6480e44ddd6d9eed1e11b8e5ae109e760d9037fd",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -156,7 +156,7 @@
     {
       "symbol": "BCHUSDT",
       "instrument_id": 10,
-      "source_dataset_id": "ds_6955ab19ad55c23ca1c5e90fc0f1f75debfcf0c39be5d363e9b5962861fc8767",
+      "source_dataset_id": "ds_bb5d1c55d1747efa8c054ac80fde6d1bdc4ab796591fb70ac81e43faa2a647ab",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -164,7 +164,7 @@
     {
       "symbol": "DOGEUSDT",
       "instrument_id": 11,
-      "source_dataset_id": "ds_3083ac8155c51e0983582b1e9eff1222e5826515ece657967c37f6f19de95780",
+      "source_dataset_id": "ds_879a2c97cd18397d0ca82d501a200583c95627111f02a138f9956870793b65be",
       "event_start": "2020-01-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2397
@@ -172,7 +172,7 @@
     {
       "symbol": "UNIUSDT",
       "instrument_id": 12,
-      "source_dataset_id": "ds_805be25229b7aaf2416e4e9d8d1a01fb43f9d8ec588577065a80fd356e5cd370",
+      "source_dataset_id": "ds_839f3227021267b9c74253b92897e1392b113a5d85afd368fabed70ec5e31faf",
       "event_start": "2020-09-17T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2137
@@ -180,7 +180,7 @@
     {
       "symbol": "AAVEUSDT",
       "instrument_id": 13,
-      "source_dataset_id": "ds_1137e36ad1780fc57b58034031789699119b48f15185f95bdf0aea8177e800f4",
+      "source_dataset_id": "ds_01572b78e2d123514cb35791958760b3782437b7805a0719c11a47b6ba4051d3",
       "event_start": "2020-10-15T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2109
@@ -188,7 +188,7 @@
     {
       "symbol": "CRVUSDT",
       "instrument_id": 14,
-      "source_dataset_id": "ds_10a4544b9dbb21028ca0396b5423424c6475811b4c7ed2c9e49ba3ad370853a6",
+      "source_dataset_id": "ds_9adb7cfdcb94e86165e9f3385e282c2a15fb90754c1a72f241fdd383523278aa",
       "event_start": "2020-08-15T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2170
@@ -196,7 +196,7 @@
     {
       "symbol": "APEUSDT",
       "instrument_id": 15,
-      "source_dataset_id": "ds_192e633e05a59c2e9287dca7277560f2e8f2821b84bd7617172fc7c9e7aacb5a",
+      "source_dataset_id": "ds_76fe624a564ed26702888c32e25f253e789c224819fc721556a532894cb451d2",
       "event_start": "2022-03-17T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1591
@@ -204,7 +204,7 @@
     {
       "symbol": "NEARUSDT",
       "instrument_id": 16,
-      "source_dataset_id": "ds_b939c354379fa4617e0d205e0c929a7127cf5bbf96013bb2bd7d3f54a27ca879",
+      "source_dataset_id": "ds_ad195426fe03b32fc105e5b6da984113d7a251ed461b0695f7746dd14cc69184",
       "event_start": "2020-10-14T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2110
@@ -212,7 +212,7 @@
     {
       "symbol": "FILUSDT",
       "instrument_id": 17,
-      "source_dataset_id": "ds_78bfd986028d598140d224ce46545382ae33bf37aa41ba117149ef3442ce571e",
+      "source_dataset_id": "ds_fcbe13fb76768e0860cc1acc3e1e253e0a393aa49b78fd89a22cb0481e186a45",
       "event_start": "2020-10-15T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 2109
@@ -220,7 +220,7 @@
     {
       "symbol": "ARBUSDT",
       "instrument_id": 18,
-      "source_dataset_id": "ds_db70d697fe79d0ce67b25d4f91bd8669b4c89993584ddf41a20bc9cb54f3cf68",
+      "source_dataset_id": "ds_c12788f88535671649e4e4232aa1bffb1f90745ddf19aeab4d3bed6a854c9190",
       "event_start": "2023-03-23T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1220
@@ -228,7 +228,7 @@
     {
       "symbol": "OPUSDT",
       "instrument_id": 19,
-      "source_dataset_id": "ds_ceafbefb6d86578606f0cb3d46b3863a2b4ef62110874e4165bba381ce1da898",
+      "source_dataset_id": "ds_ae12e92098261af07e46f3c3840be01659dad09fa66e44762c0764340cd21398",
       "event_start": "2022-06-01T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1515
@@ -236,7 +236,7 @@
     {
       "symbol": "SUIUSDT",
       "instrument_id": 20,
-      "source_dataset_id": "ds_f54ad2f8f29be0bb7e53d2ebd62e24bbc327d2fc0fb6e883d49dabd437bc2487",
+      "source_dataset_id": "ds_e133c4ee005dbabe77a1359d9a337342cd3add1bd08bfb3ec02532b9bc64325f",
       "event_start": "2023-05-03T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1179
@@ -244,7 +244,7 @@
     {
       "symbol": "SEIUSDT",
       "instrument_id": 21,
-      "source_dataset_id": "ds_df3991afb9b8d7d0ff04d5d5ba94833b44f5d11b60ea4d26577909a1d849ff08",
+      "source_dataset_id": "ds_b4d66705b92a4b04eced5bb726c7b0176ab6ae4ac0174125e85b9ce8fa2f85d1",
       "event_start": "2023-08-15T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1075
@@ -252,7 +252,7 @@
     {
       "symbol": "WLDUSDT",
       "instrument_id": 22,
-      "source_dataset_id": "ds_d7207cc7ea12d73a21e1169db81cffde07ac12aa04644be4646af46e39332c70",
+      "source_dataset_id": "ds_1c4cdd2da0ec865ae252b420497619a23f40e0d1dd2926bceffa82c19abc6dd2",
       "event_start": "2023-07-24T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1097
@@ -260,7 +260,7 @@
     {
       "symbol": "PEPEUSDT",
       "instrument_id": 23,
-      "source_dataset_id": "ds_7f035119459893ece351604544b54f1de089fd3e721ea09a4aea58879fa83f3c",
+      "source_dataset_id": "ds_f7703f478d6d1e0adff3942f226ed922914dd24f669055bdfc0ddf5f55b56dac",
       "event_start": "2023-05-05T00:00:00+00:00",
       "event_end": "2026-07-24T00:00:00+00:00",
       "row_count": 1177
@@ -293,5 +293,21 @@
   },
   "gate_status": "OK",
   "live_eligible": false,
-  "generated_at": "2026-07-24T01:17:44.775031+00:00"
+  "scope_reduction": {
+    "why_not_earliest_2017": "The script supports the Binance earliest listing date (2017-08-17) via DEFAULT_EARLIEST_START and watermarks. The real_asof backfill was intentionally run from 2020-01-01 to (a) satisfy the DATA-006 acceptance criterion that BTCUSDT and ETHUSDT cover >=2020, and (b) avoid REJECTED source datasets caused by listing-day partial bars on assets that began trading intra-day after 2020-01-01.",
+    "universe_scope": "U50+ spot universe as listed in DATA-006 (23 symbols). The canonical bars use instrument_id 1..23 and match the universe approved in the ticket.",
+    "interval_scope": "Daily (1d) only for this evidence. Hourly support is present in the script via --interval 1h."
+  },
+  "generated_at": "2026-07-24T01:30:17.558511+00:00",
+  "catalog_reconciliation": {
+    "report_canonical_dataset_id": "ds_5578bfc1c483df215552526dfe0884582e8c77f2e0dbd4e7fcbc62e35e2e2957",
+    "report_quality_status": "PASS",
+    "report_row_count": 90276,
+    "resolve_latest_by_type_market_bars": "ds_5578bfc1c483df215552526dfe0884582e8c77f2e0dbd4e7fcbc62e35e2e2957",
+    "resolve_latest_row_count": 90276,
+    "note": "Multiple PASS market_bars datasets share ~90276 rows from DATA-006 runs. Evidence for this ticket pins report_canonical_dataset_id. resolve_latest_by_type prefers PASS then created_at/dataset_id and may return a sibling PASS id.",
+    "pin_for_consumers": "ds_5578bfc1c483df215552526dfe0884582e8c77f2e0dbd4e7fcbc62e35e2e2957"
+  },
+  "review_0207_rework_at": "2026-07-24T01:32:30.701547+00:00",
+  "review_0207_option": "B"
 }
