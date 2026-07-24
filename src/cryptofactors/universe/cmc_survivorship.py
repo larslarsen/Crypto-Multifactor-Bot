@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import csv
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
@@ -76,7 +76,7 @@ def _require_utc(dt: datetime, *, field: str) -> datetime:
             f"{field} must be timezone-aware UTC",
             context={"value": str(dt)},
         )
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def _dt_to_us(dt: datetime) -> int:
@@ -95,8 +95,8 @@ def parse_iso_datetime(value: str | None) -> datetime | None:
     try:
         dt = datetime.fromisoformat(val)
         if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
+            return dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
     except ValueError:
         return None
 
@@ -194,11 +194,11 @@ def normalize_coin_record(
         if retrieved_at_raw:
             retrieved_at_str = str(retrieved_at_raw).strip()
         else:
-            retrieved_at_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            retrieved_at_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     else:
         retrieved_at_str = str(retrieved_at)
 
-    avail_dt = availability_time or datetime.now(timezone.utc)
+    avail_dt = availability_time or datetime.now(UTC)
     avail_us = _dt_to_us(avail_dt)
 
     return {
@@ -300,11 +300,8 @@ class CMCSurvivorshipProvider:
                 f"CSV file not found: {path}",
                 context={"path": str(path)},
             )
-        records: list[dict[str, Any]] = []
         with open(p, encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                records.append(row)
+            records = list(csv.DictReader(f))
         return cls.from_records(records, availability_time=availability_time, as_of_store=as_of_store)
 
     @classmethod
@@ -365,7 +362,10 @@ class CMCSurvivorshipProvider:
             is_active = bool(is_active_col[i])
             death_str = death_col[i]
 
-            if not is_active and death_str:
+            if not is_active:
+                if not death_str:
+                    # Inactive with no death date is never eligible (fail-closed).
+                    continue
                 death_dt = parse_iso_datetime(death_str)
                 if death_dt and t > death_dt:
                     continue

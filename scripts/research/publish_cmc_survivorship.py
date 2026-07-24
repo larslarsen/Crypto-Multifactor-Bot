@@ -13,7 +13,7 @@ import hashlib
 import json
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,9 +41,9 @@ from cryptofactors.universe.cmc_survivorship import (
     CMC_SURVIVORSHIP_DATASET_ID,
     CMC_SURVIVORSHIP_SCHEMA,
     CMCSurvivorshipProvider,
+    parse_iso_datetime,
 )
 
-UTC = timezone.utc
 CSV_PATH = Path("data/survivorship/cmc_dead_universe_full.csv")
 STORE_ROOT = Path("data/exp003_store")
 DB_PATH = Path("exp003.db")
@@ -70,6 +70,31 @@ def main() -> int:
     table = provider.get_table()
     row_count = table.num_rows
     print(f"Loaded {row_count} rows from {CSV_PATH}", file=sys.stderr)
+
+    rows = table.to_pylist()
+
+    # Inactive coins without a death_proxy_date are now excluded by the provider
+    # at every point in time (fail-closed). Count them for the evidence report.
+    immortal_rows_fixed = sum(
+        1 for r in rows if not r.get("is_active") and not r.get("death_proxy_date")
+    )
+    if immortal_rows_fixed:
+        print(f"Excluded {immortal_rows_fixed} immortal rows in universe_at", file=sys.stderr)
+
+    # Coverage window spans the actual data range: earliest birth to latest
+    # death or retrieved timestamp.
+    all_date_strs: list[str] = []
+    for r in rows:
+        if r.get("birth_date"):
+            all_date_strs.append(r["birth_date"])
+        if r.get("death_proxy_date"):
+            all_date_strs.append(r["death_proxy_date"])
+        if r.get("retrieved_at"):
+            all_date_strs.append(r["retrieved_at"])
+    all_dts = [parse_iso_datetime(s) for s in all_date_strs if s]
+    all_dts = [d for d in all_dts if d is not None]
+    event_start = min(all_dts) if all_dts else now
+    event_end = max(all_dts) if all_dts else now
 
     avail_us = int(now.timestamp() * 1_000_000)
     relative_path = "universe/cmc_survivorship_universe.parquet"
@@ -123,8 +148,8 @@ def main() -> int:
                 byte_size=byte_size,
             ),
             coverage=CoverageWindow(
-                event_start=now,
-                event_end=now,
+                event_start=event_start,
+                event_end=event_end,
                 availability_start=now,
                 availability_end=now,
             ),
@@ -159,6 +184,13 @@ def main() -> int:
     dataset_id = result.dataset_id
     print(f"Published dataset {dataset_id}", file=sys.stderr)
 
+    # Fix 3: catalog reconciliation - actually resolve_latest_by_type
+    catalog2 = SqliteDatasetCatalog(DB_PATH)
+    try:
+        latest_id = catalog2.resolve_latest_by_type(CMC_SURVIVORSHIP_DATASET_ID)
+    finally:
+        catalog2.close()
+
     # Compute universe membership snapshots
     t_2020 = datetime(2020, 1, 1, tzinfo=UTC)
     t_2026 = datetime(2026, 7, 1, tzinfo=UTC)
@@ -175,19 +207,24 @@ def main() -> int:
         "dataset_type": CMC_SURVIVORSHIP_DATASET_ID,
         "catalog_reconciliation": {
             "report_pinned_dataset_id": dataset_id,
-            "resolve_latest_by_type": None,
-            "match": True,
+            "resolve_latest_by_type": latest_id,
+            "match": dataset_id == latest_id,
         },
         "universe_at_2020_01_01_count": len(univ_2020),
         "universe_at_2026_07_01_count": len(univ_2026),
-        "birth_dates_present": sum(1 for r in provider.records() if r.get("birth_date")),
-        "death_proxy_dates_present": sum(1 for r in provider.records() if r.get("death_proxy_date")),
+        "immortal_rows_fixed": immortal_rows_fixed,
+        "coverage_window": {
+            "event_start": event_start.isoformat(),
+            "event_end": event_end.isoformat(),
+        },
+        "birth_dates_present": sum(1 for r in rows if r.get("birth_date")),
+        "death_proxy_dates_present": sum(1 for r in rows if r.get("death_proxy_date")),
         "all_provenance_labels_present": all(
             r.get("death_date_is_proxy") is True and r.get("source") == "cmc_data_api_unofficial"
-            for r in provider.records()
+            for r in rows
         ),
-        "all_rows_have_source": all(r.get("source") == "cmc_data_api_unofficial" for r in provider.records()),
-        "all_dead_coins_have_proxy_label": all(r.get("death_date_is_proxy") is True for r in provider.records()),
+        "all_rows_have_source": all(r.get("source") == "cmc_data_api_unofficial" for r in rows),
+        "all_dead_coins_have_proxy_label": all(r.get("death_date_is_proxy") is True for r in rows),
         "quality_status": "PASS",
         "live_eligible": False,
         "generated_at": now.isoformat(),

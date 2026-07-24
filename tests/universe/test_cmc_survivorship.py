@@ -1,9 +1,8 @@
 """Tests for UNIVERSE-003 CoinMarketCap survivorship registry and provider."""
 
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 from typing import Any
 
 import pyarrow.parquet as pq
@@ -94,18 +93,18 @@ def test_point_in_time_membership_universe_at() -> None:
     provider = CMCSurvivorshipProvider.from_records(records)
 
     # Decision time before Devcoin birth (2013-04-28)
-    t_before = datetime(2012, 1, 1, tzinfo=timezone.utc)
+    t_before = datetime(2012, 1, 1, tzinfo=UTC)
     univ_before = provider.universe_at(t_before)
     assert "cmc_7" not in univ_before
 
     # Decision time during Devcoin active life (2015-01-01)
-    t_active = datetime(2015, 1, 1, tzinfo=timezone.utc)
+    t_active = datetime(2015, 1, 1, tzinfo=UTC)
     univ_active = provider.universe_at(t_active)
     assert "cmc_7" in univ_active
     assert "cmc_12" in univ_active
 
     # Decision time after Devcoin death proxy (2017-11-23)
-    t_after = datetime(2018, 6, 1, tzinfo=timezone.utc)
+    t_after = datetime(2018, 6, 1, tzinfo=UTC)
     univ_after = provider.universe_at(t_after)
     assert "cmc_7" not in univ_after
     assert "cmc_12" in univ_after  # Bytecoin still alive in mid 2018
@@ -153,19 +152,17 @@ def test_csv_universe_at_membership() -> None:
         pytest.skip("CMC survivorship CSV not found")
     provider = CMCSurvivorshipProvider.from_csv(csv_path)
 
-    t_2020 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    t_2026 = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    t_2020 = datetime(2020, 1, 1, tzinfo=UTC)
+    t_2026 = datetime(2026, 7, 1, tzinfo=UTC)
 
     univ_2020 = provider.universe_at(t_2020)
     univ_2026 = provider.universe_at(t_2026)
 
-    # Both should have results
+    # 2020 should still contain coins that died after it; 2026 should be
+    # strictly smaller after the immortal-membership bug fix.
     assert len(univ_2020) > 0
-    assert len(univ_2026) > 0
-
-    # 2020 and 2026 should differ (coins died between)
-    assert len(univ_2020) != len(univ_2026), (
-        f"universe_at should differ: 2020={len(univ_2020)} vs 2026={len(univ_2026)}"
+    assert len(univ_2026) < len(univ_2020), (
+        f"universe_at should shrink: 2020={len(univ_2020)} vs 2026={len(univ_2026)}"
     )
 
     # All instrument_ids should be strings starting with 'cmc_'
@@ -176,3 +173,16 @@ def test_csv_universe_at_membership() -> None:
     # Devcoin (cmc_7) died 2017 — should NOT be in 2020 or 2026
     assert "cmc_7" not in univ_2026, "Devcoin died 2017, should not be in 2026"
     assert "cmc_7" not in univ_2020, "Devcoin died 2017, should not be in 2020"
+
+
+def test_inactive_without_death_is_excluded() -> None:
+    """Fail-closed: inactive coins with no death_proxy_date are never eligible."""
+    csv_path = Path("data/survivorship/cmc_dead_universe_full.csv")
+    if not csv_path.exists():
+        pytest.skip("CMC survivorship CSV not found")
+    provider = CMCSurvivorshipProvider.from_csv(csv_path)
+    t = datetime(2030, 1, 1, tzinfo=UTC)
+    univ = provider.universe_at(t)
+    for r in provider.records():
+        if not r["is_active"] and not r.get("death_proxy_date"):
+            assert r["instrument_id"] not in univ
