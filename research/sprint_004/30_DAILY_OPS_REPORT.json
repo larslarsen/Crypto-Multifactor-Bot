@@ -1,12 +1,12 @@
 {
   "experiment_id": "INFRA-001",
-  "run_at": "2026-07-24T01:33:31.707083+00:00",
+  "run_at": "2026-07-24T01:19:41.877663+00:00",
   "mode": "dry-run",
   "control_database": "exp003.db",
   "dataset_store_root": "data/exp003_store",
   "raw_store_root": "data/exp003_store/raw",
-  "canonical_dataset_id": "ds_5578bfc1c483df215552526dfe0884582e8c77f2e0dbd4e7fcbc62e35e2e2957",
-  "prior_canonical_dataset_id": "ds_5578bfc1c483df215552526dfe0884582e8c77f2e0dbd4e7fcbc62e35e2e2957",
+  "canonical_dataset_id": "ds_890b365e24c929429d6e28d3d7839b3fa467f44831fda66d2098628d42e16fb4",
+  "prior_canonical_dataset_id": "ds_890b365e24c929429d6e28d3d7839b3fa467f44831fda66d2098628d42e16fb4",
   "canonical_dataset_quality_status": "PASS",
   "universe": [
     "AAVEUSDT",
@@ -116,5 +116,5 @@
     "research/sprint_004/28_MULTIPLE_TESTING_ANALYSIS.json",
     "research/sprint_004/29_HOLDOUT_RESERVATION.json"
   ],
-  "generated_at": "2026-07-24T01:33:31.947079+00:00"
+  "generated_at": "2026-07-24T01:19:42.112956+00:00"
 }

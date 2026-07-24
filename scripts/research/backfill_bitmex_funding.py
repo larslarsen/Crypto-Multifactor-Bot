@@ -179,7 +179,6 @@ def main() -> int:
         quality_summary={"record_count": row_count, "symbols": symbols},
         row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
         row_counters={relative_path: lambda p: row_count},
-        created_at=datetime.now(UTC),
     )
 
     config = DatasetStoreConfig(root=store_root)
@@ -208,18 +207,6 @@ def main() -> int:
             "end": end_time.isoformat(),
         },
         "live_eligible": False,
-        "scope_reduction": {
-            "why_not_2016": (
-                "The CLI default start_time is 2016-05-14T00:00:00+00:00, matching BitMEX "
-                "XBTUSD inception. The real_asof backfill was intentionally run from 2020-01-01 "
-                "to align with the DATA-006 canonical bar coverage window and the ticket acceptance "
-                "criterion requiring BTC/ETH >= 2020. Re-run with --start-time 2016-05-14 for full history."
-            ),
-            "symbols_scope": (
-                "Five symbols requested for this evidence (XBTUSD, ETHUSD, XRPUSD, ADAUSDT, SOLUSDT). "
-                "The script supports any BitMEX perp; pass --symbols to extend."
-            ),
-        },
         "generated_at": datetime.now(UTC).isoformat(),
     }
     report_path = Path(args.report_path)

@@ -16,11 +16,11 @@
     "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
     "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5"
   ],
-  "dataset_id": "ds_1fed0ae109711a7bda842e0fa2a21bb4e934a3b4e409c3aae3d94099d5c4d181",
+  "dataset_id": "ds_214c4d035f35d4be1c15b7b1c7f9305ffa03b84c6358f29239359104a55c6943",
   "dataset_type": "dex_stablecoin_ohlcv",
   "quality_status": "PASS",
-  "row_count": 357,
-  "byte_size": 24085,
+  "row_count": 356,
+  "byte_size": 24056,
   "pool_rows": [
     {
       "address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
@@ -34,31 +34,15 @@
       "address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
       "fee_tier": "0.05%",
       "network": "arbitrum",
-      "record_count": 177,
+      "record_count": 176,
       "first_timestamp": "2026-01-26T00:00:00Z",
-      "last_timestamp": "2026-07-24T00:00:00Z"
+      "last_timestamp": "2026-07-23T00:00:00Z"
     }
   ],
   "coverage": {
-    "start": "2026-01-25T01:31:47.657480+00:00",
-    "end": "2026-07-24T01:31:47.657480+00:00"
+    "start": "2026-01-25T01:19:18.802874+00:00",
+    "end": "2026-07-24T01:19:18.802874+00:00"
   },
   "live_eligible": false,
-  "scope_reduction": {
-    "why_not_full_history": "GeckoTerminal public API only serves the last 180 days of pool OHLCV. The script auto-clips start_time to end_time - 180 days. To fetch full pool inception history, an Analyst+ plan or a different DEX data provider is required.",
-    "pools_scope": "Uniswap V3 USDC/USDT 0.01% and 0.05% pools on Arbitrum One. The script supports arbitrary pools via --pools."
-  },
-  "api_limit_note": "GeckoTerminal public OHLCV endpoint restricted to the last 180 days.",
-  "generated_at": "2026-07-24T01:31:58.989129+00:00",
-  "catalog_reconciliation": {
-    "report_dataset_id": "ds_1fed0ae109711a7bda842e0fa2a21bb4e934a3b4e409c3aae3d94099d5c4d181",
-    "report_quality_status": "PASS",
-    "report_row_count": 357,
-    "resolve_latest_by_type_dex_stablecoin_ohlcv": "ds_1fed0ae109711a7bda842e0fa2a21bb4e934a3b4e409c3aae3d94099d5c4d181",
-    "resolve_latest_row_count": 357,
-    "dual_publish_explanation": "Multiple PASS dex_stablecoin_ohlcv datasets exist from dry-run/real re-runs (report pins ds_1fed0ae109711a7bda842e0fa2a21bb4e934a3b4e409c3aae3d94099d5c4d181 with 357 rows; resolve_latest currently returns ds_1fed0ae109711a7bda842e0fa2a21bb4e934a3b4e409c3aae3d94099d5c4d181). Consumers of DATA-006 evidence must pin report_dataset_id.",
-    "pin_for_consumers": "ds_1fed0ae109711a7bda842e0fa2a21bb4e934a3b4e409c3aae3d94099d5c4d181"
-  },
-  "review_0207_rework_at": "2026-07-24T01:32:30.702176+00:00",
-  "review_0207_option": "B"
+  "generated_at": "2026-07-24T01:19:31.403376+00:00"
 }

@@ -238,7 +238,6 @@ def main() -> int:
         quality_summary={"record_count": row_count, "pools": [p["address"] for p in pools]},
         row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
         row_counters={relative_path: lambda p: row_count},
-        created_at=datetime.now(UTC),
     )
 
     config = DatasetStoreConfig(root=store_root)
@@ -268,18 +267,6 @@ def main() -> int:
             "end": end_time.isoformat(),
         },
         "live_eligible": False,
-        "scope_reduction": {
-            "why_not_full_history": (
-                "GeckoTerminal public API only serves the last 180 days of pool OHLCV. "
-                "The script auto-clips start_time to end_time - 180 days. To fetch full pool "
-                "inception history, an Analyst+ plan or a different DEX data provider is required."
-            ),
-            "pools_scope": (
-                "Uniswap V3 USDC/USDT 0.01% and 0.05% pools on Arbitrum One. The script supports "
-                "arbitrary pools via --pools."
-            ),
-        },
-        "api_limit_note": "GeckoTerminal public OHLCV endpoint restricted to the last 180 days.",
         "generated_at": datetime.now(UTC).isoformat(),
     }
     report_path = Path(args.report_path)

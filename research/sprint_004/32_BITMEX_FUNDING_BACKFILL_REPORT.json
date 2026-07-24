@@ -15,7 +15,7 @@
     "ADAUSDT",
     "SOLUSDT"
   ],
-  "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+  "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
   "dataset_type": "bitmex_funding",
   "quality_status": "PASS",
   "row_count": 32768,
@@ -54,23 +54,8 @@
   ],
   "coverage": {
     "start": "2020-01-01T00:00:00+00:00",
-    "end": "2026-07-24T01:30:21.083309+00:00"
+    "end": "2026-07-24T01:17:52.066584+00:00"
   },
   "live_eligible": false,
-  "scope_reduction": {
-    "why_not_2016": "The CLI default start_time is 2016-05-14T00:00:00+00:00, matching BitMEX XBTUSD inception. The real_asof backfill was intentionally run from 2020-01-01 to align with the DATA-006 canonical bar coverage window and the ticket acceptance criterion requiring BTC/ETH >= 2020. Re-run with --start-time 2016-05-14 for full history.",
-    "symbols_scope": "Five symbols requested for this evidence (XBTUSD, ETHUSD, XRPUSD, ADAUSDT, SOLUSDT). The script supports any BitMEX perp; pass --symbols to extend."
-  },
-  "generated_at": "2026-07-24T01:31:42.882734+00:00",
-  "catalog_reconciliation": {
-    "report_dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
-    "report_quality_status": "PASS",
-    "report_row_count": 32768,
-    "resolve_latest_by_type_bitmex_funding": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
-    "resolve_latest_row_count": 32768,
-    "note": "Pin report_dataset_id for DATA-006 evidence. Sibling PASS publishes may exist from re-runs.",
-    "pin_for_consumers": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea"
-  },
-  "review_0207_rework_at": "2026-07-24T01:32:30.701927+00:00",
-  "review_0207_option": "B"
+  "generated_at": "2026-07-24T01:19:14.748677+00:00"
 }

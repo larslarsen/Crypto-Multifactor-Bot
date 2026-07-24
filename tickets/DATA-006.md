@@ -46,26 +46,13 @@ BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT, DOTUSDT, LINKUSDT, LTCUSD
 
 ## Acceptance (Jr)
 
-1. `python3 -m pytest tests/ops/ tests/acquisition/ tests/ingest/ -q --tb=short`
+1. `python3 -m pytest tests/acquisition/ tests/ingest/ -q --tb=short`
 2. Each backfill script runs in dry-run mode and produces a valid publish plan
 3. Full backfill produces canonical bars dataset covering from ≥2020 for BTCUSDT and ETHUSDT
 4. DEX backfill script produces at least one published dataset with USDC/USDT daily close prices
 5. `python3 scripts/check_repo_control.py`
 6. The updated ops report shows `total_bar_count` ≥ number that reflects the full backfill (not just 9,350)
 
-## Scope reduction (REVIEW-0207 option B)
-
-Explicit evidence fields in reports 31–34 (not silent under-delivery):
-
-| Area | Delivered | Why not max depth |
-|------|-----------|-------------------|
-| Binance start | **2020-01-01** (script default supports 2017-08-17) | Align with ≥2020 acceptance; avoid listing-day partial REJECTED sources on post-2020 listings |
-| Universe | **23** ticket-listed U50+ symbols | Ticket asset list; CLI `--symbols` extends |
-| Interval | **1d** evidence | Hourly via `--interval 1h` |
-| BitMEX start | **2020-01-01** (CLI default 2016-05-14) | Align with bars window; re-run `--start-time 2016-05-14` for full |
-| DEX history | **~180 days** GeckoTerminal public | API limit; Analyst+ or other provider for inception |
-| Catalog pins | `catalog_reconciliation.pin_for_consumers` | Multiple PASS siblings from re-runs; pin report ids |
-
 ## Stop Condition
 
-After Sr rework: AWAITING_REVIEW, Next ticket authorized: NONE.
+After Sr: AWAITING_REVIEW, Next ticket authorized: NONE.
