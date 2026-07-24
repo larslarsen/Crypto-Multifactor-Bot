@@ -1,0 +1,128 @@
+{
+  "experiment_id": "DEX-002-MULTI-PROVIDER-FANOUT",
+  "data_mode": "real_asof",
+  "real_asof": "2026-07-24T03:25:07.744926+00:00",
+  "providers": [
+    "geckoterminal",
+    "dexscreener",
+    "defillama"
+  ],
+  "recommended_fanout": [
+    "geckoterminal",
+    "dexscreener",
+    "defillama"
+  ],
+  "candidate_pools": [
+    {
+      "chain": "arbitrum",
+      "address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+      "fee_tier": "0.01%"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
+      "fee_tier": "0.05%"
+    }
+  ],
+  "screened_pools": [
+    {
+      "chain": "arbitrum",
+      "pool_address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+      "passed": true,
+      "provider": "geckoterminal",
+      "liquidity_usd": null,
+      "volume_24h_usd": null,
+      "screen_results": [
+        {
+          "provider": "geckoterminal",
+          "chain": "arbitrum",
+          "pool_address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+          "liquidity_usd": null,
+          "volume_24h_usd": null,
+          "passed": true,
+          "note": "no screening data available"
+        }
+      ]
+    },
+    {
+      "chain": "arbitrum",
+      "pool_address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
+      "passed": true,
+      "provider": "geckoterminal",
+      "liquidity_usd": null,
+      "volume_24h_usd": null,
+      "screen_results": [
+        {
+          "provider": "geckoterminal",
+          "chain": "arbitrum",
+          "pool_address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
+          "liquidity_usd": null,
+          "volume_24h_usd": null,
+          "passed": true,
+          "note": "no screening data available"
+        }
+      ]
+    }
+  ],
+  "rejected_pools": [],
+  "dead_pools": [],
+  "pool_results": [
+    {
+      "chain": "arbitrum",
+      "pool_address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "chain": "arbitrum",
+      "pool_address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
+      "fee_tier": null,
+      "record_count": 177,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    }
+  ],
+  "dataset_id": "ds_a1f2d236bb8b77b70a9fb83b3e0330551ee8daa1591034e8ecf91818859acd98",
+  "dataset_type": "dex_ohlcv_fanout",
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_a1f2d236bb8b77b70a9fb83b3e0330551ee8daa1591034e8ecf91818859acd98",
+    "resolve_latest_by_type": "ds_a1f2d236bb8b77b70a9fb83b3e0330551ee8daa1591034e8ecf91818859acd98",
+    "match": true
+  },
+  "total_records": 357,
+  "coverage": {
+    "start": "2026-01-26T00:00:00+00:00",
+    "end": "2026-07-24T00:00:00+00:00"
+  },
+  "rate_limit": {
+    "geckoterminal": {
+      "tokens_per_second": 0.1,
+      "burst": 1,
+      "total_requests": 2,
+      "incidents": []
+    },
+    "dexscreener": {
+      "tokens_per_second": 1.0,
+      "burst": 1,
+      "total_requests": 0,
+      "incidents": []
+    },
+    "defillama": {
+      "tokens_per_second": 2.0,
+      "burst": 1,
+      "total_requests": 0,
+      "incidents": []
+    }
+  },
+  "live_eligible": false,
+  "live_eligible_note": "DEX-002 is a research ingestion fan-out; no LIVE authorization.",
+  "generated_at": "2026-07-24T03:25:20.011064+00:00"
+}

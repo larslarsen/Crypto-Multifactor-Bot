@@ -1,31 +1,32 @@
 # CURRENT_TASK
 
-Ticket: DEX-002
+Ticket: UNIVERSE-004
 State: READY
-Next required actor: Sr Dev (Strong Model) — multi-provider free DEX OHLCV fan-out
-Next ticket authorized: UNIVERSE-004
+Next required actor: Sr Dev (Strong Model) — Birdeye listings → screen → OHLCV queue + liquidity death
+Next ticket authorized: NONE
 
 **Reviewer Decision (Architecture & Ticket Selection):**
 
-DATA-008 ACCEPTED. Binance universe expanded from 23 to 52 symbols (29 added), 70k+ bars, 0 rate-limit incidents. New pinned dataset `ds_c094b7c9b6ba825d0d0585a2c51e03ae5ce0992fac4c7b57dd74ba21f77dfcf8`.
+DEX-002 ACCEPTED. Multi-provider free DEX OHLCV fan-out implemented: GeckoTerminal primary, DexScreener/DefiLlama secondary, token-bucket rate limiters, merge/dedupe, screening gate, pragmatic death. 357 records across 2 Arbitrum pools, 0 rate-limit incidents.
 
 Queue now:
-1. **DEX-002** (active) — Multi-provider free DEX OHLCV fan-out
-2. **UNIVERSE-004** (next) — Birdeye listings → screen → OHLCV queue
+1. **UNIVERSE-004** (active) — Birdeye listings → screen → OHLCV queue + liquidity death
+2. (next TBD)
 
 Rules: No Birdeye OHLCV. No LIVE. Screen-prioritize.
 
 ## Governing documents
 
-- tickets/DEX-002.md
 - tickets/UNIVERSE-004.md
+- tickets/DEX-002.md (ACCEPTED)
 - tickets/DATA-008.md (ACCEPTED)
 - tickets/DATA-007.md (ACCEPTED)
 - tickets/UNIVERSE-002.md (ACCEPTED)
 - research/sprint_004/35_FREE_SOURCE_RATE_LIMIT_MATRIX.json
 - research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json
-- src/cryptofactors/acquisition/free_source_probes.py
+- research/sprint_004/37_DEX_MULTI_PROVIDER_FANOUT.json
+- src/cryptofactors/ingest/dex_fanout.py
 
 ## Acceptance (Jr)
 
-per tickets/DEX-002.md
+per tickets/UNIVERSE-004.md
