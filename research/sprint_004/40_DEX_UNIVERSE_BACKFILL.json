@@ -1,7 +1,7 @@
 {
   "experiment_id": "DATA-010-DEX-UNIVERSE-BACKFILL",
   "data_mode": "real_asof",
-  "real_asof": "2026-07-24T05:48:32.555711+00:00",
+  "real_asof": "2026-07-24T19:43:49.508560+00:00",
   "assets": [
     "BTC",
     "ETH",
@@ -28,43 +28,165 @@
     "PEPE"
   ],
   "screening_config": {
-    "min_liquidity_usd": 5000.0,
-    "min_volume_24h_usd": 1000.0,
-    "max_pools": null
+    "min_liquidity_usd": 0.0,
+    "min_volume_24h_usd": 0.0,
+    "max_pools": null,
+    "max_pools_per_run": 5
   },
-  "pools_backfilled": [
+  "pools_resolved": [
     {
-      "symbol": "BTC",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x5969efdde3cf5c0d9a88ae51e47d721096a97203",
+      "symbol": "ETH",
+      "chain": "base",
+      "gecko_network": "base",
+      "address": "0x6c561b446416e1a00e8e93e221854d6ea4171372",
       "fee_tier": null,
-      "score": 6647333.783343511,
+      "score": 79377822.33427745,
       "rank": 1,
-      "liquidity_usd": 8222232.23,
-      "volume_24h_usd": 5374093.7
-    },
-    {
-      "symbol": "BTC",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x0e4831319a50228b9e450861297ab92dee15b44f",
-      "fee_tier": null,
-      "score": 6064254.700711875,
-      "rank": 2,
-      "liquidity_usd": 8104248.82,
-      "volume_24h_usd": 4537766.04
+      "liquidity_usd": 109686414.16,
+      "volume_24h_usd": 57444112.17
     },
     {
       "symbol": "ETH",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x641c00a822e8b671738d32a431a4fb6074e5c79d",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
       "fee_tier": null,
-      "score": 4601995.875920739,
+      "score": 77587404.20949265,
+      "rank": 2,
+      "liquidity_usd": 94042544.87,
+      "volume_24h_usd": 64011509.9
+    },
+    {
+      "symbol": "ETH",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36",
+      "fee_tier": null,
+      "score": 40046859.64449771,
       "rank": 3,
-      "liquidity_usd": 6437034.2,
-      "volume_24h_usd": 3290081.33
+      "liquidity_usd": 84579142.16,
+      "volume_24h_usd": 18961542.13
+    },
+    {
+      "symbol": "SOL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+      "fee_tier": null,
+      "score": 36926668.01701419,
+      "rank": 4,
+      "liquidity_usd": 25947510.2,
+      "volume_24h_usd": 52551431.73
+    },
+    {
+      "symbol": "AVAX",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HMWmtwgAomTibJdCkmy6nMgaSyrgwppvd2qg824BLKcA",
+      "fee_tier": null,
+      "score": 28861124.071415305,
+      "rank": 5,
+      "liquidity_usd": 6508094310.18,
+      "volume_24h_usd": 127989.0
+    },
+    {
+      "symbol": "DOGE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "9ZpDuZTX1CdPWTaFXSrC8bkDaGr2oetzCpTcSTY6dQ84",
+      "fee_tier": null,
+      "score": 15154035.780462435,
+      "rank": 6,
+      "liquidity_usd": 838432744.91,
+      "volume_24h_usd": 273897.7
+    },
+    {
+      "symbol": "LTC",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "8DgyWoQu82p6oNMk4h9shLsqBUhZxizigm86pAQfQcRZ",
+      "fee_tier": null,
+      "score": 13396211.786553454,
+      "rank": 7,
+      "liquidity_usd": 1212683551.06,
+      "volume_24h_usd": 147984.6
+    },
+    {
+      "symbol": "WLD",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "9JGsuHTq924oMzcQ33WJ9zof7aBxCJNG4LVCPDW9tSrb",
+      "fee_tier": null,
+      "score": 13083848.977584844,
+      "rank": 8,
+      "liquidity_usd": 625002890.01,
+      "volume_24h_usd": 273898.1
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x56534741cd8b152df6d48adf7ac51f75169a83b2",
+      "fee_tier": null,
+      "score": 10210120.7084539,
+      "rank": 9,
+      "liquidity_usd": 13413489.94,
+      "volume_24h_usd": 7771770.46
+    },
+    {
+      "symbol": "SOL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv",
+      "fee_tier": null,
+      "score": 8162653.910327631,
+      "rank": 10,
+      "liquidity_usd": 6033220.15,
+      "volume_24h_usd": 11043674.39
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x9db9e0e53058c89e5b94e29621a205198648425b",
+      "fee_tier": null,
+      "score": 6736271.347151835,
+      "rank": 11,
+      "liquidity_usd": 25709633.48,
+      "volume_24h_usd": 1764994.11
+    },
+    {
+      "symbol": "ADA",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "2qXjXMT68EirPRU65Mneo7k73qXpPomceHyvkj1RQ5Cf",
+      "fee_tier": null,
+      "score": 5968200.1063792305,
+      "rank": 12,
+      "liquidity_usd": 240696751.62,
+      "volume_24h_usd": 147984.6
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x99ac8ca7087fa4a2a1fb6357269965a2014abc35",
+      "fee_tier": null,
+      "score": 5637733.315025117,
+      "rank": 13,
+      "liquidity_usd": 25473344.45,
+      "volume_24h_usd": 1247737.1
+    },
+    {
+      "symbol": "SOL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",
+      "fee_tier": null,
+      "score": 4544674.22221408,
+      "rank": 14,
+      "liquidity_usd": 9916656.5,
+      "volume_24h_usd": 2082764.87
     },
     {
       "symbol": "UNI",
@@ -72,54 +194,54 @@
       "gecko_network": "eth",
       "address": "0x3470447f3cecffac709d3e783a307790b0208d60",
       "fee_tier": null,
-      "score": 1138878.2430298477,
-      "rank": 4,
-      "liquidity_usd": 2712628.35,
-      "volume_24h_usd": 478150.15
+      "score": 1128387.1689468774,
+      "rank": 15,
+      "liquidity_usd": 2717986.68,
+      "volume_24h_usd": 468456.16
     },
     {
-      "symbol": "AAVE",
+      "symbol": "PEPE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "BHaUhGhMnjnZXMx1DFfsq82hf1CqvywFJkFxj2doTuNf",
+      "fee_tier": null,
+      "score": 759756.7681513815,
+      "rank": 16,
+      "liquidity_usd": 3900610.92,
+      "volume_24h_usd": 147984.6
+    },
+    {
+      "symbol": "XRP",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "57BMebRut7qxcPdVyDVGaJ5sdtZeuaKeMjvddoUUJVgq",
+      "fee_tier": null,
+      "score": 568878.4284583781,
+      "rank": 17,
+      "liquidity_usd": 2186867.19,
+      "volume_24h_usd": 147984.6
+    },
+    {
+      "symbol": "DOT",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "FzmJW8EtaFs2YCYap4EcQNTzqv3SAx3oQtrqbcBhy1mT",
+      "fee_tier": null,
+      "score": 162170.4749881923,
+      "rank": 18,
+      "liquidity_usd": 6591293974.41,
+      "volume_24h_usd": 3.99
+    },
+    {
+      "symbol": "LINK",
       "chain": "ethereum",
       "gecko_network": "eth",
-      "address": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
+      "address": "0xfad57d2039c21811c8f2b5d5b65308aa99d31559",
       "fee_tier": null,
-      "score": 881584.0644559907,
-      "rank": 5,
-      "liquidity_usd": 2229032.59,
-      "volume_24h_usd": 348667.16
-    },
-    {
-      "symbol": "UNI",
-      "chain": "ethereum",
-      "gecko_network": "eth",
-      "address": "0x9a5c1d2f4a7a7962a63259de6fcc1afb1d0aa1abdf5d19c23d22fd78953c5167",
-      "fee_tier": null,
-      "score": 878580.2492218218,
-      "rank": 6,
-      "liquidity_usd": 1875809.48,
-      "volume_24h_usd": 411504.08
-    },
-    {
-      "symbol": "ETH",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
-      "fee_tier": null,
-      "score": 592982.255151692,
-      "rank": 7,
-      "liquidity_usd": 966806.01,
-      "volume_24h_usd": 363700.63
-    },
-    {
-      "symbol": "ARB",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
-      "fee_tier": null,
-      "score": 131077.98334199376,
-      "rank": 8,
-      "liquidity_usd": 559717.94,
-      "volume_24h_usd": 30696.6
+      "score": 158262.79381046767,
+      "rank": 19,
+      "liquidity_usd": 757091.62,
+      "volume_24h_usd": 33083.33
     },
     {
       "symbol": "OP",
@@ -127,32 +249,21 @@
       "gecko_network": "optimism",
       "address": "0x069c637cc3dc68aab4cd785df4da7137c717cf3f",
       "fee_tier": null,
-      "score": 127593.7639947282,
-      "rank": 9,
-      "liquidity_usd": 50906.72,
-      "volume_24h_usd": 319803.92
+      "score": 124109.3176325694,
+      "rank": 20,
+      "liquidity_usd": 52479.3,
+      "volume_24h_usd": 293508.54
     },
     {
-      "symbol": "AAVE",
+      "symbol": "LINK",
       "chain": "ethereum",
       "gecko_network": "eth",
-      "address": "0x5d059911b0fe3f9f72c701772cb7826f32fad07a0fccbf0c90d899b6bb407710",
+      "address": "0xac5a2c404ebba22a869998089ac7893ff4e1f0a7",
       "fee_tier": null,
-      "score": 102645.52046346689,
-      "rank": 10,
-      "liquidity_usd": 212012.45,
-      "volume_24h_usd": 49695.68
-    },
-    {
-      "symbol": "ETH",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x4d1576158518dd61924218446c1057cf03138d57",
-      "fee_tier": null,
-      "score": 93615.60932290726,
-      "rank": 11,
-      "liquidity_usd": 418398.83,
-      "volume_24h_usd": 20946.24
+      "score": 106705.27139871394,
+      "rank": 21,
+      "liquidity_usd": 251892.62,
+      "volume_24h_usd": 45201.86
     },
     {
       "symbol": "ARB",
@@ -160,10 +271,21 @@
       "gecko_network": "arbitrum",
       "address": "0xcda53b1f66614552f834ceef361a8d12a0b8dad8",
       "fee_tier": null,
-      "score": 88515.74943282128,
-      "rank": 12,
-      "liquidity_usd": 217069.05,
-      "volume_24h_usd": 36094.68
+      "score": 93866.45084697408,
+      "rank": 22,
+      "liquidity_usd": 211222.21,
+      "volume_24h_usd": 41713.94
+    },
+    {
+      "symbol": "FIL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "GAKghgVU4KVQUZkGy7KQFH9huQ5vxiXbtWfi7fkvTf1Z",
+      "fee_tier": null,
+      "score": 80960.24195504791,
+      "rank": 23,
+      "liquidity_usd": 1642747062.01,
+      "volume_24h_usd": 3.99
     },
     {
       "symbol": "AAVE",
@@ -171,10 +293,21 @@
       "gecko_network": "eth",
       "address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
       "fee_tier": null,
-      "score": 80791.92536117208,
-      "rank": 13,
-      "liquidity_usd": 200034.36,
-      "volume_24h_usd": 32631.07
+      "score": 80771.30078763372,
+      "rank": 24,
+      "liquidity_usd": 197673.76,
+      "volume_24h_usd": 33003.89
+    },
+    {
+      "symbol": "LINK",
+      "chain": "polygon",
+      "gecko_network": "matic",
+      "address": "0x79e4240e33c121402dfc9009de266356c91f241d",
+      "fee_tier": null,
+      "score": 78385.07552442365,
+      "rank": 25,
+      "liquidity_usd": 282034.36,
+      "volume_24h_usd": 21785.36
     },
     {
       "symbol": "NEAR",
@@ -182,21 +315,43 @@
       "gecko_network": "eth",
       "address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
       "fee_tier": null,
-      "score": 64717.768179884726,
-      "rank": 14,
-      "liquidity_usd": 360955.73,
-      "volume_24h_usd": 11603.61
+      "score": 70392.67565783531,
+      "rank": 26,
+      "liquidity_usd": 353061.17,
+      "volume_24h_usd": 14034.76
     },
     {
-      "symbol": "LINK",
+      "symbol": "ARB",
       "chain": "arbitrum",
       "gecko_network": "arbitrum",
-      "address": "0x32a5746ba6826828716cc1a394bc33301ebc7656",
+      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
       "fee_tier": null,
-      "score": 43148.209963378555,
-      "rank": 15,
-      "liquidity_usd": 187165.41,
-      "volume_24h_usd": 9947.18
+      "score": 68279.5099454236,
+      "rank": 27,
+      "liquidity_usd": 546214.24,
+      "volume_24h_usd": 8535.28
+    },
+    {
+      "symbol": "APE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HBf6hQsmCJit9vijiQqz5UiXgC73WJGF1eZUxvZ5bRKX",
+      "fee_tier": null,
+      "score": 53236.91991522143,
+      "rank": 28,
+      "liquidity_usd": 710318206.03,
+      "volume_24h_usd": 3.99
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x4d1ad4a9e61bc0e5529d64f38199ccfca56f5a42",
+      "fee_tier": null,
+      "score": 42709.387858543465,
+      "rank": 29,
+      "liquidity_usd": 98133.45,
+      "volume_24h_usd": 18587.87
     },
     {
       "symbol": "UNI",
@@ -204,10 +359,21 @@
       "gecko_network": "eth",
       "address": "0xd0fc8ba7e267f2bc56044a7715a489d851dc6d78",
       "fee_tier": null,
-      "score": 36648.87787065247,
-      "rank": 16,
-      "liquidity_usd": 387033.08,
-      "volume_24h_usd": 3470.35
+      "score": 36637.89848747469,
+      "rank": 30,
+      "liquidity_usd": 387556.15,
+      "volume_24h_usd": 3463.59
+    },
+    {
+      "symbol": "SEI",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "C2D6QPeMeJ5PUHGWU8qpfEaAsqFWWro4jRb62QpHb4sR",
+      "fee_tier": null,
+      "score": 35412.49408631508,
+      "rank": 31,
+      "liquidity_usd": 314296926.67,
+      "volume_24h_usd": 3.99
     },
     {
       "symbol": "OP",
@@ -215,43 +381,43 @@
       "gecko_network": "optimism",
       "address": "0xb533c12fb4e7b53b5524eab9b47d93ff6c7a456f",
       "fee_tier": null,
-      "score": 33877.93099806716,
-      "rank": 17,
-      "liquidity_usd": 87666.58,
-      "volume_24h_usd": 13091.81
+      "score": 33706.908495473144,
+      "rank": 32,
+      "liquidity_usd": 82311.87,
+      "volume_24h_usd": 13803.06
     },
     {
-      "symbol": "LINK",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0xbbe36e6f0331c6a36ab44bc8421e28e1a1871c1e",
+      "symbol": "BCH",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HPHLnz7UJ8V9CnsBEVAB4hvVef9prURD52gCQLoCYY1P",
       "fee_tier": null,
-      "score": 29547.887015199583,
-      "rank": 18,
-      "liquidity_usd": 38150.3,
-      "volume_24h_usd": 22885.21
+      "score": 30249.2011430269,
+      "rank": 33,
+      "liquidity_usd": 173626977.19,
+      "volume_24h_usd": 5.27
     },
     {
-      "symbol": "BTC",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x53c6ca2597711ca7a73b6921faf4031eedf71339",
+      "symbol": "SUI",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HR7LKkaewVsKayhRNvo56rXW9Hs4ANn175c5Rik6LRE8",
       "fee_tier": null,
-      "score": 25276.293103663364,
-      "rank": 19,
-      "liquidity_usd": 137271.63,
-      "volume_24h_usd": 4654.21
+      "score": 20194.759288530775,
+      "rank": 34,
+      "liquidity_usd": 77386774.71,
+      "volume_24h_usd": 5.27
     },
     {
-      "symbol": "WLD",
-      "chain": "optimism",
-      "gecko_network": "optimism",
-      "address": "0x4e5541815227e3272c405886149f45d2f437c7ff",
+      "symbol": "CRV",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HF9iYDwxD1gPNuNA6pchdfqieRny215XV1y8VM6bELvU",
       "fee_tier": null,
-      "score": 10166.167672987693,
-      "rank": 20,
-      "liquidity_usd": 13498.69,
-      "volume_24h_usd": 7656.37
+      "score": 18256.137832038843,
+      "rank": 35,
+      "liquidity_usd": 63242233.12,
+      "volume_24h_usd": 5.27
     },
     {
       "symbol": "ARB",
@@ -259,48 +425,398 @@
       "gecko_network": "arbitrum",
       "address": "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1",
       "fee_tier": null,
-      "score": 9759.763754804724,
+      "score": 9459.66086467163,
+      "rank": 36,
+      "liquidity_usd": 63537.67,
+      "volume_24h_usd": 1408.38
+    },
+    {
+      "symbol": "WLD",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0xd1f1bad4c9e6c44dec1e9bf3b94902205c5cd6c3",
+      "fee_tier": null,
+      "score": 7183.779247471348,
+      "rank": 37,
+      "liquidity_usd": 38666.54,
+      "volume_24h_usd": 1334.66
+    },
+    {
+      "symbol": "WLD",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0xdc6cb16b8d635ef255cef370263c35ac0007186a",
+      "fee_tier": null,
+      "score": 2662.696543618893,
+      "rank": 38,
+      "liquidity_usd": 22866.39,
+      "volume_24h_usd": 310.06
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xebfb684dd2b01e698ca6c14f10e4f289934a54d6",
+      "fee_tier": null,
+      "score": 973.3879955598384,
+      "rank": 39,
+      "liquidity_usd": 6085.71,
+      "volume_24h_usd": 155.69
+    },
+    {
+      "symbol": "PEPE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xcee31c846cbf003f4ceb5bbd234cba03c6e940c7",
+      "fee_tier": null,
+      "score": 572.3887678842065,
+      "rank": 40,
+      "liquidity_usd": 6975.28,
+      "volume_24h_usd": 46.97
+    },
+    {
+      "symbol": "PEPE",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xf18d4753f7473496e818f38e0cfddb0eae8739b0",
+      "fee_tier": null,
+      "score": 68.82504340717846,
+      "rank": 41,
+      "liquidity_usd": 1178.33,
+      "volume_24h_usd": 4.02
+    },
+    {
+      "symbol": "APE",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0x3c63b3c95cfef13c35c63dec97b753970d6e8eeb",
+      "fee_tier": null,
+      "score": 13.540771765302006,
+      "rank": 42,
+      "liquidity_usd": 81.49,
+      "volume_24h_usd": 2.25
+    }
+  ],
+  "pools_backfilled": [
+    {
+      "symbol": "ETH",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+      "fee_tier": null,
+      "score": 77587404.20949265,
+      "rank": 2,
+      "liquidity_usd": 94042544.87,
+      "volume_24h_usd": 64011509.9
+    },
+    {
+      "symbol": "ETH",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36",
+      "fee_tier": null,
+      "score": 40046859.64449771,
+      "rank": 3,
+      "liquidity_usd": 84579142.16,
+      "volume_24h_usd": 18961542.13
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x56534741cd8b152df6d48adf7ac51f75169a83b2",
+      "fee_tier": null,
+      "score": 10210120.7084539,
+      "rank": 9,
+      "liquidity_usd": 13413489.94,
+      "volume_24h_usd": 7771770.46
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x9db9e0e53058c89e5b94e29621a205198648425b",
+      "fee_tier": null,
+      "score": 6736271.347151835,
+      "rank": 11,
+      "liquidity_usd": 25709633.48,
+      "volume_24h_usd": 1764994.11
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x99ac8ca7087fa4a2a1fb6357269965a2014abc35",
+      "fee_tier": null,
+      "score": 5637733.315025117,
+      "rank": 13,
+      "liquidity_usd": 25473344.45,
+      "volume_24h_usd": 1247737.1
+    },
+    {
+      "symbol": "SOL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",
+      "fee_tier": null,
+      "score": 4544674.22221408,
+      "rank": 14,
+      "liquidity_usd": 9916656.5,
+      "volume_24h_usd": 2082764.87
+    },
+    {
+      "symbol": "UNI",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x3470447f3cecffac709d3e783a307790b0208d60",
+      "fee_tier": null,
+      "score": 1128387.1689468774,
+      "rank": 15,
+      "liquidity_usd": 2717986.68,
+      "volume_24h_usd": 468456.16
+    },
+    {
+      "symbol": "PEPE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "BHaUhGhMnjnZXMx1DFfsq82hf1CqvywFJkFxj2doTuNf",
+      "fee_tier": null,
+      "score": 759756.7681513815,
+      "rank": 16,
+      "liquidity_usd": 3900610.92,
+      "volume_24h_usd": 147984.6
+    },
+    {
+      "symbol": "XRP",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "57BMebRut7qxcPdVyDVGaJ5sdtZeuaKeMjvddoUUJVgq",
+      "fee_tier": null,
+      "score": 568878.4284583781,
+      "rank": 17,
+      "liquidity_usd": 2186867.19,
+      "volume_24h_usd": 147984.6
+    },
+    {
+      "symbol": "DOT",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "FzmJW8EtaFs2YCYap4EcQNTzqv3SAx3oQtrqbcBhy1mT",
+      "fee_tier": null,
+      "score": 162170.4749881923,
+      "rank": 18,
+      "liquidity_usd": 6591293974.41,
+      "volume_24h_usd": 3.99
+    },
+    {
+      "symbol": "LINK",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xfad57d2039c21811c8f2b5d5b65308aa99d31559",
+      "fee_tier": null,
+      "score": 158262.79381046767,
+      "rank": 19,
+      "liquidity_usd": 757091.62,
+      "volume_24h_usd": 33083.33
+    },
+    {
+      "symbol": "OP",
+      "chain": "optimism",
+      "gecko_network": "optimism",
+      "address": "0x069c637cc3dc68aab4cd785df4da7137c717cf3f",
+      "fee_tier": null,
+      "score": 124109.3176325694,
+      "rank": 20,
+      "liquidity_usd": 52479.3,
+      "volume_24h_usd": 293508.54
+    },
+    {
+      "symbol": "LINK",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xac5a2c404ebba22a869998089ac7893ff4e1f0a7",
+      "fee_tier": null,
+      "score": 106705.27139871394,
       "rank": 21,
-      "liquidity_usd": 62347.32,
-      "volume_24h_usd": 1527.78
+      "liquidity_usd": 251892.62,
+      "volume_24h_usd": 45201.86
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xcda53b1f66614552f834ceef361a8d12a0b8dad8",
+      "fee_tier": null,
+      "score": 93866.45084697408,
+      "rank": 22,
+      "liquidity_usd": 211222.21,
+      "volume_24h_usd": 41713.94
+    },
+    {
+      "symbol": "FIL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "GAKghgVU4KVQUZkGy7KQFH9huQ5vxiXbtWfi7fkvTf1Z",
+      "fee_tier": null,
+      "score": 80960.24195504791,
+      "rank": 23,
+      "liquidity_usd": 1642747062.01,
+      "volume_24h_usd": 3.99
+    },
+    {
+      "symbol": "AAVE",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
+      "fee_tier": null,
+      "score": 80771.30078763372,
+      "rank": 24,
+      "liquidity_usd": 197673.76,
+      "volume_24h_usd": 33003.89
+    },
+    {
+      "symbol": "LINK",
+      "chain": "polygon",
+      "gecko_network": "matic",
+      "address": "0x79e4240e33c121402dfc9009de266356c91f241d",
+      "fee_tier": null,
+      "score": 78385.07552442365,
+      "rank": 25,
+      "liquidity_usd": 282034.36,
+      "volume_24h_usd": 21785.36
+    },
+    {
+      "symbol": "NEAR",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
+      "fee_tier": null,
+      "score": 70392.67565783531,
+      "rank": 26,
+      "liquidity_usd": 353061.17,
+      "volume_24h_usd": 14034.76
+    },
+    {
+      "symbol": "ARB",
+      "chain": "arbitrum",
+      "gecko_network": "arbitrum",
+      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
+      "fee_tier": null,
+      "score": 68279.5099454236,
+      "rank": 27,
+      "liquidity_usd": 546214.24,
+      "volume_24h_usd": 8535.28
+    },
+    {
+      "symbol": "APE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HBf6hQsmCJit9vijiQqz5UiXgC73WJGF1eZUxvZ5bRKX",
+      "fee_tier": null,
+      "score": 53236.91991522143,
+      "rank": 28,
+      "liquidity_usd": 710318206.03,
+      "volume_24h_usd": 3.99
     }
   ],
   "pool_results": [
     {
-      "symbol": "BTC",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x5969efdde3cf5c0d9a88ae51e47d721096a97203",
+      "symbol": "ETH",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
       "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
-      "symbol": "BTC",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x0e4831319a50228b9e450861297ab92dee15b44f",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
+      "record_count": 0,
+      "providers_used": [],
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
     },
     {
       "symbol": "ETH",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x641c00a822e8b671738d32a431a4fb6074e5c79d",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36",
+      "fee_tier": null,
+      "record_count": 0,
+      "providers_used": [],
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x56534741cd8b152df6d48adf7ac51f75169a83b2",
+      "fee_tier": null,
+      "record_count": 0,
+      "providers_used": [],
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x9db9e0e53058c89e5b94e29621a205198648425b",
+      "fee_tier": null,
+      "record_count": 0,
+      "providers_used": [],
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "BTC",
+      "chain": "ethereum",
+      "gecko_network": "eth",
+      "address": "0x99ac8ca7087fa4a2a1fb6357269965a2014abc35",
+      "fee_tier": null,
+      "record_count": 180,
+      "providers_used": [
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "SOL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",
       "fee_tier": null,
       "record_count": 180,
       "providers_used": [
@@ -332,10 +848,55 @@
       ]
     },
     {
-      "symbol": "AAVE",
+      "symbol": "PEPE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "BHaUhGhMnjnZXMx1DFfsq82hf1CqvywFJkFxj2doTuNf",
+      "fee_tier": null,
+      "record_count": 94,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-04-22T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "XRP",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "57BMebRut7qxcPdVyDVGaJ5sdtZeuaKeMjvddoUUJVgq",
+      "fee_tier": null,
+      "record_count": 126,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-03-21T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "DOT",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "FzmJW8EtaFs2YCYap4EcQNTzqv3SAx3oQtrqbcBhy1mT",
+      "fee_tier": null,
+      "record_count": 53,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-27T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "LINK",
       "chain": "ethereum",
       "gecko_network": "eth",
-      "address": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
+      "address": "0xfad57d2039c21811c8f2b5d5b65308aa99d31559",
       "fee_tier": null,
       "record_count": 180,
       "providers_used": [
@@ -350,56 +911,6 @@
           "note": "DexScreener non-200 response"
         }
       ]
-    },
-    {
-      "symbol": "UNI",
-      "chain": "ethereum",
-      "gecko_network": "eth",
-      "address": "0x9a5c1d2f4a7a7962a63259de6fcc1afb1d0aa1abdf5d19c23d22fd78953c5167",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": [
-        {
-          "provider": "dexscreener",
-          "status_code": 400,
-          "note": "DexScreener non-200 response"
-        }
-      ]
-    },
-    {
-      "symbol": "ETH",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
-      "symbol": "ARB",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
     },
     {
       "symbol": "OP",
@@ -417,16 +928,16 @@
       "incidents": []
     },
     {
-      "symbol": "AAVE",
+      "symbol": "LINK",
       "chain": "ethereum",
       "gecko_network": "eth",
-      "address": "0x5d059911b0fe3f9f72c701772cb7826f32fad07a0fccbf0c90d899b6bb407710",
+      "address": "0xac5a2c404ebba22a869998089ac7893ff4e1f0a7",
       "fee_tier": null,
-      "record_count": 110,
+      "record_count": 180,
       "providers_used": [
         "geckoterminal"
       ],
-      "first_timestamp": "2026-03-07T00:00:00+00:00",
+      "first_timestamp": "2026-01-26T00:00:00+00:00",
       "last_timestamp": "2026-07-24T00:00:00+00:00",
       "incidents": [
         {
@@ -435,21 +946,6 @@
           "note": "DexScreener non-200 response"
         }
       ]
-    },
-    {
-      "symbol": "ETH",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x4d1576158518dd61924218446c1057cf03138d57",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
     },
     {
       "symbol": "ARB",
@@ -467,6 +963,21 @@
       "incidents": []
     },
     {
+      "symbol": "FIL",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "GAKghgVU4KVQUZkGy7KQFH9huQ5vxiXbtWfi7fkvTf1Z",
+      "fee_tier": null,
+      "record_count": 93,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-01-27T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
       "symbol": "AAVE",
       "chain": "ethereum",
       "gecko_network": "eth",
@@ -479,6 +990,29 @@
       "first_timestamp": "2026-01-26T00:00:00+00:00",
       "last_timestamp": "2026-07-24T00:00:00+00:00",
       "incidents": [
+        {
+          "provider": "dexscreener",
+          "status_code": 400,
+          "note": "DexScreener non-200 response"
+        }
+      ]
+    },
+    {
+      "symbol": "LINK",
+      "chain": "polygon",
+      "gecko_network": "matic",
+      "address": "0x79e4240e33c121402dfc9009de266356c91f241d",
+      "fee_tier": null,
+      "record_count": 0,
+      "providers_used": [],
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "incidents": [
+        {
+          "provider": "geckoterminal",
+          "status_code": 0,
+          "note": "GeckoTerminal OHLCV request failed with HTTP 404 | context={'url': 'https://api.geckoterminal.com/api/v2/networks/matic/pools/0x79e4240e33c121402dfc9009de266356c91f241d/ohlcv/day', 'params': {'currency': 'token', 'token': 'base', 'limit': 1000, 'before_timestamp': 1784922229}, 'body': '{\"errors\":[{\"status\":\"404\",\"title\":\"Not Found\"}],\"meta\":{\"ref_id\":\"01b79583-65c1-4cb6-8d10-567368e81547\"}}'}"
+        },
         {
           "provider": "dexscreener",
           "status_code": 400,
@@ -507,105 +1041,10 @@
       ]
     },
     {
-      "symbol": "LINK",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x32a5746ba6826828716cc1a394bc33301ebc7656",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
-      "symbol": "UNI",
-      "chain": "ethereum",
-      "gecko_network": "eth",
-      "address": "0xd0fc8ba7e267f2bc56044a7715a489d851dc6d78",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": [
-        {
-          "provider": "dexscreener",
-          "status_code": 400,
-          "note": "DexScreener non-200 response"
-        }
-      ]
-    },
-    {
-      "symbol": "OP",
-      "chain": "optimism",
-      "gecko_network": "optimism",
-      "address": "0xb533c12fb4e7b53b5524eab9b47d93ff6c7a456f",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
-      "symbol": "LINK",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0xbbe36e6f0331c6a36ab44bc8421e28e1a1871c1e",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
-      "symbol": "BTC",
-      "chain": "arbitrum",
-      "gecko_network": "arbitrum",
-      "address": "0x53c6ca2597711ca7a73b6921faf4031eedf71339",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
-      "symbol": "WLD",
-      "chain": "optimism",
-      "gecko_network": "optimism",
-      "address": "0x4e5541815227e3272c405886149f45d2f437c7ff",
-      "fee_tier": null,
-      "record_count": 180,
-      "providers_used": [
-        "dexscreener",
-        "geckoterminal"
-      ],
-      "first_timestamp": "2026-01-26T00:00:00+00:00",
-      "last_timestamp": "2026-07-24T00:00:00+00:00",
-      "incidents": []
-    },
-    {
       "symbol": "ARB",
       "chain": "arbitrum",
       "gecko_network": "arbitrum",
-      "address": "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1",
+      "address": "0xaebdca1bc8d89177ebe2308d62af5e74885dccc3",
       "fee_tier": null,
       "record_count": 180,
       "providers_used": [
@@ -613,19 +1052,35 @@
         "geckoterminal"
       ],
       "first_timestamp": "2026-01-26T00:00:00+00:00",
+      "last_timestamp": "2026-07-24T00:00:00+00:00",
+      "incidents": []
+    },
+    {
+      "symbol": "APE",
+      "chain": "solana",
+      "gecko_network": "solana",
+      "address": "HBf6hQsmCJit9vijiQqz5UiXgC73WJGF1eZUxvZ5bRKX",
+      "fee_tier": null,
+      "record_count": 20,
+      "providers_used": [
+        "dexscreener",
+        "geckoterminal"
+      ],
+      "first_timestamp": "2026-02-05T00:00:00+00:00",
       "last_timestamp": "2026-07-24T00:00:00+00:00",
       "incidents": []
     }
   ],
   "rejected_pools": [],
-  "dataset_id": "ds_e562d724e89c6735df6a499c6beedfd59fc1a8c55f978b253e5e53897041a0f1",
+  "unresolved_assets": [],
+  "dataset_id": "ds_05fae8a85ff43ffcba6023925c391449fa3c5110deef53bd7a7ce32a958dbd58",
   "dataset_type": "dex_ohlcv_fanout",
   "catalog_reconciliation": {
-    "report_pinned_dataset_id": "ds_e562d724e89c6735df6a499c6beedfd59fc1a8c55f978b253e5e53897041a0f1",
-    "resolve_latest_by_type": "ds_e562d724e89c6735df6a499c6beedfd59fc1a8c55f978b253e5e53897041a0f1",
+    "report_pinned_dataset_id": "ds_05fae8a85ff43ffcba6023925c391449fa3c5110deef53bd7a7ce32a958dbd58",
+    "resolve_latest_by_type": "ds_05fae8a85ff43ffcba6023925c391449fa3c5110deef53bd7a7ce32a958dbd58",
     "match": true
   },
-  "total_records": 3604,
+  "total_records": 2080,
   "coverage": {
     "start": "2026-01-26T00:00:00+00:00",
     "end": "2026-07-24T00:00:00+00:00"
@@ -634,52 +1089,26 @@
     "geckoterminal": {
       "tokens_per_second": 0.1,
       "burst": 1,
-      "total_requests": 21,
-      "incidents": []
+      "total_requests": 5,
+      "incidents": [
+        {
+          "timestamp": "2026-07-24T19:46:43.881911+00:00",
+          "provider": "geckoterminal",
+          "chain": "matic",
+          "pool_address": "0x79e4240e33c121402dfc9009de266356c91f241d",
+          "status_code": 0,
+          "backoff_seconds": 0.0,
+          "note": "GeckoTerminal OHLCV request failed with HTTP 404 | context={'url': 'https://api.geckoterminal.com/api/v2/networks/matic/pools/0x79e4240e33c121402dfc9009de266356c91f241d/ohlcv/day', 'params': {'currency': 'token', 'token': 'base', 'limit': 1000, 'before_timestamp': 1784922229}, 'body': '{\"errors\":[{\"status\":\"404\",\"title\":\"Not Found\"}],\"meta\":{\"ref_id\":\"01b79583-65c1-4cb6-8d10-567368e81547\"}}'}"
+        }
+      ]
     },
     "dexscreener": {
       "tokens_per_second": 1.0,
       "burst": 1,
-      "total_requests": 21,
+      "total_requests": 5,
       "incidents": [
         {
-          "timestamp": "2026-07-24T05:50:22.751058+00:00",
-          "provider": "dexscreener",
-          "chain": "eth",
-          "pool_address": "0x3470447f3cecffac709d3e783a307790b0208d60",
-          "status_code": 400,
-          "backoff_seconds": 0.0,
-          "note": "DexScreener non-200 response"
-        },
-        {
-          "timestamp": "2026-07-24T05:50:32.996221+00:00",
-          "provider": "dexscreener",
-          "chain": "eth",
-          "pool_address": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
-          "status_code": 400,
-          "backoff_seconds": 0.0,
-          "note": "DexScreener non-200 response"
-        },
-        {
-          "timestamp": "2026-07-24T05:50:43.007486+00:00",
-          "provider": "dexscreener",
-          "chain": "eth",
-          "pool_address": "0x9a5c1d2f4a7a7962a63259de6fcc1afb1d0aa1abdf5d19c23d22fd78953c5167",
-          "status_code": 400,
-          "backoff_seconds": 0.0,
-          "note": "DexScreener non-200 response"
-        },
-        {
-          "timestamp": "2026-07-24T05:52:08.335147+00:00",
-          "provider": "dexscreener",
-          "chain": "eth",
-          "pool_address": "0x5d059911b0fe3f9f72c701772cb7826f32fad07a0fccbf0c90d899b6bb407710",
-          "status_code": 400,
-          "backoff_seconds": 0.0,
-          "note": "DexScreener non-200 response"
-        },
-        {
-          "timestamp": "2026-07-24T05:52:43.157370+00:00",
+          "timestamp": "2026-07-24T19:46:34.902293+00:00",
           "provider": "dexscreener",
           "chain": "eth",
           "pool_address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
@@ -688,19 +1117,19 @@
           "note": "DexScreener non-200 response"
         },
         {
-          "timestamp": "2026-07-24T05:52:52.861058+00:00",
+          "timestamp": "2026-07-24T19:46:44.567058+00:00",
           "provider": "dexscreener",
-          "chain": "eth",
-          "pool_address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
+          "chain": "matic",
+          "pool_address": "0x79e4240e33c121402dfc9009de266356c91f241d",
           "status_code": 400,
           "backoff_seconds": 0.0,
           "note": "DexScreener non-200 response"
         },
         {
-          "timestamp": "2026-07-24T05:53:17.728530+00:00",
+          "timestamp": "2026-07-24T19:46:54.872790+00:00",
           "provider": "dexscreener",
           "chain": "eth",
-          "pool_address": "0xd0fc8ba7e267f2bc56044a7715a489d851dc6d78",
+          "pool_address": "0xee8aaa362a75fbf8e0a38a50ddc27f38551e16ea",
           "status_code": 400,
           "backoff_seconds": 0.0,
           "note": "DexScreener non-200 response"
@@ -710,11 +1139,11 @@
     "defillama": {
       "tokens_per_second": 2.0,
       "burst": 1,
-      "total_requests": 0,
+      "total_requests": 42,
       "incidents": []
     }
   },
   "live_eligible": false,
   "live_eligible_note": "DATA-010 is a research DEX universe backfill; no LIVE authorization.",
-  "generated_at": "2026-07-24T05:54:17.278013+00:00"
+  "generated_at": "2026-07-24T19:47:15.513443+00:00"
 }

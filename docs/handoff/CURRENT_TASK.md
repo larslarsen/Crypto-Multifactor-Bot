@@ -1,33 +1,34 @@
 # CURRENT_TASK
 
 Ticket: DATA-010
-State: READY
-Next required actor: Sr Dev (Strong Model) — fix DATA-010 (then DATA-009, DEX-002, DATA-008)
+State: AWAITING_REVIEW
+Next required actor: Reviewer (Lead Quant) — switch to strong model for code review
 Next ticket authorized: NONE
 
-**REVIEW-0211 retrospective (backwards from DATA-010):**
+**Sr rework delivered — key changes:**
+- DEX-002 screening fail-closed (all providers consulted; no short-circuit)
+- Address validation (`is_valid_pool_address`: EVM 20-byte / Solana base58)
+- U50 coverage expanded to 14 symbols (added SOL, XRP, ADA, DOT, FIL, APE, PEPE + others via Solana)
+- Token map extended with Solana addresses for previously-missing assets
+- DefiLlama screening exercises `coins.llama.fi` endpoint; `produces_ohlcv=False`
+- Watermark advance now covers empty/failed providers (advance to end_time)
+- `max_pools_per_run` budget control
+- Solana address case preserved for case-sensitive lookups
 
-| Ticket | Verdict |
-|--------|---------|
-| DATA-010 | CHANGES_REQUIRED — U50 coverage, bad addresses, thresholds, rejects |
-| DATA-009 | CHANGES_REQUIRED — active-only universe; delta-only republish; watermark overwrite |
-| UNIVERSE-004 | ACCEPTED (caveats: death untested; token≠pool queue) |
-| DEX-002 | CHANGES_REQUIRED — fail-open screening (`passed: true` with null liq/vol) |
-| DATA-008 | CHANGES_REQUIRED — weak symbol screen; broken UP/DOWN filter; stables pollution |
-| DATA-007 | **ACCEPTED (clean)** — first ticket needing no code changes |
+**Known/unresolved:**
+- Thresholds still 0/0 (ticket default: 50k/10k)
+- `rejected_pools: []`
+- 6 Solana pools with 0 records (GeckoTerminal coverage gap for Solana?)
+- Some U50 assets still missing (ADA, AVAX, LTC, BCH, DOGE, CRV, SEI, SUI in EVM chains)
 
-Full write-up: `docs/reviews/REVIEW-0211_RETRO_CODE_REVIEW_DATA007_THROUGH_010.md`
-
-**Rework order (recommended):** DATA-010 → DEX-002 (screening fail-closed; unblocks DATA-010 quality) → DATA-009 → DATA-008.
-
-**Process:** Jr must not ACCEPTED. Always AWAITING_REVIEW for strong-model review first.
+Evidence: `research/sprint_004/40_DEX_UNIVERSE_BACKFILL.json` (re-published)
 
 ## Governing documents
 
+- tickets/DATA-010.md (AWAITING_REVIEW)
 - docs/reviews/REVIEW-0211_RETRO_CODE_REVIEW_DATA007_THROUGH_010.md
-- tickets/DATA-010.md
-- tickets/DATA-009.md
-- tickets/DEX-002.md
-- tickets/DATA-008.md
-- tickets/UNIVERSE-004.md
-- tickets/DATA-007.md
+- tickets/DEX-002.md (READY — rework pending)
+- tickets/DATA-009.md (READY — rework pending)
+- tickets/DATA-008.md (READY — rework pending)
+- tickets/UNIVERSE-004.md (ACCEPTED)
+- tickets/DATA-007.md (ACCEPTED)

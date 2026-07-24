@@ -124,8 +124,7 @@ def test_u50_assets_list_has_expected_size() -> None:
 
 def test_all_u50_assets_have_token_addresses() -> None:
     missing = [sym for sym in U50_TRADING_ASSETS if sym not in TOKEN_ADDRESSES]
-    # Some native/non-EVM assets are intentionally omitted from the static mapping.
-    assert set(missing) <= {"SUI", "SEI", "FIL", "BCH"}
+    assert missing == []
 
 
 def test_chain_allowlist_includes_base() -> None:
@@ -146,3 +145,50 @@ def test_gecko_network_mapping_for_ethereum() -> None:
     assert GECKO_NETWORKS["ethereum"] == "eth"
     assert GECKO_NETWORKS["arbitrum"] == "arbitrum"
     assert GECKO_NETWORKS["base"] == "base"
+
+
+def test_is_valid_pool_address_rejects_non_evm_hex() -> None:
+    from cryptofactors.universe.dex_pool_resolver import is_valid_pool_address
+    assert is_valid_pool_address("ethereum", "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8") is False
+    assert is_valid_pool_address("arbitrum", "0x1111111111111111111111111111111111111111") is True
+    assert is_valid_pool_address("solana", "CfZyzHSpSuGFDYTFy5H9DxGajW6UWvBpkPVCrMTtLpey") is True
+    assert is_valid_pool_address("solana", "0x1111111111111111111111111111111111111111") is False
+
+
+def test_resolve_pool_filters_invalid_pair_addresses() -> None:
+    response = _mock_token_pairs_response()
+    response["pairs"].append({
+        "chainId": "arbitrum",
+        "dexId": "uniswap",
+        "pairAddress": "0x2187d779d9b173dd7202b38b54dca6eb04d1b32ca261980869195b5b9fa97ef8",
+        "baseToken": {"symbol": "WBTC", "address": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f"},
+        "quoteToken": {"symbol": "USDC", "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831"},
+        "liquidity": {"usd": 9_000_000.0},
+        "volume": {"h24": 1_000_000.0},
+    })
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "api.dexscreener.com" in str(request.url):
+            return httpx.Response(200, json=response)
+        return httpx.Response(404, text="unmocked")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    resolver = DexPoolResolver(client=client, chain_allowlist={"arbitrum"})
+    pools = resolver.resolve_pool("BTC", min_liquidity_usd=0.0, min_volume_24h_usd=0.0, top_n=3)
+    assert len(pools) == 2
+    assert all(len(p["address"]) == 42 for p in pools)
+
+
+def test_resolve_universe_with_status_records_missing_and_rejected() -> None:
+    resolver = DexPoolResolver(client=_make_mock_client(), chain_allowlist={"arbitrum"})
+    status = resolver.resolve_universe_with_status(["BTC", "UNKNOWN"])
+    assert any(p["symbol"] == "BTC" for p in status["resolved"])
+    assert any(r["symbol"] == "UNKNOWN" and r["reason"] == "no_token_address" for r in status["rejected"])
+
+
+def test_resolve_pool_returns_token_addresses() -> None:
+    resolver = DexPoolResolver(client=_make_mock_client(), chain_allowlist={"arbitrum"})
+    pools = resolver.resolve_pool("BTC", min_liquidity_usd=0.0, min_volume_24h_usd=0.0, top_n=1)
+    assert pools
+    assert pools[0]["base_token_address"]
+    assert pools[0]["quote_token_address"]

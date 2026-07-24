@@ -12,6 +12,7 @@ No Birdeye OHLCV.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -92,11 +93,13 @@ TOKEN_ADDRESSES: dict[str, dict[str, str]] = {
         "arbitrum": "0x11cDb42B0EB46D95f990BeDD9975A8bd637eaD52",
         "polygon": "0x172370d5Cd63263e6e2Dc8ee21E9A47e6B9Db4E7",
         "base": "0x8ee73c484a26e0a5df2ee2a4960b789967dd0415",  # CoinGecko Base
+        "solana": "DJweeGAryejNzj52WwyijoXAjz7fg7kgD3cpeaZnkhGF",  # Solana CRV
     },
     "APE": {
         "ethereum": "0x4d224452801ACEd8B2F0aebE1553bb5b5bC243b8",
         "arbitrum": "0x7f9fbf9bdd3f4105c478b996b648fe6e828a1e98",
         "polygon": "0xb7b31a6bc18e48888545ce79e83e06003be70930",
+        "solana": "2TH9DzA7EDyYh4bdmj6F7jkH17NtPpPE3xibSUFG5mWY",  # Solana APE
     },
     "ARB": {
         "ethereum": "0xB50721BCf8d664c30432CfE8c544b0b62D093c9e",
@@ -109,39 +112,57 @@ TOKEN_ADDRESSES: dict[str, dict[str, str]] = {
     "WLD": {
         "ethereum": "0x163f8c2467924be0ae7b5347228cabf260318753",
         "optimism": "0xdc6ff44d5d932cbd77b52e5612ba0529dc6226f1",
+        "solana": "FXGjdid8JWs1iFM5hLrujRy1ZVaPnnYLi4sV8h1xGsJj",  # Solana WLD
     },
     "PEPE": {
         "ethereum": "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
         "arbitrum": "0x25d887ce7a35172c62febfd67a1856f20faebb00",
+        "solana": "A1DBHWmtuYZMpLNXE9xr4B7crD8FAxwHSDnqnk8NwAKS",  # Solana PEPE
     },
     "NEAR": {
         "ethereum": "0x85F17Cf997934a597031b2e18a9AB6EBd4b9f6a4",  # wrapped NEAR
     },
     "SOL": {
         "ethereum": "0xD31a59c85aE9D8edEFeC411D448f90841571b89c",  # Wormhole SOL
+        "solana": "So11111111111111111111111111111111111111112",  # wrapped SOL
     },
     "DOGE": {
         "base": "0xcbd06e5a2b0c65597161de254aa074e489deb510",  # cbDOGE
+        "solana": "EhD6AjTzgpBVVc9aAdVFU7ar52gAymFCYhFkMWDubCJW",  # Solana DOGE
     },
     "XRP": {
         "base": "0xcb585250f852C6c6bf90434AB21A00f02833a4af",  # cbXRP
         "ethereum": "0x39fBBABf11738317a448031930706cd3e612e1B9",  # wXRP
+        "solana": "XRPV7Lt1RM87o2gdoWytgKZuFf7vtE3QxZ2WJ5G8b38",  # Solana wXRP
     },
     "ADA": {
         "base": "0xcbADA732173e39521CDBE8bf59a6Dc85A9fc7b8c",  # cbADA
+        "solana": "ADAZbY2yd4MtWvR2Q9kkngauLJrYaKWrCC4NvSUqNu4J",  # Solana ADA
     },
     "LTC": {
         "base": "0xcb17C9Db87B595717C857a08468793f5bAb6445F",  # cbLTC
+        "solana": "LTCzLubSuBYP9wjkQZCAj6gwpCZxEjoJEbWPmUCJJcK",  # Solana LTC
     },
     "AVAX": {
         "ethereum": "0x85f138bfEE4ef8e540890CFb48F620571d67Eda3",  # Wormhole WAVAX
+        "solana": "AwGNGUsTmDN72yFSftCYWQvaMEFUGYdNuLyfqCQTVEt2",  # Solana AVAX
     },
     "DOT": {
         "ethereum": "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",  # Snowbridge DOT
+        "solana": "EZzQqEQn9P8HFvpARuvznSEaFoY1Qwr1oMfzZFHB4KQa",  # Solana DOT
     },
-    # SUI, SEI, FIL, and BCH are native/non-EVM assets for which we have not
-    # identified liquid, GeckoTerminal-tracked USDC/USDT pools on the supported
-    # EVM chains. They are intentionally omitted from the static mapping.
+    "BCH": {
+        "solana": "BCH68g7z9UuNQGXdpjzQj9QXaCDNw8iUVk7T8jo2cdKh",  # Solana BCH
+    },
+    "FIL": {
+        "solana": "C9uvqEj322rPsRwuQSLXbqtPrrMWdVBpBcZJBqyrLmZ3",  # Solana FIL
+    },
+    "SUI": {
+        "solana": "SULMRQuNUXXZs3TFWe5ZD4Xj742aGzhEqksDhkwAR9t",  # Solana SUI
+    },
+    "SEI": {
+        "solana": "2qXLuNKGMoktsyLiXDnA4bRHjcde7J5VSdN3BwzmPLy5",  # Solana SEI
+    },
 }
 
 DEFAULT_CHAIN_ALLOWLIST: set[str] = {"ethereum", "arbitrum", "polygon", "optimism", "base", "solana"}
@@ -166,6 +187,24 @@ SYMBOL_ALIASES: dict[str, set[str]] = {
 }
 # DexScreener public API is generous; keep a polite 30 req/min.
 DEFAULT_RATE_PER_MIN: float = 30.0
+
+_EVM_ADDRESS_RE: re.Pattern[str] = re.compile(r"^0x[a-fA-F0-9]{40}$")
+_SOLANA_ADDRESS_RE: re.Pattern[str] = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+
+
+def is_valid_pool_address(chain: str, address: str) -> bool:
+    """Return True if ``address`` is a plausible pool address for ``chain``.
+
+    DexScreener sometimes returns 32-byte (66-character) hex strings that are
+    not valid EVM contract addresses. Those must be rejected before enqueue.
+    """
+    if not address or not isinstance(address, str):
+        return False
+    chain = chain.lower().strip()
+    if chain == "solana":
+        return bool(_SOLANA_ADDRESS_RE.match(address))
+    # All other supported chains are EVM-compatible.
+    return bool(_EVM_ADDRESS_RE.match(address))
 
 
 def _normalize_symbol(symbol: str) -> str:
@@ -223,17 +262,31 @@ class DexPoolResolver:
             if liquidity < min_liquidity_usd or volume_24h < min_volume_24h_usd:
                 continue
             chain_id = str(best.get("chainId") or "").lower()
+            address = str(best.get("pairAddress") or "")
+            if not is_valid_pool_address(chain_id, address):
+                continue
+            # Preserve original base58 casing for Solana; EVM addresses can be
+            # lower-cased without breaking pool lookup.
+            if chain_id != "solana":
+                address = address.lower()
+            base_token_address = str(best.get("baseToken", {}).get("address") or "")
+            quote_token_address = str(best.get("quoteToken", {}).get("address") or "")
+            if chain_id != "solana":
+                base_token_address = base_token_address.lower()
+                quote_token_address = quote_token_address.lower()
             out.append({
                 "symbol": sym,
                 "chain": chain_id,
                 "gecko_network": GECKO_NETWORKS.get(chain_id, chain_id),
-                "address": str(best.get("pairAddress") or "").lower(),
+                "address": address,
                 "fee_tier": self._infer_fee_tier(best),
                 "liquidity_usd": liquidity,
                 "volume_24h_usd": volume_24h,
                 "dex_id": str(best.get("dexId") or ""),
                 "base_token": best.get("baseToken", {}).get("symbol"),
                 "quote_token": best.get("quoteToken", {}).get("symbol"),
+                "base_token_address": base_token_address,
+                "quote_token_address": quote_token_address,
             })
         return out
 
@@ -256,6 +309,43 @@ class DexPoolResolver:
             )
             pools.extend(resolved)
         return pools
+
+    def resolve_universe_with_status(
+        self,
+        symbols: Sequence[str],
+        *,
+        top_n: int = 3,
+    ) -> dict[str, Any]:
+        """Resolve pools for a list of symbols and record why assets are rejected.
+
+        Returns ``{"resolved": [...], "rejected": [...]}``.  ``resolved`` pools
+        are valid address/chain pairs that may still fail downstream liquidity
+        thresholds; ``rejected`` records assets with no known token address or
+        with invalid pair addresses returned by the resolver.
+        """
+        resolved: list[dict[str, Any]] = []
+        rejected: list[dict[str, Any]] = []
+        for sym in symbols:
+            sym = _normalize_symbol(sym)
+            token_addresses = TOKEN_ADDRESSES.get(sym)
+            if not token_addresses:
+                rejected.append({
+                    "symbol": sym,
+                    "reason": "no_token_address",
+                    "note": "no known EVM/Solana token address for this asset",
+                })
+                continue
+            pools = self.resolve_pool(sym, min_liquidity_usd=0.0, min_volume_24h_usd=0.0, top_n=top_n)
+            if pools:
+                resolved.extend(pools)
+                continue
+            # Symbol had token addresses but no valid USDC/USDT pool.
+            rejected.append({
+                "symbol": sym,
+                "reason": "no_valid_pool",
+                "note": "no valid USDC/USDT pool found with a well-formed address",
+            })
+        return {"resolved": resolved, "rejected": rejected}
 
     def _fetch_token_pairs(self, token_address: str) -> list[dict[str, Any]]:
         url = f"https://api.dexscreener.com/latest/dex/tokens/{token_address}"
@@ -283,6 +373,11 @@ class DexPoolResolver:
             chain = str(p.get("chainId") or "").lower()
             if chain not in self._chain_allowlist:
                 continue
+            # Validate the pool address in its original casing. Solana base58
+            # addresses are case-sensitive; EVM checks are case-insensitive.
+            pair_address = str(p.get("pairAddress") or "")
+            if not is_valid_pool_address(chain, pair_address):
+                continue
             base = str(p.get("baseToken", {}).get("symbol") or "").upper()
             quote = str(p.get("quoteToken", {}).get("symbol") or "").upper()
             if base not in aliases and quote not in aliases:
@@ -297,10 +392,7 @@ class DexPoolResolver:
         return out
 
     def _rank_pairs(self, pairs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Prefer Arbitrum, then Ethereum, then other EVM chains, then Solana.
-
-        Arbitrum has the best GeckoTerminal public-API coverage for DEX-002.
-        """
+        """Prefer highest liquidity, then Arbitrum/Ethereum for GeckoTerminal coverage."""
         chain_order = {
             "arbitrum": 0,
             "ethereum": 1,
@@ -312,8 +404,8 @@ class DexPoolResolver:
         return sorted(
             pairs,
             key=lambda p: (
-                chain_order.get(str(p.get("chainId") or "").lower(), 99),
                 -(p.get("liquidity", {}).get("usd") or 0.0),
+                chain_order.get(str(p.get("chainId") or "").lower(), 99),
             ),
         )
 

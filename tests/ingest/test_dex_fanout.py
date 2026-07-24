@@ -68,6 +68,8 @@ class _StaticProvider(DexOHLCVProvider):
         pool_address: str,
         min_liquidity_usd: float,
         min_volume_24h_usd: float,
+        base_token_address: str | None = None,
+        quote_token_address: str | None = None,
     ) -> dict[str, Any]:
         return {
             "provider": self._provider_id,
@@ -189,7 +191,14 @@ class _FailingProvider(DexOHLCVProvider):
         return ProviderResult(provider=self._provider_id, chain=chain, pool_address=pool_address, records=[])
 
     def screen_pool(
-        self, *, chain: str, pool_address: str, min_liquidity_usd: float, min_volume_24h_usd: float
+        self,
+        *,
+        chain: str,
+        pool_address: str,
+        min_liquidity_usd: float,
+        min_volume_24h_usd: float,
+        base_token_address: str | None = None,
+        quote_token_address: str | None = None,
     ) -> dict[str, Any]:
         return {
             "provider": self._provider_id,

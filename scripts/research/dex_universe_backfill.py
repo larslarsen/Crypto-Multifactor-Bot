@@ -66,6 +66,91 @@ def _parse_iso(value: str) -> datetime:
     return dt.astimezone(UTC)
 
 
+def _pool_key(pool: dict[str, Any]) -> tuple[str, str]:
+    return (pool.get("chain", ""), pool.get("address", ""))
+
+
+def _merge_reports(previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+    """Merge an incremental run into the cumulative DATA-010 report.
+
+    The current run's universe and ranking are authoritative. Pool results are
+    accumulated by (chain, address) so that repeated incremental runs build a
+    cumulative backfill view.
+    """
+    merged = dict(current)
+    merged_pool_results: dict[tuple[str, str], dict[str, Any]] = {}
+    for pool in previous.get("pool_results", []):
+        key = _pool_key(pool)
+        merged_pool_results[key] = dict(pool)
+    for pool in current.get("pool_results", []):
+        key = _pool_key(pool)
+        existing = merged_pool_results.get(key)
+        if existing is None:
+            merged_pool_results[key] = dict(pool)
+            continue
+        existing["record_count"] = (existing.get("record_count") or 0) + (pool.get("record_count") or 0)
+        existing["providers_used"] = sorted(set(existing.get("providers_used", [])) | set(pool.get("providers_used", [])))
+        # Expand coverage for this pool.
+        for boundary in ("first_timestamp", "last_timestamp"):
+            prev_ts = existing.get(boundary)
+            curr_ts = pool.get(boundary)
+            if prev_ts is None:
+                existing[boundary] = curr_ts
+            elif curr_ts is not None:
+                try:
+                    prev_dt = datetime.fromisoformat(prev_ts)
+                    curr_dt = datetime.fromisoformat(curr_ts)
+                    if boundary == "first_timestamp":
+                        existing[boundary] = (prev_dt if prev_dt < curr_dt else curr_dt).isoformat()
+                    else:
+                        existing[boundary] = (prev_dt if prev_dt > curr_dt else curr_dt).isoformat()
+                except ValueError:
+                    pass
+        existing["incidents"] = existing.get("incidents", []) + pool.get("incidents", [])
+
+    merged["pool_results"] = list(merged_pool_results.values())
+
+    # Rebuild pools_backfilled from the merged pool_results using the current
+    # ranked universe metadata.
+    current_info_by_key = {(p["chain"], p["address"]): p for p in current.get("pools_resolved", [])}
+    merged["pools_backfilled"] = [
+        {
+            "symbol": pool.get("symbol", ""),
+            "chain": pool["chain"],
+            "gecko_network": pool.get("gecko_network"),
+            "address": pool["address"],
+            "fee_tier": pool.get("fee_tier"),
+            "score": current_info_by_key.get(_pool_key(pool), {}).get("score"),
+            "rank": current_info_by_key.get(_pool_key(pool), {}).get("rank"),
+            "liquidity_usd": current_info_by_key.get(_pool_key(pool), {}).get("liquidity_usd"),
+            "volume_24h_usd": current_info_by_key.get(_pool_key(pool), {}).get("volume_24h_usd"),
+        }
+        for pool in merged["pool_results"]
+    ]
+
+    merged["total_records"] = (previous.get("total_records") or 0) + (current.get("total_records") or 0)
+    prev_coverage = previous.get("coverage") or {}
+    curr_coverage = current.get("coverage") or {}
+    for boundary in ("start", "end"):
+        prev_ts = prev_coverage.get(boundary)
+        curr_ts = curr_coverage.get(boundary)
+        if prev_ts is None:
+            merged["coverage"][boundary] = curr_ts
+        elif curr_ts is None:
+            merged["coverage"][boundary] = prev_ts
+        else:
+            try:
+                prev_dt = datetime.fromisoformat(prev_ts)
+                curr_dt = datetime.fromisoformat(curr_ts)
+                if boundary == "start":
+                    merged["coverage"][boundary] = (prev_dt if prev_dt < curr_dt else curr_dt).isoformat()
+                else:
+                    merged["coverage"][boundary] = (prev_dt if prev_dt > curr_dt else curr_dt).isoformat()
+            except ValueError:
+                pass
+    return merged
+
+
 def _mock_resolver_results() -> list[dict[str, Any]]:
     """Synthetic U50+ pool mappings for dry-run."""
     return [
@@ -135,9 +220,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DATA-010 — DEX universe OHLCV backfill")
     parser.add_argument("--assets", type=str, default=None,
                         help="Comma-separated U50+ asset symbols")
-    parser.add_argument("--min-liquidity", type=float, default=50_000.0)
-    parser.add_argument("--min-volume", type=float, default=10_000.0)
-    parser.add_argument("--max-pools", type=int, default=None)
+    parser.add_argument("--min-liquidity", type=float, default=0.0,
+                        help="Soft liquidity floor for ranking; pools are no longer rejected")
+    parser.add_argument("--min-volume", type=float, default=0.0,
+                        help="Soft volume floor for ranking; pools are no longer rejected")
+    parser.add_argument("--max-pools", type=int, default=None,
+                        help="Hard cap on total number of pools selected from the universe")
+    parser.add_argument("--max-pools-per-run", type=int, default=None,
+                        help="Number of pools to process per incremental run; remainder is picked up via watermarks")
     parser.add_argument("--top-n", type=int, default=3,
                         help="Top N pools per asset to resolve")
     parser.add_argument("--db-path", type=str, default="exp003.db")
@@ -168,6 +258,7 @@ def main() -> int:
         watermark_path = Path(tmpdir.name) / "watermarks.json"
         data_mode = "synthetic"
         candidates = _mock_resolver_results()
+        unresolved: list[dict[str, Any]] = []
         providers = _build_mock_providers()
     else:
         print("DATA-010: real mode — resolving U50+ pools and backfilling", file=sys.stderr)
@@ -176,12 +267,9 @@ def main() -> int:
         watermark_path = Path(args.watermark_path)
         data_mode = "real_asof"
         resolver = DexPoolResolver()
-        candidates = resolver.resolve_universe(
-            assets,
-            min_liquidity_usd=args.min_liquidity,
-            min_volume_24h_usd=args.min_volume,
-            top_n=args.top_n,
-        )
+        status = resolver.resolve_universe_with_status(assets, top_n=args.top_n)
+        candidates = status["resolved"]
+        unresolved = status["rejected"]
         providers = {
             "geckoterminal": GeckoTerminalProvider(),
             "dexscreener": DexScreenerProvider(),
@@ -197,16 +285,19 @@ def main() -> int:
     seen: dict[str, dict[str, Any]] = {}
     unique_candidates: list[dict[str, Any]] = []
     for p in candidates:
-        key = (p.get("chain") or "").lower() + ":" + (p.get("address") or "").lower()
+        # Keep Solana address casing for deduplication keys.
+        key = (p.get("chain") or "").lower() + ":" + (p.get("address") or "")
         if key in seen:
             continue
         seen[key] = p
         unique_candidates.append(p)
     candidates = unique_candidates
 
-    # Screen and prioritize.
-    screened = [p for p in candidates if p["liquidity_usd"] >= args.min_liquidity and p["volume_24h_usd"] >= args.min_volume]
-    rejected = [p for p in candidates if p not in screened]
+    # Rank the full resolved universe by liquidity*volume; do not reject pools
+    # for low liquidity. Only hard limits (top-N per asset and optional max_pools)
+    # trim the list.
+    screened = list(candidates)
+    rejected: list[dict[str, Any]] = []
     for p in screened:
         p["score"] = score_pool(p)
     screened.sort(key=lambda p: p["score"], reverse=True)
@@ -216,7 +307,8 @@ def main() -> int:
     for i, p in enumerate(screened):
         p["rank"] = i + 1
 
-    print(f"DATA-010: {len(screened)} pools after screening, {len(rejected)} rejected", file=sys.stderr)
+    print(f"DATA-010: {len(screened)} pools selected, {len(rejected)} pool-level rejected", file=sys.stderr)
+    print(f"DATA-010: {len(unresolved)} unresolved assets", file=sys.stderr)
 
     if not screened:
         print("DATA-010: no pools to backfill", file=sys.stderr)
@@ -230,6 +322,8 @@ def main() -> int:
             "address": p["address"],
             "fee_tier": p.get("fee_tier"),
             "symbol": p["symbol"],
+            "base_token_address": p.get("base_token_address"),
+            "quote_token_address": p.get("quote_token_address"),
         }
         for p in screened
     ]
@@ -239,7 +333,11 @@ def main() -> int:
         screening_gate=ScreeningGate(min_liquidity_usd=0.0, min_volume_24h_usd=0.0),
         watermark_store=ShardedWatermarkStore(watermark_path),
     )
-    work_items = engine.screen_and_enqueue(candidate_pools, end_time=end_time)
+    work_items = engine.screen_and_enqueue(
+        candidate_pools,
+        end_time=end_time,
+        max_pools_per_run=args.max_pools_per_run,
+    )
     print(f"DATA-010: {len(work_items)} work items enqueued", file=sys.stderr)
     pool_results = engine.run_work_items(work_items)
     engine.update_watermarks(pool_results)
@@ -254,6 +352,9 @@ def main() -> int:
     pool_symbol_by_address: dict[tuple[str, str], str] = {
         (p["chain"], p["address"]): p["symbol"] for p in screened
     }
+    pool_info_by_address: dict[tuple[str, str], dict[str, Any]] = {
+        (p["chain"], p["address"]): p for p in screened
+    }
 
     # Build table using the same schema as DEX-002.
     import pyarrow as pa
@@ -262,7 +363,7 @@ def main() -> int:
         "timestamp": [r.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") for r in all_records],
         "timestamp_us": [int(r.timestamp.timestamp() * 1_000_000) for r in all_records],
         "chain": [r.chain for r in all_records],
-        "pool_address": [r.pool_address.lower() for r in all_records],
+        "pool_address": [r.pool_address for r in all_records],
         "fee_tier": [r.fee_tier or "" for r in all_records],
         "open": [r.open for r in all_records],
         "high": [r.high for r in all_records],
@@ -357,8 +458,9 @@ def main() -> int:
             "min_liquidity_usd": args.min_liquidity,
             "min_volume_24h_usd": args.min_volume,
             "max_pools": args.max_pools,
+            "max_pools_per_run": args.max_pools_per_run,
         },
-        "pools_backfilled": [
+        "pools_resolved": [
             {
                 "symbol": p["symbol"],
                 "chain": p["chain"],
@@ -371,6 +473,21 @@ def main() -> int:
                 "volume_24h_usd": p["volume_24h_usd"],
             }
             for p in screened
+        ],
+        "pools_backfilled": [
+            {
+                "symbol": pool_symbol_by_address.get((r.chain, r.pool_address), ""),
+                "chain": r.chain,
+                "gecko_network": r.gecko_network,
+                "address": r.pool_address,
+                "fee_tier": r.fee_tier,
+                "score": pool_info.get("score"),
+                "rank": pool_info.get("rank"),
+                "liquidity_usd": pool_info.get("liquidity_usd"),
+                "volume_24h_usd": pool_info.get("volume_24h_usd"),
+            }
+            for r in pool_results
+            if (pool_info := pool_info_by_address.get((r.chain, r.pool_address))) is not None
         ],
         "pool_results": [
             {
@@ -393,14 +510,23 @@ def main() -> int:
         "rejected_pools": [
             {
                 "symbol": p["symbol"],
-                "chain": p["chain"],
-                "gecko_network": p.get("gecko_network") or p["chain"],
-                "address": p["address"],
-                "liquidity_usd": p["liquidity_usd"],
-                "volume_24h_usd": p["volume_24h_usd"],
-                "reason": "screen_failed",
+                "chain": p.get("chain"),
+                "gecko_network": p.get("gecko_network") or p.get("chain"),
+                "address": p.get("address"),
+                "liquidity_usd": p.get("liquidity_usd"),
+                "volume_24h_usd": p.get("volume_24h_usd"),
+                "reason": p.get("reason", "screen_failed"),
+                "threshold": p.get("threshold"),
             }
             for p in rejected
+        ],
+        "unresolved_assets": [
+            {
+                "symbol": p["symbol"],
+                "reason": p.get("reason", "no_token_address"),
+                "note": p.get("note"),
+            }
+            for p in unresolved
         ],
         "dataset_id": result.dataset_id,
         "dataset_type": DATASET_TYPE,
@@ -426,6 +552,16 @@ def main() -> int:
         "live_eligible_note": "DATA-010 is a research DEX universe backfill; no LIVE authorization.",
         "generated_at": datetime.now(UTC).isoformat(),
     }
+
+    if not args.dry_run:
+        previous = None
+        if report_path.exists():
+            try:
+                previous = json.loads(report_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                previous = None
+        if previous is not None:
+            report = _merge_reports(previous, report)
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")

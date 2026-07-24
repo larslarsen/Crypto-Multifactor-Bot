@@ -1,7 +1,7 @@
 # DATA-010 — DEX Universe Asset OHLCV Backfill (U50+ Trading Assets)
 
 **Priority:** P1
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** DATA-007 (ACCEPTED), DEX-002 (ACCEPTED), UNIVERSE-004 (ACCEPTED), DATA-006 (ACCEPTED)
 **Layer:** acquisition / dex
 **Architecture:** extend existing `dex_multi_provider_fanout.py` fan-out engine; use DATA-007 `recommended_fanout` sources. **No LIVE. No Birdeye OHLCV.**
@@ -20,7 +20,7 @@ DATA-006 backfilled only two Uniswap V3 USDC/USDT stablecoin pools on Arbitrum (
 
 1. **U50+ DEX universe identification** — For each U50+ trading asset (BTC, ETH, SOL, XRP, ADA, AVAX, DOT, LINK, LTC, BCH, DOGE, UNI, AAVE, CRV, APE, NEAR, FIL, ARB, OP, SUI, SEI, WLD, PEPE), resolve the primary DEX pool addresses on the highest-liquidity chains (Ethereum mainnet, Arbitrum, Polygon) where the pair is quoted against USDC or USDT. These pool addresses become the `candidate_pools` input.
 
-2. **Asset prioritization by screening characteristics** — Screen each pool using DexScreener (secondary) for current liquidity and 24h volume. Sort by a composite score (e.g. `sqrt(liquidity_usd * volume_24h_usd)`). High-score assets are backfilled first, ensuring rate-limit budget is spent on the most liquid, highest-signal assets. Configurable threshold: `--min-liquidity 50000 --min-volume 10000`.
+2. **Asset prioritization by screening characteristics** — Score each pool using DexScreener (secondary) for current liquidity and 24h volume. Sort by a composite score (e.g. `sqrt(liquidity_usd * volume_24h_usd)`). Highest-score assets are backfilled first; lowest-score assets backfilled last. **No pool is rejected for low liquidity** — every resolved pool gets backfilled, just in rank order. A pool that cannot be resolved at all (no address found on any chain) is the only case that should be skipped.
 
 3. **Multi-provider backfill per DEX-002 fan-out pattern**:
    - **GeckoTerminal (primary):** ~180-day OHLCV history per pool, ~6 req/min, ~720 pools/day.
@@ -36,10 +36,10 @@ DATA-006 backfilled only two Uniswap V3 USDC/USDT stablecoin pools on Arbitrum (
    - record count per pool
    - provider breakdown (which sources filled each pool)
    - coverage start/end per pool
-   - priority ranking (score, rank)
-   - rate-limit incidents (429s, backoffs, timeouts)
-   - rejected pools (screen failures with reasons)
-   - total records published
+    - priority ranking (score, rank)
+    - rate-limit incidents (429s, backoffs, timeouts)
+    - unresolvable pools (no address on any chain, skipped)
+    - total records published
    - pinned dataset id with catalog reconciliation
 
 ### Out of scope
@@ -60,7 +60,7 @@ For each U50+ trading asset (BTC, ETH, SOL, XRP, ADA, AVAX, DOT, LINK, LTC, BCH,
 1. Pool address resolution script or mapping for U50+ trading assets to DEX pool addresses on primary chains.
 2. Priority scoring logic: screen → score → sort → backfill in rank order.
 3. Extended `dex_multi_provider_fanout.py` (or a dedicated `backfill_dex_universe_pools.py`) supporting asset-priority sorting and the full U50+ pool set.
-4. Published `dex_ohlcv_fanout` canonical dataset covering all screened U50+ pools.
+4. Published `dex_ohlcv_fanout` canonical dataset covering all resolvable U50+ pools.
 5. Report `40_DEX_UNIVERSE_BACKFILL.json`.
 
 ## Acceptance (Jr)
@@ -68,7 +68,7 @@ For each U50+ trading asset (BTC, ETH, SOL, XRP, ADA, AVAX, DOT, LINK, LTC, BCH,
 1. `.venv/bin/python -m pytest tests/ -q --tb=short`
 2. `.venv/bin/python -m ruff check src/cryptofactors/ scripts/`
 3. `40_DEX_UNIVERSE_BACKFILL.json` present with ≥20 U50+ backfilled pools, per-pool coverage, priority ranking, and dataset id
-4. Pools with zero liquidity/volume are rejected with documented screen failure
+4. All resolvable U50+ pools are backfilled (none rejected for low liquidity); unresolvable pools documented with reason
 5. `python3 scripts/check_repo_control.py`
 
 ## Stop Condition

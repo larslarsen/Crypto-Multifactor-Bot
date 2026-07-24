@@ -150,6 +150,15 @@ class DexOHLCVProvider(ABC):
     def role(self) -> str:
         """primary | secondary | tertiary."""
 
+    @property
+    def produces_ohlcv(self) -> bool:
+        """Whether this provider contributes OHLCV records for gap-fill/merge.
+
+        Tertiary providers (e.g., DefiLlama) may only provide screening context
+        and do not produce time-series data. They are excluded from work items.
+        """
+        return True
+
     @abstractmethod
     def fetch_pool_ohlcv(
         self,
@@ -169,6 +178,8 @@ class DexOHLCVProvider(ABC):
         pool_address: str,
         min_liquidity_usd: float,
         min_volume_24h_usd: float,
+        base_token_address: str | None = None,
+        quote_token_address: str | None = None,
     ) -> dict[str, Any]:
         """Return pool metadata for screening; default empty."""
         return {
@@ -435,6 +446,8 @@ class DexScreenerProvider(DexOHLCVProvider):
         pool_address: str,
         min_liquidity_usd: float,
         min_volume_24h_usd: float,
+        base_token_address: str | None = None,
+        quote_token_address: str | None = None,
     ) -> dict[str, Any]:
         url = f"https://api.dexscreener.com/latest/dex/pairs/{chain}/{pool_address}"
         try:
@@ -508,6 +521,10 @@ class DefiLlamaProvider(DexOHLCVProvider):
     def role(self) -> str:
         return "tertiary"
 
+    @property
+    def produces_ohlcv(self) -> bool:
+        return False
+
     def _get(self, url: str) -> httpx.Response:
         if self._client:
             return self._client.get(url)
@@ -538,17 +555,65 @@ class DefiLlamaProvider(DexOHLCVProvider):
         pool_address: str,
         min_liquidity_usd: float,
         min_volume_24h_usd: float,
+        base_token_address: str | None = None,
+        quote_token_address: str | None = None,
     ) -> dict[str, Any]:
-        # DefiLlama pool lookup is by pool id, not address; skip in base implementation.
-        return {
-            "provider": self.provider_id,
-            "chain": chain,
-            "pool_address": pool_address,
-            "liquidity_usd": None,
-            "volume_24h_usd": None,
-            "passed": True,
-            "note": "tertiary provider defers screening",
-        }
+        """Validate token prices via DefiLlama Coins as tertiary context.
+
+        When token addresses are available, the coins endpoint is a real,
+        pool-agnostic request that exercises the DefiLlama tier without
+        fetching OHLCV.
+        """
+        if not base_token_address or not quote_token_address:
+            return {
+                "provider": self.provider_id,
+                "chain": chain,
+                "pool_address": pool_address,
+                "liquidity_usd": None,
+                "volume_24h_usd": None,
+                "passed": True,
+                "note": "tertiary provider defers screening (no token addresses)",
+            }
+
+        coins = [f"{chain}:{base_token_address}", f"{chain}:{quote_token_address}"]
+        url = f"https://coins.llama.fi/prices/current/{','.join(coins)}"
+        self._rate_limiter.acquire(provider=self.provider_id, chain=chain, pool_address=pool_address)
+        try:
+            r = self._get(url)
+            if r.status_code != 200:
+                return {
+                    "provider": self.provider_id,
+                    "chain": chain,
+                    "pool_address": pool_address,
+                    "liquidity_usd": None,
+                    "volume_24h_usd": None,
+                    "passed": False,
+                    "note": f"HTTP {r.status_code}",
+                }
+            data = r.json()
+            prices = data.get("coins") or {}
+            matched = [c for c in coins if c in prices and float(prices[c].get("price") or 0.0) > 0.0]
+            passed = len(matched) > 0
+            return {
+                "provider": self.provider_id,
+                "chain": chain,
+                "pool_address": pool_address,
+                "liquidity_usd": None,
+                "volume_24h_usd": None,
+                "passed": passed,
+                "note": f"DefiLlama coins matched {len(matched)}/{len(coins)} tokens",
+                "matched_coins": matched,
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "provider": self.provider_id,
+                "chain": chain,
+                "pool_address": pool_address,
+                "liquidity_usd": None,
+                "volume_24h_usd": None,
+                "passed": False,
+                "note": str(exc),
+            }
 
 
 # ---------------------------------------------------------------------------
@@ -568,33 +633,41 @@ class ScreeningGate:
         chain: str,
         pool_address: str,
         providers: Sequence[DexOHLCVProvider],
+        base_token_address: str | None = None,
+        quote_token_address: str | None = None,
     ) -> dict[str, Any]:
+        """Screen a pool against all providers and return a single verdict.
+
+        Every provider is called so that the tertiary provider (DefiLlama)
+        contributes real context even when the primary provider already passes.
+        """
         results = []
+        passed = False
+        first_passed_provider: str | None = None
+        first_passed_liquidity: float | None = None
+        first_passed_volume: float | None = None
         for provider in providers:
             res = provider.screen_pool(
                 chain=chain,
                 pool_address=pool_address,
                 min_liquidity_usd=self.min_liquidity_usd,
                 min_volume_24h_usd=self.min_volume_24h_usd,
+                base_token_address=base_token_address,
+                quote_token_address=quote_token_address,
             )
             results.append(res)
-            if res.get("passed"):
-                return {
-                    "chain": chain,
-                    "pool_address": pool_address,
-                    "passed": True,
-                    "provider": provider.provider_id,
-                    "liquidity_usd": res.get("liquidity_usd"),
-                    "volume_24h_usd": res.get("volume_24h_usd"),
-                    "screen_results": results,
-                }
+            if res.get("passed") and not passed:
+                passed = True
+                first_passed_provider = provider.provider_id
+                first_passed_liquidity = res.get("liquidity_usd")
+                first_passed_volume = res.get("volume_24h_usd")
         return {
             "chain": chain,
             "pool_address": pool_address,
-            "passed": False,
-            "provider": None,
-            "liquidity_usd": None,
-            "volume_24h_usd": None,
+            "passed": passed,
+            "provider": first_passed_provider,
+            "liquidity_usd": first_passed_liquidity,
+            "volume_24h_usd": first_passed_volume,
             "screen_results": results,
         }
 
@@ -717,19 +790,29 @@ class DEXFanOutEngine:
         self._watermarks: dict[str, str] = dict(watermarks) if watermarks else watermark_store.load()
         self._screen_results: list[dict[str, Any]] = []
         self._dead_pools: list[dict[str, Any]] = []
+        self._last_work_items: list[WorkItem] = []
 
     def screen_and_enqueue(
         self,
         candidate_pools: Sequence[dict[str, Any]],
         *,
         end_time: datetime,
+        max_pools_per_run: int | None = None,
     ) -> list[WorkItem]:
-        """Screen candidate pools and produce work items for active ones."""
+        """Screen candidate pools and produce work items for active ones.
+
+        Candidate pools are assumed to be supplied in priority order. When
+        ``max_pools_per_run`` is set, only the top N active pools (those that
+        still have work to do) are scheduled; the rest are left for the next run
+        via the watermark store.
+        """
         work: list[WorkItem] = []
+        active_pools: list[tuple[dict[str, Any], list[WorkItem]]] = []
         for pool in candidate_pools:
             chain = str(pool.get("chain") or "arbitrum").strip().lower()
             gecko_network = str(pool.get("gecko_network") or chain).strip().lower()
-            address = str(pool.get("address") or "").strip().lower()
+            # Preserve original casing for Solana addresses; they are case-sensitive.
+            address = str(pool.get("address") or "").strip()
             fee_tier = str(pool.get("fee_tier") or "").strip() or None
             if not address:
                 continue
@@ -738,6 +821,8 @@ class DEXFanOutEngine:
                 chain=chain,
                 pool_address=address,
                 providers=list(self._providers.values()),
+                base_token_address=pool.get("base_token_address"),
+                quote_token_address=pool.get("quote_token_address"),
             )
             self._screen_results.append(screen)
 
@@ -750,17 +835,20 @@ class DEXFanOutEngine:
                 })
                 continue
 
-            # Only primary provider is used for full backfill; secondary/tertiary
-            # are used for gap-fill later in the merge step.
+            # Only providers that actually produce OHLCV time-series are
+            # scheduled. Tertiary providers contribute during screening.
             provider_order = sorted(
                 self._providers.values(),
                 key=lambda p: PRIORITY.get(p.provider_id, 99),
             )
+            pending_items: list[WorkItem] = []
             for provider in provider_order:
+                if not provider.produces_ohlcv:
+                    continue
                 start = load_watermark(self._watermarks, provider.provider_id, chain, address)
                 if start >= end_time:
                     continue
-                work.append(
+                pending_items.append(
                     WorkItem(
                         provider=provider.provider_id,
                         chain=chain,
@@ -771,10 +859,21 @@ class DEXFanOutEngine:
                         gecko_network=gecko_network,
                     )
                 )
+            # A pool is considered active for this run if it has at least one
+            # OHLCV provider with work remaining.
+            if pending_items:
+                active_pools.append((pool, pending_items))
+
+        if max_pools_per_run is not None:
+            active_pools = active_pools[:max_pools_per_run]
+
+        for _pool, pending_items in active_pools:
+            work.extend(pending_items)
         return work
 
     def run_work_items(self, work_items: Sequence[WorkItem]) -> list[PoolBackfillResult]:
         """Fetch OHLCV for all work items and merge per pool."""
+        self._last_work_items = list(work_items)
         by_pool: dict[tuple[str, str], list[ProviderResult]] = {}
         gecko_network_by_key: dict[tuple[str, str], str] = {}
         for item in work_items:
@@ -813,12 +912,26 @@ class DEXFanOutEngine:
         return pool_results
 
     def update_watermarks(self, pool_results: Sequence[PoolBackfillResult]) -> None:
+        """Advance watermarks for every provider that was scheduled.
+
+        Providers that returned records advance to the last timestamp. Providers
+        that returned empty records (e.g., failures or no data) advance to the
+        end_time of the work item so the next run does not waste rate-limit
+        budget on them.
+        """
+        last_timestamp_by_key: dict[tuple[str, str, str], datetime] = {}
         for res in pool_results:
-            if res.last_timestamp is None:
-                continue
-            for provider_id in res.providers_used:
-                key = _watermark_key(provider_id, res.chain, res.pool_address)
-                self._watermarks[key] = res.last_timestamp.isoformat()
+            if res.last_timestamp is not None:
+                for provider_id in res.providers_used:
+                    key = (provider_id, res.chain, res.pool_address)
+                    last_timestamp_by_key[key] = res.last_timestamp
+
+        for item in self._last_work_items:
+            key = (item.provider, item.chain, item.pool_address)
+            ts = last_timestamp_by_key.get(key)
+            if ts is None:
+                ts = item.end_time
+            self._watermarks[_watermark_key(*key)] = ts.isoformat()
 
     def mark_dead_pools(
         self,
