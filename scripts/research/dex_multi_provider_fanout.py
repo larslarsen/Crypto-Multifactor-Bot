@@ -19,7 +19,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -45,8 +45,8 @@ from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
 from cryptofactors.catalog.dataset.publisher import DatasetPublisher
 from cryptofactors.catalog.runner import apply_migrations
 from cryptofactors.ingest.dex_fanout import (
-    DEXFanOutEngine,
     DefiLlamaProvider,
+    DEXFanOutEngine,
     DexOHLCVProvider,
     DexScreenerProvider,
     GeckoTerminalProvider,
@@ -55,7 +55,7 @@ from cryptofactors.ingest.dex_fanout import (
     build_dex_fanout_table,
 )
 
-UTC = timezone.utc
+UTC = UTC
 
 WATERMARK_PATH = Path("data/dex_fanout_watermarks.json")
 DEFAULT_POOLS = [

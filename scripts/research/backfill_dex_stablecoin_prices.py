@@ -14,7 +14,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +43,7 @@ from cryptofactors.ingest.dex_ohlcv import (
     build_dex_ohlcv_table,
 )
 
-UTC = timezone.utc
+UTC = UTC
 
 # Uniswap V3 USDC/USDT pools on Arbitrum One.
 # Addresses are case-insensitive; stored lower-case for consistency.

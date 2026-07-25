@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +16,6 @@ from cryptofactors.execution.models import PaperOpsStatus
 from cryptofactors.execution.paper import PaperBroker
 from cryptofactors.promotion import PromotionError, PromotionRegistry, PromotionTarget
 
-UTC = timezone.utc
 DEFAULT_OPS_STATUS_PATH = Path("research/sprint_004/09_PAPER_OPS_STATUS.json")
 
 
@@ -74,8 +73,7 @@ class PaperOpsMonitor:
             else:
                 last_equity = broker.get_cash()
             initial_cash = 100_000.0
-            if last_equity > peak_equity:
-                peak_equity = last_equity
+            peak_equity = max(peak_equity, last_equity)
 
         net_return = (last_equity - initial_cash) / initial_cash
         drawdown = max(0.0, (peak_equity - last_equity) / peak_equity) if peak_equity > 0 else 0.0

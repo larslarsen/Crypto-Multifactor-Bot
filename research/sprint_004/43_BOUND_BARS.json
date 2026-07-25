@@ -1,0 +1,459 @@
+{
+  "experiment_id": "DATA-011",
+  "data_mode": "real_asof",
+  "symbols_requested": [
+    "XBTUSD",
+    "ETHUSD",
+    "SOLUSD",
+    "XRPUSD",
+    "ADAUSD",
+    "AVAXUSD",
+    "DOTUSD",
+    "LINKUSD",
+    "LTCUSD",
+    "BCHUSD",
+    "DOGEUSD",
+    "UNIUSD",
+    "AAVEUSD",
+    "CRVUSD",
+    "APEUSD",
+    "NEARUSD",
+    "FILUSD",
+    "ARBUSD",
+    "OPUSD",
+    "SUIUSD",
+    "SEIUSD",
+    "WLDUSD",
+    "PEPEUSD"
+  ],
+  "symbols_excluded": [],
+  "symbols_backfilled": [
+    "XBTUSD",
+    "ETHUSD",
+    "SOLUSD",
+    "XRPUSD",
+    "ADAUSD",
+    "AVAXUSD",
+    "DOTUSD",
+    "LINKUSD",
+    "LTCUSD",
+    "BCHUSD",
+    "DOGEUSD",
+    "UNIUSD",
+    "AAVEUSD",
+    "CRVUSD",
+    "APEUSD",
+    "NEARUSD",
+    "FILUSD",
+    "ARBUSD",
+    "OPUSD",
+    "SUIUSD",
+    "SEIUSD",
+    "WLDUSD",
+    "PEPEUSD"
+  ],
+  "exclusion_count": 0,
+  "backfill_count": 23,
+  "source_dataset_ids": [
+    "ds_791922db203841bedffab4e59be313869e18ef57c6abe6d683a5db784c6269a3",
+    "ds_b886a84545edc57b0ae5e1a3bb3ed99f6c2d1783b6cd4fd696200a5e7b948d03",
+    "ds_ec56a4d24e2225e10078ed9a2ef2c29653c086424d2cb7377f549a6bf709e16b",
+    "ds_7d05cb92235acc65acead4320aae2f24b7d0ca87c60af9228ff1914b15277528",
+    "ds_3c70823208a727f53c7a0658e2a063a6250ca5e7a64debd2a7b0c760259dfc4a",
+    "ds_31dc71c6c1c3dc17dc1a905100e71033d41825b702cd4e519d87ae17abdcf533",
+    "ds_a8e1b580f7e028d25b10a8aa09752b0658719b358e802b22b63cb2fb275dc5f8",
+    "ds_9e7fe92a9d3915eabf406aa3ce77494923b29e3839461eaa65114518892d90c5",
+    "ds_17ea798c19f43ab969a319fe7155dd2d876bca8b8ac789b17b88079901d5fd34",
+    "ds_bb8bbc6e1b51c74adfd27d8a3b3747ed284b5d720a710a882ff9a0b871f1e3c9",
+    "ds_fcddceb4185d1a429c5f1d1fe2eb98bbc169bd5b49f7c9cacd750f5ca9b30bb7",
+    "ds_6aa9858756836fa51eb14baf42a7dbf2c751cc10a56484c98eaef437adc0fe69",
+    "ds_5037dfbb1adafb66b7d210dfb1b676a476b45744c456af4b1f8487a07338222e",
+    "ds_5ac53460cee1ee13bf693a81e385a2efd0c4b7b8a1d542261277ed9e8cc371c8",
+    "ds_dd0a83e9e109ce1d45cf6ad92db9a34dbc453c54d93fb9194551589b81d0be66",
+    "ds_274c72f1fdb416ae031cca23f95a08ae5b0d47715b444cf348c81c91c4ce0f3b",
+    "ds_58f38ca87e0f0b25480ca83f19a09f38920e98115392fe65dceef6f5004f15a4",
+    "ds_14204c9e47cb3cbd19a404c44ae874a716da29c6ef1fc8a9f0bf98c52847ab4c",
+    "ds_b6baa1f85c89f55ef36f31b45046017d1788f93766d5b26c2abc52c51da1a000",
+    "ds_973164149340fbca6094a9e08a26b74155a5589354553bfd5c9406e510f34c66",
+    "ds_cd609eb0e6201651574f395ec7e9a47796e40f7064b70b93b869c776becf7216",
+    "ds_b6142d8645b21a483fbba6ac88e9cd3549649c529f98d0635895ad8e551f1a28"
+  ],
+  "canonical_dataset_id": "ds_2bf3bf423a0c751e856dad506f12b6d8b4185b01f7408c46d76a9e7eed3f1497",
+  "canonical_quality_status": "PASS",
+  "total_bar_count": 84470,
+  "per_symbol": [
+    {
+      "paper_symbol": "XBTUSD",
+      "binance_symbol": "BTCUSDT",
+      "instrument_id": 1,
+      "source_dataset_id": "ds_791922db203841bedffab4e59be313869e18ef57c6abe6d683a5db784c6269a3",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "ETHUSD",
+      "binance_symbol": "ETHUSDT",
+      "instrument_id": 2,
+      "source_dataset_id": "ds_b886a84545edc57b0ae5e1a3bb3ed99f6c2d1783b6cd4fd696200a5e7b948d03",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "SOLUSD",
+      "binance_symbol": "SOLUSDT",
+      "instrument_id": 3,
+      "source_dataset_id": "ds_ec56a4d24e2225e10078ed9a2ef2c29653c086424d2cb7377f549a6bf709e16b",
+      "event_start": "2020-08-11T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2151
+    },
+    {
+      "paper_symbol": "XRPUSD",
+      "binance_symbol": "XRPUSDT",
+      "instrument_id": 4,
+      "source_dataset_id": "ds_7d05cb92235acc65acead4320aae2f24b7d0ca87c60af9228ff1914b15277528",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "ADAUSD",
+      "binance_symbol": "ADAUSDT",
+      "instrument_id": 5,
+      "source_dataset_id": "ds_3c70823208a727f53c7a0658e2a063a6250ca5e7a64debd2a7b0c760259dfc4a",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "AVAXUSD",
+      "binance_symbol": "AVAXUSDT",
+      "instrument_id": 6,
+      "source_dataset_id": "ds_31dc71c6c1c3dc17dc1a905100e71033d41825b702cd4e519d87ae17abdcf533",
+      "event_start": "2020-09-22T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2109
+    },
+    {
+      "paper_symbol": "DOTUSD",
+      "binance_symbol": "DOTUSDT",
+      "instrument_id": 7,
+      "source_dataset_id": "ds_a8e1b580f7e028d25b10a8aa09752b0658719b358e802b22b63cb2fb275dc5f8",
+      "event_start": "2020-08-18T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2144
+    },
+    {
+      "paper_symbol": "LINKUSD",
+      "binance_symbol": "LINKUSDT",
+      "instrument_id": 8,
+      "source_dataset_id": "ds_9e7fe92a9d3915eabf406aa3ce77494923b29e3839461eaa65114518892d90c5",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "LTCUSD",
+      "binance_symbol": "LTCUSDT",
+      "instrument_id": 9,
+      "source_dataset_id": "ds_17ea798c19f43ab969a319fe7155dd2d876bca8b8ac789b17b88079901d5fd34",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "BCHUSD",
+      "binance_symbol": "BCHUSDT",
+      "instrument_id": 10,
+      "source_dataset_id": "ds_bb8bbc6e1b51c74adfd27d8a3b3747ed284b5d720a710a882ff9a0b871f1e3c9",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2374
+    },
+    {
+      "paper_symbol": "UNIUSD",
+      "binance_symbol": "UNIUSDT",
+      "instrument_id": 12,
+      "source_dataset_id": "ds_fcddceb4185d1a429c5f1d1fe2eb98bbc169bd5b49f7c9cacd750f5ca9b30bb7",
+      "event_start": "2020-09-17T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2114
+    },
+    {
+      "paper_symbol": "AAVEUSD",
+      "binance_symbol": "AAVEUSDT",
+      "instrument_id": 13,
+      "source_dataset_id": "ds_6aa9858756836fa51eb14baf42a7dbf2c751cc10a56484c98eaef437adc0fe69",
+      "event_start": "2020-10-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2086
+    },
+    {
+      "paper_symbol": "CRVUSD",
+      "binance_symbol": "CRVUSDT",
+      "instrument_id": 14,
+      "source_dataset_id": "ds_5037dfbb1adafb66b7d210dfb1b676a476b45744c456af4b1f8487a07338222e",
+      "event_start": "2020-08-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2147
+    },
+    {
+      "paper_symbol": "APEUSD",
+      "binance_symbol": "APEUSDT",
+      "instrument_id": 15,
+      "source_dataset_id": "ds_5ac53460cee1ee13bf693a81e385a2efd0c4b7b8a1d542261277ed9e8cc371c8",
+      "event_start": "2022-03-17T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1568
+    },
+    {
+      "paper_symbol": "NEARUSD",
+      "binance_symbol": "NEARUSDT",
+      "instrument_id": 16,
+      "source_dataset_id": "ds_dd0a83e9e109ce1d45cf6ad92db9a34dbc453c54d93fb9194551589b81d0be66",
+      "event_start": "2020-10-14T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2087
+    },
+    {
+      "paper_symbol": "FILUSD",
+      "binance_symbol": "FILUSDT",
+      "instrument_id": 17,
+      "source_dataset_id": "ds_274c72f1fdb416ae031cca23f95a08ae5b0d47715b444cf348c81c91c4ce0f3b",
+      "event_start": "2020-10-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 2086
+    },
+    {
+      "paper_symbol": "ARBUSD",
+      "binance_symbol": "ARBUSDT",
+      "instrument_id": 18,
+      "source_dataset_id": "ds_58f38ca87e0f0b25480ca83f19a09f38920e98115392fe65dceef6f5004f15a4",
+      "event_start": "2023-03-23T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1197
+    },
+    {
+      "paper_symbol": "OPUSD",
+      "binance_symbol": "OPUSDT",
+      "instrument_id": 19,
+      "source_dataset_id": "ds_14204c9e47cb3cbd19a404c44ae874a716da29c6ef1fc8a9f0bf98c52847ab4c",
+      "event_start": "2022-06-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1492
+    },
+    {
+      "paper_symbol": "SUIUSD",
+      "binance_symbol": "SUIUSDT",
+      "instrument_id": 20,
+      "source_dataset_id": "ds_b6baa1f85c89f55ef36f31b45046017d1788f93766d5b26c2abc52c51da1a000",
+      "event_start": "2023-05-03T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1156
+    },
+    {
+      "paper_symbol": "SEIUSD",
+      "binance_symbol": "SEIUSDT",
+      "instrument_id": 21,
+      "source_dataset_id": "ds_973164149340fbca6094a9e08a26b74155a5589354553bfd5c9406e510f34c66",
+      "event_start": "2023-08-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1052
+    },
+    {
+      "paper_symbol": "WLDUSD",
+      "binance_symbol": "WLDUSDT",
+      "instrument_id": 22,
+      "source_dataset_id": "ds_cd609eb0e6201651574f395ec7e9a47796e40f7064b70b93b869c776becf7216",
+      "event_start": "2023-07-24T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1074
+    },
+    {
+      "paper_symbol": "PEPEUSD",
+      "binance_symbol": "PEPEUSDT",
+      "instrument_id": 23,
+      "source_dataset_id": "ds_b6142d8645b21a483fbba6ac88e9cd3549649c529f98d0635895ad8e551f1a28",
+      "event_start": "2023-05-05T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00",
+      "row_count": 1154
+    }
+  ],
+  "per_symbol_coverage": [
+    {
+      "instrument_id": 1,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 2,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 3,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-08-11T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 4,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 5,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 6,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-09-22T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 7,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-08-18T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 8,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 9,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 10,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-01-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 12,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-09-17T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 13,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-10-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 14,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-08-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 15,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2022-03-17T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 16,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-10-14T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 17,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2020-10-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 18,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2023-03-23T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 19,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2022-06-01T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 20,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2023-05-03T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 21,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2023-08-15T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 22,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2023-07-24T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    },
+    {
+      "instrument_id": 23,
+      "venue_id": "binance",
+      "interval": "1d",
+      "event_start": "2023-05-05T00:00:00+00:00",
+      "event_end": "2026-07-01T00:00:00+00:00"
+    }
+  ],
+  "catalog_reconciliation": {
+    "report_pinned_dataset_id": "ds_2bf3bf423a0c751e856dad506f12b6d8b4185b01f7408c46d76a9e7eed3f1497",
+    "resolve_latest_by_type": "ds_2bf3bf423a0c751e856dad506f12b6d8b4185b01f7408c46d76a9e7eed3f1497",
+    "match": true
+  },
+  "survivorship_join": {
+    "cmc_records_loaded": 1756,
+    "cmc_symbols_matched": 4,
+    "cmc_unique_symbols": 1663,
+    "graveyard_source": "data/survivorship/cmc_dead_universe_full.csv"
+  },
+  "date_range": {
+    "start": "2020-01-01T00:00:00+00:00",
+    "end": "2026-07-01T00:00:00+00:00"
+  },
+  "gate_status": "OK",
+  "live_eligible": false,
+  "live_eligible_note": "DATA-011 is a bound-bar dataset ticket; no LIVE authorization.",
+  "generated_at": "2026-07-25T01:16:54.421639+00:00"
+}

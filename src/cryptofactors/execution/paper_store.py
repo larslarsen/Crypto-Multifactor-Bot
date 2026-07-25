@@ -10,7 +10,7 @@ import json
 import sqlite3
 import uuid
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
 
@@ -22,17 +22,17 @@ _US_PER_SECOND: Final[int] = 1_000_000
 
 def _dt_to_iso(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     else:
-        dt = dt.astimezone(timezone.utc)
+        dt = dt.astimezone(UTC)
     return dt.isoformat()
 
 
 def _parse_iso(iso_str: str) -> datetime:
     dt = datetime.fromisoformat(iso_str)
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 class PaperSessionStore:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Final
 
 import httpx
@@ -17,7 +17,6 @@ from cryptofactors.execution.errors import LiveExecutionError
 from cryptofactors.execution.models import LiveOrder, LiveOrderStatus
 
 DEFAULT_PING_URL: Final[str] = "https://api.binance.com/api/v3/ping"
-UTC: Final[timezone] = timezone.utc
 
 
 class ReadOnlyVenueProbeAdapter:

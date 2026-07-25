@@ -12,7 +12,7 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -36,7 +36,9 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
-UTC = timezone.utc
+from cryptofactors.universe.binding import load_paper_universe_binding
+
+UTC = UTC
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
 FINGERPRINT = "87469a44a18449bee23de76b1312413fd3e5a649a6677e3509a8c270caea3318"
 
@@ -211,8 +213,7 @@ def main() -> int:
     session_end = datetime.strptime(args.session_end, "%Y-%m-%d").replace(tzinfo=UTC)
 
     first_decision = session_start
-    if first_decision < start_date + timedelta(days=37):
-        first_decision = start_date + timedelta(days=37)
+    first_decision = max(first_decision, start_date + timedelta(days=37))
     if first_decision > session_end:
         raise ValueError("session_start is after session_end")
 
@@ -226,7 +227,7 @@ def main() -> int:
     canonical_dataset_id = _resolve_canonical_dataset_id(db_path, store_root)
     print(f"Canonical dataset: {canonical_dataset_id}", file=sys.stderr)
 
-    universe = list(PAPER_TO_INSTRUMENT_ID.keys())
+    universe_binding = load_paper_universe_binding(db_path, store_root)
 
     raw_as_of = _CachedAsOfStore(CatalogAsOfStore(control_database=db_path, dataset_store_root=store_root))
     price_store = PaperSymbolAsOfAdapter(raw_as_of)
@@ -250,7 +251,7 @@ def main() -> int:
 
     def get_prices(dt: datetime, univ: Any) -> dict[str, float]:
         res: dict[str, float] = {}
-        for sym in universe:
+        for sym in univ:
             int_key = PAPER_TO_INSTRUMENT_ID[sym]
             tbl = raw_as_of.latest_available(canonical_dataset_id, [int_key], ["close"], dt)
             if tbl is not None and tbl.num_rows > 0:
@@ -258,7 +259,7 @@ def main() -> int:
         return res
 
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices,
         min_observation_days=14,
@@ -270,8 +271,7 @@ def main() -> int:
     for log in result.period_logs:
         net = sum(log.target_weights.values())
         net_exposures.append(net)
-        if abs(net) > max_abs_net:
-            max_abs_net = abs(net)
+        max_abs_net = max(max_abs_net, abs(net))
     avg_abs_net = sum(abs(n) for n in net_exposures) / max(len(net_exposures), 1)
 
     obs = result.observation_result
@@ -283,7 +283,7 @@ def main() -> int:
         "control_database": str(db_path),
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": canonical_dataset_id,
-        "universe": universe,
+        "universe": sorted(universe_binding.universe_at(first_decision)),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

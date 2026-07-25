@@ -23,16 +23,16 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from cryptofactors.execution.live import (
+    _LEVERAGE_TOLERANCE,
     MAX_GROSS_LEVERAGE,
     MAX_SINGLE_ASSET_WEIGHT,
-    _LEVERAGE_TOLERANCE,
 )
 
 __all__ = [
     "MAX_GROSS_LEVERAGE",
     "MAX_SINGLE_ASSET_WEIGHT",
-    "enforce_risk_limits",
     "compute_live_gate_satisfied",
+    "enforce_risk_limits",
 ]
 
 

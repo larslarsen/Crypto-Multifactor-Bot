@@ -1,36 +1,34 @@
 # CURRENT_TASK
 
-Ticket: UNIVERSE-006
+Ticket: ARCH-002
 State: AWAITING_REVIEW
-Next required actor: Reviewer (Lead Quant) — review + accept
+Next required actor: reviewer — Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-## Sr Dev deliverables
+## What landed
 
-1. Fixed `universe_at` in `src/cryptofactors/universe/cmc_survivorship.py` so inactive coins without a `death_proxy_date` are **never** eligible (fail-closed).
-2. Removed row mutation in `scripts/research/publish_cmc_survivorship.py`; the published table is the raw CSV and the provider enforces the rule.
-3. Re-published graveyard dataset `ds_22d2100a575a9764cceec9cc75f45867047969d1b348fd630771bfb083f5b3d8`.
-4. Regenerated `research/sprint_004/42_CMC_UNIVERSE_PUBLISHED.json` with honest coverage and counts.
-5. Added `test_inactive_without_death_is_excluded` in `tests/universe/test_cmc_survivorship.py`.
-
-## Evidence
-
-- `pytest tests/universe/test_cmc_survivorship.py` — 8/8 PASS
-- `ruff check src/cryptofactors/universe/cmc_survivorship.py scripts/research/publish_cmc_survivorship.py tests/universe/test_cmc_survivorship.py` — PASS
-- `scripts/check_repo_control.py` — PASS
-- Report: `research/sprint_004/42_CMC_UNIVERSE_PUBLISHED.json`
-  - `row_count`: 1756
-  - `immortal_rows_fixed`: 153
-  - `universe_at_2020_01_01_count`: 18
-  - `universe_at_2026_07_01_count`: 0
-  - `coverage_window.event_start`: 2013-04-28
-  - `coverage_window.event_end`: 2026-07-24T19:27:58Z
-  - `catalog_reconciliation.match`: true
+- `src/cryptofactors/universe/binding.py` — `UniverseBinding` protocol and
+  `CMCSurvivorshipBinding` adapter backed by catalog-published CMC graveyard
+  dataset. Fail-closed on missing/empty dataset.
+- `src/cryptofactors/execution/paper_loop.py` — `FactorDrivenPaperLoop.run_loop`
+  now requires a `UniverseBinding`; resolves membership per decision time and
+  fingerprints `universe_dataset_id`, `survivorship_policy`, and
+  `universe_code_version` in `PaperLoopResult`.
+- `src/cryptofactors/universe/__init__.py` — exports the binding protocol,
+  adapter, loaders, and `is_survivorship_invalid`.
+- `scripts/run_paper_momts.py` + 10 `scripts/research/*.py` — migrated from
+  static `PAPER_TO_INSTRUMENT_ID.keys()` membership to
+  `load_paper_universe_binding(...)`.
+- `tests/universe/test_binding.py` — 11 tests for contract, CMC birth/death
+  proxy semantics, empty-universe fail-closed, fingerprinting, and old-list API
+  rejection.
+- `tests/execution/test_paper_loop.py` + `tests/execution/test_paper_ops.py` —
+  updated to use `_StaticUniverseBinding` test stubs.
+- Static venue maps (`PAPER_TO_INSTRUMENT_ID`, `PAPER_TO_BINANCE_MAP`) remain
+  symbol translation only and are never used for membership.
 
 ## Governing documents
 
-- tickets/UNIVERSE-006.md (AWAITING_REVIEW)
-- docs/reviews/REVIEW-0214_UNIVERSE-006_REWORK_CHANGES_REQUIRED.md
-- src/cryptofactors/universe/cmc_survivorship.py
-- scripts/research/publish_cmc_survivorship.py
-- research/sprint_004/42_CMC_UNIVERSE_PUBLISHED.json
+- tickets/ARCH-002.md (this ticket, AWAITING_REVIEW)
+- research/sprint_004/41_DATA_ARCHITECTURE_GAP.md (survivorship-invalid artifact list)
+- docs/reviews/REVIEW-0216_DATA-011_ACCEPTED.md (prior ticket DATA-011)

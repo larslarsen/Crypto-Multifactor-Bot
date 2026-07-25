@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -30,7 +30,7 @@ from cryptofactors.ingest.raw.models import RawObjectStoreConfig
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
 
-UTC = timezone.utc
+UTC = UTC
 
 
 # ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ Key constraints & semantics:
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
@@ -78,7 +78,7 @@ def _require_utc(dt: datetime, *, field: str) -> datetime:
             f"{field} must be timezone-aware UTC",
             context={"value": str(dt)},
         )
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def _dt_to_us(dt: datetime) -> int:
@@ -93,7 +93,7 @@ def parse_iso_datetime(value: Any) -> datetime | None:
         ts = float(value)
         if ts > 1e11:
             ts = ts / 1000.0
-        return datetime.fromtimestamp(ts, tz=timezone.utc)
+        return datetime.fromtimestamp(ts, tz=UTC)
     if not isinstance(value, str):
         return None
     val = value.strip()
@@ -104,8 +104,8 @@ def parse_iso_datetime(value: Any) -> datetime | None:
     try:
         dt = datetime.fromisoformat(val)
         if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
+            return dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
     except ValueError:
         return None
 
@@ -157,7 +157,7 @@ def normalize_listing_event(
     )
     dt_liq = parse_iso_datetime(raw_liq_time)
     if dt_liq is None:
-        dt_liq = datetime.now(timezone.utc)
+        dt_liq = datetime.now(UTC)
 
     liq_added_iso = dt_liq.strftime("%Y-%m-%dT%H:%M:%SZ")
     liq_added_us = _dt_to_us(dt_liq)
@@ -170,11 +170,11 @@ def normalize_listing_event(
         if retrieved_at_raw:
             retrieved_at_str = str(retrieved_at_raw).strip()
         else:
-            retrieved_at_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            retrieved_at_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     else:
         retrieved_at_str = str(retrieved_at)
 
-    avail_dt = availability_time or datetime.now(timezone.utc)
+    avail_dt = availability_time or datetime.now(UTC)
     avail_us = _dt_to_us(avail_dt)
 
     return {

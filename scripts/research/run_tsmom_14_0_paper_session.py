@@ -17,7 +17,7 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -43,8 +43,9 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
+from cryptofactors.universe.binding import load_paper_universe_binding
 
-UTC = timezone.utc
+UTC = UTC
 
 MODEL_ARTIFACT_ID = "mod_tsmom_14_0_v1"
 LOOKBACK_DAYS = 14
@@ -277,7 +278,7 @@ def main() -> int:
     in_memory_store = _InMemoryMarketBarStore(db_path, store_root, dataset_id)
     print(f"PAPER-007: in-memory bar store loaded for {dataset_id}", file=sys.stderr)
 
-    universe = list(PAPER_TO_INSTRUMENT_ID.keys())
+    universe_binding = load_paper_universe_binding(db_path, store_root)
 
     registry = PromotionRegistry(db_path)
     _ensure_paper_approved(registry, effective_time=start)
@@ -306,7 +307,7 @@ def main() -> int:
 
     def get_prices(dt: datetime, univ: Any) -> dict[str, float]:
         res: dict[str, float] = {}
-        for sym in universe:
+        for sym in univ:
             int_key = PAPER_TO_INSTRUMENT_ID[sym]
             tbl = in_memory_store.latest_available(dataset_id, [int_key], ["close"], dt)
             if tbl is not None and tbl.num_rows > 0:
@@ -314,7 +315,7 @@ def main() -> int:
         return res
 
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices,
         min_observation_days=14,
@@ -368,7 +369,7 @@ def main() -> int:
         "canonical_dataset_id": dataset_id,
         "canonical_dataset_quality_status": "REJECTED",
         "canonical_dataset_quality_note": "BAR-001 quarantines all native 1d rows; intraday partition is used.",
-        "universe": universe,
+        "universe": sorted(universe_binding.universe_at(start)),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

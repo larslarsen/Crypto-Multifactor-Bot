@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 
@@ -12,7 +12,7 @@ def _require_utc(dt: datetime, *, field_name: str) -> datetime:
         raise TypeError(f"{field_name} must be a datetime")
     if dt.tzinfo is None:
         raise ValueError(f"{field_name} must be timezone-aware UTC")
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +59,7 @@ class PaperAccountState:
     cash: float
     positions: dict[str, float] = field(default_factory=dict)
     equity: float = 0.0
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         _require_utc(self.timestamp, field_name="timestamp")
@@ -142,7 +142,7 @@ class PaperOpsStatus:
     total_trades_count: int
     paper_observation_reference: str | None
     drawdown_alert_triggered: bool
-    report_generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    report_generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         _require_utc(self.report_generated_at, field_name="report_generated_at")

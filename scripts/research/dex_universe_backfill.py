@@ -15,7 +15,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -39,21 +39,21 @@ from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
 from cryptofactors.catalog.dataset.publisher import DatasetPublisher
 from cryptofactors.catalog.runner import apply_migrations
 from cryptofactors.ingest.dex_fanout import (
+    DefiLlamaProvider,
     DEXFanOutEngine,
     DexScreenerProvider,
-    DefiLlamaProvider,
     GeckoTerminalProvider,
     ScreeningGate,
     ShardedWatermarkStore,
     TokenBucketRateLimiter,
 )
 from cryptofactors.universe.dex_pool_resolver import (
-    DexPoolResolver,
     U50_TRADING_ASSETS,
+    DexPoolResolver,
     score_pool,
 )
 
-UTC = timezone.utc
+UTC = UTC
 WATERMARK_PATH = Path("data/dex_fanout_watermarks.json")
 REPORT_PATH = "research/sprint_004/40_DEX_UNIVERSE_BACKFILL.json"
 DATASET_TYPE = "dex_ohlcv_fanout"
@@ -101,9 +101,9 @@ def _merge_reports(previous: dict[str, Any], current: dict[str, Any]) -> dict[st
                     prev_dt = datetime.fromisoformat(prev_ts)
                     curr_dt = datetime.fromisoformat(curr_ts)
                     if boundary == "first_timestamp":
-                        existing[boundary] = (prev_dt if prev_dt < curr_dt else curr_dt).isoformat()
+                        existing[boundary] = (min(curr_dt, prev_dt)).isoformat()
                     else:
-                        existing[boundary] = (prev_dt if prev_dt > curr_dt else curr_dt).isoformat()
+                        existing[boundary] = (max(curr_dt, prev_dt)).isoformat()
                 except ValueError:
                     pass
         existing["incidents"] = existing.get("incidents", []) + pool.get("incidents", [])
@@ -143,9 +143,9 @@ def _merge_reports(previous: dict[str, Any], current: dict[str, Any]) -> dict[st
                 prev_dt = datetime.fromisoformat(prev_ts)
                 curr_dt = datetime.fromisoformat(curr_ts)
                 if boundary == "start":
-                    merged["coverage"][boundary] = (prev_dt if prev_dt < curr_dt else curr_dt).isoformat()
+                    merged["coverage"][boundary] = (min(curr_dt, prev_dt)).isoformat()
                 else:
-                    merged["coverage"][boundary] = (prev_dt if prev_dt > curr_dt else curr_dt).isoformat()
+                    merged["coverage"][boundary] = (max(curr_dt, prev_dt)).isoformat()
             except ValueError:
                 pass
     return merged

@@ -1,7 +1,7 @@
 """Tests for HARDEN-001 Paper Path Hardening, Read-Only Venue Probe, and Verification Report."""
 
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -9,14 +9,13 @@ import pytest
 from cryptofactors.execution import (
     LiveExecutionError,
     LiveOrder,
-    PaperExecutionError,
     PaperOpsStatus,
     ReadOnlyVenueProbeAdapter,
     build_harden_report,
     write_harden_report_artifact,
 )
 
-UTC = timezone.utc
+UTC = UTC
 
 
 def test_venue_probe_adapter_ping_and_order_guards() -> None:

@@ -2,7 +2,7 @@
 
 import tempfile
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -53,7 +53,7 @@ class StubVenue:
             state=LiveOrderState.FILLED,
             filled_quantity=1.0,
             avg_fill_price=50_000.0,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
 
@@ -73,7 +73,7 @@ def live_approved_payload(
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.LIVE,
-        effective_time=datetime.now(timezone.utc),
+        effective_time=datetime.now(UTC),
         approving_authority="Owner authorization board",
         evidence_reference="rev_001",
         paper_observation_reference="holdout_14day_passed",
@@ -94,7 +94,7 @@ def promote_to_live(registry: PromotionRegistry, model_artifact_id: str = "art_l
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.RESEARCH,
-        effective_time=datetime.now(timezone.utc),
+        effective_time=datetime.now(UTC),
         approving_authority="Owner",
         evidence_reference="rev_001",
     )
@@ -113,7 +113,7 @@ def promote_to_live(registry: PromotionRegistry, model_artifact_id: str = "art_l
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.PAPER,
-        effective_time=datetime.now(timezone.utc),
+        effective_time=datetime.now(UTC),
         approving_authority="Lead Quant",
         evidence_reference="rev_001",
     )
@@ -165,7 +165,7 @@ class TestUnapprovedArtifactFailsBeforeHTTP:
                 cost_model_version="cm",
                 risk_policy_version="rp",
                 target_stage=PromotionTarget.RESEARCH,
-                effective_time=datetime.now(timezone.utc),
+                effective_time=datetime.now(UTC),
                 approving_authority="Owner",
                 evidence_reference="rev",
             )
@@ -183,7 +183,7 @@ class TestUnapprovedArtifactFailsBeforeHTTP:
                 cost_model_version="cm",
                 risk_policy_version="rp",
                 target_stage=PromotionTarget.PAPER,
-                effective_time=datetime.now(timezone.utc),
+                effective_time=datetime.now(UTC),
                 approving_authority="Lead Quant",
                 evidence_reference="rev",
             )
@@ -328,7 +328,7 @@ class TestKillSwitch:
                 cost_model_version="cost1",
                 risk_policy_version="risk1",
                 target_stage=PromotionTarget.LIVE,
-                effective_time=datetime.now(timezone.utc),
+                effective_time=datetime.now(UTC),
                 approving_authority="Owner authorization board",
                 evidence_reference="rev_001",
                 paper_observation_reference="holdout_14day_passed",

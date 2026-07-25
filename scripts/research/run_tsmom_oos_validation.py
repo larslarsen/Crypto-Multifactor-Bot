@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -42,8 +42,9 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
+from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
 
-UTC = timezone.utc
+UTC = UTC
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
 FINGERPRINT = "87469a44a18449bee23de76b1312413fd3e5a649a6677e3509a8c270caea3318"
 _US_PER_SECOND = 1_000_000
@@ -245,7 +246,7 @@ def _run_config(
     skip_days: int,
     db_path: Path,
     dataset_id: str,
-    universe: list[str],
+    universe_binding: UniverseBinding,
     decision_times: list[datetime],
     in_memory_store: _InMemoryMarketBarStore,
 ) -> dict[str, Any]:
@@ -276,7 +277,7 @@ def _run_config(
 
     def get_prices(dt: datetime, univ: Any) -> dict[str, float]:
         res: dict[str, float] = {}
-        for sym in universe:
+        for sym in univ:
             int_key = PAPER_TO_INSTRUMENT_ID[sym]
             tbl = in_memory_store.latest_available(dataset_id, [int_key], ["close"], dt)
             if tbl is not None and tbl.num_rows > 0:
@@ -284,7 +285,7 @@ def _run_config(
         return res
 
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices,
         min_observation_days=14,
@@ -375,7 +376,7 @@ def main() -> int:
     in_memory_store = _InMemoryMarketBarStore(db_path, store_root, dataset_id)
     print("In-memory bar store loaded", file=sys.stderr)
 
-    universe = list(PAPER_TO_INSTRUMENT_ID.keys())
+    universe_binding = load_paper_universe_binding(db_path, store_root)
 
     # In-sample train-fold grid to select top-K.
     print("Running train-fold grid for selection...", file=sys.stderr)
@@ -389,7 +390,7 @@ def main() -> int:
                 skip,
                 db_path,
                 dataset_id,
-                universe,
+                universe_binding,
                 train_decisions,
                 in_memory_store,
             )
@@ -417,7 +418,7 @@ def main() -> int:
             skip,
             db_path,
             dataset_id,
-            universe,
+            universe_binding,
             test_decisions,
             in_memory_store,
         )
@@ -436,7 +437,7 @@ def main() -> int:
         "control_database": str(db_path),
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": dataset_id,
-        "universe": universe,
+        "universe": sorted(universe_binding.universe_at(test_start)),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

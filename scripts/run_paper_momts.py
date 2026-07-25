@@ -20,7 +20,7 @@ import json
 import sys
 import tempfile
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -48,8 +48,9 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
+from cryptofactors.universe.binding import load_paper_universe_binding
 
-UTC = timezone.utc
+UTC = UTC
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
 FINGERPRINT = "87469a44a18449bee23de76b1312413fd3e5a649a6677e3509a8c270caea3318"
 DEFAULT_OUTPUT_PATH = Path("research/sprint_004/08_PAPER_FACTOR_LOOP_RESULTS.json")
@@ -260,6 +261,9 @@ def format_loop_result(res: PaperLoopResult) -> dict[str, Any]:
         "observation_summary": obs_dict,
         "period_logs": logs,
         "session_run_at": res.session_run_at.isoformat(),
+        "universe_dataset_id": res.universe_dataset_id,
+        "survivorship_policy": res.survivorship_policy,
+        "universe_code_version": res.universe_code_version,
     }
 
 
@@ -276,17 +280,12 @@ def main() -> int:
     data_mode = "synthetic" if args.dry_run else "real_asof"
     tmpdir: tempfile.TemporaryDirectory[str] | None = None
 
-    universe = [
-        "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
-        "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
-    ]
-
     if args.dry_run:
         print("Running factor-driven paper loop in DRY-RUN mode...", file=sys.stderr)
         tmpdir = tempfile.TemporaryDirectory()
         db_path = Path(tmpdir.name) / "control.db"
         store_root = Path(tmpdir.name) / "store"
-        synthetic_store = _SyntheticPriceStore(universe, days=160)
+        synthetic_store = _SyntheticPriceStore(list(PAPER_TO_INSTRUMENT_ID.keys()), days=160)
         price_store: Any = synthetic_store
         get_prices_fn = synthetic_store.get_prices_at
         dataset_id = args.market_dataset_id
@@ -359,6 +358,8 @@ def main() -> int:
 
         get_prices_fn = get_real_prices
 
+    universe_binding = load_paper_universe_binding(db_path, store_root)
+
     registry = PromotionRegistry(db_path)
     ensure_paper_approved(registry, MODEL_ARTIFACT_ID)
 
@@ -389,7 +390,7 @@ def main() -> int:
 
     print(f"Executing paper loop for '{MODEL_ARTIFACT_ID}' across {len(decision_times)} decision times...", file=sys.stderr)
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices_fn,
         min_observation_days=14,
@@ -397,7 +398,7 @@ def main() -> int:
 
     # Generate and write PaperOpsStatus report artifact
     obs_ref = result.observation_result.reference_id if result.observation_result else None
-    final_prices = get_prices_fn(decision_times[-1], universe)
+    final_prices = get_prices_fn(decision_times[-1], sorted(universe_binding.universe_at(decision_times[-1])))
     ops_status = monitor.inspect_session(
         MODEL_ARTIFACT_ID,
         broker=loop.broker,

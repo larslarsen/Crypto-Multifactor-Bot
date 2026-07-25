@@ -25,7 +25,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +42,7 @@ from cryptofactors.ingest.raw.models import RawObjectStoreConfig
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
 
-UTC = timezone.utc
+UTC = UTC
 
 # Binance spot launched public trading ~2017-08-17; use this as the default
 # earliest fetch date for pairs with no existing source dataset.

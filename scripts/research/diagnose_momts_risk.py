@@ -17,7 +17,7 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -43,8 +43,9 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
+from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
 
-UTC = timezone.utc
+UTC = UTC
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
 FINGERPRINT = "87469a44a18449bee23de76b1312413fd3e5a649a6677e3509a8c270caea3318"
 
@@ -181,7 +182,7 @@ def _run_session(
     db_path: Path,
     store_root: Path,
     dataset_id: str,
-    universe: list[str],
+    universe_binding: UniverseBinding,
     decision_times: list[datetime],
     *,
     max_single_weight: float,
@@ -211,7 +212,7 @@ def _run_session(
 
     def get_prices(dt: datetime, univ: Any) -> dict[str, float]:
         res: dict[str, float] = {}
-        for sym in universe:
+        for sym in univ:
             try:
                 int_key = PAPER_TO_INSTRUMENT_ID[sym]
             except KeyError:
@@ -222,7 +223,7 @@ def _run_session(
         return res
 
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices,
         min_observation_days=14,
@@ -232,7 +233,7 @@ def _run_session(
     raw_factor = make_tsmom_30_7(price_store, market_dataset_id=dataset_id)
     periods: list[dict[str, Any]] = []
     for log in result.period_logs:
-        frame = raw_factor.compute(universe, log.decision_time)
+        frame = raw_factor.compute(sorted(universe_binding.universe_at(log.decision_time)), log.decision_time)
         raw_weights = allocator.allocate(frame.values)
         raw_dict = {k: float(v) for k, v in raw_weights.items()}
         enforced = enforce_risk_limits(raw_dict, max_gross_leverage=max_gross_leverage, max_single_weight=max_single_weight)
@@ -382,7 +383,7 @@ def main() -> int:
     canonical_dataset_id = _backfill_and_publish(db_path, store_root, start_date, end_date, output_dir)
     print(f"Canonical dataset: {canonical_dataset_id}", file=sys.stderr)
 
-    universe = list(PAPER_TO_INSTRUMENT_ID.keys())
+    universe_binding = load_paper_universe_binding(db_path, store_root)
 
     # Risk-enforced session.
     print("Running risk-enforced paper session...", file=sys.stderr)
@@ -390,7 +391,7 @@ def main() -> int:
         db_path,
         store_root,
         canonical_dataset_id,
-        universe,
+        universe_binding,
         decision_times,
         max_single_weight=MAX_SINGLE_ASSET_WEIGHT,
         max_gross_leverage=MAX_GROSS_LEVERAGE,
@@ -403,7 +404,7 @@ def main() -> int:
         db_path,
         store_root,
         canonical_dataset_id,
-        universe,
+        universe_binding,
         decision_times,
         max_single_weight=1.0,
         max_gross_leverage=MAX_GROSS_LEVERAGE,
@@ -439,7 +440,7 @@ def main() -> int:
         "control_database": str(db_path),
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": canonical_dataset_id,
-        "universe": universe,
+        "universe": sorted(universe_binding.universe_at(first_decision)),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "session_start": first_decision.isoformat(),
         "session_end": session_end.isoformat(),
@@ -488,7 +489,7 @@ def main() -> int:
         "control_database": str(db_path),
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": canonical_dataset_id,
-        "universe": universe,
+        "universe": sorted(universe_binding.universe_at(first_decision)),
         "session_start": first_decision.isoformat(),
         "session_end": session_end.isoformat(),
         "backfill_start": start_date.isoformat(),

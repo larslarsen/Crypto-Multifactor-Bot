@@ -1,7 +1,7 @@
 """Tests for EXEC-001 Paper Execution Runtime and PaperBroker."""
 
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -36,7 +36,7 @@ def create_approved_artifact(
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.RESEARCH,
-        effective_time=datetime.now(timezone.utc),
+        effective_time=datetime.now(UTC),
         approving_authority="Lead Quant",
         evidence_reference="rev_001",
     )
@@ -55,7 +55,7 @@ def create_approved_artifact(
         cost_model_version="cost1",
         risk_policy_version="risk1",
         target_stage=PromotionTarget.PAPER,
-        effective_time=datetime.now(timezone.utc),
+        effective_time=datetime.now(UTC),
         approving_authority="Lead Quant",
         evidence_reference="rev_001",
     )
@@ -90,7 +90,7 @@ def test_paper_broker_raises_error_for_unapproved_artifact() -> None:
             cost_model_version="cm1",
             risk_policy_version="rp1",
             target_stage=PromotionTarget.RESEARCH,
-            effective_time=datetime.now(timezone.utc),
+            effective_time=datetime.now(UTC),
             approving_authority="Quant",
             evidence_reference="ev1",
         )
@@ -118,7 +118,7 @@ def test_paper_broker_initialization_and_rebalance() -> None:
         assert broker.get_positions() == {}
 
         prices = {"BTC": 50_000.0, "ETH": 3_000.0}
-        t0 = datetime(2026, 7, 23, 12, 0, tzinfo=timezone.utc)
+        t0 = datetime(2026, 7, 23, 12, 0, tzinfo=UTC)
 
         # Rebalance: 50% BTC, 30% ETH
         target_weights = {"BTC": 0.5, "ETH": 0.3}
@@ -144,7 +144,7 @@ def test_leverage_limit_enforced() -> None:
 
         broker = PaperBroker("art_approved_v1", registry)
         prices = {"BTC": 50_000.0, "ETH": 3_000.0}
-        t0 = datetime(2026, 7, 23, 12, 0, tzinfo=timezone.utc)
+        t0 = datetime(2026, 7, 23, 12, 0, tzinfo=UTC)
 
         # Leverage > 1.0 (0.8 + 0.5 = 1.3)
         invalid_weights = {"BTC": 0.8, "ETH": 0.5}

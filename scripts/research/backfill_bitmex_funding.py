@@ -17,7 +17,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +46,7 @@ from cryptofactors.ingest.bitmex_funding import (
     build_funding_table,
 )
 
-UTC = timezone.utc
+UTC = UTC
 DEFAULT_START_TIME = "2016-05-13T00:00:00+00:00"
 WATERMARK_PATH = Path("data/bitmex_funding_full_watermarks.json")
 REPORT_PATH = "research/sprint_004/39_BITMEX_FULL_BACKFILL.json"

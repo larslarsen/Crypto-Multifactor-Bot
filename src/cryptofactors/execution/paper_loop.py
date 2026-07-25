@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -25,6 +25,7 @@ from cryptofactors.serving.holdout import (
     ProspectiveEvaluator,
     ProspectiveHoldoutError,
 )
+from cryptofactors.universe.binding import UniverseBinding
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +54,10 @@ class PaperLoopResult:
     period_logs: tuple[PaperLoopPeriodLog, ...]
     observation_result: PaperObservationResult | None = None
     drawdown_alert_triggered: bool = False
-    session_run_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    session_run_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    universe_dataset_id: str | None = None
+    universe_code_version: str | None = None
+    survivorship_policy: str | None = None
 
 
 class FactorDrivenPaperLoop:
@@ -102,15 +106,23 @@ class FactorDrivenPaperLoop:
 
     def run_loop(
         self,
-        universe: Sequence[str],
+        universe_binding: UniverseBinding,
         decision_times: Sequence[datetime],
         get_prices_at: Callable[[datetime, Sequence[str]], dict[str, float]],
         *,
         min_observation_days: int = 14,
     ) -> PaperLoopResult:
-        """Run sequential factor evaluation -> allocation -> paper rebalance across decision times."""
+        """Run sequential factor evaluation -> allocation -> paper rebalance across decision times.
+
+        Membership is resolved at each decision time through ``universe_binding``;
+        passing a static list of symbols is no longer supported.
+        """
         if not decision_times:
             raise PaperExecutionError("decision_times must be non-empty")
+
+        universe_dataset_id = universe_binding.universe_dataset_id
+        survivorship_policy = universe_binding.survivorship_policy
+        universe_code_version = universe_binding.universe_code_version
 
         logs: list[PaperLoopPeriodLog] = []
         sim_periods: list[SimulationPeriod] = []
@@ -121,6 +133,16 @@ class FactorDrivenPaperLoop:
         alert_triggered = False
 
         for dt in decision_times:
+            universe = sorted(universe_binding.universe_at(dt))
+            if not universe:
+                raise PaperExecutionError(
+                    "empty universe at decision_time",
+                    context={
+                        "decision_time": dt.isoformat(),
+                        "universe_dataset_id": universe_dataset_id,
+                    },
+                )
+
             # 1. Compute factor frame
             frame = self.factor.compute(universe, dt)
 
@@ -134,10 +156,8 @@ class FactorDrivenPaperLoop:
 
             gross_leverage = sum(abs(w) for w in target_weights.values())
             max_single_weight = max((abs(w) for w in target_weights.values()), default=0.0)
-            if gross_leverage > max_leverage_seen:
-                max_leverage_seen = gross_leverage
-            if max_single_weight > max_weight_seen:
-                max_weight_seen = max_single_weight
+            max_leverage_seen = max(max_leverage_seen, gross_leverage)
+            max_weight_seen = max(max_weight_seen, max_single_weight)
 
             # 3. Get point-in-time prices
             current_prices = get_prices_at(dt, universe)
@@ -153,8 +173,7 @@ class FactorDrivenPaperLoop:
                     self.session_store.save_trades(self.model_artifact_id, trades)
 
             # Drawdown check
-            if state.equity > peak_equity:
-                peak_equity = state.equity
+            peak_equity = max(peak_equity, state.equity)
             curr_drawdown = (peak_equity - state.equity) / peak_equity if peak_equity > 0 else 0.0
             if curr_drawdown >= self.max_drawdown_threshold:
                 alert_triggered = True
@@ -188,7 +207,8 @@ class FactorDrivenPaperLoop:
 
         all_trades = self.broker.get_trade_history()
         last_dt = decision_times[-1]
-        final_prices = get_prices_at(last_dt, universe)
+        final_universe = sorted(universe_binding.universe_at(last_dt))
+        final_prices = get_prices_at(last_dt, final_universe)
         final_state = self.broker.get_account_state(final_prices, last_dt)
 
         # Prospective holdout observation evaluation
@@ -227,4 +247,7 @@ class FactorDrivenPaperLoop:
             period_logs=tuple(logs),
             observation_result=obs_result,
             drawdown_alert_triggered=alert_triggered,
+            universe_dataset_id=universe_dataset_id,
+            universe_code_version=universe_code_version,
+            survivorship_policy=survivorship_policy,
         )

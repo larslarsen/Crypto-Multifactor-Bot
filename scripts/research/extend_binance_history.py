@@ -16,7 +16,7 @@ import json
 import sys
 import tempfile
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +42,7 @@ from cryptofactors.ingest.raw.models import RawObjectStoreConfig
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
 
-UTC = timezone.utc
+UTC = UTC
 
 DEFAULT_START = datetime(2024, 1, 1, tzinfo=UTC)
 

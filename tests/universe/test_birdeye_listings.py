@@ -1,19 +1,19 @@
 """Tests for UNIVERSE-002 Birdeye DEX listings provider."""
 
 import inspect
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 import pytest
 
+import cryptofactors.universe.birdeye_listings as birdeye_module
 from cryptofactors.universe import (
     BirdeyeListingsError,
     BirdeyeListingsProvider,
     build_birdeye_listings_table,
     normalize_listing_event,
 )
-import cryptofactors.universe.birdeye_listings as birdeye_module
 
 
 def sample_raw_listing() -> dict[str, Any]:
@@ -73,15 +73,15 @@ def test_point_in_time_membership_queries() -> None:
     provider = BirdeyeListingsProvider.from_records(records)
 
     # Before token_a listing
-    t0 = datetime(2024, 12, 31, tzinfo=timezone.utc)
+    t0 = datetime(2024, 12, 31, tzinfo=UTC)
     assert provider.universe_at(t0) == []
 
     # After token_a, before token_b
-    t1 = datetime(2025, 3, 1, tzinfo=timezone.utc)
+    t1 = datetime(2025, 3, 1, tzinfo=UTC)
     assert provider.universe_at(t1) == ["token_a"]
 
     # After token_b listing
-    t2 = datetime(2025, 7, 1, tzinfo=timezone.utc)
+    t2 = datetime(2025, 7, 1, tzinfo=UTC)
     assert provider.universe_at(t2) == ["token_a", "token_b"]
 
     # Events since t1

@@ -3,7 +3,7 @@
 All tests use mocked Birdeye HTTP responses; no live network calls.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -15,7 +15,7 @@ from cryptofactors.universe.birdeye_screen_queue import (
     ScreeningConfig,
 )
 
-UTC = timezone.utc
+UTC = UTC
 
 
 def _sample_listing(address: str, symbol: str, liquidity: float, chain: str = "solana") -> dict[str, Any]:

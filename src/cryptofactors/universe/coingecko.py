@@ -13,7 +13,7 @@ import tempfile
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
@@ -88,7 +88,7 @@ def _require_utc(dt: datetime, *, field: str) -> datetime:
             f"{field} must be timezone-aware UTC",
             context={"value": str(dt)},
         )
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def _dt_to_us(dt: datetime) -> int:
@@ -136,7 +136,7 @@ class CoinGeckoUniverseProvider:
         self._last_published_dataset_id: str | None = None
 
     def fetch_universe(self) -> list[dict[str, str | bool]]:
-        availability_time = datetime.now(tz=timezone.utc)
+        availability_time = datetime.now(tz=UTC)
         active_raw = self._fetch_status("active")
         inactive_raw = self._fetch_status("inactive")
         by_id: dict[str, dict[str, str | bool]] = {}

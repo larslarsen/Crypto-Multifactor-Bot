@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Final, Protocol, runtime_checkable
 
 from cryptofactors.execution.errors import (
@@ -57,7 +57,7 @@ def _require_utc(dt: datetime, *, field_name: str) -> datetime:
             f"{field_name} must be timezone-aware UTC",
             context={"value": str(dt)},
         )
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 @runtime_checkable
@@ -244,7 +244,7 @@ class LiveBroker:
             state=LiveOrderState.SUBMITTED,
             filled_quantity=0.0,
             avg_fill_price=None,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     def cancel_order(self, order_id: str) -> bool:
@@ -285,7 +285,7 @@ class LiveBroker:
         open_order_ids = dict(self._open_orders)
         return FlattenSignal(
             reason=reason,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             open_orders=open_order_ids,
         )
 

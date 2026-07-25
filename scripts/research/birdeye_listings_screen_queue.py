@@ -15,7 +15,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,13 +29,13 @@ from cryptofactors.universe.birdeye_screen_queue import (
     DEFAULT_DEATH_CONSECUTIVE_DAYS,
     DEFAULT_MIN_LIQUIDITY_USD,
     DEFAULT_MIN_VOLUME_24H_USD,
+    BirdeyeScreenQueue,
     PoolStats,
     ScreeningConfig,
-    BirdeyeScreenQueue,
     build_birdeye_screening_provider,
 )
 
-UTC = timezone.utc
+UTC = UTC
 REPORT_PATH = "research/sprint_004/38_BIRDEYE_LISTINGS_SCREEN_QUEUE.json"
 
 

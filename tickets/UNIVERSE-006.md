@@ -1,7 +1,7 @@
 # UNIVERSE-006 — Publish CMC Survivorship Graveyard as Catalog Universe Dataset
 
 **Priority:** P0  
-**Status:** AWAITING_REVIEW  
+**Status:** ACCEPTED  
 **Dependencies:** UNIVERSE-003 (ACCEPTED), ADR-0012, ADR-0014  
 **Layer:** universe / catalog  
 **Architecture:** one-shot CMC CSV → immutable catalog universe dataset (graveyard-only).

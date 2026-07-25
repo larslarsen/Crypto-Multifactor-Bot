@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Final
 
 from cryptofactors.execution.errors import (
@@ -39,7 +39,7 @@ def _require_utc(dt: datetime, *, field_name: str) -> datetime:
             f"{field_name} must be timezone-aware UTC",
             context={"value": str(dt)},
         )
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 class PaperBroker:

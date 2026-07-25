@@ -17,7 +17,7 @@ import argparse
 import json
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +47,7 @@ from cryptofactors.ingest.raw.models import RawObjectStoreConfig
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
 
-UTC = timezone.utc
+UTC = UTC
 
 DEFAULT_BASE_SYMBOLS = sorted(set(PAPER_TO_BINANCE_MAP.values()))
 DEFAULT_START = datetime(2020, 1, 1, tzinfo=UTC)

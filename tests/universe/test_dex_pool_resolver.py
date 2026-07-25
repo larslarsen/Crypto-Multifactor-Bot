@@ -7,9 +7,9 @@ import httpx
 from cryptofactors.universe.dex_pool_resolver import (
     DEFAULT_CHAIN_ALLOWLIST,
     SYMBOL_ALIASES,
-    DexPoolResolver,
     TOKEN_ADDRESSES,
     U50_TRADING_ASSETS,
+    DexPoolResolver,
 )
 
 

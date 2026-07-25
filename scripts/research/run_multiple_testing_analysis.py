@@ -22,7 +22,7 @@ import csv
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +31,7 @@ import numpy as np
 # Import the grid runner's in-memory store and decision-time helper.
 # The script is in the same directory; add it to the path for import.
 sys.path.insert(0, str(Path(__file__).parent))
-from run_tsmom_grid import _InMemoryMarketBarStore, _decision_times
+from run_tsmom_grid import _decision_times, _InMemoryMarketBarStore
 
 from cryptofactors.execution.live import MAX_GROSS_LEVERAGE, MAX_SINGLE_ASSET_WEIGHT
 from cryptofactors.execution.paper_loop import FactorDrivenPaperLoop
@@ -43,8 +43,9 @@ from cryptofactors.execution.symbols import (
 from cryptofactors.factors.tsmom import TimeSeriesMomentumFactor
 from cryptofactors.portfolio.perpetual_simulation import LongShortRankAllocator
 from cryptofactors.promotion import PromotionRegistry
+from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
 
-UTC = timezone.utc
+UTC = UTC
 
 MODEL_ARTIFACT_ID = "mod_tsmom_14_3_v1"  # already PAPER_APPROVED from PROMO-003
 FACTOR_ID = "tsmom_14_3"
@@ -77,7 +78,7 @@ def _run_config_with_returns(
     skip_days: int,
     db_path: Path,
     dataset_id: str,
-    universe: list[str],
+    universe_binding: UniverseBinding,
     decision_times: list[datetime],
     in_memory_store: _InMemoryMarketBarStore,
 ) -> dict[str, Any]:
@@ -108,7 +109,7 @@ def _run_config_with_returns(
 
     def get_prices(dt: datetime, univ: Any) -> dict[str, float]:
         res: dict[str, float] = {}
-        for sym in universe:
+        for sym in univ:
             int_key = PAPER_TO_INSTRUMENT_ID[sym]
             tbl = in_memory_store.latest_available(dataset_id, [int_key], ["close"], dt)
             if tbl is not None and tbl.num_rows > 0:
@@ -116,7 +117,7 @@ def _run_config_with_returns(
         return res
 
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices,
         min_observation_days=14,
@@ -386,7 +387,7 @@ def main() -> int:
     in_memory_store = _InMemoryMarketBarStore(db_path, store_root, dataset_id)
     print(f"EXP-008: PASS bar store loaded for {dataset_id}", file=sys.stderr)
 
-    universe = list(PAPER_TO_INSTRUMENT_ID.keys())
+    universe_binding = load_paper_universe_binding(db_path, store_root)
     rng = np.random.default_rng(args.seed)
 
     cells: list[dict[str, Any]] = []
@@ -401,7 +402,7 @@ def main() -> int:
                 skip,
                 db_path,
                 dataset_id,
-                universe,
+                universe_binding,
                 decision_times,
                 in_memory_store,
             )

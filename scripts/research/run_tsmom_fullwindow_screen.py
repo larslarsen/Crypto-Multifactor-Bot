@@ -18,7 +18,7 @@ import hashlib
 import json
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -44,8 +44,9 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
+from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
 
-UTC = timezone.utc
+UTC = UTC
 
 DATASET_ID = "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd"
 EVIDENCE_REFERENCE = "REVIEW-0198"
@@ -272,7 +273,7 @@ def _run_screen_config(
     cfg: _ScreenConfig,
     db_path: Path,
     dataset_id: str,
-    universe: list[str],
+    universe_binding: UniverseBinding,
     decision_times: list[datetime],
     in_memory_store: _InMemoryMarketBarStore,
 ) -> dict[str, Any]:
@@ -303,7 +304,7 @@ def _run_screen_config(
 
     def get_prices(dt: datetime, univ: Any) -> dict[str, float]:
         res: dict[str, float] = {}
-        for sym in universe:
+        for sym in univ:
             int_key = PAPER_TO_INSTRUMENT_ID[sym]
             tbl = in_memory_store.latest_available(dataset_id, [int_key], ["close"], dt)
             if tbl is not None and tbl.num_rows > 0:
@@ -311,7 +312,7 @@ def _run_screen_config(
         return res
 
     result = loop.run_loop(
-        universe=universe,
+        universe_binding=universe_binding,
         decision_times=decision_times,
         get_prices_at=get_prices,
         min_observation_days=14,
@@ -390,7 +391,7 @@ def main() -> int:
     in_memory_store = _InMemoryMarketBarStore(db_path, store_root, dataset_id)
     print(f"EXP-007: in-memory bar store loaded for {dataset_id}", file=sys.stderr)
 
-    universe = list(PAPER_TO_INSTRUMENT_ID.keys())
+    universe_binding = load_paper_universe_binding(db_path, store_root)
 
     results: list[dict[str, Any]] = []
     for cfg in SCREEN_CONFIGS:
@@ -399,7 +400,7 @@ def main() -> int:
             cfg,
             db_path,
             dataset_id,
-            universe,
+            universe_binding,
             decision_times,
             in_memory_store,
         )
@@ -434,7 +435,7 @@ def main() -> int:
         "canonical_dataset_id": dataset_id,
         "canonical_dataset_quality_status": "REJECTED",
         "canonical_dataset_quality_note": "BAR-001 quarantines all native 1d rows; intraday partition is used.",
-        "universe": universe,
+        "universe": sorted(universe_binding.universe_at(start)),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

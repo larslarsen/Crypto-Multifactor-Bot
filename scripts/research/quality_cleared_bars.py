@@ -16,7 +16,7 @@ import argparse
 import json
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ from cryptofactors.catalog.dataset.publisher import DatasetPublisher
 from cryptofactors.execution.symbols import PAPER_TO_INSTRUMENT_ID
 from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
 
-UTC = timezone.utc
+UTC = UTC
 
 OLD_DATASET_ID = "ds_a17651d5c871656f18c29d50fe96d41fa9f08eee8436b276237f96a679764dcd"
 

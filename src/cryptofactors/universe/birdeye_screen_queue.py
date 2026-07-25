@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -214,7 +214,7 @@ class BirdeyeScreenQueue:
         except Exception as exc:  # noqa: BLE001
             self._rate_limiter.record_incident(
                 RateLimitIncident(
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                     provider="birdeye_listings",
                     chain=chain,
                     note=str(exc),
@@ -255,7 +255,7 @@ class BirdeyeScreenQueue:
 
     def build_queue(self, survivors: Sequence[Mapping[str, Any]]) -> list[OHLCVQueueItem]:
         """Convert survivors to OHLCV request queue items."""
-        as_of = self._config.as_of or datetime.now(timezone.utc)
+        as_of = self._config.as_of or datetime.now(UTC)
         items: list[OHLCVQueueItem] = []
         for r in survivors:
             volume_note = "n/a" if r.get("volume_24h") is None else f"{float(r['volume_24h']):.2f}"
@@ -287,7 +287,7 @@ class BirdeyeScreenQueue:
         DEX-002 derived activity, not from the listing event itself.
         """
         cfg = self._config
-        as_of = cfg.as_of or datetime.now(timezone.utc)
+        as_of = cfg.as_of or datetime.now(UTC)
         members: list[UniverseMember] = []
         for r in listed:
             chain = r["chain"]

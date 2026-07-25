@@ -2,9 +2,11 @@
 
 import tempfile
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -16,6 +18,7 @@ from cryptofactors.execution.risk_limits import (
     compute_live_gate_satisfied,
     enforce_risk_limits,
 )
+from cryptofactors.catalog.runner import apply_migrations
 from cryptofactors.factors.tsmom import TimeSeriesMomentumFactor
 from cryptofactors.promotion import (
     PromotionIdentityPayload,
@@ -24,9 +27,40 @@ from cryptofactors.promotion import (
     PromotionTarget,
 )
 
-UTC = timezone.utc
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
+
+
+@pytest.fixture
+def tmp_db() -> Path:
+    """Provide a temporary control DB with migrations applied."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "control.db"
+        apply_migrations(db_path)
+        yield db_path
 FINGERPRINT = "87469a44a18449bee23de76b1312413fd3e5a649a6677e3509a8c270caea3318"
+
+
+@dataclass(frozen=True, slots=True)
+class _StaticUniverseBinding:
+    """Test-only binding that returns a fixed set of symbols at every time."""
+
+    symbols: tuple[str, ...]
+    universe_dataset_id: str = "static_test"
+    survivorship_policy: str = "none"
+    universe_code_version: str = "test"
+
+    def universe_at(self, decision_time: datetime) -> frozenset[str]:
+        return frozenset(self.symbols)
+
+    def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
+        return {
+            "eligible": len(self.symbols),
+            "with_bars": None,
+            "missing": None,
+            "universe_dataset_id": self.universe_dataset_id,
+            "survivorship_policy": self.survivorship_policy,
+            "universe_code_version": self.universe_code_version,
+        }
 
 
 class _StubPriceStore:
@@ -149,167 +183,162 @@ def promote_to_paper(
     )
 
 
-def test_paper_loop_fails_closed_for_unapproved_artifact() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "control.db"
-        registry = PromotionRegistry(db_path)
-        universe = ["XBTUSD", "ETHUSD"]
-        store = _StubPriceStore(universe)
-        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+def test_paper_loop_fails_closed_for_unapproved_artifact(tmp_db: Path) -> None:
+    db_path = tmp_db
+    registry = PromotionRegistry(db_path)
+    universe = ["XBTUSD", "ETHUSD"]
+    store = _StubPriceStore(universe)
+    factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
 
-        with pytest.raises(UnapprovedArtifactError, match="failed paper promotion gate"):
-            FactorDrivenPaperLoop(
-                model_artifact_id="unapproved_model",
-                promotion_registry=registry,
-                factor=factor,
-            )
-
-
-def test_paper_loop_execution_and_metrics() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "control.db"
-        registry = PromotionRegistry(db_path)
-        promote_to_paper(registry, MODEL_ARTIFACT_ID)
-
-        universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
-        store = _StubPriceStore(universe)
-        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
-
-        loop = FactorDrivenPaperLoop(
-            model_artifact_id=MODEL_ARTIFACT_ID,
+    with pytest.raises(UnapprovedArtifactError, match="failed paper promotion gate"):
+        FactorDrivenPaperLoop(
+            model_artifact_id="unapproved_model",
             promotion_registry=registry,
             factor=factor,
-            initial_cash=100_000.0,
         )
 
-        t0 = datetime(2026, 1, 1, tzinfo=UTC)
-        decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]
 
-        res = loop.run_loop(
-            universe=universe,
-            decision_times=decision_times,
-            get_prices_at=store.get_prices_at,
-            min_observation_days=14,
-        )
+def test_paper_loop_execution_and_metrics(tmp_db: Path) -> None:
+    db_path = tmp_db
+    registry = PromotionRegistry(db_path)
+    promote_to_paper(registry, MODEL_ARTIFACT_ID)
 
-        assert res.model_artifact_id == MODEL_ARTIFACT_ID
-        assert res.factor_id == "tsmom_30_7"
-        assert res.initial_cash == 100_000.0
-        assert res.total_trades_executed > 0
-        assert len(res.period_logs) == len(decision_times)
+    universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
+    store = _StubPriceStore(universe)
+    factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+
+    loop = FactorDrivenPaperLoop(
+        model_artifact_id=MODEL_ARTIFACT_ID,
+        promotion_registry=registry,
+        factor=factor,
+        initial_cash=100_000.0,
+    )
+
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
+    decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]
+
+    res = loop.run_loop(
+        universe_binding=_StaticUniverseBinding(symbols=tuple(universe)),
+        decision_times=decision_times,
+        get_prices_at=store.get_prices_at,
+        min_observation_days=14,
+    )
+
+    assert res.model_artifact_id == MODEL_ARTIFACT_ID
+    assert res.factor_id == "tsmom_30_7"
+    assert res.initial_cash == 100_000.0
+    assert res.total_trades_executed > 0
+    assert len(res.period_logs) == len(decision_times)
 
 
-def test_observation_non_null_when_window_complete() -> None:
+def test_observation_non_null_when_window_complete(tmp_db: Path) -> None:
     """PAPER-002: Observation result is non-null and complete when duration >= min_observation_days."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "control.db"
-        registry = PromotionRegistry(db_path)
+    db_path = tmp_db
+    registry = PromotionRegistry(db_path)
 
-        eff_time = datetime(2026, 4, 1, tzinfo=UTC)
-        promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
+    eff_time = datetime(2026, 4, 1, tzinfo=UTC)
+    promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
 
-        # 10 assets so single asset weight is 0.10 <= 0.15
-        universe = [
-            "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
-            "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
-        ]
-        store = _StubPriceStore(universe)
-        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+    # 10 assets so single asset weight is 0.10 <= 0.15
+    universe = [
+        "XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD", "ADAUSD",
+        "AVAXUSD", "DOTUSD", "LINKUSD", "LTCUSD", "BCHUSD",
+    ]
+    store = _StubPriceStore(universe)
+    factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
 
-        loop = FactorDrivenPaperLoop(
-            model_artifact_id=MODEL_ARTIFACT_ID,
-            promotion_registry=registry,
-            factor=factor,
-            initial_cash=100_000.0,
-        )
+    loop = FactorDrivenPaperLoop(
+        model_artifact_id=MODEL_ARTIFACT_ID,
+        promotion_registry=registry,
+        factor=factor,
+        initial_cash=100_000.0,
+    )
 
-        t0 = datetime(2026, 1, 1, tzinfo=UTC)
-        decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]  # 2026-04-11 to 2026-05-30 (59 days)
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
+    decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]  # 2026-04-11 to 2026-05-30 (59 days)
 
-        res = loop.run_loop(
-            universe=universe,
-            decision_times=decision_times,
-            get_prices_at=store.get_prices_at,
-            min_observation_days=14,
-        )
+    res = loop.run_loop(
+        universe_binding=_StaticUniverseBinding(symbols=tuple(universe)),
+        decision_times=decision_times,
+        get_prices_at=store.get_prices_at,
+        min_observation_days=14,
+    )
 
-        assert res.observation_result is not None
-        obs = res.observation_result
-        assert obs.is_complete is True
-        assert obs.meets_risk_limits is True
-        assert obs.duration_days >= 14.0
-        assert obs.reference_id.startswith("obs_mod_tsmom_30_7_v1_")
+    assert res.observation_result is not None
+    obs = res.observation_result
+    assert obs.is_complete is True
+    assert obs.meets_risk_limits is True
+    assert obs.duration_days >= 14.0
+    assert obs.reference_id.startswith("obs_mod_tsmom_30_7_v1_")
 
 
-def test_observation_incomplete_when_window_short() -> None:
+def test_observation_incomplete_when_window_short(tmp_db: Path) -> None:
     """PAPER-002: Observation is marked incomplete (is_complete=False) when duration < min_observation_days."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "control.db"
-        registry = PromotionRegistry(db_path)
+    db_path = tmp_db
+    registry = PromotionRegistry(db_path)
 
-        eff_time = datetime(2026, 5, 20, tzinfo=UTC)  # Only 10 days before evaluation at May 30
-        promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
+    eff_time = datetime(2026, 5, 20, tzinfo=UTC)  # Only 10 days before evaluation at May 30
+    promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
 
-        universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
-        store = _StubPriceStore(universe)
-        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+    universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
+    store = _StubPriceStore(universe)
+    factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
 
-        loop = FactorDrivenPaperLoop(
-            model_artifact_id=MODEL_ARTIFACT_ID,
-            promotion_registry=registry,
-            factor=factor,
-            initial_cash=100_000.0,
-        )
+    loop = FactorDrivenPaperLoop(
+        model_artifact_id=MODEL_ARTIFACT_ID,
+        promotion_registry=registry,
+        factor=factor,
+        initial_cash=100_000.0,
+    )
 
-        t0 = datetime(2026, 1, 1, tzinfo=UTC)
-        decision_times = [t0 + timedelta(days=d) for d in range(140, 150, 7)]  # May 20 to May 30
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
+    decision_times = [t0 + timedelta(days=d) for d in range(140, 150, 7)]  # May 20 to May 30
 
-        res = loop.run_loop(
-            universe=universe,
-            decision_times=decision_times,
-            get_prices_at=store.get_prices_at,
-            min_observation_days=14,
-        )
+    res = loop.run_loop(
+        universe_binding=_StaticUniverseBinding(symbols=tuple(universe)),
+        decision_times=decision_times,
+        get_prices_at=store.get_prices_at,
+        min_observation_days=14,
+    )
 
-        assert res.observation_result is not None
-        assert res.observation_result.is_complete is False
+    assert res.observation_result is not None
+    assert res.observation_result.is_complete is False
 
 
-def test_risk_limits_enforced_even_with_small_universe() -> None:
+def test_risk_limits_enforced_even_with_small_universe(tmp_db: Path) -> None:
     """PAPER-006: With 4 assets raw weights are 0.25, but enforcement clips to 0.15 and scales."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "control.db"
-        registry = PromotionRegistry(db_path)
+    db_path = tmp_db
+    registry = PromotionRegistry(db_path)
 
-        eff_time = datetime(2026, 4, 1, tzinfo=UTC)
-        promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
+    eff_time = datetime(2026, 4, 1, tzinfo=UTC)
+    promote_to_paper(registry, MODEL_ARTIFACT_ID, effective_time=eff_time)
 
-        # 4 assets -> raw single asset weight is 0.25, but enforcement should cap it.
-        universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
-        store = _StubPriceStore(universe)
-        factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
+    # 4 assets -> raw single asset weight is 0.25, but enforcement should cap it.
+    universe = ["XBTUSD", "ETHUSD", "SOLUSD", "XRPUSD"]
+    store = _StubPriceStore(universe)
+    factor = TimeSeriesMomentumFactor(store, lookback_days=30, skip_days=7, market_dataset_id="ds_1h")
 
-        loop = FactorDrivenPaperLoop(
-            model_artifact_id=MODEL_ARTIFACT_ID,
-            promotion_registry=registry,
-            factor=factor,
-            initial_cash=100_000.0,
-        )
+    loop = FactorDrivenPaperLoop(
+        model_artifact_id=MODEL_ARTIFACT_ID,
+        promotion_registry=registry,
+        factor=factor,
+        initial_cash=100_000.0,
+    )
 
-        t0 = datetime(2026, 1, 1, tzinfo=UTC)
-        decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
+    decision_times = [t0 + timedelta(days=d) for d in range(100, 150, 7)]
 
-        res = loop.run_loop(
-            universe=universe,
-            decision_times=decision_times,
-            get_prices_at=store.get_prices_at,
-            min_observation_days=14,
-        )
+    res = loop.run_loop(
+        universe_binding=_StaticUniverseBinding(symbols=tuple(universe)),
+        decision_times=decision_times,
+        get_prices_at=store.get_prices_at,
+        min_observation_days=14,
+    )
 
-        assert res.observation_result is not None
-        assert res.observation_result.meets_risk_limits is True
-        assert res.observation_result.max_single_asset_weight <= Decimal("0.15")
-        assert res.observation_result.max_leverage_observed <= Decimal("1.0")
+    assert res.observation_result is not None
+    assert res.observation_result.meets_risk_limits is True
+    assert res.observation_result.max_single_asset_weight <= Decimal("0.15")
+    assert res.observation_result.max_leverage_observed <= Decimal("1.0")
 
 
 # ---------------------------------------------------------------------------

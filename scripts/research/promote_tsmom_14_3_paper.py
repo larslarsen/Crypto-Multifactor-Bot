@@ -23,7 +23,7 @@ import argparse
 import csv
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +34,7 @@ from cryptofactors.promotion import (
     PromotionTarget,
 )
 
-UTC = timezone.utc
+UTC = UTC
 
 MODEL_ARTIFACT_ID = "mod_tsmom_14_3_v1"
 FACTOR_ID = "tsmom_14_3"
