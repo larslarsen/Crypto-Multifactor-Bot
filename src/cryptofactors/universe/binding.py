@@ -3,6 +3,12 @@
 Membership for every experiment and paper session must resolve through a
 catalog-published survivorship-aware universe dataset. Static venue maps are
 symbol translation only, never membership.
+
+Research/paper panel semantics (ADR-0014):
+    tradable_panel(t) = declared_panel  minus  CMC-dead_at(t)
+
+The CMC dataset is a dead-coin graveyard; it is used to *exclude* symbols from
+a declared liquid panel, not to supply the panel itself.
 """
 
 from __future__ import annotations
@@ -10,7 +16,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -26,8 +32,39 @@ from cryptofactors.universe.cmc_survivorship import (
     CMCSurvivorshipProvider,
 )
 
-UNIVERSE_BINDING_CODE_VERSION: str = "v1"
+UNIVERSE_BINDING_CODE_VERSION: str = "v2"
 SURVIVORSHIP_POLICY: str = "cmc_aware_proxy_v1"
+PAPER_PANEL_SURVIVORSHIP_POLICY: str = "paper_panel_minus_cmc_dead_v1"
+
+# Known names for paper symbols to disambiguate ticker collisions.
+# Key is the base asset (e.g., "SOL"), value is the expected CMC coin name.
+PAPER_BASE_TO_NAME: dict[str, str] = {
+    "BTC": "Bitcoin",
+    "ETH": "Ethereum",
+    "SOL": "Solana",
+    "XRP": "XRP",
+    "ADA": "Cardano",
+    "AVAX": "Avalanche",
+    "DOT": "Polkadot",
+    "LINK": "Chainlink",
+    "LTC": "Litecoin",
+    "BCH": "Bitcoin Cash",
+    "DOGE": "Dogecoin",
+    "UNI": "Uniswap",
+    "AAVE": "Aave",
+    "CRV": "Curve DAO",
+    "APE": "ApeCoin",
+    "NEAR": "NEAR Protocol",
+    "FIL": "Filecoin",
+    "ARB": "Arbitrum",
+    "OP": "Optimism",
+    "SUI": "Sui",
+    "SEI": "Sei",
+    "WLD": "Worldcoin",
+    "PEPE": "Pepe",
+}
+
+PAPER_PANEL_SYMBOLS: frozenset[str] = frozenset(PAPER_TO_INSTRUMENT_ID.keys())
 
 # Prior sprint_004 artifacts listed in 41_DATA_ARCHITECTURE_GAP.md as
 # survivorship-invalid for research conclusions.
@@ -100,15 +137,158 @@ class CMCSurvivorshipBinding:
     def universe_at(self, decision_time: datetime) -> frozenset[str]:
         """Return eligible paper/instrument keys at ``decision_time``."""
         ids = self.provider.universe_at(decision_time)
-        if self.key_map:
-            return frozenset(self.key_map.get(iid, iid) for iid in ids)
-        return frozenset(ids)
+        if not self.key_map:
+            return frozenset(ids)
+        # Only return mapped keys; unmapped ids are dropped to avoid leakage.
+        return frozenset(
+            self.key_map[iid]
+            for iid in ids
+            if iid in self.key_map
+        )
 
     def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
         """Return coverage metadata for the universe at ``decision_time``."""
         univ = self.universe_at(decision_time)
         return {
             "eligible": len(univ),
+            "with_bars": None,
+            "missing": None,
+            "universe_dataset_id": self.universe_dataset_id,
+            "survivorship_policy": self.survivorship_policy,
+            "universe_code_version": self.universe_code_version,
+        }
+
+
+def _base_asset(venue_symbol: str) -> str:
+    """Extract base asset from a venue pair (e.g. BTCUSDT -> BTC)."""
+    sym = venue_symbol.upper()
+    for suffix in ("USDT", "BUSD", "USDC", "USD"):
+        if sym.endswith(suffix) and len(sym) > len(suffix):
+            return sym[: -len(suffix)]
+    return sym
+
+
+def _paper_symbol_to_base(paper_symbol: str) -> str | None:
+    """Map a paper symbol (e.g. XBTUSD) to its base asset (e.g. BTC)."""
+    venue = PAPER_TO_BINANCE_MAP.get(paper_symbol)
+    if venue is None:
+        return None
+    return _base_asset(venue)
+
+
+def _parse_iso(value: str | None) -> datetime | None:
+    """Parse an ISO datetime string into UTC, returning None on failure."""
+    if not value:
+        return None
+    v = str(value).strip().upper().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(v)
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
+    except ValueError:
+        return None
+
+
+@dataclass(frozen=True, slots=True)
+class PaperPanelSurvivorshipBinding:
+    """Paper panel binding: declared panel minus CMC-dead coins at ``t``.
+
+    The CMC survivorship dataset is a dead-coin graveyard. This binding starts
+    from a fixed liquid panel (e.g. the DATA-011 23-symbol paper map) and
+    excludes any symbol whose name-matched CMC record is dead at the decision
+    time. Only paper symbols are ever returned; raw CMC ids never leak.
+    """
+
+    universe_dataset_id: str
+    provider: CMCSurvivorshipProvider
+    panel: frozenset[str]
+    base_to_name: Mapping[str, str]
+    survivorship_policy: str = PAPER_PANEL_SURVIVORSHIP_POLICY
+    universe_code_version: str = UNIVERSE_BINDING_CODE_VERSION
+    _records_by_symbol: dict[str, tuple[dict[str, Any], ...]] = field(
+        init=False, repr=False,
+    )
+
+    def __post_init__(self) -> None:
+        if not self.panel:
+            raise UniverseBindingError(
+                "PaperPanelSurvivorshipBinding requires a non-empty panel",
+            )
+        if self.provider.get_table().num_rows == 0:
+            raise UniverseBindingError(
+                "PaperPanelSurvivorshipBinding cannot be constructed from an empty provider",
+            )
+        for sym in self.panel:
+            if _paper_symbol_to_base(sym) is None:
+                raise UniverseBindingError(
+                    f"Paper symbol {sym!r} cannot be resolved to a base asset",
+                )
+        by_symbol: dict[str, list[dict[str, Any]]] = {}
+        for record in self.provider.records():
+            sym = str(record.get("symbol", "")).upper()
+            if sym:
+                by_symbol.setdefault(sym, []).append(record)
+        object.__setattr__(
+            self,
+            "_records_by_symbol",
+            {k: tuple(v) for k, v in by_symbol.items()},
+        )
+
+    def _is_dead_at(self, record: dict[str, Any], t: datetime) -> bool:
+        """Return True if a CMC record is dead at time ``t``."""
+        if record.get("is_active"):
+            return False
+        death_str = record.get("death_proxy_date")
+        if not death_str:
+            # Inactive with no death date is treated as dead for all times.
+            return True
+        death_dt = _parse_iso(str(death_str))
+        if death_dt is None:
+            # Unparseable death date: fail-closed and treat as dead.
+            return True
+        return t > death_dt
+
+    def _dead_symbols(self, t: datetime) -> set[str]:
+        """Return the subset of the panel that is CMC-dead at time ``t``."""
+        dead: set[str] = set()
+        for paper_sym in self.panel:
+            base = _paper_symbol_to_base(paper_sym)
+            if base is None:
+                continue
+            expected_name = self.base_to_name.get(base)
+            if not expected_name:
+                continue
+            for record in self._records_by_symbol.get(base, ()):
+                if not self._is_dead_at(record, t):
+                    continue
+                if str(record.get("name", "")).lower() != expected_name.lower():
+                    continue
+                dead.add(paper_sym)
+                break
+        return dead
+
+    def universe_at(self, decision_time: datetime) -> frozenset[str]:
+        """Return the survivorship-filtered paper panel at ``decision_time``."""
+        t = decision_time if decision_time.tzinfo else decision_time.replace(tzinfo=UTC)
+        dead = self._dead_symbols(t)
+        result = self.panel - dead
+        if not result:
+            raise UniverseBindingError(
+                f"Paper panel is empty after survivorship filter at {decision_time.isoformat()}; "
+                f"panel={len(self.panel)}, dead={len(dead)}",
+            )
+        return frozenset(result)
+
+    def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
+        """Return coverage metadata for the panel at ``decision_time``."""
+        t = decision_time if decision_time.tzinfo else decision_time.replace(tzinfo=UTC)
+        dead = self._dead_symbols(t)
+        result = self.panel - dead
+        return {
+            "eligible": len(result),
+            "excluded": len(dead),
+            "panel": len(self.panel),
             "with_bars": None,
             "missing": None,
             "universe_dataset_id": self.universe_dataset_id,
@@ -140,13 +320,12 @@ def _default_symbol_to_paper_map() -> dict[str, str]:
     return symbol_map
 
 
-def load_cmc_survivorship_binding(
+def _load_cmc_provider(
     db_path: Path | str,
     store_root: Path | str,
     dataset_id: str | None = None,
-    symbol_map: Mapping[str, str] | None = None,
-) -> CMCSurvivorshipBinding:
-    """Load the latest (or requested) CMC survivorship dataset and bind it.
+) -> tuple[str, CMCSurvivorshipProvider]:
+    """Load the latest (or requested) CMC survivorship dataset from the catalog.
 
     Fail-closed:
     - Missing catalog dataset -> ``UniverseBindingError``.
@@ -205,6 +384,18 @@ def load_cmc_survivorship_binding(
             f"Universe dataset {resolved_id} is empty",
         )
 
+    return resolved_id, provider
+
+
+def load_cmc_survivorship_binding(
+    db_path: Path | str,
+    store_root: Path | str,
+    dataset_id: str | None = None,
+    symbol_map: Mapping[str, str] | None = None,
+) -> CMCSurvivorshipBinding:
+    """Load the latest (or requested) CMC survivorship dataset and bind it."""
+    resolved_id, provider = _load_cmc_provider(db_path, store_root, dataset_id)
+
     symbol_map = symbol_map or _default_symbol_to_paper_map()
     try:
         key_map = {
@@ -228,11 +419,22 @@ def load_paper_universe_binding(
     db_path: Path | str,
     store_root: Path | str,
     dataset_id: str | None = None,
-) -> CMCSurvivorshipBinding:
-    """Convenience loader that returns CMC survivorship mapped to paper symbols."""
-    return load_cmc_survivorship_binding(
-        db_path,
-        store_root,
-        dataset_id=dataset_id,
-        symbol_map=_default_symbol_to_paper_map(),
+    panel: frozenset[str] | None = None,
+    base_to_name: Mapping[str, str] | None = None,
+) -> PaperPanelSurvivorshipBinding:
+    """Load a survivorship-filtered paper panel binding.
+
+    The panel is the declared liquid set (defaults to the DATA-011 23-symbol
+    paper map). The CMC dead-coin registry is used only to exclude symbols that
+    are name-matched as dead at the decision time.
+    """
+    resolved_id, provider = _load_cmc_provider(db_path, store_root, dataset_id)
+    selected_panel = panel or PAPER_PANEL_SYMBOLS
+    selected_base_to_name = base_to_name or PAPER_BASE_TO_NAME
+
+    return PaperPanelSurvivorshipBinding(
+        universe_dataset_id=resolved_id,
+        provider=provider,
+        panel=selected_panel,
+        base_to_name=selected_base_to_name,
     )

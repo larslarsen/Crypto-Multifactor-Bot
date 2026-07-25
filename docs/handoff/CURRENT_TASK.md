@@ -1,34 +1,28 @@
 # CURRENT_TASK
 
 Ticket: ARCH-002
-State: AWAITING_REVIEW
-Next required actor: reviewer — Lead Quantitative Finance Researcher/Engineer
+State: BLOCKED
+Next required actor: Sr Dev — fix membership semantics (REVIEW-0217)
 Next ticket authorized: NONE
 
-## What landed
+## Review verdict
 
-- `src/cryptofactors/universe/binding.py` — `UniverseBinding` protocol and
-  `CMCSurvivorshipBinding` adapter backed by catalog-published CMC graveyard
-  dataset. Fail-closed on missing/empty dataset.
-- `src/cryptofactors/execution/paper_loop.py` — `FactorDrivenPaperLoop.run_loop`
-  now requires a `UniverseBinding`; resolves membership per decision time and
-  fingerprints `universe_dataset_id`, `survivorship_policy`, and
-  `universe_code_version` in `PaperLoopResult`.
-- `src/cryptofactors/universe/__init__.py` — exports the binding protocol,
-  adapter, loaders, and `is_survivorship_invalid`.
-- `scripts/run_paper_momts.py` + 10 `scripts/research/*.py` — migrated from
-  static `PAPER_TO_INSTRUMENT_ID.keys()` membership to
-  `load_paper_universe_binding(...)`.
-- `tests/universe/test_binding.py` — 11 tests for contract, CMC birth/death
-  proxy semantics, empty-universe fail-closed, fingerprinting, and old-list API
-  rejection.
-- `tests/execution/test_paper_loop.py` + `tests/execution/test_paper_ops.py` —
-  updated to use `_StaticUniverseBinding` test stubs.
-- Static venue maps (`PAPER_TO_INSTRUMENT_ID`, `PAPER_TO_BINANCE_MAP`) remain
-  symbol translation only and are never used for membership.
+**CHANGES_REQUIRED** — see `docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md`
+
+## Blocking (summary)
+
+1. CMC dead-only graveyard used as universe membership → liquid panel empty / wrong
+2. `key_map.get(iid, iid)` leaks raw `cmc_*` ids into paper universe
+3. No real-catalog integration proof for sensible DATA-011 panel
+4. Commit uncommitted `TYPE_CHECKING` circular-import fix with rework
+
+## Required shape
+
+tradable = (paper/bars panel) minus CMC-dead at t (name-safe), not dead-list as membership
 
 ## Governing documents
 
-- tickets/ARCH-002.md (this ticket, AWAITING_REVIEW)
-- research/sprint_004/41_DATA_ARCHITECTURE_GAP.md (survivorship-invalid artifact list)
-- docs/reviews/REVIEW-0216_DATA-011_ACCEPTED.md (prior ticket DATA-011)
+- tickets/ARCH-002.md
+- docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md
+- src/cryptofactors/universe/binding.py
+- src/cryptofactors/execution/paper_loop.py

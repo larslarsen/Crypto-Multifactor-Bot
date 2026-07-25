@@ -11,7 +11,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from cryptofactors.execution.errors import PaperExecutionError
 from cryptofactors.execution.live import MAX_GROSS_LEVERAGE, MAX_SINGLE_ASSET_WEIGHT
@@ -25,7 +25,9 @@ from cryptofactors.serving.holdout import (
     ProspectiveEvaluator,
     ProspectiveHoldoutError,
 )
-from cryptofactors.universe.binding import UniverseBinding
+
+if TYPE_CHECKING:
+    from cryptofactors.universe.binding import UniverseBinding
 
 
 @dataclass(frozen=True, slots=True)

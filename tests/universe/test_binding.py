@@ -202,7 +202,7 @@ def test_coverage_report_fields() -> None:
     assert report["eligible"] == 1
     assert report["universe_dataset_id"] == "ds_test"
     assert report["survivorship_policy"] == "cmc_aware_proxy_v1"
-    assert report["universe_code_version"] == "v1"
+    assert report["universe_code_version"] == "v2"
 
 
 def test_is_survivorship_invalid() -> None:

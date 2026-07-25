@@ -1,10 +1,14 @@
 """Cryptofactors universe module."""
 
 from cryptofactors.universe.binding import (
+    PAPER_BASE_TO_NAME,
+    PAPER_PANEL_SURVIVORSHIP_POLICY,
+    PAPER_PANEL_SYMBOLS,
     SURVIVORSHIP_INVALID_ARTIFACT_IDS,
     SURVIVORSHIP_POLICY,
     UNIVERSE_BINDING_CODE_VERSION,
     CMCSurvivorshipBinding,
+    PaperPanelSurvivorshipBinding,
     UniverseBinding,
     UniverseBindingError,
     is_survivorship_invalid,
@@ -40,6 +44,9 @@ __all__ = [
     "CMC_SURVIVORSHIP_DATASET_ID",
     "CMC_SURVIVORSHIP_SCHEMA",
     "COINGECKO_UNIVERSE_DATASET_ID",
+    "PAPER_BASE_TO_NAME",
+    "PAPER_PANEL_SURVIVORSHIP_POLICY",
+    "PAPER_PANEL_SYMBOLS",
     "PROVENANCE_SOURCE",
     "SURVIVORSHIP_INVALID_ARTIFACT_IDS",
     "SURVIVORSHIP_POLICY",
@@ -51,6 +58,7 @@ __all__ = [
     "CMCSurvivorshipProvider",
     "CoinGeckoUniverseError",
     "CoinGeckoUniverseProvider",
+    "PaperPanelSurvivorshipBinding",
     "UniverseBinding",
     "UniverseBindingError",
     "build_birdeye_listings_table",
