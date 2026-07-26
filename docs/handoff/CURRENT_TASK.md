@@ -1,28 +1,21 @@
 # CURRENT_TASK
 
-Ticket: ARCH-002
-State: BLOCKED
-Next required actor: Sr Dev — fix membership semantics (REVIEW-0217)
+Ticket: ARCH-003
+State: SUPERSEDED
+Next required actor: Reviewer
 Next ticket authorized: NONE
 
-## Review verdict
+## Summary
 
-**CHANGES_REQUIRED** — see `docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md`
+ARCH-003 implementation abandoned due to broken refresh, invalid watermark access,
+and no consumer wiring. ADR-0015 remains unaccepted.
 
-## Blocking (summary)
+## Evidence
 
-1. CMC dead-only graveyard used as universe membership → liquid panel empty / wrong
-2. `key_map.get(iid, iid)` leaks raw `cmc_*` ids into paper universe
-3. No real-catalog integration proof for sensible DATA-011 panel
-4. Commit uncommitted `TYPE_CHECKING` circular-import fix with rework
+- `tickets/ARCH-003.md`
+- `docs/reviews/REVIEW-0225_ARCH-003_SUPERSEDED.md`
 
-## Required shape
+## Governance
 
-tradable = (paper/bars panel) minus CMC-dead at t (name-safe), not dead-list as membership
-
-## Governing documents
-
-- tickets/ARCH-002.md
-- docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md
-- src/cryptofactors/universe/binding.py
-- src/cryptofactors/execution/paper_loop.py
+- No Sr Dev work is authorized under ARCH-003.
+- No DEX backfill, factor research, or LIVE work is authorized.
