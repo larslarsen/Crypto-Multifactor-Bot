@@ -1,30 +1,22 @@
 # CURRENT_TASK
 
-Ticket: DEX-002
-State: ACCEPTED
-Next required actor: NONE
+Ticket: DATA-008
+State: READY
+Next required actor: Sr Dev - Claude Opus 5
 Next ticket authorized: NONE
 
 ## Summary
 
-DEX-002 - Screened Free DEX OHLCV Acquisition is accepted at `13000c1`.
-REVIEW-0235 through REVIEW-0238 are closed by REVIEW-0239.
-
-The accepted path enforces provider capabilities, fail-closed screening, genuine
-interval bars, exact raw lineage, retry-safe watermarks, complete canonical snapshots,
-and deterministic repeated refreshes. The legacy publisher and report 37 have no
-authority.
-
-## Verification
-
-- 168 focused tests passed.
-- Complete repository pytest suite passed with 6 skips.
-- Scoped Ruff passed.
-- Repository control passed.
-- Controlled report 44 reconciles dataset
-  `ds_14d5ff00c501117b200f157260bed7c2c3fda2406efa2d1eb0231218337902be`.
+DATA-008 rework is authorized by REVIEW-0240. The existing Binance expansion must be
+corrected for deterministic evidence-backed ranking, base-asset exclusions, history
+eligibility, exact raw lineage, retry-safe watermarks, and full canonical incremental
+publication.
 
 ## Governing documents
 
-- tickets/DEX-002.md
-- docs/reviews/REVIEW-0239_DEX-002_ACCEPTED.md
+- tickets/DATA-008.md
+- docs/reviews/REVIEW-0240_DATA-008_REWORK_AUTHORIZED.md
+
+## Authorization
+
+Only DATA-008 is authorized. No other ticket or LIVE work may begin.
