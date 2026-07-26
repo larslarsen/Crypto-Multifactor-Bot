@@ -14,7 +14,11 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cryptofactors.acquisition.uniswap_v2 import UniswapV2PairCreatedIngestor
+from cryptofactors.acquisition.uniswap_v2 import (
+    UNISWAP_V2_DEPLOYMENT_BLOCK,
+    UNISWAP_V2_FACTORY,
+    UniswapV2PairCreatedIngestor,
+)
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.models import (
     CodeIdentity,
@@ -42,7 +46,10 @@ from cryptofactors.ingest.raw.writer import RawObjectWriter
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Ingest Uniswap V2 PairCreated events")
-    parser.add_argument("--start-block", required=True, type=int)
+    parser.add_argument(
+        "--start-block", required=True, type=int,
+        help=f"first block; must not precede deployment block {UNISWAP_V2_DEPLOYMENT_BLOCK}",
+    )
     parser.add_argument("--end-block", required=True, type=int)
     parser.add_argument("--chunk-size", type=int, default=10_000)
     parser.add_argument("--db-path", type=Path, default=Path("exp003.db"))
@@ -59,6 +66,7 @@ def main() -> int:
         ingestor = UniswapV2PairCreatedIngestor(
             rpc_url=rpc_url,
             raw_writer=RawObjectWriter(RawObjectStoreConfig(root=args.raw_root), catalog),
+            raw_root=args.raw_root,
         )
         try:
             ingestor.fetch(
@@ -67,6 +75,7 @@ def main() -> int:
                 chunk_size=args.chunk_size,
                 receipt_db_path=str(args.db_path),
                 emit_rows=False,
+                raw_root=args.raw_root,
             )
             replay = ingestor.replay_receipts(
                 start_block=args.start_block,
@@ -104,7 +113,7 @@ def main() -> int:
         pq.write_table(table, output, compression="zstd")
         sha256, byte_size = stream_sha256_and_size(output)
         config = {
-            "factory": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+            "factory": UNISWAP_V2_FACTORY,
             "start_block": args.start_block,
             "end_block": args.end_block,
             "chunk_size": args.chunk_size,

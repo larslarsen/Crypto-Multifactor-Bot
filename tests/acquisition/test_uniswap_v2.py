@@ -1,21 +1,26 @@
 """DATA-012 — tests for Uniswap V2 Factory PairCreated raw-event ingestion.
 
-Every test exercises the finished implementation:
-``src/cryptofactors/acquisition/uniswap_v2.py`` and its runner
+Every test exercises the shipped implementation:
+``src/cryptofactors/acquisition/uniswap_v2.py``, migration 0012, and the runner
 ``scripts/research/ingest_uniswap_v2_pair_created.py``. Nothing here re-implements
-production logic; the publication test drives the runner itself.
+production logic; publication is proven by driving the runner itself.
 
-Coverage maps to the DATA-012 acceptance criteria and the REVIEW-0230 corrections:
+Coverage maps to the ticket acceptance criteria and the review corrections:
 
-* no block gaps across resumable chunks              -> `TestFetch`, `TestReplayCoverage`
-* exact JSON-RPC response bytes preserved            -> `TestRawPreservation`
-* all required source fields present                 -> `TestDecoder`
-* deterministic replay                               -> `TestReplayDeterminism`
-* no duplicate ``(tx_hash, log_index)``              -> `TestDecoder`, `TestReplayCoverage`
-* RPC URL from environment, never Git                -> `TestConfiguration`
-* REVIEW-0230 (1) complete ``raw_object_ids``        -> `TestReplayCoverage`
-* REVIEW-0230 (2) receipt DB closed in ``finally``   -> `TestFetch`
-* REVIEW-0230 (3) invalid raw JSON is a typed error  -> `TestRawPreservation`
+* mainnet only (``eth_chainId == 0x1``)        -> `TestChainSafety`
+* deployment block 10_000_835 enforced         -> `TestDeploymentBlock`
+* strict emitter/removed/topics/ABI/hash/
+  quantity/block-identity/duplicate validation -> `TestLogValidation`
+* receipts bound to acquisitions, raw ids,
+  exact requests, ranges and timestamps        -> `TestReceiptBinding`
+* end-header number/hash authenticated         -> `TestReceiptBinding`, `TestResume`
+* every dependency verified before a skip      -> `TestResume`
+* replay offline, request-bound, SHA-verified,
+  contiguous, deterministic                    -> `TestReplay`
+* logs acquisition time is row availability    -> `TestAvailabilityTime`
+* error bytes preserved, failures recorded     -> `TestFailureRecording`
+* no gaps, no duplicate (tx_hash, log_index)   -> `TestFetch`, `TestReplay`
+* RPC URL from environment, never Git          -> `TestConfiguration`
 """
 
 from __future__ import annotations
@@ -37,14 +42,20 @@ import pytest
 from cryptofactors.acquisition import uniswap_v2
 from cryptofactors.acquisition.uniswap_v2 import (
     ETHEREUM_CHAIN,
+    ETHEREUM_MAINNET_CHAIN_ID,
+    FAILURE_TABLE,
     PAIR_CREATED_TOPIC,
+    RECEIPT_TABLE,
+    UNISWAP_V2_DEPLOYMENT_BLOCK,
     UNISWAP_V2_FACTORY,
     PairCreatedRow,
+    ReplayResult,
     UniswapV2IngestionError,
     UniswapV2PairCreatedIngestor,
-    _address,
-    _hex_int,
+    _canonical_json,
+    block_header_request,
     decode_pair_created,
+    logs_request,
 )
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.runner import MIGRATIONS_DIR, apply_migrations, get_status
@@ -61,7 +72,7 @@ REQUIRED_ROW_FIELDS = frozenset({
     "event_time", "availability_time", "raw_object_id",
 })
 
-TIMESTAMP_BASE = 1_700_000_000
+TIMESTAMP_BASE = 1_588_000_000
 
 
 # ---------------------------------------------------------------------------
@@ -69,12 +80,10 @@ TIMESTAMP_BASE = 1_700_000_000
 # ---------------------------------------------------------------------------
 
 def _addr(n: int) -> str:
-    """A 20-byte address as lowercase hex."""
     return "0x" + f"{n:040x}"
 
 
 def _hash32(n: int) -> str:
-    """A 32-byte hash as lowercase hex."""
     return "0x" + f"{n:064x}"
 
 
@@ -94,14 +103,11 @@ def pair_created_log(
     token1: str,
     pair: str,
     all_pairs_length: int = 1,
+    emitter: str = UNISWAP_V2_FACTORY,
 ) -> dict[str, Any]:
-    """A `PairCreated(address,address,address,uint256)` log as eth_getLogs returns it.
-
-    `token0`/`token1` are indexed (topics); `pair` and the pair count are ABI-encoded
-    into `data`, so `data`'s first word is the left-padded pair address.
-    """
+    """A `PairCreated(address,address,address,uint)` log as eth_getLogs returns it."""
     return {
-        "address": UNISWAP_V2_FACTORY,
+        "address": emitter,
         "blockHash": block_hash,
         "blockNumber": hex(block_number),
         "data": _abi_word(pair) + f"{all_pairs_length:064x}",
@@ -114,31 +120,37 @@ def pair_created_log(
 
 
 class MockEthereumNode:
-    """Deterministic JSON-RPC node serving `eth_getLogs` and `eth_getBlockByNumber`.
+    """Deterministic JSON-RPC node for eth_chainId, eth_getLogs and eth_getBlockByNumber.
 
     Records the exact bytes of every response so tests can assert byte-for-byte
-    preservation in the raw store, and records every call so tests can assert which
-    requests the ingestor did (and did not) make.
+    preservation, and every call so tests can assert which requests were and were not
+    made (resume must not re-fetch; replay must not call at all).
     """
 
     def __init__(
         self,
         *,
         block_hashes: dict[int, str],
-        logs: list[dict[str, Any]] | None = None,
+        logs: list[Any] | None = None,
+        chain_id: str = ETHEREUM_MAINNET_CHAIN_ID,
         fail_status_for: set[str] | None = None,
         rpc_error_for: set[str] | None = None,
-        honour_block_range: bool = True,
         invalid_json_for: set[str] | None = None,
+        transport_error_for: set[str] | None = None,
+        honour_block_range: bool = True,
         omit_header_fields: set[str] | None = None,
+        header_number_override: dict[int, int] | None = None,
     ) -> None:
         self.block_hashes = block_hashes
-        self.logs = logs or []
+        self.logs = logs if logs is not None else []
+        self.chain_id = chain_id
         self.fail_status_for = fail_status_for or set()
         self.rpc_error_for = rpc_error_for or set()
-        self.honour_block_range = honour_block_range
         self.invalid_json_for = invalid_json_for or set()
+        self.transport_error_for = transport_error_for or set()
+        self.honour_block_range = honour_block_range
         self.omit_header_fields = omit_header_fields or set()
+        self.header_number_override = header_number_override or {}
         self.calls: list[tuple[str, Any]] = []
         self.served: list[bytes] = []
 
@@ -146,12 +158,16 @@ class MockEthereumNode:
     def timestamp(block_number: int) -> int:
         return TIMESTAMP_BASE + block_number
 
+    def methods(self) -> list[str]:
+        return [method for method, _ in self.calls]
+
     def _respond(self, status: int, payload: dict[str, Any]) -> httpx.Response:
         body = json.dumps(payload).encode()
         self.served.append(body)
         return httpx.Response(status, content=body, headers={"content-type": "application/json"})
 
-    def _error(self, message: str) -> dict[str, Any]:
+    @staticmethod
+    def _error(message: str) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": message}}
 
     def handler(self, request: httpx.Request) -> httpx.Response:
@@ -160,6 +176,8 @@ class MockEthereumNode:
         params = payload["params"]
         self.calls.append((method, params))
 
+        if method in self.transport_error_for:
+            raise httpx.ConnectError("connection refused", request=request)
         if method in self.fail_status_for:
             return self._respond(500, self._error("upstream failure"))
         if method in self.rpc_error_for:
@@ -169,12 +187,16 @@ class MockEthereumNode:
             self.served.append(body)
             return httpx.Response(200, content=body, headers={"content-type": "text/html"})
 
+        if method == "eth_chainId":
+            return self._respond(200, {"jsonrpc": "2.0", "id": 1, "result": self.chain_id})
+
         if method == "eth_getBlockByNumber":
             number = int(params[0], 16)
             if number not in self.block_hashes:
                 return self._respond(200, self._error(f"unknown block {number}"))
-            header = {
-                "number": hex(number),
+            reported = self.header_number_override.get(number, number)
+            header: dict[str, Any] = {
+                "number": hex(reported),
                 "hash": self.block_hashes[number],
                 "parentHash": _hash32(number - 1),
                 "timestamp": hex(self.timestamp(number)),
@@ -189,7 +211,8 @@ class MockEthereumNode:
             selected = [
                 log for log in self.logs
                 if not self.honour_block_range
-                or from_block <= int(log["blockNumber"], 16) <= to_block
+                or (isinstance(log, dict)
+                    and from_block <= int(log["blockNumber"], 16) <= to_block)
             ]
             return self._respond(200, {"jsonrpc": "2.0", "id": 1, "result": selected})
 
@@ -199,10 +222,7 @@ class MockEthereumNode:
         return httpx.Client(transport=httpx.MockTransport(self.handler))
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Make `httpx.Client()` constructed inside the ingestor talk to this node.
-
-        Needed for the runner script, which owns its client.
-        """
+        """Point `httpx.Client()` built inside the ingestor at this node (runner path)."""
         real_client = httpx.Client
         monkeypatch.setattr(
             uniswap_v2.httpx,
@@ -211,17 +231,25 @@ class MockEthereumNode:
         )
 
 
+def exploding_client() -> httpx.Client:
+    """A client that fails the test if anything touches the network."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError(f"unexpected network call to {request.url}")
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
 # ---------------------------------------------------------------------------
 # Store / receipt helpers
 # ---------------------------------------------------------------------------
 
 class Store:
-    """Raw object store plus the control database holding the chunk receipts."""
+    """Raw object store plus the control database holding chunk receipts."""
 
     def __init__(self, tmp_path: Path) -> None:
-        self.raw_root = tmp_path / "store" / "raw"
-        self.raw_root.mkdir(parents=True, exist_ok=True)
         self.store_root = tmp_path / "store"
+        self.raw_root = self.store_root / "raw"
+        self.raw_root.mkdir(parents=True, exist_ok=True)
         self.db = tmp_path / "control.db"
         apply_migrations(self.db, migrations_dir=MIGRATIONS_DIR)
         self.catalog = SqliteRawObjectCatalog(self.db)
@@ -230,44 +258,56 @@ class Store:
     def close(self) -> None:
         self.catalog.close()
 
-    def receipts(self) -> list[dict[str, Any]]:
+    def _query(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         conn = sqlite3.connect(self.db)
         try:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                "SELECT * FROM uniswap_v2_pair_created_chunk_receipt_v2 ORDER BY start_block"
-            ).fetchall()
+            return [dict(row) for row in conn.execute(sql, params)]
         finally:
             conn.close()
-        return [dict(row) for row in rows]
 
-    def insert_receipt(
-        self,
-        *,
-        start_block: int,
-        end_block: int,
-        end_block_hash: str,
-        logs_raw_object_id: str,
-        header_raw_object_ids: list[str],
-        completed_at: str = "2026-07-25T00:00:00+00:00",
-        chain: str = ETHEREUM_CHAIN,
-        factory: str = UNISWAP_V2_FACTORY,
-        topic: str = PAIR_CREATED_TOPIC,
-        header_raw_object_ids_json: str | None = None,
-    ) -> None:
-        payload = (
-            json.dumps(header_raw_object_ids)
-            if header_raw_object_ids_json is None
-            else header_raw_object_ids_json
-        )
+    def receipts(self) -> list[dict[str, Any]]:
+        return self._query(f"SELECT * FROM {RECEIPT_TABLE} ORDER BY start_block")
+
+    def receipt(self, start_block: int) -> dict[str, Any]:
+        rows = [r for r in self.receipts() if r["start_block"] == start_block]
+        assert len(rows) == 1, f"expected exactly one receipt at {start_block}"
+        return rows[0]
+
+    def failures(self) -> list[dict[str, Any]]:
+        return self._query(f"SELECT * FROM {FAILURE_TABLE} ORDER BY failure_id")
+
+    def update_receipt(self, _where_start_block: int, /, **columns: Any) -> None:
+        assignments = ", ".join(f"{name} = ?" for name in columns)
         conn = sqlite3.connect(self.db)
         try:
             conn.execute(
-                "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (chain, factory, topic, start_block, end_block, end_block_hash,
-                 logs_raw_object_id, payload, completed_at),
+                f"UPDATE {RECEIPT_TABLE} SET {assignments} WHERE start_block = ?",
+                (*columns.values(), _where_start_block),
             )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def clone_receipt_for_factory(self, start_block: int, factory: str) -> None:
+        """Copy a receipt under a different factory, leaving the original in place."""
+        row = self.receipt(start_block)
+        row["factory"] = factory
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute(
+                f"INSERT INTO {RECEIPT_TABLE} ({', '.join(row)}) "
+                f"VALUES ({', '.join('?' for _ in row)})",
+                tuple(row.values()),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def delete_receipts_for_factory(self, factory: str) -> None:
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute(f"DELETE FROM {RECEIPT_TABLE} WHERE factory = ?", (factory,))
             conn.commit()
         finally:
             conn.close()
@@ -275,17 +315,7 @@ class Store:
     def raw_path(self, raw_object_id: str) -> Path:
         return content_addressed_absolute_path(self.raw_root, raw_object_id.removeprefix("raw_"))
 
-    def write_raw(self, payload: dict[str, Any]) -> str:
-        """Place exact bytes at their content address, returning the raw object id."""
-        body = json.dumps(payload).encode()
-        digest = hashlib.sha256(body).hexdigest()
-        path = content_addressed_absolute_path(self.raw_root, digest)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(body)
-        return f"raw_{digest}"
-
     def overwrite_raw(self, raw_object_id: str, body: bytes) -> None:
-        """Corrupt a preserved object in place, keeping its (now wrong) id."""
         path = self.raw_path(raw_object_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
@@ -298,44 +328,56 @@ def store(tmp_path: Path) -> Iterator[Store]:
     created.close()
 
 
-def declared_raw_object_ids(receipts: list[dict[str, Any]]) -> set[str]:
-    """Every raw object a receipt says it depends on: the logs response and all headers."""
-    declared: set[str] = set()
-    for receipt in receipts:
-        declared.add(str(receipt["logs_raw_object_id"]))
-        declared.update(str(rid) for rid in json.loads(receipt["header_raw_object_ids_json"]))
-    return declared
-
-
 # ---------------------------------------------------------------------------
-# A two-chunk scenario: logs in the first chunk, an empty second chunk.
-# The empty chunk is what makes the end-block header a mandatory dependency.
+# A two-chunk scenario starting exactly at the deployment block: events in the
+# first chunk, an empty second chunk. The empty chunk is what makes the
+# end-block header a mandatory, independently-authenticated dependency.
 # ---------------------------------------------------------------------------
+
+SCENARIO_START = UNISWAP_V2_DEPLOYMENT_BLOCK
+SCENARIO_CHUNK = 100
+SCENARIO_END = SCENARIO_START + 199
+
+BLOCK_EVENT = SCENARIO_START + 15       # carries two events
+BLOCK_CHUNK1_END = SCENARIO_START + 99  # carries one event and ends chunk 1
+BLOCK_CHUNK2_END = SCENARIO_END         # empty chunk's end block
 
 TOKEN_A, TOKEN_B, TOKEN_C = _addr(0xA1), _addr(0xB2), _addr(0xC3)
 PAIR_1, PAIR_2, PAIR_3 = _addr(0x11), _addr(0x22), _addr(0x33)
-BLOCK_150_HASH, BLOCK_199_HASH, BLOCK_299_HASH = _hash32(150), _hash32(199), _hash32(299)
 
-SCENARIO_BLOCK_HASHES = {150: BLOCK_150_HASH, 199: BLOCK_199_HASH, 299: BLOCK_299_HASH}
+SCENARIO_BLOCK_HASHES = {
+    BLOCK_EVENT: _hash32(BLOCK_EVENT),
+    BLOCK_CHUNK1_END: _hash32(BLOCK_CHUNK1_END),
+    BLOCK_CHUNK2_END: _hash32(BLOCK_CHUNK2_END),
+}
 
-# Deliberately served out of order so ordering is proven, not inherited from the node.
-SCENARIO_LOGS = [
+TX_1, TX_2, TX_3 = _hash32(0xF1), _hash32(0xF2), _hash32(0xF3)
+
+# Served out of order so ordering is proven, not inherited from the node.
+SCENARIO_LOGS: list[Any] = [
     pair_created_log(
-        block_number=199, block_hash=BLOCK_199_HASH, tx_hash=_hash32(0xF3),
+        block_number=BLOCK_CHUNK1_END, block_hash=_hash32(BLOCK_CHUNK1_END), tx_hash=TX_3,
         tx_index=1, log_index=4, token0=TOKEN_A, token1=TOKEN_C, pair=PAIR_3,
     ),
     pair_created_log(
-        block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF2),
+        block_number=BLOCK_EVENT, block_hash=_hash32(BLOCK_EVENT), tx_hash=TX_2,
         tx_index=3, log_index=7, token0=TOKEN_B, token1=TOKEN_C, pair=PAIR_2,
     ),
     pair_created_log(
-        block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
+        block_number=BLOCK_EVENT, block_hash=_hash32(BLOCK_EVENT), tx_hash=TX_1,
         tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
     ),
 ]
 
-SCENARIO_START, SCENARIO_END, SCENARIO_CHUNK = 100, 299, 100
-SCENARIO_EXPECTED_ORDER = [(150, 0, 0), (150, 3, 7), (199, 1, 4)]
+SCENARIO_EXPECTED_ORDER = [
+    (BLOCK_EVENT, 0, 0),
+    (BLOCK_EVENT, 3, 7),
+    (BLOCK_CHUNK1_END, 1, 4),
+]
+SCENARIO_RANGES = [
+    (SCENARIO_START, BLOCK_CHUNK1_END),
+    (BLOCK_CHUNK1_END + 1, SCENARIO_END),
+]
 
 
 def scenario_node(**overrides: Any) -> MockEthereumNode:
@@ -347,33 +389,69 @@ def scenario_node(**overrides: Any) -> MockEthereumNode:
     return MockEthereumNode(**kwargs)
 
 
-def run_scenario_fetch(store: Store, node: MockEthereumNode, **kwargs: Any) -> list[PairCreatedRow]:
-    ingestor = UniswapV2PairCreatedIngestor(
-        rpc_url="http://node.invalid", raw_writer=store.writer, client=node.client()
-    )
+def make_ingestor(
+    store: Store, node: MockEthereumNode | None = None, **overrides: Any
+) -> UniswapV2PairCreatedIngestor:
+    kwargs: dict[str, Any] = {
+        "rpc_url": "http://node.invalid",
+        "raw_writer": store.writer,
+        "raw_root": store.raw_root,
+        "client": exploding_client() if node is None else node.client(),
+    }
+    kwargs.update(overrides)
+    return UniswapV2PairCreatedIngestor(**kwargs)
+
+
+def run_fetch(
+    store: Store, node: MockEthereumNode, **kwargs: Any
+) -> list[PairCreatedRow]:
+    params: dict[str, Any] = {
+        "start_block": SCENARIO_START,
+        "end_block": SCENARIO_END,
+        "chunk_size": SCENARIO_CHUNK,
+        "receipt_db_path": str(store.db),
+    }
+    params.update(kwargs)
+    ingestor = make_ingestor(store, node)
     try:
-        return ingestor.fetch(
-            start_block=SCENARIO_START,
-            end_block=SCENARIO_END,
-            chunk_size=SCENARIO_CHUNK,
-            receipt_db_path=str(store.db),
-            **kwargs,
-        )
+        return ingestor.fetch(**params)
     finally:
         ingestor.close()
 
 
-def scenario_replay(store: Store) -> Any:
-    ingestor = UniswapV2PairCreatedIngestor(rpc_url="http://node.invalid", raw_writer=store.writer)
+def run_replay(store: Store, **kwargs: Any) -> ReplayResult:
+    """Replay with a client that raises if the network is touched."""
+    params: dict[str, Any] = {
+        "start_block": SCENARIO_START,
+        "end_block": SCENARIO_END,
+        "receipt_db_path": str(store.db),
+    }
+    params.update(kwargs)
+    ingestor = make_ingestor(store)
     try:
-        return ingestor.replay_receipts(
-            start_block=SCENARIO_START,
-            end_block=SCENARIO_END,
-            receipt_db_path=str(store.db),
-            raw_root=store.raw_root,
-        )
+        return ingestor.replay_receipts(**params)
     finally:
         ingestor.close()
+
+
+def declared_raw_object_ids(receipts: list[dict[str, Any]]) -> set[str]:
+    declared: set[str] = set()
+    for receipt in receipts:
+        declared.add(str(receipt["logs_raw_object_id"]))
+        declared.add(str(receipt["end_header_raw_object_id"]))
+        for dep in json.loads(receipt["header_dependencies_json"]):
+            declared.add(str(dep["raw_object_id"]))
+    return declared
+
+
+def declared_acquisition_ids(receipts: list[dict[str, Any]]) -> set[str]:
+    declared: set[str] = set()
+    for receipt in receipts:
+        declared.add(str(receipt["logs_acquisition_id"]))
+        declared.add(str(receipt["end_header_acquisition_id"]))
+        for dep in json.loads(receipt["header_dependencies_json"]):
+            declared.add(str(dep["acquisition_id"]))
+    return declared
 
 
 # ---------------------------------------------------------------------------
@@ -385,26 +463,37 @@ class TestMigrations:
         db = tmp_path / "control.db"
         apply_migrations(db, migrations_dir=MIGRATIONS_DIR)
         applied = get_status(db, migrations_dir=MIGRATIONS_DIR)["applied"]
-        for version in ("0009", "0010", "0011"):
+        for version in ("0009", "0010", "0011", "0012"):
             assert any(version in name for name in applied), f"migration {version} not applied"
 
-    def test_receipt_table_is_keyed_by_full_ingestion_identity(self, tmp_path: Path) -> None:
-        """Chunk identity must include chain/factory/topic, not just the block range."""
-        db = tmp_path / "control.db"
-        apply_migrations(db, migrations_dir=MIGRATIONS_DIR)
-        conn = sqlite3.connect(db)
+    def test_completed_migrations_are_not_replaced(self, store: Store) -> None:
+        """0012 is forward-only: the v2 table it supersedes still exists untouched."""
+        conn = sqlite3.connect(store.db)
         try:
-            columns = conn.execute(
-                "PRAGMA table_info(uniswap_v2_pair_created_chunk_receipt_v2)"
-            ).fetchall()
+            tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        finally:
+            conn.close()
+        assert "uniswap_v2_pair_created_chunk_receipt_v2" in tables
+        assert RECEIPT_TABLE in tables
+        assert FAILURE_TABLE in tables
+
+    def test_receipt_table_binds_identity_requests_acquisitions_and_timestamps(
+        self, store: Store
+    ) -> None:
+        conn = sqlite3.connect(store.db)
+        try:
+            columns = conn.execute(f"PRAGMA table_info({RECEIPT_TABLE})").fetchall()
         finally:
             conn.close()
 
-        assert columns, "uniswap_v2_pair_created_chunk_receipt_v2 is missing"
         names = {row[1] for row in columns}
         assert {
-            "chain", "factory", "topic", "start_block", "end_block", "end_block_hash",
-            "logs_raw_object_id", "header_raw_object_ids_json", "completed_at",
+            "chain", "chain_id", "factory", "topic", "start_block", "end_block",
+            "logs_request_json", "logs_raw_object_id", "logs_acquisition_id",
+            "logs_acquired_at", "end_block_number", "end_block_hash",
+            "end_header_request_json", "end_header_raw_object_id",
+            "end_header_acquisition_id", "end_header_acquired_at",
+            "header_dependencies_json", "completed_at",
         } <= names
         primary_key = [row[1] for row in sorted(columns, key=lambda row: row[5]) if row[5]]
         assert primary_key == ["chain", "factory", "topic", "start_block", "end_block"]
@@ -412,18 +501,97 @@ class TestMigrations:
     def test_receipt_identity_allows_the_same_range_for_a_different_factory(
         self, store: Store
     ) -> None:
-        other_factory = _addr(0xDEAD)
-        store.insert_receipt(
-            start_block=100, end_block=199, end_block_hash=BLOCK_199_HASH,
-            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
-        )
-        store.insert_receipt(
-            start_block=100, end_block=199, end_block_hash=BLOCK_199_HASH,
-            logs_raw_object_id="raw_" + "1" * 64, header_raw_object_ids=[],
-            factory=other_factory,
-        )
+        """Why the identity check lives in the query, not in a per-row assertion."""
+        run_fetch(store, scenario_node())
+        store.clone_receipt_for_factory(SCENARIO_START, _addr(0xDEAD))
+
         factories = {receipt["factory"] for receipt in store.receipts()}
-        assert factories == {UNISWAP_V2_FACTORY, other_factory}
+        assert factories == {UNISWAP_V2_FACTORY, _addr(0xDEAD)}
+
+
+# ---------------------------------------------------------------------------
+# Chain safety and range guards
+# ---------------------------------------------------------------------------
+
+class TestChainSafety:
+    def test_the_chain_id_is_verified_before_any_logs_are_requested(
+        self, store: Store
+    ) -> None:
+        node = scenario_node()
+        run_fetch(store, node)
+
+        assert node.methods()[0] == "eth_chainId"
+
+    def test_the_chain_id_is_verified_once_per_ingestor(self, store: Store) -> None:
+        node = scenario_node()
+        run_fetch(store, node)
+
+        assert node.methods().count("eth_chainId") == 1
+
+    @pytest.mark.parametrize("chain_id", ["0x5", "0x89", "0xa"])
+    def test_a_non_mainnet_endpoint_is_refused(self, store: Store, chain_id: str) -> None:
+        node = scenario_node(chain_id=chain_id)
+        with pytest.raises(UniswapV2IngestionError, match="mainnet chain id"):
+            run_fetch(store, node)
+
+    def test_a_non_mainnet_endpoint_is_refused_before_any_receipt_is_written(
+        self, store: Store
+    ) -> None:
+        node = scenario_node(chain_id="0x5")
+        with pytest.raises(UniswapV2IngestionError):
+            run_fetch(store, node)
+
+        assert store.receipts() == []
+        assert node.methods() == ["eth_chainId"]
+
+    @pytest.mark.parametrize("chain_id", [None, "", "not-hex", "1"])
+    def test_a_malformed_chain_id_is_refused(self, store: Store, chain_id: Any) -> None:
+        node = scenario_node(chain_id=chain_id)
+        with pytest.raises(UniswapV2IngestionError):
+            run_fetch(store, node)
+
+
+class TestDeploymentBlock:
+    def test_a_range_starting_before_deployment_is_refused(self, store: Store) -> None:
+        node = scenario_node()
+        with pytest.raises(UniswapV2IngestionError, match="precedes the Uniswap V2 Factory"):
+            run_fetch(
+                store, node,
+                start_block=UNISWAP_V2_DEPLOYMENT_BLOCK - 1,
+                end_block=UNISWAP_V2_DEPLOYMENT_BLOCK + 99,
+            )
+
+    def test_a_range_starting_before_deployment_is_refused_without_touching_the_node(
+        self, store: Store
+    ) -> None:
+        node = scenario_node()
+        with pytest.raises(UniswapV2IngestionError):
+            run_fetch(store, node, start_block=0, end_block=100)
+
+        assert node.calls == []
+
+    def test_a_range_starting_exactly_at_deployment_is_accepted(self, store: Store) -> None:
+        rows = run_fetch(store, scenario_node())
+
+        assert [(r.block_number, r.tx_index, r.log_index) for r in rows] == SCENARIO_EXPECTED_ORDER
+
+    @pytest.mark.parametrize(
+        ("start_block", "end_block", "chunk_size"),
+        [
+            (-1, SCENARIO_END, 10),
+            (SCENARIO_END, SCENARIO_START, 10),
+            (SCENARIO_START, SCENARIO_END, 0),
+            (SCENARIO_START, SCENARIO_END, -5),
+        ],
+    )
+    def test_an_invalid_range_or_chunk_size_is_refused(
+        self, store: Store, start_block: int, end_block: int, chunk_size: int
+    ) -> None:
+        with pytest.raises(ValueError):
+            run_fetch(
+                store, scenario_node(),
+                start_block=start_block, end_block=end_block, chunk_size=chunk_size,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -434,79 +602,89 @@ class TestFetch:
     def test_chunks_cover_the_requested_range_without_gaps_or_overlap(
         self, store: Store
     ) -> None:
-        run_scenario_fetch(store, scenario_node())
+        run_fetch(store, scenario_node())
         ranges = [(r["start_block"], r["end_block"]) for r in store.receipts()]
 
-        assert ranges == [(100, 199), (200, 299)]
+        assert ranges == SCENARIO_RANGES
         assert ranges[0][0] == SCENARIO_START
         assert ranges[-1][1] == SCENARIO_END
         for previous, following in pairwise(ranges):
             assert following[0] == previous[1] + 1, "receipt ranges must be contiguous"
 
     def test_rows_are_ordered_by_block_transaction_and_log_index(self, store: Store) -> None:
-        rows = run_scenario_fetch(store, scenario_node())
+        rows = run_fetch(store, scenario_node())
         assert [(r.block_number, r.tx_index, r.log_index) for r in rows] == SCENARIO_EXPECTED_ORDER
 
-    def test_an_empty_chunk_still_produces_a_receipt(self, store: Store) -> None:
-        run_scenario_fetch(store, scenario_node())
-        empty = [r for r in store.receipts() if r["start_block"] == 200]
+    def test_fetched_rows_have_no_duplicate_transaction_and_log_index(
+        self, store: Store
+    ) -> None:
+        rows = run_fetch(store, scenario_node())
+        identities = [(row.tx_hash, row.log_index) for row in rows]
 
-        assert len(empty) == 1
-        assert empty[0]["end_block_hash"] == BLOCK_299_HASH
-        header_ids = json.loads(empty[0]["header_raw_object_ids_json"])
-        assert len(header_ids) == 1, "an empty chunk still depends on its end-block header"
+        assert len(identities) == len(set(identities)) == len(SCENARIO_LOGS)
+
+    def test_an_empty_chunk_still_produces_a_receipt_with_its_end_header(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        empty = store.receipt(BLOCK_CHUNK1_END + 1)
+
+        assert empty["end_block_hash"] == _hash32(BLOCK_CHUNK2_END)
+        assert json.loads(empty["header_dependencies_json"]) == []
+        assert empty["end_header_raw_object_id"].startswith("raw_")
 
     def test_emit_rows_false_still_writes_receipts(self, store: Store) -> None:
         """The runner acquires with emit_rows=False and decodes from receipts only."""
-        rows = run_scenario_fetch(store, scenario_node(), emit_rows=False)
+        rows = run_fetch(store, scenario_node(), emit_rows=False)
 
         assert rows == []
         assert len(store.receipts()) == 2
 
-    def test_rejects_a_log_outside_the_requested_chunk(self, store: Store) -> None:
+    def test_a_log_outside_the_requested_chunk_is_refused(self, store: Store) -> None:
         """A node that ignores fromBlock/toBlock must not silently widen coverage."""
         stray = pair_created_log(
-            block_number=1_000_000, block_hash=_hash32(1_000_000), tx_hash=_hash32(0xEE),
+            block_number=SCENARIO_END + 5_000, block_hash=_hash32(1), tx_hash=_hash32(0xEE),
             tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
         )
         node = scenario_node(logs=[stray], honour_block_range=False)
 
         with pytest.raises(UniswapV2IngestionError, match="outside requested chunk"):
-            run_scenario_fetch(store, node)
+            run_fetch(store, node)
 
-    @pytest.mark.parametrize(
-        ("start_block", "end_block", "chunk_size"),
-        [(-1, 100, 10), (200, 100, 10), (100, 200, 0), (100, 200, -5)],
-    )
-    def test_rejects_an_invalid_range_or_chunk_size(
-        self, store: Store, start_block: int, end_block: int, chunk_size: int
+    def test_a_header_reporting_the_wrong_block_number_is_refused(self, store: Store) -> None:
+        node = scenario_node(header_number_override={BLOCK_EVENT: BLOCK_EVENT + 1})
+
+        with pytest.raises(UniswapV2IngestionError, match="reports block"):
+            run_fetch(store, node)
+
+    def test_an_end_header_reporting_the_wrong_block_number_is_refused(
+        self, store: Store
     ) -> None:
-        ingestor = UniswapV2PairCreatedIngestor(
-            rpc_url="http://node.invalid", raw_writer=store.writer, client=scenario_node().client()
+        node = scenario_node(
+            logs=[], header_number_override={BLOCK_CHUNK1_END: BLOCK_CHUNK1_END + 1}
         )
-        try:
-            with pytest.raises(ValueError):
-                ingestor.fetch(
-                    start_block=start_block, end_block=end_block, chunk_size=chunk_size,
-                    receipt_db_path=str(store.db),
-                )
-        finally:
-            ingestor.close()
 
-    def test_http_failure_raises_a_typed_error(self, store: Store) -> None:
-        node = scenario_node(fail_status_for={"eth_getLogs"})
-        with pytest.raises(UniswapV2IngestionError, match="HTTP 500"):
-            run_scenario_fetch(store, node)
+        with pytest.raises(UniswapV2IngestionError, match="end-block header is for block"):
+            run_fetch(store, node)
 
-    def test_json_rpc_error_body_raises_a_typed_error(self, store: Store) -> None:
-        node = scenario_node(rpc_error_for={"eth_getLogs"})
-        with pytest.raises(UniswapV2IngestionError, match="failed"):
-            run_scenario_fetch(store, node)
+    def test_one_header_is_fetched_per_distinct_event_block(self, store: Store) -> None:
+        node = scenario_node()
+        run_fetch(store, node)
 
-    def test_receipt_database_is_closed_when_acquisition_fails(
+        header_blocks = [
+            int(params[0], 16) for method, params in node.calls
+            if method == "eth_getBlockByNumber"
+        ]
+        # BLOCK_EVENT carries two events but is fetched once; the two chunk-end
+        # headers are fetched once each, BLOCK_CHUNK1_END being both event and end.
+        assert header_blocks.count(BLOCK_EVENT) == 1
+        assert sorted(set(header_blocks)) == [
+            BLOCK_EVENT, BLOCK_CHUNK1_END, BLOCK_CHUNK2_END,
+        ]
+
+    def test_the_receipt_database_is_closed_when_acquisition_fails(
         self, store: Store, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """REVIEW-0230 (2): the receipt connection is released even on the error path."""
         opened: list[sqlite3.Connection] = []
         real_connect = sqlite3.connect
 
@@ -518,7 +696,7 @@ class TestFetch:
         monkeypatch.setattr(uniswap_v2.sqlite3, "connect", tracking_connect)
 
         with pytest.raises(UniswapV2IngestionError):
-            run_scenario_fetch(store, scenario_node(fail_status_for={"eth_getLogs"}))
+            run_fetch(store, scenario_node(fail_status_for={"eth_getLogs"}))
 
         assert opened, "fetch did not open the receipt database"
         for conn in opened:
@@ -526,288 +704,166 @@ class TestFetch:
                 conn.execute("SELECT 1")
 
 
-class TestResume:
-    def test_a_completed_chunk_is_skipped_after_its_end_block_hash_is_reverified(
-        self, store: Store
-    ) -> None:
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
-        )
-        node = scenario_node()
-
-        ingestor = UniswapV2PairCreatedIngestor(
-            rpc_url="http://node.invalid", raw_writer=store.writer, client=node.client()
-        )
-        try:
-            rows = ingestor.fetch(
-                start_block=SCENARIO_START, end_block=SCENARIO_END, chunk_size=1_000,
-                receipt_db_path=str(store.db),
-            )
-        finally:
-            ingestor.close()
-
-        assert rows == []
-        assert [method for method, _ in node.calls] == ["eth_getBlockByNumber"], (
-            "a completed chunk must cost exactly one end-block verification"
-        )
-        assert len(store.receipts()) == 1, "resume must not duplicate the receipt"
-
-    def test_a_receipt_whose_end_block_hash_changed_is_rejected(self, store: Store) -> None:
-        """A reorged chunk must fail loudly rather than be silently trusted."""
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=_hash32(0xBAD),
-            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
-        )
-        ingestor = UniswapV2PairCreatedIngestor(
-            rpc_url="http://node.invalid", raw_writer=store.writer, client=scenario_node().client()
-        )
-        try:
-            with pytest.raises(UniswapV2IngestionError, match="end-block validation"):
-                ingestor.fetch(
-                    start_block=SCENARIO_START, end_block=SCENARIO_END, chunk_size=1_000,
-                    receipt_db_path=str(store.db),
-                )
-        finally:
-            ingestor.close()
-
-    def test_a_receipt_for_a_different_factory_does_not_satisfy_this_chunk(
-        self, store: Store
-    ) -> None:
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
-            factory=_addr(0xDEAD),
-        )
-        node = scenario_node()
-        ingestor = UniswapV2PairCreatedIngestor(
-            rpc_url="http://node.invalid", raw_writer=store.writer, client=node.client()
-        )
-        try:
-            rows = ingestor.fetch(
-                start_block=SCENARIO_START, end_block=SCENARIO_END, chunk_size=1_000,
-                receipt_db_path=str(store.db),
-            )
-        finally:
-            ingestor.close()
-
-        assert len(rows) == len(SCENARIO_LOGS), "the foreign receipt must not be reused"
-        assert "eth_getLogs" in [method for method, _ in node.calls]
-
-    def test_resuming_a_partially_completed_range_fills_only_the_missing_chunk(
-        self, store: Store
-    ) -> None:
-        first = scenario_node()
-        ingestor = UniswapV2PairCreatedIngestor(
-            rpc_url="http://node.invalid", raw_writer=store.writer, client=first.client()
-        )
-        try:
-            ingestor.fetch(
-                start_block=SCENARIO_START, end_block=199, chunk_size=SCENARIO_CHUNK,
-                receipt_db_path=str(store.db),
-            )
-        finally:
-            ingestor.close()
-        assert [(r["start_block"], r["end_block"]) for r in store.receipts()] == [(100, 199)]
-
-        second = scenario_node()
-        run_scenario_fetch(store, second)
-
-        assert [(r["start_block"], r["end_block"]) for r in store.receipts()] == [
-            (100, 199), (200, 299),
-        ]
-        logs_calls = [params for method, params in second.calls if method == "eth_getLogs"]
-        assert len(logs_calls) == 1, "the completed chunk must not be re-fetched"
-        assert int(logs_calls[0][0]["fromBlock"], 16) == 200
-
-
 # ---------------------------------------------------------------------------
-# Raw preservation
+# Receipt binding
 # ---------------------------------------------------------------------------
 
-class TestRawPreservation:
-    def test_every_preserved_object_is_the_exact_response_body(self, store: Store) -> None:
+class TestReceiptBinding:
+    def test_the_receipt_records_the_exact_logs_request_it_answers(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+
+        assert receipt["logs_request_json"] == _canonical_json(
+            logs_request(
+                factory=UNISWAP_V2_FACTORY,
+                start_block=SCENARIO_START,
+                end_block=BLOCK_CHUNK1_END,
+            )
+        )
+
+    def test_the_receipt_records_the_exact_end_header_request_it_answers(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+
+        assert receipt["end_header_request_json"] == _canonical_json(
+            block_header_request(BLOCK_CHUNK1_END)
+        )
+
+    def test_the_receipt_binds_raw_objects_and_acquisition_ids(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+
+        assert receipt["logs_raw_object_id"].startswith("raw_")
+        assert receipt["end_header_raw_object_id"].startswith("raw_")
+        assert receipt["logs_acquisition_id"]
+        assert receipt["end_header_acquisition_id"]
+        assert receipt["logs_acquisition_id"] != receipt["end_header_acquisition_id"]
+
+    def test_the_receipt_records_chain_identity_and_range(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+
+        assert receipt["chain"] == ETHEREUM_CHAIN
+        assert receipt["chain_id"] == ETHEREUM_MAINNET_CHAIN_ID
+        assert receipt["factory"] == UNISWAP_V2_FACTORY
+        assert receipt["topic"] == PAIR_CREATED_TOPIC
+        assert receipt["start_block"] == SCENARIO_START
+        assert receipt["end_block"] == BLOCK_CHUNK1_END
+
+    def test_the_receipt_authenticates_the_end_block_identity(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+
+        assert receipt["end_block_number"] == receipt["end_block"] == BLOCK_CHUNK1_END
+        assert receipt["end_block_hash"] == _hash32(BLOCK_CHUNK1_END)
+
+    def test_every_event_block_header_is_bound_individually(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        dependencies = json.loads(store.receipt(SCENARIO_START)["header_dependencies_json"])
+
+        by_block = {dep["block_number"]: dep for dep in dependencies}
+        assert set(by_block) == {BLOCK_EVENT, BLOCK_CHUNK1_END}
+        for block_number, dep in by_block.items():
+            assert dep["block_hash"] == _hash32(block_number)
+            assert dep["request_json"] == _canonical_json(block_header_request(block_number))
+            assert dep["raw_object_id"].startswith("raw_")
+            assert dep["acquisition_id"]
+            assert datetime.fromisoformat(dep["acquired_at"]).tzinfo is not None
+
+    def test_receipt_timestamps_are_timezone_aware_and_ordered(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+
+        logs_at = datetime.fromisoformat(receipt["logs_acquired_at"])
+        end_at = datetime.fromisoformat(receipt["end_header_acquired_at"])
+        completed_at = datetime.fromisoformat(receipt["completed_at"])
+
+        for moment in (logs_at, end_at, completed_at):
+            assert moment.tzinfo is not None
+        assert logs_at <= completed_at
+        assert end_at <= completed_at
+        assert completed_at == max(logs_at, end_at, *(
+            datetime.fromisoformat(dep["acquired_at"])
+            for dep in json.loads(receipt["header_dependencies_json"])
+        ))
+
+    def test_preserved_objects_are_the_exact_response_bytes(self, store: Store) -> None:
         node = scenario_node()
-        run_scenario_fetch(store, node)
+        run_fetch(store, node)
 
         served = set(node.served)
         declared = declared_raw_object_ids(store.receipts())
-        assert declared, "fetch recorded no raw objects"
+        assert declared
 
         for raw_object_id in declared:
             body = store.raw_path(raw_object_id).read_bytes()
             assert body in served, f"{raw_object_id} is not a byte-for-byte response"
             assert f"raw_{hashlib.sha256(body).hexdigest()}" == raw_object_id
 
-    def test_the_logs_and_header_responses_are_preserved_before_decoding(
+
+class TestReceiptConstraints:
+    """Schema-level invariants.
+
+    These are enforced by migration 0012's CHECK constraints rather than by a
+    read-time assertion, so an inconsistent receipt cannot be written by any writer
+    — including one outside this module.
+    """
+
+    def test_a_receipt_cannot_record_a_non_mainnet_chain(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        with pytest.raises(sqlite3.IntegrityError, match="chain_id"):
+            store.update_receipt(SCENARIO_START, chain_id="0x5")
+
+    def test_a_receipt_cannot_disagree_with_itself_about_the_end_block(
         self, store: Store
     ) -> None:
-        node = scenario_node()
-        run_scenario_fetch(store, node)
+        run_fetch(store, scenario_node())
+        with pytest.raises(sqlite3.IntegrityError, match="end_block_number"):
+            store.update_receipt(SCENARIO_START, end_block_number=BLOCK_CHUNK1_END + 1)
 
-        declared = declared_raw_object_ids(store.receipts())
-        decoded = [json.loads(store.raw_path(rid).read_bytes()) for rid in declared]
+    def test_a_receipt_cannot_invert_its_block_range(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        with pytest.raises(sqlite3.IntegrityError, match="end_block"):
+            store.update_receipt(SCENARIO_START, start_block=SCENARIO_END + 1_000)
 
-        assert all("error" not in payload for payload in decoded)
-        assert any(isinstance(payload["result"], list) for payload in decoded), "logs response"
-        assert any(isinstance(payload["result"], dict) for payload in decoded), "header response"
+    def test_a_receipt_cannot_record_a_negative_start_block(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        with pytest.raises(sqlite3.IntegrityError, match="start_block"):
+            store.update_receipt(SCENARIO_START, start_block=-1)
 
-    def test_a_failed_response_is_preserved_before_the_error_is_raised(
-        self, store: Store
-    ) -> None:
-        node = scenario_node(fail_status_for={"eth_getLogs"})
-        with pytest.raises(UniswapV2IngestionError):
-            run_scenario_fetch(store, node)
-
-        failure_body = node.served[0]
-        digest = hashlib.sha256(failure_body).hexdigest()
-        path = content_addressed_absolute_path(store.raw_root, digest)
-        assert path.read_bytes() == failure_body, "the failing response must still be preserved"
-
-    def test_replay_rejects_a_raw_object_that_is_no_longer_valid_json(
-        self, store: Store
-    ) -> None:
-        """REVIEW-0230 (3): unreadable raw bytes surface as UniswapV2IngestionError."""
-        run_scenario_fetch(store, scenario_node())
-        logs_id = str(store.receipts()[0]["logs_raw_object_id"])
-        store.overwrite_raw(logs_id, b"<html>gateway timeout</html>")
-
-        with pytest.raises(UniswapV2IngestionError, match="cannot replay raw object"):
-            scenario_replay(store)
-
-    def test_replay_rejects_a_missing_raw_object(self, store: Store) -> None:
-        run_scenario_fetch(store, scenario_node())
-        logs_id = str(store.receipts()[0]["logs_raw_object_id"])
-        store.raw_path(logs_id).unlink()
-
-        with pytest.raises(UniswapV2IngestionError, match="cannot replay raw object"):
-            scenario_replay(store)
-
-    def test_replay_rejects_a_tampered_raw_object_that_is_still_valid_json(
-        self, store: Store
-    ) -> None:
-        run_scenario_fetch(store, scenario_node())
-        logs_id = str(store.receipts()[0]["logs_raw_object_id"])
-        store.overwrite_raw(logs_id, json.dumps({"jsonrpc": "2.0", "result": []}).encode())
-
-        with pytest.raises(UniswapV2IngestionError, match="SHA-256 mismatch"):
-            scenario_replay(store)
-
-    def test_replay_rejects_a_malformed_raw_object_id(self, store: Store) -> None:
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id="not_a_raw_object_id", header_raw_object_ids=[],
-        )
-        with pytest.raises(UniswapV2IngestionError, match="invalid raw object id"):
-            scenario_replay(store)
-
-
-# ---------------------------------------------------------------------------
-# Replay
-# ---------------------------------------------------------------------------
-
-class TestReplayDeterminism:
-    def test_replay_reproduces_the_fetched_rows_exactly(self, store: Store) -> None:
-        fetched = run_scenario_fetch(store, scenario_node())
-        replayed = scenario_replay(store).rows
-
-        assert [row.as_dict() for row in replayed] == [row.as_dict() for row in fetched]
-
-    def test_replay_is_stable_across_repeated_invocations(self, store: Store) -> None:
-        run_scenario_fetch(store, scenario_node())
-        first, second = scenario_replay(store), scenario_replay(store)
-
-        assert [row.as_dict() for row in first.rows] == [row.as_dict() for row in second.rows]
-        assert first.raw_object_ids == second.raw_object_ids
-        assert first.completed_ranges == second.completed_ranges
-
-    def test_replay_does_not_contact_the_node(self, store: Store) -> None:
-        """Replay must decode preserved bytes only — no RPC URL is reachable here."""
-        node = scenario_node()
-        run_scenario_fetch(store, node)
-        calls_after_fetch = len(node.calls)
-
-        scenario_replay(store)
-
-        assert len(node.calls) == calls_after_fetch
-
-
-class TestReplayCoverage:
-    def test_raw_object_ids_cover_every_logs_and_header_response(self, store: Store) -> None:
-        """REVIEW-0230 (1): including empty chunks and end-block headers."""
-        run_scenario_fetch(store, scenario_node())
-        receipts = store.receipts()
-        replay = scenario_replay(store)
-
-        assert replay.raw_object_ids == frozenset(declared_raw_object_ids(receipts))
-
-        empty_chunk = next(r for r in receipts if r["start_block"] == 200)
-        empty_headers = json.loads(empty_chunk["header_raw_object_ids_json"])
-        assert set(empty_headers) <= replay.raw_object_ids, "empty-chunk header dropped"
-        assert str(empty_chunk["logs_raw_object_id"]) in replay.raw_object_ids
-
-        non_empty = next(r for r in receipts if r["start_block"] == 100)
-        headers = json.loads(non_empty["header_raw_object_ids_json"])
-        assert len(headers) == 2, "block 150, block 199 (also the end block)"
-        assert set(headers) <= replay.raw_object_ids
-
-    def test_completed_ranges_report_the_full_covered_span(self, store: Store) -> None:
-        run_scenario_fetch(store, scenario_node())
-        replay = scenario_replay(store)
-
-        assert replay.completed_ranges == ((100, 199), (200, 299))
-
-    def test_replayed_rows_have_no_duplicate_transaction_and_log_index(
-        self, store: Store
-    ) -> None:
-        run_scenario_fetch(store, scenario_node())
-        rows = scenario_replay(store).rows
-        identities = [(row.tx_hash, row.log_index) for row in rows]
-
-        assert len(identities) == len(set(identities))
-        assert len(identities) == len(SCENARIO_LOGS)
-
-    def test_a_hole_between_receipts_is_rejected(self, store: Store) -> None:
-        payload = {"jsonrpc": "2.0", "id": 1, "result": []}
-        header = {
-            "jsonrpc": "2.0", "id": 1,
-            "result": {"number": hex(199), "hash": BLOCK_199_HASH, "timestamp": hex(1)},
-        }
-        logs_id, header_id = store.write_raw(payload), store.write_raw(header)
-        store.insert_receipt(
-            start_block=100, end_block=199, end_block_hash=BLOCK_199_HASH,
-            logs_raw_object_id=logs_id, header_raw_object_ids=[header_id],
-        )
-        store.insert_receipt(
-            start_block=250, end_block=299, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id=logs_id, header_raw_object_ids=[header_id],
-        )
-
-        with pytest.raises(UniswapV2IngestionError, match="not contiguous"):
-            scenario_replay(store)
-
-    def test_a_range_that_stops_short_of_the_end_block_is_rejected(self, store: Store) -> None:
-        first = scenario_node()
-        ingestor = UniswapV2PairCreatedIngestor(
-            rpc_url="http://node.invalid", raw_writer=store.writer, client=first.client()
-        )
+    def test_a_failure_row_must_carry_a_known_failure_kind(self, store: Store) -> None:
+        conn = sqlite3.connect(store.db)
         try:
-            ingestor.fetch(
-                start_block=SCENARIO_START, end_block=199, chunk_size=SCENARIO_CHUNK,
-                receipt_db_path=str(store.db),
-            )
+            with pytest.raises(sqlite3.IntegrityError, match="failure_kind"):
+                conn.execute(
+                    f"INSERT INTO {FAILURE_TABLE} "
+                    "(chain, factory, topic, method, request_json, start_block, end_block, "
+                    "failure_kind, detail, occurred_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (ETHEREUM_CHAIN, UNISWAP_V2_FACTORY, PAIR_CREATED_TOPIC, "eth_getLogs",
+                     "{}", 1, 2, "not_a_kind", "detail", "2026-07-25T00:00:00+00:00"),
+                )
         finally:
-            ingestor.close()
-
-        with pytest.raises(UniswapV2IngestionError, match="block gap"):
-            scenario_replay(store)
+            conn.close()
 
 
 # ---------------------------------------------------------------------------
-# Decoder
+# Strict log validation
 # ---------------------------------------------------------------------------
 
-def _decode(logs: list[dict[str, Any]], headers: dict[int, tuple[dict[str, Any], str]]) -> Any:
+def _header(block_number: int, block_hash: str, timestamp: int = 1_700_000_000) -> dict[str, Any]:
+    return {"number": hex(block_number), "hash": block_hash, "timestamp": hex(timestamp)}
+
+
+def _decode(
+    logs: list[Any], headers: dict[int, tuple[dict[str, Any], str]] | None = None
+) -> list[PairCreatedRow]:
+    if headers is None:
+        headers = {BLOCK_EVENT: (_header(BLOCK_EVENT, _hash32(BLOCK_EVENT)), "raw_" + "b" * 64)}
     return decode_pair_created(
         {"jsonrpc": "2.0", "id": 1, "result": logs},
         headers,
@@ -817,20 +873,23 @@ def _decode(logs: list[dict[str, Any]], headers: dict[int, tuple[dict[str, Any],
     )
 
 
-def _header(block_number: int, block_hash: str, timestamp: int) -> dict[str, Any]:
-    return {"number": hex(block_number), "hash": block_hash, "timestamp": hex(timestamp)}
+def _valid_log(**overrides: Any) -> dict[str, Any]:
+    log = pair_created_log(
+        block_number=BLOCK_EVENT, block_hash=_hash32(BLOCK_EVENT), tx_hash=TX_1,
+        tx_index=3, log_index=7, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+    )
+    log.update(overrides)
+    return log
 
 
-class TestDecoder:
+class TestLogValidation:
     def test_every_required_source_field_is_populated(self) -> None:
         timestamp = 1_700_000_150
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=3, log_index=7, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
-        )
-        headers = {150: (_header(150, BLOCK_150_HASH, timestamp), "raw_" + "b" * 64)}
+        headers = {BLOCK_EVENT: (
+            _header(BLOCK_EVENT, _hash32(BLOCK_EVENT), timestamp), "raw_" + "b" * 64
+        )}
 
-        (row,) = _decode([log], headers)
+        (row,) = _decode([_valid_log()], headers)
         record = row.as_dict()
 
         assert REQUIRED_ROW_FIELDS <= set(record)
@@ -839,99 +898,137 @@ class TestDecoder:
         assert record["pair"] == PAIR_1
         assert record["token0"] == TOKEN_A
         assert record["token1"] == TOKEN_B
-        assert record["block_number"] == 150
-        assert record["block_hash"] == BLOCK_150_HASH
+        assert record["block_number"] == BLOCK_EVENT
+        assert record["block_hash"] == _hash32(BLOCK_EVENT)
         assert record["block_timestamp"] == timestamp
-        assert record["tx_hash"] == _hash32(0xF1)
+        assert record["tx_hash"] == TX_1
         assert record["tx_index"] == 3
         assert record["log_index"] == 7
         assert record["raw_object_id"] == "raw_" + "a" * 64
         assert record["block_raw_object_id"] == "raw_" + "b" * 64
 
-    def test_event_time_is_the_block_timestamp_in_utc(self) -> None:
-        timestamp = 1_700_000_150
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+    def test_a_log_from_another_emitter_is_refused(self) -> None:
+        """A topic filter alone does not prove the factory emitted the event."""
+        with pytest.raises(UniswapV2IngestionError, match="expected factory"):
+            _decode([_valid_log(address=_addr(0xDEAD))])
+
+    def test_an_emitter_differing_only_by_case_is_accepted(self) -> None:
+        (row,) = _decode([_valid_log(address=UNISWAP_V2_FACTORY.lower())])
+        assert row.factory == UNISWAP_V2_FACTORY
+
+    def test_a_reorg_removed_log_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="reorg-removed"):
+            _decode([_valid_log(removed=True)])
+
+    def test_a_log_without_a_removed_flag_is_refused(self) -> None:
+        log = _valid_log()
+        del log["removed"]
+        with pytest.raises(UniswapV2IngestionError, match="missing 'removed'"):
+            _decode([log])
+
+    @pytest.mark.parametrize("count", [0, 1, 2, 4])
+    def test_a_topic_list_of_the_wrong_length_is_refused(self, count: int) -> None:
+        log = _valid_log()
+        topics = list(log["topics"])
+        log["topics"] = (topics + [_hash32(9)] * 4)[:count]
+        with pytest.raises(UniswapV2IngestionError, match="topics"):
+            _decode([log])
+
+    def test_a_foreign_event_topic_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="topics"):
+            _decode([_valid_log(topics=[_hash32(0x5117), _abi_word(TOKEN_A), _abi_word(TOKEN_B)])])
+
+    def test_a_topic_of_the_wrong_byte_length_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="32 bytes"):
+            _decode([_valid_log(topics=["0xabcd", _abi_word(TOKEN_A), _abi_word(TOKEN_B)])])
+
+    def test_an_address_word_with_dirty_padding_is_refused(self) -> None:
+        """A non-zero high byte means the word is not an address; truncating would lie."""
+        dirty = "0x" + "ff" + "0" * 22 + TOKEN_A[2:]
+        with pytest.raises(UniswapV2IngestionError, match="left-padded 20-byte address"):
+            _decode([_valid_log(topics=[PAIR_CREATED_TOPIC, dirty, _abi_word(TOKEN_B)])])
+
+    @pytest.mark.parametrize("data", ["0x", "0x00", _abi_word(PAIR_1), _abi_word(PAIR_1) + "00"])
+    def test_event_data_of_the_wrong_length_is_refused(self, data: str) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="log data"):
+            _decode([_valid_log(data=data)])
+
+    def test_a_block_hash_of_the_wrong_length_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="blockHash"):
+            _decode([_valid_log(blockHash="0xbb")])
+
+    def test_a_transaction_hash_of_the_wrong_length_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="transactionHash"):
+            _decode([_valid_log(transactionHash="0xaa")])
+
+    @pytest.mark.parametrize("field", ["blockNumber", "logIndex", "transactionIndex"])
+    def test_a_non_hex_quantity_is_refused(self, field: str) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="hex quantity"):
+            _decode([_valid_log(**{field: 12345})])
+
+    def test_a_log_whose_block_hash_contradicts_the_header_is_refused(self) -> None:
+        headers = {BLOCK_EVENT: (_header(BLOCK_EVENT, _hash32(0xBAD)), "raw_" + "b" * 64)}
+        with pytest.raises(UniswapV2IngestionError, match="does not match block header"):
+            _decode([_valid_log()], headers)
+
+    def test_a_header_for_a_different_block_is_refused(self) -> None:
+        headers = {BLOCK_EVENT: (
+            _header(BLOCK_EVENT + 1, _hash32(BLOCK_EVENT)), "raw_" + "b" * 64
+        )}
+        with pytest.raises(UniswapV2IngestionError, match="preserved header is for block"):
+            _decode([_valid_log()], headers)
+
+    def test_a_log_with_no_preserved_header_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="no preserved block header"):
+            _decode([_valid_log()], {})
+
+    def test_duplicate_transaction_and_log_index_is_refused(self) -> None:
+        with pytest.raises(UniswapV2IngestionError, match="duplicate"):
+            _decode([_valid_log(), _valid_log()])
+
+    def test_duplicate_detection_is_case_normalised(self) -> None:
+        """Providers differ on hash casing; 0xAB.. and 0xab.. are the same event."""
+        upper = _valid_log(transactionHash="0x" + TX_1[2:].upper())
+        with pytest.raises(UniswapV2IngestionError, match="duplicate"):
+            _decode([_valid_log(), upper])
+
+    def test_hashes_are_normalised_on_output(self) -> None:
+        headers = {BLOCK_EVENT: (
+            _header(BLOCK_EVENT, "0x" + _hash32(BLOCK_EVENT)[2:].upper()), "raw_" + "b" * 64
+        )}
+        (row,) = _decode(
+            [_valid_log(
+                transactionHash="0x" + TX_1[2:].upper(),
+                blockHash="0x" + _hash32(BLOCK_EVENT)[2:].upper(),
+            )],
+            headers,
         )
-        headers = {150: (_header(150, BLOCK_150_HASH, timestamp), "raw_" + "b" * 64)}
-
-        (row,) = _decode([log], headers)
-
-        assert row.event_time == datetime.fromtimestamp(timestamp, UTC)
-        assert row.event_time.tzinfo is not None
-        assert row.availability_time == datetime(2026, 7, 25, 12, 0, tzinfo=UTC)
-        assert row.availability_time >= row.event_time
+        assert row.tx_hash == TX_1
+        assert row.block_hash == _hash32(BLOCK_EVENT)
 
     def test_rows_are_sorted_by_block_transaction_and_log_index(self) -> None:
-        logs = [
-            pair_created_log(
-                block_number=151, block_hash=_hash32(151), tx_hash=_hash32(0xF9),
-                tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
-            ),
-            pair_created_log(
-                block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF8),
-                tx_index=2, log_index=9, token0=TOKEN_A, token1=TOKEN_C, pair=PAIR_2,
-            ),
-            pair_created_log(
-                block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF7),
-                tx_index=2, log_index=1, token0=TOKEN_B, token1=TOKEN_C, pair=PAIR_3,
-            ),
-        ]
         headers = {
-            150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64),
-            151: (_header(151, _hash32(151), 2), "raw_" + "c" * 64),
+            BLOCK_EVENT: (_header(BLOCK_EVENT, _hash32(BLOCK_EVENT), 1), "raw_" + "b" * 64),
+            BLOCK_EVENT + 1: (
+                _header(BLOCK_EVENT + 1, _hash32(BLOCK_EVENT + 1), 2), "raw_" + "c" * 64
+            ),
         }
+        logs = [
+            _valid_log(
+                blockNumber=hex(BLOCK_EVENT + 1), blockHash=_hash32(BLOCK_EVENT + 1),
+                transactionHash=TX_3, transactionIndex=hex(0), logIndex=hex(0),
+            ),
+            _valid_log(transactionHash=TX_2, transactionIndex=hex(2), logIndex=hex(9)),
+            _valid_log(transactionHash=TX_1, transactionIndex=hex(2), logIndex=hex(1)),
+        ]
 
         rows = _decode(logs, headers)
 
         assert [(r.block_number, r.tx_index, r.log_index) for r in rows] == [
-            (150, 2, 1), (150, 2, 9), (151, 0, 0),
+            (BLOCK_EVENT, 2, 1), (BLOCK_EVENT, 2, 9), (BLOCK_EVENT + 1, 0, 0),
         ]
 
-    def test_duplicate_transaction_and_log_index_is_rejected(self) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
-        )
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
-
-        with pytest.raises(UniswapV2IngestionError, match="duplicate"):
-            _decode([log, dict(log)], headers)
-
-    def test_a_log_whose_block_hash_contradicts_the_header_is_rejected(self) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=_hash32(0xBAD), tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
-        )
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
-
-        with pytest.raises(UniswapV2IngestionError, match="block hash"):
-            _decode([log], headers)
-
-    def test_a_foreign_event_topic_is_rejected(self) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
-        )
-        log["topics"] = [_hash32(0x5117), *log["topics"][1:]]
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
-
-        with pytest.raises(UniswapV2IngestionError, match="topics"):
-            _decode([log], headers)
-
-    def test_a_truncated_topic_list_is_rejected(self) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
-        )
-        log["topics"] = log["topics"][:2]
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
-
-        with pytest.raises(UniswapV2IngestionError, match="topics"):
-            _decode([log], headers)
-
-    def test_a_non_list_result_is_rejected(self) -> None:
+    def test_a_non_list_result_is_refused(self) -> None:
         with pytest.raises(UniswapV2IngestionError, match="must be a list"):
             decode_pair_created(
                 {"jsonrpc": "2.0", "id": 1, "result": {"unexpected": True}},
@@ -941,151 +1038,444 @@ class TestDecoder:
                 availability_time=datetime(2026, 7, 25, tzinfo=UTC),
             )
 
-    def test_an_empty_result_decodes_to_no_rows(self) -> None:
-        assert _decode([], {}) == []
-
-
-class TestHexHelpers:
-    def test_hex_quantities_decode(self) -> None:
-        assert _hex_int("0x0") == 0
-        assert _hex_int("0xff") == 255
-        assert _hex_int(hex(20_000_000)) == 20_000_000
-
-    def test_a_non_hex_quantity_is_rejected(self) -> None:
-        with pytest.raises(UniswapV2IngestionError, match="expected hex quantity"):
-            _hex_int("20000000")
-
-    def test_a_numeric_json_quantity_is_rejected(self) -> None:
-        """A node returning a JSON number instead of a hex string must not decode."""
-        with pytest.raises(UniswapV2IngestionError, match="expected hex quantity"):
-            _hex_int(20_000_000)  # type: ignore[arg-type]
-
-    def test_an_abi_word_yields_its_low_20_bytes(self) -> None:
-        address = _addr(0xABCDEF)
-        assert _address(_abi_word(address)) == address
-
-    def test_a_short_abi_word_is_rejected(self) -> None:
-        with pytest.raises(UniswapV2IngestionError, match="32-byte ABI word"):
-            _address("0x" + "ab" * 19)
-
-
-# ---------------------------------------------------------------------------
-# Typed failures
-#
-# Every malformed node response or corrupt receipt must surface as
-# UniswapV2IngestionError. A bare KeyError / JSONDecodeError / ValueError escaping
-# the ingestor is indistinguishable from a programming fault at the call site.
-# ---------------------------------------------------------------------------
-
-class TestTypedFailures:
-    def test_a_non_json_body_on_a_200_response_is_typed(self, store: Store) -> None:
-        node = scenario_node(invalid_json_for={"eth_getLogs"})
-        with pytest.raises(UniswapV2IngestionError, match="invalid JSON"):
-            run_scenario_fetch(store, node)
-
-    def test_an_end_block_header_without_a_hash_is_typed(self, store: Store) -> None:
-        node = scenario_node(logs=[], omit_header_fields={"hash"})
-        with pytest.raises(UniswapV2IngestionError, match="end-block header is missing"):
-            run_scenario_fetch(store, node)
-
-    def test_a_non_object_log_entry_is_typed(self, store: Store) -> None:
-        node = scenario_node(logs=["not-an-object"], honour_block_range=False)
+    def test_a_non_object_log_entry_is_refused(self) -> None:
         with pytest.raises(UniswapV2IngestionError, match="log entry must be an object"):
-            run_scenario_fetch(store, node)
+            _decode(["not-an-object"])
 
-    @pytest.mark.parametrize(
-        "field",
-        ["blockNumber", "blockHash", "transactionHash", "logIndex", "transactionIndex", "data"],
-    )
-    def test_a_log_missing_a_required_field_is_typed(self, field: str) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+    def test_an_empty_result_decodes_to_no_rows(self) -> None:
+        assert _decode([]) == []
+
+
+# ---------------------------------------------------------------------------
+# Resume
+# ---------------------------------------------------------------------------
+
+class TestResume:
+    def test_a_completed_chunk_is_skipped_after_its_dependencies_verify(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        resumed = scenario_node()
+
+        rows = run_fetch(store, resumed)
+
+        assert rows == []
+        assert "eth_getLogs" not in resumed.methods(), "a completed chunk must not re-fetch logs"
+        assert len(store.receipts()) == 2, "resume must not duplicate receipts"
+
+    def test_resume_reverifies_the_live_end_block_hash(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        resumed = scenario_node()
+        run_fetch(store, resumed)
+
+        header_blocks = [
+            int(params[0], 16) for method, params in resumed.calls
+            if method == "eth_getBlockByNumber"
+        ]
+        assert sorted(header_blocks) == [BLOCK_CHUNK1_END, BLOCK_CHUNK2_END]
+
+    def test_a_reorged_chunk_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        reorged = scenario_node(
+            block_hashes={**SCENARIO_BLOCK_HASHES, BLOCK_CHUNK1_END: _hash32(0xBAD)}
         )
-        del log[field]
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
 
-        with pytest.raises(UniswapV2IngestionError, match=f"log is missing '{field}'"):
-            _decode([log], headers)
+        with pytest.raises(UniswapV2IngestionError, match="end-block validation"):
+            run_fetch(store, reorged)
 
-    @pytest.mark.parametrize("field", ["hash", "timestamp"])
-    def test_a_block_header_missing_a_required_field_is_typed(self, field: str) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+    def test_a_missing_dependency_blocks_the_skip(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.raw_path(store.receipt(SCENARIO_START)["logs_raw_object_id"]).unlink()
+
+        with pytest.raises(UniswapV2IngestionError, match="cannot replay raw object"):
+            run_fetch(store, scenario_node())
+
+    def test_a_tampered_dependency_blocks_the_skip(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        logs_id = store.receipt(SCENARIO_START)["logs_raw_object_id"]
+        store.overwrite_raw(logs_id, json.dumps({"jsonrpc": "2.0", "result": []}).encode())
+
+        with pytest.raises(UniswapV2IngestionError, match="SHA-256 mismatch"):
+            run_fetch(store, scenario_node())
+
+    def test_a_tampered_header_dependency_blocks_the_skip(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        dependencies = json.loads(store.receipt(SCENARIO_START)["header_dependencies_json"])
+        store.raw_path(dependencies[0]["raw_object_id"]).unlink()
+
+        with pytest.raises(UniswapV2IngestionError, match="cannot replay raw object"):
+            run_fetch(store, scenario_node())
+
+    def test_a_receipt_bound_to_a_different_request_blocks_the_skip(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(
+            SCENARIO_START,
+            logs_request_json=_canonical_json(
+                logs_request(factory=UNISWAP_V2_FACTORY, start_block=0, end_block=1)
+            ),
         )
-        header = _header(150, BLOCK_150_HASH, 1)
-        del header[field]
 
-        with pytest.raises(UniswapV2IngestionError, match=f"block header is missing '{field}'"):
-            _decode([log], {150: (header, "raw_" + "b" * 64)})
+        with pytest.raises(UniswapV2IngestionError, match="does not match the requested chunk"):
+            run_fetch(store, scenario_node())
 
-    def test_a_log_with_no_preserved_header_is_typed(self) -> None:
-        """Previously a bare KeyError out of the block_headers lookup."""
-        log = pair_created_log(
-            block_number=999, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+    def test_a_receipt_whose_end_header_answers_another_block_blocks_the_skip(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(
+            SCENARIO_START,
+            end_header_request_json=_canonical_json(block_header_request(BLOCK_CHUNK2_END)),
         )
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
 
-        with pytest.raises(UniswapV2IngestionError, match="no preserved block header for block 999"):
-            _decode([log], headers)
+        with pytest.raises(UniswapV2IngestionError, match="different request"):
+            run_fetch(store, scenario_node())
 
-    def test_a_non_string_event_topic_is_typed(self) -> None:
-        log = pair_created_log(
-            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
-            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+    def test_a_receipt_for_a_different_factory_is_not_reused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.clone_receipt_for_factory(SCENARIO_START, _addr(0xDEAD))
+        store.delete_receipts_for_factory(UNISWAP_V2_FACTORY)
+
+        node = scenario_node()
+        rows = run_fetch(store, node)
+
+        assert len(rows) == len(SCENARIO_LOGS), "the foreign receipt must not satisfy this chunk"
+        assert "eth_getLogs" in node.methods()
+
+    def test_resuming_a_partial_range_fills_only_the_missing_chunk(self, store: Store) -> None:
+        run_fetch(store, scenario_node(), end_block=BLOCK_CHUNK1_END)
+        assert [(r["start_block"], r["end_block"]) for r in store.receipts()] == [
+            SCENARIO_RANGES[0]
+        ]
+
+        second = scenario_node()
+        run_fetch(store, second)
+
+        assert [(r["start_block"], r["end_block"]) for r in store.receipts()] == SCENARIO_RANGES
+        logs_calls = [params for method, params in second.calls if method == "eth_getLogs"]
+        assert len(logs_calls) == 1, "the completed chunk must not be re-fetched"
+        assert int(logs_calls[0][0]["fromBlock"], 16) == BLOCK_CHUNK1_END + 1
+
+
+# ---------------------------------------------------------------------------
+# Replay
+# ---------------------------------------------------------------------------
+
+class TestReplay:
+    def test_replay_never_contacts_the_node(self, store: Store) -> None:
+        """run_replay builds an ingestor whose client raises on any request."""
+        run_fetch(store, scenario_node())
+        replay = run_replay(store)
+
+        assert len(replay.rows) == len(SCENARIO_LOGS)
+
+    def test_replay_reproduces_the_fetched_rows_exactly(self, store: Store) -> None:
+        fetched = run_fetch(store, scenario_node())
+        replayed = run_replay(store).rows
+
+        assert [row.as_dict() for row in replayed] == [row.as_dict() for row in fetched]
+
+    def test_replay_is_stable_across_repeated_invocations(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        first, second = run_replay(store), run_replay(store)
+
+        assert [row.as_dict() for row in first.rows] == [row.as_dict() for row in second.rows]
+        assert first.raw_object_ids == second.raw_object_ids
+        assert first.acquisition_ids == second.acquisition_ids
+        assert first.completed_ranges == second.completed_ranges
+
+    def test_replay_reports_the_full_covered_span(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        assert run_replay(store).completed_ranges == tuple(SCENARIO_RANGES)
+
+    def test_replay_declares_every_logs_and_header_dependency(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipts = store.receipts()
+        replay = run_replay(store)
+
+        assert replay.raw_object_ids == frozenset(declared_raw_object_ids(receipts))
+
+        empty = store.receipt(BLOCK_CHUNK1_END + 1)
+        assert str(empty["logs_raw_object_id"]) in replay.raw_object_ids
+        assert str(empty["end_header_raw_object_id"]) in replay.raw_object_ids, (
+            "an empty chunk still depends on its end-block header"
         )
-        log["topics"] = [None, *log["topics"][1:]]
-        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
 
-        with pytest.raises(UniswapV2IngestionError, match="topics"):
-            _decode([log], headers)
+    def test_replay_declares_every_acquisition(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        replay = run_replay(store)
 
-    def test_a_receipt_with_a_corrupt_header_id_list_is_typed(self, store: Store) -> None:
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
-            header_raw_object_ids_json="{not json",
+        assert replay.acquisition_ids == frozenset(declared_acquisition_ids(store.receipts()))
+
+    def test_replayed_rows_have_no_duplicate_transaction_and_log_index(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        identities = [(row.tx_hash.lower(), row.log_index) for row in run_replay(store).rows]
+
+        assert len(identities) == len(set(identities)) == len(SCENARIO_LOGS)
+
+    def test_a_hole_between_receipts_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(BLOCK_CHUNK1_END + 1, start_block=BLOCK_CHUNK1_END + 50)
+
+        with pytest.raises(UniswapV2IngestionError, match="not contiguous"):
+            run_replay(store)
+
+    def test_a_range_that_stops_short_of_the_end_block_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node(), end_block=BLOCK_CHUNK1_END)
+
+        with pytest.raises(UniswapV2IngestionError, match="block gap"):
+            run_replay(store)
+
+    def test_a_receipt_bound_to_another_range_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(
+            SCENARIO_START,
+            logs_request_json=_canonical_json(
+                logs_request(factory=UNISWAP_V2_FACTORY, start_block=0, end_block=5)
+            ),
         )
+
+        with pytest.raises(UniswapV2IngestionError, match="does not match its own block range"):
+            run_replay(store)
+
+    def test_preserved_logs_from_another_range_are_refused(self, store: Store) -> None:
+        """Request binding proves which request a receipt answers, not which bytes it
+        points at. Replay must still bound decoded events to the receipt's range, or a
+        repointed logs object silently widens coverage and duplicates events."""
+        run_fetch(store, scenario_node())
+        first = store.receipt(SCENARIO_START)
+        second = store.receipt(BLOCK_CHUNK1_END + 1)
+        assert second["logs_raw_object_id"] != first["logs_raw_object_id"]
+
+        # Point the empty chunk at the first chunk's logs, and lend it the headers those
+        # logs need, so decoding succeeds and the range bound is what rejects them.
+        store.update_receipt(
+            BLOCK_CHUNK1_END + 1,
+            logs_raw_object_id=first["logs_raw_object_id"],
+            header_dependencies_json=first["header_dependencies_json"],
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="outside receipt range"):
+            run_replay(store)
+
+    def test_an_end_header_hash_disagreeing_with_the_receipt_is_refused(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, end_block_hash=_hash32(0xBAD))
+
+        with pytest.raises(UniswapV2IngestionError, match="hash does not match the receipt"):
+            run_replay(store)
+
+    def test_a_header_dependency_bound_to_another_block_is_refused(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        dependencies = json.loads(store.receipt(SCENARIO_START)["header_dependencies_json"])
+        dependencies[0]["request_json"] = _canonical_json(block_header_request(1))
+        store.update_receipt(
+            SCENARIO_START, header_dependencies_json=json.dumps(dependencies)
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="different request"):
+            run_replay(store)
+
+    def test_a_raw_object_that_is_no_longer_valid_json_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        logs_id = store.receipt(SCENARIO_START)["logs_raw_object_id"]
+        body = store.raw_path(logs_id).read_bytes()
+        # Keep the digest honest so the JSON decode is what fails.
+        store.overwrite_raw(f"raw_{hashlib.sha256(body).hexdigest()}", body)
+        store.overwrite_raw(logs_id, b"<html>gateway timeout</html>")
+
+        with pytest.raises(UniswapV2IngestionError, match="SHA-256 mismatch|cannot replay"):
+            run_replay(store)
+
+    def test_a_missing_raw_object_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.raw_path(store.receipt(SCENARIO_START)["logs_raw_object_id"]).unlink()
+
+        with pytest.raises(UniswapV2IngestionError, match="cannot replay raw object"):
+            run_replay(store)
+
+    def test_a_tampered_raw_object_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        logs_id = store.receipt(SCENARIO_START)["logs_raw_object_id"]
+        store.overwrite_raw(logs_id, json.dumps({"jsonrpc": "2.0", "result": []}).encode())
+
+        with pytest.raises(UniswapV2IngestionError, match="SHA-256 mismatch"):
+            run_replay(store)
+
+    def test_a_malformed_raw_object_id_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, logs_raw_object_id="not_a_raw_object_id")
+
+        with pytest.raises(UniswapV2IngestionError, match="invalid raw object id"):
+            run_replay(store)
+
+    def test_a_corrupt_dependency_list_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, header_dependencies_json="{not json")
+
         with pytest.raises(UniswapV2IngestionError, match="not valid JSON"):
-            scenario_replay(store)
+            run_replay(store)
 
-    def test_a_receipt_whose_header_id_list_is_not_an_array_is_typed(self, store: Store) -> None:
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
-            header_raw_object_ids_json='{"raw_a": 1}',
-        )
+    def test_a_dependency_list_that_is_not_an_array_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, header_dependencies_json='{"a": 1}')
+
         with pytest.raises(UniswapV2IngestionError, match="must be a JSON array"):
-            scenario_replay(store)
+            run_replay(store)
 
-    def test_a_receipt_with_an_unparseable_completed_at_is_typed(self, store: Store) -> None:
-        logs_id = store.write_raw({"jsonrpc": "2.0", "id": 1, "result": []})
-        header_id = store.write_raw({
-            "jsonrpc": "2.0", "id": 1,
-            "result": {"number": hex(299), "hash": BLOCK_299_HASH, "timestamp": hex(1)},
-        })
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id=logs_id, header_raw_object_ids=[header_id],
-            completed_at="not-a-timestamp",
-        )
+    def test_an_unparseable_acquisition_timestamp_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, logs_acquired_at="not-a-timestamp")
+
         with pytest.raises(UniswapV2IngestionError, match="ISO-8601"):
-            scenario_replay(store)
+            run_replay(store)
 
-    def test_a_preserved_header_without_a_block_number_is_typed(self, store: Store) -> None:
-        logs_id = store.write_raw({"jsonrpc": "2.0", "id": 1, "result": []})
-        header_id = store.write_raw({
-            "jsonrpc": "2.0", "id": 1,
-            "result": {"hash": BLOCK_299_HASH, "timestamp": hex(1)},
-        })
-        store.insert_receipt(
-            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
-            logs_raw_object_id=logs_id, header_raw_object_ids=[header_id],
+    def test_a_naive_acquisition_timestamp_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, logs_acquired_at="2026-07-25T00:00:00")
+
+        with pytest.raises(UniswapV2IngestionError, match="timezone-aware"):
+            run_replay(store)
+
+    def test_replay_requires_a_raw_root(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        ingestor = make_ingestor(store, raw_root=None)
+        try:
+            with pytest.raises(UniswapV2IngestionError, match="raw_root is required"):
+                ingestor.replay_receipts(
+                    start_block=SCENARIO_START, end_block=SCENARIO_END,
+                    receipt_db_path=str(store.db),
+                )
+        finally:
+            ingestor.close()
+
+
+# ---------------------------------------------------------------------------
+# Availability semantics
+# ---------------------------------------------------------------------------
+
+class TestAvailabilityTime:
+    def test_availability_is_the_logs_acquisition_time(self, store: Store) -> None:
+        """Events became observable when the logs response was acquired, not when the
+        later header fetches resolved their timestamps."""
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        logs_at = datetime.fromisoformat(receipt["logs_acquired_at"])
+
+        chunk_rows = [r for r in run_replay(store).rows if r.block_number <= BLOCK_CHUNK1_END]
+
+        assert chunk_rows
+        for row in chunk_rows:
+            assert row.availability_time == logs_at
+
+    def test_availability_is_not_the_chunk_completion_time(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        completed_at = datetime.fromisoformat(receipt["completed_at"])
+        logs_at = datetime.fromisoformat(receipt["logs_acquired_at"])
+
+        assert logs_at < completed_at, "headers are acquired after the logs response"
+        for row in run_replay(store).rows:
+            if row.block_number <= BLOCK_CHUNK1_END:
+                assert row.availability_time != completed_at
+
+    def test_fetch_and_replay_agree_on_availability(self, store: Store) -> None:
+        fetched = run_fetch(store, scenario_node())
+        replayed = run_replay(store).rows
+
+        assert [r.availability_time for r in fetched] == [r.availability_time for r in replayed]
+
+    def test_event_time_is_the_block_timestamp_in_utc(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+
+        for row in run_replay(store).rows:
+            assert row.event_time == datetime.fromtimestamp(
+                MockEthereumNode.timestamp(row.block_number), UTC
+            )
+            assert row.event_time.tzinfo is not None
+            assert row.availability_time >= row.event_time
+
+
+# ---------------------------------------------------------------------------
+# Failure evidence
+# ---------------------------------------------------------------------------
+
+class TestFailureRecording:
+    def test_a_transport_failure_is_recorded_and_typed(self, store: Store) -> None:
+        node = scenario_node(transport_error_for={"eth_getLogs"})
+
+        with pytest.raises(UniswapV2IngestionError, match="transport failure"):
+            run_fetch(store, node)
+
+        failures = store.failures()
+        assert len(failures) == 1
+        assert failures[0]["failure_kind"] == "transport"
+        assert failures[0]["method"] == "eth_getLogs"
+        assert failures[0]["raw_object_id"] is None, "no bytes were received"
+        assert failures[0]["start_block"] == SCENARIO_START
+        assert failures[0]["end_block"] == BLOCK_CHUNK1_END
+        assert datetime.fromisoformat(failures[0]["occurred_at"]).tzinfo is not None
+
+    def test_an_http_failure_preserves_the_bytes_and_records_the_attempt(
+        self, store: Store
+    ) -> None:
+        node = scenario_node(fail_status_for={"eth_getLogs"})
+
+        with pytest.raises(UniswapV2IngestionError, match="HTTP 500"):
+            run_fetch(store, node)
+
+        failures = store.failures()
+        assert len(failures) == 1
+        assert failures[0]["failure_kind"] == "http_status"
+        assert failures[0]["status_code"] == 500
+        raw_object_id = failures[0]["raw_object_id"]
+        assert raw_object_id is not None
+        assert store.raw_path(raw_object_id).read_bytes() in set(node.served), (
+            "the failing response body must still be preserved"
         )
-        with pytest.raises(UniswapV2IngestionError, match="block header is missing 'number'"):
-            scenario_replay(store)
+
+    def test_an_invalid_json_body_is_recorded(self, store: Store) -> None:
+        node = scenario_node(invalid_json_for={"eth_getLogs"})
+
+        with pytest.raises(UniswapV2IngestionError, match="invalid JSON"):
+            run_fetch(store, node)
+
+        failures = store.failures()
+        assert [f["failure_kind"] for f in failures] == ["invalid_json"]
+        assert failures[0]["raw_object_id"] is not None
+
+    def test_a_json_rpc_error_body_is_recorded(self, store: Store) -> None:
+        node = scenario_node(rpc_error_for={"eth_getLogs"})
+
+        with pytest.raises(UniswapV2IngestionError, match="failed"):
+            run_fetch(store, node)
+
+        failures = store.failures()
+        assert [f["failure_kind"] for f in failures] == ["rpc_error"]
+
+    def test_the_recorded_request_identifies_what_was_attempted(self, store: Store) -> None:
+        node = scenario_node(fail_status_for={"eth_getLogs"})
+        with pytest.raises(UniswapV2IngestionError):
+            run_fetch(store, node)
+
+        assert store.failures()[0]["request_json"] == _canonical_json(
+            logs_request(
+                factory=UNISWAP_V2_FACTORY,
+                start_block=SCENARIO_START,
+                end_block=BLOCK_CHUNK1_END,
+            )
+        )
+
+    def test_a_successful_run_records_no_failures(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        assert store.failures() == []
 
 
 # ---------------------------------------------------------------------------
@@ -1093,7 +1483,7 @@ class TestTypedFailures:
 # ---------------------------------------------------------------------------
 
 class TestConfiguration:
-    def test_an_empty_rpc_url_is_rejected(self, store: Store) -> None:
+    def test_an_empty_rpc_url_is_refused(self, store: Store) -> None:
         with pytest.raises(ValueError, match="rpc_url is required"):
             UniswapV2PairCreatedIngestor(rpc_url="", raw_writer=store.writer)
 
@@ -1117,7 +1507,7 @@ class TestConfiguration:
         monkeypatch.delenv("ETHEREUM_RPC_URL", raising=False)
         monkeypatch.setattr(sys, "argv", [
             "ingest_uniswap_v2_pair_created.py",
-            "--start-block", "100", "--end-block", "299",
+            "--start-block", str(SCENARIO_START), "--end-block", str(SCENARIO_END),
             "--db-path", str(tmp_path / "exp.db"), "--code-commit", "test",
         ])
 
@@ -1132,8 +1522,8 @@ class TestRunnerPublication:
         from scripts.research import ingest_uniswap_v2_pair_created as runner
 
         db = tmp_path / "exp.db"
-        raw_root = tmp_path / "store" / "raw"
         store_root = tmp_path / "store"
+        raw_root = store_root / "raw"
         node = scenario_node()
         node.install(monkeypatch)
         monkeypatch.setenv("ETHEREUM_RPC_URL", "http://node.invalid")
@@ -1154,11 +1544,11 @@ class TestRunnerPublication:
         try:
             conn.row_factory = sqlite3.Row
             receipts = [dict(r) for r in conn.execute(
-                "SELECT * FROM uniswap_v2_pair_created_chunk_receipt_v2 ORDER BY start_block"
+                f"SELECT * FROM {RECEIPT_TABLE} ORDER BY start_block"
             )]
         finally:
             conn.close()
-        assert [(r["start_block"], r["end_block"]) for r in receipts] == [(100, 199), (200, 299)]
+        assert [(r["start_block"], r["end_block"]) for r in receipts] == SCENARIO_RANGES
 
         catalog = SqliteDatasetCatalog(db)
         try:
@@ -1182,9 +1572,9 @@ class TestRunnerPublication:
         assert REQUIRED_ROW_FIELDS <= set(table.column_names)
 
         records = table.to_pylist()
-        assert [(r["block_number"], r["tx_index"], r["log_index"]) for r in records] == (
-            SCENARIO_EXPECTED_ORDER
-        )
+        assert [
+            (r["block_number"], r["tx_index"], r["log_index"]) for r in records
+        ] == SCENARIO_EXPECTED_ORDER
         assert {r["chain"] for r in records} == {ETHEREUM_CHAIN}
         assert {r["factory"] for r in records} == {UNISWAP_V2_FACTORY}
         assert [r["pair"] for r in records] == [PAIR_1, PAIR_2, PAIR_3]

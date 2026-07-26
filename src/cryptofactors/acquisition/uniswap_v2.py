@@ -1,10 +1,23 @@
-"""DATA-012 Uniswap V2 Factory PairCreated raw-event ingestion."""
+"""DATA-012 Uniswap V2 Factory PairCreated raw-event ingestion.
+
+Acquisition preserves exact JSON-RPC response bytes through ``RawObjectWriter`` and
+records a chunk receipt that binds every dependency to the request that produced it.
+Decoding never touches the network: ``replay_receipts`` reads only preserved bytes,
+re-derives the request each receipt claims to answer, verifies SHA-256, and proves
+contiguous coverage before returning rows.
+
+Chain safety is explicit. The ingestor refuses to run against anything but Ethereum
+mainnet (``eth_chainId == 0x1``) and refuses block ranges that begin before the
+Uniswap V2 Factory deployment block, because logs from before deployment cannot
+exist and a range that claims them indicates a misconfigured run.
+"""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import sqlite3
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,13 +30,132 @@ from cryptofactors.ingest.raw.paths import content_addressed_absolute_path
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 
 ETHEREUM_CHAIN = "ethereum"
+ETHEREUM_MAINNET_CHAIN_ID = "0x1"
 UNISWAP_V2_FACTORY = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+UNISWAP_V2_DEPLOYMENT_BLOCK = 10_000_835
 PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
+SOURCE_ID = "ethereum_json_rpc_uniswap_v2"
+
+RECEIPT_TABLE = "uniswap_v2_pair_created_chunk_receipt_v3"
+FAILURE_TABLE = "uniswap_v2_pair_created_transport_failure"
+
+_HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
+_ADDRESS_PAD = "0" * 24
 
 
 class UniswapV2IngestionError(RuntimeError):
     """Raised for malformed RPC responses or invalid event continuity."""
 
+
+# ---------------------------------------------------------------------------
+# Validation primitives
+#
+# Every accessor below converts a malformed node response into a typed failure.
+# A bare KeyError or ValueError escaping this module is indistinguishable from a
+# programming fault at the call site.
+# ---------------------------------------------------------------------------
+
+def _require(source: Mapping[str, Any], key: str, *, label: str) -> Any:
+    if not isinstance(source, Mapping) or key not in source:
+        raise UniswapV2IngestionError(f"{label} is missing {key!r}")
+    return source[key]
+
+
+def _hex_quantity(value: Any, *, label: str) -> int:
+    """Decode a JSON-RPC QUANTITY.
+
+    Non-canonical zero padding is tolerated (some providers emit it) but the value
+    must be a ``0x``-prefixed, non-empty, purely hexadecimal string. A JSON number
+    is rejected: silently accepting it would let a provider change the wire type
+    without detection.
+    """
+    if not isinstance(value, str):
+        raise UniswapV2IngestionError(f"{label} must be a hex quantity string, got {value!r}")
+    if not value.startswith("0x") or len(value) == 2:
+        raise UniswapV2IngestionError(f"expected hex quantity, got {value!r}")
+    body = value[2:]
+    if any(char not in _HEX_DIGITS for char in body):
+        raise UniswapV2IngestionError(f"expected hex quantity, got {value!r}")
+    return int(body, 16)
+
+
+def _hex_bytes(value: Any, size: int, *, label: str) -> str:
+    """Decode a fixed-width DATA value, returning it lowercase-normalised."""
+    if not isinstance(value, str) or not value.startswith("0x"):
+        raise UniswapV2IngestionError(f"{label} must be 0x-prefixed hex, got {value!r}")
+    body = value[2:]
+    if len(body) != size * 2:
+        raise UniswapV2IngestionError(
+            f"{label} must be exactly {size} bytes, got {len(body) // 2}"
+        )
+    if any(char not in _HEX_DIGITS for char in body):
+        raise UniswapV2IngestionError(f"{label} is not valid hex: {value!r}")
+    return "0x" + body.lower()
+
+
+def _abi_address(word: Any, *, label: str) -> str:
+    """Extract a 20-byte address from a 32-byte ABI word, rejecting dirty padding."""
+    normalized = _hex_bytes(word, 32, label=label)
+    if normalized[2:26] != _ADDRESS_PAD:
+        raise UniswapV2IngestionError(f"{label} is not a left-padded 20-byte address")
+    return "0x" + normalized[26:]
+
+
+def _same_address(left: str, right: str) -> bool:
+    return left.lower() == right.lower()
+
+
+# Retained so existing callers keep working; both delegate to the strict helpers.
+def _hex_int(value: str) -> int:
+    return _hex_quantity(value, label="quantity")
+
+
+def _address(topic_or_word: str) -> str:
+    return _abi_address(topic_or_word, label="ABI word")
+
+
+def _canonical_json(payload: Any) -> str:
+    """Stable request encoding, so a recorded request compares byte-for-byte."""
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+# ---------------------------------------------------------------------------
+# Canonical JSON-RPC requests
+#
+# Replay re-derives these from the receipt's own identity columns and compares
+# them to what was recorded, which is what makes replay request-bound.
+# ---------------------------------------------------------------------------
+
+def chain_id_request() -> dict[str, Any]:
+    return {"jsonrpc": "2.0", "id": 1, "method": "eth_chainId", "params": []}
+
+
+def logs_request(*, factory: str, start_block: int, end_block: int) -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getLogs",
+        "params": [{
+            "address": factory,
+            "fromBlock": hex(start_block),
+            "toBlock": hex(end_block),
+            "topics": [PAIR_CREATED_TOPIC],
+        }],
+    }
+
+
+def block_header_request(block_number: int) -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getBlockByNumber",
+        "params": [hex(block_number), False],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Records
+# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True, slots=True)
 class PairCreatedRow:
@@ -64,96 +196,255 @@ class PairCreatedRow:
 
 
 @dataclass(frozen=True, slots=True)
+class RpcCall:
+    """One acquisition attempt that produced preserved bytes."""
+
+    request: dict[str, Any]
+    payload: dict[str, Any]
+    raw_object_id: str
+    acquisition_id: str
+    acquired_at: datetime
+
+    @property
+    def request_json(self) -> str:
+        return _canonical_json(self.request)
+
+
+@dataclass(frozen=True, slots=True)
+class HeaderDependency:
+    """A preserved block header bound to the request that produced it."""
+
+    block_number: int
+    block_hash: str
+    request_json: str
+    raw_object_id: str
+    acquisition_id: str
+    acquired_at: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "block_number": self.block_number,
+            "block_hash": self.block_hash,
+            "request_json": self.request_json,
+            "raw_object_id": self.raw_object_id,
+            "acquisition_id": self.acquisition_id,
+            "acquired_at": self.acquired_at,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Any) -> HeaderDependency:
+        if not isinstance(payload, Mapping):
+            raise UniswapV2IngestionError("header dependency must be an object")
+        return cls(
+            block_number=int(_require(payload, "block_number", label="header dependency")),
+            block_hash=str(_require(payload, "block_hash", label="header dependency")),
+            request_json=str(_require(payload, "request_json", label="header dependency")),
+            raw_object_id=str(_require(payload, "raw_object_id", label="header dependency")),
+            acquisition_id=str(_require(payload, "acquisition_id", label="header dependency")),
+            acquired_at=str(_require(payload, "acquired_at", label="header dependency")),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkReceipt:
+    """A completed chunk, bound to every acquisition that produced it."""
+
+    chain: str
+    chain_id: str
+    factory: str
+    topic: str
+    start_block: int
+    end_block: int
+    logs_request_json: str
+    logs_raw_object_id: str
+    logs_acquisition_id: str
+    logs_acquired_at: str
+    end_block_number: int
+    end_block_hash: str
+    end_header_request_json: str
+    end_header_raw_object_id: str
+    end_header_acquisition_id: str
+    end_header_acquired_at: str
+    header_dependencies: tuple[HeaderDependency, ...]
+    completed_at: str
+
+    @property
+    def raw_object_ids(self) -> frozenset[str]:
+        return frozenset({
+            self.logs_raw_object_id,
+            self.end_header_raw_object_id,
+            *(dep.raw_object_id for dep in self.header_dependencies),
+        })
+
+    @property
+    def acquisition_ids(self) -> frozenset[str]:
+        return frozenset({
+            self.logs_acquisition_id,
+            self.end_header_acquisition_id,
+            *(dep.acquisition_id for dep in self.header_dependencies),
+        })
+
+
+@dataclass(frozen=True, slots=True)
 class ReplayResult:
     rows: tuple[PairCreatedRow, ...]
     raw_object_ids: frozenset[str]
     completed_ranges: tuple[tuple[int, int], ...]
+    acquisition_ids: frozenset[str] = frozenset()
 
 
-def _hex_int(value: str) -> int:
-    if not isinstance(value, str) or not value.startswith("0x"):
-        raise UniswapV2IngestionError(f"expected hex quantity, got {value!r}")
-    return int(value, 16)
-
-
-def _require(source: dict[str, Any], key: str, *, label: str) -> Any:
-    """Fetch a mandatory JSON-RPC field as a typed failure rather than a KeyError."""
-    if key not in source:
-        raise UniswapV2IngestionError(f"{label} is missing {key!r}")
-    return source[key]
-
-
-def _address(topic_or_word: str) -> str:
-    if not isinstance(topic_or_word, str) or not topic_or_word.startswith("0x"):
-        raise UniswapV2IngestionError("expected ABI hex word")
-    payload = topic_or_word[2:]
-    if len(payload) != 64:
-        raise UniswapV2IngestionError("expected 32-byte ABI word")
-    return "0x" + payload[-40:]
-
+# ---------------------------------------------------------------------------
+# Decoder
+# ---------------------------------------------------------------------------
 
 def decode_pair_created(
-    logs_response: dict[str, Any],
-    block_headers: dict[int, tuple[dict[str, Any], str]],
+    logs_response: Mapping[str, Any],
+    block_headers: Mapping[int, tuple[Mapping[str, Any], str]],
     *,
     factory: str,
     log_raw_object_id: str,
     availability_time: datetime,
 ) -> list[PairCreatedRow]:
-    """Pure deterministic decoder for replaying preserved RPC response bytes."""
-    logs = logs_response.get("result")
+    """Pure deterministic decoder for replaying preserved RPC response bytes.
+
+    Strict by construction: a log is accepted only if it was emitted by the expected
+    factory, is not a reorg tombstone, carries exactly the PairCreated topic set, and
+    agrees with the preserved header on both block number and block hash. Duplicate
+    detection is case-normalised, because hash casing is not stable across providers.
+    """
+    logs = logs_response.get("result") if isinstance(logs_response, Mapping) else None
     if not isinstance(logs, list):
         raise UniswapV2IngestionError("eth_getLogs result must be a list")
+
     seen: set[tuple[str, int]] = set()
     rows: list[PairCreatedRow] = []
     for log in logs:
-        if not isinstance(log, dict):
+        if not isinstance(log, Mapping):
             raise UniswapV2IngestionError("log entry must be an object")
+
+        emitter = _require(log, "address", label="log")
+        if not isinstance(emitter, str) or not _same_address(emitter, factory):
+            raise UniswapV2IngestionError(
+                f"log emitted by {emitter!r}, expected factory {factory}"
+            )
+
+        removed = _require(log, "removed", label="log")
+        if removed is not False:
+            raise UniswapV2IngestionError("reorg-removed log cannot be published")
+
         topics = log.get("topics")
-        if not isinstance(topics, list) or len(topics) < 3 or not isinstance(topics[0], str):
+        if not isinstance(topics, list) or len(topics) != 3:
             raise UniswapV2IngestionError("invalid PairCreated topics")
-        if topics[0].lower() != PAIR_CREATED_TOPIC:
+        event_topic = _hex_bytes(topics[0], 32, label="event topic")
+        if event_topic != PAIR_CREATED_TOPIC:
             raise UniswapV2IngestionError("invalid PairCreated topics")
-        block_number = _hex_int(_require(log, "blockNumber", label="log"))
+
+        block_number = _hex_quantity(_require(log, "blockNumber", label="log"), label="blockNumber")
         if block_number not in block_headers:
             raise UniswapV2IngestionError(f"no preserved block header for block {block_number}")
         header, header_raw_object_id = block_headers[block_number]
-        block_hash = str(_require(log, "blockHash", label="log"))
-        if block_hash.lower() != str(_require(header, "hash", label="block header")).lower():
-            raise UniswapV2IngestionError("log block hash does not match block header")
-        identity = (
-            str(_require(log, "transactionHash", label="log")),
-            _hex_int(_require(log, "logIndex", label="log")),
+
+        header_number = _hex_quantity(
+            _require(header, "number", label="block header"), label="header number"
         )
+        if header_number != block_number:
+            raise UniswapV2IngestionError(
+                f"preserved header is for block {header_number}, not {block_number}"
+            )
+
+        block_hash = _hex_bytes(_require(log, "blockHash", label="log"), 32, label="log blockHash")
+        header_hash = _hex_bytes(
+            _require(header, "hash", label="block header"), 32, label="header hash"
+        )
+        if block_hash != header_hash:
+            raise UniswapV2IngestionError("log block hash does not match block header")
+
+        tx_hash = _hex_bytes(
+            _require(log, "transactionHash", label="log"), 32, label="transactionHash"
+        )
+        log_index = _hex_quantity(_require(log, "logIndex", label="log"), label="logIndex")
+        identity = (tx_hash, log_index)
         if identity in seen:
             raise UniswapV2IngestionError("duplicate (tx_hash, log_index)")
         seen.add(identity)
-        timestamp = _hex_int(_require(header, "timestamp", label="block header"))
+
+        # PairCreated(address indexed token0, address indexed token1, address pair, uint)
+        data = _hex_bytes(_require(log, "data", label="log"), 64, label="log data")
+        timestamp = _hex_quantity(
+            _require(header, "timestamp", label="block header"), label="block timestamp"
+        )
         rows.append(PairCreatedRow(
-            chain=ETHEREUM_CHAIN, factory=factory,
-            pair=_address(str(_require(log, "data", label="log"))[:66]),
-            token0=_address(str(topics[1])), token1=_address(str(topics[2])),
-            block_number=block_number, block_hash=block_hash, block_timestamp=timestamp,
-            tx_hash=identity[0],
-            tx_index=_hex_int(_require(log, "transactionIndex", label="log")),
-            log_index=identity[1],
-            event_time=datetime.fromtimestamp(timestamp, UTC), availability_time=availability_time,
-            raw_object_id=log_raw_object_id, block_raw_object_id=header_raw_object_id,
+            chain=ETHEREUM_CHAIN,
+            factory=factory,
+            pair=_abi_address(data[:66], label="pair"),
+            token0=_abi_address(topics[1], label="token0"),
+            token1=_abi_address(topics[2], label="token1"),
+            block_number=block_number,
+            block_hash=block_hash,
+            block_timestamp=timestamp,
+            tx_hash=tx_hash,
+            tx_index=_hex_quantity(
+                _require(log, "transactionIndex", label="log"), label="transactionIndex"
+            ),
+            log_index=log_index,
+            event_time=datetime.fromtimestamp(timestamp, UTC),
+            availability_time=availability_time,
+            raw_object_id=log_raw_object_id,
+            block_raw_object_id=header_raw_object_id,
         ))
     return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
 
 
-def _receipt_header_ids(header_raw_object_ids_json: object) -> list[str]:
-    """Parse a receipt's header raw-object list, failing typed on a corrupt control plane."""
+# ---------------------------------------------------------------------------
+# Receipt persistence
+# ---------------------------------------------------------------------------
+
+_RECEIPT_COLUMNS = (
+    "chain", "chain_id", "factory", "topic", "start_block", "end_block",
+    "logs_request_json", "logs_raw_object_id", "logs_acquisition_id", "logs_acquired_at",
+    "end_block_number", "end_block_hash", "end_header_request_json",
+    "end_header_raw_object_id", "end_header_acquisition_id", "end_header_acquired_at",
+    "header_dependencies_json", "completed_at",
+)
+
+
+def _receipt_from_row(row: Sequence[Any]) -> ChunkReceipt:
     try:
-        parsed = json.loads(str(header_raw_object_ids_json))
+        parsed = json.loads(str(row[16]))
     except json.JSONDecodeError as exc:
-        raise UniswapV2IngestionError(
-            "receipt header raw object list is not valid JSON"
-        ) from exc
+        raise UniswapV2IngestionError("receipt header dependency list is not valid JSON") from exc
     if not isinstance(parsed, list):
-        raise UniswapV2IngestionError("receipt header raw object list must be a JSON array")
-    return [str(raw_id) for raw_id in parsed]
+        raise UniswapV2IngestionError("receipt header dependency list must be a JSON array")
+    return ChunkReceipt(
+        chain=str(row[0]),
+        chain_id=str(row[1]),
+        factory=str(row[2]),
+        topic=str(row[3]),
+        start_block=int(row[4]),
+        end_block=int(row[5]),
+        logs_request_json=str(row[6]),
+        logs_raw_object_id=str(row[7]),
+        logs_acquisition_id=str(row[8]),
+        logs_acquired_at=str(row[9]),
+        end_block_number=int(row[10]),
+        end_block_hash=str(row[11]),
+        end_header_request_json=str(row[12]),
+        end_header_raw_object_id=str(row[13]),
+        end_header_acquisition_id=str(row[14]),
+        end_header_acquired_at=str(row[15]),
+        header_dependencies=tuple(HeaderDependency.from_dict(item) for item in parsed),
+        completed_at=str(row[17]),
+    )
+
+
+def _parse_timestamp(value: str, *, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise UniswapV2IngestionError(f"{label} is not an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None:
+        raise UniswapV2IngestionError(f"{label} must be timezone-aware")
+    return parsed
 
 
 class UniswapV2PairCreatedIngestor:
@@ -166,6 +457,7 @@ class UniswapV2PairCreatedIngestor:
         raw_writer: RawObjectWriter,
         client: httpx.Client | None = None,
         factory: str = UNISWAP_V2_FACTORY,
+        raw_root: Path | None = None,
     ) -> None:
         if not rpc_url:
             raise ValueError("rpc_url is required")
@@ -174,119 +466,168 @@ class UniswapV2PairCreatedIngestor:
         self._client = client or httpx.Client(timeout=30.0)
         self._owns_client = client is None
         self._factory = factory
-
-    def _rpc(self, method: str, params: list[Any], *, event_start: int, event_end: int) -> tuple[dict[str, Any], str, datetime]:
-        request = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
-        response = self._client.post(self._rpc_url, json=request)
-        body = response.content
-        fetched_at = datetime.now(UTC)
-        raw = self._raw_writer.write_stream(
-            [body],
-            AcquisitionMetadata(
-                source_id="ethereum_json_rpc_uniswap_v2",
-                request=request,
-                response_metadata={"status_code": response.status_code, "method": method},
-                original_name=f"{method}_{event_start}_{event_end}.json",
-                acquired_at=fetched_at,
-            ),
-        )
-        if response.is_error:
-            raise UniswapV2IngestionError(f"JSON-RPC HTTP {response.status_code}")
-        try:
-            decoded = json.loads(body)
-        except json.JSONDecodeError as exc:
-            raise UniswapV2IngestionError(f"JSON-RPC {method} returned invalid JSON") from exc
-        if not isinstance(decoded, dict) or decoded.get("error") is not None:
-            raise UniswapV2IngestionError(f"JSON-RPC {method} failed: {decoded!r}")
-        return decoded, raw.raw_object_id, fetched_at
+        self._raw_root = raw_root
+        self._chain_id: str | None = None
 
     def close(self) -> None:
         if self._owns_client:
             self._client.close()
 
-    def fetch(
+    # -- transport ---------------------------------------------------------
+
+    def _record_failure(
         self,
+        receipts: sqlite3.Connection | None,
         *,
+        method: str,
+        request_json: str,
         start_block: int,
         end_block: int,
-        chunk_size: int,
-        receipt_db_path: str | None = None,
-        emit_rows: bool = True,
-    ) -> list[PairCreatedRow]:
-        if start_block < 0 or end_block < start_block or chunk_size <= 0:
-            raise ValueError("invalid block range or chunk_size")
-        rows: list[PairCreatedRow] = []
-        receipts = sqlite3.connect(receipt_db_path) if receipt_db_path else None
+        kind: str,
+        detail: str,
+        status_code: int | None = None,
+        raw_object_id: str | None = None,
+        acquisition_id: str | None = None,
+    ) -> None:
+        """Record a failed acquisition attempt as durable evidence.
+
+        Best effort by design: a failure to write the failure row must not mask the
+        original transport error the caller is about to see.
+        """
+        if receipts is None:
+            return
         try:
-            if receipts is not None:
-                receipts.execute("PRAGMA foreign_keys = ON")
-            for chunk_start in range(start_block, end_block + 1, chunk_size):
-                chunk_end = min(chunk_start + chunk_size - 1, end_block)
-                if receipts is not None:
-                    prior = receipts.execute(
-                        "SELECT end_block_hash FROM uniswap_v2_pair_created_chunk_receipt_v2 "
-                        "WHERE chain = ? AND factory = ? AND topic = ? AND start_block = ? AND end_block = ?",
-                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end),
-                    ).fetchone()
-                    if prior is not None:
-                        header_response, _, _ = self._rpc(
-                            "eth_getBlockByNumber", [hex(chunk_end), False], event_start=chunk_end, event_end=chunk_end
-                        )
-                        header = header_response.get("result")
-                        if not isinstance(header, dict) or str(header.get("hash", "")).lower() != str(prior[0]).lower():
-                            raise UniswapV2IngestionError("completed chunk receipt failed end-block validation")
-                        continue
-                logs_response, logs_raw_id, logs_time = self._rpc(
-                    "eth_getLogs",
-                    [{"address": self._factory, "fromBlock": hex(chunk_start), "toBlock": hex(chunk_end), "topics": [PAIR_CREATED_TOPIC]}],
-                    event_start=chunk_start,
-                    event_end=chunk_end,
-                )
-                logs = logs_response.get("result")
-                if not isinstance(logs, list):
-                    raise UniswapV2IngestionError("eth_getLogs result must be a list")
-                headers: dict[int, tuple[dict[str, Any], str, datetime]] = {}
-                for log in logs:
-                    if not isinstance(log, dict):
-                        raise UniswapV2IngestionError("log entry must be an object")
-                    block_number = _hex_int(_require(log, "blockNumber", label="log"))
-                    if block_number < chunk_start or block_number > chunk_end:
-                        raise UniswapV2IngestionError("RPC returned log outside requested chunk")
-                    if block_number not in headers:
-                        response, raw_id, acquired_at = self._rpc(
-                            "eth_getBlockByNumber", [hex(block_number), False], event_start=block_number, event_end=block_number
-                        )
-                        header = response.get("result")
-                        if not isinstance(header, dict):
-                            raise UniswapV2IngestionError("missing block result")
-                        headers[block_number] = (header, raw_id, acquired_at)
-                end_response, end_raw_id, end_time = self._rpc(
-                    "eth_getBlockByNumber", [hex(chunk_end), False], event_start=chunk_end, event_end=chunk_end
-                )
-                end_header = end_response.get("result")
-                if not isinstance(end_header, dict):
-                    raise UniswapV2IngestionError("missing end-block header")
-                if emit_rows:
-                    rows.extend(decode_pair_created(
-                        logs_response,
-                        {block: (header, raw_id) for block, (header, raw_id, _) in headers.items()},
-                        factory=self._factory,
-                        log_raw_object_id=logs_raw_id,
-                        availability_time=max([logs_time, end_time, *(item[2] for item in headers.values())]),
-                    ))
-                if receipts is not None:
-                    receipts.execute(
-                        "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end,
-                         str(_require(end_header, "hash", label="end-block header")), logs_raw_id,
-                         json.dumps(sorted({end_raw_id, *(raw_id for _, raw_id, _ in headers.values())})),
-                         max([logs_time, end_time, *(item[2] for item in headers.values())]).isoformat()),
-                    )
-                    receipts.commit()
-            return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
-        finally:
-            if receipts is not None:
-                receipts.close()
+            receipts.execute(
+                f"INSERT INTO {FAILURE_TABLE} "
+                "(chain, factory, topic, method, request_json, start_block, end_block, "
+                "failure_kind, status_code, raw_object_id, acquisition_id, detail, occurred_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, method, request_json,
+                 start_block, end_block, kind, status_code, raw_object_id, acquisition_id,
+                 detail, datetime.now(UTC).isoformat()),
+            )
+            receipts.commit()
+        except sqlite3.Error:
+            return
+
+    def _rpc(
+        self,
+        request: Mapping[str, Any],
+        *,
+        event_start: int,
+        event_end: int,
+        receipts: sqlite3.Connection | None,
+    ) -> RpcCall:
+        method = str(_require(request, "method", label="rpc request"))
+        request_json = _canonical_json(request)
+        acquired_at = datetime.now(UTC)
+
+        try:
+            response = self._client.post(self._rpc_url, json=dict(request))
+        except httpx.HTTPError as exc:
+            detail = f"transport failure: {exc}"
+            # No bytes were received, so there is nothing to preserve; the attempt is
+            # still recorded so a gap in coverage is explainable after the fact.
+            self._raw_writer.record_failed_acquisition(
+                AcquisitionMetadata(
+                    source_id=SOURCE_ID, request=dict(request), acquired_at=acquired_at
+                ),
+                detail,
+            )
+            self._record_failure(
+                receipts, method=method, request_json=request_json, start_block=event_start,
+                end_block=event_end, kind="transport", detail=detail,
+            )
+            raise UniswapV2IngestionError(f"JSON-RPC {method} transport failure") from exc
+
+        body = response.content
+        acquired_at = datetime.now(UTC)
+        raw = self._raw_writer.write_stream(
+            [body],
+            AcquisitionMetadata(
+                source_id=SOURCE_ID,
+                request=dict(request),
+                response_metadata={"status_code": response.status_code, "method": method},
+                original_name=f"{method}_{event_start}_{event_end}.json",
+                acquired_at=acquired_at,
+            ),
+        )
+
+        if response.is_error:
+            detail = f"JSON-RPC HTTP {response.status_code}"
+            self._record_failure(
+                receipts, method=method, request_json=request_json, start_block=event_start,
+                end_block=event_end, kind="http_status", detail=detail,
+                status_code=response.status_code, raw_object_id=raw.raw_object_id,
+                acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail)
+
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError as exc:
+            detail = f"JSON-RPC {method} returned invalid JSON"
+            self._record_failure(
+                receipts, method=method, request_json=request_json, start_block=event_start,
+                end_block=event_end, kind="invalid_json", detail=detail,
+                status_code=response.status_code, raw_object_id=raw.raw_object_id,
+                acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail) from exc
+
+        if not isinstance(payload, dict):
+            detail = f"JSON-RPC {method} response must be an object"
+            self._record_failure(
+                receipts, method=method, request_json=request_json, start_block=event_start,
+                end_block=event_end, kind="invalid_json", detail=detail,
+                status_code=response.status_code, raw_object_id=raw.raw_object_id,
+                acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail)
+
+        if payload.get("error") is not None:
+            detail = f"JSON-RPC {method} failed: {payload['error']!r}"
+            self._record_failure(
+                receipts, method=method, request_json=request_json, start_block=event_start,
+                end_block=event_end, kind="rpc_error", detail=detail,
+                status_code=response.status_code, raw_object_id=raw.raw_object_id,
+                acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail)
+
+        return RpcCall(
+            request=dict(request),
+            payload=payload,
+            raw_object_id=raw.raw_object_id,
+            acquisition_id=raw.acquisition_id,
+            acquired_at=acquired_at,
+        )
+
+    def _assert_mainnet(self, receipts: sqlite3.Connection | None) -> str:
+        """Refuse to ingest mainnet addresses from a non-mainnet endpoint."""
+        if self._chain_id is not None:
+            return self._chain_id
+        call = self._rpc(chain_id_request(), event_start=0, event_end=0, receipts=receipts)
+        raw_chain_id = call.payload.get("result")
+        chain_id = _hex_quantity(raw_chain_id, label="eth_chainId result")
+        if chain_id != 1:
+            raise UniswapV2IngestionError(
+                f"expected Ethereum mainnet chain id {ETHEREUM_MAINNET_CHAIN_ID}, "
+                f"got {raw_chain_id!r}"
+            )
+        self._chain_id = ETHEREUM_MAINNET_CHAIN_ID
+        return self._chain_id
+
+    # -- preserved bytes ---------------------------------------------------
+
+    def _resolve_raw_root(self, raw_root: Path | None) -> Path:
+        resolved = raw_root if raw_root is not None else self._raw_root
+        if resolved is None:
+            raise UniswapV2IngestionError(
+                "raw_root is required to verify preserved dependencies; pass it to the "
+                "ingestor or to the call"
+            )
+        return resolved
 
     @staticmethod
     def _read_raw_json(raw_root: Path, raw_object_id: str) -> dict[str, Any]:
@@ -296,14 +637,268 @@ class UniswapV2PairCreatedIngestor:
         path = content_addressed_absolute_path(raw_root, digest)
         try:
             body = path.read_bytes()
-            decoded = json.loads(body)
-        except (OSError, json.JSONDecodeError) as exc:
+        except OSError as exc:
             raise UniswapV2IngestionError(f"cannot replay raw object {raw_object_id}") from exc
         if hashlib.sha256(body).hexdigest() != digest:
             raise UniswapV2IngestionError(f"raw object SHA-256 mismatch: {raw_object_id}")
+        try:
+            decoded = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise UniswapV2IngestionError(f"cannot replay raw object {raw_object_id}") from exc
         if not isinstance(decoded, dict):
             raise UniswapV2IngestionError("raw RPC response must be an object")
         return decoded
+
+    def _authenticate_header(
+        self,
+        raw_root: Path,
+        *,
+        raw_object_id: str,
+        request_json: str,
+        expected_block_number: int,
+        expected_block_hash: str | None,
+        label: str,
+    ) -> dict[str, Any]:
+        """Prove a preserved header answers the request the receipt claims, for the
+        block the receipt claims, with the hash the receipt claims."""
+        expected_request = _canonical_json(block_header_request(expected_block_number))
+        if request_json != expected_request:
+            raise UniswapV2IngestionError(
+                f"{label} was acquired by a different request than the receipt claims"
+            )
+        response = self._read_raw_json(raw_root, raw_object_id)
+        header = response.get("result")
+        if not isinstance(header, dict):
+            raise UniswapV2IngestionError(f"{label} raw object has no block result")
+        number = _hex_quantity(_require(header, "number", label=label), label=f"{label} number")
+        if number != expected_block_number:
+            raise UniswapV2IngestionError(
+                f"{label} is for block {number}, expected {expected_block_number}"
+            )
+        block_hash = _hex_bytes(_require(header, "hash", label=label), 32, label=f"{label} hash")
+        if expected_block_hash is not None and block_hash != _hex_bytes(
+            expected_block_hash, 32, label=f"{label} recorded hash"
+        ):
+            raise UniswapV2IngestionError(f"{label} hash does not match the receipt")
+        return header
+
+    def _verify_receipt_dependencies(self, receipt: ChunkReceipt, raw_root: Path) -> None:
+        """Every dependency must still be present, intact and request-bound.
+
+        Called before a resume skips a completed chunk: a receipt is only a licence to
+        skip work if the evidence it points at is still verifiable.
+        """
+        expected_logs_request = _canonical_json(
+            logs_request(
+                factory=receipt.factory,
+                start_block=receipt.start_block,
+                end_block=receipt.end_block,
+            )
+        )
+        if receipt.logs_request_json != expected_logs_request:
+            raise UniswapV2IngestionError(
+                "receipt logs request does not match the requested chunk"
+            )
+        logs_response = self._read_raw_json(raw_root, receipt.logs_raw_object_id)
+        if not isinstance(logs_response.get("result"), list):
+            raise UniswapV2IngestionError("preserved eth_getLogs result must be a list")
+
+        self._authenticate_header(
+            raw_root,
+            raw_object_id=receipt.end_header_raw_object_id,
+            request_json=receipt.end_header_request_json,
+            expected_block_number=receipt.end_block,
+            expected_block_hash=receipt.end_block_hash,
+            label="end-block header",
+        )
+        for dependency in receipt.header_dependencies:
+            self._authenticate_header(
+                raw_root,
+                raw_object_id=dependency.raw_object_id,
+                request_json=dependency.request_json,
+                expected_block_number=dependency.block_number,
+                expected_block_hash=dependency.block_hash,
+                label=f"header for block {dependency.block_number}",
+            )
+        _parse_timestamp(receipt.logs_acquired_at, label="receipt logs_acquired_at")
+        _parse_timestamp(receipt.completed_at, label="receipt completed_at")
+
+    # -- acquisition -------------------------------------------------------
+
+    def fetch(
+        self,
+        *,
+        start_block: int,
+        end_block: int,
+        chunk_size: int,
+        receipt_db_path: str | None = None,
+        emit_rows: bool = True,
+        raw_root: Path | None = None,
+    ) -> list[PairCreatedRow]:
+        if start_block < 0 or end_block < start_block or chunk_size <= 0:
+            raise ValueError("invalid block range or chunk_size")
+        if start_block < UNISWAP_V2_DEPLOYMENT_BLOCK:
+            raise UniswapV2IngestionError(
+                f"start_block {start_block} precedes the Uniswap V2 Factory deployment "
+                f"block {UNISWAP_V2_DEPLOYMENT_BLOCK}"
+            )
+
+        rows: list[PairCreatedRow] = []
+        receipts = sqlite3.connect(receipt_db_path) if receipt_db_path else None
+        try:
+            if receipts is not None:
+                receipts.execute("PRAGMA foreign_keys = ON")
+            chain_id = self._assert_mainnet(receipts)
+            verify_root = self._raw_root if raw_root is None else raw_root
+
+            for chunk_start in range(start_block, end_block + 1, chunk_size):
+                chunk_end = min(chunk_start + chunk_size - 1, end_block)
+
+                if receipts is not None:
+                    prior = receipts.execute(
+                        f"SELECT {', '.join(_RECEIPT_COLUMNS)} FROM {RECEIPT_TABLE} "
+                        "WHERE chain = ? AND factory = ? AND topic = ? "
+                        "AND start_block = ? AND end_block = ?",
+                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC,
+                         chunk_start, chunk_end),
+                    ).fetchone()
+                    if prior is not None:
+                        receipt = _receipt_from_row(prior)
+                        if verify_root is None:
+                            raise UniswapV2IngestionError(
+                                "raw_root is required to verify a completed chunk before "
+                                "resuming; pass raw_root to fetch()"
+                            )
+                        self._verify_receipt_dependencies(receipt, verify_root)
+                        # Only after the preserved evidence checks out do we confirm the
+                        # chain still agrees with it.
+                        end_call = self._rpc(
+                            block_header_request(chunk_end),
+                            event_start=chunk_end, event_end=chunk_end, receipts=receipts,
+                        )
+                        live_header = end_call.payload.get("result")
+                        if not isinstance(live_header, dict):
+                            raise UniswapV2IngestionError("missing end-block header")
+                        live_hash = _hex_bytes(
+                            _require(live_header, "hash", label="end-block header"),
+                            32, label="end-block header hash",
+                        )
+                        if live_hash != _hex_bytes(
+                            receipt.end_block_hash, 32, label="receipt end_block_hash"
+                        ):
+                            raise UniswapV2IngestionError(
+                                "completed chunk receipt failed end-block validation"
+                            )
+                        continue
+
+                logs_call = self._rpc(
+                    logs_request(
+                        factory=self._factory, start_block=chunk_start, end_block=chunk_end
+                    ),
+                    event_start=chunk_start, event_end=chunk_end, receipts=receipts,
+                )
+                logs = logs_call.payload.get("result")
+                if not isinstance(logs, list):
+                    raise UniswapV2IngestionError("eth_getLogs result must be a list")
+
+                headers: dict[int, tuple[dict[str, Any], str]] = {}
+                dependencies: list[HeaderDependency] = []
+                for log in logs:
+                    if not isinstance(log, Mapping):
+                        raise UniswapV2IngestionError("log entry must be an object")
+                    block_number = _hex_quantity(
+                        _require(log, "blockNumber", label="log"), label="blockNumber"
+                    )
+                    if block_number < chunk_start or block_number > chunk_end:
+                        raise UniswapV2IngestionError("RPC returned log outside requested chunk")
+                    if block_number in headers:
+                        continue
+                    header_call = self._rpc(
+                        block_header_request(block_number),
+                        event_start=block_number, event_end=block_number, receipts=receipts,
+                    )
+                    header = header_call.payload.get("result")
+                    if not isinstance(header, dict):
+                        raise UniswapV2IngestionError("missing block result")
+                    header_number = _hex_quantity(
+                        _require(header, "number", label="block header"), label="header number"
+                    )
+                    if header_number != block_number:
+                        raise UniswapV2IngestionError(
+                            f"header for block {block_number} reports block {header_number}"
+                        )
+                    header_hash = _hex_bytes(
+                        _require(header, "hash", label="block header"), 32, label="header hash"
+                    )
+                    headers[block_number] = (header, header_call.raw_object_id)
+                    dependencies.append(HeaderDependency(
+                        block_number=block_number,
+                        block_hash=header_hash,
+                        request_json=header_call.request_json,
+                        raw_object_id=header_call.raw_object_id,
+                        acquisition_id=header_call.acquisition_id,
+                        acquired_at=header_call.acquired_at.isoformat(),
+                    ))
+
+                end_call = self._rpc(
+                    block_header_request(chunk_end),
+                    event_start=chunk_end, event_end=chunk_end, receipts=receipts,
+                )
+                end_header = end_call.payload.get("result")
+                if not isinstance(end_header, dict):
+                    raise UniswapV2IngestionError("missing end-block header")
+                end_number = _hex_quantity(
+                    _require(end_header, "number", label="end-block header"),
+                    label="end-block header number",
+                )
+                if end_number != chunk_end:
+                    raise UniswapV2IngestionError(
+                        f"end-block header is for block {end_number}, expected {chunk_end}"
+                    )
+                end_hash = _hex_bytes(
+                    _require(end_header, "hash", label="end-block header"),
+                    32, label="end-block header hash",
+                )
+
+                if emit_rows:
+                    rows.extend(decode_pair_created(
+                        logs_call.payload,
+                        headers,
+                        factory=self._factory,
+                        log_raw_object_id=logs_call.raw_object_id,
+                        # Availability is when the events became observable, which is the
+                        # moment the logs response was acquired -- not the later header
+                        # fetches that merely resolve their timestamps.
+                        availability_time=logs_call.acquired_at,
+                    ))
+
+                if receipts is not None:
+                    completed_at = max(
+                        [logs_call.acquired_at, end_call.acquired_at,
+                         *(_parse_timestamp(dep.acquired_at, label="header acquired_at")
+                           for dep in dependencies)]
+                    )
+                    receipts.execute(
+                        f"INSERT INTO {RECEIPT_TABLE} "
+                        f"({', '.join(_RECEIPT_COLUMNS)}) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (ETHEREUM_CHAIN, chain_id, self._factory, PAIR_CREATED_TOPIC,
+                         chunk_start, chunk_end,
+                         logs_call.request_json, logs_call.raw_object_id,
+                         logs_call.acquisition_id, logs_call.acquired_at.isoformat(),
+                         chunk_end, end_hash, end_call.request_json, end_call.raw_object_id,
+                         end_call.acquisition_id, end_call.acquired_at.isoformat(),
+                         json.dumps([dep.as_dict() for dep in dependencies], sort_keys=True),
+                         completed_at.isoformat()),
+                    )
+                    receipts.commit()
+
+            return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+        finally:
+            if receipts is not None:
+                receipts.close()
+
+    # -- replay ------------------------------------------------------------
 
     def replay_receipts(
         self,
@@ -311,57 +906,110 @@ class UniswapV2PairCreatedIngestor:
         start_block: int,
         end_block: int,
         receipt_db_path: str,
-        raw_root: Path,
+        raw_root: Path | None = None,
     ) -> ReplayResult:
-        """Decode only preserved receipt bytes after contiguous coverage validation."""
+        """Decode only preserved receipt bytes; never contacts the network.
+
+        Coverage must be exactly contiguous over the requested range, every preserved
+        object must hash to the id that names it, and every response must answer the
+        request the receipt records. Anything less is not a replay, it is a guess.
+        """
+        root = self._resolve_raw_root(raw_root)
         conn = sqlite3.connect(receipt_db_path)
         try:
-            receipts = conn.execute(
-                "SELECT start_block, end_block, logs_raw_object_id, completed_at, chain, factory, topic, "
-                "header_raw_object_ids_json FROM uniswap_v2_pair_created_chunk_receipt_v2 "
-                "WHERE chain = ? AND factory = ? AND topic = ? AND start_block >= ? AND end_block <= ? ORDER BY start_block",
+            rows_raw = conn.execute(
+                f"SELECT {', '.join(_RECEIPT_COLUMNS)} FROM {RECEIPT_TABLE} "
+                "WHERE chain = ? AND factory = ? AND topic = ? "
+                "AND start_block >= ? AND end_block <= ? ORDER BY start_block",
                 (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, start_block, end_block),
             ).fetchall()
         finally:
             conn.close()
+
+        receipts = [_receipt_from_row(row) for row in rows_raw]
         expected = start_block
         rows: list[PairCreatedRow] = []
-        # Identity is enforced by the query above; migration 0011 keys receipts by
-        # (chain, factory, topic, ...) so several factories may share one table.
-        header_ids_by_receipt = [_receipt_header_ids(receipt[7]) for receipt in receipts]
-        for receipt, header_ids in zip(receipts, header_ids_by_receipt, strict=True):
-            chunk_start, chunk_end = int(receipt[0]), int(receipt[1])
-            if chunk_start != expected or chunk_end < chunk_start:
+        raw_ids: set[str] = set()
+        acquisition_ids: set[str] = set()
+
+        for receipt in receipts:
+            # chain_id == 0x1, end_block_number == end_block and end_block >= start_block
+            # are CHECK constraints in migration 0012, so an inconsistent receipt cannot
+            # be written by any writer; re-asserting them here would be unreachable.
+            if receipt.start_block != expected or receipt.end_block < receipt.start_block:
                 raise UniswapV2IngestionError("receipt coverage is not contiguous")
-            headers: dict[int, tuple[dict[str, Any], str]] = {}
-            for raw_id in header_ids:
-                response = self._read_raw_json(raw_root, raw_id)
-                header = response.get("result")
-                if not isinstance(header, dict):
-                    raise UniswapV2IngestionError("receipt header raw object has no block result")
-                headers[_hex_int(_require(header, "number", label="block header"))] = (header, raw_id)
-            try:
-                completed_at = datetime.fromisoformat(str(receipt[3]))
-            except ValueError as exc:
+
+            expected_logs_request = _canonical_json(
+                logs_request(
+                    factory=receipt.factory,
+                    start_block=receipt.start_block,
+                    end_block=receipt.end_block,
+                )
+            )
+            if receipt.logs_request_json != expected_logs_request:
                 raise UniswapV2IngestionError(
-                    "receipt completed_at is not an ISO-8601 timestamp"
-                ) from exc
-            rows.extend(decode_pair_created(
-                self._read_raw_json(raw_root, str(receipt[2])),
+                    "receipt logs request does not match its own block range"
+                )
+
+            self._authenticate_header(
+                root,
+                raw_object_id=receipt.end_header_raw_object_id,
+                request_json=receipt.end_header_request_json,
+                expected_block_number=receipt.end_block,
+                expected_block_hash=receipt.end_block_hash,
+                label="end-block header",
+            )
+
+            headers: dict[int, tuple[Mapping[str, Any], str]] = {}
+            for dependency in receipt.header_dependencies:
+                header = self._authenticate_header(
+                    root,
+                    raw_object_id=dependency.raw_object_id,
+                    request_json=dependency.request_json,
+                    expected_block_number=dependency.block_number,
+                    expected_block_hash=dependency.block_hash,
+                    label=f"header for block {dependency.block_number}",
+                )
+                headers[dependency.block_number] = (header, dependency.raw_object_id)
+
+            chunk_rows = decode_pair_created(
+                self._read_raw_json(root, receipt.logs_raw_object_id),
                 headers,
-                factory=self._factory,
-                log_raw_object_id=str(receipt[2]),
-                availability_time=completed_at,
-            ))
-            expected = chunk_end + 1
+                factory=receipt.factory,
+                log_raw_object_id=receipt.logs_raw_object_id,
+                availability_time=_parse_timestamp(
+                    receipt.logs_acquired_at, label="receipt logs_acquired_at"
+                ),
+            )
+            # Acquisition rejects logs outside the requested chunk. Replay must apply the
+            # same bound: preserved bytes that decode cleanly can still belong to another
+            # range, and accepting them would silently widen this receipt's coverage.
+            for row in chunk_rows:
+                if not receipt.start_block <= row.block_number <= receipt.end_block:
+                    raise UniswapV2IngestionError(
+                        f"preserved log for block {row.block_number} is outside receipt "
+                        f"range [{receipt.start_block}, {receipt.end_block}]"
+                    )
+            rows.extend(chunk_rows)
+            raw_ids |= receipt.raw_object_ids
+            acquisition_ids |= receipt.acquisition_ids
+            expected = receipt.end_block + 1
+
         if expected != end_block + 1:
             raise UniswapV2IngestionError("receipt coverage has a block gap")
+
+        # decode_pair_created already normalises hashes to lowercase, so identities are
+        # directly comparable; this catches an event repeated across two receipts.
         identities = [(row.tx_hash, row.log_index) for row in rows]
         if len(identities) != len(set(identities)):
             raise UniswapV2IngestionError("replayed rows contain duplicate (tx_hash, log_index)")
-        ordered = tuple(sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index)))
-        raw_ids: set[str] = set()
-        for receipt, header_ids in zip(receipts, header_ids_by_receipt, strict=True):
-            raw_ids.add(str(receipt[2]))
-            raw_ids.update(header_ids)
-        return ReplayResult(ordered, frozenset(raw_ids), tuple((int(r[0]), int(r[1])) for r in receipts))
+
+        ordered = tuple(
+            sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+        )
+        return ReplayResult(
+            rows=ordered,
+            raw_object_ids=frozenset(raw_ids),
+            completed_ranges=tuple((r.start_block, r.end_block) for r in receipts),
+            acquisition_ids=frozenset(acquisition_ids),
+        )
