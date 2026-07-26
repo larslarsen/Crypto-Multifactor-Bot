@@ -24,7 +24,7 @@ import argparse
 import csv
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -36,8 +36,8 @@ from cryptofactors.catalog.dataset import (
     ConfigIdentity,
     CoverageWindow,
     DatasetManifest,
-    DatasetPublishResult,
     DatasetPublisher,
+    DatasetPublishResult,
     DatasetStatistics,
     DatasetStoreConfig,
     DependencyKind,
@@ -50,19 +50,13 @@ from cryptofactors.catalog.dataset import (
 )
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.paths import lexical_join
-from cryptofactors.execution.symbols import (
-    BINANCE_TO_PAPER_MAP,
-    PAPER_TO_INSTRUMENT_ID,
-)
 from cryptofactors.ingest.binance import normalize_binance_kline
+from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
 from cryptofactors.ingest.raw.writer import (  # type: ignore[attr-defined]
     RawObjectStoreConfig,
     RawObjectWriter,
 )
-from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
 from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
-
-UTC = timezone.utc
 
 PASS_DATASET_ID = "ds_0cb6415fa79119bf5317c124e9da2f0d4953b9a8d119aae45e2589ba716c5aaa"
 HOLDOUT_START = "2026-07-24T00:00:00+00:00"
@@ -75,11 +69,49 @@ DEFAULT_SYMBOLS = [
     "SEIUSDT", "WLDUSDT", "PEPEUSDT",
 ]
 
-BINANCE_TO_INSTRUMENT_ID = {
-    sym: PAPER_TO_INSTRUMENT_ID[BINANCE_TO_PAPER_MAP[sym]]
-    for sym in DEFAULT_SYMBOLS
-    if sym in BINANCE_TO_PAPER_MAP
-}
+
+# ---------------------------------------------------------------------------
+# CEX auto-growth helpers
+# ---------------------------------------------------------------------------
+
+_SYMBOL_REGISTRY_PATH = Path("data/symbol_registry.json")
+
+
+def _load_symbol_registry() -> dict[str, Any]:
+    """Load the dynamic symbol registry from disk."""
+    if not _SYMBOL_REGISTRY_PATH.exists():
+        return {"symbols": []}
+    try:
+        return json.loads(_SYMBOL_REGISTRY_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"symbols": []}
+
+
+def _save_symbol_registry(registry: dict[str, Any]) -> None:
+    """Persist the symbol registry to disk."""
+    _SYMBOL_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _SYMBOL_REGISTRY_PATH.write_text(json.dumps(registry, indent=2), encoding="utf-8")
+
+
+def _paper_symbol_for_binance(binance_sym: str) -> str:
+    """Map a Binance USDT symbol to a paper universe symbol."""
+    if binance_sym == "BTCUSDT":
+        return "XBTUSD"
+    base = binance_sym[:-4]  # strip USDT suffix
+    return f"{base}USD"
+
+
+def _discover_binance_usdt_pairs() -> set[str]:
+    """Fetch Binance exchangeInfo and return the set of active USDT spot symbols."""
+    resp = httpx.get("https://api.binance.com/api/v3/exchangeInfo", timeout=30.0)
+    resp.raise_for_status()
+    data = resp.json()
+    return {
+        s["symbol"]
+        for s in data["symbols"]
+        if s["quoteAsset"] == "USDT" and s["status"] == "TRADING"
+    }
+
 
 EXPERIMENT_REGISTRY = Path("research/sprint_004/experiment_registry.csv")
 
@@ -87,7 +119,7 @@ EXPERIMENT_REGISTRY = Path("research/sprint_004/experiment_registry.csv")
 def _parse_iso(value: str | None) -> datetime | None:
     if value is None:
         return None
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return datetime.fromisoformat(value)
 
 
 def _manifest_from_json(manifest: dict[str, Any]) -> DatasetManifest:
@@ -320,8 +352,8 @@ def _analyze_canonical_dataset(
     holdout_start: datetime,
 ) -> dict[str, Any]:
     """Compute bar span, total count, and holdout count from the canonical dataset."""
-    from pyarrow import parquet as pq
     from pyarrow import concat_tables
+    from pyarrow import parquet as pq
 
     dataset_base = lexical_join(store_root, str(Path(canonical_ds.manifest_uri).parent))
     daily_paths = list((dataset_base / "market_bars" / "daily").rglob("bars.parquet"))
@@ -422,7 +454,7 @@ def main() -> int:
     parser.add_argument("--store-root", type=str, default="data/exp003_store")
     parser.add_argument("--raw-root", type=str, default="data/exp003_store/raw")
     parser.add_argument("--stage-dir", type=str, default="data/exp003_store/daily_stage")
-    parser.add_argument("--symbols", type=str, default=",".join(DEFAULT_SYMBOLS))
+    parser.add_argument("--symbols", type=str, default=None, help="Comma-separated list of Binance symbols to refresh (default: all registered symbols)")
     parser.add_argument("--run-paper", action="store_true", help="Enable paper loop step (still skips archived tsmom_14_3)")
     parser.add_argument("--dry-run", action="store_true", default=True, help="Skip network fetch and paper loop; report on existing canonical dataset")
     parser.add_argument("--no-dry-run", dest="dry_run", action="store_false", help="Perform real incremental fetch and publish")
@@ -435,9 +467,15 @@ def main() -> int:
     stage_dir = Path(args.stage_dir)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
     run_at = datetime.now(UTC)
     holdout_start = datetime.fromisoformat(HOLDOUT_START)
+
+    # Membership comes from the published listing universe. This legacy refresh
+    # accepts an explicit symbol list only; it never mutates a symbol registry.
+    if args.symbols is None:
+        symbols = list(DEFAULT_SYMBOLS)
+    else:
+        symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
 
     # Resolve latest canonical dataset
     catalog = SqliteDatasetCatalog(db_path)
@@ -452,6 +490,11 @@ def main() -> int:
     print(f"INFRA-001: latest canonical dataset {canonical_dataset_id}", file=sys.stderr)
 
     fetch_symbols: list[str] = []
+    discovered_symbols: list[str] = []
+
+    # Universe membership is published independently. Refresh does not discover,
+    # register, or mutate CEX/DEX symbols and dry-run performs no network calls.
+
     if args.dry_run:
         print("INFRA-001: dry-run mode; skipping network fetch and paper loop", file=sys.stderr)
         # Use the latest canonical dataset for the report
@@ -491,10 +534,12 @@ def main() -> int:
                 if next_start > today:
                     print(f"INFRA-001: skip {symbol} - no new calendar days to fetch", file=sys.stderr)
                     continue
-                instrument_id = BINANCE_TO_INSTRUMENT_ID.get(symbol)
-                if instrument_id is None:
-                    print(f"INFRA-001: skip {symbol} - unknown instrument_id", file=sys.stderr)
-                    continue
+                instrument_id = None
+                print(
+                    f"INFRA-001: skip {symbol} - refresh requires published listing identity",
+                    file=sys.stderr,
+                )
+                continue
                 fetch_symbols.append(symbol)
                 print(f"INFRA-001: fetching {symbol} 1d from {next_start} to {today}", file=sys.stderr)
                 new_ds_id = _fetch_and_publish_source(
@@ -564,7 +609,7 @@ def main() -> int:
             "match": new_canonical_dataset_id == canonical_dataset_id,
         },
         "universe": sorted(symbols),
-        "paper_symbols": sorted(BINANCE_TO_PAPER_MAP.values()),
+        "paper_symbols": [],
         "holdout_start": HOLDOUT_START,
         "holdout_policy": (
             "Bars from 2026-07-24 onward are reserved for pre-registered single-hypothesis tests. "
@@ -582,6 +627,7 @@ def main() -> int:
             "symbols_requested": symbols,
             "symbols_fetched": fetch_symbols if not args.dry_run else [],
             "new_bars_fetched": len(fetch_symbols),
+            "symbols_discovered": discovered_symbols,
         },
         "paper": paper_metrics,
         "archived_factor_note": (

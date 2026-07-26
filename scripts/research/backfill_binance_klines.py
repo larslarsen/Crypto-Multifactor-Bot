@@ -247,8 +247,11 @@ def main() -> int:
             print(f"ERROR backfilling {symbol}: {exc}", file=sys.stderr)
             continue
 
+        if raw_object.event_end is None:
+            print(f"ERROR backfilling {symbol}: raw object has no complete event end", file=sys.stderr)
+            continue
         raw_object_ids.append(raw_object.raw_object_id)
-        watermarks[symbol] = end_time.isoformat()
+        watermarks[symbol] = raw_object.event_end.isoformat()
 
         symbol_rows.append({
             "symbol": symbol,

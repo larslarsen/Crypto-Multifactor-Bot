@@ -19,7 +19,6 @@ from cryptofactors.reference.models import dt_to_iso
 
 BINANCE_VENUE_ID = "venue:binance"
 ARBITRUM_VENUE_ID = "venue:arbitrum"
-FIRST_BAR_PROXY_AT = "2020-01-01T00:00:00.000000Z"
 BINANCE_SYMBOLS = (
     "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT",
     "DOTUSDT", "LINKUSDT", "LTCUSDT", "BCHUSDT", "DOGEUSDT", "UNIUSDT",
@@ -42,6 +41,8 @@ DEX_POOLS = (
 def _parse_known_at(value: str | None) -> str:
     if value is None:
         return dt_to_iso(datetime.now(UTC))
+    if not isinstance(value, str):
+        raise TypeError("--known-at must be a string or None")
     text = value.strip().replace("Z", "+00:00")
     parsed = datetime.fromisoformat(text)
     if parsed.tzinfo is None:
@@ -51,6 +52,28 @@ def _parse_known_at(value: str | None) -> str:
 
 def _asset_id(symbol: str) -> str:
     return f"asset:{symbol.lower()}"
+
+
+def _load_listing_evidence(path: Path | None) -> dict[str, dict[str, str]]:
+    if path is None:
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise TypeError("listing evidence must be a JSON object keyed by venue symbol")
+    evidence: dict[str, dict[str, str]] = {}
+    for symbol, item in data.items():
+        if not isinstance(item, dict):
+            continue
+        event_time = item.get("event_time")
+        availability_time = item.get("availability_time")
+        source = item.get("source")
+        if all(isinstance(value, str) and value for value in (event_time, availability_time, source)):
+            evidence[str(symbol).upper()] = {
+                "event_time": event_time,
+                "availability_time": availability_time,
+                "source": source,
+            }
+    return evidence
 
 
 def _upsert_surrogate(
@@ -71,7 +94,11 @@ def _upsert_surrogate(
     )
 
 
-def _seed(conn: sqlite3.Connection, known_at: str) -> None:
+def _seed(
+    conn: sqlite3.Connection,
+    known_at: str,
+    listing_evidence: dict[str, dict[str, str]],
+) -> None:
     conn.execute(
         "INSERT INTO ref_venue(venue_id, venue_code, display_name, venue_type, created_at) "
         "VALUES (?, 'BINANCE', 'Binance', 'CEX', ?) "
@@ -148,6 +175,9 @@ def _seed(conn: sqlite3.Connection, known_at: str) -> None:
         )
 
     for canonical_id, symbol in enumerate(BINANCE_SYMBOLS, 1):
+        listing_evidence_row = listing_evidence.get(symbol)
+        if listing_evidence_row is None:
+            continue
         base = symbol.removesuffix("USDT")
         pair_id = f"venue_pair:binance:{symbol}"
         listing_id = f"listing:binance:{symbol}"
@@ -169,22 +199,32 @@ def _seed(conn: sqlite3.Connection, known_at: str) -> None:
             reference_id=pair_id,
             known_at=known_at,
         )
-        evidence = json.dumps(
-            {
-                "source": "ARCH-003-static-seed",
-                "listing_time_kind": "first_bar_proxy",
-                "listing_time_note": "not an exchange listing-time claim",
-            },
-            sort_keys=True,
+        evidence = json.dumps(listing_evidence_row, sort_keys=True)
+        conn.execute(
+            "INSERT INTO ref_venue_listing(listing_id, venue_id, instrument_id, venue_symbol, "
+            "created_at, evidence_json) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(listing_id) DO UPDATE SET instrument_id=excluded.instrument_id, "
+            "venue_symbol=excluded.venue_symbol, evidence_json=excluded.evidence_json",
+            (listing_id, BINANCE_VENUE_ID, pair_id, symbol, known_at, evidence),
         )
         conn.execute(
-            "INSERT INTO ref_listing_event(listing_event_id, instrument_id, venue_id, event_type, "
+            "INSERT INTO ref_listing_event(listing_event_id, listing_id, instrument_id, venue_id, event_type, "
             "valid_from, valid_to, known_from, known_to, evidence_json, venue_symbol) "
-            "VALUES (?, ?, ?, 'LIST', ?, NULL, ?, NULL, ?, ?) "
+            "VALUES (?, ?, ?, ?, 'LIST', ?, NULL, ?, NULL, ?, ?) "
             "ON CONFLICT(listing_event_id) DO UPDATE SET instrument_id=excluded.instrument_id, "
-            "valid_from=excluded.valid_from, known_from=excluded.known_from, "
+            "listing_id=excluded.listing_id, valid_from=excluded.valid_from, "
+            "known_from=excluded.known_from, "
             "evidence_json=excluded.evidence_json, venue_symbol=excluded.venue_symbol",
-            (listing_id, pair_id, BINANCE_VENUE_ID, FIRST_BAR_PROXY_AT, known_at, evidence, symbol),
+            (
+                listing_id,
+                listing_id,
+                pair_id,
+                BINANCE_VENUE_ID,
+                listing_evidence_row["event_time"],
+                listing_evidence_row["availability_time"],
+                evidence,
+                symbol,
+            ),
         )
 
 
@@ -192,14 +232,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Seed ARCH-003 reference identity catalog")
     parser.add_argument("--db-path", type=Path, default=Path("exp003.db"))
     parser.add_argument("--known-at", default=None, help="UTC observation time for seed evidence")
+    parser.add_argument("--listing-evidence", type=Path, default=None)
     args = parser.parse_args()
     known_at = _parse_known_at(args.known_at)
+    listing_evidence = _load_listing_evidence(args.listing_evidence)
     args.db_path.parent.mkdir(parents=True, exist_ok=True)
     apply_migrations(args.db_path)
     conn = sqlite3.connect(args.db_path)
     try:
         conn.execute("PRAGMA foreign_keys = ON")
-        _seed(conn, known_at)
+        _seed(conn, known_at, listing_evidence)
         conn.commit()
     finally:
         conn.close()

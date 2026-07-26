@@ -19,17 +19,17 @@ Implement the four-level reference identity model (asset, token_contract, pool_i
 
 ## Reviewer Corrections
 
-REVIEW-0219 records CHANGES REQUIRED. Sr Dev must:
+REVIEW-0225 records CHANGES REQUIRED. Sr Dev must:
 
-1. Remove fabricated 2017 listing dates; use evidence-backed dates or labeled first-bar proxies.
-2. Model asset, token contract, pool legs, venue listing, and canonical integer surrogate separately.
-3. Replace global DB access and integer-cast catalog IDs with an explicit resolver.
-4. Centralize valid-time plus knowledge-time listing lifecycle logic.
-5. Bind experiments to immutable published universe datasets, not mutable SQLite tables.
-6. Remove identity resolution from raw acquisition without deleting normalization/publication.
-7. Remove mutable symbol-registry membership.
-8. Preserve case-sensitive Solana addresses.
-9. Wire all experiment/paper entrypoints to the new binding.
+1. Remove the shared 2020 listing proxy and use per-symbol evidence, skipping missing symbols.
+2. Add migration 0011 with stable `ref_venue_listing` rows referenced by lifecycle events.
+3. Apply knowledge-time filtering before selecting lifecycle events in `listing_universe.py`.
+4. Require all 12 experiment/paper entrypoints to use a pinned `load_universe_binding(...)` dataset.
+5. Remove mutable symbol-registry writes and the Birdeye network block from `daily_refresh.py`; dry-run must make no network calls.
+6. Persist the Binance acquisition's last complete event end as the watermark.
+7. Rename Birdeye counting functions so they do not claim registration and preserve Solana case.
+8. Support `instrument_id` from either the partition or `quality_summary` in `market/bars.py`.
+9. Require `--code-commit` in `publish_listing_universe.py`.
 
 ## Scope
 

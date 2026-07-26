@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+import pyarrow as pa
+
+from cryptofactors.universe.listing_universe import (
+    LISTING_UNIVERSE_SCHEMA,
+    ListingUniverseProvider,
+)
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts" / "ops"))
 import daily_refresh
@@ -73,6 +80,32 @@ def test_dry_run_emits_ops_report(tmp_path: Path) -> None:
     # period_start >= holdout_start, and the count must be non-negative.
     assert data["bars"]["bars_in_holdout_count"] >= 0
     assert data["fetch"]["new_bars_fetched"] == 0
+
+
+def test_published_listing_universe_controls_membership() -> None:
+    """Membership comes from immutable listing events, not a symbol registry."""
+    provider = ListingUniverseProvider(
+        pa.Table.from_pylist(
+            [
+                {
+                    "listing_event_id": "listing:testusdt",
+                    "canonical_instrument_id": 9999,
+                    "venue": "BINANCE",
+                    "venue_symbol": "TESTUSDT",
+                    "event_type": "LIST",
+                    "valid_from_us": 1_700_000_000_000_000,
+                    "valid_to_us": None,
+                    "known_from_us": 1_700_000_000_000_000,
+                    "known_to_us": None,
+                }
+            ],
+            schema=LISTING_UNIVERSE_SCHEMA,
+        )
+    )
+    before_listing = datetime.fromtimestamp(1_699_999_999, UTC)
+    after_listing = datetime.fromtimestamp(1_700_000_001, UTC)
+    assert provider.universe_at(before_listing) == frozenset()
+    assert provider.universe_at(after_listing) == frozenset({"9999"})
 
 
 def test_paper_step_skips_by_default() -> None:

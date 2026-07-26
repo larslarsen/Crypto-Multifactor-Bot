@@ -7,7 +7,7 @@ Next ticket authorized: NONE
 
 ## Summary
 
-**REVIEW-0219 CHANGES REQUIRED** — ARCH-003 requires the listed Sr Dev corrections
+**REVIEW-0225 CHANGES REQUIRED** — ARCH-003 requires the listed Sr Dev corrections
 before acceptance. No production files were changed and no tests were run. ADR-0015
 remains Proposed and ARCH-003 is not complete.
 
@@ -18,13 +18,13 @@ remains Proposed and ARCH-003 is not complete.
 
 ## Evidence Files
 
-- `docs/reviews/REVIEW-0219_ARCH-003_CHANGES_REQUIRED.md` — Reviewer verdict
+- `docs/reviews/REVIEW-0225_ARCH-003_CHANGES_REQUIRED.md` — Reviewer verdict
 - `tickets/ARCH-003.md` — Current active ticket (requires review)
 
 ## Governance
 
 - All work traceable to tickets: ARCH-003, ADR-0015
 - No LIVE authorization — architecture review mode only
-- Sr Dev Grok Build must implement REVIEW-0219 corrections
+- Sr Dev Grok Build must implement REVIEW-0225 corrections
 
-**Awaiting Sr Dev Grok Build** with changes required as per REVIEW-0219.
+**Awaiting Sr Dev Grok Build** with changes required as per REVIEW-0225.
