@@ -1,21 +1,26 @@
 # CURRENT_TASK
 
 Ticket: DATA-007
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: ACCEPTED
+Next required actor: NONE
 Next ticket authorized: NONE
 
 ## Summary
 
-DATA-007 — Free DEX/CEX Source Capability & Rate-Limit Probe.
+DATA-007 - Free DEX/CEX Source Capability & Rate-Limit Probe is accepted at
+`7d86ea6`. REVIEW-0233 is closed by REVIEW-0234.
 
-REVIEW-0233 corrections applied. Five probes now route the supplied mock through
-live paths; network guard prevents bare httpx.Client construction in tests.
-33 DATA-007 tests pass, Ruff clean, repo control PASS.
+All probe tests are deterministic and network-free when mocks are supplied. The
+accepted matrix covers six sources, preserves the Birdeye listings-only constraint,
+and provides the required fan-out and capacity evidence without LIVE authority.
 
-## Evidence
+## Verification
 
-- `tickets/DATA-007.md`
-- `docs/reviews/REVIEW-0233_DATA-007_REOPENED_CHANGES_REQUIRED.md`
-- `src/cryptofactors/acquisition/free_source_probes.py`
-- `tests/acquisition/test_free_source_probes.py`
+- 33 DATA-007 tests passed.
+- Scoped Ruff passed.
+- Repository control passed after acceptance state reconciliation.
+
+## Governing documents
+
+- tickets/DATA-007.md
+- docs/reviews/REVIEW-0234_DATA-007_ACCEPTED.md
