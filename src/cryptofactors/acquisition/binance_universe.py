@@ -41,10 +41,14 @@ KLINES_SOURCE_ID = "binance_klines"
 #: only comparable when they were produced under the same rules.
 EXCLUSION_TAXONOMY_VERSION = "2026-07-26.1"
 
-#: The volume evidence this ticket ranks on. Named for what it actually is: the
-#: 24-hour rolling window from /api/v3/ticker/24hr. It is *not* 30-day volume, and
-#: describing it as such was the previous implementation's central misstatement.
-VOLUME_WINDOW = "24h"
+#: The volume evidence this ticket ranks on. The ticket requires top-N by 30-day
+#: volume, so ranking sums quote volume over trailing daily bars rather than reading
+#: the 24-hour ticker. The 24h ticker is retained only as a cheap candidacy prefilter,
+#: and is labelled PREFILTER_WINDOW so the two are never conflated again.
+VOLUME_WINDOW = "30d"
+
+PREFILTER_WINDOW = "24h"
+RANKING_DAYS = 30
 
 DEFAULT_QUOTE_ASSETS = ("USDT",)
 DEFAULT_MIN_QUOTE_VOLUME = 1_000_000.0
@@ -78,6 +82,7 @@ class ExclusionReason(str, Enum):
     BELOW_VOLUME_FLOOR = "BELOW_VOLUME_FLOOR"
     NO_VOLUME_EVIDENCE = "NO_VOLUME_EVIDENCE"
     ALREADY_COVERED = "ALREADY_COVERED"
+    BELOW_TOP_N = "BELOW_TOP_N"
 
 
 class DeferralReason(str, Enum):
@@ -92,6 +97,9 @@ class DeferralReason(str, Enum):
 STABLECOIN_BASES = frozenset({
     "USDT", "USDC", "BUSD", "TUSD", "FDUSD", "DAI", "USDP", "UST", "USTC",
     "PAX", "SUSD", "GUSD", "LUSD", "PYUSD", "EURI", "AEUR", "USD1",
+    # Observed on the exchange but previously only caught by the volume floor, so a
+    # volume increase could have admitted them as research assets.
+    "BFUSD", "FRAX", "USDE", "USDS", "XUSD",
 })
 FIAT_BASES = frozenset({
     "EUR", "GBP", "AUD", "TRY", "BRL", "RUB", "UAH", "ZAR", "NGN", "IDRT",
@@ -139,6 +147,34 @@ class SpotSymbol:
             "permissions": list(self.permissions),
             "raw_object_id": self.raw_object_id,
         }
+
+
+def load_covered_symbols(db_path: Any, *, venue: str = "venue:binance") -> set[str]:
+    """Symbols already carried by the accepted canonical panel.
+
+    Read from the reference tables rather than hard-coded, so an added-symbol take
+    never re-adds an instrument the panel already covers. Returns an empty set when
+    the reference tables are absent, which keeps the runner usable on a fresh store.
+    """
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+    except sqlite3.Error:
+        return set()
+    try:
+        rows = conn.execute(
+            "SELECT b.display_name, q.display_name FROM ref_instrument i "
+            "JOIN ref_asset b ON b.asset_id = i.base_asset_id "
+            "JOIN ref_asset q ON q.asset_id = i.quote_asset_id "
+            "WHERE i.venue_id = ? AND i.instrument_type = 'SPOT'",
+            (venue,),
+        ).fetchall()
+    except sqlite3.Error:
+        return set()
+    finally:
+        conn.close()
+    return {f"{str(b).strip().upper()}{str(q).strip().upper()}" for b, q in rows}
 
 
 def parse_exchange_info(payload: Any, *, raw_object_id: str) -> list[SpotSymbol]:
@@ -279,7 +315,7 @@ class VolumeEvidence:
 
 
 def parse_ticker_evidence(
-    payload: Any, *, observed_at: datetime, raw_object_id: str, window: str = VOLUME_WINDOW
+    payload: Any, *, observed_at: datetime, raw_object_id: str, window: str = PREFILTER_WINDOW
 ) -> dict[str, VolumeEvidence]:
     """Decode /ticker/24hr into per-symbol volume evidence."""
     if not isinstance(payload, list):
@@ -452,6 +488,14 @@ def select_symbols(
 
     ranked = rank_symbols(candidates)
     if config.top_n is not None:
+        # Truncation is a decision, not a disappearance: everything below the cut is
+        # recorded with its rank so the audit accounts for every discovered symbol.
+        for cut in ranked[config.top_n:]:
+            excluded.append(Exclusion(
+                symbol=cut.symbol, base_asset=cut.base_asset, quote_asset=cut.quote_asset,
+                reason=ExclusionReason.BELOW_TOP_N,
+                detail=f"rank {cut.rank} is below top_n={config.top_n}",
+            ))
         ranked = ranked[: config.top_n]
     return SelectionResult(
         ranked=ranked,
@@ -573,6 +617,41 @@ class BinanceUniverseAcquirer:
             raw_object_id=str(outcome.raw_object_id),
         ), outcome
 
+    def fetch_trailing_volume(
+        self, symbol: str, *, end_time: datetime, days: int = RANKING_DAYS
+    ) -> VolumeEvidence | None:
+        """Measured trailing N-day quote volume, summed from daily bars.
+
+        Binance exposes no 30-day volume field, so the ticket's measure is computed
+        from the daily bars themselves. Returning None leaves the symbol unranked
+        rather than silently falling back to a different window.
+        """
+        start = end_time - timedelta(days=days - 1)
+        outcome = self._acquirer.get_json(
+            provider="binance", url=f"{self._base_url}/api/v3/klines",
+            params={
+                "symbol": symbol, "interval": "1d",
+                "startTime": int(start.timestamp() * 1000),
+                "endTime": int(end_time.timestamp() * 1000), "limit": days,
+            },
+            source_id=KLINES_SOURCE_ID, original_name=f"binance_vol30_{symbol}.json",
+        )
+        if not outcome.ok or not isinstance(outcome.payload, list) or not outcome.payload:
+            return None
+        total = 0.0
+        for row in outcome.payload:
+            if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) < 8:
+                return None
+            value = _finite(row[7])
+            if value is None or value < 0:
+                return None
+            total += value
+        return VolumeEvidence(
+            symbol=symbol, quote_volume=total, trade_count=0,
+            window=f"{days}d", observed_at=outcome.acquired_at,
+            raw_object_id=str(outcome.raw_object_id),
+        )
+
     def fetch_history_eligibility(
         self, symbol: str, *, as_of: datetime, min_history_days: int
     ) -> HistoryEligibility:
@@ -622,6 +701,7 @@ __all__ = [
     "SpotSymbol",
     "VolumeEvidence",
     "classify_base_asset",
+    "load_covered_symbols",
     "evaluate_history",
     "is_leveraged_token",
     "parse_exchange_info",

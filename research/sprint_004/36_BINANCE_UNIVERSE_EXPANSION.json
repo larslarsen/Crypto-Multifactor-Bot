@@ -1,87 +1,528 @@
 {
   "acquisition_attempts": [
     {
-      "acquired_at": "2026-07-26T22:25:44.746918+00:00",
-      "acquisition_id": "acq_d954d0a5b26842c09f4eb4fd30a674ec",
+      "acquired_at": "2026-07-26T23:20:43.209580+00:00",
+      "acquisition_id": "acq_3f374c1fdf664cbf82eee2eb03946549",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_91f280fc4c37156efe938313ceac5569c12b6ca395c6d1923f9168879fb002bb",
+      "raw_object_id": "raw_e5ba9c8f823edb70dc9345cdd1c00b555080a87c9fe18d4a3f4a1de6e01d191d",
       "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://data-api.binance.vision/api/v3/exchangeInfo\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:45.371393+00:00",
-      "acquisition_id": "acq_61b19f532b8f4750b2f6cd06841852f2",
+      "acquired_at": "2026-07-26T23:20:43.838479+00:00",
+      "acquisition_id": "acq_b32fbd5bf94b4e09be47ea924023d307",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
+      "raw_object_id": "raw_13287a4105628bd6c6f1ad197dd0247889812abd436efd3dd357526bf09f285f",
       "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://data-api.binance.vision/api/v3/ticker/24hr\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:45.854194+00:00",
-      "acquisition_id": "acq_001648e44f9e4522b090499f384de265",
+      "acquired_at": "2026-07-26T23:20:44.325112+00:00",
+      "acquisition_id": "acq_26c822f3a55647b5ac5e11cc1a8a076e",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_6e5c67aceb33ff80a3f1d7944f39993deee51b28e8cfe2b6f60029642dd7a29d",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"BTCUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "raw_object_id": "raw_cb24f3c5b590bbb595f5d946d82c7447b367fbd88f4d0c4ed166ec1bf6d6ed95",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"DEXEUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:46.259133+00:00",
-      "acquisition_id": "acq_3a49a3fd6a814a8c91bd968458f423f0",
+      "acquired_at": "2026-07-26T23:20:44.736896+00:00",
+      "acquisition_id": "acq_10f4f5d3dafb47f8935241b4a93ad531",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_bdf27595b3f66a7882c444868c9a80cff40d53ba0508cbbfd98d07b27ceb5e49",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"BTCUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "raw_object_id": "raw_d80e7e12be3e1921aa83dc462b0a17067ed08ee74c7a8708c720de7c4dba8ce1",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"VANAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:46.670210+00:00",
-      "acquisition_id": "acq_bf205ce669ea4cc087ab752cfecdc35a",
+      "acquired_at": "2026-07-26T23:20:45.148580+00:00",
+      "acquisition_id": "acq_96f09e68b97b4e33a350c4cb70f6dec4",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_21e26735511b3c534e3ef28864f34274bba5841cf0dc708f9a0ff666d5965a0b",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"ETHUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "raw_object_id": "raw_4a7df52f7d5c0ec2e9aad7e2b990c4dd618b9cc7b02f8c8ab490aef49363e985",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"EULUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:47.075038+00:00",
-      "acquisition_id": "acq_ca2cfbe1937744a8b9a74e4b0d5e9eec",
+      "acquired_at": "2026-07-26T23:20:45.556864+00:00",
+      "acquisition_id": "acq_d73a7e4cc2074bec9ed0baaf78caed9d",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_2bf87e92fc986b4c92b9f36e3a76a7d94fe3e42f9bd725affe33b281c1a679a8",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"ETHUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "raw_object_id": "raw_d08e0d6b8cb3f8772722a624c1a6f841db610896c4167ada1ae85cf520a1e578",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"SHIBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:47.486718+00:00",
-      "acquisition_id": "acq_8fbc328d71f4400c8d2ca88a2bc12756",
+      "acquired_at": "2026-07-26T23:20:45.964249+00:00",
+      "acquisition_id": "acq_093cc0edcdb84fa2b90b73798f09e9d1",
       "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_9277307778c6e37dd391c313c092127db73e4888b8859de8543e6c990c40bafb",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"BNBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:46.376826+00:00",
+      "acquisition_id": "acq_3bc8f93701364e86b16da2e9a462caa0",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_6cf727a5196d8b633a14f84d8e81e1ae6612fff3e8ba042ad2523f680f36cf57",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"BANKUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:46.784610+00:00",
+      "acquisition_id": "acq_d446f206716f4eeaa698b9c6dd4c7811",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_b19e44de79347bb27c08b83024c3a7b9e967a7e89825be0622f18995941197f2",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"ZECUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:47.196927+00:00",
+      "acquisition_id": "acq_d05203e1d4c241bfa23258a63131c13b",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_156fd3a35bfbd7ea022ae54a889c01bd82a3e431a88960f5b048ada7299c095b",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"ESPUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:47.612859+00:00",
+      "acquisition_id": "acq_23db2f68cde44e1a947b2cf7fc8bf465",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_da93afab1e8bfe76b652175005595d1a1f998aac31427ecfc9380a9b08ffa2f8",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"AEROUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:48.018276+00:00",
+      "acquisition_id": "acq_f34ac23da41a4e8e8160aa4f62f3ff6d",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_32d81740d862d6d526935c13fd5a13c752ae78fd48e50cc3de45105b19943f88",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"RLUSDUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:48.428313+00:00",
+      "acquisition_id": "acq_efcbd7ebe1074b4989c83afcf4369d52",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_50ce5da82461b827dae7e995a2acf162537da298e333acdd92f379c88640659e",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"ZAMAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:48.840189+00:00",
+      "acquisition_id": "acq_1efd339a0b734d4ea3d345c4570d8ec7",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_a3cc2e9ce9e9422093d7a60fc9b1b03fc965b9162f7132778cf206eed270a894",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"TRXUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:49.252411+00:00",
+      "acquisition_id": "acq_892fb45402d5458e8cfd869c7d25efe9",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_0b21f464e5ed3c54f0a4361056756d6866f16c6cca3e9bd65f3bb0508ee2da93",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"KAITOUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:49.664206+00:00",
+      "acquisition_id": "acq_17ffd2b337b24401851d15cc967f6eb0",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_165bad8abe883301cdefa20c320e92d47f1e92d849d6b1e3ce6e5078e7594d61",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"ALLOUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:50.076313+00:00",
+      "acquisition_id": "acq_5d96479f5a754dc08de491c3d039270b",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_bb9ecbe4dc1421ae05a5ff53922ff958c3cb7f59a51ad52e74140e750586f367",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"TAOUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:50.481060+00:00",
+      "acquisition_id": "acq_a13ac063567c462e859f83e84d513904",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_c894bf4e91edc56733b9b3f20db96cf95084bc978d96c87ce14ea08913d86a7a",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"ONDOUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:50.892656+00:00",
+      "acquisition_id": "acq_b312b85cfb7745b3b267e0f0e6c4efe0",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_ddfde40ffcbb4aecc9a8abfae6eadf1103b619d922bc7219f08db80df1207808",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"RIFUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:51.304364+00:00",
+      "acquisition_id": "acq_e3af38dea66549008300ebbbcacb950e",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_f2a1926f72af8d17f5a19ea64ddcd95387334c7ccbf5f6c2524f313a049d1364",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"DIAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:51.716698+00:00",
+      "acquisition_id": "acq_16e05e6154894823aad250d832a3b941",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_21d9d5808968ac2241a3e1825be12da808b820ff349eaff2de105905dd122a59",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"PUMPUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:52.127740+00:00",
+      "acquisition_id": "acq_2304a62d9e0c42cb954902967d5e5af8",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_af2a0cdaf112ffbbb51914afc8e69bf2de1d34cb586b6839639d11e530e4c57f",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"LPTUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:52.536120+00:00",
+      "acquisition_id": "acq_e8fea2266b594304ac042df77243120c",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_1dff6464116c5e6800f2f1772b6c1c8fe542ae02134048c943bd48503e3483a6",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"EPICUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:52.948017+00:00",
+      "acquisition_id": "acq_6945f319d4e142e889a906b0c647bad8",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_6d02fce698b3293fce59649273e2fe6a4b4c7301cc856335fcd47f85a967ef40",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"REUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:53.356334+00:00",
+      "acquisition_id": "acq_34fa99e8c0a24971982411032b4bbe69",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_5325b9caeaa8d0ec0f5b577db9cc36ce41a117f28b1ed39925937434ed5a7e57",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"ENAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:53.769210+00:00",
+      "acquisition_id": "acq_ba2b2ea7d61c4579902a301aa4356d14",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_d1dbab60d4824681aef0d5448af3656db1bc4e85008f4a26a9c84be90ead8daf",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"UUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:54.180805+00:00",
+      "acquisition_id": "acq_1014f8d238aa4d20bae6d3cd1b35ea7c",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_0fb536113acb4b877ab57590e49eff47e6a017c7bb7437dae378c23efd0d42e4",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":30,\"startTime\":1782432000000,\"symbol\":\"LAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:54.596087+00:00",
+      "acquisition_id": "acq_7ea44afbc10944a383f975578cc5b8d7",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_04775bb8791e8079e6ef08229288238e65ba59238371c039b30417c8fcfa92ed",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"REUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:55.004351+00:00",
+      "acquisition_id": "acq_5345469aaf964797a59b77507e6351c0",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_5d3383dadfe2b4832bbb041f0eed636e0c86525d54e5b64c6246142c7acf7a50",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"ZECUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:55.422187+00:00",
+      "acquisition_id": "acq_550092156b2d46b78eeb49d80c4a7da2",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_a545b0bcb7e466441af8b5d1d62a15d323ce4cab7083bb262149b6cf6bf99786",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1577836800000,\"symbol\":\"ZECUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:55.854737+00:00",
+      "acquisition_id": "acq_50b7c0071b7143c1ba9568cee2ba0728",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_01f34f037b1cba1b663011b2a1b9be078efac674d851044b060c41e98d801301",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1664236800000,\"symbol\":\"ZECUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:56.277926+00:00",
+      "acquisition_id": "acq_1a18b5f28ffa4b108c16511cd3bbe3cd",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_501b80217297be16642c0a22a5083d70a86a2d268db8c2716a65903e59bb432b",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1750636800000,\"symbol\":\"ZECUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:56.696342+00:00",
+      "acquisition_id": "acq_10d23e09b46a4283acea09a152c075f4",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_3e47c17e5573fb1dada572e92686c9a2e27fe1f75d0598c63c87907ccd14d001",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"BNBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:57.120404+00:00",
+      "acquisition_id": "acq_1ed1680ca5624fcbacefd65ded0c5ee7",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_15a345ff163e6a3d368b4e305b37c5a3131f29f70cc6df16e8616c07a327723c",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1577836800000,\"symbol\":\"BNBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:57.550192+00:00",
+      "acquisition_id": "acq_8ea84df21f8a49d3bbedcf374576aab8",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_29f1b4f00d13646bda633da22297b0993060ac051da59c1b4cf83ca75671f25f",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1664236800000,\"symbol\":\"BNBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:57.973097+00:00",
+      "acquisition_id": "acq_f9ec3bd2af954876aedf20845f189922",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_202845fb424d1bb8c46ea24eb07038efb3e490a40c5cc07eb0111152e7fb63a2",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1750636800000,\"symbol\":\"BNBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:58.392306+00:00",
+      "acquisition_id": "acq_6b499afa4fe042bc8fdb58c5d1e44ed5",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "binance",
+      "rate_limited": false,
+      "raw_object_id": "raw_383a58a538a4dfa706080bc57492bb2c978a7c83a6cf1e77870528aeeead7956",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"RLUSDUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T23:20:58.800417+00:00",
+      "acquisition_id": "acq_3487dd89c2394052abda8aa7e8286660",
+      "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
@@ -92,157 +533,105 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:47.890408+00:00",
-      "acquisition_id": "acq_52758a34d44d4d8eb6892eb2453b7d38",
+      "acquired_at": "2026-07-26T23:20:59.220911+00:00",
+      "acquisition_id": "acq_8030eeeb85d840e0a2ab9ae126686692",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_ec69b039cce27cbbabbbf6e45074013b38aff68390209a96e677a548f6cdc5fe",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"DEXEUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "raw_object_id": "raw_3750edefa6aa6ec2aee9a4103159160592004cfbad05298422c27081d3f86658",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1626998400000,\"symbol\":\"DEXEUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T22:25:48.302152+00:00",
-      "acquisition_id": "acq_c4e9d5210bf447e0a734e6b85f1b003b",
+      "acquired_at": "2026-07-26T23:20:59.647457+00:00",
+      "acquisition_id": "acq_ae6a771ce19a4f5c9c6ecb781cdd4ff4",
       "attempt": 1,
+      "backoff_seconds": 0.0,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_3fcec4a8e421892fca0975e2ca7fdf099493a00e8eb4ee9a39de508c9dc76126",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"SOLUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:48.706412+00:00",
-      "acquisition_id": "acq_8519e9b898424f94b124a56cdaff0be7",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_c384528d9edf6a6105cfe439897d4db616cb7ac14a69cb99b6f9bc46bb8f51e5",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"SOLUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:49.118874+00:00",
-      "acquisition_id": "acq_55dc73d48e5746ccabe7f307fd0ba612",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_eee93cea5df9e86d0bc2a43c70d894a6477ccdd21cae80b3028d9d368887563b",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"VANAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:49.522695+00:00",
-      "acquisition_id": "acq_c879b9dee98b470a8f2a2cb6a729f5be",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_6d4e2143e4d7ceb8fe08619596c5837483f51af6ab8b8fb9d06e19fc497ed3b1",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"VANAUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:49.927381+00:00",
-      "acquisition_id": "acq_47b94ab441d242248f54c5ac75d5a958",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_be9a821ed2d9668738afd8b10c559ec824033c7e90c8db65aac8eb4e448e7e53",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"EULUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:50.334226+00:00",
-      "acquisition_id": "acq_2672ef111fa54bf98b9b5cd820d0a10e",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_9f335a2e1206c4189e841f8342b6b15d16b10920e22ceed253500dc810bd38a8",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"SHIBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:50.738646+00:00",
-      "acquisition_id": "acq_8a843d848c5640c3b5ce5d410c49b360",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_89cb2e977a1e550d216dc552da95dc34ad60af160ad30d7e65b9d9744b58f9b2",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"SHIBUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:51.143454+00:00",
-      "acquisition_id": "acq_3e11c503ba494259929f3683c1bcd8f2",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_be06bb468630e52cf04e2a1a8670db2113971a68eefc0e9bf0089376f7746499",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"interval\":\"1d\",\"limit\":1,\"startTime\":0,\"symbol\":\"DOGEUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
-      "status_code": 200
-    },
-    {
-      "acquired_at": "2026-07-26T22:25:51.547872+00:00",
-      "acquisition_id": "acq_fbfe9b454ae241528ea7e914ce4e8278",
-      "attempt": 1,
-      "detail": null,
-      "failure_kind": null,
-      "ok": true,
-      "provider": "binance",
-      "rate_limited": false,
-      "raw_object_id": "raw_0ab7d94e6bdc82206f0832d81fc9142c89ba3905222b851b117386aaa04efe98",
-      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1784160000000,\"symbol\":\"DOGEUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
+      "raw_object_id": "raw_96a60dce57c2f3565d892cf16b6fa463f5fcedeef99f47856d0a189a2171e943",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"endTime\":1784937600000,\"interval\":\"1d\",\"limit\":1000,\"startTime\":1713398400000,\"symbol\":\"DEXEUSDT\"},\"url\":\"https://data-api.binance.vision/api/v3/klines\"}",
       "status_code": 200
     }
   ],
+  "added_symbols": [
+    "REUSDT",
+    "ZECUSDT",
+    "BNBUSDT",
+    "RLUSDUSDT",
+    "DEXEUSDT"
+  ],
+  "additive_dataset_id": "ds_9624cffa97aad1d3eec2a6ab642d9520f2cdb07b47bfe4e8666d6b531d78692a",
+  "base_addition_symbols_disjoint": true,
+  "base_panel_dataset_id": "ds_1f3e26338a964570dd19c20f01385906aa8fc27d53275a1f6c7850b2ece12916",
+  "base_panel_symbol_count": 23,
+  "base_panel_symbols": [
+    "AAVEUSDT",
+    "ADAUSDT",
+    "APEUSDT",
+    "ARBUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BTCUSDT",
+    "CRVUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "ETHUSDT",
+    "FILUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "OPUSDT",
+    "PEPEUSDT",
+    "SEIUSDT",
+    "SOLUSDT",
+    "SUIUSDT",
+    "UNIUSDT",
+    "WLDUSDT",
+    "XRPUSDT"
+  ],
   "blocking_symbols": [],
-  "canonical_dataset_id": "ds_0a15325e40a489e269f3bf397fef072a30ae886d2079f54e23171c8eb5524008",
+  "budget": {
+    "day": "2026-07-25",
+    "limit": 20000,
+    "processed": 5,
+    "start": 0
+  },
+  "canonical_dataset_id": "ds_9624cffa97aad1d3eec2a6ab642d9520f2cdb07b47bfe4e8666d6b531d78692a",
   "catalog_reconciliation": {
     "catalog_registered": true,
-    "manifest_sha256": "a6d38b4b15fc25caec87d374670c92362ae8335ce7533e5db3dda5373082dc8b",
-    "output_sha256": "b16d7f4f4291cc48dd2479f4b1a40b9126be1cab9e9e512e508cefe44cd758b4",
-    "published_dataset_id": "ds_0a15325e40a489e269f3bf397fef072a30ae886d2079f54e23171c8eb5524008",
-    "resolved_dataset_id": "ds_0a15325e40a489e269f3bf397fef072a30ae886d2079f54e23171c8eb5524008",
-    "row_count": 70,
+    "manifest_sha256": "62e93c4a047d206d17cf3490a8eb43407a4f37758c5b9fea0a2e92cad2280830",
+    "output_sha256": "8dcbead61a907ac7378db2f5637b469d290dd2263ba59721ef25d4e51a78930e",
+    "published_dataset_id": "ds_9624cffa97aad1d3eec2a6ab642d9520f2cdb07b47bfe4e8666d6b531d78692a",
+    "resolved_dataset_id": "ds_9624cffa97aad1d3eec2a6ab642d9520f2cdb07b47bfe4e8666d6b531d78692a",
+    "row_count": 6625,
     "state": "reconciled"
   },
-  "config_fingerprint": "3ea2604cdef397b5ef809d7ae5ba13ac550eb3f8dd734f3d08b2ef1e4dd9abcb",
-  "default_start": "2026-07-16T00:00:00+00:00",
+  "config_fingerprint": "76dbeb87645f6b58434ca989835aacd9c1a75a3d0e1dc5980b08dbd17b2d17c5",
+  "default_start": "2020-01-01T00:00:00+00:00",
   "deferred_symbols": [
     {
       "eligible": false,
-      "first_bar_open_time": "2025-10-13T00:00:00+00:00",
-      "history_days": 285,
-      "raw_object_id": "raw_be9a821ed2d9668738afd8b10c559ec824033c7e90c8db65aac8eb4e448e7e53",
+      "first_bar_open_time": "2026-06-18T00:00:00+00:00",
+      "history_days": 37,
+      "raw_object_id": "raw_04775bb8791e8079e6ef08229288238e65ba59238371c039b30417c8fcfa92ed",
       "reason": "INSUFFICIENT_HISTORY",
-      "symbol": "EULUSDT"
+      "symbol": "REUSDT"
+    },
+    {
+      "eligible": false,
+      "first_bar_open_time": "2026-01-22T00:00:00+00:00",
+      "history_days": 184,
+      "raw_object_id": "raw_383a58a538a4dfa706080bc57492bb2c978a7c83a6cf1e77870528aeeead7956",
+      "reason": "INSUFFICIENT_HISTORY",
+      "symbol": "RLUSDUSDT"
     }
   ],
   "effective_config": {
@@ -252,25 +641,25 @@
       "USDT"
     ],
     "taxonomy_version": "2026-07-26.1",
-    "top_n": 8,
-    "volume_window": "24h"
+    "top_n": 5,
+    "volume_window": "30d"
   },
   "eligible_symbols": [
     {
       "eligible": true,
-      "first_bar_open_time": "2017-08-17T00:00:00+00:00",
-      "history_days": 3264,
-      "raw_object_id": "raw_6e5c67aceb33ff80a3f1d7944f39993deee51b28e8cfe2b6f60029642dd7a29d",
+      "first_bar_open_time": "2019-03-21T00:00:00+00:00",
+      "history_days": 2683,
+      "raw_object_id": "raw_5d3383dadfe2b4832bbb041f0eed636e0c86525d54e5b64c6246142c7acf7a50",
       "reason": null,
-      "symbol": "BTCUSDT"
+      "symbol": "ZECUSDT"
     },
     {
       "eligible": true,
-      "first_bar_open_time": "2017-08-17T00:00:00+00:00",
-      "history_days": 3264,
-      "raw_object_id": "raw_21e26735511b3c534e3ef28864f34274bba5841cf0dc708f9a0ff666d5965a0b",
+      "first_bar_open_time": "2017-11-06T00:00:00+00:00",
+      "history_days": 3183,
+      "raw_object_id": "raw_3e47c17e5573fb1dada572e92686c9a2e27fe1f75d0598c63c87907ccd14d001",
       "reason": null,
-      "symbol": "ETHUSDT"
+      "symbol": "BNBUSDT"
     },
     {
       "eligible": true,
@@ -279,44 +668,988 @@
       "raw_object_id": "raw_e0b87cdd7601e1f58c63a479d8edf675b77db4de1fc772b4f249ee5d677992de",
       "reason": null,
       "symbol": "DEXEUSDT"
-    },
-    {
-      "eligible": true,
-      "first_bar_open_time": "2020-08-11T00:00:00+00:00",
-      "history_days": 2174,
-      "raw_object_id": "raw_3fcec4a8e421892fca0975e2ca7fdf099493a00e8eb4ee9a39de508c9dc76126",
-      "reason": null,
-      "symbol": "SOLUSDT"
-    },
-    {
-      "eligible": true,
-      "first_bar_open_time": "2024-12-16T00:00:00+00:00",
-      "history_days": 586,
-      "raw_object_id": "raw_eee93cea5df9e86d0bc2a43c70d894a6477ccdd21cae80b3028d9d368887563b",
-      "reason": null,
-      "symbol": "VANAUSDT"
-    },
-    {
-      "eligible": true,
-      "first_bar_open_time": "2021-05-10T00:00:00+00:00",
-      "history_days": 1902,
-      "raw_object_id": "raw_9f335a2e1206c4189e841f8342b6b15d16b10920e22ceed253500dc810bd38a8",
-      "reason": null,
-      "symbol": "SHIBUSDT"
-    },
-    {
-      "eligible": true,
-      "first_bar_open_time": "2019-07-05T00:00:00+00:00",
-      "history_days": 2577,
-      "raw_object_id": "raw_be06bb468630e52cf04e2a1a8670db2113971a68eefc0e9bf0089376f7746499",
-      "reason": null,
-      "symbol": "DOGEUSDT"
     }
   ],
   "excluded_symbols": [
     {
+      "base_asset": "AERO",
+      "detail": "rank 8 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "AEROUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ALLO",
+      "detail": "rank 13 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ALLOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "BANK",
+      "detail": "rank 7 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "BANKUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "DIA",
+      "detail": "rank 25 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "DIAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ENA",
+      "detail": "rank 10 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ENAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "EPIC",
+      "detail": "rank 19 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "EPICUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ESP",
+      "detail": "rank 23 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ESPUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "EUL",
+      "detail": "rank 22 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "EULUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "KAITO",
+      "detail": "rank 16 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "KAITOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "LA",
+      "detail": "rank 21 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "LAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "LPT",
+      "detail": "rank 24 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "LPTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ONDO",
+      "detail": "rank 12 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ONDOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PUMP",
+      "detail": "rank 14 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PUMPUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "RIF",
+      "detail": "rank 18 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "RIFUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SHIB",
+      "detail": "rank 20 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "SHIBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TAO",
+      "detail": "rank 11 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TAOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TRX",
+      "detail": "rank 6 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TRXUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "U",
+      "detail": "rank 9 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "UUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "VANA",
+      "detail": "rank 17 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "VANAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ZAMA",
+      "detail": "rank 15 is below top_n=5",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ZAMAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "AAVE",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "AAVEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ADA",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "ADAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "APE",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "APEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ARB",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "ARBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "AVAX",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "AVAXUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "BCH",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "BCHUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "BTC",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "BTCUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "CRV",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "CRVUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "DOGE",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "DOGEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "DOT",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "DOTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ETH",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "ETHUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "FIL",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "FILUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "LINK",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "LINKUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "LTC",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "LTCUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "NEAR",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "NEARUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "OP",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "OPUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PEPE",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "PEPEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SEI",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "SEIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SOL",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "SOLUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SUI",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "SUIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "UNI",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "UNIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "WLD",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "WLDUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "XRP",
+      "detail": "symbol already in the covered panel",
+      "quote_asset": "USDT",
+      "reason": "ALREADY_COVERED",
+      "symbol": "XRPUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "1000CAT",
+      "detail": "rank 99 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "1000CATUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ACE",
+      "detail": "rank 50 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ACEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "AIGENSYN",
+      "detail": "rank 97 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "AIGENSYNUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ALGO",
+      "detail": "rank 102 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ALGOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "APT",
+      "detail": "rank 36 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "APTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ASTER",
+      "detail": "rank 78 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ASTERUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ATM",
+      "detail": "rank 74 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ATMUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ATOM",
+      "detail": "rank 98 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ATOMUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "BOME",
+      "detail": "rank 33 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "BOMEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "BONK",
+      "detail": "rank 43 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "BONKUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "CRCLB",
+      "detail": "rank 73 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "CRCLBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "DASH",
+      "detail": "rank 64 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "DASHUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "EDU",
+      "detail": "rank 95 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "EDUUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "EIGEN",
+      "detail": "rank 56 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "EIGENUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ENSO",
+      "detail": "rank 103 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ENSOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ERA",
+      "detail": "rank 80 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ERAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ETC",
+      "detail": "rank 35 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ETCUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ETHFI",
+      "detail": "rank 52 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ETHFIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "FET",
+      "detail": "rank 38 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "FETUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "FLOKI",
+      "detail": "rank 46 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "FLOKIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "GIGGLE",
+      "detail": "rank 69 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "GIGGLEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "GRAM",
+      "detail": "rank 34 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "GRAMUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "HBAR",
+      "detail": "rank 48 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "HBARUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "HOLO",
+      "detail": "rank 49 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "HOLOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "HOME",
+      "detail": "rank 55 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "HOMEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "HOT",
+      "detail": "rank 87 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "HOTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "HYPER",
+      "detail": "rank 91 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "HYPERUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ICP",
+      "detail": "rank 37 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ICPUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "INJ",
+      "detail": "rank 28 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "INJUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "IO",
+      "detail": "rank 77 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "IOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "JST",
+      "detail": "rank 68 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "JSTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "JTO",
+      "detail": "rank 57 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "JTOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "KITE",
+      "detail": "rank 44 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "KITEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "LDO",
+      "detail": "rank 59 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "LDOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "LUNC",
+      "detail": "rank 101 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "LUNCUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "MET",
+      "detail": "rank 104 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "METUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "MINA",
+      "detail": "rank 84 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "MINAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "MIRA",
+      "detail": "rank 79 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "MIRAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "MORPHO",
+      "detail": "rank 45 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "MORPHOUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "MUB",
+      "detail": "rank 82 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "MUBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "NEIRO",
+      "detail": "rank 54 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "NEIROUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "NIGHT",
+      "detail": "rank 93 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "NIGHTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "NIL",
+      "detail": "rank 89 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "NILUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "OPN",
+      "detail": "rank 60 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "OPNUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ORDI",
+      "detail": "rank 29 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ORDIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PENDLE",
+      "detail": "rank 86 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PENDLEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PENGU",
+      "detail": "rank 27 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PENGUUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PEOPLE",
+      "detail": "rank 67 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PEOPLEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PLUME",
+      "detail": "rank 83 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PLUMEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PNUT",
+      "detail": "rank 70 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PNUTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "POL",
+      "detail": "rank 85 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "POLUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PROM",
+      "detail": "rank 76 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PROMUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PYR",
+      "detail": "rank 100 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PYRUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "PYTH",
+      "detail": "rank 94 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "PYTHUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "QI",
+      "detail": "rank 42 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "QIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "QQQB",
+      "detail": "rank 31 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "QQQBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "RENDER",
+      "detail": "rank 71 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "RENDERUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "REQ",
+      "detail": "rank 63 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "REQUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SCR",
+      "detail": "rank 88 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "SCRUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SNDKB",
+      "detail": "rank 47 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "SNDKBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SOXLB",
+      "detail": "rank 41 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "SOXLBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SPCXB",
+      "detail": "rank 58 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "SPCXBUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "STRK",
+      "detail": "rank 62 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "STRKUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "STX",
+      "detail": "rank 75 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "STXUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "SYN",
+      "detail": "rank 26 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "SYNUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TIA",
+      "detail": "rank 90 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TIAUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TLM",
+      "detail": "rank 66 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TLMUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TNSR",
+      "detail": "rank 92 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TNSRUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TOWNS",
+      "detail": "rank 96 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TOWNSUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "TRUMP",
+      "detail": "rank 32 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "TRUMPUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "VANRY",
+      "detail": "rank 65 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "VANRYUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "VIRTUAL",
+      "detail": "rank 51 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "VIRTUALUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "WIF",
+      "detail": "rank 72 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "WIFUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "WLFI",
+      "detail": "rank 61 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "WLFIUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "XLM",
+      "detail": "rank 30 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "XLMUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "XPL",
+      "detail": "rank 39 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "XPLUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "YGG",
+      "detail": "rank 81 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "YGGUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "ZBT",
+      "detail": "rank 53 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "ZBTUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "\u5e01\u5b89\u4eba\u751f",
+      "detail": "rank 40 is below top_n=25",
+      "quote_asset": "USDT",
+      "reason": "BELOW_TOP_N",
+      "symbol": "\u5e01\u5b89\u4eba\u751fUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
       "base_asset": "0G",
-      "detail": "24h quote volume 365546.98 < 1000000.00",
+      "detail": "24h quote volume 373057.03 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "0GUSDT",
@@ -324,7 +1657,7 @@
     },
     {
       "base_asset": "1000CHEEMS",
-      "detail": "24h quote volume 259390.90 < 1000000.00",
+      "detail": "24h quote volume 271983.05 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "1000CHEEMSUSDT",
@@ -332,7 +1665,7 @@
     },
     {
       "base_asset": "1000SATS",
-      "detail": "24h quote volume 679700.62 < 1000000.00",
+      "detail": "24h quote volume 684361.20 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "1000SATSUSDT",
@@ -340,7 +1673,7 @@
     },
     {
       "base_asset": "1INCH",
-      "detail": "24h quote volume 587330.84 < 1000000.00",
+      "detail": "24h quote volume 597873.64 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "1INCHUSDT",
@@ -348,7 +1681,7 @@
     },
     {
       "base_asset": "1MBABYDOGE",
-      "detail": "24h quote volume 420660.14 < 1000000.00",
+      "detail": "24h quote volume 424132.35 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "1MBABYDOGEUSDT",
@@ -356,7 +1689,7 @@
     },
     {
       "base_asset": "2Z",
-      "detail": "24h quote volume 90626.35 < 1000000.00",
+      "detail": "24h quote volume 97226.34 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "2ZUSDT",
@@ -364,7 +1697,7 @@
     },
     {
       "base_asset": "AAOIB",
-      "detail": "24h quote volume 172409.93 < 1000000.00",
+      "detail": "24h quote volume 238999.38 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AAOIBUSDT",
@@ -372,7 +1705,7 @@
     },
     {
       "base_asset": "ACH",
-      "detail": "24h quote volume 361143.38 < 1000000.00",
+      "detail": "24h quote volume 381809.67 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ACHUSDT",
@@ -380,7 +1713,7 @@
     },
     {
       "base_asset": "ACM",
-      "detail": "24h quote volume 136796.18 < 1000000.00",
+      "detail": "24h quote volume 131263.87 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ACMUSDT",
@@ -388,7 +1721,7 @@
     },
     {
       "base_asset": "ACT",
-      "detail": "24h quote volume 417616.50 < 1000000.00",
+      "detail": "24h quote volume 395406.39 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ACTUSDT",
@@ -396,7 +1729,7 @@
     },
     {
       "base_asset": "ACX",
-      "detail": "24h quote volume 122597.47 < 1000000.00",
+      "detail": "24h quote volume 122433.71 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ACXUSDT",
@@ -404,7 +1737,7 @@
     },
     {
       "base_asset": "ADX",
-      "detail": "24h quote volume 269429.86 < 1000000.00",
+      "detail": "24h quote volume 274466.56 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ADXUSDT",
@@ -412,7 +1745,7 @@
     },
     {
       "base_asset": "AEVO",
-      "detail": "24h quote volume 133421.59 < 1000000.00",
+      "detail": "24h quote volume 134809.54 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AEVOUSDT",
@@ -420,7 +1753,7 @@
     },
     {
       "base_asset": "AGLD",
-      "detail": "24h quote volume 158328.95 < 1000000.00",
+      "detail": "24h quote volume 148628.52 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AGLDUSDT",
@@ -428,7 +1761,7 @@
     },
     {
       "base_asset": "AI",
-      "detail": "24h quote volume 172133.08 < 1000000.00",
+      "detail": "24h quote volume 163045.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AIUSDT",
@@ -436,23 +1769,15 @@
     },
     {
       "base_asset": "AIXBT",
-      "detail": "24h quote volume 358318.87 < 1000000.00",
+      "detail": "24h quote volume 358090.44 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AIXBTUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "ALGO",
-      "detail": "24h quote volume 991496.47 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "ALGOUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "ALICE",
-      "detail": "24h quote volume 441758.99 < 1000000.00",
+      "detail": "24h quote volume 448998.08 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ALICEUSDT",
@@ -460,7 +1785,7 @@
     },
     {
       "base_asset": "ALPINE",
-      "detail": "24h quote volume 318694.54 < 1000000.00",
+      "detail": "24h quote volume 307288.32 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ALPINEUSDT",
@@ -468,7 +1793,7 @@
     },
     {
       "base_asset": "ALT",
-      "detail": "24h quote volume 167355.50 < 1000000.00",
+      "detail": "24h quote volume 170034.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ALTUSDT",
@@ -476,7 +1801,7 @@
     },
     {
       "base_asset": "AMDB",
-      "detail": "24h quote volume 40595.63 < 1000000.00",
+      "detail": "24h quote volume 45496.58 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AMDBUSDT",
@@ -484,7 +1809,7 @@
     },
     {
       "base_asset": "AMP",
-      "detail": "24h quote volume 288050.89 < 1000000.00",
+      "detail": "24h quote volume 289300.80 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AMPUSDT",
@@ -492,7 +1817,7 @@
     },
     {
       "base_asset": "ANIME",
-      "detail": "24h quote volume 82314.75 < 1000000.00",
+      "detail": "24h quote volume 84775.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ANIMEUSDT",
@@ -500,23 +1825,15 @@
     },
     {
       "base_asset": "ANKR",
-      "detail": "24h quote volume 97006.65 < 1000000.00",
+      "detail": "24h quote volume 98032.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ANKRUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "APE",
-      "detail": "24h quote volume 495141.10 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "APEUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "API3",
-      "detail": "24h quote volume 147248.74 < 1000000.00",
+      "detail": "24h quote volume 147989.77 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "API3USDT",
@@ -524,7 +1841,7 @@
     },
     {
       "base_asset": "ARKM",
-      "detail": "24h quote volume 365543.67 < 1000000.00",
+      "detail": "24h quote volume 376539.43 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ARKMUSDT",
@@ -532,7 +1849,7 @@
     },
     {
       "base_asset": "ARK",
-      "detail": "24h quote volume 42910.89 < 1000000.00",
+      "detail": "24h quote volume 43589.44 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ARKUSDT",
@@ -540,7 +1857,7 @@
     },
     {
       "base_asset": "ARMB",
-      "detail": "24h quote volume 11714.01 < 1000000.00",
+      "detail": "24h quote volume 12280.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ARMBUSDT",
@@ -548,7 +1865,7 @@
     },
     {
       "base_asset": "ARPA",
-      "detail": "24h quote volume 65326.98 < 1000000.00",
+      "detail": "24h quote volume 63085.28 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ARPAUSDT",
@@ -556,7 +1873,7 @@
     },
     {
       "base_asset": "AR",
-      "detail": "24h quote volume 537628.76 < 1000000.00",
+      "detail": "24h quote volume 534145.28 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ARUSDT",
@@ -564,7 +1881,7 @@
     },
     {
       "base_asset": "ASR",
-      "detail": "24h quote volume 55278.46 < 1000000.00",
+      "detail": "24h quote volume 62826.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ASRUSDT",
@@ -572,7 +1889,7 @@
     },
     {
       "base_asset": "ASTR",
-      "detail": "24h quote volume 53896.51 < 1000000.00",
+      "detail": "24h quote volume 54654.34 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ASTRUSDT",
@@ -580,7 +1897,7 @@
     },
     {
       "base_asset": "AT",
-      "detail": "24h quote volume 82037.18 < 1000000.00",
+      "detail": "24h quote volume 80264.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ATUSDT",
@@ -588,7 +1905,7 @@
     },
     {
       "base_asset": "AUCTION",
-      "detail": "24h quote volume 241616.64 < 1000000.00",
+      "detail": "24h quote volume 245753.43 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AUCTIONUSDT",
@@ -596,7 +1913,7 @@
     },
     {
       "base_asset": "AUDIO",
-      "detail": "24h quote volume 134545.48 < 1000000.00",
+      "detail": "24h quote volume 112185.45 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AUDIOUSDT",
@@ -604,7 +1921,7 @@
     },
     {
       "base_asset": "A",
-      "detail": "24h quote volume 463457.40 < 1000000.00",
+      "detail": "24h quote volume 460328.88 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AUSDT",
@@ -612,7 +1929,7 @@
     },
     {
       "base_asset": "AVA",
-      "detail": "24h quote volume 156246.02 < 1000000.00",
+      "detail": "24h quote volume 152647.88 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AVAUSDT",
@@ -620,7 +1937,7 @@
     },
     {
       "base_asset": "AVGOB",
-      "detail": "24h quote volume 34784.80 < 1000000.00",
+      "detail": "24h quote volume 35497.71 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AVGOBUSDT",
@@ -628,7 +1945,7 @@
     },
     {
       "base_asset": "AVNT",
-      "detail": "24h quote volume 166606.99 < 1000000.00",
+      "detail": "24h quote volume 174817.42 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AVNTUSDT",
@@ -636,7 +1953,7 @@
     },
     {
       "base_asset": "AWE",
-      "detail": "24h quote volume 134907.82 < 1000000.00",
+      "detail": "24h quote volume 140937.98 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AWEUSDT",
@@ -644,7 +1961,7 @@
     },
     {
       "base_asset": "AXL",
-      "detail": "24h quote volume 62827.74 < 1000000.00",
+      "detail": "24h quote volume 65260.71 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AXLUSDT",
@@ -652,7 +1969,7 @@
     },
     {
       "base_asset": "AXS",
-      "detail": "24h quote volume 500995.15 < 1000000.00",
+      "detail": "24h quote volume 536139.36 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AXSUSDT",
@@ -660,7 +1977,7 @@
     },
     {
       "base_asset": "AXTIB",
-      "detail": "24h quote volume 26751.33 < 1000000.00",
+      "detail": "24h quote volume 26290.14 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "AXTIBUSDT",
@@ -668,7 +1985,7 @@
     },
     {
       "base_asset": "BABAB",
-      "detail": "24h quote volume 11550.71 < 1000000.00",
+      "detail": "24h quote volume 12939.60 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BABABUSDT",
@@ -676,7 +1993,7 @@
     },
     {
       "base_asset": "BABY",
-      "detail": "24h quote volume 315261.17 < 1000000.00",
+      "detail": "24h quote volume 316355.45 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BABYUSDT",
@@ -684,7 +2001,7 @@
     },
     {
       "base_asset": "BANANAS31",
-      "detail": "24h quote volume 263206.47 < 1000000.00",
+      "detail": "24h quote volume 256279.68 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BANANAS31USDT",
@@ -692,7 +2009,7 @@
     },
     {
       "base_asset": "BANANA",
-      "detail": "24h quote volume 232106.34 < 1000000.00",
+      "detail": "24h quote volume 265768.22 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BANANAUSDT",
@@ -700,7 +2017,7 @@
     },
     {
       "base_asset": "BAND",
-      "detail": "24h quote volume 66133.92 < 1000000.00",
+      "detail": "24h quote volume 67228.57 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BANDUSDT",
@@ -708,7 +2025,7 @@
     },
     {
       "base_asset": "BARD",
-      "detail": "24h quote volume 660835.74 < 1000000.00",
+      "detail": "24h quote volume 671598.69 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BARDUSDT",
@@ -716,7 +2033,7 @@
     },
     {
       "base_asset": "BAR",
-      "detail": "24h quote volume 129647.24 < 1000000.00",
+      "detail": "24h quote volume 136752.76 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BARUSDT",
@@ -724,7 +2041,7 @@
     },
     {
       "base_asset": "BAT",
-      "detail": "24h quote volume 116052.64 < 1000000.00",
+      "detail": "24h quote volume 99766.03 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BATUSDT",
@@ -732,7 +2049,7 @@
     },
     {
       "base_asset": "BB",
-      "detail": "24h quote volume 282311.74 < 1000000.00",
+      "detail": "24h quote volume 285918.72 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BBUSDT",
@@ -740,7 +2057,7 @@
     },
     {
       "base_asset": "BEAMX",
-      "detail": "24h quote volume 663671.41 < 1000000.00",
+      "detail": "24h quote volume 680685.64 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BEAMXUSDT",
@@ -748,7 +2065,7 @@
     },
     {
       "base_asset": "BEL",
-      "detail": "24h quote volume 227062.51 < 1000000.00",
+      "detail": "24h quote volume 231057.48 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BELUSDT",
@@ -756,23 +2073,15 @@
     },
     {
       "base_asset": "BERA",
-      "detail": "24h quote volume 719339.04 < 1000000.00",
+      "detail": "24h quote volume 712618.68 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BERAUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "BFUSD",
-      "detail": "24h quote volume 88878.28 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "BFUSDUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "BICO",
-      "detail": "24h quote volume 166837.44 < 1000000.00",
+      "detail": "24h quote volume 173824.94 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BICOUSDT",
@@ -780,7 +2089,7 @@
     },
     {
       "base_asset": "BIGTIME",
-      "detail": "24h quote volume 82228.65 < 1000000.00",
+      "detail": "24h quote volume 83540.62 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BIGTIMEUSDT",
@@ -788,7 +2097,7 @@
     },
     {
       "base_asset": "BIO",
-      "detail": "24h quote volume 698901.08 < 1000000.00",
+      "detail": "24h quote volume 713289.45 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BIOUSDT",
@@ -796,7 +2105,7 @@
     },
     {
       "base_asset": "BLUR",
-      "detail": "24h quote volume 190526.54 < 1000000.00",
+      "detail": "24h quote volume 202899.34 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BLURUSDT",
@@ -804,7 +2113,7 @@
     },
     {
       "base_asset": "BMT",
-      "detail": "24h quote volume 110192.15 < 1000000.00",
+      "detail": "24h quote volume 111092.21 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BMTUSDT",
@@ -812,7 +2121,7 @@
     },
     {
       "base_asset": "BNSOL",
-      "detail": "24h quote volume 87652.61 < 1000000.00",
+      "detail": "24h quote volume 88250.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BNSOLUSDT",
@@ -820,7 +2129,7 @@
     },
     {
       "base_asset": "BNT",
-      "detail": "24h quote volume 56463.58 < 1000000.00",
+      "detail": "24h quote volume 75523.23 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BNTUSDT",
@@ -828,7 +2137,7 @@
     },
     {
       "base_asset": "BREV",
-      "detail": "24h quote volume 192135.92 < 1000000.00",
+      "detail": "24h quote volume 197790.69 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BREVUSDT",
@@ -836,7 +2145,7 @@
     },
     {
       "base_asset": "BROCCOLI714",
-      "detail": "24h quote volume 629529.03 < 1000000.00",
+      "detail": "24h quote volume 602742.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BROCCOLI714USDT",
@@ -844,7 +2153,7 @@
     },
     {
       "base_asset": "BTTC",
-      "detail": "24h quote volume 210089.74 < 1000000.00",
+      "detail": "24h quote volume 209820.10 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "BTTCUSDT",
@@ -852,7 +2161,7 @@
     },
     {
       "base_asset": "C98",
-      "detail": "24h quote volume 70135.15 < 1000000.00",
+      "detail": "24h quote volume 77168.86 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "C98USDT",
@@ -860,7 +2169,7 @@
     },
     {
       "base_asset": "CAKE",
-      "detail": "24h quote volume 957436.30 < 1000000.00",
+      "detail": "24h quote volume 992635.45 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CAKEUSDT",
@@ -868,7 +2177,7 @@
     },
     {
       "base_asset": "CATI",
-      "detail": "24h quote volume 262117.48 < 1000000.00",
+      "detail": "24h quote volume 258743.60 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CATIUSDT",
@@ -876,7 +2185,7 @@
     },
     {
       "base_asset": "CBRSB",
-      "detail": "24h quote volume 45203.73 < 1000000.00",
+      "detail": "24h quote volume 56202.88 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CBRSBUSDT",
@@ -884,7 +2193,7 @@
     },
     {
       "base_asset": "CELO",
-      "detail": "24h quote volume 359160.41 < 1000000.00",
+      "detail": "24h quote volume 378102.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CELOUSDT",
@@ -892,7 +2201,7 @@
     },
     {
       "base_asset": "CELR",
-      "detail": "24h quote volume 202643.17 < 1000000.00",
+      "detail": "24h quote volume 203941.33 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CELRUSDT",
@@ -900,7 +2209,7 @@
     },
     {
       "base_asset": "CETUS",
-      "detail": "24h quote volume 65774.46 < 1000000.00",
+      "detail": "24h quote volume 69349.04 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CETUSUSDT",
@@ -908,7 +2217,7 @@
     },
     {
       "base_asset": "CFG",
-      "detail": "24h quote volume 909797.08 < 1000000.00",
+      "detail": "24h quote volume 963307.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CFGUSDT",
@@ -916,7 +2225,7 @@
     },
     {
       "base_asset": "CFX",
-      "detail": "24h quote volume 304153.42 < 1000000.00",
+      "detail": "24h quote volume 308530.35 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CFXUSDT",
@@ -924,7 +2233,7 @@
     },
     {
       "base_asset": "CGPT",
-      "detail": "24h quote volume 127014.10 < 1000000.00",
+      "detail": "24h quote volume 154461.27 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CGPTUSDT",
@@ -932,7 +2241,7 @@
     },
     {
       "base_asset": "CHIP",
-      "detail": "24h quote volume 541043.95 < 1000000.00",
+      "detail": "24h quote volume 537910.00 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CHIPUSDT",
@@ -940,7 +2249,7 @@
     },
     {
       "base_asset": "CHR",
-      "detail": "24h quote volume 139723.23 < 1000000.00",
+      "detail": "24h quote volume 101378.56 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CHRUSDT",
@@ -948,7 +2257,7 @@
     },
     {
       "base_asset": "CHZ",
-      "detail": "24h quote volume 837589.68 < 1000000.00",
+      "detail": "24h quote volume 824863.11 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CHZUSDT",
@@ -956,7 +2265,7 @@
     },
     {
       "base_asset": "CITY",
-      "detail": "24h quote volume 208046.25 < 1000000.00",
+      "detail": "24h quote volume 188392.42 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CITYUSDT",
@@ -964,7 +2273,7 @@
     },
     {
       "base_asset": "CKB",
-      "detail": "24h quote volume 166211.07 < 1000000.00",
+      "detail": "24h quote volume 165464.52 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CKBUSDT",
@@ -972,7 +2281,7 @@
     },
     {
       "base_asset": "COINB",
-      "detail": "24h quote volume 111489.29 < 1000000.00",
+      "detail": "24h quote volume 127902.27 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "COINBUSDT",
@@ -980,7 +2289,7 @@
     },
     {
       "base_asset": "COMP",
-      "detail": "24h quote volume 191544.11 < 1000000.00",
+      "detail": "24h quote volume 212200.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "COMPUSDT",
@@ -988,7 +2297,7 @@
     },
     {
       "base_asset": "COOKIE",
-      "detail": "24h quote volume 109927.74 < 1000000.00",
+      "detail": "24h quote volume 120996.79 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "COOKIEUSDT",
@@ -996,7 +2305,7 @@
     },
     {
       "base_asset": "COTI",
-      "detail": "24h quote volume 138489.62 < 1000000.00",
+      "detail": "24h quote volume 143967.02 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "COTIUSDT",
@@ -1004,7 +2313,7 @@
     },
     {
       "base_asset": "COW",
-      "detail": "24h quote volume 119688.39 < 1000000.00",
+      "detail": "24h quote volume 123770.44 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "COWUSDT",
@@ -1012,7 +2321,7 @@
     },
     {
       "base_asset": "CRWVB",
-      "detail": "24h quote volume 16353.73 < 1000000.00",
+      "detail": "24h quote volume 16631.84 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CRWVBUSDT",
@@ -1020,7 +2329,7 @@
     },
     {
       "base_asset": "CTK",
-      "detail": "24h quote volume 29431.41 < 1000000.00",
+      "detail": "24h quote volume 29741.33 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CTKUSDT",
@@ -1028,7 +2337,7 @@
     },
     {
       "base_asset": "CTSI",
-      "detail": "24h quote volume 38731.02 < 1000000.00",
+      "detail": "24h quote volume 39707.22 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CTSIUSDT",
@@ -1036,7 +2345,7 @@
     },
     {
       "base_asset": "C",
-      "detail": "24h quote volume 76661.17 < 1000000.00",
+      "detail": "24h quote volume 83338.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CUSDT",
@@ -1044,7 +2353,7 @@
     },
     {
       "base_asset": "CVC",
-      "detail": "24h quote volume 35414.73 < 1000000.00",
+      "detail": "24h quote volume 35596.47 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CVCUSDT",
@@ -1052,7 +2361,7 @@
     },
     {
       "base_asset": "CVX",
-      "detail": "24h quote volume 800466.54 < 1000000.00",
+      "detail": "24h quote volume 830574.58 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CVXUSDT",
@@ -1060,7 +2369,7 @@
     },
     {
       "base_asset": "CYBER",
-      "detail": "24h quote volume 273901.50 < 1000000.00",
+      "detail": "24h quote volume 276358.45 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "CYBERUSDT",
@@ -1068,7 +2377,7 @@
     },
     {
       "base_asset": "DCR",
-      "detail": "24h quote volume 159505.37 < 1000000.00",
+      "detail": "24h quote volume 157201.99 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DCRUSDT",
@@ -1076,7 +2385,7 @@
     },
     {
       "base_asset": "DGB",
-      "detail": "24h quote volume 571951.43 < 1000000.00",
+      "detail": "24h quote volume 581108.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DGBUSDT",
@@ -1084,7 +2393,7 @@
     },
     {
       "base_asset": "DODO",
-      "detail": "24h quote volume 774075.69 < 1000000.00",
+      "detail": "24h quote volume 770970.16 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DODOUSDT",
@@ -1092,7 +2401,7 @@
     },
     {
       "base_asset": "DOGS",
-      "detail": "24h quote volume 692432.03 < 1000000.00",
+      "detail": "24h quote volume 688607.29 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DOGSUSDT",
@@ -1100,7 +2409,7 @@
     },
     {
       "base_asset": "DOLO",
-      "detail": "24h quote volume 69722.73 < 1000000.00",
+      "detail": "24h quote volume 68117.68 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DOLOUSDT",
@@ -1108,7 +2417,7 @@
     },
     {
       "base_asset": "DRAMB",
-      "detail": "24h quote volume 623833.72 < 1000000.00",
+      "detail": "24h quote volume 975904.30 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DRAMBUSDT",
@@ -1116,7 +2425,7 @@
     },
     {
       "base_asset": "DUSK",
-      "detail": "24h quote volume 125642.77 < 1000000.00",
+      "detail": "24h quote volume 128723.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DUSKUSDT",
@@ -1124,7 +2433,7 @@
     },
     {
       "base_asset": "DYDX",
-      "detail": "24h quote volume 465352.04 < 1000000.00",
+      "detail": "24h quote volume 479326.65 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DYDXUSDT",
@@ -1132,7 +2441,7 @@
     },
     {
       "base_asset": "DYM",
-      "detail": "24h quote volume 93588.50 < 1000000.00",
+      "detail": "24h quote volume 97349.21 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "DYMUSDT",
@@ -1140,7 +2449,7 @@
     },
     {
       "base_asset": "EDEN",
-      "detail": "24h quote volume 162636.60 < 1000000.00",
+      "detail": "24h quote volume 165739.78 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "EDENUSDT",
@@ -1148,7 +2457,7 @@
     },
     {
       "base_asset": "EGLD",
-      "detail": "24h quote volume 190610.84 < 1000000.00",
+      "detail": "24h quote volume 195371.71 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "EGLDUSDT",
@@ -1156,7 +2465,7 @@
     },
     {
       "base_asset": "ENJ",
-      "detail": "24h quote volume 170409.29 < 1000000.00",
+      "detail": "24h quote volume 170687.66 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ENJUSDT",
@@ -1164,7 +2473,7 @@
     },
     {
       "base_asset": "ENS",
-      "detail": "24h quote volume 688763.25 < 1000000.00",
+      "detail": "24h quote volume 784207.35 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ENSUSDT",
@@ -1172,7 +2481,7 @@
     },
     {
       "base_asset": "EWYB",
-      "detail": "24h quote volume 130681.09 < 1000000.00",
+      "detail": "24h quote volume 529590.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "EWYBUSDT",
@@ -1180,7 +2489,7 @@
     },
     {
       "base_asset": "FF",
-      "detail": "24h quote volume 575594.31 < 1000000.00",
+      "detail": "24h quote volume 579772.14 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FFUSDT",
@@ -1188,7 +2497,7 @@
     },
     {
       "base_asset": "FIDA",
-      "detail": "24h quote volume 150178.33 < 1000000.00",
+      "detail": "24h quote volume 150779.30 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FIDAUSDT",
@@ -1196,7 +2505,7 @@
     },
     {
       "base_asset": "FLOW",
-      "detail": "24h quote volume 67067.88 < 1000000.00",
+      "detail": "24h quote volume 63065.95 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FLOWUSDT",
@@ -1204,7 +2513,7 @@
     },
     {
       "base_asset": "FLUX",
-      "detail": "24h quote volume 115063.30 < 1000000.00",
+      "detail": "24h quote volume 104586.26 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FLUXUSDT",
@@ -1212,7 +2521,7 @@
     },
     {
       "base_asset": "FOGO",
-      "detail": "24h quote volume 70345.73 < 1000000.00",
+      "detail": "24h quote volume 67324.79 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FOGOUSDT",
@@ -1220,23 +2529,15 @@
     },
     {
       "base_asset": "FORM",
-      "detail": "24h quote volume 260197.51 < 1000000.00",
+      "detail": "24h quote volume 274263.12 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FORMUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "FRAX",
-      "detail": "24h quote volume 137031.25 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "FRAXUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "FTT",
-      "detail": "24h quote volume 231714.60 < 1000000.00",
+      "detail": "24h quote volume 236139.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FTTUSDT",
@@ -1244,7 +2545,7 @@
     },
     {
       "base_asset": "F",
-      "detail": "24h quote volume 73504.63 < 1000000.00",
+      "detail": "24h quote volume 78908.33 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "FUSDT",
@@ -1252,7 +2553,7 @@
     },
     {
       "base_asset": "GALA",
-      "detail": "24h quote volume 524071.49 < 1000000.00",
+      "detail": "24h quote volume 549003.94 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GALAUSDT",
@@ -1260,7 +2561,7 @@
     },
     {
       "base_asset": "GAS",
-      "detail": "24h quote volume 105479.93 < 1000000.00",
+      "detail": "24h quote volume 110653.93 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GASUSDT",
@@ -1268,7 +2569,7 @@
     },
     {
       "base_asset": "GENIUS",
-      "detail": "24h quote volume 358118.75 < 1000000.00",
+      "detail": "24h quote volume 359345.83 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GENIUSUSDT",
@@ -1276,7 +2577,7 @@
     },
     {
       "base_asset": "GLMR",
-      "detail": "24h quote volume 435477.15 < 1000000.00",
+      "detail": "24h quote volume 436342.12 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GLMRUSDT",
@@ -1284,7 +2585,7 @@
     },
     {
       "base_asset": "GLM",
-      "detail": "24h quote volume 107908.68 < 1000000.00",
+      "detail": "24h quote volume 109302.86 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GLMUSDT",
@@ -1292,7 +2593,7 @@
     },
     {
       "base_asset": "GLWB",
-      "detail": "24h quote volume 40801.37 < 1000000.00",
+      "detail": "24h quote volume 41842.72 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GLWBUSDT",
@@ -1300,7 +2601,7 @@
     },
     {
       "base_asset": "GMT",
-      "detail": "24h quote volume 198802.08 < 1000000.00",
+      "detail": "24h quote volume 205729.13 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GMTUSDT",
@@ -1308,7 +2609,7 @@
     },
     {
       "base_asset": "GMX",
-      "detail": "24h quote volume 167834.34 < 1000000.00",
+      "detail": "24h quote volume 173113.97 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GMXUSDT",
@@ -1316,7 +2617,7 @@
     },
     {
       "base_asset": "GNO",
-      "detail": "24h quote volume 140686.47 < 1000000.00",
+      "detail": "24h quote volume 139979.07 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GNOUSDT",
@@ -1324,7 +2625,7 @@
     },
     {
       "base_asset": "GNS",
-      "detail": "24h quote volume 42306.04 < 1000000.00",
+      "detail": "24h quote volume 42969.18 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GNSUSDT",
@@ -1332,7 +2633,7 @@
     },
     {
       "base_asset": "GOOGLB",
-      "detail": "24h quote volume 399348.40 < 1000000.00",
+      "detail": "24h quote volume 396053.51 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GOOGLBUSDT",
@@ -1340,7 +2641,7 @@
     },
     {
       "base_asset": "GPS",
-      "detail": "24h quote volume 260825.61 < 1000000.00",
+      "detail": "24h quote volume 259022.89 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GPSUSDT",
@@ -1348,7 +2649,7 @@
     },
     {
       "base_asset": "GRT",
-      "detail": "24h quote volume 354259.80 < 1000000.00",
+      "detail": "24h quote volume 354385.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GRTUSDT",
@@ -1356,7 +2657,7 @@
     },
     {
       "base_asset": "GTC",
-      "detail": "24h quote volume 74276.96 < 1000000.00",
+      "detail": "24h quote volume 75056.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GTCUSDT",
@@ -1364,7 +2665,7 @@
     },
     {
       "base_asset": "GUN",
-      "detail": "24h quote volume 219230.87 < 1000000.00",
+      "detail": "24h quote volume 208843.68 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GUNUSDT",
@@ -1372,7 +2673,7 @@
     },
     {
       "base_asset": "G",
-      "detail": "24h quote volume 228054.47 < 1000000.00",
+      "detail": "24h quote volume 223397.19 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "GUSDT",
@@ -1380,7 +2681,7 @@
     },
     {
       "base_asset": "HAEDAL",
-      "detail": "24h quote volume 63848.70 < 1000000.00",
+      "detail": "24h quote volume 60629.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HAEDALUSDT",
@@ -1388,7 +2689,7 @@
     },
     {
       "base_asset": "HEI",
-      "detail": "24h quote volume 570820.99 < 1000000.00",
+      "detail": "24h quote volume 577787.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HEIUSDT",
@@ -1396,7 +2697,7 @@
     },
     {
       "base_asset": "HEMI",
-      "detail": "24h quote volume 857294.46 < 1000000.00",
+      "detail": "24h quote volume 857086.46 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HEMIUSDT",
@@ -1404,7 +2705,7 @@
     },
     {
       "base_asset": "HFT",
-      "detail": "24h quote volume 547475.73 < 1000000.00",
+      "detail": "24h quote volume 553248.39 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HFTUSDT",
@@ -1412,7 +2713,7 @@
     },
     {
       "base_asset": "HIVE",
-      "detail": "24h quote volume 73506.50 < 1000000.00",
+      "detail": "24h quote volume 73235.71 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HIVEUSDT",
@@ -1420,7 +2721,7 @@
     },
     {
       "base_asset": "HMSTR",
-      "detail": "24h quote volume 729781.88 < 1000000.00",
+      "detail": "24h quote volume 720559.80 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HMSTRUSDT",
@@ -1428,7 +2729,7 @@
     },
     {
       "base_asset": "HOODB",
-      "detail": "24h quote volume 13073.29 < 1000000.00",
+      "detail": "24h quote volume 15634.07 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HOODBUSDT",
@@ -1436,7 +2737,7 @@
     },
     {
       "base_asset": "HUMA",
-      "detail": "24h quote volume 67400.38 < 1000000.00",
+      "detail": "24h quote volume 66445.63 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "HUMAUSDT",
@@ -1444,7 +2745,7 @@
     },
     {
       "base_asset": "IBMB",
-      "detail": "24h quote volume 95801.22 < 1000000.00",
+      "detail": "24h quote volume 96186.46 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IBMBUSDT",
@@ -1452,7 +2753,7 @@
     },
     {
       "base_asset": "ICX",
-      "detail": "24h quote volume 24109.96 < 1000000.00",
+      "detail": "24h quote volume 22268.30 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ICXUSDT",
@@ -1460,7 +2761,7 @@
     },
     {
       "base_asset": "ID",
-      "detail": "24h quote volume 391712.86 < 1000000.00",
+      "detail": "24h quote volume 392170.10 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IDUSDT",
@@ -1468,7 +2769,7 @@
     },
     {
       "base_asset": "ILV",
-      "detail": "24h quote volume 61810.67 < 1000000.00",
+      "detail": "24h quote volume 61766.94 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ILVUSDT",
@@ -1476,7 +2777,7 @@
     },
     {
       "base_asset": "IMX",
-      "detail": "24h quote volume 219451.54 < 1000000.00",
+      "detail": "24h quote volume 242301.81 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IMXUSDT",
@@ -1484,7 +2785,7 @@
     },
     {
       "base_asset": "INIT",
-      "detail": "24h quote volume 112871.12 < 1000000.00",
+      "detail": "24h quote volume 110524.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "INITUSDT",
@@ -1492,7 +2793,7 @@
     },
     {
       "base_asset": "INTCB",
-      "detail": "24h quote volume 504764.95 < 1000000.00",
+      "detail": "24h quote volume 802004.13 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "INTCBUSDT",
@@ -1500,7 +2801,7 @@
     },
     {
       "base_asset": "INTWB",
-      "detail": "24h quote volume 62960.00 < 1000000.00",
+      "detail": "24h quote volume 154627.65 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "INTWBUSDT",
@@ -1508,7 +2809,7 @@
     },
     {
       "base_asset": "IOST",
-      "detail": "24h quote volume 77749.28 < 1000000.00",
+      "detail": "24h quote volume 78971.79 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IOSTUSDT",
@@ -1516,7 +2817,7 @@
     },
     {
       "base_asset": "IOTA",
-      "detail": "24h quote volume 191160.85 < 1000000.00",
+      "detail": "24h quote volume 245249.47 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IOTAUSDT",
@@ -1524,7 +2825,7 @@
     },
     {
       "base_asset": "IOTX",
-      "detail": "24h quote volume 83325.14 < 1000000.00",
+      "detail": "24h quote volume 85184.56 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IOTXUSDT",
@@ -1532,7 +2833,7 @@
     },
     {
       "base_asset": "IQ",
-      "detail": "24h quote volume 37218.01 < 1000000.00",
+      "detail": "24h quote volume 42283.31 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "IQUSDT",
@@ -1540,7 +2841,7 @@
     },
     {
       "base_asset": "JASMY",
-      "detail": "24h quote volume 191616.23 < 1000000.00",
+      "detail": "24h quote volume 191259.95 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "JASMYUSDT",
@@ -1548,7 +2849,7 @@
     },
     {
       "base_asset": "JOE",
-      "detail": "24h quote volume 121238.04 < 1000000.00",
+      "detail": "24h quote volume 117444.27 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "JOEUSDT",
@@ -1556,7 +2857,7 @@
     },
     {
       "base_asset": "JUP",
-      "detail": "24h quote volume 576745.12 < 1000000.00",
+      "detail": "24h quote volume 679801.20 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "JUPUSDT",
@@ -1564,7 +2865,7 @@
     },
     {
       "base_asset": "JUV",
-      "detail": "24h quote volume 192368.70 < 1000000.00",
+      "detail": "24h quote volume 186869.60 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "JUVUSDT",
@@ -1572,7 +2873,7 @@
     },
     {
       "base_asset": "KAIA",
-      "detail": "24h quote volume 254241.09 < 1000000.00",
+      "detail": "24h quote volume 261820.32 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KAIAUSDT",
@@ -1580,7 +2881,7 @@
     },
     {
       "base_asset": "KAT",
-      "detail": "24h quote volume 275923.57 < 1000000.00",
+      "detail": "24h quote volume 272531.43 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KATUSDT",
@@ -1588,7 +2889,7 @@
     },
     {
       "base_asset": "KAVA",
-      "detail": "24h quote volume 202016.89 < 1000000.00",
+      "detail": "24h quote volume 210189.52 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KAVAUSDT",
@@ -1596,7 +2897,7 @@
     },
     {
       "base_asset": "KERNEL",
-      "detail": "24h quote volume 278060.61 < 1000000.00",
+      "detail": "24h quote volume 276707.96 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KERNELUSDT",
@@ -1604,7 +2905,7 @@
     },
     {
       "base_asset": "KGST",
-      "detail": "24h quote volume 33498.88 < 1000000.00",
+      "detail": "24h quote volume 33840.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KGSTUSDT",
@@ -1612,7 +2913,7 @@
     },
     {
       "base_asset": "KMNO",
-      "detail": "24h quote volume 174251.45 < 1000000.00",
+      "detail": "24h quote volume 176592.91 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KMNOUSDT",
@@ -1620,7 +2921,7 @@
     },
     {
       "base_asset": "KNC",
-      "detail": "24h quote volume 65539.40 < 1000000.00",
+      "detail": "24h quote volume 64819.93 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KNCUSDT",
@@ -1628,7 +2929,7 @@
     },
     {
       "base_asset": "KORUB",
-      "detail": "24h quote volume 551836.13 < 1000000.00",
+      "detail": "24h quote volume 660874.75 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KORUBUSDT",
@@ -1636,7 +2937,7 @@
     },
     {
       "base_asset": "KSM",
-      "detail": "24h quote volume 111353.64 < 1000000.00",
+      "detail": "24h quote volume 111808.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "KSMUSDT",
@@ -1644,7 +2945,7 @@
     },
     {
       "base_asset": "LAYER",
-      "detail": "24h quote volume 213804.65 < 1000000.00",
+      "detail": "24h quote volume 213855.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LAYERUSDT",
@@ -1652,7 +2953,7 @@
     },
     {
       "base_asset": "LAZIO",
-      "detail": "24h quote volume 209217.38 < 1000000.00",
+      "detail": "24h quote volume 205529.18 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LAZIOUSDT",
@@ -1660,7 +2961,7 @@
     },
     {
       "base_asset": "LINEA",
-      "detail": "24h quote volume 434572.26 < 1000000.00",
+      "detail": "24h quote volume 435960.00 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LINEAUSDT",
@@ -1668,7 +2969,7 @@
     },
     {
       "base_asset": "LISTA",
-      "detail": "24h quote volume 534424.81 < 1000000.00",
+      "detail": "24h quote volume 442661.00 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LISTAUSDT",
@@ -1676,7 +2977,7 @@
     },
     {
       "base_asset": "LITEB",
-      "detail": "24h quote volume 21138.54 < 1000000.00",
+      "detail": "24h quote volume 21850.96 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LITEBUSDT",
@@ -1684,7 +2985,7 @@
     },
     {
       "base_asset": "LQTY",
-      "detail": "24h quote volume 688493.59 < 1000000.00",
+      "detail": "24h quote volume 700751.20 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LQTYUSDT",
@@ -1692,7 +2993,7 @@
     },
     {
       "base_asset": "LSK",
-      "detail": "24h quote volume 102797.44 < 1000000.00",
+      "detail": "24h quote volume 101573.74 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LSKUSDT",
@@ -1700,7 +3001,7 @@
     },
     {
       "base_asset": "LUMIA",
-      "detail": "24h quote volume 819903.27 < 1000000.00",
+      "detail": "24h quote volume 805928.89 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LUMIAUSDT",
@@ -1708,7 +3009,7 @@
     },
     {
       "base_asset": "LUNA",
-      "detail": "24h quote volume 311861.50 < 1000000.00",
+      "detail": "24h quote volume 321005.41 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "LUNAUSDT",
@@ -1716,7 +3017,7 @@
     },
     {
       "base_asset": "MAGIC",
-      "detail": "24h quote volume 46035.46 < 1000000.00",
+      "detail": "24h quote volume 45169.27 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MAGICUSDT",
@@ -1724,7 +3025,7 @@
     },
     {
       "base_asset": "MANA",
-      "detail": "24h quote volume 110626.79 < 1000000.00",
+      "detail": "24h quote volume 114518.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MANAUSDT",
@@ -1732,7 +3033,7 @@
     },
     {
       "base_asset": "MANTA",
-      "detail": "24h quote volume 196098.39 < 1000000.00",
+      "detail": "24h quote volume 200175.33 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MANTAUSDT",
@@ -1740,7 +3041,7 @@
     },
     {
       "base_asset": "MANTRA",
-      "detail": "24h quote volume 501996.81 < 1000000.00",
+      "detail": "24h quote volume 507573.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MANTRAUSDT",
@@ -1748,7 +3049,7 @@
     },
     {
       "base_asset": "MASK",
-      "detail": "24h quote volume 68697.35 < 1000000.00",
+      "detail": "24h quote volume 69824.14 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MASKUSDT",
@@ -1756,7 +3057,7 @@
     },
     {
       "base_asset": "MAV",
-      "detail": "24h quote volume 87741.90 < 1000000.00",
+      "detail": "24h quote volume 90032.76 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MAVUSDT",
@@ -1764,7 +3065,7 @@
     },
     {
       "base_asset": "MBL",
-      "detail": "24h quote volume 201983.87 < 1000000.00",
+      "detail": "24h quote volume 229468.82 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MBLUSDT",
@@ -1772,7 +3073,7 @@
     },
     {
       "base_asset": "MEGA",
-      "detail": "24h quote volume 883600.35 < 1000000.00",
+      "detail": "24h quote volume 904559.33 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MEGAUSDT",
@@ -1780,7 +3081,7 @@
     },
     {
       "base_asset": "MEME",
-      "detail": "24h quote volume 585372.81 < 1000000.00",
+      "detail": "24h quote volume 592357.91 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MEMEUSDT",
@@ -1788,7 +3089,7 @@
     },
     {
       "base_asset": "METAB",
-      "detail": "24h quote volume 28153.59 < 1000000.00",
+      "detail": "24h quote volume 28530.82 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "METABUSDT",
@@ -1796,23 +3097,15 @@
     },
     {
       "base_asset": "METIS",
-      "detail": "24h quote volume 64298.43 < 1000000.00",
+      "detail": "24h quote volume 65761.14 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "METISUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "MET",
-      "detail": "24h quote volume 962950.92 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "METUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "ME",
-      "detail": "24h quote volume 294908.86 < 1000000.00",
+      "detail": "24h quote volume 288787.46 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MEUSDT",
@@ -1820,7 +3113,7 @@
     },
     {
       "base_asset": "MITO",
-      "detail": "24h quote volume 180282.57 < 1000000.00",
+      "detail": "24h quote volume 178313.41 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MITOUSDT",
@@ -1828,7 +3121,7 @@
     },
     {
       "base_asset": "MMT",
-      "detail": "24h quote volume 350988.63 < 1000000.00",
+      "detail": "24h quote volume 347482.08 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MMTUSDT",
@@ -1836,7 +3129,7 @@
     },
     {
       "base_asset": "MOVE",
-      "detail": "24h quote volume 277932.47 < 1000000.00",
+      "detail": "24h quote volume 306574.73 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MOVEUSDT",
@@ -1844,7 +3137,7 @@
     },
     {
       "base_asset": "MOVR",
-      "detail": "24h quote volume 401387.62 < 1000000.00",
+      "detail": "24h quote volume 405913.55 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MOVRUSDT",
@@ -1852,7 +3145,7 @@
     },
     {
       "base_asset": "MRVLB",
-      "detail": "24h quote volume 170298.41 < 1000000.00",
+      "detail": "24h quote volume 172592.29 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MRVLBUSDT",
@@ -1860,7 +3153,7 @@
     },
     {
       "base_asset": "MSFTB",
-      "detail": "24h quote volume 20513.20 < 1000000.00",
+      "detail": "24h quote volume 21291.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MSFTBUSDT",
@@ -1868,7 +3161,7 @@
     },
     {
       "base_asset": "MSTRB",
-      "detail": "24h quote volume 117224.91 < 1000000.00",
+      "detail": "24h quote volume 175965.80 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MSTRBUSDT",
@@ -1876,7 +3169,7 @@
     },
     {
       "base_asset": "MTL",
-      "detail": "24h quote volume 36266.65 < 1000000.00",
+      "detail": "24h quote volume 36407.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MTLUSDT",
@@ -1884,7 +3177,7 @@
     },
     {
       "base_asset": "MUBARAK",
-      "detail": "24h quote volume 540061.24 < 1000000.00",
+      "detail": "24h quote volume 535692.39 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MUBARAKUSDT",
@@ -1892,7 +3185,7 @@
     },
     {
       "base_asset": "MUUB",
-      "detail": "24h quote volume 82104.64 < 1000000.00",
+      "detail": "24h quote volume 91500.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MUUBUSDT",
@@ -1900,7 +3193,7 @@
     },
     {
       "base_asset": "MVLLB",
-      "detail": "24h quote volume 23139.35 < 1000000.00",
+      "detail": "24h quote volume 24065.15 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "MVLLBUSDT",
@@ -1908,7 +3201,7 @@
     },
     {
       "base_asset": "NBISB",
-      "detail": "24h quote volume 161605.95 < 1000000.00",
+      "detail": "24h quote volume 155027.42 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NBISBUSDT",
@@ -1916,7 +3209,7 @@
     },
     {
       "base_asset": "NEO",
-      "detail": "24h quote volume 192652.26 < 1000000.00",
+      "detail": "24h quote volume 196835.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NEOUSDT",
@@ -1924,7 +3217,7 @@
     },
     {
       "base_asset": "NEWT",
-      "detail": "24h quote volume 499173.12 < 1000000.00",
+      "detail": "24h quote volume 499482.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NEWTUSDT",
@@ -1932,7 +3225,7 @@
     },
     {
       "base_asset": "NEXO",
-      "detail": "24h quote volume 264027.94 < 1000000.00",
+      "detail": "24h quote volume 282474.46 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NEXOUSDT",
@@ -1940,7 +3233,7 @@
     },
     {
       "base_asset": "NMR",
-      "detail": "24h quote volume 137868.26 < 1000000.00",
+      "detail": "24h quote volume 136866.89 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NMRUSDT",
@@ -1948,7 +3241,7 @@
     },
     {
       "base_asset": "NOKB",
-      "detail": "24h quote volume 33201.71 < 1000000.00",
+      "detail": "24h quote volume 36320.78 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NOKBUSDT",
@@ -1956,7 +3249,7 @@
     },
     {
       "base_asset": "NOM",
-      "detail": "24h quote volume 620762.89 < 1000000.00",
+      "detail": "24h quote volume 649486.11 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NOMUSDT",
@@ -1964,7 +3257,7 @@
     },
     {
       "base_asset": "NOT",
-      "detail": "24h quote volume 164920.14 < 1000000.00",
+      "detail": "24h quote volume 168001.12 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NOTUSDT",
@@ -1972,7 +3265,7 @@
     },
     {
       "base_asset": "NVDAB",
-      "detail": "24h quote volume 116740.83 < 1000000.00",
+      "detail": "24h quote volume 133231.06 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NVDABUSDT",
@@ -1980,7 +3273,7 @@
     },
     {
       "base_asset": "NXPC",
-      "detail": "24h quote volume 391761.78 < 1000000.00",
+      "detail": "24h quote volume 397204.77 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "NXPCUSDT",
@@ -1988,7 +3281,7 @@
     },
     {
       "base_asset": "OGN",
-      "detail": "24h quote volume 168004.33 < 1000000.00",
+      "detail": "24h quote volume 150864.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "OGNUSDT",
@@ -1996,7 +3289,7 @@
     },
     {
       "base_asset": "OG",
-      "detail": "24h quote volume 143750.93 < 1000000.00",
+      "detail": "24h quote volume 146486.70 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "OGUSDT",
@@ -2004,7 +3297,7 @@
     },
     {
       "base_asset": "ONE",
-      "detail": "24h quote volume 317332.87 < 1000000.00",
+      "detail": "24h quote volume 323128.63 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ONEUSDT",
@@ -2012,7 +3305,7 @@
     },
     {
       "base_asset": "ONG",
-      "detail": "24h quote volume 141998.21 < 1000000.00",
+      "detail": "24h quote volume 155538.39 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ONGUSDT",
@@ -2020,7 +3313,7 @@
     },
     {
       "base_asset": "ONT",
-      "detail": "24h quote volume 280746.37 < 1000000.00",
+      "detail": "24h quote volume 280276.85 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ONTUSDT",
@@ -2028,7 +3321,7 @@
     },
     {
       "base_asset": "OPEN",
-      "detail": "24h quote volume 303916.48 < 1000000.00",
+      "detail": "24h quote volume 325878.23 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "OPENUSDT",
@@ -2036,7 +3329,7 @@
     },
     {
       "base_asset": "OPG",
-      "detail": "24h quote volume 458274.33 < 1000000.00",
+      "detail": "24h quote volume 447892.38 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "OPGUSDT",
@@ -2044,7 +3337,7 @@
     },
     {
       "base_asset": "ORCA",
-      "detail": "24h quote volume 169204.95 < 1000000.00",
+      "detail": "24h quote volume 171342.99 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ORCAUSDT",
@@ -2052,7 +3345,7 @@
     },
     {
       "base_asset": "ORCLB",
-      "detail": "24h quote volume 90027.78 < 1000000.00",
+      "detail": "24h quote volume 89875.06 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ORCLBUSDT",
@@ -2060,7 +3353,7 @@
     },
     {
       "base_asset": "OSMO",
-      "detail": "24h quote volume 541798.55 < 1000000.00",
+      "detail": "24h quote volume 526771.17 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "OSMOUSDT",
@@ -2068,7 +3361,7 @@
     },
     {
       "base_asset": "PARTI",
-      "detail": "24h quote volume 652372.05 < 1000000.00",
+      "detail": "24h quote volume 586459.43 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PARTIUSDT",
@@ -2076,7 +3369,7 @@
     },
     {
       "base_asset": "PHA",
-      "detail": "24h quote volume 344944.64 < 1000000.00",
+      "detail": "24h quote volume 338202.77 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PHAUSDT",
@@ -2084,7 +3377,7 @@
     },
     {
       "base_asset": "PIVX",
-      "detail": "24h quote volume 150416.63 < 1000000.00",
+      "detail": "24h quote volume 149148.61 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PIVXUSDT",
@@ -2092,7 +3385,7 @@
     },
     {
       "base_asset": "PIXEL",
-      "detail": "24h quote volume 180347.14 < 1000000.00",
+      "detail": "24h quote volume 180511.16 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PIXELUSDT",
@@ -2100,7 +3393,7 @@
     },
     {
       "base_asset": "PLTRB",
-      "detail": "24h quote volume 20583.63 < 1000000.00",
+      "detail": "24h quote volume 21109.59 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PLTRBUSDT",
@@ -2108,7 +3401,7 @@
     },
     {
       "base_asset": "POLYX",
-      "detail": "24h quote volume 77213.99 < 1000000.00",
+      "detail": "24h quote volume 78747.57 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "POLYXUSDT",
@@ -2116,7 +3409,7 @@
     },
     {
       "base_asset": "PORTAL",
-      "detail": "24h quote volume 186308.27 < 1000000.00",
+      "detail": "24h quote volume 176399.89 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PORTALUSDT",
@@ -2124,7 +3417,7 @@
     },
     {
       "base_asset": "PORTO",
-      "detail": "24h quote volume 271886.60 < 1000000.00",
+      "detail": "24h quote volume 275563.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PORTOUSDT",
@@ -2132,7 +3425,7 @@
     },
     {
       "base_asset": "POWR",
-      "detail": "24h quote volume 17662.18 < 1000000.00",
+      "detail": "24h quote volume 18695.66 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "POWRUSDT",
@@ -2140,7 +3433,7 @@
     },
     {
       "base_asset": "PROVE",
-      "detail": "24h quote volume 93808.64 < 1000000.00",
+      "detail": "24h quote volume 97882.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PROVEUSDT",
@@ -2148,7 +3441,7 @@
     },
     {
       "base_asset": "PSG",
-      "detail": "24h quote volume 168854.53 < 1000000.00",
+      "detail": "24h quote volume 173123.65 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PSGUSDT",
@@ -2156,7 +3449,7 @@
     },
     {
       "base_asset": "PUNDIX",
-      "detail": "24h quote volume 101189.46 < 1000000.00",
+      "detail": "24h quote volume 69865.69 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "PUNDIXUSDT",
@@ -2164,7 +3457,7 @@
     },
     {
       "base_asset": "QCOMB",
-      "detail": "24h quote volume 20387.84 < 1000000.00",
+      "detail": "24h quote volume 22347.17 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "QCOMBUSDT",
@@ -2172,7 +3465,7 @@
     },
     {
       "base_asset": "QKC",
-      "detail": "24h quote volume 130275.33 < 1000000.00",
+      "detail": "24h quote volume 128312.54 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "QKCUSDT",
@@ -2180,7 +3473,7 @@
     },
     {
       "base_asset": "QNTB",
-      "detail": "24h quote volume 129425.22 < 1000000.00",
+      "detail": "24h quote volume 130635.61 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "QNTBUSDT",
@@ -2188,7 +3481,7 @@
     },
     {
       "base_asset": "QNT",
-      "detail": "24h quote volume 431509.63 < 1000000.00",
+      "detail": "24h quote volume 437217.02 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "QNTUSDT",
@@ -2196,7 +3489,7 @@
     },
     {
       "base_asset": "QTUM",
-      "detail": "24h quote volume 267446.28 < 1000000.00",
+      "detail": "24h quote volume 280411.18 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "QTUMUSDT",
@@ -2204,7 +3497,7 @@
     },
     {
       "base_asset": "QUICK",
-      "detail": "24h quote volume 57261.94 < 1000000.00",
+      "detail": "24h quote volume 55302.24 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "QUICKUSDT",
@@ -2212,7 +3505,7 @@
     },
     {
       "base_asset": "RAD",
-      "detail": "24h quote volume 118940.26 < 1000000.00",
+      "detail": "24h quote volume 119127.67 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RADUSDT",
@@ -2220,7 +3513,7 @@
     },
     {
       "base_asset": "RARE",
-      "detail": "24h quote volume 287486.52 < 1000000.00",
+      "detail": "24h quote volume 289066.59 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RAREUSDT",
@@ -2228,7 +3521,7 @@
     },
     {
       "base_asset": "RAY",
-      "detail": "24h quote volume 278577.08 < 1000000.00",
+      "detail": "24h quote volume 285020.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RAYUSDT",
@@ -2236,7 +3529,7 @@
     },
     {
       "base_asset": "RED",
-      "detail": "24h quote volume 119850.37 < 1000000.00",
+      "detail": "24h quote volume 125265.51 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "REDUSDT",
@@ -2244,7 +3537,7 @@
     },
     {
       "base_asset": "RESOLV",
-      "detail": "24h quote volume 321146.70 < 1000000.00",
+      "detail": "24h quote volume 324226.59 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RESOLVUSDT",
@@ -2252,7 +3545,7 @@
     },
     {
       "base_asset": "REZ",
-      "detail": "24h quote volume 143633.41 < 1000000.00",
+      "detail": "24h quote volume 144558.38 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "REZUSDT",
@@ -2260,7 +3553,7 @@
     },
     {
       "base_asset": "RKLBB",
-      "detail": "24h quote volume 31838.56 < 1000000.00",
+      "detail": "24h quote volume 33925.76 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RKLBBUSDT",
@@ -2268,7 +3561,7 @@
     },
     {
       "base_asset": "RLC",
-      "detail": "24h quote volume 86565.61 < 1000000.00",
+      "detail": "24h quote volume 87002.23 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RLCUSDT",
@@ -2276,7 +3569,7 @@
     },
     {
       "base_asset": "ROBO",
-      "detail": "24h quote volume 187748.95 < 1000000.00",
+      "detail": "24h quote volume 188847.43 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ROBOUSDT",
@@ -2284,7 +3577,7 @@
     },
     {
       "base_asset": "RONIN",
-      "detail": "24h quote volume 448267.02 < 1000000.00",
+      "detail": "24h quote volume 444623.11 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RONINUSDT",
@@ -2292,7 +3585,7 @@
     },
     {
       "base_asset": "ROSE",
-      "detail": "24h quote volume 211605.28 < 1000000.00",
+      "detail": "24h quote volume 212233.90 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ROSEUSDT",
@@ -2300,7 +3593,7 @@
     },
     {
       "base_asset": "RPL",
-      "detail": "24h quote volume 158811.40 < 1000000.00",
+      "detail": "24h quote volume 160096.83 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RPLUSDT",
@@ -2308,7 +3601,7 @@
     },
     {
       "base_asset": "RSR",
-      "detail": "24h quote volume 651335.48 < 1000000.00",
+      "detail": "24h quote volume 681846.58 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RSRUSDT",
@@ -2316,7 +3609,7 @@
     },
     {
       "base_asset": "RUNE",
-      "detail": "24h quote volume 652331.75 < 1000000.00",
+      "detail": "24h quote volume 651452.99 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RUNEUSDT",
@@ -2324,7 +3617,7 @@
     },
     {
       "base_asset": "RVN",
-      "detail": "24h quote volume 108250.28 < 1000000.00",
+      "detail": "24h quote volume 108984.69 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "RVNUSDT",
@@ -2332,7 +3625,7 @@
     },
     {
       "base_asset": "SAGA",
-      "detail": "24h quote volume 462579.07 < 1000000.00",
+      "detail": "24h quote volume 473520.38 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SAGAUSDT",
@@ -2340,7 +3633,7 @@
     },
     {
       "base_asset": "SAHARA",
-      "detail": "24h quote volume 870691.53 < 1000000.00",
+      "detail": "24h quote volume 848865.67 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SAHARAUSDT",
@@ -2348,7 +3641,7 @@
     },
     {
       "base_asset": "SAND",
-      "detail": "24h quote volume 305479.25 < 1000000.00",
+      "detail": "24h quote volume 329996.57 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SANDUSDT",
@@ -2356,7 +3649,7 @@
     },
     {
       "base_asset": "SANTOS",
-      "detail": "24h quote volume 146692.61 < 1000000.00",
+      "detail": "24h quote volume 143140.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SANTOSUSDT",
@@ -2364,7 +3657,7 @@
     },
     {
       "base_asset": "SAPIEN",
-      "detail": "24h quote volume 162442.64 < 1000000.00",
+      "detail": "24h quote volume 162872.17 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SAPIENUSDT",
@@ -2372,7 +3665,7 @@
     },
     {
       "base_asset": "SCRT",
-      "detail": "24h quote volume 94747.87 < 1000000.00",
+      "detail": "24h quote volume 96443.61 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SCRTUSDT",
@@ -2380,7 +3673,7 @@
     },
     {
       "base_asset": "SC",
-      "detail": "24h quote volume 69085.23 < 1000000.00",
+      "detail": "24h quote volume 69034.31 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SCUSDT",
@@ -2388,7 +3681,7 @@
     },
     {
       "base_asset": "SENT",
-      "detail": "24h quote volume 328420.45 < 1000000.00",
+      "detail": "24h quote volume 343142.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SENTUSDT",
@@ -2396,7 +3689,7 @@
     },
     {
       "base_asset": "SFP",
-      "detail": "24h quote volume 44855.83 < 1000000.00",
+      "detail": "24h quote volume 47408.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SFPUSDT",
@@ -2404,7 +3697,7 @@
     },
     {
       "base_asset": "SHELL",
-      "detail": "24h quote volume 167016.46 < 1000000.00",
+      "detail": "24h quote volume 168753.72 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SHELLUSDT",
@@ -2412,7 +3705,7 @@
     },
     {
       "base_asset": "SIGN",
-      "detail": "24h quote volume 127381.98 < 1000000.00",
+      "detail": "24h quote volume 135756.49 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SIGNUSDT",
@@ -2420,7 +3713,7 @@
     },
     {
       "base_asset": "SKHYB",
-      "detail": "24h quote volume 735190.84 < 1000000.00",
+      "detail": "24h quote volume 735805.48 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SKHYBUSDT",
@@ -2428,7 +3721,7 @@
     },
     {
       "base_asset": "SKL",
-      "detail": "24h quote volume 429054.89 < 1000000.00",
+      "detail": "24h quote volume 420178.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SKLUSDT",
@@ -2436,7 +3729,7 @@
     },
     {
       "base_asset": "SKY",
-      "detail": "24h quote volume 648385.09 < 1000000.00",
+      "detail": "24h quote volume 662383.52 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SKYUSDT",
@@ -2444,7 +3737,7 @@
     },
     {
       "base_asset": "SLP",
-      "detail": "24h quote volume 482607.09 < 1000000.00",
+      "detail": "24h quote volume 484773.02 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SLPUSDT",
@@ -2452,7 +3745,7 @@
     },
     {
       "base_asset": "SNX",
-      "detail": "24h quote volume 677679.73 < 1000000.00",
+      "detail": "24h quote volume 685528.00 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SNXUSDT",
@@ -2460,7 +3753,7 @@
     },
     {
       "base_asset": "SNXXB",
-      "detail": "24h quote volume 102814.41 < 1000000.00",
+      "detail": "24h quote volume 108566.09 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SNXXBUSDT",
@@ -2468,7 +3761,7 @@
     },
     {
       "base_asset": "SOLV",
-      "detail": "24h quote volume 231933.16 < 1000000.00",
+      "detail": "24h quote volume 235478.96 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SOLVUSDT",
@@ -2476,7 +3769,7 @@
     },
     {
       "base_asset": "SOMI",
-      "detail": "24h quote volume 148600.43 < 1000000.00",
+      "detail": "24h quote volume 148404.91 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SOMIUSDT",
@@ -2484,7 +3777,7 @@
     },
     {
       "base_asset": "SOPH",
-      "detail": "24h quote volume 46743.94 < 1000000.00",
+      "detail": "24h quote volume 47269.56 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SOPHUSDT",
@@ -2492,7 +3785,7 @@
     },
     {
       "base_asset": "SPELL",
-      "detail": "24h quote volume 153900.00 < 1000000.00",
+      "detail": "24h quote volume 154748.58 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SPELLUSDT",
@@ -2500,7 +3793,7 @@
     },
     {
       "base_asset": "SPK",
-      "detail": "24h quote volume 729281.70 < 1000000.00",
+      "detail": "24h quote volume 767214.83 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SPKUSDT",
@@ -2508,7 +3801,7 @@
     },
     {
       "base_asset": "SPYB",
-      "detail": "24h quote volume 16659.04 < 1000000.00",
+      "detail": "24h quote volume 17398.44 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SPYBUSDT",
@@ -2516,7 +3809,7 @@
     },
     {
       "base_asset": "SSV",
-      "detail": "24h quote volume 289771.13 < 1000000.00",
+      "detail": "24h quote volume 298815.35 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SSVUSDT",
@@ -2524,7 +3817,7 @@
     },
     {
       "base_asset": "STEEM",
-      "detail": "24h quote volume 68162.75 < 1000000.00",
+      "detail": "24h quote volume 69299.63 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "STEEMUSDT",
@@ -2532,7 +3825,7 @@
     },
     {
       "base_asset": "STG",
-      "detail": "24h quote volume 158487.79 < 1000000.00",
+      "detail": "24h quote volume 161347.76 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "STGUSDT",
@@ -2540,7 +3833,7 @@
     },
     {
       "base_asset": "STORJ",
-      "detail": "24h quote volume 155166.93 < 1000000.00",
+      "detail": "24h quote volume 166674.72 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "STORJUSDT",
@@ -2548,7 +3841,7 @@
     },
     {
       "base_asset": "STO",
-      "detail": "24h quote volume 416345.34 < 1000000.00",
+      "detail": "24h quote volume 422800.67 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "STOUSDT",
@@ -2556,7 +3849,7 @@
     },
     {
       "base_asset": "STRAX",
-      "detail": "24h quote volume 90358.65 < 1000000.00",
+      "detail": "24h quote volume 92796.26 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "STRAXUSDT",
@@ -2564,7 +3857,7 @@
     },
     {
       "base_asset": "SUN",
-      "detail": "24h quote volume 300747.39 < 1000000.00",
+      "detail": "24h quote volume 329641.85 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SUNUSDT",
@@ -2572,7 +3865,7 @@
     },
     {
       "base_asset": "SUPER",
-      "detail": "24h quote volume 196260.32 < 1000000.00",
+      "detail": "24h quote volume 199260.73 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SUPERUSDT",
@@ -2580,7 +3873,7 @@
     },
     {
       "base_asset": "S",
-      "detail": "24h quote volume 434530.85 < 1000000.00",
+      "detail": "24h quote volume 447399.00 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SUSDT",
@@ -2588,7 +3881,7 @@
     },
     {
       "base_asset": "SUSHI",
-      "detail": "24h quote volume 161310.93 < 1000000.00",
+      "detail": "24h quote volume 167309.74 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SUSHIUSDT",
@@ -2596,7 +3889,7 @@
     },
     {
       "base_asset": "SXT",
-      "detail": "24h quote volume 567252.16 < 1000000.00",
+      "detail": "24h quote volume 563797.94 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SXTUSDT",
@@ -2604,7 +3897,7 @@
     },
     {
       "base_asset": "SYRUP",
-      "detail": "24h quote volume 249526.96 < 1000000.00",
+      "detail": "24h quote volume 248982.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "SYRUPUSDT",
@@ -2612,7 +3905,7 @@
     },
     {
       "base_asset": "TFUEL",
-      "detail": "24h quote volume 45383.95 < 1000000.00",
+      "detail": "24h quote volume 47542.82 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TFUELUSDT",
@@ -2620,7 +3913,7 @@
     },
     {
       "base_asset": "THETA",
-      "detail": "24h quote volume 222444.29 < 1000000.00",
+      "detail": "24h quote volume 223200.73 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "THETAUSDT",
@@ -2628,7 +3921,7 @@
     },
     {
       "base_asset": "THE",
-      "detail": "24h quote volume 274093.20 < 1000000.00",
+      "detail": "24h quote volume 286375.85 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "THEUSDT",
@@ -2636,7 +3929,7 @@
     },
     {
       "base_asset": "TKO",
-      "detail": "24h quote volume 124267.32 < 1000000.00",
+      "detail": "24h quote volume 123293.25 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TKOUSDT",
@@ -2644,7 +3937,7 @@
     },
     {
       "base_asset": "TQQQB",
-      "detail": "24h quote volume 27668.24 < 1000000.00",
+      "detail": "24h quote volume 28855.68 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TQQQBUSDT",
@@ -2652,7 +3945,7 @@
     },
     {
       "base_asset": "TRB",
-      "detail": "24h quote volume 593575.40 < 1000000.00",
+      "detail": "24h quote volume 593875.26 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TRBUSDT",
@@ -2660,7 +3953,7 @@
     },
     {
       "base_asset": "TREE",
-      "detail": "24h quote volume 427648.80 < 1000000.00",
+      "detail": "24h quote volume 442892.93 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TREEUSDT",
@@ -2668,7 +3961,7 @@
     },
     {
       "base_asset": "TSLAB",
-      "detail": "24h quote volume 790222.99 < 1000000.00",
+      "detail": "24h quote volume 814336.38 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TSLABUSDT",
@@ -2676,7 +3969,7 @@
     },
     {
       "base_asset": "TSMB",
-      "detail": "24h quote volume 30383.57 < 1000000.00",
+      "detail": "24h quote volume 27636.13 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TSMBUSDT",
@@ -2684,7 +3977,7 @@
     },
     {
       "base_asset": "TST",
-      "detail": "24h quote volume 454837.06 < 1000000.00",
+      "detail": "24h quote volume 449344.35 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TSTUSDT",
@@ -2692,7 +3985,7 @@
     },
     {
       "base_asset": "TURBO",
-      "detail": "24h quote volume 612164.99 < 1000000.00",
+      "detail": "24h quote volume 610001.83 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TURBOUSDT",
@@ -2700,7 +3993,7 @@
     },
     {
       "base_asset": "TURTLE",
-      "detail": "24h quote volume 284129.07 < 1000000.00",
+      "detail": "24h quote volume 291492.16 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TURTLEUSDT",
@@ -2708,7 +4001,7 @@
     },
     {
       "base_asset": "T",
-      "detail": "24h quote volume 591546.29 < 1000000.00",
+      "detail": "24h quote volume 591435.94 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TUSDT",
@@ -2716,7 +4009,7 @@
     },
     {
       "base_asset": "TUT",
-      "detail": "24h quote volume 349798.28 < 1000000.00",
+      "detail": "24h quote volume 354137.76 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TUTUSDT",
@@ -2724,7 +4017,7 @@
     },
     {
       "base_asset": "TWT",
-      "detail": "24h quote volume 992263.70 < 1000000.00",
+      "detail": "24h quote volume 993366.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "TWTUSDT",
@@ -2732,31 +4025,15 @@
     },
     {
       "base_asset": "UMA",
-      "detail": "24h quote volume 131588.48 < 1000000.00",
+      "detail": "24h quote volume 131291.96 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "UMAUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "USDE",
-      "detail": "24h quote volume 164923.39 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "USDEUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
-      "base_asset": "USDS",
-      "detail": "24h quote volume 185296.10 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "USDSUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "USUAL",
-      "detail": "24h quote volume 163297.14 < 1000000.00",
+      "detail": "24h quote volume 163536.36 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "USUALUSDT",
@@ -2764,7 +4041,7 @@
     },
     {
       "base_asset": "VELODROME",
-      "detail": "24h quote volume 66112.09 < 1000000.00",
+      "detail": "24h quote volume 72193.07 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "VELODROMEUSDT",
@@ -2772,7 +4049,7 @@
     },
     {
       "base_asset": "VET",
-      "detail": "24h quote volume 329438.94 < 1000000.00",
+      "detail": "24h quote volume 320093.34 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "VETUSDT",
@@ -2780,7 +4057,7 @@
     },
     {
       "base_asset": "VIC",
-      "detail": "24h quote volume 147907.83 < 1000000.00",
+      "detail": "24h quote volume 155327.68 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "VICUSDT",
@@ -2788,7 +4065,7 @@
     },
     {
       "base_asset": "VTHO",
-      "detail": "24h quote volume 43825.65 < 1000000.00",
+      "detail": "24h quote volume 42743.92 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "VTHOUSDT",
@@ -2796,7 +4073,7 @@
     },
     {
       "base_asset": "WAL",
-      "detail": "24h quote volume 77790.70 < 1000000.00",
+      "detail": "24h quote volume 80025.08 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WALUSDT",
@@ -2804,7 +4081,7 @@
     },
     {
       "base_asset": "WAXP",
-      "detail": "24h quote volume 33874.60 < 1000000.00",
+      "detail": "24h quote volume 41806.50 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WAXPUSDT",
@@ -2812,7 +4089,7 @@
     },
     {
       "base_asset": "WBETH",
-      "detail": "24h quote volume 195863.05 < 1000000.00",
+      "detail": "24h quote volume 367966.31 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WBETHUSDT",
@@ -2820,7 +4097,7 @@
     },
     {
       "base_asset": "WBTC",
-      "detail": "24h quote volume 887519.35 < 1000000.00",
+      "detail": "24h quote volume 987406.27 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WBTCUSDT",
@@ -2828,7 +4105,7 @@
     },
     {
       "base_asset": "WCT",
-      "detail": "24h quote volume 367537.99 < 1000000.00",
+      "detail": "24h quote volume 384402.17 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WCTUSDT",
@@ -2836,7 +4113,7 @@
     },
     {
       "base_asset": "WDCB",
-      "detail": "24h quote volume 28158.63 < 1000000.00",
+      "detail": "24h quote volume 28788.37 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WDCBUSDT",
@@ -2844,7 +4121,7 @@
     },
     {
       "base_asset": "WIN",
-      "detail": "24h quote volume 199891.25 < 1000000.00",
+      "detail": "24h quote volume 197347.64 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WINUSDT",
@@ -2852,7 +4129,7 @@
     },
     {
       "base_asset": "WOO",
-      "detail": "24h quote volume 253061.06 < 1000000.00",
+      "detail": "24h quote volume 256196.04 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WOOUSDT",
@@ -2860,7 +4137,7 @@
     },
     {
       "base_asset": "W",
-      "detail": "24h quote volume 718077.13 < 1000000.00",
+      "detail": "24h quote volume 724654.53 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "WUSDT",
@@ -2868,7 +4145,7 @@
     },
     {
       "base_asset": "XAI",
-      "detail": "24h quote volume 162987.70 < 1000000.00",
+      "detail": "24h quote volume 166985.51 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "XAIUSDT",
@@ -2876,7 +4153,7 @@
     },
     {
       "base_asset": "XEC",
-      "detail": "24h quote volume 680565.61 < 1000000.00",
+      "detail": "24h quote volume 668149.80 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "XECUSDT",
@@ -2884,7 +4161,7 @@
     },
     {
       "base_asset": "XNO",
-      "detail": "24h quote volume 105622.49 < 1000000.00",
+      "detail": "24h quote volume 130337.28 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "XNOUSDT",
@@ -2892,23 +4169,15 @@
     },
     {
       "base_asset": "XTZ",
-      "detail": "24h quote volume 300049.05 < 1000000.00",
+      "detail": "24h quote volume 319922.82 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "XTZUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
-      "base_asset": "XUSD",
-      "detail": "24h quote volume 558216.63 < 1000000.00",
-      "quote_asset": "USDT",
-      "reason": "BELOW_VOLUME_FLOOR",
-      "symbol": "XUSDUSDT",
-      "taxonomy_version": "2026-07-26.1"
-    },
-    {
       "base_asset": "XVG",
-      "detail": "24h quote volume 130840.64 < 1000000.00",
+      "detail": "24h quote volume 136605.71 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "XVGUSDT",
@@ -2916,7 +4185,7 @@
     },
     {
       "base_asset": "XVS",
-      "detail": "24h quote volume 185109.73 < 1000000.00",
+      "detail": "24h quote volume 185801.70 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "XVSUSDT",
@@ -2924,7 +4193,7 @@
     },
     {
       "base_asset": "YB",
-      "detail": "24h quote volume 396105.04 < 1000000.00",
+      "detail": "24h quote volume 405497.98 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "YBUSDT",
@@ -2932,7 +4201,7 @@
     },
     {
       "base_asset": "YFI",
-      "detail": "24h quote volume 153500.45 < 1000000.00",
+      "detail": "24h quote volume 158465.10 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "YFIUSDT",
@@ -2940,7 +4209,7 @@
     },
     {
       "base_asset": "ZEN",
-      "detail": "24h quote volume 482713.84 < 1000000.00",
+      "detail": "24h quote volume 487666.39 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZENUSDT",
@@ -2948,7 +4217,7 @@
     },
     {
       "base_asset": "ZIL",
-      "detail": "24h quote volume 242777.77 < 1000000.00",
+      "detail": "24h quote volume 248439.47 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZILUSDT",
@@ -2956,7 +4225,7 @@
     },
     {
       "base_asset": "ZKC",
-      "detail": "24h quote volume 517112.17 < 1000000.00",
+      "detail": "24h quote volume 521472.47 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZKCUSDT",
@@ -2964,7 +4233,7 @@
     },
     {
       "base_asset": "ZKP",
-      "detail": "24h quote volume 168307.41 < 1000000.00",
+      "detail": "24h quote volume 174568.74 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZKPUSDT",
@@ -2972,7 +4241,7 @@
     },
     {
       "base_asset": "ZK",
-      "detail": "24h quote volume 508530.82 < 1000000.00",
+      "detail": "24h quote volume 537368.76 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZKUSDT",
@@ -2980,7 +4249,7 @@
     },
     {
       "base_asset": "ZRO",
-      "detail": "24h quote volume 780488.46 < 1000000.00",
+      "detail": "24h quote volume 770152.66 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZROUSDT",
@@ -2988,7 +4257,7 @@
     },
     {
       "base_asset": "ZRX",
-      "detail": "24h quote volume 14992.27 < 1000000.00",
+      "detail": "24h quote volume 16136.06 < 1000000.00",
       "quote_asset": "USDT",
       "reason": "BELOW_VOLUME_FLOOR",
       "symbol": "ZRXUSDT",
@@ -28523,6 +29792,14 @@
       "taxonomy_version": "2026-07-26.1"
     },
     {
+      "base_asset": "BFUSD",
+      "detail": "BFUSD is classified STABLECOIN_BASE",
+      "quote_asset": "USDT",
+      "reason": "STABLECOIN_BASE",
+      "symbol": "BFUSDUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
       "base_asset": "EURI",
       "detail": "EURI is classified STABLECOIN_BASE",
       "quote_asset": "USDT",
@@ -28536,6 +29813,14 @@
       "quote_asset": "USDT",
       "reason": "STABLECOIN_BASE",
       "symbol": "FDUSDUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "FRAX",
+      "detail": "FRAX is classified STABLECOIN_BASE",
+      "quote_asset": "USDT",
+      "reason": "STABLECOIN_BASE",
+      "symbol": "FRAXUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
@@ -28563,6 +29848,14 @@
       "taxonomy_version": "2026-07-26.1"
     },
     {
+      "base_asset": "USDE",
+      "detail": "USDE is classified STABLECOIN_BASE",
+      "quote_asset": "USDT",
+      "reason": "STABLECOIN_BASE",
+      "symbol": "USDEUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
       "base_asset": "USDP",
       "detail": "USDP is classified STABLECOIN_BASE",
       "quote_asset": "USDT",
@@ -28571,11 +29864,27 @@
       "taxonomy_version": "2026-07-26.1"
     },
     {
+      "base_asset": "USDS",
+      "detail": "USDS is classified STABLECOIN_BASE",
+      "quote_asset": "USDT",
+      "reason": "STABLECOIN_BASE",
+      "symbol": "USDSUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
       "base_asset": "USTC",
       "detail": "USTC is classified STABLECOIN_BASE",
       "quote_asset": "USDT",
       "reason": "STABLECOIN_BASE",
       "symbol": "USTCUSDT",
+      "taxonomy_version": "2026-07-26.1"
+    },
+    {
+      "base_asset": "XUSD",
+      "detail": "XUSD is classified STABLECOIN_BASE",
+      "quote_asset": "USDT",
+      "reason": "STABLECOIN_BASE",
+      "symbol": "XUSDUSDT",
       "taxonomy_version": "2026-07-26.1"
     },
     {
@@ -28599,135 +29908,95 @@
   "experiment_id": "DATA-008-BINANCE-UNIVERSE-EXPANSION",
   "failed_acquisition_count": 0,
   "failed_symbols": [],
-  "generated_at": "2026-07-26T22:25:51.690087+00:00",
+  "generated_at": "2026-07-26T23:20:59.820967+00:00",
   "live_eligible": false,
+  "logical_union_symbol_count": 28,
   "pinned_end_time": "2026-07-25T00:00:00+00:00",
   "prior_dataset_reconciliation": {
     "prior_dataset_id": null,
     "state": "none"
   },
   "rate_limit_incidents": [],
-  "raw_dependency_count": 17,
+  "raw_dependency_count": 40,
   "retry_count": 0,
+  "rows_fetched": 6625,
   "selected_symbols": [
     {
-      "base_asset": "BTC",
+      "base_asset": "RE",
       "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 473135398.46183,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "BTCUSDT",
-        "trade_count": 1005452,
-        "window": "24h"
+        "observed_at": "2026-07-26T23:20:52.948017+00:00",
+        "quote_volume": 2375271459.9819098,
+        "raw_object_id": "raw_6d02fce698b3293fce59649273e2fe6a4b4c7301cc856335fcd47f85a967ef40",
+        "symbol": "REUSDT",
+        "trade_count": 0,
+        "window": "30d"
       },
       "quote_asset": "USDT",
       "rank": 1,
-      "symbol": "BTCUSDT"
+      "symbol": "REUSDT"
     },
     {
-      "base_asset": "ETH",
+      "base_asset": "ZEC",
       "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 224000855.074472,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "ETHUSDT",
-        "trade_count": 1261821,
-        "window": "24h"
+        "observed_at": "2026-07-26T23:20:46.784610+00:00",
+        "quote_volume": 2339760041.94329,
+        "raw_object_id": "raw_b19e44de79347bb27c08b83024c3a7b9e967a7e89825be0622f18995941197f2",
+        "symbol": "ZECUSDT",
+        "trade_count": 0,
+        "window": "30d"
       },
       "quote_asset": "USDT",
       "rank": 2,
-      "symbol": "ETHUSDT"
+      "symbol": "ZECUSDT"
+    },
+    {
+      "base_asset": "BNB",
+      "evidence": {
+        "observed_at": "2026-07-26T23:20:45.964249+00:00",
+        "quote_volume": 1719480859.4306896,
+        "raw_object_id": "raw_9277307778c6e37dd391c313c092127db73e4888b8859de8543e6c990c40bafb",
+        "symbol": "BNBUSDT",
+        "trade_count": 0,
+        "window": "30d"
+      },
+      "quote_asset": "USDT",
+      "rank": 3,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "base_asset": "RLUSD",
+      "evidence": {
+        "observed_at": "2026-07-26T23:20:48.018276+00:00",
+        "quote_volume": 1100276964.9976,
+        "raw_object_id": "raw_32d81740d862d6d526935c13fd5a13c752ae78fd48e50cc3de45105b19943f88",
+        "symbol": "RLUSDUSDT",
+        "trade_count": 0,
+        "window": "30d"
+      },
+      "quote_asset": "USDT",
+      "rank": 4,
+      "symbol": "RLUSDUSDT"
     },
     {
       "base_asset": "DEXE",
       "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 88462179.3935,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
+        "observed_at": "2026-07-26T23:20:44.325112+00:00",
+        "quote_volume": 833567898.99107,
+        "raw_object_id": "raw_cb24f3c5b590bbb595f5d946d82c7447b367fbd88f4d0c4ed166ec1bf6d6ed95",
         "symbol": "DEXEUSDT",
-        "trade_count": 1192565,
-        "window": "24h"
-      },
-      "quote_asset": "USDT",
-      "rank": 3,
-      "symbol": "DEXEUSDT"
-    },
-    {
-      "base_asset": "SOL",
-      "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 57282595.88995,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "SOLUSDT",
-        "trade_count": 249528,
-        "window": "24h"
-      },
-      "quote_asset": "USDT",
-      "rank": 4,
-      "symbol": "SOLUSDT"
-    },
-    {
-      "base_asset": "VANA",
-      "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 53620935.45168,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "VANAUSDT",
-        "trade_count": 257679,
-        "window": "24h"
+        "trade_count": 0,
+        "window": "30d"
       },
       "quote_asset": "USDT",
       "rank": 5,
-      "symbol": "VANAUSDT"
-    },
-    {
-      "base_asset": "EUL",
-      "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 46303374.05037,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "EULUSDT",
-        "trade_count": 741048,
-        "window": "24h"
-      },
-      "quote_asset": "USDT",
-      "rank": 6,
-      "symbol": "EULUSDT"
-    },
-    {
-      "base_asset": "SHIB",
-      "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 40916337.44676268,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "SHIBUSDT",
-        "trade_count": 324089,
-        "window": "24h"
-      },
-      "quote_asset": "USDT",
-      "rank": 7,
-      "symbol": "SHIBUSDT"
-    },
-    {
-      "base_asset": "DOGE",
-      "evidence": {
-        "observed_at": "2026-07-26T22:25:45.371393+00:00",
-        "quote_volume": 36511815.46872,
-        "raw_object_id": "raw_abe72a768dd3d7c813c507f0e7dd4364003177481a244f058f398840dcc82991",
-        "symbol": "DOGEUSDT",
-        "trade_count": 330533,
-        "window": "24h"
-      },
-      "quote_asset": "USDT",
-      "rank": 8,
-      "symbol": "DOGEUSDT"
+      "symbol": "DEXEUSDT"
     }
   ],
-  "snapshot_raw_object_count": 7,
-  "snapshot_row_count": 70,
+  "snapshot_raw_object_count": 8,
+  "snapshot_row_count": 6625,
   "snapshot_span": {
     "end": "2026-07-25T00:00:00+00:00",
-    "start": "2026-07-16T00:00:00+00:00"
+    "start": "2020-01-01T00:00:00+00:00"
   },
   "symbols_by_state": {
     "DEFERRED": [
@@ -28740,7 +30009,18 @@
         "span_end": null,
         "span_start": null,
         "state": "DEFERRED",
-        "symbol": "EULUSDT"
+        "symbol": "REUSDT"
+      },
+      {
+        "error": "INSUFFICIENT_HISTORY",
+        "missing_days": [],
+        "requested_end": null,
+        "requested_start": null,
+        "row_count": 0,
+        "span_end": null,
+        "span_start": null,
+        "state": "DEFERRED",
+        "symbol": "RLUSDUSDT"
       }
     ],
     "PUBLISHABLE": [
@@ -28748,91 +30028,44 @@
         "error": null,
         "missing_days": [],
         "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
+        "requested_start": "2020-01-01T00:00:00+00:00",
+        "row_count": 2398,
         "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
+        "span_start": "2020-01-01T00:00:00+00:00",
         "state": "PUBLISHABLE",
-        "symbol": "BTCUSDT"
+        "symbol": "ZECUSDT"
       },
       {
         "error": null,
         "missing_days": [],
         "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
+        "requested_start": "2020-01-01T00:00:00+00:00",
+        "row_count": 2398,
         "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
+        "span_start": "2020-01-01T00:00:00+00:00",
         "state": "PUBLISHABLE",
-        "symbol": "ETHUSDT"
+        "symbol": "BNBUSDT"
       },
       {
         "error": null,
         "missing_days": [],
         "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
+        "requested_start": "2021-07-23T00:00:00+00:00",
+        "row_count": 1829,
         "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
+        "span_start": "2021-07-23T00:00:00+00:00",
         "state": "PUBLISHABLE",
         "symbol": "DEXEUSDT"
-      },
-      {
-        "error": null,
-        "missing_days": [],
-        "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
-        "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
-        "state": "PUBLISHABLE",
-        "symbol": "SOLUSDT"
-      },
-      {
-        "error": null,
-        "missing_days": [],
-        "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
-        "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
-        "state": "PUBLISHABLE",
-        "symbol": "VANAUSDT"
-      },
-      {
-        "error": null,
-        "missing_days": [],
-        "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
-        "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
-        "state": "PUBLISHABLE",
-        "symbol": "SHIBUSDT"
-      },
-      {
-        "error": null,
-        "missing_days": [],
-        "requested_end": "2026-07-25T00:00:00+00:00",
-        "requested_start": "2026-07-16T00:00:00+00:00",
-        "row_count": 10,
-        "span_end": "2026-07-25T00:00:00+00:00",
-        "span_start": "2026-07-16T00:00:00+00:00",
-        "state": "PUBLISHABLE",
-        "symbol": "DOGEUSDT"
       }
     ]
   },
-  "total_rows_added": 70,
-  "volume_window": "24h",
+  "total_panel_symbol_count": 28,
+  "total_rows_added": 6625,
+  "volume_window": "30d",
   "watermarks_after": {
-    "BTCUSDT": "2026-07-25T00:00:00+00:00",
+    "BNBUSDT": "2026-07-25T00:00:00+00:00",
     "DEXEUSDT": "2026-07-25T00:00:00+00:00",
-    "DOGEUSDT": "2026-07-25T00:00:00+00:00",
-    "ETHUSDT": "2026-07-25T00:00:00+00:00",
-    "SHIBUSDT": "2026-07-25T00:00:00+00:00",
-    "SOLUSDT": "2026-07-25T00:00:00+00:00",
-    "VANAUSDT": "2026-07-25T00:00:00+00:00"
+    "ZECUSDT": "2026-07-25T00:00:00+00:00"
   },
   "watermarks_before": {}
 }

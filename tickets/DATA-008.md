@@ -1,10 +1,12 @@
 # DATA-008 — Free CEX Universe Expansion (Binance-first)
 
 **Priority:** P1  
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** DATA-006 (ACCEPTED), DATA-007 (ACCEPTED)  
 **Layer:** acquisition / bars  
-**Architecture:** free Binance REST + watermarks. **No LIVE.**
+**Architecture:** free Binance REST + watermarks; additive
+`binance_spot_daily_bars` anchored to immutable DATA-006 `market_bars`. No
+`market_bars` publisher change. **No LIVE.**
 
 ## Objective
 
@@ -14,7 +16,11 @@ Expand spot bar universe/history under **free** Binance rate limits using DATA-0
 
 1. **Symbol priority list** from liquidity/volume screen (top N by 30d volume on Binance, configurable). Implement as a sort + take, not a manual list.
 2. **Incremental backfill** with watermarks per symbol. Resume-safe. Multi-day safe at the estimated 20k symbols/day rate.
-3. **Extend history** where DATA-006 stopped (23 symbols). Add additional symbols from the priority list up to a reasonable free-tier boundary. Optionally deepen major symbols back to 2017 if time and rate limit allow.
+3. **Extend history** where DATA-006 stopped (23 symbols). Publish additional symbols
+   from the priority list in the separate additive dataset, declare the accepted
+   DATA-006 dataset as its base-panel dependency, and reconcile the logical union for
+   consumers. Do not duplicate the 23 base symbols or allocate unmapped instruments.
+   Optionally deepen major symbols back to 2017 if time and rate limit allow.
 4. **Report** `research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json` with:
    - symbols added and their span
    - rate-limit incidents (429s, backoffs)

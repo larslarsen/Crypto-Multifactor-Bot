@@ -37,6 +37,7 @@ from cryptofactors.acquisition.binance_snapshot import (
 )
 from cryptofactors.acquisition.binance_universe import (
     EXCLUSION_TAXONOMY_VERSION,
+    PREFILTER_WINDOW,
     VOLUME_WINDOW,
     BinanceUniverseAcquirer,
     BinanceUniverseError,
@@ -79,7 +80,7 @@ def kline(index: int, *, close: float = 100.0) -> list[Any]:
     open_ms = int(day(index).timestamp() * 1000)
     return [
         open_ms, str(close), str(close + 1), str(close - 1), str(close), "10.5",
-        open_ms + 86_399_999, "1050.0", 42,
+        open_ms + 86_399_999, "1050000.0", 42,
     ]
 
 
@@ -132,6 +133,7 @@ class MockBinance:
         klines_status_by_symbol: dict[str, int] | None = None,
         klines_transport_error_for: set[str] | None = None,
         history_status_by_symbol: dict[str, int] | None = None,
+        volume_status_by_symbol: dict[str, int] | None = None,
         exchange_info_status: int = 200,
         ticker_status: int = 200,
         default_volume: float = 5_000_000.0,
@@ -145,6 +147,7 @@ class MockBinance:
         self.klines_status_by_symbol = klines_status_by_symbol or {}
         self.klines_transport_error_for = klines_transport_error_for or set()
         self.history_status_by_symbol = history_status_by_symbol or {}
+        self.volume_status_by_symbol = volume_status_by_symbol or {}
         self.exchange_info_status = exchange_info_status
         self.ticker_status = ticker_status
         self.default_volume = default_volume
@@ -182,6 +185,12 @@ class MockBinance:
             symbol = params.get("symbol", "")
             # startTime=0 is the history-eligibility probe, not the bar fetch.
             is_probe = params.get("startTime") == "0"
+            is_volume = params.get("limit") == "30"
+            if is_volume:
+                status = self.volume_status_by_symbol.get(symbol, 200)
+                if status != 200:
+                    return self._respond(status, {"code": -1})
+                return self._respond(200, [kline(i) for i in range(5)])
             if is_probe:
                 status = self.history_status_by_symbol.get(symbol, 200)
                 if status != 200:
@@ -451,14 +460,17 @@ class TestDeterministicRanking:
         result = selection_for(DEFAULT_SYMBOLS)
 
         for ranked in result.ranked:
-            assert ranked.evidence.window == VOLUME_WINDOW == "24h"
+            assert ranked.evidence.window == PREFILTER_WINDOW == "24h"
             assert ranked.evidence.observed_at == DAY0
             assert ranked.evidence.raw_object_id == "raw_b"
 
-    def test_the_window_is_not_described_as_thirty_days(self) -> None:
-        """The ranking evidence is a 24h rolling ticker, and says so."""
-        assert VOLUME_WINDOW == "24h"
-        assert "30" not in SelectionConfig().as_dict()["volume_window"]
+    def test_ranking_uses_the_thirty_day_window_and_prefilter_is_labelled_separately(
+        self,
+    ) -> None:
+        """The ticket ranks on 30d; the 24h ticker only narrows the candidate field."""
+        assert VOLUME_WINDOW == "30d"
+        assert PREFILTER_WINDOW == "24h"
+        assert SelectionConfig().as_dict()["volume_window"] == "30d"
 
     def test_top_n_truncates_after_ranking(self) -> None:
         result = selection_for(
@@ -1060,7 +1072,7 @@ class TestRunnerPublication:
         assert report["failed_acquisition_count"] == 0
         assert report["rate_limit_incidents"] == []
         assert report["exclusion_taxonomy_version"] == EXCLUSION_TAXONOMY_VERSION
-        assert report["volume_window"] == "24h"
+        assert report["volume_window"] == "30d"
         assert report["snapshot_span"]["start"] == day(0).isoformat()
 
     def test_the_run_uses_a_real_commit_and_config_hash(
@@ -1078,3 +1090,150 @@ class TestRunnerPublication:
         assert row is not None
         assert row["code_commit"] == "0" * 40
         assert len(row["config_sha256"]) == 64
+
+
+class TestReview0241Corrections:
+    """Minimal cover for the patched behaviours; Jr owns the wider suite."""
+
+    @pytest.mark.parametrize("base", ["BFUSD", "FRAX", "USDE", "USDS", "XUSD"])
+    def test_observed_stablecoin_bases_are_now_classified(self, base: str) -> None:
+        assert classify_base_asset(base) is ExclusionReason.STABLECOIN_BASE
+
+    def test_candidates_below_top_n_get_a_terminal_reason(self) -> None:
+        result = selection_for(
+            DEFAULT_SYMBOLS,
+            volumes={"BTCUSDT": 9e9, "ETHUSDT": 5e9, "SUPERUSDT": 2e9, "JUPUSDT": 1e9},
+            config=SelectionConfig(top_n=2),
+        )
+
+        below = {e.symbol: e.reason for e in result.excluded}
+        assert below["SUPERUSDT"] is ExclusionReason.BELOW_TOP_N
+        assert below["JUPUSDT"] is ExclusionReason.BELOW_TOP_N
+        assert len(result.symbols) + len(result.excluded) == len(DEFAULT_SYMBOLS)
+
+    def test_klines_are_paginated_until_the_range_is_complete(self, store: Store) -> None:
+        """A single 1000-row response cannot cover a multi-year backfill."""
+        end = DAY0 + timedelta(days=2499)
+        node = MockBinance()
+        node.klines_by_symbol = {}
+        pages: list[int] = []
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            params = dict(request.url.params)
+            if "klines" in str(request.url) and params.get("limit") == "1000":
+                start_ms = int(params["startTime"])
+                first = (start_ms - int(DAY0.timestamp() * 1000)) // 86_400_000
+                rows = [kline(first + i) for i in range(min(1000, 2500 - first))]
+                pages.append(len(rows))
+                return node._respond(200, rows)
+            return original(request)
+
+        acquirer = BinanceBarAcquirer(
+            acquirer=RawHttpAcquirer(
+                raw_writer=store.writer,
+                client=REAL_HTTPX_CLIENT(transport=httpx.MockTransport(handler)),
+                log=AcquisitionLog(),
+            ),
+            base_url="https://binance.test",
+        )
+        result = acquirer.acquire(symbol="BTCUSDT", start_time=DAY0, end_time=end)
+
+        assert len(pages) == 3, "2500 days needs three pages"
+        assert result.state is SymbolState.PUBLISHABLE
+        assert len(result.bars) == 2500
+
+    def test_an_unmeasurable_candidate_is_excluded_with_a_reason(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockBinance(volume_status_by_symbol={"BTCUSDT": 500}),
+        )
+
+        assert code == 0
+        excluded = {e["symbol"]: e["reason"] for e in report["excluded_symbols"]}
+        assert excluded["BTCUSDT"] == "NO_VOLUME_EVIDENCE"
+
+    def test_the_report_uses_net_rows_and_global_spans(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch, end_time=day(2),
+            node=MockBinance(klines_by_symbol={
+                s["symbol"]: [kline(i) for i in range(3)] for s in DEFAULT_SYMBOLS
+            }),
+        )
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch, end_time=day(4),
+            node=MockBinance(klines_by_symbol={
+                s["symbol"]: [kline(3), kline(4)] for s in DEFAULT_SYMBOLS
+            }),
+        )
+
+        assert report["total_rows_added"] == 8, "net new rows after merge, not rows fetched"
+        assert report["snapshot_span"]["start"] == day(0).isoformat()
+        assert report["snapshot_span"]["end"] == day(4).isoformat()
+
+    def test_the_budget_defers_symbols_and_resumes_next_run(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Capacity limits must not silently shrink the requested panel."""
+        from scripts.research import binance_universe_expansion as runner
+
+        node = MockBinance()
+        node.install(monkeypatch)
+        report_path = tmp_path / "r.json"
+        argv = [
+            "x", "--end-time", END_TIME.isoformat(), "--default-start", DAY0.isoformat(),
+            "--db-path", str(store.db), "--raw-root", str(store.raw_root),
+            "--store-root", str(store.store_root),
+            "--watermark-path", str(store.watermark_path),
+            "--report-path", str(report_path), "--top-n", "10",
+            "--min-history-days", "365", "--base-url", "https://binance.test",
+            "--code-commit", "0" * 40, "--max-attempts", "1", "--backoff-seconds", "0",
+            "--symbols-per-day", "2",
+        ]
+        monkeypatch.setattr(sys, "argv", argv)
+        assert runner.main() == 0
+        first = json.loads(report_path.read_text())
+
+        assert first["budget"] == {"day": END_TIME.date().isoformat(), "start": 0,
+                                   "processed": 2, "limit": 2}
+        deferred = [s["symbol"] for s in first["symbols_by_state"].get("BUDGET_DEFERRED", [])]
+        assert len(deferred) == 2, "over-budget symbols are recorded, not dropped"
+
+        monkeypatch.setattr(sys, "argv", argv)
+        runner.main()
+        second = json.loads(report_path.read_text())
+        assert second["budget"]["start"] == 2, "the cursor resumes where it stopped"
+
+    def test_the_base_panel_is_declared_and_reconciled(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch
+        )
+
+        # No market_bars in this fresh store, so the base id is absent but the union
+        # accounting and disjointness must still be reported.
+        assert "base_panel_dataset_id" in report
+        assert report["base_addition_symbols_disjoint"] is True
+        assert report["logical_union_symbol_count"] == len(report["added_symbols"])
+        assert report["additive_dataset_id"] == report["canonical_dataset_id"]
+
+    def test_backoff_durations_are_recorded(self, store: Store) -> None:
+        node = MockBinance(klines_status=429)
+        slept: list[float] = []
+        acquirer = make_acquirer(
+            store, node, max_attempts=3, backoff_seconds=2.0, sleep=slept.append
+        )
+        BinanceBarAcquirer(acquirer=acquirer, base_url="https://binance.test").acquire(
+            symbol="BTCUSDT", start_time=DAY0, end_time=END_TIME
+        )
+
+        waits = [o.backoff_seconds for o in acquirer.log.outcomes]
+        assert waits == [0.0, 2.0, 4.0]
+        assert [i["backoff_seconds"] for i in
+                [o.as_dict() for o in acquirer.log.rate_limit_incidents]] == [0.0, 2.0, 4.0]
+

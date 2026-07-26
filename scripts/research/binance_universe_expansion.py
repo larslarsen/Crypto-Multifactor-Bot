@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -42,9 +43,13 @@ from cryptofactors.acquisition.binance_universe import (
     BINANCE_BASE_URL,
     EXCLUSION_TAXONOMY_VERSION,
     VOLUME_WINDOW,
+    RANKING_DAYS,
     BinanceUniverseAcquirer,
+    Exclusion,
+    ExclusionReason,
     HistoryEligibility,
     SelectionConfig,
+    load_covered_symbols,
 )
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.models import (
@@ -73,6 +78,7 @@ from cryptofactors.ingest.raw.writer import RawObjectWriter
 from cryptofactors.ingest.raw_http import RawHttpAcquirer
 
 DATASET_TYPE = "binance_spot_daily_bars"
+BASE_PANEL_TYPE = "market_bars"
 RELATIVE_PATH = "cex/binance_spot_daily_bars/bars.parquet"
 REPORT_PATH = Path("research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json")
 
@@ -172,6 +178,10 @@ def build_report(
     watermarks_after: Mapping[str, str],
     snapshot: Sequence[KlineBar],
     dataset_id: str | None,
+    net_rows_added: int = 0,
+    covered_symbols: set[str] | None = None,
+    base_panel_dataset_id: str | None = None,
+    budget: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     deferred = [item for item in eligibility if not item.eligible]
     by_state: dict[str, list[dict[str, Any]]] = {}
@@ -187,6 +197,19 @@ def build_report(
         "config_fingerprint": config.fingerprint(),
         "volume_window": VOLUME_WINDOW,
         "exclusion_taxonomy_version": EXCLUSION_TAXONOMY_VERSION,
+        "base_panel_dataset_id": base_panel_dataset_id,
+        "additive_dataset_id": dataset_id,
+        "base_addition_symbols_disjoint": not (
+            set(covered_symbols or ()) & {item.symbol for item in selection.ranked}
+        ),
+        "logical_union_symbol_count": len(
+            set(covered_symbols or ()) | {item.symbol for item in selection.ranked}
+        ),
+        "budget": dict(budget or {}),
+        "base_panel_symbols": sorted(covered_symbols or ()),
+        "base_panel_symbol_count": len(covered_symbols or ()),
+        "added_symbols": [item.symbol for item in selection.ranked],
+        "total_panel_symbol_count": len(covered_symbols or ()) + len(selection.ranked),
         "selected_symbols": [item.as_dict() for item in selection.ranked],
         "excluded_symbols": [item.as_dict() for item in selection.excluded],
         "deferred_symbols": [item.as_dict() for item in deferred],
@@ -207,11 +230,16 @@ def build_report(
         "rate_limit_incidents": [item.as_dict() for item in log.rate_limit_incidents],
         "watermarks_before": dict(watermarks_before),
         "watermarks_after": dict(watermarks_after),
-        "total_rows_added": sum(len(a.bars) for a in acquisitions if a.usable),
+        "rows_fetched": sum(len(a.bars) for a in acquisitions if a.usable),
+        "total_rows_added": net_rows_added,
         "snapshot_row_count": len(snapshot),
         "snapshot_span": {
-            "start": snapshot[0].open_time.isoformat() if snapshot else None,
-            "end": snapshot[-1].open_time.isoformat() if snapshot else None,
+            # Global min/max: the snapshot is symbol-major, so first/last rows are not
+            # the earliest and latest bars.
+            "start": min((b.open_time for b in snapshot), default=None) and
+                     min(b.open_time for b in snapshot).isoformat(),
+            "end": max((b.open_time for b in snapshot), default=None) and
+                   max(b.open_time for b in snapshot).isoformat(),
         },
         "prior_dataset_reconciliation": dict(prior_reconciliation),
         "catalog_reconciliation": dict(reconciliation),
@@ -235,6 +263,8 @@ def main() -> int:
     parser.add_argument("--watermark-path", type=Path, default=Path("data/data008_watermarks.json"))
     parser.add_argument("--report-path", type=Path, default=REPORT_PATH)
     parser.add_argument("--top-n", type=int, default=10)
+    parser.add_argument("--prefilter-top-n", type=int, default=60)
+    parser.add_argument("--symbols-per-day", type=int, default=20_000)
     parser.add_argument("--min-quote-volume", type=float, default=None)
     parser.add_argument("--min-history-days", type=int, default=None)
     parser.add_argument("--base-url", default=BINANCE_BASE_URL)
@@ -257,6 +287,14 @@ def main() -> int:
     code_commit = resolve_code_commit(args.code_commit)
 
     apply_migrations(args.db_path)
+    base_catalog = SqliteDatasetCatalog(args.db_path)
+    try:
+        base_panel_dataset_id = base_catalog.resolve_latest_by_type(BASE_PANEL_TYPE)
+    finally:
+        base_catalog.close()
+    # The accepted panel's symbols are excluded from the added-symbol take; their
+    # history is retained by the panel itself, not re-fetched here.
+    covered_symbols = load_covered_symbols(args.db_path)
     watermark_store = WatermarkStore(args.watermark_path)
     watermarks_before = watermark_store.load()
 
@@ -277,12 +315,50 @@ def main() -> int:
 
         from cryptofactors.acquisition.binance_universe import select_symbols
 
+        prefilter = select_symbols(
+            discovered=discovered, evidence=evidence,
+            config=replace(config, top_n=args.prefilter_top_n),
+            already_covered=covered_symbols,
+        )
+        # The ticket ranks on 30-day volume; the 24h ticker only narrows the field.
+        by_symbol = {s.symbol: s for s in discovered}
+        measured: dict[str, Any] = {}
+        unmeasured: list[Any] = []
+        for ranked in prefilter.ranked:
+            volume = universe.fetch_trailing_volume(ranked.symbol, end_time=end_time)
+            if volume is None:
+                unmeasured.append(ranked)
+            else:
+                measured[ranked.symbol] = volume
         selection = select_symbols(
-            discovered=discovered, evidence=evidence, config=config,
+            discovered=[by_symbol[s] for s in measured],
+            evidence=measured, config=config, already_covered=covered_symbols,
+        )
+        # Everything the prefilter dropped keeps its reasoned terminal state.
+        selection.excluded.extend(prefilter.excluded)
+        selection.excluded.extend(
+            Exclusion(
+                symbol=item.symbol, base_asset=item.base_asset, quote_asset=item.quote_asset,
+                reason=ExclusionReason.NO_VOLUME_EVIDENCE,
+                detail=f"trailing {RANKING_DAYS}d volume could not be measured",
+            )
+            for item in unmeasured
         )
 
         bars_acquirer = BinanceBarAcquirer(acquirer=raw_acquirer, base_url=args.base_url)
+        day_key = end_time.date().isoformat()
+        processed = watermark_store.load_budget(day_key=day_key)
+        budget_start = processed
         for ranked in selection.ranked:
+            if processed >= args.symbols_per_day:
+                # Capacity reached: recorded, not dropped, so the next run continues
+                # from here rather than silently shrinking the requested panel.
+                acquisitions.append(SymbolAcquisition(
+                    symbol=ranked.symbol, state=SymbolState.BUDGET_DEFERRED,
+                    error=f"daily symbol budget {args.symbols_per_day} reached",
+                ))
+                continue
+            processed += 1
             verdict = universe.fetch_history_eligibility(
                 ranked.symbol, as_of=end_time, min_history_days=config.min_history_days
             )
@@ -295,10 +371,17 @@ def main() -> int:
                     error=None if verdict.reason is None else verdict.reason.value,
                 ))
                 continue
+            # A symbol cannot have bars before it listed, so the effective start is
+            # the later of the requested start and its first observed bar. Demanding
+            # pre-listing days would otherwise register as a leading coverage gap.
+            listed_at = verdict.first_bar_open_time or default_start
             acquisitions.append(bars_acquirer.acquire(
                 symbol=ranked.symbol,
-                start_time=resume_start(
-                    watermarks_before, symbol=ranked.symbol, default_start=default_start
+                start_time=max(
+                    resume_start(
+                        watermarks_before, symbol=ranked.symbol, default_start=default_start
+                    ),
+                    listed_at,
                 ),
                 end_time=end_time,
             ))
@@ -334,14 +417,20 @@ def main() -> int:
                 config=config, end_time=end_time, default_start=default_start,
                 selection=selection, eligibility=eligibility, acquisitions=acquisitions,
                 blocked=blocked, log=log, prior_reconciliation=prior_reconciliation,
-                reconciliation={"state": state}, watermarks_before=watermarks_before,
+                reconciliation={"state": state}, covered_symbols=covered_symbols,
+                base_panel_dataset_id=base_panel_dataset_id,
+                budget={"day": day_key, "start": budget_start, "processed": processed,
+                        "limit": args.symbols_per_day},
+                watermarks_before=watermarks_before,
                 watermarks_after=watermarks_before, snapshot=[], dataset_id=None,
             )
             _write_report(args.report_path, report)
             print(f"DATA-008: {state}; prior snapshot and watermarks retained")
             return 1
 
+        prior_keys = {bar.dedupe_key for bar in prior_bars}
         snapshot = merge_canonical_bars(prior_bars, acquired)
+        net_rows_added = sum(1 for bar in snapshot if bar.dedupe_key not in prior_keys)
         table = pa.Table.from_pylist([b.as_dict() for b in snapshot], schema=SNAPSHOT_SCHEMA)
 
         with tempfile.TemporaryDirectory(prefix="data008-") as tmp:
@@ -371,6 +460,13 @@ def main() -> int:
                 dependencies.append(DependencyRef(
                     id=prior_dataset_id, kind=DependencyKind.DATASET,
                     role="prior_canonical_snapshot",
+                ))
+            # This dataset is additive to the accepted DATA-006 panel; consumers need
+            # the pinned base id to reconcile the logical union.
+            if base_panel_dataset_id is not None:
+                dependencies.append(DependencyRef(
+                    id=base_panel_dataset_id, kind=DependencyKind.DATASET,
+                    role="base_panel",
                 ))
 
             times = [bar.open_time for bar in snapshot]
@@ -435,6 +531,7 @@ def main() -> int:
                 acquisition.watermark_candidate.isoformat()
             )
         watermark_store.save(watermarks_after)
+        watermark_store.save_budget(day_key=day_key, processed=processed)
     finally:
         dataset_catalog.close()
 
@@ -443,7 +540,10 @@ def main() -> int:
         eligibility=eligibility, acquisitions=acquisitions, blocked=[], log=log,
         prior_reconciliation=prior_reconciliation, reconciliation=reconciliation,
         watermarks_before=watermarks_before, watermarks_after=watermarks_after,
-        snapshot=snapshot, dataset_id=dataset_id,
+        snapshot=snapshot, dataset_id=dataset_id, net_rows_added=net_rows_added,
+        covered_symbols=covered_symbols, base_panel_dataset_id=base_panel_dataset_id,
+        budget={"day": day_key, "start": budget_start, "processed": processed,
+                "limit": args.symbols_per_day},
     )
     _write_report(args.report_path, report)
     print(f"DATA-008: published {len(snapshot)} rows as {dataset_id}")

@@ -50,6 +50,7 @@ class AcquisitionOutcome:
     failure_kind: str | None = None
     detail: str | None = None
     attempt: int = 1
+    backoff_seconds: float = 0.0
 
     @property
     def request_json(self) -> str:
@@ -67,6 +68,7 @@ class AcquisitionOutcome:
             "failure_kind": self.failure_kind,
             "detail": self.detail,
             "attempt": self.attempt,
+            "backoff_seconds": self.backoff_seconds,
             "rate_limited": self.status_code in RATE_LIMIT_STATUSES,
         }
 
@@ -154,12 +156,14 @@ class RawHttpAcquirer:
             )
             if not retryable:
                 return outcome
+            waited = 0.0
             if self._backoff_seconds > 0:
                 # Exponential, so a rate-limited provider gets progressively more room.
-                self._sleep(self._backoff_seconds * (2 ** (attempt - 2)))
+                waited = self._backoff_seconds * (2 ** (attempt - 2))
+                self._sleep(waited)
             outcome = self._attempt(
                 provider=provider, url=url, params=params, source_id=source_id,
-                original_name=original_name, attempt=attempt,
+                original_name=original_name, attempt=attempt, backoff_seconds=waited,
             )
         return outcome
 
@@ -172,6 +176,7 @@ class RawHttpAcquirer:
         source_id: str,
         original_name: str,
         attempt: int,
+        backoff_seconds: float = 0.0,
     ) -> AcquisitionOutcome:
         request = {"method": "GET", "url": url, "params": dict(params or {})}
         acquired_at = datetime.now(UTC)
@@ -188,6 +193,7 @@ class RawHttpAcquirer:
             return self.log.record(AcquisitionOutcome(
                 provider=provider, request=request, acquired_at=acquired_at, ok=False,
                 failure_kind="transport", detail=detail, attempt=attempt,
+                backoff_seconds=backoff_seconds,
             ))
 
         body = response.content
@@ -210,6 +216,7 @@ class RawHttpAcquirer:
             "raw_object_id": raw.raw_object_id,
             "acquisition_id": raw.acquisition_id,
             "attempt": attempt,
+            "backoff_seconds": backoff_seconds,
         }
 
         if response.is_error:

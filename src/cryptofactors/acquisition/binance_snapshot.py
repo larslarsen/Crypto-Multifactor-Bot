@@ -44,6 +44,7 @@ class SymbolState(str, Enum):
     EMPTY = "EMPTY"
     INVALID = "INVALID"
     GAPPED = "GAPPED"
+    BUDGET_DEFERRED = "BUDGET_DEFERRED"
 
 
 #: States that block publication for a symbol that was selected and eligible.
@@ -312,6 +313,7 @@ class WatermarkStore:
     """Per-symbol watermarks persisted atomically, retaining unrelated sections."""
 
     SECTION = "binance_spot_daily"
+    BUDGET_SECTION = "binance_spot_daily_budget"
 
     def __init__(self, path: Path | str) -> None:
         self._path = Path(path)
@@ -336,6 +338,25 @@ class WatermarkStore:
     def save(self, watermarks: Mapping[str, str]) -> None:
         document = self._document()
         document[self.SECTION] = dict(sorted(watermarks.items()))
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self._path.with_suffix(self._path.suffix + ".tmp")
+        temporary.write_text(canonical_json(document) + "\n", encoding="utf-8")
+        temporary.replace(self._path)
+
+
+    def load_budget(self, *, day_key: str) -> int:
+        """Symbols already processed today, so a multi-day run resumes mid-panel."""
+        section = self._document().get(self.BUDGET_SECTION, {})
+        if not isinstance(section, Mapping) or section.get("day") != day_key:
+            return 0
+        try:
+            return int(section.get("processed", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def save_budget(self, *, day_key: str, processed: int) -> None:
+        document = self._document()
+        document[self.BUDGET_SECTION] = {"day": day_key, "processed": int(processed)}
         self._path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self._path.with_suffix(self._path.suffix + ".tmp")
         temporary.write_text(canonical_json(document) + "\n", encoding="utf-8")
@@ -409,7 +430,8 @@ class BinanceBarAcquirer:
         self._base_url = base_url.rstrip("/")
 
     def acquire(
-        self, *, symbol: str, start_time: datetime, end_time: datetime, limit: int = 1000
+        self, *, symbol: str, start_time: datetime, end_time: datetime,
+        limit: int = 1000, max_pages: int = 64,
     ) -> SymbolAcquisition:
         if start_time > end_time:
             return SymbolAcquisition(
@@ -417,32 +439,48 @@ class BinanceBarAcquirer:
                 requested_start=start_time, requested_end=end_time,
             )
 
-        outcome: AcquisitionOutcome = self._acquirer.get_json(
-            provider=BINANCE_PROVIDER, url=f"{self._base_url}/api/v3/klines",
-            params={
-                "symbol": symbol, "interval": "1d",
-                "startTime": int(start_time.timestamp() * 1000),
-                "endTime": int(end_time.timestamp() * 1000), "limit": limit,
-            },
-            source_id=KLINES_SOURCE_ID, original_name=f"binance_klines_{symbol}.json",
-        )
-        if not outcome.ok:
-            return SymbolAcquisition(
-                symbol=symbol, state=SymbolState.FAILED,
-                requested_start=start_time, requested_end=end_time,
-                error=f"{outcome.failure_kind}: {outcome.detail}",
+        # Binance caps a klines response at `limit` rows, so a multi-year backfill
+        # needs pagination. Every page is preserved as raw evidence in its own right.
+        collected: list[KlineBar] = []
+        cursor = start_time
+        pages = 0
+        while cursor <= end_time and pages < max_pages:
+            pages += 1
+            outcome: AcquisitionOutcome = self._acquirer.get_json(
+                provider=BINANCE_PROVIDER, url=f"{self._base_url}/api/v3/klines",
+                params={
+                    "symbol": symbol, "interval": "1d",
+                    "startTime": int(cursor.timestamp() * 1000),
+                    "endTime": int(end_time.timestamp() * 1000), "limit": limit,
+                },
+                source_id=KLINES_SOURCE_ID, original_name=f"binance_klines_{symbol}.json",
             )
-        try:
-            bars = parse_klines(
-                outcome.payload, symbol=symbol, start_time=start_time, end_time=end_time,
-                raw_object_id=str(outcome.raw_object_id),
-            )
-        except (BinanceSnapshotError, BinanceUniverseError) as exc:
-            return SymbolAcquisition(
-                symbol=symbol, state=SymbolState.INVALID,
-                requested_start=start_time, requested_end=end_time,
-                error=f"invalid klines response: {exc}",
-            )
+            if not outcome.ok:
+                return SymbolAcquisition(
+                    symbol=symbol, state=SymbolState.FAILED,
+                    requested_start=start_time, requested_end=end_time,
+                    error=f"{outcome.failure_kind}: {outcome.detail}",
+                )
+            try:
+                page = parse_klines(
+                    outcome.payload, symbol=symbol, start_time=cursor, end_time=end_time,
+                    raw_object_id=str(outcome.raw_object_id),
+                )
+            except (BinanceSnapshotError, BinanceUniverseError) as exc:
+                return SymbolAcquisition(
+                    symbol=symbol, state=SymbolState.INVALID,
+                    requested_start=start_time, requested_end=end_time,
+                    error=f"invalid klines response: {exc}",
+                )
+            if not page:
+                break
+            collected.extend(page)
+            advanced = page[-1].open_time + timedelta(seconds=DAY_SECONDS)
+            if advanced <= cursor:
+                break
+            cursor = advanced
+
+        bars = sorted({b.dedupe_key: b for b in collected}.values(), key=lambda b: b.open_time)
         if not bars:
             return SymbolAcquisition(
                 symbol=symbol, state=SymbolState.EMPTY,
