@@ -1,7 +1,12 @@
 # DATA-010 — DEX Universe Asset OHLCV Backfill (U50+ Trading Assets)
 
 **Priority:** P1
-**Status:** AWAITING_REVIEW
+**Status:** SUPERSEDED
+
+> **Note:** DATA-010 is engineering-prototype evidence only. Its current-pool API
+> observations do not reconstruct the historical DEX population. No survivorship or
+> research-validity claim is made for this dataset. Any replacement DEX event-spine work
+> requires a new reviewer-authorized ticket.
 **Dependencies:** DATA-007 (ACCEPTED), DEX-002 (ACCEPTED), UNIVERSE-004 (ACCEPTED), DATA-006 (ACCEPTED)
 **Layer:** acquisition / dex
 **Architecture:** extend existing `dex_multi_provider_fanout.py` fan-out engine; use DATA-007 `recommended_fanout` sources. **No LIVE. No Birdeye OHLCV.**
