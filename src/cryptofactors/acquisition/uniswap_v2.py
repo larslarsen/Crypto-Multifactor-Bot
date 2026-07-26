@@ -246,6 +246,17 @@ class HeaderDependency:
 
 
 @dataclass(frozen=True, slots=True)
+class AcquisitionRecord:
+    """A `raw_acquisition` row, used to authenticate what a receipt claims."""
+
+    acquisition_id: str
+    raw_object_id: str | None
+    request_json: str
+    acquired_at: str
+    status: str
+
+
+@dataclass(frozen=True, slots=True)
 class ChunkReceipt:
     """A completed chunk, bound to every acquisition that produced it."""
 
@@ -267,12 +278,17 @@ class ChunkReceipt:
     end_header_acquired_at: str
     header_dependencies: tuple[HeaderDependency, ...]
     completed_at: str
+    chain_id_request_json: str
+    chain_id_raw_object_id: str
+    chain_id_acquisition_id: str
+    chain_id_acquired_at: str
 
     @property
     def raw_object_ids(self) -> frozenset[str]:
         return frozenset({
             self.logs_raw_object_id,
             self.end_header_raw_object_id,
+            self.chain_id_raw_object_id,
             *(dep.raw_object_id for dep in self.header_dependencies),
         })
 
@@ -281,6 +297,7 @@ class ChunkReceipt:
         return frozenset({
             self.logs_acquisition_id,
             self.end_header_acquisition_id,
+            self.chain_id_acquisition_id,
             *(dep.acquisition_id for dep in self.header_dependencies),
         })
 
@@ -405,6 +422,8 @@ _RECEIPT_COLUMNS = (
     "end_block_number", "end_block_hash", "end_header_request_json",
     "end_header_raw_object_id", "end_header_acquisition_id", "end_header_acquired_at",
     "header_dependencies_json", "completed_at",
+    "chain_id_request_json", "chain_id_raw_object_id", "chain_id_acquisition_id",
+    "chain_id_acquired_at",
 )
 
 
@@ -415,6 +434,22 @@ def _receipt_from_row(row: Sequence[Any]) -> ChunkReceipt:
         raise UniswapV2IngestionError("receipt header dependency list is not valid JSON") from exc
     if not isinstance(parsed, list):
         raise UniswapV2IngestionError("receipt header dependency list must be a JSON array")
+    dependencies = tuple(HeaderDependency.from_dict(item) for item in parsed)
+    # One block, one header. A repeat is a provider inconsistency; a repeat with a
+    # different hash means two different chains answered for the same height.
+    by_block: dict[int, HeaderDependency] = {}
+    for dependency in dependencies:
+        previous = by_block.get(dependency.block_number)
+        if previous is not None:
+            if previous.block_hash != dependency.block_hash:
+                raise UniswapV2IngestionError(
+                    f"conflicting header dependencies for block {dependency.block_number}: "
+                    f"{previous.block_hash} and {dependency.block_hash}"
+                )
+            raise UniswapV2IngestionError(
+                f"duplicate header dependency for block {dependency.block_number}"
+            )
+        by_block[dependency.block_number] = dependency
     return ChunkReceipt(
         chain=str(row[0]),
         chain_id=str(row[1]),
@@ -432,9 +467,87 @@ def _receipt_from_row(row: Sequence[Any]) -> ChunkReceipt:
         end_header_raw_object_id=str(row[13]),
         end_header_acquisition_id=str(row[14]),
         end_header_acquired_at=str(row[15]),
-        header_dependencies=tuple(HeaderDependency.from_dict(item) for item in parsed),
+        header_dependencies=dependencies,
         completed_at=str(row[17]),
+        chain_id_request_json=str(row[18]),
+        chain_id_raw_object_id=str(row[19]),
+        chain_id_acquisition_id=str(row[20]),
+        chain_id_acquired_at=str(row[21]),
     )
+
+
+def _load_acquisitions(
+    conn: sqlite3.Connection, acquisition_ids: Sequence[str]
+) -> dict[str, AcquisitionRecord]:
+    """Read the `raw_acquisition` rows a receipt claims to be backed by."""
+    records: dict[str, AcquisitionRecord] = {}
+    unique = sorted({str(item) for item in acquisition_ids if item})
+    for index in range(0, len(unique), 500):
+        batch = unique[index:index + 500]
+        placeholders = ", ".join("?" for _ in batch)
+        for row in conn.execute(
+            "SELECT acquisition_id, raw_object_id, request_json, acquired_at, status "
+            f"FROM raw_acquisition WHERE acquisition_id IN ({placeholders})",
+            tuple(batch),
+        ):
+            records[str(row[0])] = AcquisitionRecord(
+                acquisition_id=str(row[0]),
+                raw_object_id=None if row[1] is None else str(row[1]),
+                request_json=str(row[2]),
+                acquired_at=str(row[3]),
+                status=str(row[4]),
+            )
+    return records
+
+
+def _authenticate_acquisition(
+    records: Mapping[str, AcquisitionRecord],
+    *,
+    acquisition_id: str,
+    raw_object_id: str,
+    request_json: str,
+    acquired_at: str,
+    label: str,
+) -> None:
+    """Prove a receipt's claim is backed by a real, successful, matching acquisition.
+
+    A receipt is a claim; `raw_acquisition` is the independent record of what was
+    actually retrieved. Without this check a receipt could name any acquisition id --
+    or one belonging to a different request -- and replay would never notice.
+    """
+    if not acquisition_id:
+        raise UniswapV2IngestionError(f"{label} records no acquisition id")
+    record = records.get(acquisition_id)
+    if record is None:
+        raise UniswapV2IngestionError(
+            f"{label} references acquisition {acquisition_id} with no raw_acquisition row"
+        )
+    if record.status != "SUCCEEDED":
+        raise UniswapV2IngestionError(
+            f"{label} references acquisition {acquisition_id} with status {record.status}"
+        )
+    if record.raw_object_id != raw_object_id:
+        raise UniswapV2IngestionError(
+            f"{label} claims raw object {raw_object_id} but acquisition "
+            f"{acquisition_id} produced {record.raw_object_id}"
+        )
+    try:
+        recorded_request = json.loads(record.request_json)
+    except json.JSONDecodeError as exc:
+        raise UniswapV2IngestionError(
+            f"acquisition {acquisition_id} has an unreadable request record"
+        ) from exc
+    if recorded_request != json.loads(request_json):
+        raise UniswapV2IngestionError(
+            f"{label} answers a different request than acquisition {acquisition_id} made"
+        )
+    claimed = _parse_timestamp(acquired_at, label=f"{label} acquired_at")
+    actual = _parse_timestamp(record.acquired_at, label=f"acquisition {acquisition_id} acquired_at")
+    if claimed != actual:
+        raise UniswapV2IngestionError(
+            f"{label} claims acquisition time {claimed.isoformat()} but acquisition "
+            f"{acquisition_id} was recorded at {actual.isoformat()}"
+        )
 
 
 def _parse_timestamp(value: str, *, label: str) -> datetime:
@@ -468,6 +581,7 @@ class UniswapV2PairCreatedIngestor:
         self._factory = factory
         self._raw_root = raw_root
         self._chain_id: str | None = None
+        self._chain_call: RpcCall | None = None
 
     def close(self) -> None:
         if self._owns_client:
@@ -603,20 +717,28 @@ class UniswapV2PairCreatedIngestor:
             acquired_at=acquired_at,
         )
 
-    def _assert_mainnet(self, receipts: sqlite3.Connection | None) -> str:
-        """Refuse to ingest mainnet addresses from a non-mainnet endpoint."""
-        if self._chain_id is not None:
-            return self._chain_id
-        call = self._rpc(chain_id_request(), event_start=0, event_end=0, receipts=receipts)
-        raw_chain_id = call.payload.get("result")
-        chain_id = _hex_quantity(raw_chain_id, label="eth_chainId result")
-        if chain_id != 1:
+    @staticmethod
+    def _assert_mainnet_payload(payload: Mapping[str, Any]) -> str:
+        raw_chain_id = payload.get("result")
+        if _hex_quantity(raw_chain_id, label="eth_chainId result") != 1:
             raise UniswapV2IngestionError(
                 f"expected Ethereum mainnet chain id {ETHEREUM_MAINNET_CHAIN_ID}, "
                 f"got {raw_chain_id!r}"
             )
-        self._chain_id = ETHEREUM_MAINNET_CHAIN_ID
-        return self._chain_id
+        return ETHEREUM_MAINNET_CHAIN_ID
+
+    def _assert_mainnet(self, receipts: sqlite3.Connection | None) -> RpcCall:
+        """Refuse to ingest mainnet addresses from a non-mainnet endpoint.
+
+        The response is a preserved acquisition, not a throwaway preflight: every
+        receipt records it so replay can re-prove the chain identity offline.
+        """
+        if self._chain_call is not None:
+            return self._chain_call
+        call = self._rpc(chain_id_request(), event_start=0, event_end=0, receipts=receipts)
+        self._chain_id = self._assert_mainnet_payload(call.payload)
+        self._chain_call = call
+        return call
 
     # -- preserved bytes ---------------------------------------------------
 
@@ -682,6 +804,62 @@ class UniswapV2PairCreatedIngestor:
             raise UniswapV2IngestionError(f"{label} hash does not match the receipt")
         return header
 
+    def _verify_chain_lineage(
+        self,
+        receipt: ChunkReceipt,
+        raw_root: Path,
+        acquisitions: Mapping[str, AcquisitionRecord],
+    ) -> None:
+        """Re-prove mainnet identity offline from the preserved eth_chainId response."""
+        if not receipt.chain_id_raw_object_id or not receipt.chain_id_acquisition_id:
+            raise UniswapV2IngestionError(
+                "receipt carries no eth_chainId lineage and cannot prove which chain "
+                "produced it"
+            )
+        if receipt.chain_id_request_json != _canonical_json(chain_id_request()):
+            raise UniswapV2IngestionError(
+                "receipt chain identity was acquired by a different request"
+            )
+        _authenticate_acquisition(
+            acquisitions,
+            acquisition_id=receipt.chain_id_acquisition_id,
+            raw_object_id=receipt.chain_id_raw_object_id,
+            request_json=receipt.chain_id_request_json,
+            acquired_at=receipt.chain_id_acquired_at,
+            label="chain identity",
+        )
+        payload = self._read_raw_json(raw_root, receipt.chain_id_raw_object_id)
+        self._assert_mainnet_payload(payload)
+
+    def _authenticate_receipt_acquisitions(
+        self, receipt: ChunkReceipt, acquisitions: Mapping[str, AcquisitionRecord]
+    ) -> None:
+        _authenticate_acquisition(
+            acquisitions,
+            acquisition_id=receipt.logs_acquisition_id,
+            raw_object_id=receipt.logs_raw_object_id,
+            request_json=receipt.logs_request_json,
+            acquired_at=receipt.logs_acquired_at,
+            label="logs response",
+        )
+        _authenticate_acquisition(
+            acquisitions,
+            acquisition_id=receipt.end_header_acquisition_id,
+            raw_object_id=receipt.end_header_raw_object_id,
+            request_json=receipt.end_header_request_json,
+            acquired_at=receipt.end_header_acquired_at,
+            label="end-block header",
+        )
+        for dependency in receipt.header_dependencies:
+            _authenticate_acquisition(
+                acquisitions,
+                acquisition_id=dependency.acquisition_id,
+                raw_object_id=dependency.raw_object_id,
+                request_json=dependency.request_json,
+                acquired_at=dependency.acquired_at,
+                label=f"header for block {dependency.block_number}",
+            )
+
     def _verify_receipt_dependencies(self, receipt: ChunkReceipt, raw_root: Path) -> None:
         """Every dependency must still be present, intact and request-bound.
 
@@ -737,10 +915,13 @@ class UniswapV2PairCreatedIngestor:
     ) -> list[PairCreatedRow]:
         if start_block < 0 or end_block < start_block or chunk_size <= 0:
             raise ValueError("invalid block range or chunk_size")
-        if start_block < UNISWAP_V2_DEPLOYMENT_BLOCK:
+        # DATA-012 ingests from deployment. A later start would silently omit pairs and
+        # still produce a receipt chain that looks complete, so it is refused outright
+        # rather than left as an untested configuration surface.
+        if start_block != UNISWAP_V2_DEPLOYMENT_BLOCK:
             raise UniswapV2IngestionError(
-                f"start_block {start_block} precedes the Uniswap V2 Factory deployment "
-                f"block {UNISWAP_V2_DEPLOYMENT_BLOCK}"
+                f"start_block must be the Uniswap V2 Factory deployment block "
+                f"{UNISWAP_V2_DEPLOYMENT_BLOCK}, got {start_block}"
             )
 
         rows: list[PairCreatedRow] = []
@@ -748,7 +929,8 @@ class UniswapV2PairCreatedIngestor:
         try:
             if receipts is not None:
                 receipts.execute("PRAGMA foreign_keys = ON")
-            chain_id = self._assert_mainnet(receipts)
+            chain_call = self._assert_mainnet(receipts)
+            chain_id = ETHEREUM_MAINNET_CHAIN_ID
             verify_root = self._raw_root if raw_root is None else raw_root
 
             for chunk_start in range(start_block, end_block + 1, chunk_size):
@@ -770,6 +952,13 @@ class UniswapV2PairCreatedIngestor:
                                 "resuming; pass raw_root to fetch()"
                             )
                         self._verify_receipt_dependencies(receipt, verify_root)
+                        prior_acquisitions = _load_acquisitions(
+                            receipts, sorted(receipt.acquisition_ids)
+                        )
+                        self._verify_chain_lineage(
+                            receipt, verify_root, prior_acquisitions
+                        )
+                        self._authenticate_receipt_acquisitions(receipt, prior_acquisitions)
                         # Only after the preserved evidence checks out do we confirm the
                         # chain still agrees with it.
                         end_call = self._rpc(
@@ -789,6 +978,15 @@ class UniswapV2PairCreatedIngestor:
                             raise UniswapV2IngestionError(
                                 "completed chunk receipt failed end-block validation"
                             )
+                        # A skipped chunk contributes no rows. Returning the remainder
+                        # would look indistinguishable from "this range has no events",
+                        # so a row-emitting caller must go through replay instead.
+                        if emit_rows:
+                            raise UniswapV2IngestionError(
+                                f"chunk [{chunk_start}, {chunk_end}] is already complete; "
+                                "fetch(emit_rows=True) cannot return its rows -- acquire "
+                                "with emit_rows=False and decode via replay_receipts()"
+                            )
                         continue
 
                 logs_call = self._rpc(
@@ -802,6 +1000,7 @@ class UniswapV2PairCreatedIngestor:
                     raise UniswapV2IngestionError("eth_getLogs result must be a list")
 
                 headers: dict[int, tuple[dict[str, Any], str]] = {}
+                header_calls: dict[int, RpcCall] = {}
                 dependencies: list[HeaderDependency] = []
                 for log in logs:
                     if not isinstance(log, Mapping):
@@ -831,6 +1030,7 @@ class UniswapV2PairCreatedIngestor:
                         _require(header, "hash", label="block header"), 32, label="header hash"
                     )
                     headers[block_number] = (header, header_call.raw_object_id)
+                    header_calls[block_number] = header_call
                     dependencies.append(HeaderDependency(
                         block_number=block_number,
                         block_hash=header_hash,
@@ -840,7 +1040,10 @@ class UniswapV2PairCreatedIngestor:
                         acquired_at=header_call.acquired_at.isoformat(),
                     ))
 
-                end_call = self._rpc(
+                # When the chunk's last block also carries an event its header is already
+                # acquired and authenticated; re-requesting it would cost one redundant
+                # round trip per chunk against a metered endpoint.
+                end_call = header_calls.get(chunk_end) or self._rpc(
                     block_header_request(chunk_end),
                     event_start=chunk_end, event_end=chunk_end, receipts=receipts,
                 )
@@ -881,7 +1084,7 @@ class UniswapV2PairCreatedIngestor:
                     receipts.execute(
                         f"INSERT INTO {RECEIPT_TABLE} "
                         f"({', '.join(_RECEIPT_COLUMNS)}) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "VALUES (" + ", ".join("?" * len(_RECEIPT_COLUMNS)) + ")",
                         (ETHEREUM_CHAIN, chain_id, self._factory, PAIR_CREATED_TOPIC,
                          chunk_start, chunk_end,
                          logs_call.request_json, logs_call.raw_object_id,
@@ -889,10 +1092,18 @@ class UniswapV2PairCreatedIngestor:
                          chunk_end, end_hash, end_call.request_json, end_call.raw_object_id,
                          end_call.acquisition_id, end_call.acquired_at.isoformat(),
                          json.dumps([dep.as_dict() for dep in dependencies], sort_keys=True),
-                         completed_at.isoformat()),
+                         completed_at.isoformat(),
+                         chain_call.request_json, chain_call.raw_object_id,
+                         chain_call.acquisition_id, chain_call.acquired_at.isoformat()),
                     )
                     receipts.commit()
 
+            # Per-chunk decoding cannot see an event repeated across chunk boundaries.
+            identities = [(row.tx_hash, row.log_index) for row in rows]
+            if len(identities) != len(set(identities)):
+                raise UniswapV2IngestionError(
+                    "fetched rows contain duplicate (tx_hash, log_index)"
+                )
             return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
         finally:
             if receipts is not None:
@@ -923,10 +1134,12 @@ class UniswapV2PairCreatedIngestor:
                 "AND start_block >= ? AND end_block <= ? ORDER BY start_block",
                 (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, start_block, end_block),
             ).fetchall()
+            receipts = [_receipt_from_row(row) for row in rows_raw]
+            acquisitions = _load_acquisitions(
+                conn, [aid for receipt in receipts for aid in sorted(receipt.acquisition_ids)]
+            )
         finally:
             conn.close()
-
-        receipts = [_receipt_from_row(row) for row in rows_raw]
         expected = start_block
         rows: list[PairCreatedRow] = []
         raw_ids: set[str] = set()
@@ -950,6 +1163,9 @@ class UniswapV2PairCreatedIngestor:
                 raise UniswapV2IngestionError(
                     "receipt logs request does not match its own block range"
                 )
+
+            self._verify_chain_lineage(receipt, root, acquisitions)
+            self._authenticate_receipt_acquisitions(receipt, acquisitions)
 
             self._authenticate_header(
                 root,

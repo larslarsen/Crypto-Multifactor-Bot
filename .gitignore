@@ -49,6 +49,3 @@ logs/
 # Local control databases and scratch dirs
 .local/
 *.db
-
-# opencode user config — use ~/.config/opencode/ instead
-opencode.json

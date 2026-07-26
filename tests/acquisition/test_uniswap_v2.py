@@ -54,6 +54,7 @@ from cryptofactors.acquisition.uniswap_v2 import (
     UniswapV2PairCreatedIngestor,
     _canonical_json,
     block_header_request,
+    chain_id_request,
     decode_pair_created,
     logs_request,
 )
@@ -289,6 +290,38 @@ class Store:
         finally:
             conn.close()
 
+    def acquisitions(self) -> list[dict[str, Any]]:
+        return self._query("SELECT * FROM raw_acquisition ORDER BY acquired_at")
+
+    def acquisition(self, acquisition_id: str) -> dict[str, Any]:
+        rows = self._query(
+            "SELECT * FROM raw_acquisition WHERE acquisition_id = ?", (acquisition_id,)
+        )
+        assert len(rows) == 1, f"expected exactly one acquisition {acquisition_id}"
+        return rows[0]
+
+    def update_acquisition(self, acquisition_id: str, **columns: Any) -> None:
+        assignments = ", ".join(f"{name} = ?" for name in columns)
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute(
+                f"UPDATE raw_acquisition SET {assignments} WHERE acquisition_id = ?",
+                (*columns.values(), acquisition_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def delete_acquisition(self, acquisition_id: str) -> None:
+        conn = sqlite3.connect(self.db)
+        try:
+            conn.execute(
+                "DELETE FROM raw_acquisition WHERE acquisition_id = ?", (acquisition_id,)
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
     def clone_receipt_for_factory(self, start_block: int, factory: str) -> None:
         """Copy a receipt under a different factory, leaving the original in place."""
         row = self.receipt(start_block)
@@ -439,6 +472,7 @@ def declared_raw_object_ids(receipts: list[dict[str, Any]]) -> set[str]:
     for receipt in receipts:
         declared.add(str(receipt["logs_raw_object_id"]))
         declared.add(str(receipt["end_header_raw_object_id"]))
+        declared.add(str(receipt["chain_id_raw_object_id"]))
         for dep in json.loads(receipt["header_dependencies_json"]):
             declared.add(str(dep["raw_object_id"]))
     return declared
@@ -449,6 +483,7 @@ def declared_acquisition_ids(receipts: list[dict[str, Any]]) -> set[str]:
     for receipt in receipts:
         declared.add(str(receipt["logs_acquisition_id"]))
         declared.add(str(receipt["end_header_acquisition_id"]))
+        declared.add(str(receipt["chain_id_acquisition_id"]))
         for dep in json.loads(receipt["header_dependencies_json"]):
             declared.add(str(dep["acquisition_id"]))
     return declared
@@ -554,12 +589,25 @@ class TestChainSafety:
 class TestDeploymentBlock:
     def test_a_range_starting_before_deployment_is_refused(self, store: Store) -> None:
         node = scenario_node()
-        with pytest.raises(UniswapV2IngestionError, match="precedes the Uniswap V2 Factory"):
+        with pytest.raises(UniswapV2IngestionError, match="must be the Uniswap V2 Factory"):
             run_fetch(
                 store, node,
                 start_block=UNISWAP_V2_DEPLOYMENT_BLOCK - 1,
                 end_block=UNISWAP_V2_DEPLOYMENT_BLOCK + 99,
             )
+
+    def test_a_range_starting_after_deployment_is_refused(self, store: Store) -> None:
+        """A later start silently omits pairs while still producing a receipt chain
+        that looks complete, so the ticket's deployment start is exact, not a floor."""
+        node = scenario_node()
+        with pytest.raises(UniswapV2IngestionError, match="must be the Uniswap V2 Factory"):
+            run_fetch(
+                store, node,
+                start_block=UNISWAP_V2_DEPLOYMENT_BLOCK + 1,
+                end_block=SCENARIO_END,
+            )
+
+        assert node.calls == [], "refused before contacting the node"
 
     def test_a_range_starting_before_deployment_is_refused_without_touching_the_node(
         self, store: Store
@@ -667,7 +715,9 @@ class TestFetch:
         with pytest.raises(UniswapV2IngestionError, match="end-block header is for block"):
             run_fetch(store, node)
 
-    def test_one_header_is_fetched_per_distinct_event_block(self, store: Store) -> None:
+    def test_each_block_header_is_fetched_exactly_once(self, store: Store) -> None:
+        """BLOCK_CHUNK1_END carries an event *and* ends its chunk. Requesting it twice
+        would cost one redundant round trip per chunk against a metered endpoint."""
         node = scenario_node()
         run_fetch(store, node)
 
@@ -675,12 +725,60 @@ class TestFetch:
             int(params[0], 16) for method, params in node.calls
             if method == "eth_getBlockByNumber"
         ]
-        # BLOCK_EVENT carries two events but is fetched once; the two chunk-end
-        # headers are fetched once each, BLOCK_CHUNK1_END being both event and end.
-        assert header_blocks.count(BLOCK_EVENT) == 1
-        assert sorted(set(header_blocks)) == [
-            BLOCK_EVENT, BLOCK_CHUNK1_END, BLOCK_CHUNK2_END,
-        ]
+
+        assert sorted(header_blocks) == [BLOCK_EVENT, BLOCK_CHUNK1_END, BLOCK_CHUNK2_END]
+        assert header_blocks.count(BLOCK_EVENT) == 1, "two events, one header"
+        assert header_blocks.count(BLOCK_CHUNK1_END) == 1, "event block reused as end header"
+
+    def test_a_reused_end_header_is_still_bound_as_both_dependencies(
+        self, store: Store
+    ) -> None:
+        """Reusing the acquisition must not weaken the receipt: the block appears as an
+        event-header dependency and as the end header, naming the same evidence."""
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        dependencies = {
+            dep["block_number"]: dep
+            for dep in json.loads(receipt["header_dependencies_json"])
+        }
+
+        assert BLOCK_CHUNK1_END in dependencies
+        reused = dependencies[BLOCK_CHUNK1_END]
+        assert receipt["end_header_raw_object_id"] == reused["raw_object_id"]
+        assert receipt["end_header_acquisition_id"] == reused["acquisition_id"]
+        assert receipt["end_header_request_json"] == reused["request_json"]
+        assert receipt["end_block_hash"] == reused["block_hash"]
+
+    def test_an_event_repeated_across_chunks_is_refused(self, store: Store) -> None:
+        """Per-chunk decoding cannot see a duplicate that straddles a chunk boundary.
+
+        Both copies sit inside their own chunk, so the in-chunk range guard passes and
+        only a range-wide identity check can catch the repeat.
+        """
+        second_block = BLOCK_CHUNK1_END + 10
+        common = {
+            "tx_hash": TX_1, "tx_index": 0, "log_index": 0,
+            "token0": TOKEN_A, "token1": TOKEN_B, "pair": PAIR_1,
+        }
+        node = scenario_node(
+            block_hashes={
+                BLOCK_EVENT: _hash32(BLOCK_EVENT),
+                BLOCK_CHUNK1_END: _hash32(BLOCK_CHUNK1_END),
+                second_block: _hash32(second_block),
+                BLOCK_CHUNK2_END: _hash32(BLOCK_CHUNK2_END),
+            },
+            logs=[
+                pair_created_log(
+                    block_number=BLOCK_EVENT, block_hash=_hash32(BLOCK_EVENT), **common
+                ),
+                pair_created_log(
+                    block_number=second_block, block_hash=_hash32(second_block), **common
+                ),
+            ],
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="duplicate"):
+            run_fetch(store, node)
 
     def test_the_receipt_database_is_closed_when_acquisition_fails(
         self, store: Store, monkeypatch: pytest.MonkeyPatch
@@ -1054,19 +1152,35 @@ class TestResume:
     def test_a_completed_chunk_is_skipped_after_its_dependencies_verify(
         self, store: Store
     ) -> None:
-        run_fetch(store, scenario_node())
+        run_fetch(store, scenario_node(), emit_rows=False)
         resumed = scenario_node()
 
-        rows = run_fetch(store, resumed)
+        rows = run_fetch(store, resumed, emit_rows=False)
 
         assert rows == []
         assert "eth_getLogs" not in resumed.methods(), "a completed chunk must not re-fetch logs"
         assert len(store.receipts()) == 2, "resume must not duplicate receipts"
 
+    def test_a_row_emitting_resume_refuses_to_return_partial_coverage(
+        self, store: Store
+    ) -> None:
+        """Silently returning [] for a completed range is indistinguishable from
+        'this range has no events', which would publish an empty dataset."""
+        run_fetch(store, scenario_node(), emit_rows=False)
+
+        with pytest.raises(UniswapV2IngestionError, match="already complete"):
+            run_fetch(store, scenario_node(), emit_rows=True)
+
+    def test_the_refusal_names_replay_as_the_supported_path(self, store: Store) -> None:
+        run_fetch(store, scenario_node(), emit_rows=False)
+
+        with pytest.raises(UniswapV2IngestionError, match="replay_receipts"):
+            run_fetch(store, scenario_node(), emit_rows=True)
+
     def test_resume_reverifies_the_live_end_block_hash(self, store: Store) -> None:
-        run_fetch(store, scenario_node())
+        run_fetch(store, scenario_node(), emit_rows=False)
         resumed = scenario_node()
-        run_fetch(store, resumed)
+        run_fetch(store, resumed, emit_rows=False)
 
         header_blocks = [
             int(params[0], 16) for method, params in resumed.calls
@@ -1144,13 +1258,13 @@ class TestResume:
         assert "eth_getLogs" in node.methods()
 
     def test_resuming_a_partial_range_fills_only_the_missing_chunk(self, store: Store) -> None:
-        run_fetch(store, scenario_node(), end_block=BLOCK_CHUNK1_END)
+        run_fetch(store, scenario_node(), end_block=BLOCK_CHUNK1_END, emit_rows=False)
         assert [(r["start_block"], r["end_block"]) for r in store.receipts()] == [
             SCENARIO_RANGES[0]
         ]
 
         second = scenario_node()
-        run_fetch(store, second)
+        run_fetch(store, second, emit_rows=False)
 
         assert [(r["start_block"], r["end_block"]) for r in store.receipts()] == SCENARIO_RANGES
         logs_calls = [params for method, params in second.calls if method == "eth_getLogs"]
@@ -1252,10 +1366,17 @@ class TestReplay:
 
         # Point the empty chunk at the first chunk's logs, and lend it the headers those
         # logs need, so decoding succeeds and the range bound is what rejects them.
+        # Point the empty chunk at the first chunk's logs and lend it those headers, then
+        # forge the acquisition row to match so the binding checks all pass. Only the
+        # range bound can reject this.
         store.update_receipt(
             BLOCK_CHUNK1_END + 1,
             logs_raw_object_id=first["logs_raw_object_id"],
+            logs_acquisition_id=second["logs_acquisition_id"],
             header_dependencies_json=first["header_dependencies_json"],
+        )
+        store.update_acquisition(
+            second["logs_acquisition_id"], raw_object_id=first["logs_raw_object_id"]
         )
 
         with pytest.raises(UniswapV2IngestionError, match="outside receipt range"):
@@ -1309,12 +1430,17 @@ class TestReplay:
         with pytest.raises(UniswapV2IngestionError, match="SHA-256 mismatch"):
             run_replay(store)
 
-    def test_a_malformed_raw_object_id_is_refused(self, store: Store) -> None:
+    def test_a_repointed_raw_object_is_refused(self, store: Store) -> None:
         run_fetch(store, scenario_node())
         store.update_receipt(SCENARIO_START, logs_raw_object_id="not_a_raw_object_id")
 
-        with pytest.raises(UniswapV2IngestionError, match="invalid raw object id"):
+        with pytest.raises(UniswapV2IngestionError, match="but acquisition"):
             run_replay(store)
+
+    def test_a_malformed_raw_object_id_is_refused(self, store: Store) -> None:
+        """Direct cover for the id guard, which acquisition authentication now shadows."""
+        with pytest.raises(UniswapV2IngestionError, match="invalid raw object id"):
+            UniswapV2PairCreatedIngestor._read_raw_json(store.raw_root, "not_a_raw_object_id")
 
     def test_a_corrupt_dependency_list_is_refused(self, store: Store) -> None:
         run_fetch(store, scenario_node())
@@ -1355,6 +1481,244 @@ class TestReplay:
                 )
         finally:
             ingestor.close()
+
+
+# ---------------------------------------------------------------------------
+# Acquisition authentication
+#
+# A receipt is a claim. `raw_acquisition` is the independent record of what was
+# actually retrieved. Replay must reconcile the two, or a receipt could name any
+# acquisition id and nothing would notice.
+# ---------------------------------------------------------------------------
+
+class TestAcquisitionAuthentication:
+    def test_every_receipt_acquisition_exists_and_succeeded(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        recorded = {row["acquisition_id"]: row for row in store.acquisitions()}
+
+        for acquisition_id in declared_acquisition_ids(store.receipts()):
+            assert acquisition_id in recorded, f"{acquisition_id} has no raw_acquisition row"
+            assert recorded[acquisition_id]["status"] == "SUCCEEDED"
+
+    def test_an_orphaned_acquisition_id_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, logs_acquisition_id="acq_does_not_exist")
+
+        with pytest.raises(UniswapV2IngestionError, match="no raw_acquisition row"):
+            run_replay(store)
+
+    def test_an_empty_acquisition_id_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(SCENARIO_START, logs_acquisition_id="")
+
+        with pytest.raises(UniswapV2IngestionError, match="records no acquisition id"):
+            run_replay(store)
+
+    def test_a_deleted_acquisition_row_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.delete_acquisition(store.receipt(SCENARIO_START)["logs_acquisition_id"])
+
+        with pytest.raises(UniswapV2IngestionError, match="no raw_acquisition row"):
+            run_replay(store)
+
+    @pytest.mark.parametrize(
+        ("status", "raw_object_id"),
+        [
+            # raw_acquisition's own CHECK ties FAILED/REJECTED to a null raw object.
+            ("FAILED", None),
+            ("REJECTED", None),
+            ("REGISTRATION_PENDING", "keep"),
+        ],
+    )
+    def test_an_unsuccessful_acquisition_is_refused(
+        self, store: Store, status: str, raw_object_id: str | None
+    ) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        columns: dict[str, Any] = {"status": status}
+        if raw_object_id != "keep":
+            columns["raw_object_id"] = raw_object_id
+        store.update_acquisition(receipt["logs_acquisition_id"], **columns)
+
+        with pytest.raises(UniswapV2IngestionError, match=f"status {status}"):
+            run_replay(store)
+
+    def test_an_acquisition_for_a_different_raw_object_is_refused(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        store.update_acquisition(
+            receipt["logs_acquisition_id"],
+            raw_object_id=receipt["end_header_raw_object_id"],
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="but acquisition"):
+            run_replay(store)
+
+    def test_an_acquisition_for_a_different_request_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        store.update_acquisition(
+            receipt["logs_acquisition_id"],
+            request_json=_canonical_json(block_header_request(1)),
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="different request than acquisition"):
+            run_replay(store)
+
+    def test_an_acquisition_recorded_at_another_time_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        store.update_acquisition(
+            receipt["logs_acquisition_id"], acquired_at="2020-01-01T00:00:00+00:00"
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="claims acquisition time"):
+            run_replay(store)
+
+    def test_header_dependency_acquisitions_are_authenticated(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        dependencies = json.loads(store.receipt(SCENARIO_START)["header_dependencies_json"])
+        store.delete_acquisition(dependencies[0]["acquisition_id"])
+
+        with pytest.raises(UniswapV2IngestionError, match="no raw_acquisition row"):
+            run_replay(store)
+
+    def test_resume_also_authenticates_acquisitions(self, store: Store) -> None:
+        run_fetch(store, scenario_node(), emit_rows=False)
+        store.delete_acquisition(store.receipt(SCENARIO_START)["logs_acquisition_id"])
+
+        with pytest.raises(UniswapV2IngestionError, match="no raw_acquisition row"):
+            run_fetch(store, scenario_node(), emit_rows=False)
+
+
+# ---------------------------------------------------------------------------
+# Chain lineage
+# ---------------------------------------------------------------------------
+
+class TestChainLineage:
+    def test_the_chain_identity_acquisition_is_recorded_on_every_receipt(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+
+        for receipt in store.receipts():
+            assert receipt["chain_id_request_json"] == _canonical_json(chain_id_request())
+            assert receipt["chain_id_raw_object_id"].startswith("raw_")
+            assert receipt["chain_id_acquisition_id"]
+            assert datetime.fromisoformat(receipt["chain_id_acquired_at"]).tzinfo is not None
+
+    def test_the_preserved_chain_response_is_the_exact_bytes(self, store: Store) -> None:
+        node = scenario_node()
+        run_fetch(store, node)
+        raw_id = store.receipt(SCENARIO_START)["chain_id_raw_object_id"]
+
+        body = store.raw_path(raw_id).read_bytes()
+        assert body in set(node.served)
+        assert json.loads(body)["result"] == ETHEREUM_MAINNET_CHAIN_ID
+
+    def test_replay_surfaces_the_chain_acquisition_as_a_dependency(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        receipt = store.receipt(SCENARIO_START)
+        replay = run_replay(store)
+
+        assert receipt["chain_id_raw_object_id"] in replay.raw_object_ids
+        assert receipt["chain_id_acquisition_id"] in replay.acquisition_ids
+
+    def test_replay_reverifies_the_chain_identity_offline(self, store: Store) -> None:
+        """Replay must re-prove mainnet from preserved bytes, not trust that some
+        earlier online run checked it."""
+        run_fetch(store, scenario_node())
+        forged = json.dumps({"jsonrpc": "2.0", "id": 1, "result": "0x5"}).encode()
+        digest = hashlib.sha256(forged).hexdigest()
+        # Republish the forged response at its own content address and point the receipt
+        # and its acquisition at it, so only the chain-identity check can reject it.
+        store.overwrite_raw(f"raw_{digest}", forged)
+        store.update_receipt(SCENARIO_START, chain_id_raw_object_id=f"raw_{digest}")
+        store.update_acquisition(
+            store.receipt(SCENARIO_START)["chain_id_acquisition_id"],
+            raw_object_id=f"raw_{digest}",
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="mainnet chain id"):
+            run_replay(store)
+
+    def test_a_receipt_without_chain_lineage_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(
+            SCENARIO_START, chain_id_raw_object_id="", chain_id_acquisition_id=""
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="no eth_chainId lineage"):
+            run_replay(store)
+
+    def test_chain_lineage_bound_to_another_request_is_refused(self, store: Store) -> None:
+        run_fetch(store, scenario_node())
+        store.update_receipt(
+            SCENARIO_START,
+            chain_id_request_json=_canonical_json(block_header_request(1)),
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="chain identity was acquired"):
+            run_replay(store)
+
+    def test_resume_also_reverifies_chain_lineage(self, store: Store) -> None:
+        run_fetch(store, scenario_node(), emit_rows=False)
+        store.update_receipt(SCENARIO_START, chain_id_acquisition_id="")
+
+        with pytest.raises(UniswapV2IngestionError, match="no eth_chainId lineage"):
+            run_fetch(store, scenario_node(), emit_rows=False)
+
+
+# ---------------------------------------------------------------------------
+# Header dependency consistency
+# ---------------------------------------------------------------------------
+
+class TestHeaderDependencyConsistency:
+    def _dependency(self, store: Store) -> dict[str, Any]:
+        return json.loads(store.receipt(SCENARIO_START)["header_dependencies_json"])[0]
+
+    def test_a_repeated_block_in_the_dependency_list_is_refused(
+        self, store: Store
+    ) -> None:
+        run_fetch(store, scenario_node())
+        dependency = self._dependency(store)
+        store.update_receipt(
+            SCENARIO_START,
+            header_dependencies_json=json.dumps([dependency, dict(dependency)]),
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="duplicate header dependency"):
+            run_replay(store)
+
+    def test_conflicting_hashes_for_one_block_are_refused(self, store: Store) -> None:
+        """Two different hashes for one height means two chains answered."""
+        run_fetch(store, scenario_node())
+        dependency = self._dependency(store)
+        conflicting = dict(dependency, block_hash=_hash32(0xBAD))
+        store.update_receipt(
+            SCENARIO_START,
+            header_dependencies_json=json.dumps([dependency, conflicting]),
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="conflicting header dependencies"):
+            run_replay(store)
+
+    def test_a_conflicting_dependency_also_blocks_a_resume(self, store: Store) -> None:
+        run_fetch(store, scenario_node(), emit_rows=False)
+        dependency = self._dependency(store)
+        store.update_receipt(
+            SCENARIO_START,
+            header_dependencies_json=json.dumps(
+                [dependency, dict(dependency, block_hash=_hash32(0xBAD))]
+            ),
+        )
+
+        with pytest.raises(UniswapV2IngestionError, match="conflicting header dependencies"):
+            run_fetch(store, scenario_node(), emit_rows=False)
 
 
 # ---------------------------------------------------------------------------
