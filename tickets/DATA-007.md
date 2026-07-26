@@ -1,7 +1,7 @@
 # DATA-007 — Free DEX/CEX Source Capability & Rate-Limit Probe
 
 **Priority:** P0  
-**Status:** AWAITING_REVIEW  
+**Status:** READY  
 **Dependencies:** DATA-006 (ACCEPTED), UNIVERSE-002 (ACCEPTED), DEX OHLCV path (DATA-006)  
 **Layer:** acquisition / research evidence  
 **Architecture:** read-only probes + evidence artifact. **No LIVE. No Birdeye OHLCV.**
