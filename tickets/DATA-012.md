@@ -1,7 +1,7 @@
 # DATA-012 — Uniswap V2 PairCreated Event Ingestion (Ethereum Mainnet)
 
 **Priority:** P0
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Dependencies:** None
 **Layer:** acquisition / dex
 **Architecture:** raw-event ingestion via JSON-RPC, RawObjectWriter for exact response preservation. **No LIVE.**
