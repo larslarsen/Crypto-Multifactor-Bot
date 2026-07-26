@@ -27,8 +27,9 @@ REVIEW-0219 records CHANGES REQUIRED. Sr Dev must:
 4. Centralize valid-time plus knowledge-time listing lifecycle logic.
 5. Bind experiments to immutable published universe datasets, not mutable SQLite tables.
 6. Remove identity resolution from raw acquisition without deleting normalization/publication.
-7. Replace mutable symbol-registry membership and preserve case-sensitive Solana addresses.
-8. Wire all experiment/paper entrypoints to the new binding.
+7. Remove mutable symbol-registry membership.
+8. Preserve case-sensitive Solana addresses.
+9. Wire all experiment/paper entrypoints to the new binding.
 
 ## Scope
 
