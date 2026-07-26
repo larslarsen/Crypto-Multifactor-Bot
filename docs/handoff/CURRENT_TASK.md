@@ -1,22 +1,24 @@
 # CURRENT_TASK
 
 Ticket: DATA-012
-State: READY
-Next required actor: Sr Dev — Grok Build
+State: AWAITING_REVIEW
+Next required actor: Reviewer
 Next ticket authorized: NONE
 
 ## Summary
 
-DATA-012 — Uniswap V2 PairCreated Event Ingestion (Ethereum Mainnet). Raw-event
-ingestion via JSON-RPC with RawObjectWriter for exact response preservation.
-PairCreated events only. No Swap/Sync, OHLCV, universe, Birdeye, Solana, factors,
-or LIVE.
+DATA-012 — Uniswap V2 PairCreated Event Ingestion (Ethereum Mainnet).
+Sr Dev Grok Build implementation committed (`b49269b`). Awaiting reviewer
+acceptance.
+
+## Evidence
+
+- `tickets/DATA-012.md`
+- `docs/reviews/REVIEW-0226_DATA-012_AUTHORIZED.md`
+- `src/cryptofactors/acquisition/uniswap_v2.py`
+- `scripts/research/ingest_uniswap_v2_pair_created.py`
 
 ## Governing documents
 
 - `tickets/DATA-012.md`
 - `docs/reviews/REVIEW-0226_DATA-012_AUTHORIZED.md`
-
-## Authorization
-
-Reviewer authorized DATA-012 for Sr Dev Grok Build. No other work is authorized.
