@@ -23,8 +23,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import time
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -319,6 +320,7 @@ class AcquisitionOutcome:
     acquisition_id: str | None = None
     failure_kind: str | None = None
     detail: str | None = None
+    attempt: int = 1
 
     @property
     def request_json(self) -> str:
@@ -335,7 +337,13 @@ class AcquisitionOutcome:
             "acquisition_id": self.acquisition_id,
             "failure_kind": self.failure_kind,
             "detail": self.detail,
+            "attempt": self.attempt,
+            "rate_limited": self.status_code in RATE_LIMIT_STATUSES,
         }
+
+
+RATE_LIMIT_STATUSES = frozenset({429})
+RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 
 
 @dataclass
@@ -356,6 +364,14 @@ class AcquisitionLog:
     def failures(self) -> list[AcquisitionOutcome]:
         return [o for o in self.outcomes if not o.ok]
 
+    @property
+    def retries(self) -> list[AcquisitionOutcome]:
+        return [o for o in self.outcomes if o.attempt > 1]
+
+    @property
+    def rate_limit_incidents(self) -> list[AcquisitionOutcome]:
+        return [o for o in self.outcomes if o.status_code in RATE_LIMIT_STATUSES]
+
     def as_dicts(self) -> list[dict[str, Any]]:
         return [o.as_dict() for o in self.outcomes]
 
@@ -369,10 +385,18 @@ class RawHttpAcquirer:
         raw_writer: RawObjectWriter,
         client: httpx.Client,
         log: AcquisitionLog | None = None,
+        max_attempts: int = 1,
+        backoff_seconds: float = 0.0,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
+        if max_attempts < 1:
+            raise DexProviderError("max_attempts must be at least 1")
         self._raw_writer = raw_writer
         self._client = client
         self.log = log if log is not None else AcquisitionLog()
+        self._max_attempts = max_attempts
+        self._backoff_seconds = backoff_seconds
+        self._sleep = sleep
 
     def get_json(
         self,
@@ -382,6 +406,43 @@ class RawHttpAcquirer:
         params: Mapping[str, Any] | None = None,
         source_id: str,
         original_name: str,
+    ) -> AcquisitionOutcome:
+        """Acquire JSON, retrying politely on rate limits and transient errors.
+
+        Every attempt preserves its own response bytes, so a 429 body is evidence in
+        its own right rather than something discarded on the way to a retry.
+        """
+        outcome = self._attempt(
+            provider=provider, url=url, params=params, source_id=source_id,
+            original_name=original_name, attempt=1,
+        )
+        for attempt in range(2, self._max_attempts + 1):
+            if outcome.ok:
+                return outcome
+            retryable = (
+                outcome.failure_kind == "transport"
+                or (outcome.status_code in RETRYABLE_STATUSES)
+            )
+            if not retryable:
+                return outcome
+            if self._backoff_seconds > 0:
+                # Exponential, so a rate-limited provider gets progressively more room.
+                self._sleep(self._backoff_seconds * (2 ** (attempt - 2)))
+            outcome = self._attempt(
+                provider=provider, url=url, params=params, source_id=source_id,
+                original_name=original_name, attempt=attempt,
+            )
+        return outcome
+
+    def _attempt(
+        self,
+        *,
+        provider: str,
+        url: str,
+        params: Mapping[str, Any] | None,
+        source_id: str,
+        original_name: str,
+        attempt: int,
     ) -> AcquisitionOutcome:
         request = {"method": "GET", "url": url, "params": dict(params or {})}
         acquired_at = datetime.now(UTC)
@@ -397,7 +458,7 @@ class RawHttpAcquirer:
             )
             return self.log.record(AcquisitionOutcome(
                 provider=provider, request=request, acquired_at=acquired_at, ok=False,
-                failure_kind="transport", detail=detail,
+                failure_kind="transport", detail=detail, attempt=attempt,
             ))
 
         body = response.content
@@ -419,6 +480,7 @@ class RawHttpAcquirer:
             "status_code": response.status_code,
             "raw_object_id": raw.raw_object_id,
             "acquisition_id": raw.acquisition_id,
+            "attempt": attempt,
         }
 
         if response.is_error:

@@ -114,16 +114,61 @@ def load_candidate_pools(path: Path) -> list[dict[str, Any]]:
 
 def load_prior_snapshot(
     catalog: SqliteDatasetCatalog, store_root: Path
-) -> tuple[str | None, list[OhlcvBar]]:
-    """Return the prior canonical dataset id and its rows, if any."""
+) -> tuple[str | None, list[OhlcvBar], dict[str, Any]]:
+    """Return the prior canonical dataset id, its rows, and the reconciliation.
+
+    Fail-closed: if the catalog knows about a prior dataset, its output must be
+    present and must reconcile on sha256 and row count before it may be merged.
+    Returning an empty list for a missing output would turn the next publication
+    into a delta silently replacing the whole of history.
+    """
     dataset_id = catalog.resolve_latest_by_type(DATASET_TYPE)
     if dataset_id is None:
-        return None, []
-    directory = dataset_absolute_dir(store_root, dataset_id)
-    parquet = directory / RELATIVE_PATH
+        return None, [], {"prior_dataset_id": None, "state": "none"}
+
+    files = [f for f in catalog.list_files(dataset_id) if str(f["storage_uri"]).endswith(
+        RELATIVE_PATH
+    )]
+    if len(files) != 1:
+        raise RuntimeError(
+            f"prior dataset {dataset_id} does not declare exactly one {RELATIVE_PATH}"
+        )
+    declared = files[0]
+
+    parquet = dataset_absolute_dir(store_root, dataset_id) / RELATIVE_PATH
     if not parquet.exists():
-        return dataset_id, []
-    return dataset_id, bars_from_records(pq.read_table(parquet).to_pylist())
+        raise RuntimeError(
+            f"prior canonical dataset {dataset_id} is registered but its output "
+            f"{parquet} is missing; refusing to publish a delta as a full snapshot"
+        )
+
+    actual_sha256, actual_bytes = stream_sha256_and_size(parquet)
+    if actual_sha256 != str(declared["file_sha256"]):
+        raise RuntimeError(
+            f"prior canonical output {parquet} hash {actual_sha256} does not match the "
+            f"catalog value {declared['file_sha256']}"
+        )
+
+    table = pq.read_table(parquet)
+    if table.num_rows != int(declared["row_count"]):
+        raise RuntimeError(
+            f"prior canonical output has {table.num_rows} rows, catalog says "
+            f"{declared['row_count']}"
+        )
+    if set(SNAPSHOT_SCHEMA.names) != set(table.column_names):
+        raise RuntimeError(
+            f"prior canonical output schema {table.column_names} does not match "
+            f"{SNAPSHOT_SCHEMA.names}"
+        )
+
+    bars = bars_from_records(table.to_pylist())
+    return dataset_id, bars, {
+        "prior_dataset_id": dataset_id,
+        "state": "reconciled",
+        "file_sha256": actual_sha256,
+        "byte_size": actual_bytes,
+        "row_count": table.num_rows,
+    }
 
 
 def build_report(
@@ -138,6 +183,8 @@ def build_report(
     watermarks_after: Mapping[str, str],
     snapshot_rows: int,
     dataset_id: str | None,
+    prior_reconciliation: Mapping[str, Any] | None = None,
+    reconciliation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     by_status: dict[str, list[dict[str, Any]]] = {
         "passed": [], "rejected": [], "unavailable": [],
@@ -148,10 +195,8 @@ def build_report(
             "pool_address": acquisition.identity.pool_address,
             "screening": acquisition.decision.as_dict(),
             "row_count": len(acquisition.bars),
-            "gaps": [
-                {"after": start.isoformat(), "before": end.isoformat()}
-                for start, end in acquisition.gaps
-            ],
+            "coverage": acquisition.coverage_report(),
+            "publishable": acquisition.usable,
             "error": acquisition.error,
         }
         status = acquisition.decision.status
@@ -179,12 +224,19 @@ def build_report(
         "acquisition_attempts": log.as_dicts(),
         "raw_dependency_count": len(log.raw_object_ids),
         "failed_acquisition_count": len(log.failures),
+        "retry_count": len(log.retries),
+        "rate_limit_incidents": [o.as_dict() for o in log.rate_limit_incidents],
         "prior_dataset_id": prior_dataset_id,
+        "prior_dataset_reconciliation": dict(prior_reconciliation or {}),
         "watermarks_before": dict(watermarks_before),
         "watermarks_after": dict(watermarks_after),
         "snapshot_row_count": snapshot_rows,
         "published_dataset_id": dataset_id,
-        "catalog_reconciled": dataset_id is not None,
+        "catalog_reconciliation": dict(reconciliation or {}),
+        "catalog_reconciled": bool(reconciliation) and reconciliation.get("state") == "reconciled",
+        "unresolved_coverage_pools": [
+            a.identity.key for a in acquisitions if a.decision.passed and a.has_unresolved_coverage
+        ],
         "live_eligible": False,
         "supersedes": {
             "artifact": "research/sprint_004/37_DEX_MULTI_PROVIDER_FANOUT.json",
@@ -210,6 +262,8 @@ def main() -> int:
     parser.add_argument("--min-liquidity-usd", type=float, default=None)
     parser.add_argument("--min-volume-24h-usd", type=float, default=None)
     parser.add_argument("--code-commit", default=None)
+    parser.add_argument("--max-attempts", type=int, default=4)
+    parser.add_argument("--backoff-seconds", type=float, default=20.0)
     args = parser.parse_args()
 
     end_time = datetime.fromisoformat(args.end_time)
@@ -235,6 +289,8 @@ def main() -> int:
         "context_providers": ["defillama"],
         "thresholds": thresholds.as_dict(),
         "candidate_pool_count": len(candidates),
+        "max_attempts": args.max_attempts,
+        "backoff_seconds": args.backoff_seconds,
     }
 
     apply_migrations(args.db_path)
@@ -250,6 +306,8 @@ def main() -> int:
         acquirer = RawHttpAcquirer(
             raw_writer=RawObjectWriter(RawObjectStoreConfig(root=args.raw_root), raw_catalog),
             client=client,
+            max_attempts=args.max_attempts,
+            backoff_seconds=args.backoff_seconds,
         )
         engine = DexSnapshotEngine(
             acquirer=acquirer,
@@ -269,13 +327,34 @@ def main() -> int:
         client.close()
         raw_catalog.close()
 
-    acquired = [bar for acquisition in acquisitions for bar in acquisition.bars]
+    # A pool that passed screening but lacks exact requested coverage blocks the whole
+    # publication: a gap-bearing snapshot must never become canonical.
+    unresolved = [a for a in acquisitions if a.decision.passed and a.has_unresolved_coverage]
+    acquired = [bar for a in acquisitions if a.usable for bar in a.bars]
+
     dataset_catalog = SqliteDatasetCatalog(args.db_path)
     dataset_id: str | None = None
     snapshot: list[OhlcvBar] = []
     watermarks_after = dict(watermarks_before)
+    reconciliation: dict[str, Any] = {}
     try:
-        prior_dataset_id, prior_bars = load_prior_snapshot(dataset_catalog, args.store_root)
+        prior_dataset_id, prior_bars, prior_reconciliation = load_prior_snapshot(
+            dataset_catalog, args.store_root
+        )
+
+        if unresolved:
+            report = build_report(
+                end_time=end_time, thresholds=thresholds, config=config,
+                acquisitions=acquisitions, log=log, prior_dataset_id=prior_dataset_id,
+                watermarks_before=watermarks_before, watermarks_after=watermarks_before,
+                snapshot_rows=0, dataset_id=None,
+                prior_reconciliation=prior_reconciliation,
+                reconciliation={"state": "blocked_by_unresolved_coverage"},
+            )
+            _write_report(args.report_path, report)
+            names = ", ".join(a.identity.key for a in unresolved)
+            print(f"DEX-002: unresolved coverage for {names}; no PASS dataset published")
+            return 1
 
         if not acquired:
             # Nothing publishable: the prior canonical dataset and every watermark
@@ -285,6 +364,8 @@ def main() -> int:
                 acquisitions=acquisitions, log=log, prior_dataset_id=prior_dataset_id,
                 watermarks_before=watermarks_before, watermarks_after=watermarks_before,
                 snapshot_rows=0, dataset_id=None,
+                prior_reconciliation=prior_reconciliation,
+                reconciliation={"state": "no_publishable_rows"},
             )
             _write_report(args.report_path, report)
             print("DEX-002: no publishable rows; prior snapshot and watermarks retained")
@@ -333,7 +414,8 @@ def main() -> int:
                 quality_summary={
                     "passed_pools": sum(1 for a in acquisitions if a.decision.passed),
                     "row_count": table.num_rows,
-                    "unresolved_gaps": sum(len(a.gaps) for a in acquisitions),
+                    # PASS is only reachable when this is zero; see the gate above.
+                    "unresolved_coverage_pools": 0,
                 },
                 created_at=datetime.now(UTC),
                 row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
@@ -342,13 +424,31 @@ def main() -> int:
                     verifier_name="dex002_snapshot_row_count",
                 )},
             )
-            DatasetPublisher(
+            result = DatasetPublisher(
                 DatasetStoreConfig(root=args.store_root), dataset_catalog
             ).publish(plan, register_catalog=True)
 
-        dataset_id = dataset_catalog.resolve_latest_by_type(DATASET_TYPE)
-        if dataset_id is None:
-            raise RuntimeError("publication did not register a resolvable dataset")
+        # Reconciliation is proven, not asserted: the id the publisher returned must
+        # be the id the catalog now resolves as latest for this type.
+        resolved_id = dataset_catalog.resolve_latest_by_type(DATASET_TYPE)
+        reconciliation = {
+            "state": "reconciled" if resolved_id == result.dataset_id else "mismatch",
+            "published_dataset_id": result.dataset_id,
+            "resolved_dataset_id": resolved_id,
+            "manifest_sha256": result.manifest_sha256,
+            "catalog_registered": result.catalog_registered,
+            "reused_existing": result.reused_existing,
+            "output_sha256": sha256,
+            "row_count": table.num_rows,
+        }
+        if resolved_id != result.dataset_id:
+            raise RuntimeError(
+                f"catalog reconciliation failed: published {result.dataset_id} but "
+                f"resolve_latest_by_type returned {resolved_id}"
+            )
+        if not result.catalog_registered:
+            raise RuntimeError(f"dataset {result.dataset_id} was not registered in the catalog")
+        dataset_id = result.dataset_id
 
         # Publication succeeded: only now may watermarks advance, and only to the
         # last contiguous validated row.
@@ -365,6 +465,7 @@ def main() -> int:
         end_time=end_time, thresholds=thresholds, config=config, acquisitions=acquisitions,
         log=log, prior_dataset_id=prior_dataset_id, watermarks_before=watermarks_before,
         watermarks_after=watermarks_after, snapshot_rows=len(snapshot), dataset_id=dataset_id,
+        prior_reconciliation=prior_reconciliation, reconciliation=reconciliation,
     )
     _write_report(args.report_path, report)
     print(f"DEX-002: published {len(snapshot)} rows as {dataset_id}")

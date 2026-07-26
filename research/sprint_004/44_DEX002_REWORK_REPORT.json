@@ -1,0 +1,259 @@
+{
+  "acquisition_attempts": [
+    {
+      "acquired_at": "2026-07-26T18:29:38.935602+00:00",
+      "acquisition_id": "acq_84ea3260952748988af717239645cfbd",
+      "attempt": 1,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "dexscreener",
+      "rate_limited": false,
+      "raw_object_id": "raw_37e148b901c757e968cf8454a6d7318b1b58dbd8c1ae8665353c15d427490967",
+      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://api.dexscreener.com/latest/dex/pairs/arbitrum/0xc6962004f452be9203591991d15f6b388e09e8d0\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T18:29:39.031832+00:00",
+      "acquisition_id": "acq_58f096daeb9543f983a0a5b7e4254049",
+      "attempt": 1,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "defillama",
+      "rate_limited": false,
+      "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
+      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://coins.llama.fi/prices/current/arbitrum:0xc6962004f452be9203591991d15f6b388e09e8d0\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T18:29:39.226340+00:00",
+      "acquisition_id": "acq_e32b12f3873240c1ac25c0d4b07361cf",
+      "attempt": 1,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "geckoterminal",
+      "rate_limited": false,
+      "raw_object_id": "raw_90bcff3e7fa0d5a463ef8e478de11eef3251535564c40a719ccbf5d4caa0c83c",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"aggregate\":1,\"before_timestamp\":1784937600,\"currency\":\"usd\",\"limit\":1000},\"url\":\"https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xc6962004f452be9203591991d15f6b388e09e8d0/ohlcv/day\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T18:29:39.346641+00:00",
+      "acquisition_id": "acq_943db6112db74c3eae39fa43fbb62e68",
+      "attempt": 1,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "dexscreener",
+      "rate_limited": false,
+      "raw_object_id": "raw_c91fdd146e45018968edb906c95b978f73e4b44bca388f41ffe493a1857272e0",
+      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://api.dexscreener.com/latest/dex/pairs/arbitrum/0xc31e54c7a869b9fcbecc14363cf510d1c41fa443\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T18:29:39.381850+00:00",
+      "acquisition_id": "acq_7d36d2c9200c43f0a7c11b3336d3b98d",
+      "attempt": 1,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "defillama",
+      "rate_limited": false,
+      "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
+      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://coins.llama.fi/prices/current/arbitrum:0xc31e54c7a869b9fcbecc14363cf510d1c41fa443\"}",
+      "status_code": 200
+    },
+    {
+      "acquired_at": "2026-07-26T18:29:39.626451+00:00",
+      "acquisition_id": "acq_776fab909d8746c7b1738eb12b5e77b2",
+      "attempt": 1,
+      "detail": null,
+      "failure_kind": null,
+      "ok": true,
+      "provider": "geckoterminal",
+      "rate_limited": false,
+      "raw_object_id": "raw_0cd2ed7a92410187dedf70c4112ed2777647a5d4e97de31a137e45eaecbfc215",
+      "request_json": "{\"method\":\"GET\",\"params\":{\"aggregate\":1,\"before_timestamp\":1784937600,\"currency\":\"usd\",\"limit\":1000},\"url\":\"https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xc31e54c7a869b9fcbecc14363cf510d1c41fa443/ohlcv/day\"}",
+      "status_code": 200
+    }
+  ],
+  "candidate_pools": [
+    {
+      "chain": "arbitrum",
+      "pool_address": "0xc6962004f452be9203591991d15f6b388e09e8d0"
+    },
+    {
+      "chain": "arbitrum",
+      "pool_address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443"
+    }
+  ],
+  "catalog_reconciled": true,
+  "catalog_reconciliation": {
+    "catalog_registered": true,
+    "manifest_sha256": "938df5fd0e87518650c48f423feb58ac2183ac90d2e1294bf859013f8d949449",
+    "output_sha256": "aad25125e0963777d550bede3e523194b859e5f7ead70cff9f4d755e295f697c",
+    "published_dataset_id": "ds_1c5cba17fff5af270f242700d89f67750873641211c164c26e8e8f80c8450d1c",
+    "resolved_dataset_id": "ds_1c5cba17fff5af270f242700d89f67750873641211c164c26e8e8f80c8450d1c",
+    "reused_existing": false,
+    "row_count": 10,
+    "state": "reconciled"
+  },
+  "effective_config": {
+    "backoff_seconds": 25.0,
+    "candidate_pool_count": 2,
+    "context_providers": [
+      "defillama"
+    ],
+    "dataset_type": "dex_pool_ohlcv_daily",
+    "default_start": "2026-07-21T00:00:00+00:00",
+    "max_attempts": 5,
+    "ohlcv_provider": "geckoterminal",
+    "pinned_end_time": "2026-07-25T00:00:00+00:00",
+    "screening_provider": "dexscreener",
+    "thresholds": {
+      "min_liquidity_usd": 50000.0,
+      "min_volume_24h_usd": 10000.0
+    }
+  },
+  "experiment_id": "DEX-002-SCREENED-DEX-OHLCV-SNAPSHOT",
+  "failed_acquisition_count": 0,
+  "generated_at": "2026-07-26T18:29:39.789108+00:00",
+  "live_eligible": false,
+  "passed_pools": [
+    {
+      "chain": "arbitrum",
+      "coverage": {
+        "internal_gaps": [],
+        "missing_intervals": [],
+        "requested_end": "2026-07-25T00:00:00+00:00",
+        "requested_start": "2026-07-21T00:00:00+00:00",
+        "row_count": 5,
+        "unresolved": false
+      },
+      "error": null,
+      "pool_address": "0xc6962004f452be9203591991d15f6b388e09e8d0",
+      "publishable": true,
+      "row_count": 5,
+      "screening": {
+        "authoritative_provider": "dexscreener",
+        "chain": "arbitrum",
+        "liquidity_usd": 35772699.04,
+        "observations": [
+          {
+            "acquisition_id": "acq_84ea3260952748988af717239645cfbd",
+            "capability": "authoritative_screening",
+            "liquidity_usd": 35772699.04,
+            "observed_at": "2026-07-26T18:29:38.935602+00:00",
+            "provider": "dexscreener",
+            "raw_object_id": "raw_37e148b901c757e968cf8454a6d7318b1b58dbd8c1ae8665353c15d427490967",
+            "reason": "liquidity 35772699.04 >= 50000.00 and volume_24h 14798657.79 >= 10000.00",
+            "status": "PASS",
+            "volume_24h_usd": 14798657.79
+          },
+          {
+            "acquisition_id": "acq_58f096daeb9543f983a0a5b7e4254049",
+            "capability": "context",
+            "liquidity_usd": null,
+            "observed_at": "2026-07-26T18:29:39.031832+00:00",
+            "provider": "defillama",
+            "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
+            "reason": "context only; 0 coin price(s)",
+            "status": "CONTEXT_ONLY",
+            "volume_24h_usd": null
+          }
+        ],
+        "pool_address": "0xc6962004f452be9203591991d15f6b388e09e8d0",
+        "reason": "liquidity 35772699.04 >= 50000.00 and volume_24h 14798657.79 >= 10000.00",
+        "status": "PASS",
+        "thresholds": {
+          "min_liquidity_usd": 50000.0,
+          "min_volume_24h_usd": 10000.0
+        },
+        "volume_24h_usd": 14798657.79
+      }
+    },
+    {
+      "chain": "arbitrum",
+      "coverage": {
+        "internal_gaps": [],
+        "missing_intervals": [],
+        "requested_end": "2026-07-25T00:00:00+00:00",
+        "requested_start": "2026-07-21T00:00:00+00:00",
+        "row_count": 5,
+        "unresolved": false
+      },
+      "error": null,
+      "pool_address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
+      "publishable": true,
+      "row_count": 5,
+      "screening": {
+        "authoritative_provider": "dexscreener",
+        "chain": "arbitrum",
+        "liquidity_usd": 972269.97,
+        "observations": [
+          {
+            "acquisition_id": "acq_943db6112db74c3eae39fa43fbb62e68",
+            "capability": "authoritative_screening",
+            "liquidity_usd": 972269.97,
+            "observed_at": "2026-07-26T18:29:39.346641+00:00",
+            "provider": "dexscreener",
+            "raw_object_id": "raw_c91fdd146e45018968edb906c95b978f73e4b44bca388f41ffe493a1857272e0",
+            "reason": "liquidity 972269.97 >= 50000.00 and volume_24h 127881.23 >= 10000.00",
+            "status": "PASS",
+            "volume_24h_usd": 127881.23
+          },
+          {
+            "acquisition_id": "acq_7d36d2c9200c43f0a7c11b3336d3b98d",
+            "capability": "context",
+            "liquidity_usd": null,
+            "observed_at": "2026-07-26T18:29:39.381850+00:00",
+            "provider": "defillama",
+            "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
+            "reason": "context only; 0 coin price(s)",
+            "status": "CONTEXT_ONLY",
+            "volume_24h_usd": null
+          }
+        ],
+        "pool_address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
+        "reason": "liquidity 972269.97 >= 50000.00 and volume_24h 127881.23 >= 10000.00",
+        "status": "PASS",
+        "thresholds": {
+          "min_liquidity_usd": 50000.0,
+          "min_volume_24h_usd": 10000.0
+        },
+        "volume_24h_usd": 127881.23
+      }
+    }
+  ],
+  "pinned_end_time": "2026-07-25T00:00:00+00:00",
+  "prior_dataset_id": null,
+  "prior_dataset_reconciliation": {
+    "prior_dataset_id": null,
+    "state": "none"
+  },
+  "published_dataset_id": "ds_1c5cba17fff5af270f242700d89f67750873641211c164c26e8e8f80c8450d1c",
+  "rate_limit_incidents": [],
+  "raw_dependency_count": 5,
+  "rejected_pools": [],
+  "retry_count": 0,
+  "snapshot_row_count": 10,
+  "supersedes": {
+    "artifact": "research/sprint_004/37_DEX_MULTI_PROVIDER_FANOUT.json",
+    "reason": "contains fail-open screening evidence and synthetic DexScreener candles; no research or canonical-data authority",
+    "status": "SUPERSEDED_PROTOTYPE"
+  },
+  "thresholds": {
+    "min_liquidity_usd": 50000.0,
+    "min_volume_24h_usd": 10000.0
+  },
+  "thresholds_fingerprint": "caa911c272f95c16b9d1645a205ee2673f8bf08f1bf6304ab06a32179caed5a2",
+  "unavailable_pools": [],
+  "unresolved_coverage_pools": [],
+  "watermarks_after": {
+    "geckoterminal:arbitrum:0xc31e54c7a869b9fcbecc14363cf510d1c41fa443": "2026-07-25T00:00:00+00:00",
+    "geckoterminal:arbitrum:0xc6962004f452be9203591991d15f6b388e09e8d0": "2026-07-25T00:00:00+00:00"
+  },
+  "watermarks_before": {}
+}

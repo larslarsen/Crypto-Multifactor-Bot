@@ -44,6 +44,7 @@ from cryptofactors.ingest.dex_providers import (
 )
 from cryptofactors.ingest.dex_snapshot import (
     DexSnapshotEngine,
+    chain_family,
     DexSnapshotError,
     GeckoTerminalOhlcvSource,
     OhlcvBar,
@@ -110,7 +111,9 @@ class MockDexNode:
         ohlcv_transport_error: bool = False,
         screening_body: bytes | None = None,
         pairs_override: Any = None,
+        bars_by_pool: dict[str, list[list[Any]]] | None = None,
     ) -> None:
+        self.bars_by_pool = bars_by_pool or {}
         self.liquidity = liquidity
         self.volume_24h = volume_24h
         self.bars = bars if bars is not None else [bar_row(i) for i in range(5)]
@@ -157,7 +160,11 @@ class MockDexNode:
                 raise httpx.ConnectError("ohlcv refused", request=request)
             if self.ohlcv_status != 200:
                 return self._respond(self.ohlcv_status, {"error": "unavailable"})
-            return self._respond(200, {"data": {"attributes": {"ohlcv_list": list(self.bars)}}})
+            rows = next(
+                (v for k, v in self.bars_by_pool.items() if k.lower() in url.lower()),
+                self.bars,
+            )
+            return self._respond(200, {"data": {"attributes": {"ohlcv_list": list(rows)}}})
 
         return self._respond(404, {"error": "unknown"})
 
@@ -406,9 +413,14 @@ class TestBarValidation:
         with pytest.raises(DexSnapshotError, match="duplicate bar timestamp"):
             self._parse([bar_row(1), bar_row(1)])
 
-    def test_a_bar_outside_the_requested_range_is_refused(self) -> None:
-        with pytest.raises(DexSnapshotError, match="outside the requested range"):
-            self._parse([bar_row(99)])
+    def test_bars_outside_the_requested_range_are_excluded_not_published(self) -> None:
+        """Pagination returns extra history; it must never reach the snapshot."""
+        bars = self._parse([bar_row(-5), bar_row(0), bar_row(1), bar_row(99)])
+
+        assert [b.timestamp for b in bars] == [day(0), day(1)]
+
+    def test_a_response_entirely_outside_the_range_yields_no_bars(self) -> None:
+        assert self._parse([bar_row(-9), bar_row(-8)]) == []
 
     def test_a_misaligned_timestamp_is_refused(self) -> None:
         row = bar_row(1)
@@ -485,12 +497,36 @@ class TestBarValidation:
 
 class TestPoolIdentity:
     def test_evm_addresses_are_lowercased(self) -> None:
-        assert canonical_pool_address(POOL.upper().replace("0X", "0x")) == POOL
+        assert canonical_pool_address(POOL.upper().replace("0X", "0x"), chain=CHAIN) == POOL
 
     def test_non_evm_addresses_preserve_case(self) -> None:
         """Solana base58 is case-sensitive; lowercasing would merge distinct pools."""
-        assert canonical_pool_address(SOLANA_POOL) == SOLANA_POOL
-        assert canonical_pool_address(SOLANA_POOL.lower()) != SOLANA_POOL
+        assert canonical_pool_address(SOLANA_POOL, chain="solana") == SOLANA_POOL
+
+    def test_a_malformed_evm_address_fails_closed(self) -> None:
+        """It must not fall through and be accepted as a non-EVM identity."""
+        with pytest.raises(DexSnapshotError, match="not a valid 20-byte EVM address"):
+            canonical_pool_address("0xdeadbeef", chain=CHAIN)
+
+    @pytest.mark.parametrize(
+        "bad", ["0x" + "g" * 40, "0x" + "a" * 39, "0x" + "a" * 41, "not-an-address"]
+    )
+    def test_every_malformed_evm_address_is_refused(self, bad: str) -> None:
+        with pytest.raises(DexSnapshotError, match="not a valid 20-byte EVM address"):
+            canonical_pool_address(bad, chain=CHAIN)
+
+    def test_an_evm_address_on_a_solana_chain_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="not a valid base58 address"):
+            canonical_pool_address("0x" + "a" * 40, chain="solana")
+
+    def test_an_unregistered_chain_is_refused(self) -> None:
+        """An unknown chain means an unvalidated address grammar; fail closed."""
+        with pytest.raises(DexSnapshotError, match="no registered address family"):
+            canonical_pool_address(POOL, chain="fantasychain")
+
+    def test_chain_families_are_declared(self) -> None:
+        assert chain_family("arbitrum") == "evm"
+        assert chain_family("solana") == "solana"
 
     def test_the_same_address_on_two_chains_does_not_collide(self) -> None:
         arbitrum = PoolIdentity.create("arbitrum", POOL)
@@ -521,7 +557,7 @@ class TestPoolIdentity:
     @pytest.mark.parametrize("bad", ["", "   "])
     def test_an_empty_address_is_refused(self, bad: str) -> None:
         with pytest.raises(DexSnapshotError):
-            canonical_pool_address(bad)
+            canonical_pool_address(bad, chain=CHAIN)
 
 
 # ---------------------------------------------------------------------------
@@ -686,7 +722,8 @@ class TestMergeAndWatermarks:
         )
 
         assert acquisition.gaps == ((day(1), day(3)),)
-        assert acquisition.watermark_candidate == day(1), "must not advance past a gap"
+        assert acquisition.watermark_candidate is None, "a gap yields no watermark at all"
+        assert not acquisition.usable
 
     @pytest.mark.parametrize(
         "node_kwargs",
@@ -757,6 +794,7 @@ def run_runner(
     monkeypatch: pytest.MonkeyPatch,
     pools: list[dict[str, str]] | None = None,
     end_time: datetime = END_TIME,
+    max_attempts: int = 1,
 ) -> tuple[int, dict[str, Any]]:
     from scripts.research import dex002_snapshot as runner
 
@@ -773,6 +811,10 @@ def run_runner(
         "--watermark-path", str(store.watermark_path),
         "--report-path", str(report_path),
         "--code-commit", "0" * 40,
+        # Retry/backoff is exercised directly in TestRetryAndRateLimits; runner tests
+        # must not spend real seconds sleeping on deliberate failures.
+        "--max-attempts", str(max_attempts),
+        "--backoff-seconds", "0",
     ])
     code = runner.main()
     report = json.loads(report_path.read_text(encoding="utf-8"))
@@ -989,3 +1031,346 @@ def read_snapshot(store: Store) -> list[dict[str, Any]]:
         "dex/dex_pool_ohlcv_daily/bars.parquet"
     )
     return pq.read_table(parquet).to_pylist()
+
+
+# ---------------------------------------------------------------------------
+# REVIEW-0236 corrections
+# ---------------------------------------------------------------------------
+
+class TestUnresolvedCoverageBlocksPublication:
+    """Finding 2: a gap-bearing response must never become canonical data."""
+
+    def _run(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch,
+        bars: list[list[Any]],
+    ) -> tuple[int, dict[str, Any]]:
+        return run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars=bars), end_time=day(4),
+        )
+
+    def test_an_internal_gap_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = self._run(
+            tmp_path, store, monkeypatch, [bar_row(0), bar_row(1), bar_row(3), bar_row(4)]
+        )
+
+        assert code == 1
+        assert report["published_dataset_id"] is None
+        assert report["unresolved_coverage_pools"] == [f"{CHAIN}:{POOL}"]
+        assert read_snapshot(store) == []
+
+    def test_a_leading_gap_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Bars start late: contiguous between themselves, but coverage is short."""
+        code, report = self._run(tmp_path, store, monkeypatch, [bar_row(i) for i in (2, 3, 4)])
+
+        assert code == 1
+        assert report["published_dataset_id"] is None
+        missing = report["passed_pools"][0]["coverage"]["missing_intervals"]
+        assert missing == [day(0).isoformat(), day(1).isoformat()]
+
+    def test_a_trailing_gap_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = self._run(tmp_path, store, monkeypatch, [bar_row(i) for i in (0, 1, 2)])
+
+        assert code == 1
+        missing = report["passed_pools"][0]["coverage"]["missing_intervals"]
+        assert missing == [day(3).isoformat(), day(4).isoformat()]
+
+    def test_unresolved_coverage_advances_no_watermark(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = self._run(
+            tmp_path, store, monkeypatch, [bar_row(0), bar_row(1), bar_row(3), bar_row(4)]
+        )
+
+        assert code == 1
+        assert report["watermarks_after"] == report["watermarks_before"] == {}
+        assert WatermarkStore(store.watermark_path).load() == {}
+
+    def test_exact_coverage_still_publishes(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = self._run(tmp_path, store, monkeypatch, [bar_row(i) for i in range(5)])
+
+        assert code == 0
+        assert report["unresolved_coverage_pools"] == []
+        assert report["snapshot_row_count"] == 5
+
+    def test_a_gap_bearing_pool_cannot_ride_along_with_a_clean_one(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """One incomplete pool blocks the whole snapshot, not just its own rows.
+
+        The clean pool has publishable bars, so without the gate its rows would be
+        published as a canonical snapshot while its sibling silently lost days.
+        """
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars_by_pool={
+                POOL: [bar_row(i) for i in range(5)],
+                POOL_B: [bar_row(0), bar_row(1), bar_row(3), bar_row(4)],
+            }),
+            pools=[
+                {"chain": "arbitrum", "pool_address": POOL},
+                {"chain": "base", "pool_address": POOL_B},
+            ],
+            end_time=day(4),
+        )
+
+        assert code == 1, "a clean sibling must not carry a gap-bearing pool into PASS"
+        assert report["unresolved_coverage_pools"] == [f"base:{POOL_B}"]
+        assert read_snapshot(store) == []
+        assert WatermarkStore(store.watermark_path).load() == {}
+
+
+class TestPriorSnapshotFailsClosed:
+    """Finding 3: a missing or corrupt prior output must not become a delta."""
+
+    def _publish_once(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, _ = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
+        )
+        assert code == 0
+
+    def _prior_parquet(self, store: Store) -> Path:
+        catalog = SqliteDatasetCatalog(store.db)
+        try:
+            dataset_id = catalog.resolve_latest_by_type("dex_pool_ohlcv_daily")
+        finally:
+            catalog.close()
+        return dataset_absolute_dir(store.store_root, str(dataset_id)) / (
+            "dex/dex_pool_ohlcv_daily/bars.parquet"
+        )
+
+    def test_a_missing_prior_output_refuses_to_publish(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._publish_once(tmp_path, store, monkeypatch)
+        self._prior_parquet(store).unlink()
+
+        with pytest.raises(RuntimeError, match="refusing to publish a delta"):
+            run_runner(
+                tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+                node=MockDexNode(bars=[bar_row(5)]), end_time=day(5),
+            )
+
+    def test_a_hash_mismatched_prior_output_refuses_to_publish(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._publish_once(tmp_path, store, monkeypatch)
+        parquet = self._prior_parquet(store)
+        parquet.write_bytes(parquet.read_bytes() + b"tamper")
+
+        with pytest.raises(RuntimeError, match="does not match the catalog value"):
+            run_runner(
+                tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+                node=MockDexNode(bars=[bar_row(5)]), end_time=day(5),
+            )
+
+    def test_a_valid_prior_output_reconciles_and_merges(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._publish_once(tmp_path, store, monkeypatch)
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars=[bar_row(5)]), end_time=day(5),
+        )
+
+        assert code == 0
+        prior = report["prior_dataset_reconciliation"]
+        assert prior["state"] == "reconciled"
+        assert prior["row_count"] == 5
+        assert len(prior["file_sha256"]) == 64
+        assert report["snapshot_row_count"] == 6
+
+
+class TestCatalogReconciliationIsProven:
+    """Finding 6: compare the published id to the resolved id, do not assert."""
+
+    def test_the_published_and_resolved_ids_are_compared(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
+        )
+
+        assert code == 0
+        reconciliation = report["catalog_reconciliation"]
+        assert reconciliation["state"] == "reconciled"
+        assert reconciliation["published_dataset_id"] == reconciliation["resolved_dataset_id"]
+        assert reconciliation["published_dataset_id"] == report["published_dataset_id"]
+        assert reconciliation["catalog_registered"] is True
+        assert len(reconciliation["manifest_sha256"]) == 64
+        assert len(reconciliation["output_sha256"]) == 64
+        assert reconciliation["row_count"] == report["snapshot_row_count"]
+        assert report["catalog_reconciled"] is True
+
+    def test_a_reconciliation_mismatch_refuses_to_complete(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If the catalog does not resolve what was published, the run must fail."""
+        # The first call is the prior-snapshot lookup (no prior dataset exists);
+        # only the post-publish reconciliation lookup returns the wrong id.
+        calls = {"n": 0}
+
+        def resolve(self: Any, dataset_type: str) -> str | None:
+            calls["n"] += 1
+            return None if calls["n"] == 1 else "ds_" + "0" * 64
+
+        monkeypatch.setattr(SqliteDatasetCatalog, "resolve_latest_by_type", resolve)
+
+        with pytest.raises(RuntimeError, match="catalog reconciliation failed"):
+            run_runner(
+                tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
+            )
+
+    def test_an_unpublished_run_is_not_reported_as_reconciled(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(bars=[]), monkeypatch=monkeypatch
+        )
+
+        assert report["catalog_reconciled"] is False
+        assert report["published_dataset_id"] is None
+
+
+class TestLegacyPublisherIsDisabled:
+    """Finding 1: the superseded path must be impossible to publish through."""
+
+    def test_the_legacy_runner_entry_point_refuses_to_run(self) -> None:
+        from scripts.research import dex_multi_provider_fanout as legacy
+
+        assert legacy.main() == 2
+
+    def test_the_legacy_runner_exits_nonzero_as_a_process(self) -> None:
+        import subprocess
+
+        result = subprocess.run(
+            [sys.executable, "scripts/research/dex_multi_provider_fanout.py", "--no-dry-run"],
+            capture_output=True, text=True,
+            cwd=str(Path(__file__).resolve().parents[2]),
+        )
+
+        assert result.returncode == 2
+        assert "SUPERSEDED" in result.stderr
+
+    def test_the_legacy_screening_default_fails_closed(self) -> None:
+        from cryptofactors.ingest.dex_fanout import DexOHLCVProvider
+
+        result = DexOHLCVProvider.screen_pool(
+            object.__new__(type("P", (DexOHLCVProvider,), {
+                "provider_id": "p", "role": "primary", "fetch_pool_ohlcv": lambda *a, **k: None,
+            })),
+            chain=CHAIN, pool_address=POOL, min_liquidity_usd=0.0, min_volume_24h_usd=0.0,
+        )
+
+        assert result["passed"] is False
+
+
+class TestRetryAndRateLimits:
+    """Retries and rate-limit incidents are required report evidence."""
+
+    def _acquirer(self, store: Store, node: MockDexNode, **kwargs: Any) -> RawHttpAcquirer:
+        slept: list[float] = []
+        kwargs.setdefault("sleep", slept.append)
+        acquirer = RawHttpAcquirer(
+            raw_writer=store.writer, client=node.client(), log=AcquisitionLog(), **kwargs
+        )
+        acquirer.slept = slept  # type: ignore[attr-defined]
+        return acquirer
+
+    def test_a_rate_limited_response_is_retried(self, store: Store) -> None:
+        node = MockDexNode(ohlcv_status=429)
+        acquirer = self._acquirer(store, node, max_attempts=3, backoff_seconds=1.0)
+
+        outcome = acquirer.get_json(
+            provider=GECKOTERMINAL_PROVIDER, url="https://api.geckoterminal.com/x",
+            source_id="geckoterminal_ohlcv", original_name="x.json",
+        )
+
+        assert not outcome.ok
+        assert outcome.attempt == 3
+        assert len(acquirer.log.outcomes) == 3
+        assert len(acquirer.log.rate_limit_incidents) == 3
+
+    def test_backoff_grows_between_attempts(self, store: Store) -> None:
+        node = MockDexNode(ohlcv_status=429)
+        acquirer = self._acquirer(store, node, max_attempts=4, backoff_seconds=2.0)
+
+        acquirer.get_json(
+            provider=GECKOTERMINAL_PROVIDER, url="https://api.geckoterminal.com/x",
+            source_id="geckoterminal_ohlcv", original_name="x.json",
+        )
+
+        assert acquirer.slept == [2.0, 4.0, 8.0]
+
+    def test_every_attempt_preserves_its_own_response_bytes(self, store: Store) -> None:
+        """A 429 body is evidence, not something discarded on the way to a retry."""
+        node = MockDexNode(ohlcv_status=429)
+        acquirer = self._acquirer(store, node, max_attempts=2, backoff_seconds=0.0)
+
+        acquirer.get_json(
+            provider=GECKOTERMINAL_PROVIDER, url="https://api.geckoterminal.com/x",
+            source_id="geckoterminal_ohlcv", original_name="x.json",
+        )
+
+        assert all(o.raw_object_id is not None for o in acquirer.log.outcomes)
+
+    def test_a_non_retryable_status_is_not_retried(self, store: Store) -> None:
+        node = MockDexNode(ohlcv_status=404)
+        acquirer = self._acquirer(store, node, max_attempts=5, backoff_seconds=1.0)
+
+        outcome = acquirer.get_json(
+            provider=GECKOTERMINAL_PROVIDER, url="https://api.geckoterminal.com/x",
+            source_id="geckoterminal_ohlcv", original_name="x.json",
+        )
+
+        assert outcome.attempt == 1
+        assert acquirer.slept == []
+
+    def test_a_transport_failure_is_retried(self, store: Store) -> None:
+        node = MockDexNode(ohlcv_transport_error=True)
+        acquirer = self._acquirer(store, node, max_attempts=3, backoff_seconds=0.0)
+
+        outcome = acquirer.get_json(
+            provider=GECKOTERMINAL_PROVIDER, url="https://api.geckoterminal.com/x",
+            source_id="geckoterminal_ohlcv", original_name="x.json",
+        )
+
+        assert outcome.failure_kind == "transport"
+        assert outcome.attempt == 3
+
+    def test_a_single_attempt_is_the_default_shape(self, store: Store) -> None:
+        node = MockDexNode()
+        acquirer = self._acquirer(store, node)
+
+        outcome = acquirer.get_json(
+            provider=DEXSCREENER_PROVIDER, url="https://api.dexscreener.com/x",
+            source_id="dexscreener_pairs", original_name="x.json",
+        )
+
+        assert outcome.ok
+        assert outcome.attempt == 1
+        assert acquirer.log.retries == []
+
+    def test_the_report_records_retries_and_rate_limit_incidents(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(ohlcv_status=429),
+            monkeypatch=monkeypatch, max_attempts=3,
+        )
+
+        assert report["retry_count"] == 2
+        assert len(report["rate_limit_incidents"]) == 3
+        assert all(i["rate_limited"] for i in report["rate_limit_incidents"])
+

@@ -161,7 +161,28 @@ def _build_live_providers() -> dict[str, DexOHLCVProvider]:
     }
 
 
+SUPERSEDED_MESSAGE = (
+    "scripts/research/dex_multi_provider_fanout.py is SUPERSEDED by REVIEW-0235 and "
+    "disabled by REVIEW-0236. It published a PASS dataset without raw lineage or "
+    "full-snapshot semantics, screened fail-open, and advanced watermarks over empty "
+    "results. Use scripts/research/dex002_snapshot.py instead. This file is retained "
+    "only as non-executable history; report 37 has no research or canonical-data "
+    "authority."
+)
+
+
 def main() -> int:
+    """Disabled entry point.
+
+    Marking report 37 as superseded did not stop this path from producing another
+    one, so the entry point itself refuses to run. The module below is left intact
+    for historical reference only.
+    """
+    print(SUPERSEDED_MESSAGE, file=sys.stderr)
+    return 2
+
+
+def _superseded_main_disabled() -> int:
     parser = argparse.ArgumentParser(description="DEX-002 — multi-provider DEX OHLCV fan-out")
     parser.add_argument("--db-path", type=str, default="exp003.db")
     parser.add_argument("--store-root", type=str, default="data/exp003_store")

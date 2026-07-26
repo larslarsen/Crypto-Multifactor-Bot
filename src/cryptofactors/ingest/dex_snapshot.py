@@ -42,6 +42,28 @@ from cryptofactors.ingest.dex_providers import (
 
 DAY_SECONDS = 86_400
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_BASE58_ADDRESS = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+
+EVM_FAMILY = "evm"
+SOLANA_FAMILY = "solana"
+
+# Which address grammar each chain uses. A chain that is not registered here is
+# refused rather than guessed: accepting an unknown chain would mean accepting an
+# unvalidated address, which is how a malformed EVM address became a "non-EVM"
+# identity under the previous implementation.
+CHAIN_FAMILIES: dict[str, str] = {
+    "arbitrum": EVM_FAMILY,
+    "avalanche": EVM_FAMILY,
+    "base": EVM_FAMILY,
+    "bsc": EVM_FAMILY,
+    "ethereum": EVM_FAMILY,
+    "linea": EVM_FAMILY,
+    "optimism": EVM_FAMILY,
+    "polygon": EVM_FAMILY,
+    "scroll": EVM_FAMILY,
+    "zksync": EVM_FAMILY,
+    "solana": SOLANA_FAMILY,
+}
 
 
 class DexSnapshotError(RuntimeError):
@@ -52,21 +74,46 @@ class DexSnapshotError(RuntimeError):
 # Pool identity
 # ---------------------------------------------------------------------------
 
-def canonical_pool_address(address: str) -> str:
-    """Canonicalise a pool address for identity and dedupe.
+def chain_family(chain: str) -> str:
+    """The address grammar a chain uses, or a typed refusal."""
+    normalized = canonical_chain(chain)
+    family = CHAIN_FAMILIES.get(normalized)
+    if family is None:
+        raise DexSnapshotError(
+            f"chain {normalized!r} has no registered address family; register it in "
+            "CHAIN_FAMILIES before ingesting it"
+        )
+    return family
 
-    EVM addresses are case-insensitive, so they lowercase. Non-EVM addresses (Solana
-    base58, for example) are case-sensitive and are preserved exactly -- lowercasing
-    them would merge genuinely different pools.
+
+def canonical_pool_address(address: str, *, chain: str) -> str:
+    """Canonicalise a pool address against its chain's address grammar.
+
+    EVM addresses are case-insensitive, so they lowercase. Solana base58 is
+    case-sensitive and is preserved exactly -- lowercasing would merge genuinely
+    different pools. Validation is chain-driven: a malformed ``0x...`` value on an
+    EVM chain is refused rather than silently accepted as a non-EVM identity.
     """
     if not isinstance(address, str):
         raise DexSnapshotError("pool address must be a string")
     stripped = address.strip()
     if not stripped:
         raise DexSnapshotError("pool address must not be empty")
-    if _EVM_ADDRESS.match(stripped):
+
+    family = chain_family(chain)
+    if family == EVM_FAMILY:
+        if not _EVM_ADDRESS.match(stripped):
+            raise DexSnapshotError(
+                f"{stripped!r} is not a valid 20-byte EVM address for chain {chain!r}"
+            )
         return stripped.lower()
-    return stripped
+    if family == SOLANA_FAMILY:
+        if not _BASE58_ADDRESS.match(stripped):
+            raise DexSnapshotError(
+                f"{stripped!r} is not a valid base58 address for chain {chain!r}"
+            )
+        return stripped
+    raise DexSnapshotError(f"unsupported address family {family!r}")
 
 
 def canonical_chain(chain: str) -> str:
@@ -84,7 +131,11 @@ class PoolIdentity:
 
     @classmethod
     def create(cls, chain: str, pool_address: str) -> PoolIdentity:
-        return cls(chain=canonical_chain(chain), pool_address=canonical_pool_address(pool_address))
+        normalized_chain = canonical_chain(chain)
+        return cls(
+            chain=normalized_chain,
+            pool_address=canonical_pool_address(pool_address, chain=normalized_chain),
+        )
 
     @property
     def key(self) -> str:
@@ -185,10 +236,11 @@ def parse_geckoterminal_bars(
             )
         timestamp = datetime.fromtimestamp(epoch, UTC)
         if not start_time <= timestamp <= end_time:
-            raise DexSnapshotError(
-                f"bar {timestamp.isoformat()} is outside the requested range "
-                f"[{start_time.isoformat()}, {end_time.isoformat()}]"
-            )
+            # GeckoTerminal's before_timestamp+limit pagination legitimately returns
+            # bars older than the requested window. Extra history is normal API
+            # behaviour, not corruption, so it is excluded rather than fatal -- and
+            # coverage validation still catches anything missing *inside* the range.
+            continue
         if epoch in seen:
             raise DexSnapshotError(f"duplicate bar timestamp {timestamp.isoformat()}")
         seen.add(epoch)
@@ -237,6 +289,45 @@ def find_interval_gaps(
         if delta > interval_seconds:
             gaps.append((previous.timestamp, following.timestamp))
     return gaps
+
+
+def expected_interval_starts(
+    *, start_time: datetime, end_time: datetime, interval_seconds: int = DAY_SECONDS
+) -> list[datetime]:
+    """Every interval the request was supposed to cover, inclusive."""
+    if start_time > end_time:
+        return []
+    first = int(start_time.timestamp())
+    last = int(end_time.timestamp())
+    if first % interval_seconds or last % interval_seconds:
+        raise DexSnapshotError("requested range must align to the interval")
+    return [
+        datetime.fromtimestamp(epoch, UTC)
+        for epoch in range(first, last + 1, interval_seconds)
+    ]
+
+
+def missing_intervals(
+    bars: Sequence[OhlcvBar],
+    *,
+    start_time: datetime,
+    end_time: datetime,
+    interval_seconds: int = DAY_SECONDS,
+) -> list[datetime]:
+    """Requested intervals with no bar, including leading and trailing ones.
+
+    `find_interval_gaps` only sees holes *between* returned bars, so a response
+    that simply starts late or stops early looks complete to it. Coverage has to be
+    judged against the range that was requested, not against what came back.
+    """
+    present = {int(bar.timestamp.timestamp()) for bar in bars}
+    return [
+        moment
+        for moment in expected_interval_starts(
+            start_time=start_time, end_time=end_time, interval_seconds=interval_seconds
+        )
+        if int(moment.timestamp()) not in present
+    ]
 
 
 def contiguous_prefix_end(
@@ -365,10 +456,36 @@ class PoolAcquisition:
     outcomes: tuple[AcquisitionOutcome, ...]
     watermark_candidate: datetime | None
     error: str | None = None
+    missing_intervals: tuple[datetime, ...] = ()
+    requested_start: datetime | None = None
+    requested_end: datetime | None = None
+
+    @property
+    def has_unresolved_coverage(self) -> bool:
+        """Any hole -- internal, leading or trailing -- makes this pool unpublishable."""
+        return bool(self.missing_intervals) or bool(self.gaps)
 
     @property
     def usable(self) -> bool:
-        return self.error is None and bool(self.bars)
+        """Publishable only with exact requested coverage.
+
+        Returning partial bars as usable is how a gap-bearing response became
+        canonical data under the previous implementation.
+        """
+        return self.error is None and bool(self.bars) and not self.has_unresolved_coverage
+
+    def coverage_report(self) -> dict[str, Any]:
+        return {
+            "requested_start": None if self.requested_start is None else self.requested_start.isoformat(),
+            "requested_end": None if self.requested_end is None else self.requested_end.isoformat(),
+            "row_count": len(self.bars),
+            "internal_gaps": [
+                {"after": start.isoformat(), "before": end.isoformat()}
+                for start, end in self.gaps
+            ],
+            "missing_intervals": [moment.isoformat() for moment in self.missing_intervals],
+            "unresolved": self.has_unresolved_coverage,
+        }
 
 
 class GeckoTerminalOhlcvSource:
@@ -517,16 +634,27 @@ class DexSnapshotEngine:
             )
 
         gaps = find_interval_gaps(bars, interval_seconds=self._interval_seconds)
+        missing = missing_intervals(
+            bars, start_time=start_time, end_time=end_time,
+            interval_seconds=self._interval_seconds,
+        )
+        unresolved = bool(gaps) or bool(missing)
         return PoolAcquisition(
             identity=identity,
             decision=decision,
             bars=tuple(bars),
             gaps=tuple(gaps),
             outcomes=(outcome,),
-            # Only the contiguous prefix is publishable progress.
-            watermark_candidate=contiguous_prefix_end(
-                bars, interval_seconds=self._interval_seconds
+            # Unresolved coverage yields no watermark at all: advancing over a hole
+            # would permanently skip the missing intervals.
+            watermark_candidate=(
+                None if unresolved
+                else contiguous_prefix_end(bars, interval_seconds=self._interval_seconds)
             ),
+            error="unresolved coverage" if unresolved else None,
+            missing_intervals=tuple(missing),
+            requested_start=start_time,
+            requested_end=end_time,
         )
 
 
@@ -571,8 +699,11 @@ __all__ = [
     "canonical_chain",
     "canonical_pool_address",
     "config_fingerprint",
+    "chain_family",
     "contiguous_prefix_end",
+    "expected_interval_starts",
     "find_interval_gaps",
+    "missing_intervals",
     "merge_canonical_bars",
     "parse_geckoterminal_bars",
     "resume_start",
