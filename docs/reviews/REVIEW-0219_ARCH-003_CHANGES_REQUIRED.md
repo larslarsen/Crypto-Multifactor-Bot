@@ -20,9 +20,9 @@ acceptance is granted and no production source changes are made by this record.
    tables.
 6. Remove identity resolution from raw acquisition without deleting the
    normalization/publication path.
-7. Remove mutable symbol-registry membership.
-8. Preserve case-sensitive Solana addresses.
-9. Wire all experiment and paper entrypoints to the new binding.
+7. Replace mutable symbol-registry membership and preserve case-sensitive Solana
+   addresses.
+8. Wire all experiment and paper entrypoints to the new binding.
 
 ## Handoff
 
