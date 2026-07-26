@@ -8,8 +8,8 @@ Next ticket authorized: NONE
 ## Summary
 
 DATA-012 — Uniswap V2 PairCreated Event Ingestion (Ethereum Mainnet).
-REVIEW-0230 corrections applied: raw_object_ids from all receipts, DB close in
-finally, JSON error wrapping, unused var removed.
+REVIEW-0230 corrections applied. 13 tests added covering migrations, acquisition,
+replay, dedup, integrity checks, and publication.
 
 ## Evidence
 
@@ -20,3 +20,4 @@ finally, JSON error wrapping, unused var removed.
 - `sql/migrations/0009_uniswap_v2_chunk_receipt.sql`
 - `sql/migrations/0010_uniswap_v2_receipt_identity.sql`
 - `sql/migrations/0011_uniswap_v2_chunk_receipt_identity.sql`
+- `tests/acquisition/test_uniswap_v2.py`
