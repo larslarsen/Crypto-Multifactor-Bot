@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: DEX-002
-State: READY
-Next required actor: Sr Dev - Claude Opus 5
+State: AWAITING_REVIEW
+Next required actor: Reviewer
 Next ticket authorized: NONE
 
 ## Summary

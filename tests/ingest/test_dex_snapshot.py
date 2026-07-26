@@ -56,6 +56,7 @@ from cryptofactors.ingest.dex_snapshot import (
     find_interval_gaps,
     merge_canonical_bars,
     parse_geckoterminal_bars,
+    pool_covers_range,
     resume_start,
     validate_token_addresses,
     watermark_key,
@@ -830,6 +831,7 @@ def run_runner(
     pools: list[dict[str, str]] | None = None,
     end_time: datetime = END_TIME,
     max_attempts: int = 1,
+    default_start: datetime = DAY0,
 ) -> tuple[int, dict[str, Any]]:
     from scripts.research import dex002_snapshot as runner
 
@@ -839,7 +841,7 @@ def run_runner(
         "dex002_snapshot.py",
         "--pools", str(write_pools(tmp_path, pools or [{"chain": CHAIN, "pool_address": POOL}])),
         "--end-time", end_time.isoformat(),
-        "--default-start", DAY0.isoformat(),
+        "--default-start", default_start.isoformat(),
         "--db-path", str(store.db),
         "--raw-root", str(store.raw_root),
         "--store-root", str(store.store_root),
@@ -1748,4 +1750,229 @@ class TestRestoredRowsAreRevalidated:
         prior = report["prior_dataset_reconciliation"]
         assert prior["rows_revalidated"] == 5
         assert prior["declared_raw_object_ids"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# REVIEW-0238 corrections
+# ---------------------------------------------------------------------------
+
+class TestSnapshotLineageIsClosed:
+    """Finding 1: a full snapshot declares every raw object its own rows cite."""
+
+    def _refresh(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch,
+        rows: list[list[Any]], end: datetime,
+    ) -> tuple[int, dict[str, Any]]:
+        return run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars=rows), end_time=end,
+        )
+
+    def _declared_raw_ids(self, store: Store) -> set[str]:
+        catalog = SqliteDatasetCatalog(store.db)
+        try:
+            dataset_id = catalog.resolve_latest_by_type("dex_pool_ohlcv_daily")
+            return {str(r["raw_object_id"]) for r in catalog.list_raw_inputs(str(dataset_id))}
+        finally:
+            catalog.close()
+
+    def test_three_consecutive_refreshes_keep_lineage_closed(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The third refresh is where transitive-only lineage broke.
+
+        First-snapshot rows survive in Parquet but their raw ids are direct inputs of
+        snapshot 1, not of snapshot 2, so a direct-input check rejected them.
+        """
+        code1, _ = self._refresh(tmp_path, store, monkeypatch, [bar_row(0)], day(0))
+        code2, _ = self._refresh(tmp_path, store, monkeypatch, [bar_row(1)], day(1))
+        code3, report3 = self._refresh(tmp_path, store, monkeypatch, [bar_row(2)], day(2))
+
+        assert (code1, code2, code3) == (0, 0, 0)
+        assert report3["snapshot_row_count"] == 3
+
+        rows = read_snapshot(store)
+        assert [r["timestamp"] for r in rows] == [day(i).isoformat() for i in range(3)]
+
+        declared = self._declared_raw_ids(store)
+        cited = {r["raw_object_id"] for r in rows}
+        assert cited <= declared, "every carried-forward row's raw object must be declared"
+
+    def test_a_fourth_refresh_still_validates(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        for index in range(4):
+            code, _ = self._refresh(
+                tmp_path, store, monkeypatch, [bar_row(index)], day(index)
+            )
+            assert code == 0, f"refresh {index} failed"
+
+        rows = read_snapshot(store)
+        assert len(rows) == 4
+        assert {r["raw_object_id"] for r in rows} <= self._declared_raw_ids(store)
+
+    def test_carried_forward_rows_are_declared_with_their_own_role(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._refresh(tmp_path, store, monkeypatch, [bar_row(0)], day(0))
+        self._refresh(tmp_path, store, monkeypatch, [bar_row(1)], day(1))
+
+        catalog = SqliteDatasetCatalog(store.db)
+        try:
+            dataset_id = str(catalog.resolve_latest_by_type("dex_pool_ohlcv_daily"))
+            roles = {str(r["role"]) for r in catalog.list_raw_inputs(dataset_id)}
+        finally:
+            catalog.close()
+
+        assert "carried_forward_row_source" in roles
+        assert "controlling_response" in roles
+
+    def test_the_report_counts_snapshot_raw_objects(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._refresh(tmp_path, store, monkeypatch, [bar_row(0)], day(0))
+        _, report = self._refresh(tmp_path, store, monkeypatch, [bar_row(1)], day(1))
+
+        assert report["snapshot_raw_object_count"] >= 2
+
+    def test_a_snapshot_citing_a_vanished_raw_object_is_refused(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Declaration is not enough; the object must still exist."""
+        self._refresh(tmp_path, store, monkeypatch, [bar_row(0)], day(0))
+
+        conn = sqlite3.connect(store.db)
+        try:
+            conn.execute("DELETE FROM raw_object")
+            conn.commit()
+        finally:
+            conn.close()
+
+        with pytest.raises(RuntimeError, match="no longer exist"):
+            self._refresh(tmp_path, store, monkeypatch, [bar_row(1)], day(1))
+
+
+class TestAlreadyCurrentProvesExactCoverage:
+    """Finding 2: an end bar is not proof that the range is complete."""
+
+    def _seed_prior(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch,
+        rows: list[list[Any]], end: datetime, start: datetime = DAY0,
+    ) -> None:
+        code, _ = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars=rows), end_time=end, default_start=start,
+        )
+        assert code == 0
+
+    def _rerun_same_window(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch, end: datetime,
+    ) -> tuple[int, dict[str, Any]]:
+        return run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars=[]), end_time=end,
+        )
+
+    def test_complete_prior_coverage_accepts_already_current(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._seed_prior(tmp_path, store, monkeypatch, [bar_row(i) for i in range(3)], day(2))
+        before = read_snapshot(store)
+
+        code, report = self._rerun_same_window(tmp_path, store, monkeypatch, day(2))
+
+        assert report["pool_states"][f"{CHAIN}:{POOL}"] == "ALREADY_CURRENT"
+        assert report["blocking_pools"] == [], "complete coverage must not block"
+        assert code == 1, "nothing new to publish"
+        assert read_snapshot(store) == before
+
+    def test_an_internal_gap_in_prior_data_blocks_already_current(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The end bar is present, but day 1 is missing."""
+        self._seed_prior(tmp_path, store, monkeypatch, [bar_row(0), bar_row(1)], day(1))
+        # Force the pool to look current while days 2-4 are absent behind it.
+        WatermarkStore(store.watermark_path).save({
+            watermark_key(provider="geckoterminal", identity=identity()): day(9).isoformat(),
+        })
+
+        code, report = self._rerun_same_window(tmp_path, store, monkeypatch, day(4))
+
+        assert report["pool_states"][f"{CHAIN}:{POOL}"] == "ALREADY_CURRENT"
+        assert code == 1
+        assert [b["pool"] for b in report["blocking_pools"]] == [f"{CHAIN}:{POOL}"]
+        missing = report["catalog_reconciliation"]["already_current_missing_intervals"]
+        assert missing[f"{CHAIN}:{POOL}"] == [day(2).isoformat(), day(3).isoformat(), day(4).isoformat()]
+
+    def test_a_leading_gap_in_prior_data_blocks_already_current(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Prior data starts late but carries the end bar."""
+        # Seeded over day2..day4 only, so the prior snapshot legitimately holds the
+        # end bar while lacking days 0 and 1 of the wider window checked below.
+        self._seed_prior(
+            tmp_path, store, monkeypatch, [bar_row(i) for i in (2, 3, 4)], day(4),
+            start=day(2),
+        )
+        WatermarkStore(store.watermark_path).save({
+            watermark_key(provider="geckoterminal", identity=identity()): day(9).isoformat(),
+        })
+
+        code, report = self._rerun_same_window(tmp_path, store, monkeypatch, day(4))
+
+        assert code == 1
+        assert [b["pool"] for b in report["blocking_pools"]] == [f"{CHAIN}:{POOL}"]
+        missing = report["catalog_reconciliation"]["already_current_missing_intervals"]
+        assert missing[f"{CHAIN}:{POOL}"] == [day(0).isoformat(), day(1).isoformat()]
+
+    def test_pool_covers_range_reports_every_missing_interval(self) -> None:
+        bars = [
+            OhlcvBar(
+                chain=CHAIN, pool_address=POOL, timestamp=day(i), open=1.0, high=1.0,
+                low=1.0, close=1.0, volume=1.0, provider=GECKOTERMINAL_PROVIDER,
+                raw_object_id="raw_a",
+            )
+            for i in (0, 3)
+        ]
+
+        covered, missing = pool_covers_range(
+            bars, identity=identity(), start_time=day(0), end_time=day(3)
+        )
+
+        assert not covered
+        assert missing == [day(1), day(2)]
+
+    def test_pool_covers_range_accepts_a_complete_run(self) -> None:
+        bars = [
+            OhlcvBar(
+                chain=CHAIN, pool_address=POOL, timestamp=day(i), open=1.0, high=1.0,
+                low=1.0, close=1.0, volume=1.0, provider=GECKOTERMINAL_PROVIDER,
+                raw_object_id="raw_a",
+            )
+            for i in range(4)
+        ]
+
+        covered, missing = pool_covers_range(
+            bars, identity=identity(), start_time=day(0), end_time=day(3)
+        )
+
+        assert covered
+        assert missing == []
+
+    def test_another_pools_rows_do_not_satisfy_coverage(self) -> None:
+        bars = [
+            OhlcvBar(
+                chain="base", pool_address=POOL_B, timestamp=day(i), open=1.0, high=1.0,
+                low=1.0, close=1.0, volume=1.0, provider=GECKOTERMINAL_PROVIDER,
+                raw_object_id="raw_a",
+            )
+            for i in range(4)
+        ]
+
+        covered, missing = pool_covers_range(
+            bars, identity=identity(), start_time=day(0), end_time=day(3)
+        )
+
+        assert not covered
+        assert len(missing) == 4
 

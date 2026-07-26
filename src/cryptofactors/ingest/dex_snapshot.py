@@ -838,24 +838,31 @@ def bars_from_records(
     return restored
 
 
-def pool_covers_through(
+def pool_covers_range(
     bars: Iterable[OhlcvBar],
     *,
     identity: PoolIdentity,
+    start_time: datetime,
     end_time: datetime,
     interval_seconds: int = DAY_SECONDS,
-) -> bool:
-    """Whether prior canonical rows already cover this pool through the pinned end.
+) -> tuple[bool, list[datetime]]:
+    """Whether prior canonical rows cover *every* interval in the requested range.
 
-    ALREADY_CURRENT is only legitimate when this is true; otherwise a pool skipped by
-    its watermark would leave a hole nothing ever fills.
+    Returns the verdict and the missing intervals. An end-point-only check is not
+    proof: a prior snapshot with leading or internal holes can still carry the final
+    bar, and accepting that as ALREADY_CURRENT would freeze the holes in place -- the
+    watermark says the pool is done, so nothing ever re-fetches them.
     """
-    timestamps = {
+    present = {
         int(bar.timestamp.timestamp())
         for bar in bars
         if bar.chain == identity.chain and bar.pool_address == identity.pool_address
     }
-    return bool(timestamps) and int(end_time.timestamp()) in timestamps
+    expected = expected_interval_starts(
+        start_time=start_time, end_time=end_time, interval_seconds=interval_seconds
+    )
+    missing = [moment for moment in expected if int(moment.timestamp()) not in present]
+    return (not missing and bool(expected)), missing
 
 
 __all__ = [
@@ -881,7 +888,7 @@ __all__ = [
     "find_interval_gaps",
     "missing_intervals",
     "merge_canonical_bars",
-    "pool_covers_through",
+    "pool_covers_range",
     "validate_bar_timestamp",
     "validate_token_addresses",
     "validate_bar_values",

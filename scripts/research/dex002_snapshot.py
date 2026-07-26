@@ -64,7 +64,7 @@ from cryptofactors.ingest.dex_snapshot import (
     bars_from_records,
     config_fingerprint,
     merge_canonical_bars,
-    pool_covers_through,
+    pool_covers_range,
     validate_token_addresses,
     watermark_key,
 )
@@ -194,6 +194,7 @@ def build_report(
     prior_reconciliation: Mapping[str, Any] | None = None,
     reconciliation: Mapping[str, Any] | None = None,
     blocked: Sequence[PoolAcquisition] = (),
+    snapshot_raw_object_count: int = 0,
 ) -> dict[str, Any]:
     by_status: dict[str, list[dict[str, Any]]] = {
         "passed": [], "rejected": [], "unavailable": [],
@@ -232,6 +233,7 @@ def build_report(
         "unavailable_pools": by_status["unavailable"],
         "acquisition_attempts": log.as_dicts(),
         "raw_dependency_count": len(log.raw_object_ids),
+        "snapshot_raw_object_count": snapshot_raw_object_count,
         "failed_acquisition_count": len(log.failures),
         "retry_count": len(log.retries),
         "rate_limit_incidents": [o.as_dict() for o in log.rate_limit_incidents],
@@ -367,12 +369,18 @@ def main() -> int:
 
         # ALREADY_CURRENT is only legitimate when the prior canonical snapshot proves
         # this pool is complete through the pinned end.
+        already_current_gaps: dict[str, list[str]] = {}
         for acquisition in acquisitions:
             if acquisition.state is not AcquisitionState.ALREADY_CURRENT:
                 continue
-            if not pool_covers_through(
-                prior_bars, identity=acquisition.identity, end_time=end_time
-            ):
+            covered, missing = pool_covers_range(
+                prior_bars, identity=acquisition.identity,
+                start_time=default_start, end_time=end_time,
+            )
+            if not covered:
+                already_current_gaps[acquisition.identity.key] = [
+                    moment.isoformat() for moment in missing
+                ]
                 blocked.append(acquisition)
 
         if blocked:
@@ -382,7 +390,10 @@ def main() -> int:
                 watermarks_before=watermarks_before, watermarks_after=watermarks_before,
                 snapshot_rows=0, dataset_id=None,
                 prior_reconciliation=prior_reconciliation,
-                reconciliation={"state": "blocked_by_incomplete_pools"},
+                reconciliation={
+                    "state": "blocked_by_incomplete_pools",
+                    "already_current_missing_intervals": already_current_gaps,
+                },
                 blocked=blocked,
             )
             _write_report(args.report_path, report)
@@ -414,9 +425,32 @@ def main() -> int:
             pq.write_table(table, output, compression="zstd")
             sha256, byte_size = stream_sha256_and_size(output)
 
+            # A full snapshot must be self-auditing: every raw object cited by every
+            # row it contains is declared directly, including rows carried forward from
+            # earlier snapshots. Relying on the prior-dataset link would make those ids
+            # only transitively reachable, and restored-row validation -- which checks
+            # direct inputs -- would reject them from the third refresh onward.
+            carried_raw_ids = {bar.raw_object_id for bar in snapshot}
+            missing_raw = sorted(
+                raw_id for raw_id in carried_raw_ids
+                if not dataset_catalog.raw_object_exists(raw_id)
+            )
+            if missing_raw:
+                raise RuntimeError(
+                    f"snapshot cites raw objects that no longer exist: {missing_raw}"
+                )
+
+            current_raw_ids = set(log.raw_object_ids)
             dependencies = [
-                DependencyRef(id=raw_id, kind=DependencyKind.RAW_OBJECT, role="controlling_response")
-                for raw_id in sorted(log.raw_object_ids)
+                DependencyRef(
+                    id=raw_id,
+                    kind=DependencyKind.RAW_OBJECT,
+                    role=(
+                        "controlling_response" if raw_id in current_raw_ids
+                        else "carried_forward_row_source"
+                    ),
+                )
+                for raw_id in sorted(current_raw_ids | carried_raw_ids)
             ]
             if prior_dataset_id is not None and prior_bars:
                 dependencies.append(DependencyRef(
@@ -500,6 +534,7 @@ def main() -> int:
         log=log, prior_dataset_id=prior_dataset_id, watermarks_before=watermarks_before,
         watermarks_after=watermarks_after, snapshot_rows=len(snapshot), dataset_id=dataset_id,
         prior_reconciliation=prior_reconciliation, reconciliation=reconciliation,
+        snapshot_raw_object_count=len({bar.raw_object_id for bar in snapshot}),
     )
     _write_report(args.report_path, report)
     print(f"DEX-002: published {len(snapshot)} rows as {dataset_id}")
