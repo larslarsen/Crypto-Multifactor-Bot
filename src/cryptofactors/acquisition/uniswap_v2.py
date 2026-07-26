@@ -182,106 +182,74 @@ class UniswapV2PairCreatedIngestor:
         if start_block < 0 or end_block < start_block or chunk_size <= 0:
             raise ValueError("invalid block range or chunk_size")
         rows: list[PairCreatedRow] = []
-        seen: set[tuple[str, int]] = set()
         receipts = sqlite3.connect(receipt_db_path) if receipt_db_path else None
-        if receipts is not None:
-            receipts.execute("PRAGMA foreign_keys = ON")
-        for chunk_start in range(start_block, end_block + 1, chunk_size):
-            chunk_end = min(chunk_start + chunk_size - 1, end_block)
+        try:
             if receipts is not None:
-                prior = receipts.execute(
-                    "SELECT end_block_hash FROM uniswap_v2_pair_created_chunk_receipt_v2 "
-                    "WHERE chain = ? AND factory = ? AND topic = ? AND start_block = ? AND end_block = ?",
-                    (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end),
-                ).fetchone()
-                if prior is not None:
-                    header_response, _, _ = self._rpc(
-                        "eth_getBlockByNumber",
-                        [hex(chunk_end), False],
-                        event_start=chunk_end,
-                        event_end=chunk_end,
-                    )
-                    header = header_response.get("result")
-                    if not isinstance(header, dict) or str(header.get("hash", "")).lower() != str(prior[0]).lower():
-                        raise UniswapV2IngestionError("completed chunk receipt failed end-block validation")
-                    continue
-            logs_response, raw_object_id, availability_time = self._rpc(
-                "eth_getLogs",
-                [{"address": self._factory, "fromBlock": hex(chunk_start), "toBlock": hex(chunk_end), "topics": [PAIR_CREATED_TOPIC]}],
-                event_start=chunk_start,
-                event_end=chunk_end,
-            )
-            logs = logs_response.get("result")
-            if not isinstance(logs, list):
-                raise UniswapV2IngestionError("eth_getLogs result must be a list")
-            blocks: dict[int, tuple[dict[str, Any], str, datetime]] = {}
-            for log in logs:
-                if not isinstance(log, dict):
-                    raise UniswapV2IngestionError("log entry must be an object")
-                block_number = _hex_int(log["blockNumber"])
-                if block_number < chunk_start or block_number > chunk_end:
-                    raise UniswapV2IngestionError("RPC returned log outside requested chunk")
-                if block_number not in blocks:
-                    block, block_raw_id, block_availability_time = self._rpc(
-                        "eth_getBlockByNumber", [hex(block_number), False], event_start=block_number, event_end=block_number
-                    )
-                    result = block.get("result")
-                    if not isinstance(result, dict):
-                        raise UniswapV2IngestionError("missing block result")
-                    blocks[block_number] = (result, block_raw_id, block_availability_time)
-                topics = log.get("topics")
-                if not isinstance(topics, list) or len(topics) < 3 or topics[0].lower() != PAIR_CREATED_TOPIC:
-                    raise UniswapV2IngestionError("invalid PairCreated topics")
-                identity = (str(log["transactionHash"]), _hex_int(log["logIndex"]))
-                if identity in seen:
-                    raise UniswapV2IngestionError("duplicate (tx_hash, log_index)")
-                seen.add(identity)
-                block, block_raw_object_id, block_availability_time = blocks[block_number]
-                if str(log["blockHash"]).lower() != str(block["hash"]).lower():
-                    raise UniswapV2IngestionError("log block hash does not match block header")
-                if emit_rows:
-                    rows.append(PairCreatedRow(
-                    chain=ETHEREUM_CHAIN,
-                    factory=self._factory,
-                    pair=_address(str(log["data"])[:66]),
-                    token0=_address(str(topics[1])), token1=_address(str(topics[2])),
-                    block_number=block_number, block_hash=str(log["blockHash"]),
-                    block_timestamp=_hex_int(block["timestamp"]), tx_hash=identity[0],
-                    tx_index=_hex_int(log["transactionIndex"]), log_index=identity[1],
-                    event_time=datetime.fromtimestamp(_hex_int(block["timestamp"]), UTC),
-                    availability_time=max(availability_time, block_availability_time), raw_object_id=raw_object_id,
-                    block_raw_object_id=block_raw_object_id,
-                    ))
-            if receipts is not None:
-                end_header, end_header_raw_object_id, end_header_time = self._rpc(
+                receipts.execute("PRAGMA foreign_keys = ON")
+            for chunk_start in range(start_block, end_block + 1, chunk_size):
+                chunk_end = min(chunk_start + chunk_size - 1, end_block)
+                if receipts is not None:
+                    prior = receipts.execute(
+                        "SELECT end_block_hash FROM uniswap_v2_pair_created_chunk_receipt_v2 "
+                        "WHERE chain = ? AND factory = ? AND topic = ? AND start_block = ? AND end_block = ?",
+                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end),
+                    ).fetchone()
+                    if prior is not None:
+                        header_response, _, _ = self._rpc(
+                            "eth_getBlockByNumber", [hex(chunk_end), False], event_start=chunk_end, event_end=chunk_end
+                        )
+                        header = header_response.get("result")
+                        if not isinstance(header, dict) or str(header.get("hash", "")).lower() != str(prior[0]).lower():
+                            raise UniswapV2IngestionError("completed chunk receipt failed end-block validation")
+                        continue
+                logs_response, logs_raw_id, logs_time = self._rpc(
+                    "eth_getLogs",
+                    [{"address": self._factory, "fromBlock": hex(chunk_start), "toBlock": hex(chunk_end), "topics": [PAIR_CREATED_TOPIC]}],
+                    event_start=chunk_start,
+                    event_end=chunk_end,
+                )
+                logs = logs_response.get("result")
+                if not isinstance(logs, list):
+                    raise UniswapV2IngestionError("eth_getLogs result must be a list")
+                headers: dict[int, tuple[dict[str, Any], str, datetime]] = {}
+                for log in logs:
+                    block_number = _hex_int(log["blockNumber"])
+                    if block_number < chunk_start or block_number > chunk_end:
+                        raise UniswapV2IngestionError("RPC returned log outside requested chunk")
+                    if block_number not in headers:
+                        response, raw_id, acquired_at = self._rpc(
+                            "eth_getBlockByNumber", [hex(block_number), False], event_start=block_number, event_end=block_number
+                        )
+                        header = response.get("result")
+                        if not isinstance(header, dict):
+                            raise UniswapV2IngestionError("missing block result")
+                        headers[block_number] = (header, raw_id, acquired_at)
+                end_response, end_raw_id, end_time = self._rpc(
                     "eth_getBlockByNumber", [hex(chunk_end), False], event_start=chunk_end, event_end=chunk_end
                 )
-                header = end_header.get("result")
-                if not isinstance(header, dict):
+                end_header = end_response.get("result")
+                if not isinstance(end_header, dict):
                     raise UniswapV2IngestionError("missing end-block header")
-                receipts.execute(
-                    "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 "
-                    "(chain, factory, topic, start_block, end_block, end_block_hash, logs_raw_object_id, header_raw_object_ids_json, completed_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        ETHEREUM_CHAIN,
-                        self._factory,
-                        PAIR_CREATED_TOPIC,
-                        chunk_start,
-                        chunk_end,
-                        str(header["hash"]),
-                        raw_object_id,
-                        json.dumps(sorted({
-                            end_header_raw_object_id,
-                            *(block_raw_object_id for _, block_raw_object_id, _ in blocks.values()),
-                        })),
-                        max([availability_time, end_header_time, *(item[2] for item in blocks.values())]).isoformat(),
-                    ),
-                )
-                receipts.commit()
-        if receipts is not None:
-            receipts.close()
-        return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+                if emit_rows:
+                    rows.extend(decode_pair_created(
+                        logs_response,
+                        {block: (header, raw_id) for block, (header, raw_id, _) in headers.items()},
+                        factory=self._factory,
+                        log_raw_object_id=logs_raw_id,
+                        availability_time=max([logs_time, end_time, *(item[2] for item in headers.values())]),
+                    ))
+                if receipts is not None:
+                    receipts.execute(
+                        "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end, str(end_header["hash"]), logs_raw_id,
+                         json.dumps(sorted({end_raw_id, *(raw_id for _, raw_id, _ in headers.values())})),
+                         max([logs_time, end_time, *(item[2] for item in headers.values())]).isoformat()),
+                    )
+                    receipts.commit()
+            return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+        finally:
+            if receipts is not None:
+                receipts.close()
 
     @staticmethod
     def _read_raw_json(raw_root: Path, raw_object_id: str) -> dict[str, Any]:
@@ -291,11 +259,11 @@ class UniswapV2PairCreatedIngestor:
         path = content_addressed_absolute_path(raw_root, digest)
         try:
             body = path.read_bytes()
+            decoded = json.loads(body)
         except (OSError, json.JSONDecodeError) as exc:
             raise UniswapV2IngestionError(f"cannot replay raw object {raw_object_id}") from exc
         if hashlib.sha256(body).hexdigest() != digest:
             raise UniswapV2IngestionError(f"raw object SHA-256 mismatch: {raw_object_id}")
-        decoded = json.loads(body)
         if not isinstance(decoded, dict):
             raise UniswapV2IngestionError("raw RPC response must be an object")
         return decoded
@@ -349,7 +317,8 @@ class UniswapV2PairCreatedIngestor:
         if len(identities) != len(set(identities)):
             raise UniswapV2IngestionError("replayed rows contain duplicate (tx_hash, log_index)")
         ordered = tuple(sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index)))
-        raw_ids = frozenset(
-            raw_id for row in ordered for raw_id in (row.raw_object_id, row.block_raw_object_id)
-        )
-        return ReplayResult(ordered, raw_ids, tuple((int(r[0]), int(r[1])) for r in receipts))
+        raw_ids: set[str] = set()
+        for receipt in receipts:
+            raw_ids.add(str(receipt[2]))
+            raw_ids.update(str(raw_id) for raw_id in json.loads(receipt[7]))
+        return ReplayResult(ordered, frozenset(raw_ids), tuple((int(r[0]), int(r[1])) for r in receipts))
