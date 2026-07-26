@@ -1,0 +1,454 @@
+#!/usr/bin/env python3
+"""DATA-008 Binance spot universe expansion runner.
+
+Discovers spot symbols from exchangeInfo, ranks them on observed 24h volume evidence,
+checks history eligibility, backfills daily bars for what qualifies, and republishes
+the complete canonical snapshot.
+
+Nothing is admitted silently: every excluded symbol carries a taxonomy reason, every
+short-history symbol is deferred with a reason, and a symbol that was selected but
+failed acquisition blocks the whole publication rather than disappearing from the
+panel. Watermarks are written only after publication succeeds.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import tempfile
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import httpx
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+from cryptofactors.acquisition.binance_snapshot import (
+    BinanceBarAcquirer,
+    KlineBar,
+    SymbolAcquisition,
+    SymbolState,
+    WatermarkStore,
+    bars_from_records,
+    merge_canonical_bars,
+    resume_start,
+    symbol_covers_range,
+)
+from cryptofactors.acquisition.binance_universe import (
+    BINANCE_BASE_URL,
+    EXCLUSION_TAXONOMY_VERSION,
+    VOLUME_WINDOW,
+    BinanceUniverseAcquirer,
+    HistoryEligibility,
+    SelectionConfig,
+)
+from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
+from cryptofactors.catalog.dataset.models import (
+    CodeIdentity,
+    ConfigIdentity,
+    CoverageWindow,
+    DatasetStatistics,
+    DatasetStoreConfig,
+    DependencyKind,
+    DependencyRef,
+    OutputFileSpec,
+    PublishPlan,
+    QualityStatus,
+    RowCountPolicy,
+    RowCountReceipt,
+    SchemaIdentity,
+    TransformSpec,
+)
+from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
+from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
+from cryptofactors.catalog.dataset.publisher import DatasetPublisher
+from cryptofactors.catalog.runner import apply_migrations
+from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
+from cryptofactors.ingest.raw.models import RawObjectStoreConfig
+from cryptofactors.ingest.raw.writer import RawObjectWriter
+from cryptofactors.ingest.raw_http import RawHttpAcquirer
+
+DATASET_TYPE = "binance_spot_daily_bars"
+RELATIVE_PATH = "cex/binance_spot_daily_bars/bars.parquet"
+REPORT_PATH = Path("research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json")
+
+SNAPSHOT_SCHEMA = pa.schema([
+    ("symbol", pa.string()),
+    ("open_time", pa.string()),
+    ("open_time_us", pa.int64()),
+    ("open", pa.float64()),
+    ("high", pa.float64()),
+    ("low", pa.float64()),
+    ("close", pa.float64()),
+    ("volume", pa.float64()),
+    ("quote_volume", pa.float64()),
+    ("trades", pa.int64()),
+    ("provider", pa.string()),
+    ("raw_object_id", pa.string()),
+])
+
+
+def resolve_code_commit(explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError("cannot resolve code commit; pass --code-commit") from exc
+    commit = result.stdout.strip()
+    if len(commit) != 40:
+        raise RuntimeError(f"unexpected git commit {commit!r}")
+    return commit
+
+
+def load_prior_snapshot(
+    catalog: SqliteDatasetCatalog, store_root: Path
+) -> tuple[str | None, list[KlineBar], dict[str, Any]]:
+    """Prior canonical dataset, its revalidated rows, and the reconciliation."""
+    dataset_id = catalog.resolve_latest_by_type(DATASET_TYPE)
+    if dataset_id is None:
+        return None, [], {"prior_dataset_id": None, "state": "none"}
+
+    files = [
+        f for f in catalog.list_files(dataset_id)
+        if str(f["storage_uri"]).endswith(RELATIVE_PATH)
+    ]
+    if len(files) != 1:
+        raise RuntimeError(f"prior dataset {dataset_id} does not declare one {RELATIVE_PATH}")
+    declared = files[0]
+
+    parquet = dataset_absolute_dir(store_root, dataset_id) / RELATIVE_PATH
+    if not parquet.exists():
+        raise RuntimeError(
+            f"prior canonical dataset {dataset_id} is registered but its output "
+            f"{parquet} is missing; refusing to publish a delta as a full snapshot"
+        )
+    actual_sha256, byte_size = stream_sha256_and_size(parquet)
+    if actual_sha256 != str(declared["file_sha256"]):
+        raise RuntimeError(
+            f"prior output hash {actual_sha256} does not match catalog "
+            f"{declared['file_sha256']}"
+        )
+    table = pq.read_table(parquet)
+    if table.num_rows != int(declared["row_count"]):
+        raise RuntimeError(
+            f"prior output has {table.num_rows} rows, catalog says {declared['row_count']}"
+        )
+    if set(SNAPSHOT_SCHEMA.names) != set(table.column_names):
+        raise RuntimeError("prior output schema does not match the snapshot schema")
+
+    declared_raw = {str(r["raw_object_id"]) for r in catalog.list_raw_inputs(dataset_id)}
+    bars = bars_from_records(table.to_pylist(), allowed_raw_object_ids=declared_raw)
+    return dataset_id, bars, {
+        "prior_dataset_id": dataset_id,
+        "state": "reconciled",
+        "file_sha256": actual_sha256,
+        "byte_size": byte_size,
+        "row_count": table.num_rows,
+        "declared_raw_object_ids": len(declared_raw),
+        "rows_revalidated": len(bars),
+    }
+
+
+def build_report(
+    *,
+    config: SelectionConfig,
+    end_time: datetime,
+    default_start: datetime,
+    selection: Any,
+    eligibility: Sequence[HistoryEligibility],
+    acquisitions: Sequence[SymbolAcquisition],
+    blocked: Sequence[SymbolAcquisition],
+    log: Any,
+    prior_reconciliation: Mapping[str, Any],
+    reconciliation: Mapping[str, Any],
+    watermarks_before: Mapping[str, str],
+    watermarks_after: Mapping[str, str],
+    snapshot: Sequence[KlineBar],
+    dataset_id: str | None,
+) -> dict[str, Any]:
+    deferred = [item for item in eligibility if not item.eligible]
+    by_state: dict[str, list[dict[str, Any]]] = {}
+    for acquisition in acquisitions:
+        by_state.setdefault(acquisition.state.value, []).append(acquisition.as_dict())
+
+    return {
+        "experiment_id": "DATA-008-BINANCE-UNIVERSE-EXPANSION",
+        "generated_at": datetime.now(UTC).isoformat(),
+        "pinned_end_time": end_time.isoformat(),
+        "default_start": default_start.isoformat(),
+        "effective_config": config.as_dict(),
+        "config_fingerprint": config.fingerprint(),
+        "volume_window": VOLUME_WINDOW,
+        "exclusion_taxonomy_version": EXCLUSION_TAXONOMY_VERSION,
+        "selected_symbols": [item.as_dict() for item in selection.ranked],
+        "excluded_symbols": [item.as_dict() for item in selection.excluded],
+        "deferred_symbols": [item.as_dict() for item in deferred],
+        "eligible_symbols": [item.as_dict() for item in eligibility if item.eligible],
+        "symbols_by_state": by_state,
+        "failed_symbols": [
+            item.as_dict() for item in acquisitions if item.state is SymbolState.FAILED
+        ],
+        "blocking_symbols": [
+            {"symbol": item.symbol, "state": item.state.value, "error": item.error}
+            for item in blocked
+        ],
+        "acquisition_attempts": log.as_dicts(),
+        "raw_dependency_count": len(log.raw_object_ids),
+        "snapshot_raw_object_count": len({bar.raw_object_id for bar in snapshot}),
+        "failed_acquisition_count": len(log.failures),
+        "retry_count": len(log.retries),
+        "rate_limit_incidents": [item.as_dict() for item in log.rate_limit_incidents],
+        "watermarks_before": dict(watermarks_before),
+        "watermarks_after": dict(watermarks_after),
+        "total_rows_added": sum(len(a.bars) for a in acquisitions if a.usable),
+        "snapshot_row_count": len(snapshot),
+        "snapshot_span": {
+            "start": snapshot[0].open_time.isoformat() if snapshot else None,
+            "end": snapshot[-1].open_time.isoformat() if snapshot else None,
+        },
+        "prior_dataset_reconciliation": dict(prior_reconciliation),
+        "catalog_reconciliation": dict(reconciliation),
+        "canonical_dataset_id": dataset_id,
+        "live_eligible": False,
+    }
+
+
+def _write_report(path: Path, report: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="DATA-008 Binance universe expansion")
+    parser.add_argument("--end-time", required=True, help="pinned UTC end day, ISO-8601")
+    parser.add_argument("--default-start", required=True, help="first day, ISO-8601")
+    parser.add_argument("--db-path", type=Path, default=Path("exp003.db"))
+    parser.add_argument("--raw-root", type=Path, default=Path("data/exp003_store/raw"))
+    parser.add_argument("--store-root", type=Path, default=Path("data/exp003_store"))
+    parser.add_argument("--watermark-path", type=Path, default=Path("data/data008_watermarks.json"))
+    parser.add_argument("--report-path", type=Path, default=REPORT_PATH)
+    parser.add_argument("--top-n", type=int, default=10)
+    parser.add_argument("--min-quote-volume", type=float, default=None)
+    parser.add_argument("--min-history-days", type=int, default=None)
+    parser.add_argument("--base-url", default=BINANCE_BASE_URL)
+    parser.add_argument("--code-commit", default=None)
+    parser.add_argument("--max-attempts", type=int, default=4)
+    parser.add_argument("--backoff-seconds", type=float, default=15.0)
+    args = parser.parse_args()
+
+    end_time = datetime.fromisoformat(args.end_time)
+    default_start = datetime.fromisoformat(args.default_start)
+    if end_time.tzinfo is None or default_start.tzinfo is None:
+        raise RuntimeError("--end-time and --default-start must be timezone-aware")
+
+    overrides: dict[str, Any] = {"top_n": args.top_n}
+    if args.min_quote_volume is not None:
+        overrides["min_quote_volume"] = args.min_quote_volume
+    if args.min_history_days is not None:
+        overrides["min_history_days"] = args.min_history_days
+    config = SelectionConfig(**overrides)
+    code_commit = resolve_code_commit(args.code_commit)
+
+    apply_migrations(args.db_path)
+    watermark_store = WatermarkStore(args.watermark_path)
+    watermarks_before = watermark_store.load()
+
+    raw_catalog = SqliteRawObjectCatalog(args.db_path)
+    client = httpx.Client(timeout=30.0)
+    acquisitions: list[SymbolAcquisition] = []
+    eligibility: list[HistoryEligibility] = []
+    try:
+        raw_acquirer = RawHttpAcquirer(
+            raw_writer=RawObjectWriter(RawObjectStoreConfig(root=args.raw_root), raw_catalog),
+            client=client,
+            max_attempts=args.max_attempts,
+            backoff_seconds=args.backoff_seconds,
+        )
+        universe = BinanceUniverseAcquirer(acquirer=raw_acquirer, base_url=args.base_url)
+        discovered, _ = universe.fetch_exchange_info()
+        evidence, _ = universe.fetch_volume_evidence()
+
+        from cryptofactors.acquisition.binance_universe import select_symbols
+
+        selection = select_symbols(
+            discovered=discovered, evidence=evidence, config=config,
+        )
+
+        bars_acquirer = BinanceBarAcquirer(acquirer=raw_acquirer, base_url=args.base_url)
+        for ranked in selection.ranked:
+            verdict = universe.fetch_history_eligibility(
+                ranked.symbol, as_of=end_time, min_history_days=config.min_history_days
+            )
+            eligibility.append(verdict)
+            if not verdict.eligible:
+                # Documented, not admitted: a short-history symbol is not research
+                # history and must not silently join the panel.
+                acquisitions.append(SymbolAcquisition(
+                    symbol=ranked.symbol, state=SymbolState.DEFERRED,
+                    error=None if verdict.reason is None else verdict.reason.value,
+                ))
+                continue
+            acquisitions.append(bars_acquirer.acquire(
+                symbol=ranked.symbol,
+                start_time=resume_start(
+                    watermarks_before, symbol=ranked.symbol, default_start=default_start
+                ),
+                end_time=end_time,
+            ))
+        log = raw_acquirer.log
+    finally:
+        client.close()
+        raw_catalog.close()
+
+    acquired = [bar for a in acquisitions if a.usable for bar in a.bars]
+    dataset_catalog = SqliteDatasetCatalog(args.db_path)
+    dataset_id: str | None = None
+    snapshot: list[KlineBar] = []
+    watermarks_after = dict(watermarks_before)
+    reconciliation: dict[str, Any] = {}
+    try:
+        prior_dataset_id, prior_bars, prior_reconciliation = load_prior_snapshot(
+            dataset_catalog, args.store_root
+        )
+        blocked = [a for a in acquisitions if a.blocks_publication]
+        for acquisition in acquisitions:
+            if acquisition.state is not SymbolState.ALREADY_CURRENT:
+                continue
+            covered, _missing = symbol_covers_range(
+                prior_bars, symbol=acquisition.symbol,
+                start_time=default_start, end_time=end_time,
+            )
+            if not covered:
+                blocked.append(acquisition)
+
+        if blocked or not acquired:
+            state = "blocked_by_incomplete_symbols" if blocked else "no_publishable_rows"
+            report = build_report(
+                config=config, end_time=end_time, default_start=default_start,
+                selection=selection, eligibility=eligibility, acquisitions=acquisitions,
+                blocked=blocked, log=log, prior_reconciliation=prior_reconciliation,
+                reconciliation={"state": state}, watermarks_before=watermarks_before,
+                watermarks_after=watermarks_before, snapshot=[], dataset_id=None,
+            )
+            _write_report(args.report_path, report)
+            print(f"DATA-008: {state}; prior snapshot and watermarks retained")
+            return 1
+
+        snapshot = merge_canonical_bars(prior_bars, acquired)
+        table = pa.Table.from_pylist([b.as_dict() for b in snapshot], schema=SNAPSHOT_SCHEMA)
+
+        with tempfile.TemporaryDirectory(prefix="data008-") as tmp:
+            output = Path(tmp) / "bars.parquet"
+            pq.write_table(table, output, compression="zstd")
+            sha256, byte_size = stream_sha256_and_size(output)
+
+            # Self-auditing: the snapshot directly declares every raw object its own
+            # rows cite, so lineage does not depend on walking the prior-dataset chain.
+            carried = {bar.raw_object_id for bar in snapshot}
+            missing_raw = sorted(
+                r for r in carried if not dataset_catalog.raw_object_exists(r)
+            )
+            if missing_raw:
+                raise RuntimeError(f"snapshot cites raw objects that no longer exist: {missing_raw}")
+
+            current = set(log.raw_object_ids)
+            dependencies = [
+                DependencyRef(
+                    id=raw_id, kind=DependencyKind.RAW_OBJECT,
+                    role=("controlling_response" if raw_id in current
+                          else "carried_forward_row_source"),
+                )
+                for raw_id in sorted(current | carried)
+            ]
+            if prior_dataset_id is not None and prior_bars:
+                dependencies.append(DependencyRef(
+                    id=prior_dataset_id, kind=DependencyKind.DATASET,
+                    role="prior_canonical_snapshot",
+                ))
+
+            times = [bar.open_time for bar in snapshot]
+            acquired_at = [o.acquired_at for o in log.outcomes if o.raw_object_id] or [
+                datetime.now(UTC)
+            ]
+            plan = PublishPlan(
+                dataset_type=DATASET_TYPE,
+                schema=SchemaIdentity(name=DATASET_TYPE, version="1"),
+                transform=TransformSpec(name="data008_binance_universe_expansion", version="1"),
+                code=CodeIdentity(commit=code_commit),
+                config=ConfigIdentity(config_sha256=config.fingerprint()),
+                dependencies=dependencies,
+                output_sources={RELATIVE_PATH: output},
+                output_specs=[OutputFileSpec(
+                    relative_path=RELATIVE_PATH, sha256=sha256, rows=table.num_rows,
+                    bytes=byte_size, rows_verified=True,
+                )],
+                statistics=DatasetStatistics(row_count=table.num_rows, byte_size=byte_size),
+                coverage=CoverageWindow(
+                    event_start=min(times), event_end=max(times),
+                    availability_start=min(acquired_at), availability_end=max(acquired_at),
+                ),
+                quality_status=QualityStatus.PASS,
+                quality_summary={
+                    "symbols": len({bar.symbol for bar in snapshot}),
+                    "row_count": table.num_rows,
+                    "blocking_symbols": 0,
+                },
+                created_at=datetime.now(UTC),
+                row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
+                row_receipts={RELATIVE_PATH: RowCountReceipt(
+                    relative_path=RELATIVE_PATH, row_count=table.num_rows,
+                    verifier_name="data008_snapshot_row_count",
+                )},
+            )
+            result = DatasetPublisher(
+                DatasetStoreConfig(root=args.store_root), dataset_catalog
+            ).publish(plan, register_catalog=True)
+
+        resolved = dataset_catalog.resolve_latest_by_type(DATASET_TYPE)
+        reconciliation = {
+            "state": "reconciled" if resolved == result.dataset_id else "mismatch",
+            "published_dataset_id": result.dataset_id,
+            "resolved_dataset_id": resolved,
+            "manifest_sha256": result.manifest_sha256,
+            "catalog_registered": result.catalog_registered,
+            "output_sha256": sha256,
+            "row_count": table.num_rows,
+        }
+        if resolved != result.dataset_id:
+            raise RuntimeError(
+                f"catalog reconciliation failed: published {result.dataset_id} but "
+                f"resolve_latest_by_type returned {resolved}"
+            )
+        dataset_id = result.dataset_id
+
+        for acquisition in acquisitions:
+            if acquisition.watermark_candidate is None:
+                continue
+            watermarks_after[acquisition.symbol] = (
+                acquisition.watermark_candidate.isoformat()
+            )
+        watermark_store.save(watermarks_after)
+    finally:
+        dataset_catalog.close()
+
+    report = build_report(
+        config=config, end_time=end_time, default_start=default_start, selection=selection,
+        eligibility=eligibility, acquisitions=acquisitions, blocked=[], log=log,
+        prior_reconciliation=prior_reconciliation, reconciliation=reconciliation,
+        watermarks_before=watermarks_before, watermarks_after=watermarks_after,
+        snapshot=snapshot, dataset_id=dataset_id,
+    )
+    _write_report(args.report_path, report)
+    print(f"DATA-008: published {len(snapshot)} rows as {dataset_id}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

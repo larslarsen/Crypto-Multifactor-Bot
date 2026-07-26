@@ -26,7 +26,7 @@ import pytest
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
 from cryptofactors.catalog.runner import MIGRATIONS_DIR, apply_migrations
-from cryptofactors.ingest import dex_providers
+from cryptofactors.ingest import raw_http
 from cryptofactors.ingest.dex_providers import (
     DEFILLAMA_PROVIDER,
     DEXSCREENER_PROVIDER,
@@ -96,7 +96,7 @@ def forbid_real_network(monkeypatch: pytest.MonkeyPatch) -> None:
             raise AssertionError("a real network client was requested; use the mock transport")
         return REAL_HTTPX_CLIENT(*args, **kwargs)
 
-    monkeypatch.setattr(dex_providers.httpx, "Client", guarded)
+    monkeypatch.setattr(raw_http.httpx, "Client", guarded)
 
 
 class MockDexNode:
@@ -207,7 +207,7 @@ class MockDexNode:
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            dex_providers.httpx, "Client",
+            raw_http.httpx, "Client",
             lambda **_kw: REAL_HTTPX_CLIENT(transport=httpx.MockTransport(self.handler)),
         )
 
