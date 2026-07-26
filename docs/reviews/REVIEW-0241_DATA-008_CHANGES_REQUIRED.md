@@ -8,14 +8,15 @@
 
 ## Findings
 
-1. **Critical - the publication does not expand the DATA-006 canonical panel.**
+1. **Critical - the additive publication is not bound to the DATA-006 panel.**
    DATA-006 published 90,276 `market_bars` rows for 23 symbols from 2020 through
    2026. The new runner neither loads that dataset nor passes its symbols through
-   `already_covered`; it creates an unrelated `binance_spot_daily_bars` dataset.
+   `already_covered`; it creates an unbound `binance_spot_daily_bars` dataset.
    Report 36 consequently contains only 70 rows for seven symbols over ten days.
    Four of those seven (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, and `DOGEUSDT`) were already
-   in DATA-006, so the pinned dataset is a smaller parallel panel rather than the
-   expanded canonical history the ticket promises consumers.
+   in DATA-006, and the dataset declares no DATA-006 dependency or consumer
+   reconciliation. It therefore does not yet constitute the additive expansion the
+   ticket promises consumers.
 
 2. **High - the priority measure does not satisfy the ticket's 30-day rule.**
    Selection sorts `/api/v3/ticker/24hr` quote volume and explicitly fingerprints a
@@ -48,10 +49,11 @@
 
 ## Required corrections
 
-1. Extend the accepted DATA-006 `market_bars` panel, or publish a schema-compatible
-   full replacement with a declared DATA-006 dependency. Exclude the existing 23
-   symbols from the added-symbol take, retain their history, and report base, added,
-   and total panel coverage separately.
+1. Keep `binance_spot_daily_bars` as an additive canonical dataset and declare the
+   accepted DATA-006 `market_bars` dataset as its base-panel dependency. Exclude the
+   existing 23 symbols from the added-symbol take. Report and test the pinned base ID,
+   pinned additive ID, disjoint base/addition symbol sets, logical union count, and
+   coverage reconciliation required by consumers.
 2. Rank on an actual trailing 30-day Binance volume measure with pinned observation
    time and exact raw lineage. If 24-hour priority is desired instead, stop and obtain
    an explicit reviewer-approved ticket rescope before implementation or evidence.
@@ -85,6 +87,19 @@ substring leveraged-token filtering; labels 24-hour evidence honestly; preserves
 responses before decoding; validates prior snapshots; directly closes carried-row raw
 lineage; blocks partial publication; and advances watermarks only after publication.
 These improvements should be retained.
+
+## Reviewer architecture decision
+
+DATA-006 remains immutable. DATA-008 is authorized to publish
+`binance_spot_daily_bars` as a separate additive canonical dataset anchored to the
+accepted DATA-006 dataset by an explicit catalog dependency and reconciliation
+contract. Consumers must pin the base and additive IDs explicitly when constructing
+the logical expanded panel.
+
+No `market_bars` publisher change, mass instrument-ID allocation, or ownership of
+unmapped Binance instruments is authorized by this ticket. The additive dataset must
+not register or resolve as `market_bars`, and it must contain additions rather than
+duplicate DATA-006 symbols.
 
 ## Constraints
 
