@@ -181,14 +181,19 @@ class DexOHLCVProvider(ABC):
         base_token_address: str | None = None,
         quote_token_address: str | None = None,
     ) -> dict[str, Any]:
-        """Return pool metadata for screening; default empty."""
+        """Return pool metadata for screening.
+
+        Fail-closed (DEX-002 rework): a provider with no screening evidence cannot
+        admit a pool. The previous default returned ``passed=True``, which let pools
+        through on no evidence at all.
+        """
         return {
             "provider": self.provider_id,
             "chain": chain,
             "pool_address": pool_address,
             "liquidity_usd": None,
             "volume_24h_usd": None,
-            "passed": True,
+            "passed": False,
             "note": "no screening data available",
         }
 
@@ -392,51 +397,17 @@ class DexScreenerProvider(DexOHLCVProvider):
                 incident=incident,
             )
 
-        # DexScreener returns current pair stats; synthesize one daily point if
-        # we have any pair. This is intentionally limited — used only for gap-fill.
-        if not isinstance(data, dict):
-            return ProviderResult(
-                provider=self.provider_id,
-                chain=chain,
-                pool_address=pool_address,
-                records=[],
-            )
-        out: list[PoolOhlcvRecord] = []
-        pairs = data.get("pairs") or []
-        for pair in pairs:
-            try:
-                price = float(pair.get("priceUsd") or 0.0)
-                volume_24h = float(pair.get("volume", {}).get("h24") or 0.0)
-                liquidity = float(pair.get("liquidity", {}).get("usd") or 0.0)
-            except (ValueError, TypeError):
-                continue
-            if price <= 0:
-                continue
-            ts = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-            if not (start_time <= ts <= end_time):
-                continue
-            out.append(
-                PoolOhlcvRecord(
-                    timestamp=ts,
-                    open=price,
-                    high=price,
-                    low=price,
-                    close=price,
-                    volume=volume_24h,
-                    provider=self.provider_id,
-                    chain=chain,
-                    pool_address=pool_address,
-                    fee_tier=fee_tier,
-                    liquidity=liquidity,
-                    volume_24h=volume_24h,
-                )
-            )
-
+        # DEX-002 rework: DexScreener returns a current-price snapshot, not interval
+        # bars. Turning one into a candle with open=high=low=close and 24h volume
+        # attached to a single timestamp fabricates a bar that is indistinguishable
+        # downstream from an observed one. DATA-007 classifies this provider as pool
+        # statistics only, so it contributes no OHLCV rows.
+        del data
         return ProviderResult(
             provider=self.provider_id,
             chain=chain,
             pool_address=pool_address,
-            records=out,
+            records=[],
         )
 
     def screen_pool(
@@ -593,7 +564,9 @@ class DefiLlamaProvider(DexOHLCVProvider):
             data = r.json()
             prices = data.get("coins") or {}
             matched = [c for c in coins if c in prices and float(prices[c].get("price") or 0.0) > 0.0]
-            passed = len(matched) > 0
+            # Context only (DEX-002 rework): token prices are not liquidity/volume
+            # evidence and can never make a pool pass.
+            passed = False
             return {
                 "provider": self.provider_id,
                 "chain": chain,
