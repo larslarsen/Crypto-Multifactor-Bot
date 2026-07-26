@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Iterator
+from typing import Any
 
 from cryptofactors.ids import fingerprint
 from cryptofactors.reference.errors import (
@@ -263,7 +263,7 @@ class ReferenceStore:
         if not code:
             raise ReferenceValidationError("venue_code must be non-empty")
         vid = self.venue_id_for(code)
-        ts = ensure_utc(created_at or datetime.now(timezone.utc))
+        ts = ensure_utc(created_at or datetime.now(UTC))
         try:
             with self._atomic():
                 self._conn.execute(
@@ -289,7 +289,7 @@ class ReferenceStore:
         created_at: datetime | None = None,
     ) -> Asset:
         aid = self.asset_id_for(asset_class=asset_class, identity_key=identity_key)
-        ts = ensure_utc(created_at or datetime.now(timezone.utc))
+        ts = ensure_utc(created_at or datetime.now(UTC))
         try:
             with self._atomic():
                 self._conn.execute(
@@ -325,7 +325,7 @@ class ReferenceStore:
             instrument_type=instrument_type,
             salt=salt,
         )
-        ts = ensure_utc(created_at or datetime.now(timezone.utc))
+        ts = ensure_utc(created_at or datetime.now(UTC))
         try:
             with self._atomic():
                 # Polymorphic refs are not FK-enforced for base/quote alone in all
@@ -774,7 +774,7 @@ class ReferenceStore:
         norm = normalize_alias(text)
         d = ensure_utc(decision_time)
         k = ensure_utc(knowledge_time)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Idempotency key excludes candidate ordering noise
         cid = fingerprint(
             "amb",
@@ -847,7 +847,7 @@ class ReferenceStore:
                 "invalid resolution status transition",
                 context={"status": status.value},
             )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with self._atomic():
             row = self._conn.execute(
                 "SELECT * FROM ref_ambiguity_case WHERE case_id = ?",

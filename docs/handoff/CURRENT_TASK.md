@@ -1,28 +1,30 @@
 # CURRENT_TASK
 
-Ticket: ARCH-002
-State: BLOCKED
-Next required actor: Sr Dev — fix membership semantics (REVIEW-0217)
+Ticket: ARCH-003
+State: READY
+Next required actor: Sr Dev — Grok Build
 Next ticket authorized: NONE
 
-## Review verdict
+## Summary
 
-**CHANGES_REQUIRED** — see `docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md`
+**REVIEW-0219 CHANGES REQUIRED** — ARCH-003 requires the listed Sr Dev corrections
+before acceptance. No production files were changed and no tests were run. ADR-0015
+remains Proposed and ARCH-003 is not complete.
 
-## Blocking (summary)
+## Blocked tickets
 
-1. CMC dead-only graveyard used as universe membership → liquid panel empty / wrong
-2. `key_map.get(iid, iid)` leaks raw `cmc_*` ids into paper universe
-3. No real-catalog integration proof for sensible DATA-011 panel
-4. Commit uncommitted `TYPE_CHECKING` circular-import fix with rework
+- **EXP-009** — BLOCKED. Reason: invalid point-in-time universe binding.
+- **DATA-010** — Engineering prototype only. Referenced as ADR-0015 motivation but not valid research data. Deferred until ARCH-003 completes.
 
-## Required shape
+## Evidence Files
 
-tradable = (paper/bars panel) minus CMC-dead at t (name-safe), not dead-list as membership
+- `docs/reviews/REVIEW-0219_ARCH-003_CHANGES_REQUIRED.md` — Reviewer verdict
+- `tickets/ARCH-003.md` — Current active ticket (requires review)
 
-## Governing documents
+## Governance
 
-- tickets/ARCH-002.md
-- docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md
-- src/cryptofactors/universe/binding.py
-- src/cryptofactors/execution/paper_loop.py
+- All work traceable to tickets: ARCH-003, ADR-0015
+- No LIVE authorization — architecture review mode only
+- Sr Dev Grok Build must implement REVIEW-0219 corrections
+
+**Awaiting Sr Dev Grok Build** with changes required as per REVIEW-0219.

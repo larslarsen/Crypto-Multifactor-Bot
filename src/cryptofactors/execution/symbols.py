@@ -9,17 +9,29 @@ and a wrapping as-of adapter that transparently translates paper symbol keys to
 int ids before calling the underlying `CatalogAsOfStore`.
 
 Fail-closed: `to_instrument_id()` raises `KeyError` if the symbol is unmapped.
+
+Dynamic registry:
+  The base maps below (23 symbols, stable IDs 1-23) are the bootstrap anchor.
+  All additional symbols are persisted in `data/symbol_registry.json` and loaded
+  at import time.  Run `register_symbol()` or the Binance discovery script to add
+  new symbols — never edit the base dicts by hand.
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import Any, Final
+from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
 
-PAPER_TO_BINANCE_MAP: Final[dict[str, str]] = {
+# ---------------------------------------------------------------------------
+# Bootstrap base maps (23 symbols, instrument IDs 1-23, stable forever)
+# ---------------------------------------------------------------------------
+
+PAPER_TO_BINANCE_MAP: dict[str, str] = {
     "XBTUSD": "BTCUSDT",
     "BTCUSD": "BTCUSDT",
     "ETHUSD": "ETHUSDT",
@@ -46,7 +58,7 @@ PAPER_TO_BINANCE_MAP: Final[dict[str, str]] = {
     "PEPEUSD": "PEPEUSDT",
 }
 
-BINANCE_TO_PAPER_MAP: Final[dict[str, str]] = {
+BINANCE_TO_PAPER_MAP: dict[str, str] = {
     "BTCUSDT": "XBTUSD",
     "ETHUSDT": "ETHUSD",
     "SOLUSDT": "SOLUSD",
@@ -72,7 +84,7 @@ BINANCE_TO_PAPER_MAP: Final[dict[str, str]] = {
     "PEPEUSDT": "PEPEUSD",
 }
 
-PAPER_TO_INSTRUMENT_ID: Final[dict[str, int]] = {
+PAPER_TO_INSTRUMENT_ID: dict[str, int] = {
     "XBTUSD": 1,
     "ETHUSD": 2,
     "SOLUSD": 3,
@@ -98,7 +110,56 @@ PAPER_TO_INSTRUMENT_ID: Final[dict[str, int]] = {
     "PEPEUSD": 23,
 }
 
-INSTRUMENT_ID_TO_PAPER: Final[dict[int, str]] = {v: k for k, v in PAPER_TO_INSTRUMENT_ID.items()}
+INSTRUMENT_ID_TO_PAPER: dict[int, str] = {v: k for k, v in PAPER_TO_INSTRUMENT_ID.items()}
+
+# ---------------------------------------------------------------------------
+# Dynamic symbol registry — loaded from disk at import time
+# ---------------------------------------------------------------------------
+
+_REGISTRY_PATH = Path(__file__).resolve().parent.parent.parent.parent / "data" / "symbol_registry.json"
+
+
+def register_symbol(paper: str, binance: str, instrument_id: int) -> None:
+    """Add a symbol to the runtime maps."""
+    PAPER_TO_BINANCE_MAP[paper] = binance
+    BINANCE_TO_PAPER_MAP[binance] = paper
+    PAPER_TO_INSTRUMENT_ID[paper] = instrument_id
+    INSTRUMENT_ID_TO_PAPER[instrument_id] = paper
+
+
+def _load_registry() -> None:
+    if not _REGISTRY_PATH.exists():
+        return
+    try:
+        data = json.loads(_REGISTRY_PATH.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    for entry in data.get("symbols", []):
+        paper = entry.get("paper")
+        binance = entry.get("binance")
+        iid = entry.get("instrument_id")
+        if paper and binance and iid and paper not in PAPER_TO_BINANCE_MAP:
+            register_symbol(paper, binance, iid)
+
+
+def _dump_registry() -> None:
+    """Persist current full maps to disk."""
+    symbols = sorted(
+        (p, b, i)
+        for p, b in PAPER_TO_BINANCE_MAP.items()
+        for i in [PAPER_TO_INSTRUMENT_ID.get(p, 0)]
+        if i
+    )
+    entries: list[dict] = [
+        {"paper": p, "binance": b, "instrument_id": i}
+        for p, b, i in symbols
+    ]
+    _REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _REGISTRY_PATH.write_text(json.dumps({"symbols": entries}, indent=2))
+
+
+# Auto-load registry on import
+_load_registry()
 
 
 def to_binance_symbol(symbol: str) -> str:

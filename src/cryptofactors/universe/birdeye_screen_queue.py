@@ -14,6 +14,7 @@ Hard constraints:
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -327,6 +328,20 @@ class BirdeyeScreenQueue:
             all_rejected.extend(rejected)
         return all_raw, all_survivors, all_rejected
 
+    def register_survivors(self, survivors: Sequence[Mapping[str, Any]]) -> tuple[int, int]:
+        """Count valid raw listing events without assigning catalog identity."""
+        seen: set[tuple[str, str]] = set()
+        skipped = 0
+
+        for r in survivors:
+            chain = r.get("chain", "").lower()
+            address = r.get("address", "").lower()
+            if not chain or not address or (chain, address) in seen:
+                skipped += 1
+                continue
+            seen.add((chain, address))
+        return len(seen), skipped
+
 
 def _is_dead_by_liquidity(
     stats: Sequence[PoolStats],
@@ -375,3 +390,33 @@ def build_birdeye_screening_provider(
     key = api_key or read_api_key_from_env()
     provider = BirdeyeListingsProvider(api_key=key, client=client)
     return BirdeyeScreenQueue(provider=provider, config=config or ScreeningConfig())
+
+
+def register_dex_tokens(
+    survivors: list[dict[str, Any]],
+    chain_allowlist: set[str] | None = None,
+    min_liquidity_usd: float = 10_000.0,
+) -> tuple[int, int]:
+    """Count DEX listing candidates without assigning catalog identity."""
+    new_count = 0
+    skipped = 0
+    seen: set[tuple[str, str]] = set()
+
+    for r in survivors:
+        chain = r.get("chain")
+        if chain_allowlist and chain not in chain_allowlist:
+            skipped += 1
+            continue
+        if float(r.get("liquidity") or 0.0) < min_liquidity_usd:
+            skipped += 1
+            continue
+
+        address = str(r.get("address") or "").lower()
+        key = (str(chain).lower(), address)
+        if not address or key in seen:
+            skipped += 1
+            continue
+        seen.add(key)
+        new_count += 1
+
+    return new_count, skipped

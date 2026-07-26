@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 
 class VenueType(str, Enum):
@@ -85,7 +86,7 @@ _UTC_STORE_FMT = "%Y-%m-%dT%H:%M:%S.%fZ"
 def ensure_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         raise ValueError("datetime must be timezone-aware UTC")
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def dt_to_iso(dt: datetime) -> str:
@@ -102,7 +103,7 @@ def iso_to_dt(value: str) -> datetime:
     dt = datetime.fromisoformat(text)
     if dt.tzinfo is None:
         raise ValueError("stored timestamp must be timezone-aware")
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def normalize_alias(text: str) -> str:
@@ -139,9 +140,7 @@ class BiTemporalWindow:
             return False
         if k < self.known_from:
             return False
-        if self.known_to is not None and k >= self.known_to:
-            return False
-        return True
+        return self.known_to is None or k < self.known_to
 
 
 @dataclass(frozen=True, slots=True)

@@ -35,6 +35,12 @@ from cryptofactors.reference.models import (
     iso_to_dt,
     normalize_alias,
 )
+from cryptofactors.reference.ref_identity import (
+    ReferenceIdentityResolver,
+    asset_id_for_instrument,
+    resolve_contract_id,
+    resolve_instrument_id,
+)
 from cryptofactors.reference.store import ReferenceStore
 
 __all__ = [
@@ -55,6 +61,7 @@ __all__ = [
     "MigrationEventType",
     "ReferenceConflictError",
     "ReferenceError",
+    "ReferenceIdentityResolver",
     "ReferenceNotFoundError",
     "ReferenceResolutionError",
     "ReferenceStore",
@@ -64,8 +71,11 @@ __all__ = [
     "TargetKind",
     "Venue",
     "VenueType",
+    "asset_id_for_instrument",
     "dt_to_iso",
     "ensure_utc",
     "iso_to_dt",
     "normalize_alias",
+    "resolve_contract_id",
+    "resolve_instrument_id",
 ]

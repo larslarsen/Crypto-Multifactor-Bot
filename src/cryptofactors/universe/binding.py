@@ -1,8 +1,8 @@
-"""ARCH-002 — UniverseBinding contract and CMC survivorship adapter.
+"""ARCH-002/ARCH-003 — point-in-time universe bindings.
 
-Membership for every experiment and paper session must resolve through a
-catalog-published survivorship-aware universe dataset. Static venue maps are
-symbol translation only, never membership.
+Membership for every experiment and paper session resolves from catalog listing
+events. Static execution maps translate already-resolved instrument IDs for
+legacy paper callers only; they never determine membership.
 
 Research/paper panel semantics (ADR-0014):
     tradable_panel(t) = declared_panel  minus  CMC-dead_at(t)
@@ -24,12 +24,17 @@ from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.models import DatasetStoreConfig
 from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
 from cryptofactors.execution.symbols import (
+    INSTRUMENT_ID_TO_PAPER,
     PAPER_TO_BINANCE_MAP,
     PAPER_TO_INSTRUMENT_ID,
 )
 from cryptofactors.universe.cmc_survivorship import (
     CMC_SURVIVORSHIP_DATASET_ID,
     CMCSurvivorshipProvider,
+)
+from cryptofactors.universe.listing_universe import (
+    ListingUniverseProvider,
+    load_listing_universe_provider,
 )
 
 UNIVERSE_BINDING_CODE_VERSION: str = "v2"
@@ -81,6 +86,7 @@ SURVIVORSHIP_INVALID_ARTIFACT_IDS: frozenset[str] = frozenset({
 })
 
 
+
 class UniverseBindingError(RuntimeError):
     """Raised when a UniverseBinding cannot be resolved or is empty."""
 
@@ -112,6 +118,56 @@ class UniverseBinding(Protocol):
     def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
         """Return a coverage report for the universe at ``decision_time``."""
         ...
+
+
+@dataclass(frozen=True, slots=True)
+class PublishedListingUniverseBinding:
+    """Membership from one immutable, catalog-published listing snapshot."""
+
+    universe_dataset_id: str
+    provider: ListingUniverseProvider
+    key_map: Mapping[str, str] = field(default_factory=dict)
+    survivorship_policy: str = "published_catalog_listing_lifecycle_v1"
+    universe_code_version: str = UNIVERSE_BINDING_CODE_VERSION
+
+    def universe_at(self, decision_time: datetime) -> frozenset[str]:
+        instrument_ids = self.provider.universe_at(decision_time)
+        result = (
+            frozenset(self.key_map[item] for item in instrument_ids if item in self.key_map)
+            if self.key_map
+            else instrument_ids
+        )
+        if not result:
+            raise UniverseBindingError(
+                f"published listing universe is empty at {decision_time.isoformat()}"
+            )
+        return result
+
+    def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
+        return {
+            "eligible": len(self.universe_at(decision_time)),
+            "with_bars": None,
+            "missing": None,
+            "universe_dataset_id": self.universe_dataset_id,
+            "survivorship_policy": self.survivorship_policy,
+            "universe_code_version": self.universe_code_version,
+        }
+
+
+def load_universe_binding(
+    db_path: Path | str,
+    store_root: Path | str,
+    dataset_id: str | None = None,
+) -> PublishedListingUniverseBinding:
+    """Load the production binding from an immutable listing-universe dataset."""
+    try:
+        resolved_id, provider = load_listing_universe_provider(db_path, store_root, dataset_id)
+    except ValueError as exc:
+        raise UniverseBindingError(str(exc)) from exc
+    return PublishedListingUniverseBinding(
+        universe_dataset_id=resolved_id,
+        provider=provider,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -351,7 +407,7 @@ def _load_cmc_provider(
 
     parquet_path: Path | None = None
     for f in files:
-        rel = str(f.get("relative_path", ""))
+        rel = str(f.get("storage_uri", ""))
         if rel.endswith(".parquet"):
             parquet_path = Path(rel)
             break
@@ -421,20 +477,22 @@ def load_paper_universe_binding(
     dataset_id: str | None = None,
     panel: frozenset[str] | None = None,
     base_to_name: Mapping[str, str] | None = None,
-) -> PaperPanelSurvivorshipBinding:
-    """Load a survivorship-filtered paper panel binding.
+) -> PublishedListingUniverseBinding:
+    """Load legacy paper keys from catalog-resolved Binance listing events.
 
-    The panel is the declared liquid set (defaults to the DATA-011 23-symbol
-    paper map). The CMC dead-coin registry is used only to exclude symbols that
-    are name-matched as dead at the decision time.
+    ``store_root``, ``dataset_id``, ``panel``, and ``base_to_name`` remain in
+    the signature so existing callers do not break. They are intentionally not
+    membership inputs: listing lifecycle in ``ref_listing_event`` is authoritative.
+    ``INSTRUMENT_ID_TO_PAPER`` only adapts resolved integer IDs to the legacy
+    execution namespace.
     """
-    resolved_id, provider = _load_cmc_provider(db_path, store_root, dataset_id)
-    selected_panel = panel or PAPER_PANEL_SYMBOLS
-    selected_base_to_name = base_to_name or PAPER_BASE_TO_NAME
-
-    return PaperPanelSurvivorshipBinding(
+    del panel, base_to_name
+    try:
+        resolved_id, provider = load_listing_universe_provider(db_path, store_root, dataset_id)
+    except ValueError as exc:
+        raise UniverseBindingError(str(exc)) from exc
+    return PublishedListingUniverseBinding(
         universe_dataset_id=resolved_id,
         provider=provider,
-        panel=selected_panel,
-        base_to_name=selected_base_to_name,
+        key_map={str(instrument_id): paper for instrument_id, paper in INSTRUMENT_ID_TO_PAPER.items()},
     )

@@ -8,9 +8,8 @@ tracking so re-runs are incremental and idempotent.
 Flow:
 1. Load per-symbol watermark (last source dataset event_end, or file fallback).
 2. Fetch incremental klines via BinanceKlineFetcher.
-3. Normalize raw objects to MAN-001 source datasets.
-4. Publish source datasets.
-5. Build and publish canonical market_bars via BAR-001.
+3. Persist immutable raw objects.
+4. Defer normalization, identity resolution, and publication to catalog consumers.
 
 Modes:
   --dry-run (default): uses mocked HTTP responses and temp directories.
@@ -32,17 +31,10 @@ from typing import Any
 import httpx
 
 from cryptofactors.acquisition.binance_fetcher import BinanceKlineFetcher
-from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
-from cryptofactors.catalog.dataset.models import DatasetPublishResult, DatasetStoreConfig
-from cryptofactors.catalog.dataset.publisher import DatasetPublisher
 from cryptofactors.catalog.runner import apply_migrations
-from cryptofactors.ingest.binance import normalize_binance_kline
 from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
 from cryptofactors.ingest.raw.models import RawObjectStoreConfig
 from cryptofactors.ingest.raw.writer import RawObjectWriter
-from cryptofactors.market.bars import VerifiedSourceBarDataset, publish_canonical_bars
-
-UTC = UTC
 
 # Binance spot launched public trading ~2017-08-17; use this as the default
 # earliest fetch date for pairs with no existing source dataset.
@@ -56,9 +48,6 @@ U50_UNIVERSE = [
     "NEARUSDT", "FILUSDT", "ARBUSDT", "OPUSDT", "SUIUSDT",
     "SEIUSDT", "WLDUSDT", "PEPEUSDT",
 ]
-
-# Stable symbol -> integer instrument_id mapping for canonical bars.
-SYMBOL_TO_INSTRUMENT_ID = {sym: idx + 1 for idx, sym in enumerate(U50_UNIVERSE)}
 
 WATERMARK_PATH = Path("data/backfill_watermarks.json")
 
@@ -156,49 +145,23 @@ def _derive_watermark(symbol: str, watermarks: dict[str, str]) -> datetime:
     return DEFAULT_EARLIEST_START
 
 
-def backfill_symbol_klines(
+def fetch_symbol_raw_klines(
     symbol: str,
     interval: str,
     raw_writer: RawObjectWriter,
-    catalog_path: Path,
-    dataset_store_root: Path,
     client: httpx.Client | None,
     start_time: datetime,
     end_time: datetime,
-    instrument_int_id: int,
-) -> DatasetPublishResult:
-    """Fetch, normalize, and publish a source dataset for one symbol."""
+) -> Any:
+    """Fetch and persist one raw Binance response without resolving identity."""
     fetcher = BinanceKlineFetcher(raw_writer=raw_writer, client=client)
     print(f"Fetching {symbol} {interval} from {start_time} to {end_time}...", file=sys.stderr)
-    raw_object = fetcher.fetch_and_write_raw(
+    return fetcher.fetch_and_write_raw(
         symbol=symbol,
         interval=interval,
         start_time=start_time,
         end_time=end_time,
     )
-    print(f"  RAW object: {raw_object.raw_object_id}", file=sys.stderr)
-
-    stage_dir = dataset_store_root / "staged" / symbol
-    stage_dir.mkdir(parents=True, exist_ok=True)
-    norm_res = normalize_binance_kline(
-        raw_objects=[raw_object],
-        market_type="spot",
-        interval=interval,
-        venue_id="binance",
-        instrument_id=str(instrument_int_id),
-        output_dir=stage_dir,
-        code_commit="DATA-006",
-    )
-
-    config = DatasetStoreConfig(root=dataset_store_root)
-    catalog = SqliteDatasetCatalog(catalog_path)
-    try:
-        publisher = DatasetPublisher(config, catalog)
-        source_dataset = publisher.publish(norm_res.publish_plan, register_catalog=True)
-    finally:
-        catalog.close()
-    print(f"  Source dataset: {source_dataset.dataset_id}", file=sys.stderr)
-    return source_dataset
 
 
 def main() -> int:
@@ -262,89 +225,39 @@ def main() -> int:
     raw_config = RawObjectStoreConfig(root=raw_root)
     raw_writer = RawObjectWriter(config=raw_config, catalog=raw_catalog)
 
-    verified_sources: list[VerifiedSourceBarDataset] = []
-    source_ids: list[str] = []
+    raw_object_ids: list[str] = []
     symbol_rows: list[dict[str, Any]] = []
 
     for symbol in symbols:
-        instrument_id = SYMBOL_TO_INSTRUMENT_ID.get(symbol)
-        if instrument_id is None:
-            print(f"Warning: no instrument_id mapping for {symbol}, skipping", file=sys.stderr)
-            continue
-
         start_time = _parse_iso(args.start_time) if args.start_time else _derive_watermark(symbol, watermarks)
         if start_time >= end_time:
             print(f"Skipping {symbol}: watermark {start_time} already at or after end {end_time}", file=sys.stderr)
             continue
 
         try:
-            source_ds = backfill_symbol_klines(
+            raw_object = fetch_symbol_raw_klines(
                 symbol=symbol,
                 interval=args.interval,
                 raw_writer=raw_writer,
-                catalog_path=db_path,
-                dataset_store_root=store_root,
                 client=client,
                 start_time=start_time,
                 end_time=end_time,
-                instrument_int_id=instrument_id,
             )
-        except Exception as exc:
+        except (httpx.HTTPError, OSError, ValueError) as exc:
             print(f"ERROR backfilling {symbol}: {exc}", file=sys.stderr)
             continue
 
-        source_ids.append(source_ds.dataset_id)
-        local_files = {
-            f.relative_path: source_ds.dataset_path / f.relative_path
-            for f in source_ds.manifest.files
-        }
-        verified_sources.append(
-            VerifiedSourceBarDataset(
-                local_files=local_files,
-                manifest=source_ds.manifest,
-                receipt=source_ds.receipt,
-                venue_id="binance",
-                instrument_id=instrument_id,
-                market_type="spot",
-                interval=args.interval,
-                schema_variant="quote_notional",
-            )
-        )
-        if source_ds.manifest.coverage.event_end:
-            watermarks[symbol] = source_ds.manifest.coverage.event_end.isoformat()
+        raw_object_ids.append(raw_object.raw_object_id)
+        watermarks[symbol] = end_time.isoformat()
 
         symbol_rows.append({
             "symbol": symbol,
-            "instrument_id": instrument_id,
-            "source_dataset_id": source_ds.dataset_id,
-            "event_start": source_ds.manifest.coverage.event_start.isoformat() if source_ds.manifest.coverage.event_start else None,
-            "event_end": source_ds.manifest.coverage.event_end.isoformat() if source_ds.manifest.coverage.event_end else None,
-            "row_count": source_ds.manifest.statistics.row_count,
+            "raw_object_id": raw_object.raw_object_id,
         })
 
-    if not verified_sources:
-        print("No source datasets were produced; cannot build canonical bars", file=sys.stderr)
+    if not raw_object_ids:
+        print("No raw objects were produced", file=sys.stderr)
         return 1
-
-    # Build canonical market_bars
-    canonical_stage_dir = store_root / "staged" / "canonical_bars_full"
-    canonical_stage_dir.mkdir(parents=True, exist_ok=True)
-    canonical_plan_res = publish_canonical_bars(
-        source_datasets=verified_sources,
-        output_dir=canonical_stage_dir,
-        code_commit="DATA-006",
-        created_at=datetime.now(UTC),
-    )
-
-    config = DatasetStoreConfig(root=store_root)
-    catalog = SqliteDatasetCatalog(db_path)
-    try:
-        publisher = DatasetPublisher(config, catalog)
-        canonical_ds = publisher.publish(canonical_plan_res.publish_plan, register_catalog=True)
-        resolved_latest = catalog.resolve_latest_by_type("market_bars")
-    finally:
-        catalog.close()
-    print(f"BAR-001 canonical market_bars published: {canonical_ds.dataset_id}", file=sys.stderr)
 
     # Update watermark file in real mode
     if not args.dry_run and args.update_watermark:
@@ -356,18 +269,13 @@ def main() -> int:
         "symbols_requested": symbols,
         "symbols_backfilled": [r["symbol"] for r in symbol_rows],
         "symbols_failed": sorted(set(symbols) - {r["symbol"] for r in symbol_rows}),
-        "source_dataset_ids": source_ids,
-        "canonical_dataset_id": canonical_ds.dataset_id,
-        "canonical_dataset_quality_status": canonical_ds.manifest.quality_status.value,
-        "total_bar_count": canonical_ds.manifest.statistics.row_count,
+        "raw_object_ids": raw_object_ids,
         "symbol_rows": symbol_rows,
         "watermarks": watermarks,
         "catalog_reconciliation": {
-            "report_pinned_dataset_id": canonical_ds.dataset_id,
-            "resolve_latest_by_type": resolved_latest,
-            "match": canonical_ds.dataset_id == resolved_latest,
+            "identity_resolution": "deferred to catalog consumer",
         },
-        "gate_status": "OK",
+        "gate_status": "RAW_ONLY",
         "live_eligible": False,
         "scope_reduction": {
             "why_not_earliest_2017": (
@@ -378,8 +286,8 @@ def main() -> int:
                 "by listing-day partial bars on assets that began trading intra-day after 2020-01-01."
             ),
             "universe_scope": (
-                "U50+ spot universe as listed in DATA-006 (23 symbols). The canonical bars use "
-                "instrument_id 1..23 and match the universe approved in the ticket."
+                "U50+ spot symbols as listed in DATA-006 (23 symbols); no instrument identity "
+                "is assigned during raw acquisition."
             ),
             "interval_scope": "Daily (1d) only for this evidence. Hourly support is present in the script via --interval 1h.",
         },
