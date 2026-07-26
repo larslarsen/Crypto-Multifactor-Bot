@@ -1,21 +1,22 @@
 # CURRENT_TASK
 
-Ticket: ARCH-003
-State: SUPERSEDED
-Next required actor: Reviewer
+Ticket: DATA-012
+State: READY
+Next required actor: Sr Dev — Grok Build
 Next ticket authorized: NONE
 
 ## Summary
 
-ARCH-003 implementation abandoned due to broken refresh, invalid watermark access,
-and no consumer wiring. ADR-0015 remains unaccepted.
+DATA-012 — Uniswap V2 PairCreated Event Ingestion (Ethereum Mainnet). Raw-event
+ingestion via JSON-RPC with RawObjectWriter for exact response preservation.
+PairCreated events only. No Swap/Sync, OHLCV, universe, Birdeye, Solana, factors,
+or LIVE.
 
-## Evidence
+## Governing documents
 
-- `tickets/ARCH-003.md`
-- `docs/reviews/REVIEW-0225_ARCH-003_SUPERSEDED.md`
+- `tickets/DATA-012.md`
+- `docs/reviews/REVIEW-0226_DATA-012_AUTHORIZED.md`
 
-## Governance
+## Authorization
 
-- No Sr Dev work is authorized under ARCH-003.
-- No DEX backfill, factor research, or LIVE work is authorized.
+Reviewer authorized DATA-012 for Sr Dev Grok Build. No other work is authorized.
