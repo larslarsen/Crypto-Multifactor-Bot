@@ -6,6 +6,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -167,6 +168,7 @@ class UniswapV2PairCreatedIngestor:
         end_block: int,
         chunk_size: int,
         receipt_db_path: str | None = None,
+        emit_rows: bool = True,
     ) -> list[PairCreatedRow]:
         if start_block < 0 or end_block < start_block or chunk_size <= 0:
             raise ValueError("invalid block range or chunk_size")
@@ -227,7 +229,8 @@ class UniswapV2PairCreatedIngestor:
                 block, block_raw_object_id, block_availability_time = blocks[block_number]
                 if str(log["blockHash"]).lower() != str(block["hash"]).lower():
                     raise UniswapV2IngestionError("log block hash does not match block header")
-                rows.append(PairCreatedRow(
+                if emit_rows:
+                    rows.append(PairCreatedRow(
                     chain=ETHEREUM_CHAIN,
                     factory=self._factory,
                     pair=_address(str(log["data"])[:66]),
@@ -238,7 +241,7 @@ class UniswapV2PairCreatedIngestor:
                     event_time=datetime.fromtimestamp(_hex_int(block["timestamp"]), UTC),
                     availability_time=max(availability_time, block_availability_time), raw_object_id=raw_object_id,
                     block_raw_object_id=block_raw_object_id,
-                ))
+                    ))
             if receipts is not None:
                 end_header, _, _ = self._rpc(
                     "eth_getBlockByNumber", [hex(chunk_end), False], event_start=chunk_end, event_end=chunk_end
@@ -247,10 +250,86 @@ class UniswapV2PairCreatedIngestor:
                 if not isinstance(header, dict):
                     raise UniswapV2IngestionError("missing end-block header")
                 receipts.execute(
-                    "INSERT INTO uniswap_v2_pair_created_chunk_receipt VALUES (?, ?, ?, ?, ?)",
-                    (chunk_start, chunk_end, str(header["hash"]), raw_object_id, availability_time.isoformat()),
+                    "INSERT INTO uniswap_v2_pair_created_chunk_receipt "
+                    "(start_block, end_block, end_block_hash, logs_raw_object_id, completed_at, chain, factory, topic, header_raw_object_ids_json) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        chunk_start,
+                        chunk_end,
+                        str(header["hash"]),
+                        raw_object_id,
+                        availability_time.isoformat(),
+                        ETHEREUM_CHAIN,
+                        self._factory,
+                        PAIR_CREATED_TOPIC,
+                        json.dumps(sorted(block_raw_object_id for _, block_raw_object_id, _ in blocks.values())),
+                    ),
                 )
                 receipts.commit()
         if receipts is not None:
             receipts.close()
+        return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+
+    @staticmethod
+    def _read_raw_json(raw_root: Path, raw_object_id: str) -> dict[str, Any]:
+        if not raw_object_id.startswith("raw_"):
+            raise UniswapV2IngestionError("invalid raw object id")
+        digest = raw_object_id.removeprefix("raw_")
+        path = raw_root / "raw" / "sha256" / digest[:2] / digest[2:4] / digest
+        try:
+            decoded = json.loads(path.read_bytes())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise UniswapV2IngestionError(f"cannot replay raw object {raw_object_id}") from exc
+        if not isinstance(decoded, dict):
+            raise UniswapV2IngestionError("raw RPC response must be an object")
+        return decoded
+
+    def replay_receipts(
+        self,
+        *,
+        start_block: int,
+        end_block: int,
+        receipt_db_path: str,
+        raw_root: Path,
+    ) -> list[PairCreatedRow]:
+        """Decode only preserved receipt bytes after contiguous coverage validation."""
+        conn = sqlite3.connect(receipt_db_path)
+        try:
+            receipts = conn.execute(
+                "SELECT start_block, end_block, logs_raw_object_id, completed_at, chain, factory, topic, "
+                "header_raw_object_ids_json FROM uniswap_v2_pair_created_chunk_receipt "
+                "WHERE start_block >= ? AND end_block <= ? ORDER BY start_block",
+                (start_block, end_block),
+            ).fetchall()
+        finally:
+            conn.close()
+        expected = start_block
+        rows: list[PairCreatedRow] = []
+        for receipt in receipts:
+            chunk_start, chunk_end = int(receipt[0]), int(receipt[1])
+            if chunk_start != expected or chunk_end < chunk_start:
+                raise UniswapV2IngestionError("receipt coverage is not contiguous")
+            if receipt[4] != ETHEREUM_CHAIN or receipt[5] != self._factory or receipt[6] != PAIR_CREATED_TOPIC:
+                raise UniswapV2IngestionError("receipt identity does not match requested ingestion")
+            headers: dict[int, tuple[dict[str, Any], str]] = {}
+            for raw_id in json.loads(receipt[7]):
+                response = self._read_raw_json(raw_root, str(raw_id))
+                header = response.get("result")
+                if not isinstance(header, dict):
+                    raise UniswapV2IngestionError("receipt header raw object has no block result")
+                headers[_hex_int(header["number"])] = (header, str(raw_id))
+            completed_at = datetime.fromisoformat(str(receipt[3]))
+            rows.extend(decode_pair_created(
+                self._read_raw_json(raw_root, str(receipt[2])),
+                headers,
+                factory=self._factory,
+                log_raw_object_id=str(receipt[2]),
+                availability_time=completed_at,
+            ))
+            expected = chunk_end + 1
+        if expected != end_block + 1:
+            raise UniswapV2IngestionError("receipt coverage has a block gap")
+        identities = [(row.tx_hash, row.log_index) for row in rows]
+        if len(identities) != len(set(identities)):
+            raise UniswapV2IngestionError("replayed rows contain duplicate (tx_hash, log_index)")
         return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))

@@ -22,6 +22,8 @@ from cryptofactors.catalog.dataset.models import (
     CoverageWindow,
     DatasetStatistics,
     DatasetStoreConfig,
+    DependencyKind,
+    DependencyRef,
     OutputFileSpec,
     PublishPlan,
     QualityStatus,
@@ -59,11 +61,18 @@ def main() -> int:
             raw_writer=RawObjectWriter(RawObjectStoreConfig(root=args.raw_root), catalog),
         )
         try:
-            rows = ingestor.fetch(
+            ingestor.fetch(
                 start_block=args.start_block,
                 end_block=args.end_block,
                 chunk_size=args.chunk_size,
                 receipt_db_path=str(args.db_path),
+                emit_rows=False,
+            )
+            rows = ingestor.replay_receipts(
+                start_block=args.start_block,
+                end_block=args.end_block,
+                receipt_db_path=str(args.db_path),
+                raw_root=args.raw_root,
             )
         finally:
             ingestor.close()
@@ -99,19 +108,41 @@ def main() -> int:
             "end_block": args.end_block,
             "chunk_size": args.chunk_size,
         }
+        event_times = [row.event_time for row in rows]
+        availability_times = [row.availability_time for row in rows]
+        raw_dependencies = sorted({
+            raw_id
+            for row in rows
+            for raw_id in (row.raw_object_id, row.block_raw_object_id)
+        })
+        if not rows:
+            raise RuntimeError("cannot publish PASS dataset without decoded PairCreated rows")
         plan = PublishPlan(
             dataset_type="uniswap_v2_pair_created",
             schema=SchemaIdentity(name="uniswap_v2_pair_created", version="1"),
             transform=TransformSpec(name="uniswap_v2_pair_created_ingest", version="1"),
             code=CodeIdentity(commit=args.code_commit),
             config=ConfigIdentity(config_sha256=hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()),
-            dependencies=(),
+            dependencies=[
+                DependencyRef(id=raw_id, kind=DependencyKind.RAW_OBJECT, role="rpc_response")
+                for raw_id in raw_dependencies
+            ],
             output_sources={relative_path: output},
             output_specs=[OutputFileSpec(relative_path=relative_path, sha256=sha256, rows=table.num_rows, bytes=byte_size, rows_verified=True)],
             statistics=DatasetStatistics(row_count=table.num_rows, byte_size=byte_size),
-            coverage=CoverageWindow(availability_start=now, availability_end=now),
+            coverage=CoverageWindow(
+                event_start=min(event_times),
+                event_end=max(event_times),
+                availability_start=min(availability_times),
+                availability_end=max(availability_times),
+            ),
             quality_status=QualityStatus.PASS,
-            quality_summary={"chain": "ethereum", "event": "PairCreated", "row_count": table.num_rows},
+            quality_summary={
+                "chain": "ethereum",
+                "event": "PairCreated",
+                "raw_object_ids": raw_dependencies,
+                "row_count": table.num_rows,
+            },
             created_at=now,
             row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
             row_receipts={relative_path: RowCountReceipt(relative_path=relative_path, row_count=table.num_rows, verifier_name="uniswap_v2_pair_created_row_count")},
