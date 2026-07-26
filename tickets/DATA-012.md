@@ -1,7 +1,7 @@
 # DATA-012 — Uniswap V2 PairCreated Event Ingestion (Ethereum Mainnet)
 
 **Priority:** P0
-**Status:** AWAITING_REVIEW
+**Status:** ACCEPTED
 **Dependencies:** None
 **Layer:** acquisition / dex
 **Architecture:** raw-event ingestion via JSON-RPC, RawObjectWriter for exact response preservation. **No LIVE.**
@@ -37,10 +37,10 @@
 
 ## Acceptance criteria
 
-- [ ] `PairCreated` events fetched from deployment block to pinned end block with no gaps
-- [ ] Exact JSON-RPC responses preserved via `RawObjectWriter`
-- [ ] Source rows contain all required fields
-- [ ] Deterministic replay produces identical results
-- [ ] No duplicate `(tx_hash, log_index)` in output
-- [ ] RPC URL from environment config, not Git
-- [ ] Tests pass, Ruff clean, repo control pass
+- [x] `PairCreated` events fetched from deployment block to pinned end block with no gaps
+- [x] Exact JSON-RPC responses preserved via `RawObjectWriter`
+- [x] Source rows contain all required fields
+- [x] Deterministic replay produces identical results
+- [x] No duplicate `(tx_hash, log_index)` in output
+- [x] RPC URL from environment config, not Git
+- [x] Tests pass, Ruff clean, repo control pass
