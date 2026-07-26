@@ -1,25 +1,20 @@
 # CURRENT_TASK
 
 Ticket: DEX-002
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: READY
+Next required actor: Sr Dev - Claude Opus 5
 Next ticket authorized: NONE
 
 ## Summary
 
-DEX-002 — Screened Free DEX OHLCV Acquisition.
+REVIEW-0236 requires correction of the retained legacy publisher, gap-bearing PASS
+publication, unsafe prior-snapshot fallback, chain-unaware pool validation, catalog
+reconciliation, and missing controlled report 44.
 
-REVIEW-0235 rework complete. Provider capabilities are separated; DexScreener
-synthetic candles removed; screening is fail-closed; canonical full-snapshot
-publication with raw lineage. 84 tests pass, Ruff clean, repo control PASS.
+The new provider separation and raw acquisition components are retained. This is a
+bounded correction pass, not another architecture rewrite.
 
-## Evidence
+## Governing documents
 
-- `tickets/DEX-002.md`
-- `docs/reviews/REVIEW-0235_DEX-002_REWORK_AUTHORIZED.md`
-- `src/cryptofactors/ingest/dex_fanout.py`
-- `src/cryptofactors/ingest/dex_providers.py`
-- `src/cryptofactors/ingest/dex_snapshot.py`
-- `scripts/research/dex002_snapshot.py`
-- `tests/ingest/test_dex_snapshot.py`
-- `research/sprint_004/37_DEX_MULTI_PROVIDER_FANOUT.json`
+- tickets/DEX-002.md
+- docs/reviews/REVIEW-0236_DEX-002_CHANGES_REQUIRED.md
