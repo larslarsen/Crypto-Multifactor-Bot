@@ -129,12 +129,16 @@ class MockEthereumNode:
         fail_status_for: set[str] | None = None,
         rpc_error_for: set[str] | None = None,
         honour_block_range: bool = True,
+        invalid_json_for: set[str] | None = None,
+        omit_header_fields: set[str] | None = None,
     ) -> None:
         self.block_hashes = block_hashes
         self.logs = logs or []
         self.fail_status_for = fail_status_for or set()
         self.rpc_error_for = rpc_error_for or set()
         self.honour_block_range = honour_block_range
+        self.invalid_json_for = invalid_json_for or set()
+        self.omit_header_fields = omit_header_fields or set()
         self.calls: list[tuple[str, Any]] = []
         self.served: list[bytes] = []
 
@@ -160,20 +164,24 @@ class MockEthereumNode:
             return self._respond(500, self._error("upstream failure"))
         if method in self.rpc_error_for:
             return self._respond(200, self._error("rejected by node"))
+        if method in self.invalid_json_for:
+            body = b"<html><body>502 Bad Gateway</body></html>"
+            self.served.append(body)
+            return httpx.Response(200, content=body, headers={"content-type": "text/html"})
 
         if method == "eth_getBlockByNumber":
             number = int(params[0], 16)
             if number not in self.block_hashes:
                 return self._respond(200, self._error(f"unknown block {number}"))
-            return self._respond(200, {
-                "jsonrpc": "2.0", "id": 1,
-                "result": {
-                    "number": hex(number),
-                    "hash": self.block_hashes[number],
-                    "parentHash": _hash32(number - 1),
-                    "timestamp": hex(self.timestamp(number)),
-                },
-            })
+            header = {
+                "number": hex(number),
+                "hash": self.block_hashes[number],
+                "parentHash": _hash32(number - 1),
+                "timestamp": hex(self.timestamp(number)),
+            }
+            for field in self.omit_header_fields:
+                header.pop(field, None)
+            return self._respond(200, {"jsonrpc": "2.0", "id": 1, "result": header})
 
         if method == "eth_getLogs":
             from_block = int(params[0]["fromBlock"], 16)
@@ -245,14 +253,20 @@ class Store:
         chain: str = ETHEREUM_CHAIN,
         factory: str = UNISWAP_V2_FACTORY,
         topic: str = PAIR_CREATED_TOPIC,
+        header_raw_object_ids_json: str | None = None,
     ) -> None:
+        payload = (
+            json.dumps(header_raw_object_ids)
+            if header_raw_object_ids_json is None
+            else header_raw_object_ids_json
+        )
         conn = sqlite3.connect(self.db)
         try:
             conn.execute(
                 "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (chain, factory, topic, start_block, end_block, end_block_hash,
-                 logs_raw_object_id, json.dumps(header_raw_object_ids), completed_at),
+                 logs_raw_object_id, payload, completed_at),
             )
             conn.commit()
         finally:
@@ -953,6 +967,125 @@ class TestHexHelpers:
     def test_a_short_abi_word_is_rejected(self) -> None:
         with pytest.raises(UniswapV2IngestionError, match="32-byte ABI word"):
             _address("0x" + "ab" * 19)
+
+
+# ---------------------------------------------------------------------------
+# Typed failures
+#
+# Every malformed node response or corrupt receipt must surface as
+# UniswapV2IngestionError. A bare KeyError / JSONDecodeError / ValueError escaping
+# the ingestor is indistinguishable from a programming fault at the call site.
+# ---------------------------------------------------------------------------
+
+class TestTypedFailures:
+    def test_a_non_json_body_on_a_200_response_is_typed(self, store: Store) -> None:
+        node = scenario_node(invalid_json_for={"eth_getLogs"})
+        with pytest.raises(UniswapV2IngestionError, match="invalid JSON"):
+            run_scenario_fetch(store, node)
+
+    def test_an_end_block_header_without_a_hash_is_typed(self, store: Store) -> None:
+        node = scenario_node(logs=[], omit_header_fields={"hash"})
+        with pytest.raises(UniswapV2IngestionError, match="end-block header is missing"):
+            run_scenario_fetch(store, node)
+
+    def test_a_non_object_log_entry_is_typed(self, store: Store) -> None:
+        node = scenario_node(logs=["not-an-object"], honour_block_range=False)
+        with pytest.raises(UniswapV2IngestionError, match="log entry must be an object"):
+            run_scenario_fetch(store, node)
+
+    @pytest.mark.parametrize(
+        "field",
+        ["blockNumber", "blockHash", "transactionHash", "logIndex", "transactionIndex", "data"],
+    )
+    def test_a_log_missing_a_required_field_is_typed(self, field: str) -> None:
+        log = pair_created_log(
+            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
+            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+        )
+        del log[field]
+        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
+
+        with pytest.raises(UniswapV2IngestionError, match=f"log is missing '{field}'"):
+            _decode([log], headers)
+
+    @pytest.mark.parametrize("field", ["hash", "timestamp"])
+    def test_a_block_header_missing_a_required_field_is_typed(self, field: str) -> None:
+        log = pair_created_log(
+            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
+            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+        )
+        header = _header(150, BLOCK_150_HASH, 1)
+        del header[field]
+
+        with pytest.raises(UniswapV2IngestionError, match=f"block header is missing '{field}'"):
+            _decode([log], {150: (header, "raw_" + "b" * 64)})
+
+    def test_a_log_with_no_preserved_header_is_typed(self) -> None:
+        """Previously a bare KeyError out of the block_headers lookup."""
+        log = pair_created_log(
+            block_number=999, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
+            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+        )
+        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
+
+        with pytest.raises(UniswapV2IngestionError, match="no preserved block header for block 999"):
+            _decode([log], headers)
+
+    def test_a_non_string_event_topic_is_typed(self) -> None:
+        log = pair_created_log(
+            block_number=150, block_hash=BLOCK_150_HASH, tx_hash=_hash32(0xF1),
+            tx_index=0, log_index=0, token0=TOKEN_A, token1=TOKEN_B, pair=PAIR_1,
+        )
+        log["topics"] = [None, *log["topics"][1:]]
+        headers = {150: (_header(150, BLOCK_150_HASH, 1), "raw_" + "b" * 64)}
+
+        with pytest.raises(UniswapV2IngestionError, match="topics"):
+            _decode([log], headers)
+
+    def test_a_receipt_with_a_corrupt_header_id_list_is_typed(self, store: Store) -> None:
+        store.insert_receipt(
+            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
+            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
+            header_raw_object_ids_json="{not json",
+        )
+        with pytest.raises(UniswapV2IngestionError, match="not valid JSON"):
+            scenario_replay(store)
+
+    def test_a_receipt_whose_header_id_list_is_not_an_array_is_typed(self, store: Store) -> None:
+        store.insert_receipt(
+            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
+            logs_raw_object_id="raw_" + "0" * 64, header_raw_object_ids=[],
+            header_raw_object_ids_json='{"raw_a": 1}',
+        )
+        with pytest.raises(UniswapV2IngestionError, match="must be a JSON array"):
+            scenario_replay(store)
+
+    def test_a_receipt_with_an_unparseable_completed_at_is_typed(self, store: Store) -> None:
+        logs_id = store.write_raw({"jsonrpc": "2.0", "id": 1, "result": []})
+        header_id = store.write_raw({
+            "jsonrpc": "2.0", "id": 1,
+            "result": {"number": hex(299), "hash": BLOCK_299_HASH, "timestamp": hex(1)},
+        })
+        store.insert_receipt(
+            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
+            logs_raw_object_id=logs_id, header_raw_object_ids=[header_id],
+            completed_at="not-a-timestamp",
+        )
+        with pytest.raises(UniswapV2IngestionError, match="ISO-8601"):
+            scenario_replay(store)
+
+    def test_a_preserved_header_without_a_block_number_is_typed(self, store: Store) -> None:
+        logs_id = store.write_raw({"jsonrpc": "2.0", "id": 1, "result": []})
+        header_id = store.write_raw({
+            "jsonrpc": "2.0", "id": 1,
+            "result": {"hash": BLOCK_299_HASH, "timestamp": hex(1)},
+        })
+        store.insert_receipt(
+            start_block=SCENARIO_START, end_block=SCENARIO_END, end_block_hash=BLOCK_299_HASH,
+            logs_raw_object_id=logs_id, header_raw_object_ids=[header_id],
+        )
+        with pytest.raises(UniswapV2IngestionError, match="block header is missing 'number'"):
+            scenario_replay(store)
 
 
 # ---------------------------------------------------------------------------

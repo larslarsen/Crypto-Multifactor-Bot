@@ -76,6 +76,13 @@ def _hex_int(value: str) -> int:
     return int(value, 16)
 
 
+def _require(source: dict[str, Any], key: str, *, label: str) -> Any:
+    """Fetch a mandatory JSON-RPC field as a typed failure rather than a KeyError."""
+    if key not in source:
+        raise UniswapV2IngestionError(f"{label} is missing {key!r}")
+    return source[key]
+
+
 def _address(topic_or_word: str) -> str:
     if not isinstance(topic_or_word, str) or not topic_or_word.startswith("0x"):
         raise UniswapV2IngestionError("expected ABI hex word")
@@ -103,26 +110,50 @@ def decode_pair_created(
         if not isinstance(log, dict):
             raise UniswapV2IngestionError("log entry must be an object")
         topics = log.get("topics")
-        if not isinstance(topics, list) or len(topics) < 3 or topics[0].lower() != PAIR_CREATED_TOPIC:
+        if not isinstance(topics, list) or len(topics) < 3 or not isinstance(topics[0], str):
             raise UniswapV2IngestionError("invalid PairCreated topics")
-        block_number = _hex_int(log["blockNumber"])
+        if topics[0].lower() != PAIR_CREATED_TOPIC:
+            raise UniswapV2IngestionError("invalid PairCreated topics")
+        block_number = _hex_int(_require(log, "blockNumber", label="log"))
+        if block_number not in block_headers:
+            raise UniswapV2IngestionError(f"no preserved block header for block {block_number}")
         header, header_raw_object_id = block_headers[block_number]
-        if str(log["blockHash"]).lower() != str(header["hash"]).lower():
+        block_hash = str(_require(log, "blockHash", label="log"))
+        if block_hash.lower() != str(_require(header, "hash", label="block header")).lower():
             raise UniswapV2IngestionError("log block hash does not match block header")
-        identity = (str(log["transactionHash"]), _hex_int(log["logIndex"]))
+        identity = (
+            str(_require(log, "transactionHash", label="log")),
+            _hex_int(_require(log, "logIndex", label="log")),
+        )
         if identity in seen:
             raise UniswapV2IngestionError("duplicate (tx_hash, log_index)")
         seen.add(identity)
-        timestamp = _hex_int(header["timestamp"])
+        timestamp = _hex_int(_require(header, "timestamp", label="block header"))
         rows.append(PairCreatedRow(
-            chain=ETHEREUM_CHAIN, factory=factory, pair=_address(str(log["data"])[:66]),
+            chain=ETHEREUM_CHAIN, factory=factory,
+            pair=_address(str(_require(log, "data", label="log"))[:66]),
             token0=_address(str(topics[1])), token1=_address(str(topics[2])),
-            block_number=block_number, block_hash=str(log["blockHash"]), block_timestamp=timestamp,
-            tx_hash=identity[0], tx_index=_hex_int(log["transactionIndex"]), log_index=identity[1],
+            block_number=block_number, block_hash=block_hash, block_timestamp=timestamp,
+            tx_hash=identity[0],
+            tx_index=_hex_int(_require(log, "transactionIndex", label="log")),
+            log_index=identity[1],
             event_time=datetime.fromtimestamp(timestamp, UTC), availability_time=availability_time,
             raw_object_id=log_raw_object_id, block_raw_object_id=header_raw_object_id,
         ))
     return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+
+
+def _receipt_header_ids(header_raw_object_ids_json: object) -> list[str]:
+    """Parse a receipt's header raw-object list, failing typed on a corrupt control plane."""
+    try:
+        parsed = json.loads(str(header_raw_object_ids_json))
+    except json.JSONDecodeError as exc:
+        raise UniswapV2IngestionError(
+            "receipt header raw object list is not valid JSON"
+        ) from exc
+    if not isinstance(parsed, list):
+        raise UniswapV2IngestionError("receipt header raw object list must be a JSON array")
+    return [str(raw_id) for raw_id in parsed]
 
 
 class UniswapV2PairCreatedIngestor:
@@ -161,7 +192,10 @@ class UniswapV2PairCreatedIngestor:
         )
         if response.is_error:
             raise UniswapV2IngestionError(f"JSON-RPC HTTP {response.status_code}")
-        decoded = json.loads(body)
+        try:
+            decoded = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise UniswapV2IngestionError(f"JSON-RPC {method} returned invalid JSON") from exc
         if not isinstance(decoded, dict) or decoded.get("error") is not None:
             raise UniswapV2IngestionError(f"JSON-RPC {method} failed: {decoded!r}")
         return decoded, raw.raw_object_id, fetched_at
@@ -213,7 +247,9 @@ class UniswapV2PairCreatedIngestor:
                     raise UniswapV2IngestionError("eth_getLogs result must be a list")
                 headers: dict[int, tuple[dict[str, Any], str, datetime]] = {}
                 for log in logs:
-                    block_number = _hex_int(log["blockNumber"])
+                    if not isinstance(log, dict):
+                        raise UniswapV2IngestionError("log entry must be an object")
+                    block_number = _hex_int(_require(log, "blockNumber", label="log"))
                     if block_number < chunk_start or block_number > chunk_end:
                         raise UniswapV2IngestionError("RPC returned log outside requested chunk")
                     if block_number not in headers:
@@ -241,7 +277,8 @@ class UniswapV2PairCreatedIngestor:
                 if receipts is not None:
                     receipts.execute(
                         "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end, str(end_header["hash"]), logs_raw_id,
+                        (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end,
+                         str(_require(end_header, "hash", label="end-block header")), logs_raw_id,
                          json.dumps(sorted({end_raw_id, *(raw_id for _, raw_id, _ in headers.values())})),
                          max([logs_time, end_time, *(item[2] for item in headers.values())]).isoformat()),
                     )
@@ -289,20 +326,26 @@ class UniswapV2PairCreatedIngestor:
             conn.close()
         expected = start_block
         rows: list[PairCreatedRow] = []
-        for receipt in receipts:
+        # Identity is enforced by the query above; migration 0011 keys receipts by
+        # (chain, factory, topic, ...) so several factories may share one table.
+        header_ids_by_receipt = [_receipt_header_ids(receipt[7]) for receipt in receipts]
+        for receipt, header_ids in zip(receipts, header_ids_by_receipt, strict=True):
             chunk_start, chunk_end = int(receipt[0]), int(receipt[1])
             if chunk_start != expected or chunk_end < chunk_start:
                 raise UniswapV2IngestionError("receipt coverage is not contiguous")
-            if receipt[4] != ETHEREUM_CHAIN or receipt[5] != self._factory or receipt[6] != PAIR_CREATED_TOPIC:
-                raise UniswapV2IngestionError("receipt identity does not match requested ingestion")
             headers: dict[int, tuple[dict[str, Any], str]] = {}
-            for raw_id in json.loads(receipt[7]):
-                response = self._read_raw_json(raw_root, str(raw_id))
+            for raw_id in header_ids:
+                response = self._read_raw_json(raw_root, raw_id)
                 header = response.get("result")
                 if not isinstance(header, dict):
                     raise UniswapV2IngestionError("receipt header raw object has no block result")
-                headers[_hex_int(header["number"])] = (header, str(raw_id))
-            completed_at = datetime.fromisoformat(str(receipt[3]))
+                headers[_hex_int(_require(header, "number", label="block header"))] = (header, raw_id)
+            try:
+                completed_at = datetime.fromisoformat(str(receipt[3]))
+            except ValueError as exc:
+                raise UniswapV2IngestionError(
+                    "receipt completed_at is not an ISO-8601 timestamp"
+                ) from exc
             rows.extend(decode_pair_created(
                 self._read_raw_json(raw_root, str(receipt[2])),
                 headers,
@@ -318,7 +361,7 @@ class UniswapV2PairCreatedIngestor:
             raise UniswapV2IngestionError("replayed rows contain duplicate (tx_hash, log_index)")
         ordered = tuple(sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index)))
         raw_ids: set[str] = set()
-        for receipt in receipts:
+        for receipt, header_ids in zip(receipts, header_ids_by_receipt, strict=True):
             raw_ids.add(str(receipt[2]))
-            raw_ids.update(str(raw_id) for raw_id in json.loads(receipt[7]))
+            raw_ids.update(header_ids)
         return ReplayResult(ordered, frozenset(raw_ids), tuple((int(r[0]), int(r[1])) for r in receipts))
