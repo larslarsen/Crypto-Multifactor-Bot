@@ -23,7 +23,7 @@ import re
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -32,11 +32,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from cryptofactors.audit.models import IssueSeverity, QualityIssue
-from cryptofactors.catalog.dataset.canonicalize import (
-    compute_dataset_id,
-    compute_manifest_sha256,
-    identity_payload,
-)
 from cryptofactors.catalog.dataset.models import (
     CodeIdentity,
     ConfigIdentity,
@@ -52,6 +47,11 @@ from cryptofactors.catalog.dataset.models import (
     RowCountPolicy,
     SchemaIdentity,
     TransformSpec,
+)
+from cryptofactors.catalog.dataset.canonicalize import (
+    compute_dataset_id,
+    compute_manifest_sha256,
+    identity_payload,
 )
 from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
 from cryptofactors.catalog.dataset.parse import load_manifest_file
@@ -212,26 +212,27 @@ def load_verified_source_bars_from_manifest(
             )
         return values[0]
 
-    partition_ids = sorted(
-        {str(spec.partition["instrument_id"]) for spec in bar_specs if spec.partition.get("instrument_id")}
-    )
-    if len(partition_ids) > 1:
-        raise ValueError(
-            f"manifest {manifest_path} has inconsistent instrument_id across bar outputs: {partition_ids}"
-        )
-    raw_instrument_id = partition_ids[0] if partition_ids else manifest.quality_summary.get("instrument_id")
-    if raw_instrument_id is None:
-        raise ValueError(
-            f"manifest {manifest_path} missing instrument_id in partition and quality_summary"
-        )
+    instrument_id_str = _partition_value("instrument_id")
     try:
-        instrument_id = int(raw_instrument_id)
-    except (TypeError, ValueError) as exc:
+        instrument_id = int(instrument_id_str)
+    except ValueError as exc:
         raise ValueError(
-            f"manifest {manifest_path} has non-integer instrument_id {raw_instrument_id!r}"
+            f"manifest {manifest_path} has non-integer instrument_id {instrument_id_str!r}"
         ) from exc
     if instrument_id <= 0:
-        raise ValueError(f"manifest {manifest_path} has non-positive instrument_id {instrument_id}")
+        # Fall back to quality_summary (older publications may have it there).
+        qsid = manifest.quality_summary.get("instrument_id")
+        if qsid is not None:
+            try:
+                instrument_id = int(qsid)
+            except ValueError as exc:
+                raise ValueError(
+                    f"manifest {manifest_path} has non-integer instrument_id in quality_summary {qsid!r}"
+                ) from exc
+    if instrument_id <= 0:
+        raise ValueError(
+            f"manifest {manifest_path} missing positive instrument_id in partition or quality_summary"
+        )
 
     venue_id = _partition_value("venue_id")
     market_type = _validate_market_type(_partition_value("market_type"))
@@ -397,13 +398,13 @@ def _us_to_datetime(us: int) -> datetime:
     sec, micro = divmod(int(us), 1_000_000)
     if sec < 0 or sec > 4102444800:
         raise ValueError(f"timestamp out of supported UTC range: {us}")
-    return datetime.fromtimestamp(sec, tz=UTC).replace(microsecond=micro)
+    return datetime.fromtimestamp(sec, tz=timezone.utc).replace(microsecond=micro)
 
 
 def _datetime_to_us(dt: datetime) -> int:
     if dt.tzinfo is None:
         raise ValueError("datetime must be timezone-aware UTC")
-    utc = dt.astimezone(UTC)
+    utc = dt.astimezone(timezone.utc)
     return calendar.timegm(utc.timetuple()) * 1_000_000 + utc.microsecond
 
 
@@ -468,7 +469,7 @@ def _coverage_identity(cov: CoverageWindow) -> tuple[Any, ...]:
             return None
         if v.tzinfo is None:
             return v.isoformat()
-        return v.astimezone(UTC).isoformat()
+        return v.astimezone(timezone.utc).isoformat()
 
     return (
         _ts(cov.event_start),
@@ -695,7 +696,9 @@ def _is_source_bar_spec(spec: OutputFileSpec) -> bool:
     if kind in blocked:
         return False
     # Require explicit bars.parquet naming (BIN-001 / BAR source convention).
-    return rel.endswith("bars.parquet")
+    if not rel.endswith("bars.parquet"):
+        return False
+    return True
 
 
 def _validate_path_token(label: str, value: str) -> str:
@@ -1254,7 +1257,7 @@ def _load_verified_bars(
                         quality_flags=flags,
                     )
                 )
-            except (ArithmeticError, KeyError, TypeError, ValueError) as exc:
+            except Exception as exc:
                 issues.append(
                     QualityIssue(
                         code="bar001_source_row_parse_failure",
@@ -1309,7 +1312,7 @@ def _enforce_uniqueness(
         fps = {m.content_fingerprint() for m in members}
         if len(fps) == 1:
             # Identical: keep lexicographically smallest source_dataset_id
-            keep = min(members, key=lambda r: r.source_dataset_id)
+            keep = sorted(members, key=lambda r: r.source_dataset_id)[0]
             unique.append(keep)
             issues.append(
                 QualityIssue(
@@ -1411,8 +1414,8 @@ def _complete_days(
     for key, members in sorted(by_day.items()):
         instrument_id, venue_id, market_type, timeframe, day_us = key
 
-        def _quarantine_members(flag: str, rows: Sequence[_BarRow] = members) -> None:
-            for m in rows:
+        def _quarantine_members(flag: str) -> None:
+            for m in members:
                 incomplete_q.append(
                     _BarRow(
                         instrument_id=m.instrument_id,
@@ -1594,13 +1597,13 @@ def _resample_daily(intraday_complete: Sequence[_BarRow]) -> list[_BarRow]:
         last = members_sorted[-1]
         high = max(m.high for m in members_sorted)
         low = min(m.low for m in members_sorted)
-        base_v = sum((m.base_volume for m in members_sorted), Decimal(0))
+        base_v = sum((m.base_volume for m in members_sorted), Decimal("0"))
         # Quote: sum only if all present; else null (missing semantics preserved).
         quote_vals = [m.quote_volume for m in members_sorted]
         if any(v is None for v in quote_vals):
             quote_v: Decimal | None = None
         else:
-            quote_v = sum((v for v in quote_vals if v is not None), Decimal(0))
+            quote_v = sum((v for v in quote_vals if v is not None), Decimal("0"))
         trade_vals = [m.trade_count for m in members_sorted]
         if any(v is None for v in trade_vals):
             trade_count: int | None = None
@@ -1619,12 +1622,12 @@ def _resample_daily(intraday_complete: Sequence[_BarRow]) -> list[_BarRow]:
         ]
         # Only sum taker when every bar has the field.
         tb_base = (
-            sum(tb_base_vals, Decimal(0))
+            sum(tb_base_vals, Decimal("0"))
             if len(tb_base_vals) == len(members_sorted)
             else None
         )
         tb_quote = (
-            sum(tb_quote_vals, Decimal(0))
+            sum(tb_quote_vals, Decimal("0"))
             if len(tb_quote_vals) == len(members_sorted)
             else None
         )
@@ -1944,8 +1947,8 @@ def _group_by_partition(
     groups: dict[tuple[str, str, str, int, int], list[_BarRow]] = defaultdict(list)
     for row in rows:
         groups[_partition_key(row)].append(row)
-    for key, members in groups.items():
-        groups[key] = sorted(members, key=_sort_key)
+    for key in groups:
+        groups[key] = sorted(groups[key], key=_sort_key)
     return groups
 
 
@@ -1956,8 +1959,8 @@ def publish_canonical_bars(
     code_commit: str,
     config_sha256: str | None = None,
     native_daily: Sequence[VerifiedDailySource] | None = None,
-    price_tolerance: Decimal | str = Decimal(0),
-    volume_tolerance: Decimal | str = Decimal(0),
+    price_tolerance: Decimal | str = Decimal("0"),
+    volume_tolerance: Decimal | str = Decimal("0"),
     daily_source_timeframe: str | None = None,
     created_at: datetime | None = None,
 ) -> CanonicalBarPublishResult:

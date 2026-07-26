@@ -52,7 +52,6 @@ def main() -> int:
     parser.add_argument("--store-root", type=Path, default=Path("data/exp003_store"))
     parser.add_argument("--venue", default="BINANCE")
     parser.add_argument("--known-at", default=None)
-    parser.add_argument("--code-commit", required=True)
     args = parser.parse_args()
     known_at = _parse_time(args.known_at)
     resolver = ReferenceIdentityResolver(args.db_path)
@@ -77,7 +76,7 @@ def main() -> int:
                 fingerprint=hashlib.sha256(str(LISTING_UNIVERSE_SCHEMA).encode()).hexdigest(),
             ),
             transform=TransformSpec(name="publish_reference_listing_universe", version="1"),
-            code=CodeIdentity(commit=args.code_commit),
+            code=CodeIdentity(commit="ARCH-003"),
             config=ConfigIdentity(
                 config_sha256=hashlib.sha256(
                     json.dumps(config_payload, sort_keys=True).encode()

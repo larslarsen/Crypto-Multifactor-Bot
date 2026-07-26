@@ -54,7 +54,7 @@ class ReferenceIdentityResolver:
         """Resolve active listing lifecycle state under both time dimensions."""
         valid = self._time(valid_at, "valid_at")
         known = self._time(known_at, "known_at")
-        symbol_clause = " AND upper(v.venue_symbol) = upper(?)" if venue_symbol else ""
+        symbol_clause = " AND upper(l.venue_symbol) = upper(?)" if venue_symbol else ""
         params: list[str] = [venue, valid, valid, known, known]
         if venue_symbol:
             params.append(venue_symbol)
@@ -62,12 +62,11 @@ class ReferenceIdentityResolver:
         try:
             rows = conn.execute(
                 "WITH active_events AS ("
-                " SELECT l.listing_event_id, l.instrument_id, v.venue_symbol, l.event_type, "
-                " row_number() OVER (PARTITION BY l.listing_id "
+                " SELECT l.listing_event_id, l.instrument_id, l.venue_symbol, l.event_type, "
+                " row_number() OVER (PARTITION BY l.venue_id, l.venue_symbol "
                 " ORDER BY l.valid_from DESC, l.known_from DESC, l.listing_event_id DESC) AS rn "
-                " FROM ref_listing_event l JOIN ref_venue_listing v ON v.listing_id = l.listing_id "
-                " JOIN ref_venue venue ON venue.venue_id = v.venue_id "
-                " WHERE upper(venue.venue_code) = upper(?) "
+                " FROM ref_listing_event l JOIN ref_venue v ON v.venue_id = l.venue_id "
+                " WHERE upper(v.venue_code) = upper(?) "
                 " AND l.valid_from <= ? AND (l.valid_to IS NULL OR l.valid_to > ?) "
                 " AND l.known_from <= ? AND (l.known_to IS NULL OR l.known_to > ?)"
                 + symbol_clause
@@ -98,12 +97,11 @@ class ReferenceIdentityResolver:
         conn = self._connect()
         try:
             rows = conn.execute(
-                "SELECT l.listing_event_id, l.event_type, v.venue_symbol, l.valid_from, l.valid_to, "
+                "SELECT l.listing_event_id, l.event_type, l.venue_symbol, l.valid_from, l.valid_to, "
                 "l.known_from, l.known_to, s.canonical_instrument_id FROM ref_listing_event l "
-                "JOIN ref_venue_listing v ON v.listing_id = l.listing_id "
-                "JOIN ref_venue venue_row ON venue_row.venue_id = v.venue_id "
+                "JOIN ref_venue v ON v.venue_id = l.venue_id "
                 "JOIN ref_instrument_surrogate s ON s.instrument_id = l.instrument_id "
-                "WHERE upper(venue_row.venue_code) = upper(?) AND l.known_from <= ? "
+                "WHERE upper(v.venue_code) = upper(?) AND l.known_from <= ? "
                 "AND (l.known_to IS NULL OR l.known_to > ?) "
                 "ORDER BY l.venue_symbol, l.valid_from, l.known_from, l.listing_event_id",
                 (venue, known, known),

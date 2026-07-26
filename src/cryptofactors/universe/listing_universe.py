@@ -55,11 +55,6 @@ class ListingUniverseProvider:
         at = _us(decision_time)
         latest: dict[tuple[str, str], Mapping[str, Any]] = {}
         for row in self._records:
-            if int(row["known_from_us"]) > at:
-                continue
-            known_to = row.get("known_to_us")
-            if known_to is not None and int(known_to) <= at:
-                continue
             if int(row["valid_from_us"]) > at:
                 continue
             valid_to = row.get("valid_to_us")

@@ -14,6 +14,7 @@ Hard constraints:
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -327,14 +328,14 @@ class BirdeyeScreenQueue:
             all_rejected.extend(rejected)
         return all_raw, all_survivors, all_rejected
 
-    def count_survivor_candidates(self, survivors: Sequence[Mapping[str, Any]]) -> tuple[int, int]:
+    def register_survivors(self, survivors: Sequence[Mapping[str, Any]]) -> tuple[int, int]:
         """Count valid raw listing events without assigning catalog identity."""
         seen: set[tuple[str, str]] = set()
         skipped = 0
 
         for r in survivors:
             chain = r.get("chain", "").lower()
-            address = r.get("address", "")
+            address = r.get("address", "").lower()
             if not chain or not address or (chain, address) in seen:
                 skipped += 1
                 continue
@@ -391,7 +392,7 @@ def build_birdeye_screening_provider(
     return BirdeyeScreenQueue(provider=provider, config=config or ScreeningConfig())
 
 
-def count_dex_token_candidates(
+def register_dex_tokens(
     survivors: list[dict[str, Any]],
     chain_allowlist: set[str] | None = None,
     min_liquidity_usd: float = 10_000.0,
@@ -410,7 +411,7 @@ def count_dex_token_candidates(
             skipped += 1
             continue
 
-        address = str(r.get("address") or "")
+        address = str(r.get("address") or "").lower()
         key = (str(chain).lower(), address)
         if not address or key in seen:
             skipped += 1
