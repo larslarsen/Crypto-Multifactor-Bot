@@ -1,18 +1,21 @@
 # CURRENT_TASK
 
 Ticket: DATA-007
-State: READY
-Next required actor: Sr Dev - Claude Sonnet 5
+State: AWAITING_REVIEW
+Next required actor: Reviewer
 Next ticket authorized: NONE
 
 ## Summary
 
-DATA-007 is reopened by REVIEW-0233. Five probe implementations bypass their
-supplied mock clients and can contact public networks during CI. The correction is
-narrow: route supplied mocks through the existing live probe paths without changing
-real live behavior or the accepted research artifact.
+DATA-007 — Free DEX/CEX Source Capability & Rate-Limit Probe.
 
-## Governing documents
+REVIEW-0233 corrections applied. Five probes now route the supplied mock through
+live paths; network guard prevents bare httpx.Client construction in tests.
+33 DATA-007 tests pass, Ruff clean, repo control PASS.
 
-- tickets/DATA-007.md
-- docs/reviews/REVIEW-0233_DATA-007_REOPENED_CHANGES_REQUIRED.md
+## Evidence
+
+- `tickets/DATA-007.md`
+- `docs/reviews/REVIEW-0233_DATA-007_REOPENED_CHANGES_REQUIRED.md`
+- `src/cryptofactors/acquisition/free_source_probes.py`
+- `tests/acquisition/test_free_source_probes.py`
