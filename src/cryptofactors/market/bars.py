@@ -54,7 +54,6 @@ from cryptofactors.catalog.dataset.canonicalize import (
     identity_payload,
 )
 from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
-from cryptofactors.catalog.dataset.parse import load_manifest_file
 
 # ---------------------------------------------------------------------------
 # Public identity constants
@@ -160,106 +159,6 @@ class VerifiedDailySource:
     schema_variant: str = "quote_notional"
     manifest: DatasetManifest | None = None
     receipt: DatasetPublicationReceipt | None = None
-
-
-def load_verified_source_bars_from_manifest(
-    manifest_path: Path,
-) -> VerifiedSourceBarDataset:
-    """Build a VerifiedSourceBarDataset from a MAN-001 manifest path.
-
-    The source dataset is validated as an accepted BIN-001 identity. The
-    instrument_id and economic metadata are inferred from the manifest file
-    partition metadata (and fall back to quality_summary), so callers do not
-    need to know them in advance.
-    """
-    manifest_path = Path(manifest_path)
-    manifest = load_manifest_file(manifest_path)
-
-    if manifest.dataset_type != _SUPPORTED_SOURCE_DATASET_TYPE:
-        raise ValueError(
-            f"manifest {manifest_path} has unsupported dataset_type "
-            f"{manifest.dataset_type!r}; expected {_SUPPORTED_SOURCE_DATASET_TYPE!r}"
-        )
-    if (
-        manifest.schema.name != _SUPPORTED_SOURCE_SCHEMA_NAME
-        or manifest.schema.version != _SUPPORTED_SOURCE_SCHEMA_VERSION
-    ):
-        raise ValueError(
-            f"manifest {manifest_path} has unsupported schema "
-            f"{manifest.schema.name!r} v{manifest.schema.version!r}; "
-            f"expected {_SUPPORTED_SOURCE_SCHEMA_NAME!r} v{_SUPPORTED_SOURCE_SCHEMA_VERSION!r}"
-        )
-
-    bar_specs = [f for f in manifest.files if f.relative_path.endswith("bars.parquet")]
-    if not bar_specs:
-        raise ValueError(
-            f"manifest {manifest_path} has no source bar output (bars.parquet)"
-        )
-
-    # Read economic metadata from the first bar file partition; verify all bar
-    # partitions agree (fail-closed on inconsistency).
-    def _partition_value(key: str) -> str:
-        values = sorted(
-            {str(f.partition.get(key) or "") for f in bar_specs if f.partition.get(key)}
-        )
-        if not values:
-            raise ValueError(
-                f"manifest {manifest_path} missing partition key {key!r} on bar outputs"
-            )
-        if len(values) > 1:
-            raise ValueError(
-                f"manifest {manifest_path} has inconsistent {key!r} across bar outputs: {values}"
-            )
-        return values[0]
-
-    instrument_id_str = _partition_value("instrument_id")
-    try:
-        instrument_id = int(instrument_id_str)
-    except ValueError as exc:
-        raise ValueError(
-            f"manifest {manifest_path} has non-integer instrument_id {instrument_id_str!r}"
-        ) from exc
-    if instrument_id <= 0:
-        # Fall back to quality_summary (older publications may have it there).
-        qsid = manifest.quality_summary.get("instrument_id")
-        if qsid is not None:
-            try:
-                instrument_id = int(qsid)
-            except ValueError as exc:
-                raise ValueError(
-                    f"manifest {manifest_path} has non-integer instrument_id in quality_summary {qsid!r}"
-                ) from exc
-    if instrument_id <= 0:
-        raise ValueError(
-            f"manifest {manifest_path} missing positive instrument_id in partition or quality_summary"
-        )
-
-    venue_id = _partition_value("venue_id")
-    market_type = _validate_market_type(_partition_value("market_type"))
-    interval = _partition_value("interval")
-    schema_variant = _partition_value("schema_variant")
-    if schema_variant not in {"quote_notional", "coin_margined"}:
-        raise ValueError(
-            f"manifest {manifest_path} has unsupported schema_variant {schema_variant!r}"
-        )
-
-    # Resolve files relative to the manifest directory.
-    dataset_dir = manifest_path.parent
-    local_files: dict[str, Path] = {}
-    for spec in manifest.files:
-        rel = spec.relative_path
-        local_files[rel] = dataset_dir / rel
-
-    return VerifiedSourceBarDataset(
-        local_files=local_files,
-        venue_id=venue_id,
-        instrument_id=instrument_id,
-        market_type=market_type,
-        interval=interval,
-        schema_variant=schema_variant,
-        manifest=manifest,
-        receipt=None,
-    )
 
 
 @dataclass(frozen=True, slots=True)
