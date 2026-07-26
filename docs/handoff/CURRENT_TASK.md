@@ -1,21 +1,20 @@
 # CURRENT_TASK
 
 Ticket: DEX-002
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: READY
+Next required actor: Sr Dev - Claude Opus 5
 Next ticket authorized: NONE
 
 ## Summary
 
-REVIEW-0237 requires four bounded corrections: terminal acquisition states must block
-partial publication, DexScreener screening must authenticate pool identity, DefiLlama
-context must use token rather than pool identity, and restored prior rows must be fully
-validated before merge.
+REVIEW-0238 requires two narrow corrections: close raw lineage over repeated full
+snapshot publications and prove exact prior interval coverage before accepting an
+`ALREADY_CURRENT` watermark.
 
-REVIEW-0236's legacy-path, coverage-gap, prior-file, chain-family, report, and catalog
-reconciliation findings are closed.
+REVIEW-0237's terminal-state, screening identity, token-context, and prior-row
+validation findings are closed.
 
 ## Governing documents
 
 - tickets/DEX-002.md
-- docs/reviews/REVIEW-0237_DEX-002_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0238_DEX-002_CHANGES_REQUIRED.md
