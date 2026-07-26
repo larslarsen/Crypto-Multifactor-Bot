@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 import pytest
 
+from cryptofactors.acquisition import free_source_probes
 from cryptofactors.acquisition.free_source_probes import (
     ALL_PROBES,
     BinancePublicProbe,
@@ -28,11 +29,20 @@ def _ok_response(payload: dict[str, Any]) -> httpx.Response:
     return httpx.Response(200, json=payload)
 
 
-def _build_mock_for(probe: SourceProbe) -> httpx.Client:
-    """Return a mock client that returns 200 for the expected probe URL."""
+class RecordingMock:
+    """A MockTransport client that records every request it serves.
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    The recording is what lets a test prove the probe actually went through the
+    supplied mock rather than reaching a public endpoint.
+    """
+
+    def __init__(self) -> None:
+        self.requests: list[str] = []
+        self.client = httpx.Client(transport=httpx.MockTransport(self._handler))
+
+    def _handler(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
+        self.requests.append(url)
         if "geckoterminal" in url:
             return _ok_response({"data": {"attributes": {"name": "USDC/USDT"}}})
         if "birdeye" in url:
@@ -47,7 +57,31 @@ def _build_mock_for(probe: SourceProbe) -> httpx.Client:
             return _ok_response([])
         return httpx.Response(404, text="not found")
 
-    return httpx.Client(transport=httpx.MockTransport(handler))
+
+def _build_mock_for(probe: SourceProbe) -> httpx.Client:
+    """Return a mock client that returns 200 for the expected probe URL."""
+    return RecordingMock().client
+
+
+@pytest.fixture(autouse=True)
+def forbid_real_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test in this module may contact a public endpoint.
+
+    `_request_or_mock` builds a bare `httpx.Client` for real live calls. Refusing to
+    construct one without an explicit transport turns any probe that bypasses its
+    supplied mock into a loud failure instead of a network-dependent flake.
+    """
+    real_client = httpx.Client
+
+    def guarded(*args: Any, **kwargs: Any) -> httpx.Client:
+        if kwargs.get("transport") is None:
+            raise AssertionError(
+                "a probe tried to build a real network client; it must use the "
+                "supplied mock transport"
+            )
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr(free_source_probes.httpx, "Client", guarded)
 
 
 @pytest.mark.parametrize("probe_cls", ALL_PROBES)
@@ -68,13 +102,56 @@ def test_probe_returns_result_dry_run(probe_cls: type[SourceProbe]) -> None:
 
 
 @pytest.mark.parametrize("probe_cls", ALL_PROBES)
-def test_probe_live_with_mock_client(probe_cls: type[SourceProbe]) -> None:
-    """Every probe can run live with a mock client."""
-    probe = probe_cls()
-    mock = _build_mock_for(probe)
-    result = probe.probe(live=True, mock=mock)
+def test_probe_live_with_mock_client(
+    probe_cls: type[SourceProbe], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every probe routes its live path through the supplied mock client.
+
+    Asserting the recorded request is the point: a probe that passed `mock=None`
+    down to `_request_or_mock` would still return `ok` whenever the real provider
+    happened to be up, which is exactly the nondeterminism REVIEW-0233 reopened.
+    """
+    monkeypatch.setenv("BIRDEYE_API_KEY", "test-key-not-a-real-secret")
+    recorder = RecordingMock()
+
+    result = probe_cls().probe(live=True, mock=recorder.client)
+
     assert result.probe_method == "live"
     assert result.probe_status == "ok"
+    assert recorder.requests, f"{probe_cls.__name__} did not use the supplied mock"
+
+
+@pytest.mark.parametrize("probe_cls", ALL_PROBES)
+def test_probe_live_never_builds_a_real_client(
+    probe_cls: type[SourceProbe], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The mock must be used instead of the network, not alongside it."""
+    monkeypatch.setenv("BIRDEYE_API_KEY", "test-key-not-a-real-secret")
+    recorder = RecordingMock()
+
+    probe_cls().probe(live=True, mock=recorder.client)
+
+    for url in recorder.requests:
+        assert url.startswith("http"), url
+
+
+@pytest.mark.parametrize("probe_cls", ALL_PROBES)
+def test_live_without_a_mock_still_reaches_for_the_real_client(
+    probe_cls: type[SourceProbe], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Routing the mock must not change real live behaviour.
+
+    With no mock supplied every probe must still take the network path. The guard
+    intercepts it at client construction, so this proves the live path is intact
+    without a request ever leaving the machine.
+    """
+    monkeypatch.setenv("BIRDEYE_API_KEY", "test-key-not-a-real-secret")
+
+    result = probe_cls().probe(live=True)
+
+    assert result.probe_method == "live"
+    assert result.probe_status == "fail"
+    assert "real network client" in result.notes
 
 
 def test_birdeye_row_forbids_ohlcv() -> None:

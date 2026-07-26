@@ -162,7 +162,7 @@ class GeckoTerminalProbe(SourceProbe):
             # Make a single polite request to the known Arbitrum USDC/USDT pool.
             url = "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6"
             try:
-                r = self._request_or_mock(live=True, mock=None, method="GET", url=url)
+                r = self._request_or_mock(live=True, mock=mock, method="GET", url=url)
                 probe_status = "ok" if r.status_code == 200 else "partial"
                 probe_method = "live"
                 note = f"HTTP {r.status_code} on pool metadata probe."
@@ -311,7 +311,7 @@ class DexScreenerProbe(SourceProbe):
         if live:
             url = "https://api.dexscreener.com/latest/dex/tokens/0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
             try:
-                r = self._request_or_mock(live=True, mock=None, method="GET", url=url)
+                r = self._request_or_mock(live=True, mock=mock, method="GET", url=url)
                 probe_status = "ok" if r.status_code == 200 else "partial"
                 probe_method = "live"
                 note = f"HTTP {r.status_code} on token pairs probe."
@@ -375,7 +375,7 @@ class DefiLlamaProbe(SourceProbe):
         if live:
             url = "https://yields.llama.fi/pools"
             try:
-                r = self._request_or_mock(live=True, mock=None, method="GET", url=url)
+                r = self._request_or_mock(live=True, mock=mock, method="GET", url=url)
                 probe_status = "ok" if r.status_code == 200 else "partial"
                 probe_method = "live"
                 note = f"HTTP {r.status_code} on pools endpoint probe."
@@ -439,7 +439,7 @@ class BinancePublicProbe(SourceProbe):
         if live:
             url = "https://api.binance.com/api/v3/exchangeInfo"
             try:
-                r = self._request_or_mock(live=True, mock=None, method="GET", url=url)
+                r = self._request_or_mock(live=True, mock=mock, method="GET", url=url)
                 probe_status = "ok" if r.status_code == 200 else "partial"
                 probe_method = "live"
                 note = f"HTTP {r.status_code} on exchangeInfo probe."
@@ -497,7 +497,7 @@ class BitmexFundingProbe(SourceProbe):
         if live:
             url = "https://www.bitmex.com/api/v1/funding?symbol=XBTUSD&count=1&reverse=true"
             try:
-                r = self._request_or_mock(live=True, mock=None, method="GET", url=url)
+                r = self._request_or_mock(live=True, mock=mock, method="GET", url=url)
                 probe_status = "ok" if r.status_code == 200 else "partial"
                 probe_method = "live"
                 note = f"HTTP {r.status_code} on funding probe."
