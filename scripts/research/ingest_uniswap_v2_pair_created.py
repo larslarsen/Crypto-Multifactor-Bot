@@ -68,7 +68,7 @@ def main() -> int:
                 receipt_db_path=str(args.db_path),
                 emit_rows=False,
             )
-            rows = ingestor.replay_receipts(
+            replay = ingestor.replay_receipts(
                 start_block=args.start_block,
                 end_block=args.end_block,
                 receipt_db_path=str(args.db_path),
@@ -78,6 +78,7 @@ def main() -> int:
             ingestor.close()
     finally:
         catalog.close()
+    rows = replay.rows
     records = [row.as_dict() for row in rows]
     table = pa.Table.from_pylist(records) if records else pa.table({
         "chain": pa.array([], type=pa.string()),
@@ -110,11 +111,7 @@ def main() -> int:
         }
         event_times = [row.event_time for row in rows]
         availability_times = [row.availability_time for row in rows]
-        raw_dependencies = sorted({
-            raw_id
-            for row in rows
-            for raw_id in (row.raw_object_id, row.block_raw_object_id)
-        })
+        raw_dependencies = sorted(replay.raw_object_ids)
         if not rows:
             raise RuntimeError("cannot publish PASS dataset without decoded PairCreated rows")
         plan = PublishPlan(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from typing import Any
 import httpx
 
 from cryptofactors.ingest.raw.models import AcquisitionMetadata
+from cryptofactors.ingest.raw.paths import content_addressed_absolute_path
 from cryptofactors.ingest.raw.writer import RawObjectWriter
 
 ETHEREUM_CHAIN = "ethereum"
@@ -59,6 +61,13 @@ class PairCreatedRow:
             "raw_object_id": self.raw_object_id,
             "block_raw_object_id": self.block_raw_object_id,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class ReplayResult:
+    rows: tuple[PairCreatedRow, ...]
+    raw_object_ids: frozenset[str]
+    completed_ranges: tuple[tuple[int, int], ...]
 
 
 def _hex_int(value: str) -> int:
@@ -181,8 +190,9 @@ class UniswapV2PairCreatedIngestor:
             chunk_end = min(chunk_start + chunk_size - 1, end_block)
             if receipts is not None:
                 prior = receipts.execute(
-                    "SELECT end_block_hash FROM uniswap_v2_pair_created_chunk_receipt WHERE start_block = ? AND end_block = ?",
-                    (chunk_start, chunk_end),
+                    "SELECT end_block_hash FROM uniswap_v2_pair_created_chunk_receipt_v2 "
+                    "WHERE chain = ? AND factory = ? AND topic = ? AND start_block = ? AND end_block = ?",
+                    (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, chunk_start, chunk_end),
                 ).fetchone()
                 if prior is not None:
                     header_response, _, _ = self._rpc(
@@ -243,26 +253,29 @@ class UniswapV2PairCreatedIngestor:
                     block_raw_object_id=block_raw_object_id,
                     ))
             if receipts is not None:
-                end_header, _, _ = self._rpc(
+                end_header, end_header_raw_object_id, end_header_time = self._rpc(
                     "eth_getBlockByNumber", [hex(chunk_end), False], event_start=chunk_end, event_end=chunk_end
                 )
                 header = end_header.get("result")
                 if not isinstance(header, dict):
                     raise UniswapV2IngestionError("missing end-block header")
                 receipts.execute(
-                    "INSERT INTO uniswap_v2_pair_created_chunk_receipt "
-                    "(start_block, end_block, end_block_hash, logs_raw_object_id, completed_at, chain, factory, topic, header_raw_object_ids_json) "
+                    "INSERT INTO uniswap_v2_pair_created_chunk_receipt_v2 "
+                    "(chain, factory, topic, start_block, end_block, end_block_hash, logs_raw_object_id, header_raw_object_ids_json, completed_at) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
+                        ETHEREUM_CHAIN,
+                        self._factory,
+                        PAIR_CREATED_TOPIC,
                         chunk_start,
                         chunk_end,
                         str(header["hash"]),
                         raw_object_id,
-                        availability_time.isoformat(),
-                        ETHEREUM_CHAIN,
-                        self._factory,
-                        PAIR_CREATED_TOPIC,
-                        json.dumps(sorted(block_raw_object_id for _, block_raw_object_id, _ in blocks.values())),
+                        json.dumps(sorted({
+                            end_header_raw_object_id,
+                            *(block_raw_object_id for _, block_raw_object_id, _ in blocks.values()),
+                        })),
+                        max([availability_time, end_header_time, *(item[2] for item in blocks.values())]).isoformat(),
                     ),
                 )
                 receipts.commit()
@@ -275,11 +288,14 @@ class UniswapV2PairCreatedIngestor:
         if not raw_object_id.startswith("raw_"):
             raise UniswapV2IngestionError("invalid raw object id")
         digest = raw_object_id.removeprefix("raw_")
-        path = raw_root / "raw" / "sha256" / digest[:2] / digest[2:4] / digest
+        path = content_addressed_absolute_path(raw_root, digest)
         try:
-            decoded = json.loads(path.read_bytes())
+            body = path.read_bytes()
         except (OSError, json.JSONDecodeError) as exc:
             raise UniswapV2IngestionError(f"cannot replay raw object {raw_object_id}") from exc
+        if hashlib.sha256(body).hexdigest() != digest:
+            raise UniswapV2IngestionError(f"raw object SHA-256 mismatch: {raw_object_id}")
+        decoded = json.loads(body)
         if not isinstance(decoded, dict):
             raise UniswapV2IngestionError("raw RPC response must be an object")
         return decoded
@@ -291,15 +307,15 @@ class UniswapV2PairCreatedIngestor:
         end_block: int,
         receipt_db_path: str,
         raw_root: Path,
-    ) -> list[PairCreatedRow]:
+    ) -> ReplayResult:
         """Decode only preserved receipt bytes after contiguous coverage validation."""
         conn = sqlite3.connect(receipt_db_path)
         try:
             receipts = conn.execute(
                 "SELECT start_block, end_block, logs_raw_object_id, completed_at, chain, factory, topic, "
-                "header_raw_object_ids_json FROM uniswap_v2_pair_created_chunk_receipt "
-                "WHERE start_block >= ? AND end_block <= ? ORDER BY start_block",
-                (start_block, end_block),
+                "header_raw_object_ids_json FROM uniswap_v2_pair_created_chunk_receipt_v2 "
+                "WHERE chain = ? AND factory = ? AND topic = ? AND start_block >= ? AND end_block <= ? ORDER BY start_block",
+                (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, start_block, end_block),
             ).fetchall()
         finally:
             conn.close()
@@ -332,4 +348,8 @@ class UniswapV2PairCreatedIngestor:
         identities = [(row.tx_hash, row.log_index) for row in rows]
         if len(identities) != len(set(identities)):
             raise UniswapV2IngestionError("replayed rows contain duplicate (tx_hash, log_index)")
-        return sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index))
+        ordered = tuple(sorted(rows, key=lambda row: (row.block_number, row.tx_index, row.log_index)))
+        raw_ids = frozenset(
+            raw_id for row in ordered for raw_id in (row.raw_object_id, row.block_raw_object_id)
+        )
+        return ReplayResult(ordered, raw_ids, tuple((int(r[0]), int(r[1])) for r in receipts))
