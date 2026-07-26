@@ -1,20 +1,30 @@
 # CURRENT_TASK
 
 Ticket: DEX-002
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: ACCEPTED
+Next required actor: NONE
 Next ticket authorized: NONE
 
 ## Summary
 
-REVIEW-0238 requires two narrow corrections: close raw lineage over repeated full
-snapshot publications and prove exact prior interval coverage before accepting an
-`ALREADY_CURRENT` watermark.
+DEX-002 - Screened Free DEX OHLCV Acquisition is accepted at `13000c1`.
+REVIEW-0235 through REVIEW-0238 are closed by REVIEW-0239.
 
-REVIEW-0237's terminal-state, screening identity, token-context, and prior-row
-validation findings are closed.
+The accepted path enforces provider capabilities, fail-closed screening, genuine
+interval bars, exact raw lineage, retry-safe watermarks, complete canonical snapshots,
+and deterministic repeated refreshes. The legacy publisher and report 37 have no
+authority.
+
+## Verification
+
+- 168 focused tests passed.
+- Complete repository pytest suite passed with 6 skips.
+- Scoped Ruff passed.
+- Repository control passed.
+- Controlled report 44 reconciles dataset
+  `ds_14d5ff00c501117b200f157260bed7c2c3fda2406efa2d1eb0231218337902be`.
 
 ## Governing documents
 
 - tickets/DEX-002.md
-- docs/reviews/REVIEW-0238_DEX-002_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0239_DEX-002_ACCEPTED.md
