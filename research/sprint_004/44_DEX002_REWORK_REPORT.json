@@ -1,84 +1,85 @@
 {
   "acquisition_attempts": [
     {
-      "acquired_at": "2026-07-26T18:29:38.935602+00:00",
-      "acquisition_id": "acq_84ea3260952748988af717239645cfbd",
+      "acquired_at": "2026-07-26T20:17:55.193537+00:00",
+      "acquisition_id": "acq_b44a455ae63c4be899e85cc0ae371869",
       "attempt": 1,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "dexscreener",
       "rate_limited": false,
-      "raw_object_id": "raw_37e148b901c757e968cf8454a6d7318b1b58dbd8c1ae8665353c15d427490967",
+      "raw_object_id": "raw_0c8aa19381f1ec2f46288137dbad0899405ee8182b8449ab0fa286e7f80d303f",
       "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://api.dexscreener.com/latest/dex/pairs/arbitrum/0xc6962004f452be9203591991d15f6b388e09e8d0\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T18:29:39.031832+00:00",
-      "acquisition_id": "acq_58f096daeb9543f983a0a5b7e4254049",
+      "acquired_at": "2026-07-26T20:17:56.046106+00:00",
+      "acquisition_id": "acq_5ca66c662a3c45c39090892dacdf376e",
       "attempt": 1,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "defillama",
       "rate_limited": false,
-      "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
-      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://coins.llama.fi/prices/current/arbitrum:0xc6962004f452be9203591991d15f6b388e09e8d0\"}",
+      "raw_object_id": "raw_ffa2dce0efd3d54c2bd9b16603f2a6060ab079231043b36bb94c2e684a314f0d",
+      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://coins.llama.fi/prices/current/arbitrum:0x82af49447d8a07e3bd95bd0d56f35241523fbab1,arbitrum:0xaf88d065e77c8cc2239327c5edb3a432268e5831\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T18:29:39.226340+00:00",
-      "acquisition_id": "acq_e32b12f3873240c1ac25c0d4b07361cf",
+      "acquired_at": "2026-07-26T20:17:56.595786+00:00",
+      "acquisition_id": "acq_ea6764b6a7704f0b84eac692a3e2a678",
       "attempt": 1,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "geckoterminal",
       "rate_limited": false,
-      "raw_object_id": "raw_90bcff3e7fa0d5a463ef8e478de11eef3251535564c40a719ccbf5d4caa0c83c",
+      "raw_object_id": "raw_69d087f7335f4c6dc88985ca696e7d44f7b8fd46690715140128165dd17c7335",
       "request_json": "{\"method\":\"GET\",\"params\":{\"aggregate\":1,\"before_timestamp\":1784937600,\"currency\":\"usd\",\"limit\":1000},\"url\":\"https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xc6962004f452be9203591991d15f6b388e09e8d0/ohlcv/day\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T18:29:39.346641+00:00",
-      "acquisition_id": "acq_943db6112db74c3eae39fa43fbb62e68",
+      "acquired_at": "2026-07-26T20:17:56.722427+00:00",
+      "acquisition_id": "acq_ab0fef3843c44a979fb0cc9075569a37",
       "attempt": 1,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "dexscreener",
       "rate_limited": false,
-      "raw_object_id": "raw_c91fdd146e45018968edb906c95b978f73e4b44bca388f41ffe493a1857272e0",
+      "raw_object_id": "raw_73152127763132c37a3243105ef456882e5c82c59b78831488a929d74be124dc",
       "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://api.dexscreener.com/latest/dex/pairs/arbitrum/0xc31e54c7a869b9fcbecc14363cf510d1c41fa443\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T18:29:39.381850+00:00",
-      "acquisition_id": "acq_7d36d2c9200c43f0a7c11b3336d3b98d",
+      "acquired_at": "2026-07-26T20:17:57.495155+00:00",
+      "acquisition_id": "acq_00bf3d70890e480d9c3c5f765b563ec1",
       "attempt": 1,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "defillama",
       "rate_limited": false,
-      "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
-      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://coins.llama.fi/prices/current/arbitrum:0xc31e54c7a869b9fcbecc14363cf510d1c41fa443\"}",
+      "raw_object_id": "raw_e823b2631b0fb20b624314866301190eb4b65c55fac39a2f42ad0d68bb1c78ef",
+      "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://coins.llama.fi/prices/current/arbitrum:0x82af49447d8a07e3bd95bd0d56f35241523fbab1,arbitrum:0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-26T18:29:39.626451+00:00",
-      "acquisition_id": "acq_776fab909d8746c7b1738eb12b5e77b2",
+      "acquired_at": "2026-07-26T20:17:57.812614+00:00",
+      "acquisition_id": "acq_adb622b74c2f4c3a848a2a45730517ad",
       "attempt": 1,
       "detail": null,
       "failure_kind": null,
       "ok": true,
       "provider": "geckoterminal",
       "rate_limited": false,
-      "raw_object_id": "raw_0cd2ed7a92410187dedf70c4112ed2777647a5d4e97de31a137e45eaecbfc215",
+      "raw_object_id": "raw_7beb5160d1cd183eb0fd14666f00ea80034f04f0e370ac32a28a03a5106e2a57",
       "request_json": "{\"method\":\"GET\",\"params\":{\"aggregate\":1,\"before_timestamp\":1784937600,\"currency\":\"usd\",\"limit\":1000},\"url\":\"https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xc31e54c7a869b9fcbecc14363cf510d1c41fa443/ohlcv/day\"}",
       "status_code": 200
     }
   ],
+  "blocking_pools": [],
   "candidate_pools": [
     {
       "chain": "arbitrum",
@@ -92,10 +93,10 @@
   "catalog_reconciled": true,
   "catalog_reconciliation": {
     "catalog_registered": true,
-    "manifest_sha256": "938df5fd0e87518650c48f423feb58ac2183ac90d2e1294bf859013f8d949449",
-    "output_sha256": "aad25125e0963777d550bede3e523194b859e5f7ead70cff9f4d755e295f697c",
-    "published_dataset_id": "ds_1c5cba17fff5af270f242700d89f67750873641211c164c26e8e8f80c8450d1c",
-    "resolved_dataset_id": "ds_1c5cba17fff5af270f242700d89f67750873641211c164c26e8e8f80c8450d1c",
+    "manifest_sha256": "1edb7d7ff760750456e6a2dff54bb023033008bf0918e09f49a3873fbc064c86",
+    "output_sha256": "57c69af17cfe3c031756cadd855aa42e2b0d8e71685d58c761dd6f108faa3426",
+    "published_dataset_id": "ds_ad349736a281612fe8794d05a0827503d1e7c1fb33d7bb776d99627f29d1d337",
+    "resolved_dataset_id": "ds_ad349736a281612fe8794d05a0827503d1e7c1fb33d7bb776d99627f29d1d337",
     "reused_existing": false,
     "row_count": 10,
     "state": "reconciled"
@@ -119,7 +120,7 @@
   },
   "experiment_id": "DEX-002-SCREENED-DEX-OHLCV-SNAPSHOT",
   "failed_acquisition_count": 0,
-  "generated_at": "2026-07-26T18:29:39.789108+00:00",
+  "generated_at": "2026-07-26T20:17:57.960528+00:00",
   "live_eligible": false,
   "passed_pools": [
     {
@@ -130,6 +131,7 @@
         "requested_end": "2026-07-25T00:00:00+00:00",
         "requested_start": "2026-07-21T00:00:00+00:00",
         "row_count": 5,
+        "state": "PUBLISHABLE",
         "unresolved": false
       },
       "error": null,
@@ -139,39 +141,39 @@
       "screening": {
         "authoritative_provider": "dexscreener",
         "chain": "arbitrum",
-        "liquidity_usd": 35772699.04,
+        "liquidity_usd": 35864214.04,
         "observations": [
           {
-            "acquisition_id": "acq_84ea3260952748988af717239645cfbd",
+            "acquisition_id": "acq_b44a455ae63c4be899e85cc0ae371869",
             "capability": "authoritative_screening",
-            "liquidity_usd": 35772699.04,
-            "observed_at": "2026-07-26T18:29:38.935602+00:00",
+            "liquidity_usd": 35864214.04,
+            "observed_at": "2026-07-26T20:17:55.193537+00:00",
             "provider": "dexscreener",
-            "raw_object_id": "raw_37e148b901c757e968cf8454a6d7318b1b58dbd8c1ae8665353c15d427490967",
-            "reason": "liquidity 35772699.04 >= 50000.00 and volume_24h 14798657.79 >= 10000.00",
+            "raw_object_id": "raw_0c8aa19381f1ec2f46288137dbad0899405ee8182b8449ab0fa286e7f80d303f",
+            "reason": "liquidity 35864214.04 >= 50000.00 and volume_24h 15120261.06 >= 10000.00",
             "status": "PASS",
-            "volume_24h_usd": 14798657.79
+            "volume_24h_usd": 15120261.06
           },
           {
-            "acquisition_id": "acq_58f096daeb9543f983a0a5b7e4254049",
+            "acquisition_id": "acq_5ca66c662a3c45c39090892dacdf376e",
             "capability": "context",
             "liquidity_usd": null,
-            "observed_at": "2026-07-26T18:29:39.031832+00:00",
+            "observed_at": "2026-07-26T20:17:56.046106+00:00",
             "provider": "defillama",
-            "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
-            "reason": "context only; 0 coin price(s)",
+            "raw_object_id": "raw_ffa2dce0efd3d54c2bd9b16603f2a6060ab079231043b36bb94c2e684a314f0d",
+            "reason": "context only; 2/2 token price(s) resolved",
             "status": "CONTEXT_ONLY",
             "volume_24h_usd": null
           }
         ],
         "pool_address": "0xc6962004f452be9203591991d15f6b388e09e8d0",
-        "reason": "liquidity 35772699.04 >= 50000.00 and volume_24h 14798657.79 >= 10000.00",
+        "reason": "liquidity 35864214.04 >= 50000.00 and volume_24h 15120261.06 >= 10000.00",
         "status": "PASS",
         "thresholds": {
           "min_liquidity_usd": 50000.0,
           "min_volume_24h_usd": 10000.0
         },
-        "volume_24h_usd": 14798657.79
+        "volume_24h_usd": 15120261.06
       }
     },
     {
@@ -182,6 +184,7 @@
         "requested_end": "2026-07-25T00:00:00+00:00",
         "requested_start": "2026-07-21T00:00:00+00:00",
         "row_count": 5,
+        "state": "PUBLISHABLE",
         "unresolved": false
       },
       "error": null,
@@ -191,51 +194,55 @@
       "screening": {
         "authoritative_provider": "dexscreener",
         "chain": "arbitrum",
-        "liquidity_usd": 972269.97,
+        "liquidity_usd": 972329.1,
         "observations": [
           {
-            "acquisition_id": "acq_943db6112db74c3eae39fa43fbb62e68",
+            "acquisition_id": "acq_ab0fef3843c44a979fb0cc9075569a37",
             "capability": "authoritative_screening",
-            "liquidity_usd": 972269.97,
-            "observed_at": "2026-07-26T18:29:39.346641+00:00",
+            "liquidity_usd": 972329.1,
+            "observed_at": "2026-07-26T20:17:56.722427+00:00",
             "provider": "dexscreener",
-            "raw_object_id": "raw_c91fdd146e45018968edb906c95b978f73e4b44bca388f41ffe493a1857272e0",
-            "reason": "liquidity 972269.97 >= 50000.00 and volume_24h 127881.23 >= 10000.00",
+            "raw_object_id": "raw_73152127763132c37a3243105ef456882e5c82c59b78831488a929d74be124dc",
+            "reason": "liquidity 972329.10 >= 50000.00 and volume_24h 127746.19 >= 10000.00",
             "status": "PASS",
-            "volume_24h_usd": 127881.23
+            "volume_24h_usd": 127746.19
           },
           {
-            "acquisition_id": "acq_7d36d2c9200c43f0a7c11b3336d3b98d",
+            "acquisition_id": "acq_00bf3d70890e480d9c3c5f765b563ec1",
             "capability": "context",
             "liquidity_usd": null,
-            "observed_at": "2026-07-26T18:29:39.381850+00:00",
+            "observed_at": "2026-07-26T20:17:57.495155+00:00",
             "provider": "defillama",
-            "raw_object_id": "raw_1502993ba9216cef597f89ad89349018d3a751d37d6c1ef81ebf29460ce48785",
-            "reason": "context only; 0 coin price(s)",
+            "raw_object_id": "raw_e823b2631b0fb20b624314866301190eb4b65c55fac39a2f42ad0d68bb1c78ef",
+            "reason": "context only; 2/2 token price(s) resolved",
             "status": "CONTEXT_ONLY",
             "volume_24h_usd": null
           }
         ],
         "pool_address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
-        "reason": "liquidity 972269.97 >= 50000.00 and volume_24h 127881.23 >= 10000.00",
+        "reason": "liquidity 972329.10 >= 50000.00 and volume_24h 127746.19 >= 10000.00",
         "status": "PASS",
         "thresholds": {
           "min_liquidity_usd": 50000.0,
           "min_volume_24h_usd": 10000.0
         },
-        "volume_24h_usd": 127881.23
+        "volume_24h_usd": 127746.19
       }
     }
   ],
   "pinned_end_time": "2026-07-25T00:00:00+00:00",
+  "pool_states": {
+    "arbitrum:0xc31e54c7a869b9fcbecc14363cf510d1c41fa443": "PUBLISHABLE",
+    "arbitrum:0xc6962004f452be9203591991d15f6b388e09e8d0": "PUBLISHABLE"
+  },
   "prior_dataset_id": null,
   "prior_dataset_reconciliation": {
     "prior_dataset_id": null,
     "state": "none"
   },
-  "published_dataset_id": "ds_1c5cba17fff5af270f242700d89f67750873641211c164c26e8e8f80c8450d1c",
+  "published_dataset_id": "ds_ad349736a281612fe8794d05a0827503d1e7c1fb33d7bb776d99627f29d1d337",
   "rate_limit_incidents": [],
-  "raw_dependency_count": 5,
+  "raw_dependency_count": 6,
   "rejected_pools": [],
   "retry_count": 0,
   "snapshot_row_count": 10,

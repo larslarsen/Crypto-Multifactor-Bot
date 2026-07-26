@@ -55,6 +55,7 @@ from cryptofactors.ingest.dex_providers import (
     ScreeningThresholds,
 )
 from cryptofactors.ingest.dex_snapshot import (
+    AcquisitionState,
     DexSnapshotEngine,
     OhlcvBar,
     PoolAcquisition,
@@ -63,6 +64,8 @@ from cryptofactors.ingest.dex_snapshot import (
     bars_from_records,
     config_fingerprint,
     merge_canonical_bars,
+    pool_covers_through,
+    validate_token_addresses,
     watermark_key,
 )
 from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
@@ -161,13 +164,18 @@ def load_prior_snapshot(
             f"{SNAPSHOT_SCHEMA.names}"
         )
 
-    bars = bars_from_records(table.to_pylist())
+    declared_raw_ids = {
+        str(row["raw_object_id"]) for row in catalog.list_raw_inputs(dataset_id)
+    }
+    bars = bars_from_records(table.to_pylist(), allowed_raw_object_ids=declared_raw_ids)
     return dataset_id, bars, {
         "prior_dataset_id": dataset_id,
         "state": "reconciled",
         "file_sha256": actual_sha256,
         "byte_size": actual_bytes,
         "row_count": table.num_rows,
+        "declared_raw_object_ids": len(declared_raw_ids),
+        "rows_revalidated": len(bars),
     }
 
 
@@ -185,6 +193,7 @@ def build_report(
     dataset_id: str | None,
     prior_reconciliation: Mapping[str, Any] | None = None,
     reconciliation: Mapping[str, Any] | None = None,
+    blocked: Sequence[PoolAcquisition] = (),
 ) -> dict[str, Any]:
     by_status: dict[str, list[dict[str, Any]]] = {
         "passed": [], "rejected": [], "unavailable": [],
@@ -234,6 +243,13 @@ def build_report(
         "published_dataset_id": dataset_id,
         "catalog_reconciliation": dict(reconciliation or {}),
         "catalog_reconciled": bool(reconciliation) and reconciliation.get("state") == "reconciled",
+        "pool_states": {a.identity.key: a.state.value for a in acquisitions},
+        # The pools that actually blocked this run, including an ALREADY_CURRENT pool
+        # whose completeness the prior snapshot could not confirm.
+        "blocking_pools": [
+            {"pool": a.identity.key, "state": a.state.value, "error": a.error}
+            for a in blocked
+        ],
         "unresolved_coverage_pools": [
             a.identity.key for a in acquisitions if a.decision.passed and a.has_unresolved_coverage
         ],
@@ -316,20 +332,22 @@ def main() -> int:
         )
         for pool in candidates:
             identity = PoolIdentity.create(str(pool["chain"]), str(pool["pool_address"]))
+            tokens = validate_token_addresses(
+                [t for t in (pool.get("base_token_address"), pool.get("quote_token_address")) if t],
+                chain=identity.chain,
+            )
             acquisitions.append(engine.acquire_pool(
                 identity=identity,
                 watermarks=watermarks_before,
                 default_start=default_start,
                 end_time=end_time,
+                token_addresses=tokens,
             ))
         log = engine.log
     finally:
         client.close()
         raw_catalog.close()
 
-    # A pool that passed screening but lacks exact requested coverage blocks the whole
-    # publication: a gap-bearing snapshot must never become canonical.
-    unresolved = [a for a in acquisitions if a.decision.passed and a.has_unresolved_coverage]
     acquired = [bar for a in acquisitions if a.usable for bar in a.bars]
 
     dataset_catalog = SqliteDatasetCatalog(args.db_path)
@@ -342,18 +360,34 @@ def main() -> int:
             dataset_catalog, args.store_root
         )
 
-        if unresolved:
+        # A screened-PASS pool in any blocking terminal state stops the run. Coverage
+        # gaps are only one way to be incomplete: failure, empty and invalid responses
+        # leave no gaps at all, yet each means the pool is missing from the snapshot.
+        blocked = [a for a in acquisitions if a.blocks_publication]
+
+        # ALREADY_CURRENT is only legitimate when the prior canonical snapshot proves
+        # this pool is complete through the pinned end.
+        for acquisition in acquisitions:
+            if acquisition.state is not AcquisitionState.ALREADY_CURRENT:
+                continue
+            if not pool_covers_through(
+                prior_bars, identity=acquisition.identity, end_time=end_time
+            ):
+                blocked.append(acquisition)
+
+        if blocked:
             report = build_report(
                 end_time=end_time, thresholds=thresholds, config=config,
                 acquisitions=acquisitions, log=log, prior_dataset_id=prior_dataset_id,
                 watermarks_before=watermarks_before, watermarks_after=watermarks_before,
                 snapshot_rows=0, dataset_id=None,
                 prior_reconciliation=prior_reconciliation,
-                reconciliation={"state": "blocked_by_unresolved_coverage"},
+                reconciliation={"state": "blocked_by_incomplete_pools"},
+                blocked=blocked,
             )
             _write_report(args.report_path, report)
-            names = ", ".join(a.identity.key for a in unresolved)
-            print(f"DEX-002: unresolved coverage for {names}; no PASS dataset published")
+            names = ", ".join(f"{a.identity.key}={a.state.value}" for a in blocked)
+            print(f"DEX-002: blocking states [{names}]; no PASS dataset published")
             return 1
 
         if not acquired:

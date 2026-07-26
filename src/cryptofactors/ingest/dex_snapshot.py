@@ -22,6 +22,7 @@ import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +69,33 @@ CHAIN_FAMILIES: dict[str, str] = {
 
 class DexSnapshotError(RuntimeError):
     """Raised for invalid bars, identity violations, or unresolved gaps."""
+
+
+class AcquisitionState(str, Enum):
+    """Terminal state of one pool's acquisition.
+
+    Every state except ``PUBLISHABLE`` and ``ALREADY_CURRENT`` means the pool has no
+    complete, trustworthy coverage for the requested window. For a pool that passed
+    screening, that must block the whole publication: dropping it while publishing a
+    clean sibling would silently narrow the snapshot.
+    """
+
+    PUBLISHABLE = "PUBLISHABLE"
+    ALREADY_CURRENT = "ALREADY_CURRENT"
+    SCREENED_OUT = "SCREENED_OUT"
+    FAILED = "FAILED"
+    EMPTY = "EMPTY"
+    INVALID = "INVALID"
+    GAPPED = "GAPPED"
+
+
+#: States that block publication when the pool passed screening.
+BLOCKING_STATES = frozenset({
+    AcquisitionState.FAILED,
+    AcquisitionState.EMPTY,
+    AcquisitionState.INVALID,
+    AcquisitionState.GAPPED,
+})
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +170,15 @@ class PoolIdentity:
         return f"{self.chain}:{self.pool_address}"
 
 
+def validate_token_addresses(
+    tokens: Iterable[str] | None, *, chain: str
+) -> tuple[str, ...]:
+    """Validate optional base/quote token identities against the chain family."""
+    if not tokens:
+        return ()
+    return tuple(canonical_pool_address(str(token), chain=chain) for token in tokens)
+
+
 # ---------------------------------------------------------------------------
 # Bars
 # ---------------------------------------------------------------------------
@@ -191,6 +228,48 @@ def _finite_number(value: Any, *, label: str) -> float:
     if not math.isfinite(number):
         raise DexSnapshotError(f"{label} must be finite, got {value!r}")
     return number
+
+
+def validate_bar_values(
+    *,
+    open_: Any,
+    high: Any,
+    low: Any,
+    close: Any,
+    volume: Any,
+) -> tuple[float, float, float, float, float]:
+    """The OHLC/volume invariants every bar must satisfy, however it was obtained."""
+    values = (
+        _finite_number(open_, label="open"),
+        _finite_number(high, label="high"),
+        _finite_number(low, label="low"),
+        _finite_number(close, label="close"),
+        _finite_number(volume, label="volume"),
+    )
+    open_v, high_v, low_v, close_v, volume_v = values
+    if volume_v < 0:
+        raise DexSnapshotError(f"volume must be non-negative, got {volume_v}")
+    if low_v > high_v:
+        raise DexSnapshotError(f"low {low_v} exceeds high {high_v}")
+    for name, value in (("open", open_v), ("close", close_v)):
+        if not low_v <= value <= high_v:
+            raise DexSnapshotError(f"{name} {value} outside [low {low_v}, high {high_v}]")
+    return values
+
+
+def validate_bar_timestamp(
+    timestamp: datetime, *, interval_seconds: int = DAY_SECONDS
+) -> datetime:
+    """Timestamps must be timezone-aware UTC and aligned to the interval."""
+    if timestamp.tzinfo is None:
+        raise DexSnapshotError(f"bar timestamp {timestamp!r} must be timezone-aware")
+    moment = timestamp.astimezone(UTC)
+    if int(moment.timestamp()) % interval_seconds:
+        raise DexSnapshotError(
+            f"bar timestamp {moment.isoformat()} is not aligned to a "
+            f"{interval_seconds}s interval"
+        )
+    return moment
 
 
 def parse_geckoterminal_bars(
@@ -245,18 +324,9 @@ def parse_geckoterminal_bars(
             raise DexSnapshotError(f"duplicate bar timestamp {timestamp.isoformat()}")
         seen.add(epoch)
 
-        open_ = _finite_number(raw_open, label="open")
-        high = _finite_number(raw_high, label="high")
-        low = _finite_number(raw_low, label="low")
-        close = _finite_number(raw_close, label="close")
-        volume = _finite_number(raw_volume, label="volume")
-        if volume < 0:
-            raise DexSnapshotError(f"volume must be non-negative, got {volume}")
-        if low > high:
-            raise DexSnapshotError(f"low {low} exceeds high {high}")
-        for name, value in (("open", open_), ("close", close)):
-            if not low <= value <= high:
-                raise DexSnapshotError(f"{name} {value} outside [low {low}, high {high}]")
+        open_, high, low, close, volume = validate_bar_values(
+            open_=raw_open, high=raw_high, low=raw_low, close=raw_close, volume=raw_volume
+        )
 
         bars.append(OhlcvBar(
             chain=identity.chain,
@@ -459,6 +529,7 @@ class PoolAcquisition:
     missing_intervals: tuple[datetime, ...] = ()
     requested_start: datetime | None = None
     requested_end: datetime | None = None
+    state: AcquisitionState = AcquisitionState.PUBLISHABLE
 
     @property
     def has_unresolved_coverage(self) -> bool:
@@ -467,12 +538,18 @@ class PoolAcquisition:
 
     @property
     def usable(self) -> bool:
-        """Publishable only with exact requested coverage.
+        """Publishable only with exact requested coverage."""
+        return self.state is AcquisitionState.PUBLISHABLE
 
-        Returning partial bars as usable is how a gap-bearing response became
-        canonical data under the previous implementation.
+    @property
+    def blocks_publication(self) -> bool:
+        """A screened-PASS pool in a blocking state stops the entire run.
+
+        Coverage gaps are not the only way a passed pool can be incomplete: an HTTP
+        failure, a transport failure, an invalid payload and a zero-row response all
+        leave no gaps to find, yet each means the pool is missing from the snapshot.
         """
-        return self.error is None and bool(self.bars) and not self.has_unresolved_coverage
+        return self.decision.passed and self.state in BLOCKING_STATES
 
     def coverage_report(self) -> dict[str, Any]:
         return {
@@ -485,6 +562,7 @@ class PoolAcquisition:
             ],
             "missing_intervals": [moment.isoformat() for moment in self.missing_intervals],
             "unresolved": self.has_unresolved_coverage,
+            "state": self.state.value,
         }
 
 
@@ -563,7 +641,9 @@ class DexSnapshotEngine:
     def log(self) -> AcquisitionLog:
         return self._acquirer.log
 
-    def screen(self, identity: PoolIdentity) -> ScreeningDecision:
+    def screen(
+        self, identity: PoolIdentity, *, token_addresses: Sequence[str] | None = None
+    ) -> ScreeningDecision:
         """Call every configured provider for auditable context, then decide."""
         observations = [
             provider.observe(
@@ -571,6 +651,7 @@ class DexSnapshotEngine:
                 pool_address=identity.pool_address,
                 thresholds=self._thresholds,
                 acquirer=self._acquirer,
+                token_addresses=token_addresses,
             )
             for provider in self._screening_providers
         ]
@@ -588,13 +669,15 @@ class DexSnapshotEngine:
         watermarks: Mapping[str, str],
         default_start: datetime,
         end_time: datetime,
+        token_addresses: Sequence[str] | None = None,
     ) -> PoolAcquisition:
-        decision = self.screen(identity)
+        decision = self.screen(identity, token_addresses=token_addresses)
         if not decision.passed:
             return PoolAcquisition(
                 identity=identity, decision=decision, bars=(), gaps=(), outcomes=(),
                 watermark_candidate=None,
                 error=f"screening {decision.status.value}: {decision.reason}",
+                state=AcquisitionState.SCREENED_OUT,
             )
 
         start_time = resume_start(
@@ -605,9 +688,13 @@ class DexSnapshotEngine:
             interval_seconds=self._interval_seconds,
         )
         if start_time > end_time:
+            # Provisional: the runner promotes this only when prior canonical rows
+            # prove the pool is complete through the pinned end.
             return PoolAcquisition(
                 identity=identity, decision=decision, bars=(), gaps=(), outcomes=(),
-                watermark_candidate=None, error="already current",
+                watermark_candidate=None, error=None,
+                state=AcquisitionState.ALREADY_CURRENT,
+                requested_start=start_time, requested_end=end_time,
             )
 
         try:
@@ -619,6 +706,8 @@ class DexSnapshotEngine:
             return PoolAcquisition(
                 identity=identity, decision=decision, bars=(), gaps=(), outcomes=(),
                 watermark_candidate=None, error=f"invalid OHLCV response: {exc}",
+                state=AcquisitionState.INVALID,
+                requested_start=start_time, requested_end=end_time,
             )
 
         if not outcome.ok:
@@ -626,11 +715,15 @@ class DexSnapshotEngine:
                 identity=identity, decision=decision, bars=(), gaps=(),
                 outcomes=(outcome,), watermark_candidate=None,
                 error=f"OHLCV {outcome.failure_kind}: {outcome.detail}",
+                state=AcquisitionState.FAILED,
+                requested_start=start_time, requested_end=end_time,
             )
         if not bars:
             return PoolAcquisition(
                 identity=identity, decision=decision, bars=(), gaps=(),
                 outcomes=(outcome,), watermark_candidate=None, error="no rows returned",
+                state=AcquisitionState.EMPTY,
+                requested_start=start_time, requested_end=end_time,
             )
 
         gaps = find_interval_gaps(bars, interval_seconds=self._interval_seconds)
@@ -652,6 +745,7 @@ class DexSnapshotEngine:
                 else contiguous_prefix_end(bars, interval_seconds=self._interval_seconds)
             ),
             error="unresolved coverage" if unresolved else None,
+            state=AcquisitionState.GAPPED if unresolved else AcquisitionState.PUBLISHABLE,
             missing_intervals=tuple(missing),
             requested_start=start_time,
             requested_end=end_time,
@@ -662,26 +756,106 @@ def config_fingerprint(config: Mapping[str, Any]) -> str:
     return hashlib.sha256(canonical_json(dict(config)).encode()).hexdigest()
 
 
-def bars_from_records(records: Iterable[Mapping[str, Any]]) -> list[OhlcvBar]:
-    """Rebuild bars from a previously published canonical snapshot."""
+def bars_from_records(
+    records: Iterable[Mapping[str, Any]],
+    *,
+    allowed_raw_object_ids: Iterable[str] | None = None,
+    interval_seconds: int = DAY_SECONDS,
+) -> list[OhlcvBar]:
+    """Rebuild and fully revalidate bars from a previously published snapshot.
+
+    A prior snapshot is untrusted input at merge time: the file may reconcile on hash
+    and row count and still contain rows that no longer satisfy the invariants, or
+    rows attributed to a provider with no OHLCV capability. Every restored row is put
+    through the same checks as a freshly decoded one, and its raw-object id must be
+    declared by the prior dataset's own lineage.
+    """
+    permitted = None if allowed_raw_object_ids is None else {
+        str(raw_id) for raw_id in allowed_raw_object_ids
+    }
     restored: list[OhlcvBar] = []
+    seen: set[tuple[str, str, int]] = set()
+
     for record in records:
-        timestamp = datetime.fromisoformat(str(record["timestamp"]))
-        if timestamp.tzinfo is None:
-            raise DexSnapshotError("prior snapshot timestamps must be timezone-aware")
-        restored.append(OhlcvBar(
-            chain=str(record["chain"]),
-            pool_address=str(record["pool_address"]),
-            timestamp=timestamp,
-            open=float(record["open"]),
-            high=float(record["high"]),
-            low=float(record["low"]),
-            close=float(record["close"]),
-            volume=float(record["volume"]),
-            provider=str(record["provider"]),
-            raw_object_id=str(record["raw_object_id"]),
-        ))
+        if not isinstance(record, Mapping):
+            raise DexSnapshotError("prior snapshot row must be an object")
+        for column in (
+            "chain", "pool_address", "timestamp", "open", "high", "low", "close",
+            "volume", "provider", "raw_object_id",
+        ):
+            if column not in record:
+                raise DexSnapshotError(f"prior snapshot row is missing {column!r}")
+
+        chain = canonical_chain(str(record["chain"]))
+        pool_address = canonical_pool_address(str(record["pool_address"]), chain=chain)
+        if pool_address != str(record["pool_address"]):
+            raise DexSnapshotError(
+                f"prior snapshot row address {record['pool_address']!r} is not canonical "
+                f"for chain {chain!r}"
+            )
+
+        provider = str(record["provider"])
+        if provider != GECKOTERMINAL_PROVIDER:
+            raise DexSnapshotError(
+                f"prior snapshot row claims provider {provider!r}, which has no OHLCV "
+                "capability"
+            )
+
+        raw_object_id = str(record["raw_object_id"])
+        if not raw_object_id.startswith("raw_"):
+            raise DexSnapshotError(f"prior snapshot row has invalid raw object id {raw_object_id!r}")
+        if permitted is not None and raw_object_id not in permitted:
+            raise DexSnapshotError(
+                f"prior snapshot row cites raw object {raw_object_id} which the prior "
+                "dataset lineage does not declare"
+            )
+
+        try:
+            parsed = datetime.fromisoformat(str(record["timestamp"]))
+        except ValueError as exc:
+            raise DexSnapshotError(
+                f"prior snapshot timestamp {record['timestamp']!r} is not ISO-8601"
+            ) from exc
+        timestamp = validate_bar_timestamp(parsed, interval_seconds=interval_seconds)
+
+        open_, high, low, close, volume = validate_bar_values(
+            open_=record["open"], high=record["high"], low=record["low"],
+            close=record["close"], volume=record["volume"],
+        )
+
+        bar = OhlcvBar(
+            chain=chain, pool_address=pool_address, timestamp=timestamp, open=open_,
+            high=high, low=low, close=close, volume=volume, provider=provider,
+            raw_object_id=raw_object_id,
+        )
+        if bar.dedupe_key in seen:
+            raise DexSnapshotError(
+                f"prior snapshot contains duplicate identity {bar.dedupe_key}"
+            )
+        seen.add(bar.dedupe_key)
+        restored.append(bar)
+
     return restored
+
+
+def pool_covers_through(
+    bars: Iterable[OhlcvBar],
+    *,
+    identity: PoolIdentity,
+    end_time: datetime,
+    interval_seconds: int = DAY_SECONDS,
+) -> bool:
+    """Whether prior canonical rows already cover this pool through the pinned end.
+
+    ALREADY_CURRENT is only legitimate when this is true; otherwise a pool skipped by
+    its watermark would leave a hole nothing ever fills.
+    """
+    timestamps = {
+        int(bar.timestamp.timestamp())
+        for bar in bars
+        if bar.chain == identity.chain and bar.pool_address == identity.pool_address
+    }
+    return bool(timestamps) and int(end_time.timestamp()) in timestamps
 
 
 __all__ = [
@@ -695,6 +869,8 @@ __all__ = [
     "PoolIdentity",
     "ScreeningStatus",
     "WatermarkStore",
+    "AcquisitionState",
+    "BLOCKING_STATES",
     "bars_from_records",
     "canonical_chain",
     "canonical_pool_address",
@@ -705,6 +881,10 @@ __all__ = [
     "find_interval_gaps",
     "missing_intervals",
     "merge_canonical_bars",
+    "pool_covers_through",
+    "validate_bar_timestamp",
+    "validate_token_addresses",
+    "validate_bar_values",
     "parse_geckoterminal_bars",
     "resume_start",
     "watermark_key",

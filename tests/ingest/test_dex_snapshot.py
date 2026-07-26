@@ -44,18 +44,20 @@ from cryptofactors.ingest.dex_providers import (
 )
 from cryptofactors.ingest.dex_snapshot import (
     DexSnapshotEngine,
-    chain_family,
     DexSnapshotError,
     GeckoTerminalOhlcvSource,
     OhlcvBar,
     PoolIdentity,
     WatermarkStore,
+    bars_from_records,
     canonical_pool_address,
+    chain_family,
     contiguous_prefix_end,
     find_interval_gaps,
     merge_canonical_bars,
     parse_geckoterminal_bars,
     resume_start,
+    validate_token_addresses,
     watermark_key,
 )
 from cryptofactors.ingest.raw.catalog import SqliteRawObjectCatalog
@@ -112,8 +114,20 @@ class MockDexNode:
         screening_body: bytes | None = None,
         pairs_override: Any = None,
         bars_by_pool: dict[str, list[list[Any]]] | None = None,
+        pair_chain_id: str | None = None,
+        pair_address: str | None = None,
+        ohlcv_status_by_pool: dict[str, int] | None = None,
+        ohlcv_transport_error_for: set[str] | None = None,
+        liquidity_by_pool: dict[str, float] | None = None,
+        volume_by_pool: dict[str, float] | None = None,
     ) -> None:
+        self.ohlcv_status_by_pool = ohlcv_status_by_pool or {}
+        self.ohlcv_transport_error_for = ohlcv_transport_error_for or set()
+        self.liquidity_by_pool = liquidity_by_pool or {}
+        self.volume_by_pool = volume_by_pool or {}
         self.bars_by_pool = bars_by_pool or {}
+        self.pair_chain_id = pair_chain_id
+        self.pair_address = pair_address
         self.liquidity = liquidity
         self.volume_24h = volume_24h
         self.bars = bars if bars is not None else [bar_row(i) for i in range(5)]
@@ -145,21 +159,40 @@ class MockDexNode:
                 return self._respond(self.screening_status, {"error": "unavailable"})
             if self.pairs_override is not None:
                 return self._respond(200, {"pairs": self.pairs_override})
-            pair: dict[str, Any] = {}
-            if self.liquidity is not None:
-                pair["liquidity"] = {"usd": self.liquidity}
-            if self.volume_24h is not None:
-                pair["volume"] = {"h24": self.volume_24h}
+            # A real DexScreener pair identifies itself; screening is bound to it.
+            requested_chain, requested_pool = url.rstrip("/").split("/")[-2:]
+            pair: dict[str, Any] = {
+                "chainId": self.pair_chain_id or requested_chain,
+                "pairAddress": self.pair_address or requested_pool,
+            }
+            liquidity = next(
+                (v for k, v in self.liquidity_by_pool.items() if k.lower() in url.lower()),
+                self.liquidity,
+            )
+            volume = next(
+                (v for k, v in self.volume_by_pool.items() if k.lower() in url.lower()),
+                self.volume_24h,
+            )
+            if liquidity is not None:
+                pair["liquidity"] = {"usd": liquidity}
+            if volume is not None:
+                pair["volume"] = {"h24": volume}
             return self._respond(200, {"pairs": [pair]})
 
         if "llama" in url:
             return self._respond(200, {"coins": {"arbitrum:0xabc": {"price": 1.0}}})
 
         if "geckoterminal" in url:
-            if self.ohlcv_transport_error:
+            if self.ohlcv_transport_error or any(
+                k.lower() in url.lower() for k in self.ohlcv_transport_error_for
+            ):
                 raise httpx.ConnectError("ohlcv refused", request=request)
-            if self.ohlcv_status != 200:
-                return self._respond(self.ohlcv_status, {"error": "unavailable"})
+            status = next(
+                (v for k, v in self.ohlcv_status_by_pool.items() if k.lower() in url.lower()),
+                self.ohlcv_status,
+            )
+            if status != 200:
+                return self._respond(status, {"error": "unavailable"})
             rows = next(
                 (v for k, v in self.bars_by_pool.items() if k.lower() in url.lower()),
                 self.bars,
@@ -591,7 +624,9 @@ class TestRawLineage:
         )
 
         providers = {o.provider for o in engine.log.outcomes if o.raw_object_id}
-        assert providers == {DEXSCREENER_PROVIDER, DEFILLAMA_PROVIDER, GECKOTERMINAL_PROVIDER}
+        # DefiLlama makes no request without token identities, so it contributes no
+        # preserved object here; see TestContextIdentity.
+        assert providers == {DEXSCREENER_PROVIDER, GECKOTERMINAL_PROVIDER}
 
     def test_an_http_error_body_is_preserved_before_raising(self, store: Store) -> None:
         node = MockDexNode(ohlcv_status=500)
@@ -978,7 +1013,7 @@ class TestRunnerPublication:
             tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
         )
 
-        assert report["raw_dependency_count"] >= 3
+        assert report["raw_dependency_count"] >= 2
         assert report["failed_acquisition_count"] == 0
         assert report["live_eligible"] is False
         assert report["catalog_reconciled"] is True
@@ -1373,4 +1408,344 @@ class TestRetryAndRateLimits:
         assert report["retry_count"] == 2
         assert len(report["rate_limit_incidents"]) == 3
         assert all(i["rate_limited"] for i in report["rate_limit_incidents"])
+
+
+# ---------------------------------------------------------------------------
+# REVIEW-0237 corrections
+# ---------------------------------------------------------------------------
+
+class TestTerminalStatesBlockPublication:
+    """Finding 1: a screened-PASS pool that failed acquisition blocks the run.
+
+    Each sibling here produces *no* gaps and *no* missing intervals, so a
+    coverage-only gate cannot see it. The clean pool has publishable rows, so without
+    a terminal-state gate the run would publish it and silently drop the other.
+    """
+
+    def _mixed(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch,
+        node: MockDexNode,
+    ) -> tuple[int, dict[str, Any]]:
+        return run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch, node=node,
+            pools=[
+                {"chain": "arbitrum", "pool_address": POOL},
+                {"chain": "base", "pool_address": POOL_B},
+            ],
+            end_time=day(4),
+        )
+
+    def test_a_clean_pool_plus_an_http_failure_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        node = MockDexNode(bars_by_pool={POOL: [bar_row(i) for i in range(5)]},
+                           ohlcv_status_by_pool={POOL_B: 500})
+
+        code, report = self._mixed(tmp_path, store, monkeypatch, node)
+
+        assert code == 1
+        assert report["pool_states"][f"base:{POOL_B}"] == "FAILED"
+        assert read_snapshot(store) == []
+        assert WatermarkStore(store.watermark_path).load() == {}
+
+    def test_a_clean_pool_plus_a_transport_failure_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        node = MockDexNode(bars_by_pool={POOL: [bar_row(i) for i in range(5)]},
+                           ohlcv_transport_error_for={POOL_B})
+
+        code, report = self._mixed(tmp_path, store, monkeypatch, node)
+
+        assert code == 1
+        assert report["pool_states"][f"base:{POOL_B}"] == "FAILED"
+        assert read_snapshot(store) == []
+
+    def test_a_clean_pool_plus_an_invalid_payload_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        node = MockDexNode(bars_by_pool={
+            POOL: [bar_row(i) for i in range(5)],
+            POOL_B: [[int(day(0).timestamp()), 10.0, 5.0, 20.0, 10.0, 1.0]],
+        })
+
+        code, report = self._mixed(tmp_path, store, monkeypatch, node)
+
+        assert code == 1
+        assert report["pool_states"][f"base:{POOL_B}"] == "INVALID"
+        assert read_snapshot(store) == []
+
+    def test_a_clean_pool_plus_an_empty_result_publishes_nothing(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        node = MockDexNode(bars_by_pool={
+            POOL: [bar_row(i) for i in range(5)], POOL_B: [],
+        })
+
+        code, report = self._mixed(tmp_path, store, monkeypatch, node)
+
+        assert code == 1
+        assert report["pool_states"][f"base:{POOL_B}"] == "EMPTY"
+        assert read_snapshot(store) == []
+
+    def test_all_clean_pools_still_publish(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        node = MockDexNode(bars_by_pool={
+            POOL: [bar_row(i) for i in range(5)],
+            POOL_B: [bar_row(i) for i in range(5)],
+        })
+
+        code, report = self._mixed(tmp_path, store, monkeypatch, node)
+
+        assert code == 0
+        assert report["blocking_pools"] == []
+        assert set(report["pool_states"].values()) == {"PUBLISHABLE"}
+        assert report["snapshot_row_count"] == 10
+
+    def test_a_screened_out_pool_does_not_block(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Only pools that passed screening can block; a rejected pool is a decision."""
+        node = MockDexNode(
+            bars_by_pool={POOL: [bar_row(i) for i in range(5)]},
+            liquidity_by_pool={POOL_B: 1.0}, volume_by_pool={POOL_B: 1.0},
+        )
+
+        code, report = self._mixed(tmp_path, store, monkeypatch, node)
+
+        assert code == 0
+        assert report["pool_states"][f"base:{POOL_B}"] == "SCREENED_OUT"
+        assert report["snapshot_row_count"] == 5
+
+    def test_an_unbacked_already_current_pool_blocks_a_clean_sibling(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A watermark alone is not proof of coverage.
+
+        Pool B is watermarked past the pinned end but has no canonical rows behind it.
+        Without verification the clean pool A would publish while B -- which the run
+        claims is current -- is absent from the snapshot entirely.
+        """
+        WatermarkStore(store.watermark_path).save({
+            watermark_key(
+                provider="geckoterminal",
+                identity=PoolIdentity.create("base", POOL_B),
+            ): day(9).isoformat(),
+        })
+
+        code, report = self._mixed(
+            tmp_path, store, monkeypatch,
+            MockDexNode(bars_by_pool={POOL: [bar_row(i) for i in range(5)]}),
+        )
+
+        assert report["pool_states"][f"base:{POOL_B}"] == "ALREADY_CURRENT"
+        assert code == 1, "an unbacked ALREADY_CURRENT pool must block publication"
+        assert read_snapshot(store) == []
+        assert f"base:{POOL_B}" in [b["pool"] for b in report["blocking_pools"]]
+
+    def test_already_current_requires_verified_prior_coverage(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Re-running the same window is only safe when prior rows prove completeness."""
+        code, _ = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
+        )
+        assert code == 0
+
+        code2, report2 = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
+        )
+
+        assert report2["pool_states"][f"{CHAIN}:{POOL}"] == "ALREADY_CURRENT"
+        assert code2 == 1, "nothing new to publish"
+        assert read_snapshot(store), "prior canonical data survives"
+
+
+class TestScreeningIsBoundToPoolIdentity:
+    """Finding 2: metrics for another pair must not admit the requested pool."""
+
+    def test_a_mismatched_pair_address_is_unavailable(self, store: Store) -> None:
+        node = MockDexNode(pair_address=POOL_B)
+        engine = make_engine(store, node)
+
+        decision = engine.screen(identity())
+
+        assert decision.status is ScreeningStatus.UNAVAILABLE
+        assert "no returned pair matches" in decision.reason
+
+    def test_a_mismatched_chain_id_is_unavailable(self, store: Store) -> None:
+        node = MockDexNode(pair_chain_id="base")
+        engine = make_engine(store, node)
+
+        decision = engine.screen(identity())
+
+        assert decision.status is ScreeningStatus.UNAVAILABLE
+
+    @pytest.mark.parametrize("pairs", [[{}], [{"chainId": CHAIN}], [{"pairAddress": POOL}]])
+    def test_a_pair_without_identity_is_unavailable(
+        self, store: Store, pairs: list[dict[str, Any]]
+    ) -> None:
+        node = MockDexNode(pairs_override=pairs)
+        engine = make_engine(store, node)
+
+        assert engine.screen(identity()).status is ScreeningStatus.UNAVAILABLE
+
+    def test_a_matching_pair_is_selected_from_several(self, store: Store) -> None:
+        node = MockDexNode(pairs_override=[
+            {"chainId": CHAIN, "pairAddress": POOL_B,
+             "liquidity": {"usd": 1.0}, "volume": {"h24": 1.0}},
+            {"chainId": CHAIN, "pairAddress": POOL,
+             "liquidity": {"usd": 250_000.0}, "volume": {"h24": 90_000.0}},
+        ])
+        engine = make_engine(store, node)
+
+        decision = engine.screen(identity())
+
+        assert decision.status is ScreeningStatus.PASS
+        assert decision.authoritative is not None
+        assert decision.authoritative.liquidity_usd == 250_000.0
+
+    def test_evm_identity_matching_is_case_insensitive(self, store: Store) -> None:
+        node = MockDexNode(pair_address=POOL.upper().replace("0X", "0x"))
+        engine = make_engine(store, node)
+
+        assert engine.screen(identity()).status is ScreeningStatus.PASS
+
+    def test_a_mismatched_identity_never_rejects(self, store: Store) -> None:
+        """It is unobserved, not observed-and-below-threshold."""
+        node = MockDexNode(pair_address=POOL_B, liquidity=1.0, volume_24h=1.0)
+        engine = make_engine(store, node)
+
+        assert engine.screen(identity()).status is not ScreeningStatus.REJECT
+
+
+class TestContextIdentity:
+    """Finding 3: never query a token endpoint with a pool address."""
+
+    def test_no_request_is_made_without_token_addresses(self, store: Store) -> None:
+        node = MockDexNode()
+        engine = make_engine(store, node)
+
+        engine.screen(identity())
+
+        assert not any("llama" in url for url in node.requests)
+        observations = {o.provider: o for o in engine.screen(identity()).observations}
+        assert observations[DEFILLAMA_PROVIDER].status is ScreeningStatus.CONTEXT_ONLY
+        assert "no base/quote token addresses" in observations[DEFILLAMA_PROVIDER].reason
+
+    def test_token_addresses_are_used_when_supplied(self, store: Store) -> None:
+        node = MockDexNode()
+        engine = make_engine(store, node)
+        token_a = "0x" + "a" * 40
+        token_b = "0x" + "b" * 40
+
+        engine.screen(identity(), token_addresses=[token_a, token_b])
+
+        llama = [u for u in node.requests if "llama" in u]
+        assert len(llama) == 1
+        assert token_a in llama[0] and token_b in llama[0]
+        assert POOL not in llama[0], "a pool address must never be sent to a token endpoint"
+
+    def test_context_can_never_pass_a_pool_even_with_tokens(self, store: Store) -> None:
+        node = MockDexNode(screening_status=503)
+        engine = make_engine(store, node)
+
+        decision = engine.screen(identity(), token_addresses=["0x" + "a" * 40])
+
+        assert decision.status is ScreeningStatus.UNAVAILABLE
+
+    def test_token_addresses_are_validated_by_chain_family(self) -> None:
+        assert validate_token_addresses(["0x" + "A" * 40], chain=CHAIN) == ("0x" + "a" * 40,)
+        with pytest.raises(DexSnapshotError, match="not a valid 20-byte EVM address"):
+            validate_token_addresses(["0xdeadbeef"], chain=CHAIN)
+
+    def test_absent_tokens_validate_to_nothing(self) -> None:
+        assert validate_token_addresses(None, chain=CHAIN) == ()
+        assert validate_token_addresses([], chain=CHAIN) == ()
+
+
+class TestRestoredRowsAreRevalidated:
+    """Finding 4: a prior snapshot is untrusted input at merge time."""
+
+    def _record(self, **overrides: Any) -> dict[str, Any]:
+        record = {
+            "chain": CHAIN, "pool_address": POOL, "timestamp": day(0).isoformat(),
+            "timestamp_us": int(day(0).timestamp() * 1_000_000),
+            "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 5.0,
+            "provider": GECKOTERMINAL_PROVIDER, "raw_object_id": "raw_" + "a" * 64,
+        }
+        record.update(overrides)
+        return record
+
+    def test_a_valid_prior_row_is_restored(self) -> None:
+        bars = bars_from_records([self._record()])
+        assert len(bars) == 1
+        assert bars[0].timestamp == day(0)
+
+    def test_a_row_violating_ohlc_invariants_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="outside"):
+            bars_from_records([self._record(open=999.0)])
+
+    def test_a_negative_volume_row_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="non-negative"):
+            bars_from_records([self._record(volume=-1.0)])
+
+    def test_a_misaligned_row_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="not aligned"):
+            bars_from_records([self._record(timestamp=(day(0) + timedelta(hours=3)).isoformat())])
+
+    def test_a_naive_timestamp_row_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="timezone-aware"):
+            bars_from_records([self._record(timestamp="2026-06-01T00:00:00")])
+
+    def test_a_row_from_a_provider_without_ohlcv_capability_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="no OHLCV capability"):
+            bars_from_records([self._record(provider=DEXSCREENER_PROVIDER)])
+
+    def test_a_malformed_address_row_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="not a valid 20-byte EVM address"):
+            bars_from_records([self._record(pool_address="0xdeadbeef")])
+
+    def test_a_non_canonical_address_row_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="not canonical"):
+            bars_from_records([self._record(pool_address=POOL.upper().replace("0X", "0x"))])
+
+    def test_duplicate_identities_are_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="duplicate identity"):
+            bars_from_records([self._record(), self._record()])
+
+    def test_a_missing_column_is_refused(self) -> None:
+        record = self._record()
+        del record["volume"]
+        with pytest.raises(DexSnapshotError, match="missing 'volume'"):
+            bars_from_records([record])
+
+    def test_a_row_outside_declared_lineage_is_refused(self) -> None:
+        with pytest.raises(DexSnapshotError, match="lineage does not declare"):
+            bars_from_records(
+                [self._record()], allowed_raw_object_ids={"raw_" + "b" * 64}
+            )
+
+    def test_a_row_inside_declared_lineage_is_accepted(self) -> None:
+        bars = bars_from_records(
+            [self._record()], allowed_raw_object_ids={"raw_" + "a" * 64}
+        )
+        assert len(bars) == 1
+
+    def test_the_runner_validates_restored_rows_against_lineage(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, _ = run_runner(
+            tmp_path=tmp_path, store=store, node=MockDexNode(), monkeypatch=monkeypatch
+        )
+        assert code == 0
+
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch,
+            node=MockDexNode(bars=[bar_row(5)]), end_time=day(5),
+        )
+
+        prior = report["prior_dataset_reconciliation"]
+        assert prior["rows_revalidated"] == 5
+        assert prior["declared_raw_object_ids"] >= 1
 

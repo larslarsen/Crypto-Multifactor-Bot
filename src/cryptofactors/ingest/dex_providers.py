@@ -520,6 +520,7 @@ class ScreeningProvider(ABC):
         pool_address: str,
         thresholds: ScreeningThresholds,
         acquirer: RawHttpAcquirer,
+        token_addresses: Sequence[str] | None = None,
     ) -> ScreeningObservation:
         """Return this provider's screening evidence for one pool."""
 
@@ -555,7 +556,9 @@ class DexScreenerScreeningProvider(ScreeningProvider):
         pool_address: str,
         thresholds: ScreeningThresholds,
         acquirer: RawHttpAcquirer,
+        token_addresses: Sequence[str] | None = None,
     ) -> ScreeningObservation:
+        del token_addresses  # screening metrics are pool-scoped
         outcome = acquirer.get_json(
             provider=self.provider_id,
             url=f"{self.BASE_URL}/{chain}/{pool_address}",
@@ -571,9 +574,15 @@ class DexScreenerScreeningProvider(ScreeningProvider):
         pairs = payload.get("pairs")
         if not isinstance(pairs, list) or not pairs:
             return self._unavailable(outcome, "no pairs in screening response")
-        pair = pairs[0]
-        if not isinstance(pair, Mapping):
-            return self._unavailable(outcome, "pair entry is not an object")
+
+        # Metrics are only authoritative for the pool we asked about. Taking pairs[0]
+        # blindly would let valid metrics for a different pair admit this one.
+        pair = self._matching_pair(pairs, chain=chain, pool_address=pool_address)
+        if pair is None:
+            return self._unavailable(
+                outcome,
+                f"no returned pair matches chainId={chain!r} pairAddress={pool_address!r}",
+            )
 
         liquidity = pair.get("liquidity")
         volume = pair.get("volume")
@@ -586,6 +595,29 @@ class DexScreenerScreeningProvider(ScreeningProvider):
             raw_object_id=outcome.raw_object_id,
             acquisition_id=outcome.acquisition_id,
         )
+
+    @staticmethod
+    def _matching_pair(
+        pairs: Sequence[Any], *, chain: str, pool_address: str
+    ) -> Mapping[str, Any] | None:
+        """The returned pair whose identity equals the requested identity."""
+        for pair in pairs:
+            if not isinstance(pair, Mapping):
+                continue
+            pair_chain = pair.get("chainId")
+            pair_address = pair.get("pairAddress")
+            if not isinstance(pair_chain, str) or not isinstance(pair_address, str):
+                continue
+            if pair_chain.strip().lower() != chain.strip().lower():
+                continue
+            # EVM addresses differ only by case; non-EVM identities are compared as-is
+            # by the caller having already canonicalised pool_address.
+            if pair_address.strip() == pool_address or (
+                pair_address.strip().lower() == pool_address.lower()
+                and pool_address.startswith("0x")
+            ):
+                return pair
+        return None
 
     def _unavailable(self, outcome: AcquisitionOutcome, reason: str) -> ScreeningObservation:
         return ScreeningObservation(
@@ -602,7 +634,12 @@ class DexScreenerScreeningProvider(ScreeningProvider):
 
 
 class DefiLlamaContextProvider(ScreeningProvider):
-    """Context only. Called for auditable context; can never make a pool pass."""
+    """Context only. Called for auditable context; can never make a pool pass.
+
+    The coins endpoint resolves *token* prices. Querying it with a pool address is a
+    semantically invalid request that can only ever return nothing, so token
+    identities must be supplied explicitly or no request is made at all.
+    """
 
     provider_id = DEFILLAMA_PROVIDER
     capability = ProviderCapability.CONTEXT
@@ -617,17 +654,28 @@ class DefiLlamaContextProvider(ScreeningProvider):
         pool_address: str,
         thresholds: ScreeningThresholds,
         acquirer: RawHttpAcquirer,
+        token_addresses: Sequence[str] | None = None,
     ) -> ScreeningObservation:
+        tokens = [t for t in (token_addresses or []) if t]
+        if not tokens:
+            return self._context_only(
+                reason="context only; no base/quote token addresses supplied"
+            )
+
+        coins = ",".join(f"{chain}:{token}" for token in tokens)
         outcome = acquirer.get_json(
             provider=self.provider_id,
-            url=f"{self.BASE_URL}/{chain}:{pool_address}",
+            url=f"{self.BASE_URL}/{coins}",
             source_id=self.SOURCE_ID,
-            original_name=f"defillama_{chain}_{pool_address}.json",
+            original_name=f"defillama_{chain}_tokens.json",
         )
         if not outcome.ok:
             return self._context_only(
                 reason=outcome.detail or "acquisition failed", outcome=outcome
             )
-        coins = outcome.payload.get("coins") if isinstance(outcome.payload, Mapping) else None
-        count = len(coins) if isinstance(coins, Mapping) else 0
-        return self._context_only(reason=f"context only; {count} coin price(s)", outcome=outcome)
+        prices = outcome.payload.get("coins") if isinstance(outcome.payload, Mapping) else None
+        matched = len(prices) if isinstance(prices, Mapping) else 0
+        return self._context_only(
+            reason=f"context only; {matched}/{len(tokens)} token price(s) resolved",
+            outcome=outcome,
+        )
