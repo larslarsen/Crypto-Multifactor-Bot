@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: DATA-008
-State: READY
-Next required actor: Sr Dev - Grok Build
+State: AWAITING_REVIEW
+Next required actor: Reviewer
 Next ticket authorized: NONE
 
 ## Summary
