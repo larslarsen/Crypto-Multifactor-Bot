@@ -14,6 +14,7 @@ import json
 import sqlite3
 import sys
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,7 @@ from cryptofactors.acquisition.binance_universe import (
     classify_base_asset,
     evaluate_history,
     is_leveraged_token,
+    load_base_panel_symbols,
     parse_exchange_info,
     parse_first_kline_open_time,
     parse_ticker_evidence,
@@ -243,10 +245,20 @@ def seed_base_panel(store: "Store") -> str:
     import sqlite3
 
     import pyarrow as pa
+
     from cryptofactors.catalog.dataset.models import (
-        CodeIdentity, ConfigIdentity, CoverageWindow, DatasetStatistics,
-        DatasetStoreConfig, OutputFileSpec, PublishPlan, QualityStatus,
-        RowCountPolicy, RowCountReceipt, SchemaIdentity, TransformSpec,
+        CodeIdentity,
+        ConfigIdentity,
+        CoverageWindow,
+        DatasetStatistics,
+        DatasetStoreConfig,
+        OutputFileSpec,
+        PublishPlan,
+        QualityStatus,
+        RowCountPolicy,
+        RowCountReceipt,
+        SchemaIdentity,
+        TransformSpec,
     )
     from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
     from cryptofactors.catalog.dataset.publisher import DatasetPublisher
@@ -1357,4 +1369,211 @@ class TestReview0241Corrections:
         assert waits == [0.0, 2.0, 4.0]
         assert [i["backoff_seconds"] for i in
                 [o.as_dict() for o in acquirer.log.rate_limit_incidents]] == [0.0, 2.0, 4.0]
+
+
+class TestBasePanelFailsClosed:
+    """REVIEW-0242(5): a base panel that cannot be proven must stop the run.
+
+    An empty or wrong base would let the additive take re-add symbols the accepted
+    panel already covers, which is the failure the pinning was introduced to prevent.
+    """
+
+    def test_a_seeded_base_resolves_its_exact_membership(self, store: Store) -> None:
+        base_id = seed_base_panel(store)
+
+        symbols = load_base_panel_symbols(
+            store.db, base_id, store_root=store.store_root
+        )
+
+        assert symbols == BASE_PANEL_SYMBOLS
+
+    def test_an_unregistered_base_id_fails_closed(self, store: Store) -> None:
+        seed_base_panel(store)
+
+        with pytest.raises(BinanceUniverseError, match="not registered in this catalog"):
+            load_base_panel_symbols(
+                store.db, "ds_" + "0" * 64, store_root=store.store_root
+            )
+
+    def test_a_base_with_no_mappable_instruments_fails_closed(self, store: Store) -> None:
+        base_id = seed_base_panel(store)
+        conn = sqlite3.connect(store.db)
+        try:
+            conn.execute("DELETE FROM ref_instrument WHERE instrument_id IN ('9101','9102')")
+            conn.commit()
+        finally:
+            conn.close()
+
+        with pytest.raises(BinanceUniverseError, match="mappable to symbols"):
+            load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
+
+    def test_a_partially_mappable_base_fails_closed(self, store: Store) -> None:
+        """23 instruments with 22 symbols is not a reconciled base."""
+        base_id = seed_base_panel(store)
+        conn = sqlite3.connect(store.db)
+        try:
+            conn.execute("DELETE FROM ref_instrument WHERE instrument_id = '9102'")
+            conn.commit()
+        finally:
+            conn.close()
+
+        with pytest.raises(BinanceUniverseError, match="mappable to symbols"):
+            load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
+
+    def test_a_missing_base_output_tree_fails_closed(self, store: Store) -> None:
+        base_id = seed_base_panel(store)
+        for parquet in (store.store_root / "datasets").rglob("bars.parquet"):
+            parquet.unlink()
+
+        with pytest.raises(BinanceUniverseError, match="no instrument identities"):
+            load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
+
+    def test_an_unreadable_catalog_fails_closed(self, tmp_path: Path) -> None:
+        with pytest.raises(BinanceUniverseError):
+            load_base_panel_symbols(
+                tmp_path / "absent.db", "ds_" + "0" * 64, store_root=tmp_path
+            )
+
+    def test_the_runner_refuses_a_wrong_base_id(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with pytest.raises(BinanceUniverseError, match="not registered"):
+            run_runner(
+                tmp_path=tmp_path, store=store, node=MockBinance(),
+                monkeypatch=monkeypatch, base_panel_id="ds_" + "9" * 64,
+            )
+
+    def test_base_symbols_are_never_re_added(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        node = MockBinance(symbols=DEFAULT_SYMBOLS + [
+            spot_entry("AAAUSDT", "AAA"), spot_entry("BBBUSDT", "BBB"),
+        ])
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch
+        )
+
+        assert code == 0
+        excluded = {e["symbol"]: e["reason"] for e in report["excluded_symbols"]}
+        assert excluded["AAAUSDT"] == "ALREADY_COVERED"
+        assert excluded["BBBUSDT"] == "ALREADY_COVERED"
+        assert not set(report["additive_symbols"]) & BASE_PANEL_SYMBOLS
+        assert report["base_addition_symbols_disjoint"] is True
+
+
+class TestThirtyDayWindowValidation:
+    """REVIEW-0242(2): only an exact closed window may be labelled 30d."""
+
+    def _measure(self, store: Store, rows: Any) -> Any:
+        node = MockBinance()
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            params = dict(request.url.params)
+            if params.get("limit") == "30":
+                return node._respond(200, rows(int(params["startTime"])))
+            return original(request)
+
+        universe = BinanceUniverseAcquirer(
+            acquirer=RawHttpAcquirer(
+                raw_writer=store.writer,
+                client=REAL_HTTPX_CLIENT(transport=httpx.MockTransport(handler)),
+                log=AcquisitionLog(),
+            ),
+            base_url="https://binance.test",
+        )
+        return universe.fetch_trailing_volume("BTCUSDT", end_time=END_TIME)
+
+    @staticmethod
+    def _row(open_ms: int, volume: str = "1000.0") -> list[Any]:
+        return [open_ms, "1", "2", "0.5", "1", "5", open_ms + 86_399_999, volume, 3]
+
+    def test_a_complete_window_is_measured(self, store: Store) -> None:
+        evidence = self._measure(
+            store, lambda start: [self._row(start + i * 86_400_000) for i in range(30)]
+        )
+
+        assert evidence is not None
+        assert evidence.window == "30d"
+        assert evidence.quote_volume == pytest.approx(30_000.0)
+
+    def test_a_short_window_is_refused(self, store: Store) -> None:
+        assert self._measure(
+            store, lambda start: [self._row(start + i * 86_400_000) for i in range(29)]
+        ) is None
+
+    def test_an_internal_hole_is_refused(self, store: Store) -> None:
+        assert self._measure(
+            store,
+            lambda start: [
+                self._row(start + i * 86_400_000) for i in range(31) if i != 5
+            ],
+        ) is None
+
+    def test_a_duplicate_bar_is_refused(self, store: Store) -> None:
+        assert self._measure(
+            store,
+            lambda start: [self._row(start)] + [
+                self._row(start + i * 86_400_000) for i in range(30)
+            ],
+        ) is None
+
+    def test_a_misaligned_bar_is_refused(self, store: Store) -> None:
+        assert self._measure(
+            store,
+            lambda start: [
+                self._row(start + i * 86_400_000 + (3_600_000 if i == 4 else 0))
+                for i in range(30)
+            ],
+        ) is None
+
+    def test_a_shifted_window_is_refused(self, store: Store) -> None:
+        """30 contiguous bars that do not end at the pinned time are not the window."""
+        assert self._measure(
+            store,
+            lambda start: [
+                self._row(start + (i + 3) * 86_400_000) for i in range(30)
+            ],
+        ) is None
+
+    def test_a_negative_volume_is_refused(self, store: Store) -> None:
+        assert self._measure(
+            store,
+            lambda start: [
+                self._row(start + i * 86_400_000, "-1" if i == 2 else "1000.0")
+                for i in range(30)
+            ],
+        ) is None
+
+    def test_an_empty_response_is_refused(self, store: Store) -> None:
+        assert self._measure(store, lambda start: []) is None
+
+
+class TestRankingCoversTheFullUniverse:
+    """REVIEW-0242(2): 24h evidence must not truncate the ranked field."""
+
+    def test_a_low_24h_symbol_with_high_30d_volume_can_still_rank(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Under the old prefilter this symbol could never enter the ranking."""
+        symbols = DEFAULT_SYMBOLS + [spot_entry("SLEEPERUSDT", "SLEEPER")]
+        node = MockBinance(
+            symbols=symbols,
+            volumes={"SLEEPERUSDT": 1.0},  # bottom of the 24h field
+        )
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch, top_n=10
+        )
+
+        assert code == 0
+        assert "SLEEPERUSDT" in report["selected_symbols_this_run"]
+
+    def test_the_config_fingerprint_covers_selection_controls(self) -> None:
+        base = SelectionConfig(base_panel_dataset_id="ds_a", symbols_per_day=10)
+
+        assert base.fingerprint() != replace(base, symbols_per_day=11).fingerprint()
+        assert base.fingerprint() != replace(base, base_panel_dataset_id="ds_b").fingerprint()
+        assert base.fingerprint() != replace(base, top_n=3).fingerprint()
 
