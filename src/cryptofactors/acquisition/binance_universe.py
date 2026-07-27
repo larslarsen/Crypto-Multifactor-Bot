@@ -92,7 +92,10 @@ class DeferralReason(str, Enum):
 
     INSUFFICIENT_HISTORY = "INSUFFICIENT_HISTORY"
     INSUFFICIENT_VOLUME_WINDOW = "INSUFFICIENT_VOLUME_WINDOW"
-    HISTORY_UNKNOWN = "HISTORY_UNKNOWN"
+    #: The provider answered and the symbol genuinely has no bars.
+    NO_HISTORY = "NO_HISTORY"
+    #: We could not observe the symbol at all. Not a deferral: it stays pending.
+    HISTORY_REQUEST_FAILED = "HISTORY_REQUEST_FAILED"
 
 
 #: Non-target base assets. Membership is data, not code, so the taxonomy version
@@ -423,6 +426,39 @@ def parse_ticker_evidence(
     return evidence
 
 
+class MeasurementStatus(str, Enum):
+    """Why a 30-day measurement did or did not produce evidence.
+
+    A genuinely short window is a fact about the symbol; a failed or malformed
+    request is a fact about us. Collapsing both into "no evidence" let a transient
+    failure silently promote a lower-ranked survivor into the canonical universe.
+    """
+
+    OK = "OK"
+    INCOMPLETE_WINDOW = "INCOMPLETE_WINDOW"
+    FAILED = "FAILED"
+
+
+@dataclass(frozen=True, slots=True)
+class VolumeMeasurement:
+    symbol: str
+    status: MeasurementStatus
+    evidence: VolumeEvidence | None
+    reason: str
+
+    @property
+    def usable(self) -> bool:
+        return self.status is MeasurementStatus.OK and self.evidence is not None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "symbol": self.symbol,
+            "status": self.status.value,
+            "reason": self.reason,
+            "evidence": None if self.evidence is None else self.evidence.as_dict(),
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class RankedSymbol:
     symbol: str
@@ -496,6 +532,19 @@ class SelectionConfig:
     def fingerprint(self) -> str:
         return hashlib.sha256(canonical_json(self.as_dict()).encode()).hexdigest()
 
+    def selection_fingerprint(self) -> str:
+        """Identity of *what* is being selected, excluding how fast we may work.
+
+        Queue progress is keyed by this: changing capacity or cursor policy must not
+        discard position, but changing eligibility, thresholds, quote assets, the
+        pinned range or the base binding must start a new queue.
+        """
+        material = {
+            k: v for k, v in self.as_dict().items()
+            if k not in ("symbols_per_day", "cursor_policy")
+        }
+        return hashlib.sha256(canonical_json(material).encode()).hexdigest()
+
 
 @dataclass
 class SelectionResult:
@@ -515,6 +564,61 @@ class SelectionResult:
             "selected": [item.as_dict() for item in self.ranked],
             "excluded": [item.as_dict() for item in self.excluded],
         }
+
+
+def filter_non_volume_taxonomy(
+    *,
+    discovered: Sequence[SpotSymbol],
+    config: SelectionConfig,
+    already_covered: Iterable[str] = (),
+) -> tuple[list[SpotSymbol], list[Exclusion]]:
+    """Apply every non-volume rule, without consulting volume evidence at all.
+
+    Separated so that measurement coverage cannot depend on the 24-hour ticker: a
+    tradable target symbol missing from that feed still has to receive a 30-day
+    measurement, and previously it was dropped as NO_VOLUME_EVIDENCE instead.
+    """
+    covered = {str(item).strip().upper() for item in already_covered}
+    known_bases = {item.base_asset for item in discovered}
+    survivors: list[SpotSymbol] = []
+    excluded: list[Exclusion] = []
+
+    for spot in discovered:
+        def drop(reason: ExclusionReason, detail: str, spot: SpotSymbol = spot) -> None:
+            excluded.append(Exclusion(
+                symbol=spot.symbol, base_asset=spot.base_asset,
+                quote_asset=spot.quote_asset, reason=reason, detail=detail,
+            ))
+
+        if spot.quote_asset not in config.quote_assets:
+            drop(
+                ExclusionReason.QUOTE_ASSET_NOT_TARGETED,
+                f"quote asset {spot.quote_asset} not in {list(config.quote_assets)}",
+            )
+            continue
+        if not spot.is_spot_trading_allowed or (
+            spot.permissions and not any("SPOT" in p for p in spot.permissions)
+        ):
+            drop(ExclusionReason.NOT_SPOT, "symbol is not spot tradable")
+            continue
+        if spot.status != "TRADING":
+            drop(ExclusionReason.NOT_TRADING, f"exchangeInfo status is {spot.status}")
+            continue
+        if is_leveraged_token(
+            spot.base_asset, permissions=spot.permissions, known_bases=known_bases
+        ):
+            drop(ExclusionReason.LEVERAGED_TOKEN, f"{spot.base_asset} is a leveraged token")
+            continue
+        taxonomy = classify_base_asset(spot.base_asset)
+        if taxonomy is not None:
+            drop(taxonomy, f"{spot.base_asset} is classified {taxonomy.value}")
+            continue
+        if spot.symbol in covered:
+            drop(ExclusionReason.ALREADY_COVERED, "symbol already in the covered panel")
+            continue
+        survivors.append(spot)
+
+    return survivors, excluded
 
 
 def select_symbols(
@@ -611,6 +715,11 @@ class HistoryEligibility:
     reason: DeferralReason | None
     raw_object_id: str | None
 
+    @property
+    def observation_failed(self) -> bool:
+        """True when eligibility is unknown because the request failed."""
+        return self.reason is DeferralReason.HISTORY_REQUEST_FAILED
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "symbol": self.symbol,
@@ -651,7 +760,7 @@ def evaluate_history(
     if first_open_time is None:
         return HistoryEligibility(
             symbol=symbol, eligible=False, first_bar_open_time=None, history_days=None,
-            reason=DeferralReason.HISTORY_UNKNOWN, raw_object_id=raw_object_id,
+            reason=DeferralReason.NO_HISTORY, raw_object_id=raw_object_id,
         )
     days = (as_of - first_open_time) // timedelta(days=1)
     eligible = days >= min_history_days
@@ -711,7 +820,7 @@ class BinanceUniverseAcquirer:
 
     def fetch_trailing_volume(
         self, symbol: str, *, end_time: datetime, days: int = RANKING_DAYS
-    ) -> VolumeEvidence | None:
+    ) -> VolumeMeasurement:
         """Measured trailing N-day quote volume, or None when the window is incomplete.
 
         Binance exposes no 30-day volume field, so the ticket's measure is summed from
@@ -729,8 +838,16 @@ class BinanceUniverseAcquirer:
             },
             source_id=KLINES_SOURCE_ID, original_name=f"binance_vol{days}_{symbol}.json",
         )
-        if not outcome.ok or not isinstance(outcome.payload, list):
-            return None
+        if not outcome.ok:
+            return VolumeMeasurement(
+                symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
+                reason=f"{outcome.failure_kind}: {outcome.detail}",
+            )
+        if not isinstance(outcome.payload, list):
+            return VolumeMeasurement(
+                symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
+                reason="klines response is not a list",
+            )
 
         day_ms = 86_400_000
         acquired_ms = int(outcome.acquired_at.timestamp() * 1000)
@@ -738,31 +855,52 @@ class BinanceUniverseAcquirer:
         seen: dict[int, float] = {}
         for row in outcome.payload:
             if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) < 8:
-                return None
+                return VolumeMeasurement(
+                    symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
+                    reason="malformed kline row",
+                )
             open_ms, close_ms = row[0], row[6]
             for value in (open_ms, close_ms):
                 if isinstance(value, bool) or not isinstance(value, (int, float)):
-                    return None
+                    return VolumeMeasurement(
+                        symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
+                        reason="malformed kline timestamps",
+                    )
             open_ms, close_ms = int(open_ms), int(close_ms)
             if open_ms % day_ms:
-                return None
+                return VolumeMeasurement(
+                    symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
+                    reason="kline open time is not day-aligned",
+                )
             # A bar is only usable once its interval has ended and we observed it after
             # that; otherwise the final candle is still forming and its volume is
             # partial, which would silently understate a 30-day measure.
             if close_ms != open_ms + day_ms - 1 or close_ms >= acquired_ms:
-                return None
+                return VolumeMeasurement(
+                    symbol=symbol, status=MeasurementStatus.INCOMPLETE_WINDOW,
+                    evidence=None, reason="window contains a bar that had not closed",
+                )
             value = _finite(row[7])
             if value is None or value < 0 or open_ms in seen:
-                return None
+                return VolumeMeasurement(
+                    symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
+                    reason="malformed or duplicated kline volume",
+                )
             seen[open_ms] = value
 
         # Exactly the pinned window: no holes, no partial trailing bar, no extras.
         if sorted(seen) != expected:
-            return None
-        return VolumeEvidence(
-            symbol=symbol, quote_volume=sum(seen.values()), trade_count=len(seen),
-            window=f"{days}d", observed_at=outcome.acquired_at,
-            raw_object_id=str(outcome.raw_object_id),
+            return VolumeMeasurement(
+                symbol=symbol, status=MeasurementStatus.INCOMPLETE_WINDOW, evidence=None,
+                reason=f"no complete {days}-day closed-bar window at the pinned end",
+            )
+        return VolumeMeasurement(
+            symbol=symbol, status=MeasurementStatus.OK, reason="complete window",
+            evidence=VolumeEvidence(
+                symbol=symbol, quote_volume=sum(seen.values()), trade_count=len(seen),
+                window=f"{days}d", observed_at=outcome.acquired_at,
+                raw_object_id=str(outcome.raw_object_id),
+            ),
         )
 
     def fetch_history_eligibility(
@@ -775,16 +913,20 @@ class BinanceUniverseAcquirer:
             source_id=KLINES_SOURCE_ID, original_name=f"binance_klines_{symbol}.json",
         )
         if not outcome.ok:
+            # We could not observe the symbol. That is our failure, not a fact about
+            # the asset, so it must stay pending rather than be recorded as deferred.
             return HistoryEligibility(
                 symbol=symbol, eligible=False, first_bar_open_time=None, history_days=None,
-                reason=DeferralReason.HISTORY_UNKNOWN, raw_object_id=outcome.raw_object_id,
+                reason=DeferralReason.HISTORY_REQUEST_FAILED,
+                raw_object_id=outcome.raw_object_id,
             )
         try:
             first_open = parse_first_kline_open_time(outcome.payload)
         except BinanceUniverseError:
             return HistoryEligibility(
                 symbol=symbol, eligible=False, first_bar_open_time=None, history_days=None,
-                reason=DeferralReason.HISTORY_UNKNOWN, raw_object_id=outcome.raw_object_id,
+                reason=DeferralReason.HISTORY_REQUEST_FAILED,
+                raw_object_id=outcome.raw_object_id,
             )
         return evaluate_history(
             symbol=symbol, first_open_time=first_open, as_of=as_of,
@@ -812,11 +954,14 @@ __all__ = [
     "SelectionConfig",
     "SelectionResult",
     "SpotSymbol",
+    "MeasurementStatus",
     "VolumeEvidence",
+    "VolumeMeasurement",
     "classify_base_asset",
     "BASE_PANEL_DATASET_ID",
     "load_base_panel_symbols",
     "evaluate_history",
+    "filter_non_volume_taxonomy",
     "is_leveraged_token",
     "parse_exchange_info",
     "parse_first_kline_open_time",

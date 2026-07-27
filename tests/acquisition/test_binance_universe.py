@@ -47,6 +47,7 @@ from cryptofactors.acquisition.binance_universe import (
     BinanceUniverseError,
     DeferralReason,
     ExclusionReason,
+    MeasurementStatus,
     SelectionConfig,
     classify_base_asset,
     evaluate_history,
@@ -643,14 +644,16 @@ class TestHistoryEligibility:
         assert not verdict.eligible
         assert verdict.reason is DeferralReason.INSUFFICIENT_HISTORY
 
-    def test_unknown_history_is_deferred(self) -> None:
+    def test_an_observed_absence_of_history_is_deferred(self) -> None:
+        """The provider answered and the symbol has no bars: a proven fact."""
         verdict = evaluate_history(
             symbol="XUSDT", first_open_time=None, as_of=END_TIME,
             min_history_days=365, raw_object_id=None,
         )
 
         assert not verdict.eligible
-        assert verdict.reason is DeferralReason.HISTORY_UNKNOWN
+        assert verdict.reason is DeferralReason.NO_HISTORY
+        assert not verdict.observation_failed
 
     def test_the_first_kline_open_time_is_decoded(self) -> None:
         moment = parse_first_kline_open_time([[OLD_LISTING_MS, "1", "1", "1", "1", "1"]])
@@ -664,7 +667,7 @@ class TestHistoryEligibility:
         with pytest.raises(BinanceUniverseError, match="must be a list"):
             parse_first_kline_open_time({})
 
-    def test_a_failed_history_probe_defers(self, store: Store) -> None:
+    def test_a_failed_history_probe_is_unknown_not_deferred(self, store: Store) -> None:
         node = MockBinance(history_status_by_symbol={"BTCUSDT": 500})
         universe = BinanceUniverseAcquirer(
             acquirer=make_acquirer(store, node), base_url="https://binance.test"
@@ -675,7 +678,8 @@ class TestHistoryEligibility:
         )
 
         assert not verdict.eligible
-        assert verdict.reason is DeferralReason.HISTORY_UNKNOWN
+        assert verdict.reason is DeferralReason.HISTORY_REQUEST_FAILED
+        assert verdict.observation_failed, "a failed request must stay pending"
 
 
 # ---------------------------------------------------------------------------
@@ -1011,6 +1015,15 @@ def run_runner(
     return code, json.loads(report_path.read_text(encoding="utf-8"))
 
 
+def queued_identities(store: Store) -> set[str]:
+    """Identities the persisted cursor considers safely resolved."""
+    if not store.watermark_path.exists():
+        return set()
+    document = json.loads(store.watermark_path.read_text(encoding="utf-8"))
+    queues = document.get(WatermarkStore.BUDGET_SECTION, {}).get("queues", {})
+    return {s for queue in queues.values() for s in queue.get("attempted", [])}
+
+
 def read_snapshot(store: Store) -> list[dict[str, Any]]:
     catalog = SqliteDatasetCatalog(store.db)
     try:
@@ -1258,7 +1271,7 @@ class TestReview0241Corrections:
         assert result.state is SymbolState.PUBLISHABLE
         assert len(result.bars) == 2500
 
-    def test_a_candidate_without_a_complete_window_is_excluded_with_a_reason(
+    def test_a_failed_measurement_blocks_rather_than_excluding(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         code, report = run_runner(
@@ -1266,11 +1279,13 @@ class TestReview0241Corrections:
             node=MockBinance(volume_status_by_symbol={"BTCUSDT": 500}),
         )
 
-        assert code == 0
         excluded = {e["symbol"]: e["reason"] for e in report["excluded_symbols"]}
-        # A failed 30d fetch is reported as an incomplete window, which is the more
-        # precise reason now that the window itself is validated.
-        assert excluded["BTCUSDT"] == "INSUFFICIENT_VOLUME_WINDOW"
+        # A failed 30d request is a failure, not evidence of low volume: it blocks
+        # rather than quietly promoting a lower-ranked survivor.
+        assert code == 1
+        assert "BTCUSDT" in {f["symbol"] for f in report["failed_measurements"]}
+        assert "BTCUSDT" in {b["symbol"] for b in report["blocking_symbols"]}
+        assert "BTCUSDT" not in excluded
 
     def test_the_report_uses_net_rows_and_global_spans(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
@@ -1497,18 +1512,19 @@ class TestThirtyDayWindowValidation:
         return [open_ms, "1", "2", "0.5", "1", "5", open_ms + 86_399_999, volume, 3]
 
     def test_a_complete_window_is_measured(self, store: Store) -> None:
-        evidence = self._measure(
+        measurement = self._measure(
             store, lambda start: [self._row(start + i * 86_400_000) for i in range(30)]
         )
 
-        assert evidence is not None
-        assert evidence.window == "30d"
-        assert evidence.quote_volume == pytest.approx(30_000.0)
+        assert measurement.usable
+        assert measurement.evidence is not None
+        assert measurement.evidence.window == "30d"
+        assert measurement.evidence.quote_volume == pytest.approx(30_000.0)
 
     def test_a_short_window_is_refused(self, store: Store) -> None:
         assert self._measure(
             store, lambda start: [self._row(start + i * 86_400_000) for i in range(29)]
-        ) is None
+        ).usable is False
 
     def test_an_internal_hole_is_refused(self, store: Store) -> None:
         assert self._measure(
@@ -1516,7 +1532,7 @@ class TestThirtyDayWindowValidation:
             lambda start: [
                 self._row(start + i * 86_400_000) for i in range(31) if i != 5
             ],
-        ) is None
+        ).usable is False
 
     def test_a_duplicate_bar_is_refused(self, store: Store) -> None:
         assert self._measure(
@@ -1524,7 +1540,7 @@ class TestThirtyDayWindowValidation:
             lambda start: [self._row(start)] + [
                 self._row(start + i * 86_400_000) for i in range(30)
             ],
-        ) is None
+        ).usable is False
 
     def test_a_misaligned_bar_is_refused(self, store: Store) -> None:
         assert self._measure(
@@ -1533,7 +1549,7 @@ class TestThirtyDayWindowValidation:
                 self._row(start + i * 86_400_000 + (3_600_000 if i == 4 else 0))
                 for i in range(30)
             ],
-        ) is None
+        ).usable is False
 
     def test_a_shifted_window_is_refused(self, store: Store) -> None:
         """30 contiguous bars that do not end at the pinned time are not the window."""
@@ -1542,7 +1558,7 @@ class TestThirtyDayWindowValidation:
             lambda start: [
                 self._row(start + (i + 3) * 86_400_000) for i in range(30)
             ],
-        ) is None
+        ).usable is False
 
     def test_a_negative_volume_is_refused(self, store: Store) -> None:
         assert self._measure(
@@ -1551,10 +1567,10 @@ class TestThirtyDayWindowValidation:
                 self._row(start + i * 86_400_000, "-1" if i == 2 else "1000.0")
                 for i in range(30)
             ],
-        ) is None
+        ).usable is False
 
     def test_an_empty_response_is_refused(self, store: Store) -> None:
-        assert self._measure(store, lambda start: []) is None
+        assert not self._measure(store, lambda start: []).usable
 
 
 class TestRankingCoversTheFullUniverse:
@@ -1709,11 +1725,11 @@ class TestClosedBarValidation:
         return [open_ms, "1", "2", "0.5", "1", "5", open_ms + 86_399_999, "1000.0", 3]
 
     def test_a_fully_closed_window_is_accepted(self, store: Store) -> None:
-        evidence = self._measure(
+        measurement = self._measure(
             store, lambda start: [self._closed(start + i * 86_400_000) for i in range(30)]
         )
 
-        assert evidence is not None
+        assert measurement.usable
 
     def test_a_still_forming_final_bar_is_refused(self, store: Store) -> None:
         """Open timestamps are all correct; only the close proves it has not ended."""
@@ -1751,7 +1767,9 @@ class TestClosedBarValidation:
             base_url="https://binance.test",
         )
         del _time
-        assert universe.fetch_trailing_volume("BTCUSDT", end_time=future) is None
+        measurement = universe.fetch_trailing_volume("BTCUSDT", end_time=future)
+        assert not measurement.usable
+        assert measurement.status is MeasurementStatus.INCOMPLETE_WINDOW
 
     def test_a_truncated_close_timestamp_is_refused(self, store: Store) -> None:
         def rows(start: int) -> list[Any]:
@@ -1759,7 +1777,7 @@ class TestClosedBarValidation:
             bars[7][6] = bars[7][0] + 1000  # not a full interval
             return bars
 
-        assert self._measure(store, rows) is None
+        assert self._measure(store, rows).usable is False
 
     def test_a_missing_close_timestamp_is_refused(self, store: Store) -> None:
         def rows(start: int) -> list[Any]:
@@ -1767,7 +1785,7 @@ class TestClosedBarValidation:
             bars[3][6] = None
             return bars
 
-        assert self._measure(store, rows) is None
+        assert self._measure(store, rows).usable is False
 
 
 class TestBaseFileReconciliation:
@@ -1900,4 +1918,152 @@ class TestCodeIdentity:
 
         assert row is not None
         assert report["code_commit"] == row["code_commit"] == "0" * 40
+
+
+class TestUnavailableEvidenceBlocks:
+    """REVIEW-0244(1,2,3,6): unknown evidence must never reshape the universe."""
+
+    def test_a_symbol_missing_from_the_24h_ticker_is_still_measured(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A missing ticker entry used to remove the symbol before measurement."""
+        node = MockBinance(symbols=DEFAULT_SYMBOLS + [spot_entry("QUIETUSDT", "QUIET")])
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "ticker/24hr" in str(request.url):
+                return node._respond(200, [
+                    {"symbol": e["symbol"], "quoteVolume": "5000000", "count": "1"}
+                    for e in DEFAULT_SYMBOLS  # QUIETUSDT deliberately absent
+                ])
+            return original(request)
+
+        node.handler = handler  # type: ignore[method-assign]
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch
+        )
+
+        assert code == 0
+        assert "QUIETUSDT" in report["selected_symbols_this_run"]
+
+    def test_a_failed_measurement_blocks_and_stays_retryable(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch, base_panel_id=base_id,
+            node=MockBinance(volume_status_by_symbol={"BTCUSDT": 500}),
+        )
+
+        assert code == 1, "an unobtainable measurement must not promote a lower rank"
+        assert {f["symbol"] for f in report["failed_measurements"]} == {"BTCUSDT"}
+        assert read_snapshot(store) == []
+        assert "BTCUSDT" not in queued_identities(store), (
+            "a failed measurement stays on the queue for retry"
+        )
+
+    def test_a_failed_history_request_blocks_and_is_not_deferred(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch, base_panel_id=base_id,
+            node=MockBinance(history_status_by_symbol={"BTCUSDT": 500}),
+        )
+
+        assert code == 1
+        blocking = {b["symbol"] for b in report["blocking_symbols"]}
+        assert "BTCUSDT" in blocking
+        assert "BTCUSDT" not in set(report["deferred_symbols_this_run"])
+        assert read_snapshot(store) == []
+
+
+class TestMixedBatchCursor:
+    """REVIEW-0244(4,5): safe progress persists; failures stay pending."""
+
+    def _node(self) -> MockBinance:
+        node = MockBinance(symbols=DEFAULT_SYMBOLS)
+        # BTC defers on history (safe terminal); ETH fails its bar fetch (blocking).
+        node.first_kline_ms = {"BTCUSDT": NEW_LISTING_MS}
+        node.klines_status_by_symbol = {"ETHUSDT": 500}
+        return node
+
+    def test_a_mixed_batch_keeps_the_deferral_and_retries_the_failure(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        code, first = run_runner(
+            tmp_path=tmp_path, store=store, node=self._node(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+        )
+
+        assert code == 1, "the blocking failure prevents publication"
+        assert "BTCUSDT" in set(first["deferred_symbols_this_run"])
+        assert "ETHUSDT" in {b["symbol"] for b in first["blocking_symbols"]}
+
+        code2, second = run_runner(
+            tmp_path=tmp_path, store=store, node=self._node(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-28", symbols_per_day=2,
+        )
+
+        # The safe deferral is not repeated; the failure is retried.
+        assert "BTCUSDT" not in set(second["deferred_symbols_this_run"])
+        assert "ETHUSDT" in {b["symbol"] for b in second["blocking_symbols"]}
+        assert second["budget"]["queue_position"] == 1, "only the deferral advanced"
+        assert code2 == 1
+        assert WatermarkStore(store.watermark_path).load() == {}, (
+            "no watermark advances while publication is blocked"
+        )
+
+    def test_changing_capacity_preserves_queue_position(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+        )
+        _, second = run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-28", symbols_per_day=8,
+        )
+
+        assert second["budget"]["queue_position"] == 2, (
+            "capacity is not a selection control and must not reset the queue"
+        )
+
+    def test_a_material_selection_change_starts_a_new_queue(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A symbol deferred under 365 history days must be reconsidered at 0."""
+        base_id = seed_base_panel(store)
+        run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+        )
+        _, second = run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+            min_history_days=0,
+        )
+
+        assert second["budget"]["queue_position"] == 0, (
+            "changed eligibility must not inherit stale terminal identities"
+        )
+
+    def test_the_selection_fingerprint_ignores_capacity_only(self) -> None:
+        base = SelectionConfig(base_panel_dataset_id="ds_a", top_n=5, min_history_days=365)
+
+        assert base.selection_fingerprint() == replace(
+            base, symbols_per_day=999
+        ).selection_fingerprint()
+        for changed in (
+            replace(base, min_history_days=0),
+            replace(base, top_n=6),
+            replace(base, min_quote_volume=1.0),
+            replace(base, base_panel_dataset_id="ds_b"),
+            replace(base, pinned_end="2026-01-01T00:00:00+00:00"),
+        ):
+            assert changed.selection_fingerprint() != base.selection_fingerprint()
 

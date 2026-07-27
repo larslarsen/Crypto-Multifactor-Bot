@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """DATA-008 Binance spot universe expansion runner.
 
-Discovers spot symbols from exchangeInfo, ranks them on observed 24h volume evidence,
+Discovers spot symbols from exchangeInfo, ranks them on measured trailing 30-day
+quote volume (24-hour ticker data is recorded as non-truncating observation only),
 checks history eligibility, backfills daily bars for what qualifies, and republishes
 the complete canonical snapshot.
 
@@ -19,7 +20,6 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -41,15 +41,16 @@ from cryptofactors.acquisition.binance_snapshot import (
 )
 from cryptofactors.acquisition.binance_universe import (
     BASE_PANEL_DATASET_ID,
+    MeasurementStatus,
     BINANCE_BASE_URL,
     EXCLUSION_TAXONOMY_VERSION,
     VOLUME_WINDOW,
-    RANKING_DAYS,
     BinanceUniverseAcquirer,
     Exclusion,
     ExclusionReason,
     HistoryEligibility,
     SelectionConfig,
+    filter_non_volume_taxonomy,
     load_base_panel_symbols,
 )
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
@@ -173,6 +174,7 @@ def build_report(
     eligibility: Sequence[HistoryEligibility],
     acquisitions: Sequence[SymbolAcquisition],
     blocked: Sequence[SymbolAcquisition],
+    failed_measurements: Sequence[Any] = (),
     log: Any,
     prior_reconciliation: Mapping[str, Any],
     reconciliation: Mapping[str, Any],
@@ -236,6 +238,9 @@ def build_report(
         "deferred_symbols": [item.as_dict() for item in deferred],
         "eligible_symbols": [item.as_dict() for item in eligibility if item.eligible],
         "symbols_by_state": by_state,
+        "failed_measurements": [
+            {"symbol": s.symbol, "reason": m.reason} for s, m in (failed_measurements or [])
+        ],
         "failed_symbols": [
             item.as_dict() for item in acquisitions if item.state is SymbolState.FAILED
         ],
@@ -345,42 +350,45 @@ def main() -> int:
 
         from cryptofactors.acquisition.binance_universe import select_symbols
 
-        # 24h evidence is recorded but never truncates: a symbol outside the 24h cut
-        # can have higher trailing 30-day volume, so every symbol surviving the
-        # non-volume taxonomy is measured.
-        eligible = select_symbols(
-            discovered=discovered, evidence=evidence,
-            config=replace(config, top_n=None, min_quote_volume=0.0),
-            already_covered=covered_symbols,
+        # Non-volume taxonomy first, then measure every survivor. A missing 24-hour
+        # ticker entry must not remove a tradable target symbol from measurement.
+        survivors, taxonomy_excluded = filter_non_volume_taxonomy(
+            discovered=discovered, config=config, already_covered=covered_symbols,
         )
-        by_symbol = {s.symbol: s for s in discovered}
         measured: dict[str, Any] = {}
         short_window: list[Any] = []
-        for candidate in eligible.ranked:
-            volume = universe.fetch_trailing_volume(candidate.symbol, end_time=end_time)
-            if volume is None:
-                short_window.append(candidate)
+        failed_measurements: list[Any] = []
+        for spot in survivors:
+            measurement = universe.fetch_trailing_volume(spot.symbol, end_time=end_time)
+            if measurement.usable:
+                measured[spot.symbol] = measurement.evidence
+            elif measurement.status is MeasurementStatus.INCOMPLETE_WINDOW:
+                short_window.append((spot, measurement))
             else:
-                measured[candidate.symbol] = volume
+                failed_measurements.append((spot, measurement))
+
+        by_symbol = {s.symbol: s for s in survivors}
         selection = select_symbols(
             discovered=[by_symbol[s] for s in measured],
             evidence=measured, config=config, already_covered=covered_symbols,
         )
-        selection.excluded.extend(eligible.excluded)
+        selection.excluded.extend(taxonomy_excluded)
         selection.excluded.extend(
             Exclusion(
-                symbol=item.symbol, base_asset=item.base_asset, quote_asset=item.quote_asset,
-                reason=ExclusionReason.INSUFFICIENT_VOLUME_WINDOW,
-                detail=f"no complete {RANKING_DAYS}-day closed-bar window at the pinned end",
+                symbol=spot.symbol, base_asset=spot.base_asset,
+                quote_asset=spot.quote_asset,
+                reason=ExclusionReason.INSUFFICIENT_VOLUME_WINDOW, detail=m.reason,
             )
-            for item in short_window
+            for spot, m in short_window
         )
 
         bars_acquirer = BinanceBarAcquirer(acquirer=raw_acquirer, base_url=args.base_url)
         processing_day = args.processing_day or datetime.now(UTC).date().isoformat()
         # Queue position is keyed by the pinned selection and survives day rollover;
         # capacity is keyed by the processing day and resets with it.
-        selection_key = f"{default_start.isoformat()}|{end_time.isoformat()}"
+        # Capacity and processing day must not reset position, but a material change
+        # to what is being selected must identify a new queue.
+        selection_key = config.selection_fingerprint()
         attempted, used = watermark_store.load_cursor(
             selection_key=selection_key, processing_day=processing_day
         )
@@ -401,9 +409,17 @@ def main() -> int:
                 ranked.symbol, as_of=end_time, min_history_days=config.min_history_days
             )
             eligibility.append(verdict)
+            if verdict.observation_failed:
+                # Unknown, not deferred: it blocks publication and stays pending.
+                acquisitions.append(SymbolAcquisition(
+                    symbol=ranked.symbol, state=SymbolState.FAILED,
+                    error="history request failed",
+                ))
+                continue
             if not verdict.eligible:
                 # Documented, not admitted: a short-history symbol is not research
-                # history and must not silently join the panel.
+                # history and must not silently join the panel. This is a proven
+                # terminal fact, so it advances the queue.
                 acquisitions.append(SymbolAcquisition(
                     symbol=ranked.symbol, state=SymbolState.DEFERRED,
                     error=None if verdict.reason is None else verdict.reason.value,
@@ -426,15 +442,21 @@ def main() -> int:
                 end_time=end_time,
             )
             acquisitions.append(acquired_symbol)
-            if not acquired_symbol.blocks_publication:
-                # Safe terminal outcome: the identity has been resolved for this
-                # selection. A failed/blocking outcome stays off the queue so it is
-                # retried rather than skipped.
+            if acquired_symbol.state is SymbolState.ALREADY_CURRENT:
+                # Proven terminal regardless of whether anything publishes.
                 attempted.add(acquired_symbol.symbol)
         log = raw_acquirer.log
     finally:
         client.close()
         raw_catalog.close()
+
+    # A measurement we could not obtain is not evidence of low volume; publishing a
+    # lower-ranked survivor in its place would bias the canonical universe.
+    for spot, measurement in failed_measurements:
+        acquisitions.append(SymbolAcquisition(
+            symbol=spot.symbol, state=SymbolState.FAILED,
+            error=f"30d measurement failed: {measurement.reason}",
+        ))
 
     acquired = [bar for a in acquisitions if a.usable for bar in a.bars]
     dataset_catalog = SqliteDatasetCatalog(args.db_path)
@@ -463,7 +485,7 @@ def main() -> int:
             report = build_report(
                 config=config, code_commit=code_commit, end_time=end_time,
                 default_start=default_start, selection=selection, eligibility=eligibility, acquisitions=acquisitions,
-                blocked=blocked, log=log, prior_reconciliation=prior_reconciliation,
+                blocked=blocked, failed_measurements=failed_measurements, log=log, prior_reconciliation=prior_reconciliation,
                 reconciliation={"state": state}, covered_symbols=covered_symbols,
                 base_panel_dataset_id=base_panel_dataset_id,
                 budget={"processing_day": processing_day, "queue_position": budget_start,
@@ -475,11 +497,15 @@ def main() -> int:
             _write_report(args.report_path, report)
             # Safe terminal outcomes are progress even with nothing to publish; losing
             # them would make a constant daily limit retry the same head forever.
-            if not blocked:
-                watermark_store.save_cursor(
-                    selection_key=selection_key, processing_day=processing_day,
-                    attempted=attempted, used=used,
-                )
+            # Safe terminal outcomes are progress even in a mixed batch. Identities
+            # that blocked, or whose rows were not published, stay off the queue so a
+            # constant daily limit does not repeat them while later ranks starve.
+            # Rows that were acquired but not published are not progress; their
+            # identities stay on the queue for retry.
+            watermark_store.save_cursor(
+                selection_key=selection_key, processing_day=processing_day,
+                attempted=attempted, used=used,
+            )
             print(f"DATA-008: {state}; prior snapshot and watermarks retained")
             return 1
 
@@ -581,6 +607,8 @@ def main() -> int:
             )
         dataset_id = result.dataset_id
 
+        # Publication succeeded, so published identities are now safe progress too.
+        attempted |= {a.symbol for a in acquisitions if a.usable}
         for acquisition in acquisitions:
             if acquisition.watermark_candidate is None:
                 continue
