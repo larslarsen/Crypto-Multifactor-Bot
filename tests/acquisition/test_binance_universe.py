@@ -2067,3 +2067,76 @@ class TestMixedBatchCursor:
         ):
             assert changed.selection_fingerprint() != base.selection_fingerprint()
 
+
+class TestSelfReviewDefects:
+    """Regression cover for defects found reviewing the REVIEW-0244 code."""
+
+    def _record(self, **overrides: Any) -> dict[str, Any]:
+        record = {
+            "symbol": "BTCUSDT", "open_time": day(0).isoformat(),
+            "open_time_us": int(day(0).timestamp() * 1_000_000), "open": 100.0,
+            "high": 101.0, "low": 99.0, "close": 100.0, "volume": 5.0,
+            "quote_volume": 500.0, "trades": 7, "provider": "binance",
+            "raw_object_id": "raw_" + "a" * 64,
+        }
+        record.update(overrides)
+        return record
+
+    @pytest.mark.parametrize("bad", ["not-a-number", None, [], {}, float("nan")])
+    def test_a_malformed_trade_count_raises_a_typed_error(self, bad: Any) -> None:
+        """int() on untrusted input escaped as ValueError/TypeError."""
+        with pytest.raises(BinanceSnapshotError, match="trades"):
+            bars_from_records([self._record(trades=bad)])
+
+    def test_a_fractional_trade_count_is_refused_not_truncated(self) -> None:
+        """int(7.9) silently stored 7, a different value than the snapshot held."""
+        with pytest.raises(BinanceSnapshotError, match="whole number"):
+            bars_from_records([self._record(trades=7.9)])
+
+    def test_an_integral_float_trade_count_is_accepted(self) -> None:
+        assert bars_from_records([self._record(trades=7.0)])[0].trades == 7
+
+    @pytest.mark.parametrize("bad", ["not-a-number", None, 7.5])
+    def test_a_malformed_kline_trade_count_raises_a_typed_error(self, bad: Any) -> None:
+        row = kline(0)
+        row[8] = bad
+        with pytest.raises(BinanceSnapshotError, match="trade count"):
+            parse_klines(
+                [row], symbol="BTCUSDT", start_time=DAY0, end_time=END_TIME,
+                raw_object_id="raw_x",
+            )
+
+    def test_a_non_midnight_range_is_refused_at_the_boundary(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Previously this surfaced as a per-symbol failure mid-run."""
+        with pytest.raises(RuntimeError, match="must be UTC midnight"):
+            run_runner(
+                tmp_path=tmp_path, store=store, node=MockBinance(),
+                monkeypatch=monkeypatch, end_time=END_TIME + timedelta(hours=5),
+            )
+
+    def test_an_inverted_range_is_refused(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with pytest.raises(RuntimeError, match="must not be after"):
+            run_runner(
+                tmp_path=tmp_path, store=store, node=MockBinance(),
+                monkeypatch=monkeypatch, default_start=day(4), end_time=day(1),
+            )
+
+    def test_base_reconciliation_reports_a_row_count_mismatch(self, store: Store) -> None:
+        """Row counts now come from Parquet footer metadata, not a full read."""
+        base_id = seed_base_panel(store)
+        conn = sqlite3.connect(store.db)
+        try:
+            conn.execute(
+                "UPDATE dataset_file SET row_count = 99 WHERE dataset_id = ?", (base_id,)
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        with pytest.raises(BinanceUniverseError, match="row count mismatch"):
+            load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
+

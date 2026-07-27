@@ -29,6 +29,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from cryptofactors.acquisition.binance_snapshot import (
+    DAY_SECONDS,
     BinanceBarAcquirer,
     KlineBar,
     SymbolAcquisition,
@@ -307,6 +308,13 @@ def main() -> int:
     default_start = datetime.fromisoformat(args.default_start)
     if end_time.tzinfo is None or default_start.tzinfo is None:
         raise RuntimeError("--end-time and --default-start must be timezone-aware")
+    # Checked here rather than deep inside coverage helpers, where it would surface
+    # as a per-symbol failure long after the run began.
+    for label, moment in (("--default-start", default_start), ("--end-time", end_time)):
+        if int(moment.timestamp()) % DAY_SECONDS:
+            raise RuntimeError(f"{label} must be UTC midnight, got {moment.isoformat()}")
+    if default_start > end_time:
+        raise RuntimeError("--default-start must not be after --end-time")
 
     overrides: dict[str, Any] = {"top_n": args.top_n}
     if args.min_quote_volume is not None:

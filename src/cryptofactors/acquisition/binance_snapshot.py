@@ -102,6 +102,26 @@ def _number(value: Any, *, label: str) -> float:
     return result
 
 
+def _whole_number(value: Any, *, label: str) -> int:
+    """Decode a count field without silent truncation or an untyped crash.
+
+    A prior snapshot is untrusted input: int() on it raises ValueError/TypeError,
+    which escapes as an unrelated exception type, and int(7.9) would silently
+    record a different value than the one stored.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise BinanceSnapshotError(f"{label} must be an integer, got {value!r}")
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError as exc:
+            raise BinanceSnapshotError(f"{label} must be an integer, got {value!r}") from exc
+    if isinstance(value, float):
+        if not math.isfinite(value) or value != int(value):
+            raise BinanceSnapshotError(f"{label} must be a whole number, got {value!r}")
+    return int(value)
+
+
 def validate_bar_values(
     *, open_: Any, high: Any, low: Any, close: Any, volume: Any, quote_volume: Any
 ) -> tuple[float, float, float, float, float, float]:
@@ -172,9 +192,7 @@ def parse_klines(
             open_=entry[1], high=entry[2], low=entry[3], close=entry[4],
             volume=entry[5], quote_volume=entry[7],
         )
-        trades = entry[8]
-        if isinstance(trades, bool) or not isinstance(trades, (int, float)):
-            raise BinanceSnapshotError(f"trade count must be numeric, got {trades!r}")
+        trades = _whole_number(entry[8], label="trade count")
 
         bars.append(KlineBar(
             symbol=symbol, open_time=open_time, open=open_, high=high, low=low,
@@ -296,7 +314,8 @@ def bars_from_records(
         bar = KlineBar(
             symbol=str(record["symbol"]).strip().upper(), open_time=open_time, open=open_,
             high=high, low=low, close=close, volume=volume, quote_volume=quote_volume,
-            trades=int(record["trades"]), provider=provider, raw_object_id=raw_object_id,
+            trades=_whole_number(record["trades"], label="trades"),
+            provider=provider, raw_object_id=raw_object_id,
         )
         if bar.dedupe_key in seen:
             raise BinanceSnapshotError(f"prior snapshot has duplicate identity {bar.dedupe_key}")

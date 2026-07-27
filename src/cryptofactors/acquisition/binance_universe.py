@@ -221,19 +221,27 @@ def load_base_panel_symbols(db_path: Any, dataset_id: str, *, store_root: Any) -
                 )
             if path.suffix != ".parquet":
                 continue
+            # Row count comes from footer metadata and only the identity column is
+            # materialised. Reading whole tables held every declared file's full
+            # contents in memory just to collect ids -- fine for the pinned base,
+            # unbounded for a larger one.
             try:
-                table = pq.read_table(path)
+                parquet = pq.ParquetFile(path)
+                if parquet.metadata.num_rows != row_count:
+                    raise BinanceUniverseError(
+                        f"pinned base panel file row count mismatch: {storage_uri}",
+                        context={"expected": row_count, "actual": parquet.metadata.num_rows},
+                    )
+                if "instrument_id" not in parquet.schema_arrow.names:
+                    continue
+                for batch in parquet.iter_batches(columns=["instrument_id"], batch_size=65_536):
+                    instrument_ids |= set(batch.column("instrument_id").to_pylist())
+            except BinanceUniverseError:
+                raise
             except Exception as exc:  # noqa: BLE001
                 raise BinanceUniverseError(
                     f"pinned base panel file is unreadable: {storage_uri}"
                 ) from exc
-            if table.num_rows != row_count:
-                raise BinanceUniverseError(
-                    f"pinned base panel file row count mismatch: {storage_uri}",
-                    context={"expected": row_count, "actual": table.num_rows},
-                )
-            if "instrument_id" in table.column_names:
-                instrument_ids |= set(table.column("instrument_id").to_pylist())
         if not instrument_ids:
             raise BinanceUniverseError(
                 f"pinned base panel {dataset_id} yielded no instrument identities"
