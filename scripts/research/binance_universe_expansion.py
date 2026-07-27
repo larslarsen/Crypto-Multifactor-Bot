@@ -374,6 +374,9 @@ def main() -> int:
     overrides["symbols_per_day"] = args.symbols_per_day
     overrides["default_start"] = default_start.isoformat()
     overrides["pinned_end"] = end_time.isoformat()
+    # The endpoint actually in effect, not the module default: two runs against
+    # different providers must not share a queue identity.
+    overrides["evidence_source"] = args.base_url
     config = SelectionConfig(**overrides)
     code_commit = resolve_code_commit(args.code_commit)
     if not args.skip_identity_check:

@@ -2442,3 +2442,25 @@ class TestReview0246Corrections:
         assert "if not args.skip_identity_check:" in source
         assert "verify_source_identity(code_commit" in source
 
+    def test_the_configured_endpoint_is_the_recorded_evidence_source(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """It recorded the module default, so a run against a different endpoint
+        inherited the same queue identity."""
+        base_id = seed_base_panel(store)
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id,
+        )
+
+        assert report["effective_config"]["evidence_source"] == "https://binance.test"
+
+    def test_a_different_endpoint_starts_a_new_queue(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base = SelectionConfig(evidence_source="https://a.test")
+
+        assert base.selection_fingerprint() != replace(
+            base, evidence_source="https://b.test"
+        ).selection_fingerprint()
+

@@ -1,8 +1,8 @@
 {
   "acquisition_attempts": [
     {
-      "acquired_at": "2026-07-27T20:31:40.793923+00:00",
-      "acquisition_id": "acq_41163f55b9824ca6a4919e9dbc987c6c",
+      "acquired_at": "2026-07-27T21:41:09.293335+00:00",
+      "acquisition_id": "acq_6a25a61643cf4ab49ba084592e5f4b0f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -10,13 +10,13 @@
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_ee2ad50f7afa230f29e737b270de416818acd8bb07b1cb358158e1ac5a67b52a",
+      "raw_object_id": "raw_2653a020662086e2f00fd88ebd6a86619854cf9c4cefd22439f5ef6a516a1d9a",
       "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://data-api.binance.vision/api/v3/exchangeInfo\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:41.431162+00:00",
-      "acquisition_id": "acq_a5243e46d72849bba52f1ef4df50e06e",
+      "acquired_at": "2026-07-27T21:41:09.930836+00:00",
+      "acquisition_id": "acq_33c3b39bbef74e5692f17dd919aa2805",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -24,13 +24,13 @@
       "ok": true,
       "provider": "binance",
       "rate_limited": false,
-      "raw_object_id": "raw_9504e04679ef4b5a89472b66a4eecba335f226bbb96c80b5d89cd05f7804c445",
+      "raw_object_id": "raw_eca429ac482654f34108114734de0884cc00b2dec92a32a2e100628942935fe1",
       "request_json": "{\"method\":\"GET\",\"params\":{},\"url\":\"https://data-api.binance.vision/api/v3/ticker/24hr\"}",
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:41.917328+00:00",
-      "acquisition_id": "acq_d8e8bfb9039a4f63b1f9f8f510d10655",
+      "acquired_at": "2026-07-27T21:41:10.417663+00:00",
+      "acquisition_id": "acq_81db052538ba4383a5b2a4f9b4b48606",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -43,8 +43,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:42.325386+00:00",
-      "acquisition_id": "acq_c803206218f54a40b27bbedea9dc4abe",
+      "acquired_at": "2026-07-27T21:41:10.824036+00:00",
+      "acquisition_id": "acq_d399f9bbc7bf4c449d377f02787c98f6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -57,8 +57,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:42.733515+00:00",
-      "acquisition_id": "acq_5059a7a30d4045488e38e9788d39419c",
+      "acquired_at": "2026-07-27T21:41:11.232271+00:00",
+      "acquisition_id": "acq_31d5a5fa974844bb9459ae2180391aad",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -71,8 +71,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:43.141927+00:00",
-      "acquisition_id": "acq_bc6729b61d1e4b1f967cf2794a797e15",
+      "acquired_at": "2026-07-27T21:41:11.639868+00:00",
+      "acquisition_id": "acq_0e6c9832aae145568ea90b61dad18e4f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -85,8 +85,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:43.549715+00:00",
-      "acquisition_id": "acq_28fcbb49363246388da231c02ffc6148",
+      "acquired_at": "2026-07-27T21:41:12.048304+00:00",
+      "acquisition_id": "acq_d5ecf54680704a559f001989657fad24",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -99,8 +99,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:43.958062+00:00",
-      "acquisition_id": "acq_fce855ceb6d74204a727603640570ed2",
+      "acquired_at": "2026-07-27T21:41:12.455732+00:00",
+      "acquisition_id": "acq_857c46aada244dd0a90bc929bd1e4511",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -113,8 +113,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:44.365834+00:00",
-      "acquisition_id": "acq_6f06e1af48e84a97ad6345ae526a9a97",
+      "acquired_at": "2026-07-27T21:41:12.864394+00:00",
+      "acquisition_id": "acq_dee1ae6700484bafa9efac1ac7a2ad3e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -127,8 +127,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:44.773383+00:00",
-      "acquisition_id": "acq_88d71006d2a843fa99885568518496d2",
+      "acquired_at": "2026-07-27T21:41:13.271632+00:00",
+      "acquisition_id": "acq_733490a3aa1342bab7c8490b82cade62",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -141,8 +141,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:45.181708+00:00",
-      "acquisition_id": "acq_f2635e398bbe4c4694c9322a0c63df23",
+      "acquired_at": "2026-07-27T21:41:13.680364+00:00",
+      "acquisition_id": "acq_da034097dc2143f1b9d3f929235c6cde",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -155,8 +155,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:45.589597+00:00",
-      "acquisition_id": "acq_27d40bb53d8e4542ad9a4379f43cc032",
+      "acquired_at": "2026-07-27T21:41:14.088964+00:00",
+      "acquisition_id": "acq_60dcae0483b44757a16538db56f85763",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -169,8 +169,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:45.997691+00:00",
-      "acquisition_id": "acq_83c262b8b89e47cea79bd0fb509da115",
+      "acquired_at": "2026-07-27T21:41:14.496343+00:00",
+      "acquisition_id": "acq_e6546a852d104379ac44fba1c5888e9c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -183,8 +183,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:46.409994+00:00",
-      "acquisition_id": "acq_fe9b1791e87d493e89f1b616d8e4e4ee",
+      "acquired_at": "2026-07-27T21:41:14.904039+00:00",
+      "acquisition_id": "acq_9296f485c6624bcba699c48f02bb061b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -197,8 +197,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:46.817879+00:00",
-      "acquisition_id": "acq_9cbe665bcfad462dacc27ede1416a202",
+      "acquired_at": "2026-07-27T21:41:15.311895+00:00",
+      "acquisition_id": "acq_9e1f8c9155c344d0a2838276ec3d5191",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -211,8 +211,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:47.225381+00:00",
-      "acquisition_id": "acq_5a9f70adc8924bc399a9f28056b2f6bb",
+      "acquired_at": "2026-07-27T21:41:15.716457+00:00",
+      "acquisition_id": "acq_a3300f5d01424bbb8359c7454e25007b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -225,8 +225,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:47.637467+00:00",
-      "acquisition_id": "acq_5f7c0eecadca481f88fe40b1beeb0613",
+      "acquired_at": "2026-07-27T21:41:16.123983+00:00",
+      "acquisition_id": "acq_57c419265f784becbe66025a0546f226",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -239,8 +239,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:48.041761+00:00",
-      "acquisition_id": "acq_c49334e6688c441895ffd35a0161c422",
+      "acquired_at": "2026-07-27T21:41:16.528308+00:00",
+      "acquisition_id": "acq_777b9b71b2d64eccb6b48b070d9ee8b6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -253,8 +253,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:48.453561+00:00",
-      "acquisition_id": "acq_3f59ef023a6c43f9855f1b16dd33d59e",
+      "acquired_at": "2026-07-27T21:41:16.936651+00:00",
+      "acquisition_id": "acq_eb8ab04ff26d463f9aee31cae47c127b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -267,8 +267,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:48.862413+00:00",
-      "acquisition_id": "acq_97dc01ed94084abb92dff967a1a70b16",
+      "acquired_at": "2026-07-27T21:41:17.344601+00:00",
+      "acquisition_id": "acq_e64fb6e8752348e795cf307417acb68e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -281,8 +281,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:49.273158+00:00",
-      "acquisition_id": "acq_a668cba828364892a5c32d5e07e4dca8",
+      "acquired_at": "2026-07-27T21:41:17.751927+00:00",
+      "acquisition_id": "acq_5446509888c74205be7d74b58411f17a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -295,8 +295,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:49.682070+00:00",
-      "acquisition_id": "acq_ffd6c200734e4861829e46117afca5e6",
+      "acquired_at": "2026-07-27T21:41:18.159932+00:00",
+      "acquisition_id": "acq_f9ca9972933c419b8476856b6f1952e9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -309,8 +309,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:50.089146+00:00",
-      "acquisition_id": "acq_0e89565f86e043dca5a3a724f1c6831f",
+      "acquired_at": "2026-07-27T21:41:18.567918+00:00",
+      "acquisition_id": "acq_dcc521aa11764ec09cc946b3ecab1750",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -323,8 +323,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:50.497297+00:00",
-      "acquisition_id": "acq_62bb857aa4174995aa6a56ec3e552b28",
+      "acquired_at": "2026-07-27T21:41:18.976248+00:00",
+      "acquisition_id": "acq_df1c12b5ddd74bac814db37782310385",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -337,8 +337,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:50.905963+00:00",
-      "acquisition_id": "acq_0faf634440964706a9b055e16fd2cedc",
+      "acquired_at": "2026-07-27T21:41:19.380417+00:00",
+      "acquisition_id": "acq_acbc080f13064e30b9ffd34b05c7a580",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -351,8 +351,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:51.313998+00:00",
-      "acquisition_id": "acq_1d474b6d0bad47699d9bc285735c0085",
+      "acquired_at": "2026-07-27T21:41:19.788680+00:00",
+      "acquisition_id": "acq_3414b5c6ba1e43e09d4684ffb7747902",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -365,8 +365,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:51.721291+00:00",
-      "acquisition_id": "acq_8ecd87273526488eb34039ff96e2d925",
+      "acquired_at": "2026-07-27T21:41:20.197050+00:00",
+      "acquisition_id": "acq_56259672a2604d3884473ece2e6e1955",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -379,8 +379,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:52.133491+00:00",
-      "acquisition_id": "acq_a983d788aa61463b80ad084ed9cc26c3",
+      "acquired_at": "2026-07-27T21:41:20.603954+00:00",
+      "acquisition_id": "acq_53d12e2c2c9f47ed97307a24b1d97d22",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -393,8 +393,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:52.545255+00:00",
-      "acquisition_id": "acq_6f0ea26731a44e39b60fbd30f3339902",
+      "acquired_at": "2026-07-27T21:41:21.008073+00:00",
+      "acquisition_id": "acq_8941cb888d7d42559efa59bc58c933f5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -407,8 +407,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:52.953915+00:00",
-      "acquisition_id": "acq_b20d905fb9974b73989fa429eb98bf84",
+      "acquired_at": "2026-07-27T21:41:21.416294+00:00",
+      "acquisition_id": "acq_1e6c57d55e204e9997af5271675f63dd",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -421,8 +421,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:53.361204+00:00",
-      "acquisition_id": "acq_70bc7db0d26540bea8500c0043503303",
+      "acquired_at": "2026-07-27T21:41:21.824094+00:00",
+      "acquisition_id": "acq_08d5d7d2d6264251a19a15cdf0fa619a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -435,8 +435,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:53.770188+00:00",
-      "acquisition_id": "acq_c25b51b2914a4f33be93937de3886ee2",
+      "acquired_at": "2026-07-27T21:41:22.232592+00:00",
+      "acquisition_id": "acq_afe8acb5245e4207ad07f96abb29bc0c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -449,8 +449,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:54.177511+00:00",
-      "acquisition_id": "acq_4b9503c914814556899448696fe89820",
+      "acquired_at": "2026-07-27T21:41:22.640115+00:00",
+      "acquisition_id": "acq_7a8faf7d718b42ef9b9d1c472fe032a8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -463,8 +463,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:54.585792+00:00",
-      "acquisition_id": "acq_b6b7ddaff9e3427c87c99210107097a6",
+      "acquired_at": "2026-07-27T21:41:23.048085+00:00",
+      "acquisition_id": "acq_e3d0c00c134b4a4ea4f1f1884ff64f1f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -477,8 +477,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:54.993507+00:00",
-      "acquisition_id": "acq_0d08f5a9d4a841aab2226e50276ab243",
+      "acquired_at": "2026-07-27T21:41:23.456380+00:00",
+      "acquisition_id": "acq_71a55f8c782446288f9f6aea6ddd7aa8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -491,8 +491,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:55.401544+00:00",
-      "acquisition_id": "acq_b91c89fdcf6e489a9bc4198c7d00058b",
+      "acquired_at": "2026-07-27T21:41:23.865179+00:00",
+      "acquisition_id": "acq_cead357a0c534549bc424112708c3f6b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -505,8 +505,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:55.809891+00:00",
-      "acquisition_id": "acq_e7f671e45db641249bfda01e9f825979",
+      "acquired_at": "2026-07-27T21:41:24.271959+00:00",
+      "acquisition_id": "acq_039cbfdb897647a296a6fe76fd874f0d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -519,8 +519,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:56.217412+00:00",
-      "acquisition_id": "acq_0e7b72fd9a444a2a97aaed50ea4a1e3d",
+      "acquired_at": "2026-07-27T21:41:24.680409+00:00",
+      "acquisition_id": "acq_14f2e27ced784f06b0c58e598dc64610",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -533,8 +533,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:56.625744+00:00",
-      "acquisition_id": "acq_c0eb624a0b3a47a99b02fcf45bd014e2",
+      "acquired_at": "2026-07-27T21:41:25.088467+00:00",
+      "acquisition_id": "acq_a6ce50d6d0c64d1db11bf206d4449ce5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -547,8 +547,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:57.033815+00:00",
-      "acquisition_id": "acq_23243e67db0440f4af90a0cd1dbe8fd7",
+      "acquired_at": "2026-07-27T21:41:25.496494+00:00",
+      "acquisition_id": "acq_a4048b1a8a174bff9ea9866a5f6010ff",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -561,8 +561,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:57.441667+00:00",
-      "acquisition_id": "acq_b5a48e84e5c445cea34a34ed72c66afb",
+      "acquired_at": "2026-07-27T21:41:25.905311+00:00",
+      "acquisition_id": "acq_e90f770c0d8348a2920b3a79dc958d4c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -575,8 +575,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:57.849707+00:00",
-      "acquisition_id": "acq_bbf97d8dacc848f1a20c5f4549f2317f",
+      "acquired_at": "2026-07-27T21:41:26.308485+00:00",
+      "acquisition_id": "acq_854079b7a85d49d6af82e842e57d21ae",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -589,8 +589,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:58.258363+00:00",
-      "acquisition_id": "acq_d14bd1aaf1e7404e912efef073aa8c6c",
+      "acquired_at": "2026-07-27T21:41:26.716474+00:00",
+      "acquisition_id": "acq_51b888b12784495e807190485abf9aa9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -603,8 +603,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:58.665893+00:00",
-      "acquisition_id": "acq_3c021c55a870486687eabbd82d5b60b7",
+      "acquired_at": "2026-07-27T21:41:27.124092+00:00",
+      "acquisition_id": "acq_0ae5245d922b46eeb515aaa8355f43e4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -617,8 +617,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:59.073374+00:00",
-      "acquisition_id": "acq_f3431268e35d48c882d9dbcc33b13213",
+      "acquired_at": "2026-07-27T21:41:27.532524+00:00",
+      "acquisition_id": "acq_3556717b36544990b4b606109559708a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -631,8 +631,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:59.481760+00:00",
-      "acquisition_id": "acq_d0544204f0764b7290c1160d1fb42033",
+      "acquired_at": "2026-07-27T21:41:27.940049+00:00",
+      "acquisition_id": "acq_4f89af7395844066b7df2c501f8dce0b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -645,8 +645,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:31:59.889548+00:00",
-      "acquisition_id": "acq_52b23524b3d74265a40314878be15b0c",
+      "acquired_at": "2026-07-27T21:41:28.344601+00:00",
+      "acquisition_id": "acq_effa77af16334683aa73fd1d6a0b2fe6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -659,8 +659,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:00.297654+00:00",
-      "acquisition_id": "acq_e9275d60ab204ae4b95e700ad3c929c9",
+      "acquired_at": "2026-07-27T21:41:28.752611+00:00",
+      "acquisition_id": "acq_d993cc2a45f5495cb970d4c010bd36d5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -673,8 +673,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:00.704950+00:00",
-      "acquisition_id": "acq_6a7b390f85804a7dab43432c7b4efc05",
+      "acquired_at": "2026-07-27T21:41:29.159938+00:00",
+      "acquisition_id": "acq_559ddb18a6da4075a0f38afc8780c280",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -687,8 +687,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:01.113578+00:00",
-      "acquisition_id": "acq_43b12f2e03684bb88b9f577e626c8ef4",
+      "acquired_at": "2026-07-27T21:41:29.564884+00:00",
+      "acquisition_id": "acq_d0ac0a1b4f3c41c6b1408b0495518a66",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -701,8 +701,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:01.522014+00:00",
-      "acquisition_id": "acq_bf4432dbf73d4e6788d4701304b1eccc",
+      "acquired_at": "2026-07-27T21:41:29.972991+00:00",
+      "acquisition_id": "acq_b5f6ea2fc44e49baae286d3041d8c09a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -715,8 +715,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:01.930295+00:00",
-      "acquisition_id": "acq_bfefa952586849218b67d67927444b70",
+      "acquired_at": "2026-07-27T21:41:30.376147+00:00",
+      "acquisition_id": "acq_d2d8862d760a4e20b0786538b61c31bf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -729,8 +729,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:02.337649+00:00",
-      "acquisition_id": "acq_7383e8b5aa0c4d339243924625685e41",
+      "acquired_at": "2026-07-27T21:41:30.783845+00:00",
+      "acquisition_id": "acq_9cca7c4bce8944ce94a7f8ade1228f79",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -743,8 +743,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:02.746016+00:00",
-      "acquisition_id": "acq_bcc61dd781294e49bf1fd6f908b51ad3",
+      "acquired_at": "2026-07-27T21:41:31.192022+00:00",
+      "acquisition_id": "acq_96d0ce5239684bd08b082c87ebd6808a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -757,8 +757,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:03.149473+00:00",
-      "acquisition_id": "acq_6c6db057866c457c8d579b809df1df14",
+      "acquired_at": "2026-07-27T21:41:31.599794+00:00",
+      "acquisition_id": "acq_f58c965ae076456cae82294f01b25597",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -771,8 +771,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:03.557202+00:00",
-      "acquisition_id": "acq_8f9f69a042c844a9a8d6135e1ccb09a1",
+      "acquired_at": "2026-07-27T21:41:32.004661+00:00",
+      "acquisition_id": "acq_435b798569dc495fafbf053daf68b470",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -785,8 +785,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:03.965629+00:00",
-      "acquisition_id": "acq_8d337aff1bef4b54a4e7082e5b829716",
+      "acquired_at": "2026-07-27T21:41:32.413356+00:00",
+      "acquisition_id": "acq_042386a6fd884dc78db92949269108cf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -799,8 +799,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:04.373527+00:00",
-      "acquisition_id": "acq_145f243178164349a90d8bc37e394d5c",
+      "acquired_at": "2026-07-27T21:41:32.820022+00:00",
+      "acquisition_id": "acq_c87f76eee9e84ddf9b4613277c215c2a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -813,8 +813,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:04.781640+00:00",
-      "acquisition_id": "acq_5852a39c4fde4e3bab34bdaecb3ad238",
+      "acquired_at": "2026-07-27T21:41:33.224904+00:00",
+      "acquisition_id": "acq_b28fc2d7897046b193271f45cc1f758a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -827,8 +827,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:05.189863+00:00",
-      "acquisition_id": "acq_b2a534fa93fe4c4ba9d3a112910679c4",
+      "acquired_at": "2026-07-27T21:41:33.632485+00:00",
+      "acquisition_id": "acq_45c7810660174d2582398ddfab4ace28",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -841,8 +841,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:05.601576+00:00",
-      "acquisition_id": "acq_9ef91178bfd54db7bd5b931e1a9d5f24",
+      "acquired_at": "2026-07-27T21:41:34.040630+00:00",
+      "acquisition_id": "acq_06d35749435141d1923375ac63dfef93",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -855,8 +855,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:06.010189+00:00",
-      "acquisition_id": "acq_6282e8ebe90a460587ab8e4b5d781309",
+      "acquired_at": "2026-07-27T21:41:34.448434+00:00",
+      "acquisition_id": "acq_a4c5d19a3c9e4a768031abfc36c17c44",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -869,8 +869,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:06.417363+00:00",
-      "acquisition_id": "acq_f10960d195404d53853955eb5d151556",
+      "acquired_at": "2026-07-27T21:41:34.857269+00:00",
+      "acquisition_id": "acq_617110b446884f4781cf5d03a5e69697",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -883,8 +883,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:06.825471+00:00",
-      "acquisition_id": "acq_37ddb5c5a6fe44c98ca5b60d2a700f7f",
+      "acquired_at": "2026-07-27T21:41:35.268590+00:00",
+      "acquisition_id": "acq_70d47a49a78b4ceaa0d69be67bc18dbd",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -897,8 +897,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:07.233433+00:00",
-      "acquisition_id": "acq_a7e420d0a4494858a37d4c8bd3a60fee",
+      "acquired_at": "2026-07-27T21:41:35.672142+00:00",
+      "acquisition_id": "acq_55d5103ed52e4632af7cee9a8291f264",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -911,8 +911,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:07.641610+00:00",
-      "acquisition_id": "acq_e8d0a71118d745bc9f7971e87c71b127",
+      "acquired_at": "2026-07-27T21:41:36.076104+00:00",
+      "acquisition_id": "acq_513f1ffb52be443aa42368ea8eb9210c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -925,8 +925,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:08.049449+00:00",
-      "acquisition_id": "acq_1dd1f87c16d9453b821719a762788181",
+      "acquired_at": "2026-07-27T21:41:36.480079+00:00",
+      "acquisition_id": "acq_0350e0d48ccd493dae05cb8eae25cdfb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -939,8 +939,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:08.457798+00:00",
-      "acquisition_id": "acq_e9ef3beb957648ffb74b723ee8397647",
+      "acquired_at": "2026-07-27T21:41:36.884022+00:00",
+      "acquisition_id": "acq_c761945ca4954539afcbf0d903f400ec",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -953,8 +953,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:08.865831+00:00",
-      "acquisition_id": "acq_7012c0bc65964b588e5aa9fd0a34ac2f",
+      "acquired_at": "2026-07-27T21:41:37.288286+00:00",
+      "acquisition_id": "acq_ec2f7568063449bc96e0d2ed72e6ff3b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -967,8 +967,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:09.273607+00:00",
-      "acquisition_id": "acq_4eff062fca0a4ff281f8ee67a14f53a9",
+      "acquired_at": "2026-07-27T21:41:37.696582+00:00",
+      "acquisition_id": "acq_cc3f4018449540e9b82244cfbd059322",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -981,8 +981,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:09.681483+00:00",
-      "acquisition_id": "acq_cf88e6df47124419aa5dc5becf81041a",
+      "acquired_at": "2026-07-27T21:41:38.104248+00:00",
+      "acquisition_id": "acq_bb64543a16424087a2a9b03c60ff738a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -995,8 +995,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:10.089811+00:00",
-      "acquisition_id": "acq_3ac3232f83d645899ea47aa4c7234bd4",
+      "acquired_at": "2026-07-27T21:41:38.508385+00:00",
+      "acquisition_id": "acq_4348b85fb2204343847f9bca4d49bc6f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1009,8 +1009,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:10.501664+00:00",
-      "acquisition_id": "acq_602fffe6acdf4dbaaecda0330a6647cc",
+      "acquired_at": "2026-07-27T21:41:38.912374+00:00",
+      "acquisition_id": "acq_1384d0d6609e46f7ab86d548403e0bbc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1023,8 +1023,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:10.909507+00:00",
-      "acquisition_id": "acq_5f0b2dc2f4d0437886f4c651bc70c555",
+      "acquired_at": "2026-07-27T21:41:39.320311+00:00",
+      "acquisition_id": "acq_6affa7b6424a45a7a6948fa6cd41e955",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1037,8 +1037,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:11.317698+00:00",
-      "acquisition_id": "acq_9084806c82d54d5aa59907cdffdec004",
+      "acquired_at": "2026-07-27T21:41:39.727712+00:00",
+      "acquisition_id": "acq_4a26c65dcb1c4b0e88e93483e15a2d05",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1051,8 +1051,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:11.724728+00:00",
-      "acquisition_id": "acq_ab715647592746b69b77693faac84285",
+      "acquired_at": "2026-07-27T21:41:40.136174+00:00",
+      "acquisition_id": "acq_6b4841f4fc604b1f867a3b59e2c6fac1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1065,8 +1065,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:12.132684+00:00",
-      "acquisition_id": "acq_85d204c4b0c445e4bdc6f157b9b0e69b",
+      "acquired_at": "2026-07-27T21:41:40.540117+00:00",
+      "acquisition_id": "acq_264fd2c010eb4cb1957d43edc58b7823",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1079,8 +1079,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:12.542716+00:00",
-      "acquisition_id": "acq_6b426de80e33485c9161817fbc37a8ad",
+      "acquired_at": "2026-07-27T21:41:40.948725+00:00",
+      "acquisition_id": "acq_cdfe464765c94c4ebafe6a97125be53a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1093,8 +1093,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:12.950082+00:00",
-      "acquisition_id": "acq_bb18d2d95c194dfbbeed86c5f2647268",
+      "acquired_at": "2026-07-27T21:41:41.355972+00:00",
+      "acquisition_id": "acq_5cbbd157d7c6476d90849845293561fc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1107,8 +1107,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:13.357505+00:00",
-      "acquisition_id": "acq_ea093785240b48caa2b3e3f4cd7e5eaf",
+      "acquired_at": "2026-07-27T21:41:41.764143+00:00",
+      "acquisition_id": "acq_0148d8bcc62041058187dc96b11e6284",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1121,8 +1121,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:13.766439+00:00",
-      "acquisition_id": "acq_dcaf1d2313bb43508a7b3dfe9a3a97c3",
+      "acquired_at": "2026-07-27T21:41:42.172003+00:00",
+      "acquisition_id": "acq_0e9386b011114f53a483620ee983a383",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1135,8 +1135,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:14.173548+00:00",
-      "acquisition_id": "acq_79bdc26fd764457cb0c7ef042ee5a152",
+      "acquired_at": "2026-07-27T21:41:42.580447+00:00",
+      "acquisition_id": "acq_922d7f1ed55b45e5958007f2fd516ef1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1149,8 +1149,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:14.581509+00:00",
-      "acquisition_id": "acq_8199749f1e4d4e1b823663c3ca88d072",
+      "acquired_at": "2026-07-27T21:41:42.989342+00:00",
+      "acquisition_id": "acq_2a133021b51d40ccaa0df5617278b8e1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1163,8 +1163,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:14.991037+00:00",
-      "acquisition_id": "acq_9e4ad9374f0c4ff5bf9dab9feeb5aa10",
+      "acquired_at": "2026-07-27T21:41:43.396640+00:00",
+      "acquisition_id": "acq_b0ba8120ac3d46cb9b0151c2882226de",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1177,8 +1177,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:15.397874+00:00",
-      "acquisition_id": "acq_4b39134e84004e209c5f4c33da7a881e",
+      "acquired_at": "2026-07-27T21:41:43.805201+00:00",
+      "acquisition_id": "acq_0bab41f31e3e466bae06cc13e36b35d9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1191,8 +1191,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:15.805811+00:00",
-      "acquisition_id": "acq_03c6cdf02a3b4545816260d46458e0f0",
+      "acquired_at": "2026-07-27T21:41:44.212761+00:00",
+      "acquisition_id": "acq_ffd91583bc42429e95d32cc7e1f162b9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1205,8 +1205,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:16.213794+00:00",
-      "acquisition_id": "acq_230a6bee08c541d6bbe2e14e2ef2a0e6",
+      "acquired_at": "2026-07-27T21:41:44.620105+00:00",
+      "acquisition_id": "acq_473cdeecc8e14aaaa8379abf753ac68a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1219,8 +1219,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:16.621617+00:00",
-      "acquisition_id": "acq_4f4ae5d8957a48bfb34aa1fe27702585",
+      "acquired_at": "2026-07-27T21:41:45.028395+00:00",
+      "acquisition_id": "acq_fad2d1c4b7de4ad88f9aff6410ed828d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1233,8 +1233,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:17.030031+00:00",
-      "acquisition_id": "acq_944a6551ac504b919c0dfb5393895fe3",
+      "acquired_at": "2026-07-27T21:41:45.435953+00:00",
+      "acquisition_id": "acq_c636d6e910854286a3d603333e55d039",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1247,8 +1247,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:17.437743+00:00",
-      "acquisition_id": "acq_b9a955b3284d414f81c79b0c46cde9f2",
+      "acquired_at": "2026-07-27T21:41:45.840159+00:00",
+      "acquisition_id": "acq_bda7e4d8b5d748d88727dfd1d84ba886",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1261,8 +1261,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:17.849766+00:00",
-      "acquisition_id": "acq_c1a919477bd746a5a6e6c809ab16d9dd",
+      "acquired_at": "2026-07-27T21:41:46.249146+00:00",
+      "acquisition_id": "acq_71aab7c29b02400b99d5df25948128aa",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1275,8 +1275,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:18.258247+00:00",
-      "acquisition_id": "acq_6f53f48ea98e4de59022536e361226fa",
+      "acquired_at": "2026-07-27T21:41:46.656207+00:00",
+      "acquisition_id": "acq_6ee0bcf874584e07958fb268828e9720",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1289,8 +1289,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:18.665780+00:00",
-      "acquisition_id": "acq_fcf651458c1343e0b6f59ca02ff7f2d7",
+      "acquired_at": "2026-07-27T21:41:47.061466+00:00",
+      "acquisition_id": "acq_cff6d3f9d13c42779dff9103085baacc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1303,8 +1303,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:19.073664+00:00",
-      "acquisition_id": "acq_2f53542326ef49428dd9ac6b94a4b1e4",
+      "acquired_at": "2026-07-27T21:41:47.468209+00:00",
+      "acquisition_id": "acq_6549fed0f03b469ba532b8fd9e69aa01",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1317,8 +1317,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:19.485450+00:00",
-      "acquisition_id": "acq_a7c0e04d42764eb091821079d503b53b",
+      "acquired_at": "2026-07-27T21:41:47.876502+00:00",
+      "acquisition_id": "acq_d0a38843da584430938f261504b6c3a1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1331,8 +1331,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:19.893681+00:00",
-      "acquisition_id": "acq_433fedfff07d466fa34c910254c807e8",
+      "acquired_at": "2026-07-27T21:41:48.284024+00:00",
+      "acquisition_id": "acq_c90cee26b81e480782daecc0a3c96f20",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1345,8 +1345,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:20.301600+00:00",
-      "acquisition_id": "acq_b44b5b28588440e3ae2bbeafd2fc0a76",
+      "acquired_at": "2026-07-27T21:41:48.689640+00:00",
+      "acquisition_id": "acq_6f5c21a00a1c4257b9ce69115a256b6a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1359,8 +1359,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:20.709565+00:00",
-      "acquisition_id": "acq_78666423f804420fb018af1346169387",
+      "acquired_at": "2026-07-27T21:41:49.096220+00:00",
+      "acquisition_id": "acq_8ab3255e0ffa4586a999e056d3b37d05",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1373,8 +1373,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:21.117421+00:00",
-      "acquisition_id": "acq_afed419afa7a49418dda629c11a3d7ac",
+      "acquired_at": "2026-07-27T21:41:49.500482+00:00",
+      "acquisition_id": "acq_c4084940c8e04fcda34675d6139ce7ba",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1387,8 +1387,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:21.525724+00:00",
-      "acquisition_id": "acq_1acf53386f494fb9bc2aff95f2b775e0",
+      "acquired_at": "2026-07-27T21:41:49.912452+00:00",
+      "acquisition_id": "acq_b1840fdedffd41b9b730fd670174d1d3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1401,8 +1401,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:21.933618+00:00",
-      "acquisition_id": "acq_e0778c1150f346c2b980a31efbecf638",
+      "acquired_at": "2026-07-27T21:41:50.320936+00:00",
+      "acquisition_id": "acq_b7ca74ea76634ad2b5aac5298dad4daf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1415,8 +1415,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:22.342118+00:00",
-      "acquisition_id": "acq_1d34fedbe6194af083d309e7c98d3e2d",
+      "acquired_at": "2026-07-27T21:41:50.728090+00:00",
+      "acquisition_id": "acq_64cc467de9de469b9504ea4bf223fec1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1429,8 +1429,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:22.745979+00:00",
-      "acquisition_id": "acq_8d9eab826a754950b05c4367b73e2aac",
+      "acquired_at": "2026-07-27T21:41:51.132702+00:00",
+      "acquisition_id": "acq_42dac8f72a3b427c92002d539cc6b37f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1443,8 +1443,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:23.153707+00:00",
-      "acquisition_id": "acq_8ab365327afc4e8985d6abbf8bc02e21",
+      "acquired_at": "2026-07-27T21:41:51.540437+00:00",
+      "acquisition_id": "acq_39cc88076e36438da8e24b9dc437881b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1457,8 +1457,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:23.562094+00:00",
-      "acquisition_id": "acq_78d24c972eea46d3af1e1d7b88dc6819",
+      "acquired_at": "2026-07-27T21:41:51.948235+00:00",
+      "acquisition_id": "acq_8b4f40a3cdef4593a70238842f3572a7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1471,8 +1471,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:23.970876+00:00",
-      "acquisition_id": "acq_e253fc61a7684ff8a6369f251926a1bc",
+      "acquired_at": "2026-07-27T21:41:52.353092+00:00",
+      "acquisition_id": "acq_f56837b62596492398e1e64dcb92e242",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1485,8 +1485,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:24.377839+00:00",
-      "acquisition_id": "acq_c76e24503ebe4e40943396ee3c60d4ca",
+      "acquired_at": "2026-07-27T21:41:52.761572+00:00",
+      "acquisition_id": "acq_905b5a97a9f6457797698bbe92270330",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1499,8 +1499,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:24.786017+00:00",
-      "acquisition_id": "acq_3e765f6fae614be5b443641cdc5038a8",
+      "acquired_at": "2026-07-27T21:41:53.169320+00:00",
+      "acquisition_id": "acq_1ce73a7093704f899fbda03d9d7c0a35",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1513,8 +1513,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:25.193526+00:00",
-      "acquisition_id": "acq_fb509138eacd40bc9800b820aa3c4c3b",
+      "acquired_at": "2026-07-27T21:41:53.576955+00:00",
+      "acquisition_id": "acq_d4a55b604ca34ec090baf814a890a713",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1527,8 +1527,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:25.602643+00:00",
-      "acquisition_id": "acq_b44d9761400a46b096df2e7b6382f1ae",
+      "acquired_at": "2026-07-27T21:41:53.984554+00:00",
+      "acquisition_id": "acq_880b1bd235074f678a7f63025b21bc6c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1541,8 +1541,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:26.009501+00:00",
-      "acquisition_id": "acq_bf04552a84964466ae961fe31e6b4d77",
+      "acquired_at": "2026-07-27T21:41:54.392390+00:00",
+      "acquisition_id": "acq_f0c77dcb3130456fbe278fe0c06312a4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1555,8 +1555,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:26.417634+00:00",
-      "acquisition_id": "acq_dacfbecfb169418985243d77b200d45f",
+      "acquired_at": "2026-07-27T21:41:54.801013+00:00",
+      "acquisition_id": "acq_a40c64cefeee459ea00ac2bb0fd541cb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1569,8 +1569,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:26.825740+00:00",
-      "acquisition_id": "acq_e6ce3b5bd10c48fdb39441d1fbf7c836",
+      "acquired_at": "2026-07-27T21:41:55.208672+00:00",
+      "acquisition_id": "acq_793d0adb05974f08985091b36f0e191c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1583,8 +1583,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:27.233267+00:00",
-      "acquisition_id": "acq_84f73effab2f45da920ed0ea1fd4c71a",
+      "acquired_at": "2026-07-27T21:41:55.616769+00:00",
+      "acquisition_id": "acq_f3a174f6497c48d487799e9b48711001",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1597,8 +1597,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:27.641611+00:00",
-      "acquisition_id": "acq_68f2c48ad20f4bdbba60d965540f7181",
+      "acquired_at": "2026-07-27T21:41:56.025012+00:00",
+      "acquisition_id": "acq_948d70f5d62e4050bb5c68284034389d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1611,8 +1611,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:28.049767+00:00",
-      "acquisition_id": "acq_6078539a116441dc899a8ca800310e98",
+      "acquired_at": "2026-07-27T21:41:56.433193+00:00",
+      "acquisition_id": "acq_c1a23bf46e8045e4b10fa1ab3236d23c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1625,8 +1625,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:28.457543+00:00",
-      "acquisition_id": "acq_5a15939dbf37419480c3bfb05d01caee",
+      "acquired_at": "2026-07-27T21:41:56.841433+00:00",
+      "acquisition_id": "acq_3e46b4bfbbde4bd39f906dac975151b9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1639,8 +1639,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:28.866086+00:00",
-      "acquisition_id": "acq_9636bdde25764f4ebf3e0c99d7e5b19c",
+      "acquired_at": "2026-07-27T21:41:57.249794+00:00",
+      "acquisition_id": "acq_33fe7bcb22b54db7983ef97718a22fdb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1653,8 +1653,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:29.273918+00:00",
-      "acquisition_id": "acq_36f6c4ae27874c7fae27245f456a3ce8",
+      "acquired_at": "2026-07-27T21:41:57.661524+00:00",
+      "acquisition_id": "acq_6fe3ecb4add04e799ebb8347617193d9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1667,8 +1667,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:29.681865+00:00",
-      "acquisition_id": "acq_0dbde56afd8b4f479d41e5a0ecb2f3fe",
+      "acquired_at": "2026-07-27T21:41:58.069493+00:00",
+      "acquisition_id": "acq_3d87363e337142eaba51b897b09ada9f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1681,8 +1681,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:30.089763+00:00",
-      "acquisition_id": "acq_08fd90261f0646e88941fbd52724234c",
+      "acquired_at": "2026-07-27T21:41:58.478466+00:00",
+      "acquisition_id": "acq_98bf6b5aee7b493bbc6dc411cb9060d6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1695,8 +1695,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:30.497410+00:00",
-      "acquisition_id": "acq_2a7e5173de5d4a4d9aec29bdc58b0b70",
+      "acquired_at": "2026-07-27T21:41:58.885918+00:00",
+      "acquisition_id": "acq_16f4b5745f244f028d817c62ff027d42",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1709,8 +1709,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:30.905211+00:00",
-      "acquisition_id": "acq_e17677ab153d4371a1022f1b358260d3",
+      "acquired_at": "2026-07-27T21:41:59.293609+00:00",
+      "acquisition_id": "acq_de61d9df27cb4300b32f97929cad24e6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1723,8 +1723,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:31.313748+00:00",
-      "acquisition_id": "acq_09b88e71e6854393a9f345815d6cc625",
+      "acquired_at": "2026-07-27T21:41:59.701257+00:00",
+      "acquisition_id": "acq_e07e11c0ac604969b73231023953f2c2",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1737,8 +1737,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:31.721407+00:00",
-      "acquisition_id": "acq_112a00389a23474bb78bd31375879f7b",
+      "acquired_at": "2026-07-27T21:42:00.109306+00:00",
+      "acquisition_id": "acq_6cb561f99b08400abc4b072b5af46f5a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1751,8 +1751,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:32.129950+00:00",
-      "acquisition_id": "acq_d6d88af8f030471a88ae826f21426fdc",
+      "acquired_at": "2026-07-27T21:42:00.518209+00:00",
+      "acquisition_id": "acq_c7a7426dd399454fbd6ac8909c6a60ed",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1765,8 +1765,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:32.537702+00:00",
-      "acquisition_id": "acq_9f027e37a19641b4bdce420b4534c0af",
+      "acquired_at": "2026-07-27T21:42:00.925526+00:00",
+      "acquisition_id": "acq_fb863375a8cc453c85a88d2ecbe31af5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1779,8 +1779,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:32.945890+00:00",
-      "acquisition_id": "acq_521d942555f04eb98dab15922efa2688",
+      "acquired_at": "2026-07-27T21:42:01.333493+00:00",
+      "acquisition_id": "acq_575d254535f64fadb5fe65558dced04b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1793,8 +1793,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:33.353566+00:00",
-      "acquisition_id": "acq_a36710bb42ee4f29a2c86291e3ef6075",
+      "acquired_at": "2026-07-27T21:42:01.741968+00:00",
+      "acquisition_id": "acq_d4e5b9293e574f7988e5d56e5c877b8d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1807,8 +1807,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:33.763252+00:00",
-      "acquisition_id": "acq_3d313c7fd5c341d9b8967a83d58ab023",
+      "acquired_at": "2026-07-27T21:42:02.149541+00:00",
+      "acquisition_id": "acq_e82111bdeade49c680e7148327065f48",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1821,8 +1821,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:34.170261+00:00",
-      "acquisition_id": "acq_a7cf47a490c544dcb49a2fad6180f31f",
+      "acquired_at": "2026-07-27T21:42:02.556710+00:00",
+      "acquisition_id": "acq_c4fc8e20e50448e18801ff2347d7662b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1835,8 +1835,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:34.578769+00:00",
-      "acquisition_id": "acq_28b850f267324fc6a71a6b199daa9ae7",
+      "acquired_at": "2026-07-27T21:42:02.965349+00:00",
+      "acquisition_id": "acq_195843bb842a49328d7d6d22b2a1c330",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1849,8 +1849,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:34.986478+00:00",
-      "acquisition_id": "acq_8d549a9e4c984f39bf57442b9068f098",
+      "acquired_at": "2026-07-27T21:42:03.369340+00:00",
+      "acquisition_id": "acq_ae46c4e32fe740a59991126e81cd5c22",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1863,8 +1863,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:35.394249+00:00",
-      "acquisition_id": "acq_6fc4e8b1648e481aa5ef5a2e192b6dd5",
+      "acquired_at": "2026-07-27T21:42:03.777099+00:00",
+      "acquisition_id": "acq_c96f3f4e67d24b3d96b3556e940a21c2",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1877,8 +1877,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:35.802832+00:00",
-      "acquisition_id": "acq_cfc7821a24a34879aef54e3317f8bebe",
+      "acquired_at": "2026-07-27T21:42:04.186298+00:00",
+      "acquisition_id": "acq_e9c2936099484d62af3d3fff6a2819ea",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1891,8 +1891,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:36.210783+00:00",
-      "acquisition_id": "acq_3ca236aad7d9487ab4b971eeabc79ade",
+      "acquired_at": "2026-07-27T21:42:04.593245+00:00",
+      "acquisition_id": "acq_b8294cc4003b45dcbd26281d1008a55f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1905,8 +1905,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:36.619445+00:00",
-      "acquisition_id": "acq_8307ea98a3964ba3b76343083a0ab295",
+      "acquired_at": "2026-07-27T21:42:05.001085+00:00",
+      "acquisition_id": "acq_08125b1d660a47d4b31771760e6fc19e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1919,8 +1919,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:37.033355+00:00",
-      "acquisition_id": "acq_88f34a41dd6745e099bb81419df80e58",
+      "acquired_at": "2026-07-27T21:42:05.409822+00:00",
+      "acquisition_id": "acq_b60ba1537f9e461499ab5ab572427f4e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1933,8 +1933,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:37.442185+00:00",
-      "acquisition_id": "acq_f1150a38888041aca7ed35735afb1553",
+      "acquired_at": "2026-07-27T21:42:05.817062+00:00",
+      "acquisition_id": "acq_df5cda44726a4b9fa80782bc8f59589b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1947,8 +1947,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:37.849909+00:00",
-      "acquisition_id": "acq_97785825973c49d9b7afb21e1bc96dba",
+      "acquired_at": "2026-07-27T21:42:06.225034+00:00",
+      "acquisition_id": "acq_079358cbcf9043d5afba8e595b9ba064",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1961,8 +1961,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:38.259808+00:00",
-      "acquisition_id": "acq_0891df6c27524b7583c566996cf68b3a",
+      "acquired_at": "2026-07-27T21:42:06.632747+00:00",
+      "acquisition_id": "acq_f8b0215b08384c22a62de856d782e068",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1975,8 +1975,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:38.670172+00:00",
-      "acquisition_id": "acq_c2f0832a43c6464d8a02b93410a88397",
+      "acquired_at": "2026-07-27T21:42:07.041351+00:00",
+      "acquisition_id": "acq_2541391bacce4211898eb11a949dd069",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -1989,8 +1989,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:39.078219+00:00",
-      "acquisition_id": "acq_a1685ebea70940448d5de520c77c20a6",
+      "acquired_at": "2026-07-27T21:42:07.449360+00:00",
+      "acquisition_id": "acq_d37e1b0a231d4c319914fcbca7b85c4a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2003,8 +2003,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:39.486711+00:00",
-      "acquisition_id": "acq_f324a66bce304a82b4eeeec455e5674f",
+      "acquired_at": "2026-07-27T21:42:07.856605+00:00",
+      "acquisition_id": "acq_5ac2f5b81b7f4913938f171911e6ea2a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2017,8 +2017,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:39.894493+00:00",
-      "acquisition_id": "acq_693fe5da0f95411ba994408debc915ab",
+      "acquired_at": "2026-07-27T21:42:08.261813+00:00",
+      "acquisition_id": "acq_c3f5fa492fae4215af482891403421e4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2031,8 +2031,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:40.302945+00:00",
-      "acquisition_id": "acq_f2587a41125540e68357ee1a4fd887eb",
+      "acquired_at": "2026-07-27T21:42:08.669753+00:00",
+      "acquisition_id": "acq_6dedadef28fa4fa7ab50070417dbd70a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2045,8 +2045,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:40.710601+00:00",
-      "acquisition_id": "acq_0ef11071f9b14be6a87e2beee9868221",
+      "acquired_at": "2026-07-27T21:42:09.076863+00:00",
+      "acquisition_id": "acq_b58b23d7b079403288cb6e301e3bbdc1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2059,8 +2059,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:41.118737+00:00",
-      "acquisition_id": "acq_8dee4a7ee9214dd9877c04909cc88490",
+      "acquired_at": "2026-07-27T21:42:09.485366+00:00",
+      "acquisition_id": "acq_719e53596bbe47b88c2d02e28e08d695",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2073,8 +2073,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:41.529993+00:00",
-      "acquisition_id": "acq_07ecb95c7c484e96a7be074979bb4396",
+      "acquired_at": "2026-07-27T21:42:09.893429+00:00",
+      "acquisition_id": "acq_95595d35dd9d421f9566589eef269c82",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2087,8 +2087,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:41.937989+00:00",
-      "acquisition_id": "acq_e27ac3f913c04c6aa41e416e62a0552f",
+      "acquired_at": "2026-07-27T21:42:10.300910+00:00",
+      "acquisition_id": "acq_23d24153e4bd401f83edc8ace4898ab9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2101,8 +2101,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:42.346425+00:00",
-      "acquisition_id": "acq_54ea545d3b3d412ebbedb0c2c699de7a",
+      "acquired_at": "2026-07-27T21:42:10.709260+00:00",
+      "acquisition_id": "acq_b64f78f66f584319955b6f585d48a440",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2115,8 +2115,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:42.754568+00:00",
-      "acquisition_id": "acq_c026a8b6ac5745acb4e603d7df213d4c",
+      "acquired_at": "2026-07-27T21:42:11.116836+00:00",
+      "acquisition_id": "acq_70b5e9534bdc44c2a12ad8380939eaeb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2129,8 +2129,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:43.162152+00:00",
-      "acquisition_id": "acq_7ae9298325954f5283d8507ad0bca9eb",
+      "acquired_at": "2026-07-27T21:42:11.524657+00:00",
+      "acquisition_id": "acq_096d9c1fd7ad4dacb62e0f90d857d68d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2143,8 +2143,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:43.570076+00:00",
-      "acquisition_id": "acq_cf0f4bafe8a94f3fb630b0d59f764df6",
+      "acquired_at": "2026-07-27T21:42:11.932825+00:00",
+      "acquisition_id": "acq_c8a10a23b4084d27be6b4b16865ce65e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2157,8 +2157,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:43.978049+00:00",
-      "acquisition_id": "acq_cd2915028f2145b98ccf80e00a2df6bc",
+      "acquired_at": "2026-07-27T21:42:12.340811+00:00",
+      "acquisition_id": "acq_1de70b1f1fda4d859c8b391abf719f4e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2171,8 +2171,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:44.386198+00:00",
-      "acquisition_id": "acq_ad4eb4b4d4434d55995350b077bf2967",
+      "acquired_at": "2026-07-27T21:42:12.748955+00:00",
+      "acquisition_id": "acq_94d1c0a4782145cb9971ffd452cc60ea",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2185,8 +2185,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:44.794548+00:00",
-      "acquisition_id": "acq_96fcf9b1e8bc41c89e46dd8e47f1d0bd",
+      "acquired_at": "2026-07-27T21:42:13.157647+00:00",
+      "acquisition_id": "acq_382048c892bf407fbc341b52387434a0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2199,8 +2199,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:45.202506+00:00",
-      "acquisition_id": "acq_752663da26fe42bfac85a73491156618",
+      "acquired_at": "2026-07-27T21:42:13.565226+00:00",
+      "acquisition_id": "acq_93a6b7e1e45e4114b591c9d87b853dcc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2213,8 +2213,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:45.610840+00:00",
-      "acquisition_id": "acq_754bd8a8351141a18d85a079977f98ff",
+      "acquired_at": "2026-07-27T21:42:13.976422+00:00",
+      "acquisition_id": "acq_b07484e407614a64bbf874f2a32d26bf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2227,8 +2227,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:46.017908+00:00",
-      "acquisition_id": "acq_629ad10c6a5b4276ad712a70cdab6a77",
+      "acquired_at": "2026-07-27T21:42:14.384341+00:00",
+      "acquisition_id": "acq_94db08a475c845b8bacdc7d3c4e1cf2f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2241,8 +2241,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:46.425863+00:00",
-      "acquisition_id": "acq_b31ada532cca42a9b49a56078b43da01",
+      "acquired_at": "2026-07-27T21:42:14.792751+00:00",
+      "acquisition_id": "acq_ea2dea963f034c3e8ecfc392e41b2985",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2255,8 +2255,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:46.833374+00:00",
-      "acquisition_id": "acq_e975fd45760c4034ad90c9d83293b674",
+      "acquired_at": "2026-07-27T21:42:15.200367+00:00",
+      "acquisition_id": "acq_464c764fd0b24c6699b35b98a496f706",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2269,8 +2269,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:47.241745+00:00",
-      "acquisition_id": "acq_e99485501ad549799584398e1c5b6ba3",
+      "acquired_at": "2026-07-27T21:42:15.608163+00:00",
+      "acquisition_id": "acq_bec1e0c28edf4936a04a419ae80052c2",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2283,8 +2283,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:47.649720+00:00",
-      "acquisition_id": "acq_e61f872d8ad1488f85ab988b4245d411",
+      "acquired_at": "2026-07-27T21:42:16.013350+00:00",
+      "acquisition_id": "acq_dd073dc5f441456782e8953e04c6c6eb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2297,8 +2297,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:48.062557+00:00",
-      "acquisition_id": "acq_da95e4f4d5a84e398db458bf0d940523",
+      "acquired_at": "2026-07-27T21:42:16.420384+00:00",
+      "acquisition_id": "acq_727e08348f624a009c02416ce1626641",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2311,8 +2311,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:48.469943+00:00",
-      "acquisition_id": "acq_2455bae17169483f887510215cd9f07e",
+      "acquired_at": "2026-07-27T21:42:16.825038+00:00",
+      "acquisition_id": "acq_bb12eb144c6542cd96ec2dfcb5e86201",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2325,8 +2325,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:48.877419+00:00",
-      "acquisition_id": "acq_b9aaf3f65ada41bbb7420af42c1c19f1",
+      "acquired_at": "2026-07-27T21:42:17.233126+00:00",
+      "acquisition_id": "acq_dbc45c3fb1ac47ae93a186d718c63a72",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2339,8 +2339,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:49.286013+00:00",
-      "acquisition_id": "acq_7bd9934923244eb39b61e97dafaf3407",
+      "acquired_at": "2026-07-27T21:42:17.640030+00:00",
+      "acquisition_id": "acq_ad24a296759e4519ad8ae633cd41e385",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2353,8 +2353,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:49.693669+00:00",
-      "acquisition_id": "acq_2c0c2e55def34873a1a26edddcaa5c86",
+      "acquired_at": "2026-07-27T21:42:18.049151+00:00",
+      "acquisition_id": "acq_2072d77bd83542a1a4ea0a1d33b2d720",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2367,8 +2367,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:50.101992+00:00",
-      "acquisition_id": "acq_15566853fa554571ac31ac413b309748",
+      "acquired_at": "2026-07-27T21:42:18.456126+00:00",
+      "acquisition_id": "acq_6e12943181d249ed8b06f081781d3d20",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2381,8 +2381,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:50.510127+00:00",
-      "acquisition_id": "acq_b7c67922a5c74afd8ecdb989303365d6",
+      "acquired_at": "2026-07-27T21:42:18.864196+00:00",
+      "acquisition_id": "acq_c9b55fe6972741699ede5a560cf20871",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2395,8 +2395,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:50.917420+00:00",
-      "acquisition_id": "acq_42e03c9942c04134bd0ce250774ad3ac",
+      "acquired_at": "2026-07-27T21:42:19.272465+00:00",
+      "acquisition_id": "acq_9e6a4f719bc3436799e9b50d2fb7419e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2409,8 +2409,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:51.325936+00:00",
-      "acquisition_id": "acq_c0000b1f42b84d8f82e222148753d4cd",
+      "acquired_at": "2026-07-27T21:42:19.680589+00:00",
+      "acquisition_id": "acq_40d15f61e03e4a118ea5c0b4785bd38f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2423,8 +2423,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:51.734714+00:00",
-      "acquisition_id": "acq_fa340034d4c145d299cd6e2b41c97999",
+      "acquired_at": "2026-07-27T21:42:20.088293+00:00",
+      "acquisition_id": "acq_08dfb06cc2364e43ac7f3cb6353dc9d5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2437,8 +2437,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:52.142158+00:00",
-      "acquisition_id": "acq_a02b53e4247849e994cb638d84058825",
+      "acquired_at": "2026-07-27T21:42:20.492273+00:00",
+      "acquisition_id": "acq_7d4e78adfedb4f17bd80b410660398cb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2451,8 +2451,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:52.549868+00:00",
-      "acquisition_id": "acq_0f06adeac0d943b49d5a9f4468924e2e",
+      "acquired_at": "2026-07-27T21:42:20.896837+00:00",
+      "acquisition_id": "acq_bbf5cdb6cc9344b8bd402391fc1eb507",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2465,8 +2465,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:52.959671+00:00",
-      "acquisition_id": "acq_dc132b2dc72844f8b41592622336dbf8",
+      "acquired_at": "2026-07-27T21:42:21.304103+00:00",
+      "acquisition_id": "acq_2ebd4c654e974cf3aa2cb883b5139be7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2479,8 +2479,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:53.369878+00:00",
-      "acquisition_id": "acq_5448b235f83a4f2187368e66fce4eeff",
+      "acquired_at": "2026-07-27T21:42:21.708103+00:00",
+      "acquisition_id": "acq_6c72247a37364828b9383dd6da02e068",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2493,8 +2493,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:53.779005+00:00",
-      "acquisition_id": "acq_240c56ab5dfb40e0b28c22b481e0baad",
+      "acquired_at": "2026-07-27T21:42:22.116615+00:00",
+      "acquisition_id": "acq_f8d711136ff949f784f5de44f0998002",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2507,8 +2507,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:54.186956+00:00",
-      "acquisition_id": "acq_faf54708b3d445539016481cee99889e",
+      "acquired_at": "2026-07-27T21:42:22.524534+00:00",
+      "acquisition_id": "acq_e0e6efd9f64a460eaf7f919099571138",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2521,8 +2521,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:54.594303+00:00",
-      "acquisition_id": "acq_8c658bac9a7945bf950880526454ee55",
+      "acquired_at": "2026-07-27T21:42:22.933255+00:00",
+      "acquisition_id": "acq_07155ce35c9b4fa58bc18f981981bfb7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2535,8 +2535,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:55.002558+00:00",
-      "acquisition_id": "acq_01aa01f3dcd94dfcbb587eb86cdd4cc9",
+      "acquired_at": "2026-07-27T21:42:23.340470+00:00",
+      "acquisition_id": "acq_7de4e78af00846a098adeef9b64f909f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2549,8 +2549,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:55.411640+00:00",
-      "acquisition_id": "acq_4c9c72c0ba13474caec6b89c463f2bb9",
+      "acquired_at": "2026-07-27T21:42:23.749285+00:00",
+      "acquisition_id": "acq_22859ae2caf846a98493ddb9cb1c85a6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2563,8 +2563,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:55.822136+00:00",
-      "acquisition_id": "acq_b7581efeb19c4233a4a6c5c81cd138be",
+      "acquired_at": "2026-07-27T21:42:24.156469+00:00",
+      "acquisition_id": "acq_ee5ddd7abd854e188353e89750ef6a59",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2577,8 +2577,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:56.230556+00:00",
-      "acquisition_id": "acq_5d025267217f4ce58120f580e79a521d",
+      "acquired_at": "2026-07-27T21:42:24.561207+00:00",
+      "acquisition_id": "acq_08ca2f92fad345179ebc4645663d7ac0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2591,8 +2591,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:56.637508+00:00",
-      "acquisition_id": "acq_8e9b3cd1db6a4b76aa64167cdd30a366",
+      "acquired_at": "2026-07-27T21:42:24.968136+00:00",
+      "acquisition_id": "acq_4b7937d295d0457a9746072a8a914658",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2605,8 +2605,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:57.041674+00:00",
-      "acquisition_id": "acq_4fbd66bb30934a84acb5d2a0b124eaad",
+      "acquired_at": "2026-07-27T21:42:25.369890+00:00",
+      "acquisition_id": "acq_c66d1348667e468dbc2d8d86e8dd4b0d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2619,8 +2619,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:57.450613+00:00",
-      "acquisition_id": "acq_4dece00865ea42869b4b23ed1d2b4588",
+      "acquired_at": "2026-07-27T21:42:25.776206+00:00",
+      "acquisition_id": "acq_2a3b77f3179b43e59a3cd4f70e58a59e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2633,8 +2633,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:57.857527+00:00",
-      "acquisition_id": "acq_f7adf8e3222c4273ac636bf7f85099e4",
+      "acquired_at": "2026-07-27T21:42:26.180978+00:00",
+      "acquisition_id": "acq_a896b9de2f894ec580b555b587d5101a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2647,8 +2647,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:58.265343+00:00",
-      "acquisition_id": "acq_b5930ca44b2b4f9fb83e82ebc6e94809",
+      "acquired_at": "2026-07-27T21:42:26.588668+00:00",
+      "acquisition_id": "acq_eefa90cf0253426688d01327e20a0043",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2661,8 +2661,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:58.674405+00:00",
-      "acquisition_id": "acq_076edbeeb5aa404fb1006c2bcd4ba8f0",
+      "acquired_at": "2026-07-27T21:42:26.996298+00:00",
+      "acquisition_id": "acq_e525418f765146b38d27c0f4193e47c8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2675,8 +2675,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:59.084273+00:00",
-      "acquisition_id": "acq_c8a1f1e1d0ea4542af8aa014c54596f2",
+      "acquired_at": "2026-07-27T21:42:27.403934+00:00",
+      "acquisition_id": "acq_453e384e89714ec5bda522cbab07f58f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2689,8 +2689,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:59.493595+00:00",
-      "acquisition_id": "acq_50173b4061964a48929c991fdf078e83",
+      "acquired_at": "2026-07-27T21:42:27.807941+00:00",
+      "acquisition_id": "acq_14622ecbbec24ec49d37ad502c830104",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2703,8 +2703,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:32:59.902124+00:00",
-      "acquisition_id": "acq_81efcac481fa4560b5ff0ddfa21c50ac",
+      "acquired_at": "2026-07-27T21:42:28.216085+00:00",
+      "acquisition_id": "acq_2598e5236db04e76b17abf074de7af05",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2717,8 +2717,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:00.310018+00:00",
-      "acquisition_id": "acq_0997a94d2bf74458a88c9328f8b45398",
+      "acquired_at": "2026-07-27T21:42:28.624038+00:00",
+      "acquisition_id": "acq_d610c703b9a24f8a89460d3f3abd837a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2731,8 +2731,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:00.718854+00:00",
-      "acquisition_id": "acq_c9a438afa46c4923a1d0061e56baefd8",
+      "acquired_at": "2026-07-27T21:42:29.032310+00:00",
+      "acquisition_id": "acq_8a8364a366eb4248a4cbb24b685c09ec",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2745,8 +2745,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:01.126252+00:00",
-      "acquisition_id": "acq_4d8a0cae9948447cbbf7b9b5231f8996",
+      "acquired_at": "2026-07-27T21:42:29.436406+00:00",
+      "acquisition_id": "acq_57bb88eb8a864d1eac49df50ed203476",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2759,8 +2759,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:01.534439+00:00",
-      "acquisition_id": "acq_384554e0bb15443297390f0e64ec747a",
+      "acquired_at": "2026-07-27T21:42:29.844118+00:00",
+      "acquisition_id": "acq_82b72876b93d409fadad861c0c0eb780",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2773,8 +2773,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:01.941415+00:00",
-      "acquisition_id": "acq_a6865bfc2f154b4499f35b15102168ee",
+      "acquired_at": "2026-07-27T21:42:30.252571+00:00",
+      "acquisition_id": "acq_c77bbdb807124c69bca814fa2871d007",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2787,8 +2787,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:02.350526+00:00",
-      "acquisition_id": "acq_4c059d1ebf75416c869d1943841aef69",
+      "acquired_at": "2026-07-27T21:42:30.660345+00:00",
+      "acquisition_id": "acq_4a293211ea93487e800eb004f1784157",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2801,8 +2801,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:02.758720+00:00",
-      "acquisition_id": "acq_41fdd704ee2f4166822229687000eabf",
+      "acquired_at": "2026-07-27T21:42:31.068237+00:00",
+      "acquisition_id": "acq_e8cc975961664cb8abc386b2f8dad92e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2815,8 +2815,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:03.170929+00:00",
-      "acquisition_id": "acq_b841a0cd9f354c80a4a0910154c4da0a",
+      "acquired_at": "2026-07-27T21:42:31.475913+00:00",
+      "acquisition_id": "acq_9495db4a2302400faee56b2083c75f27",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2829,8 +2829,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:03.578460+00:00",
-      "acquisition_id": "acq_383286e20c97439abe349910a99629a5",
+      "acquired_at": "2026-07-27T21:42:31.884396+00:00",
+      "acquisition_id": "acq_ae1654179c464f2b8d72d6250306a8e3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2843,8 +2843,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:03.987049+00:00",
-      "acquisition_id": "acq_23f7b09437c14c88b53d7bb8b655cbb8",
+      "acquired_at": "2026-07-27T21:42:32.291872+00:00",
+      "acquisition_id": "acq_cc4a507c6cc0468ba583f8a2917039fa",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2857,8 +2857,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:04.394631+00:00",
-      "acquisition_id": "acq_70ea8e6c1c21458ea81f961a79685417",
+      "acquired_at": "2026-07-27T21:42:32.699978+00:00",
+      "acquisition_id": "acq_74ff919376564576bb33078f673781c8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2871,8 +2871,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:04.802766+00:00",
-      "acquisition_id": "acq_b4c5fc6475e24ee38680d0d1f4ab3417",
+      "acquired_at": "2026-07-27T21:42:33.104583+00:00",
+      "acquisition_id": "acq_be36662558614f04b91e03cd4de46f23",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2885,8 +2885,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:05.209986+00:00",
-      "acquisition_id": "acq_b41adb0067f14699b2cc87308bd5b83d",
+      "acquired_at": "2026-07-27T21:42:33.507686+00:00",
+      "acquisition_id": "acq_4b6202289cde45f0b5ced738100a4495",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2899,8 +2899,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:05.614972+00:00",
-      "acquisition_id": "acq_ee4721a5169842ddbf211efcd9c5fc18",
+      "acquired_at": "2026-07-27T21:42:33.909644+00:00",
+      "acquisition_id": "acq_6c07755f7ff1427a8c46891c439192bf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2913,8 +2913,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:06.022706+00:00",
-      "acquisition_id": "acq_b27fae52e9134c0ca0b7f3c691298deb",
+      "acquired_at": "2026-07-27T21:42:34.312189+00:00",
+      "acquisition_id": "acq_2a411f024a414222865c9376eb223efb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2927,8 +2927,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:06.433587+00:00",
-      "acquisition_id": "acq_70a87ea559e347d08abd9b8afbdc49bb",
+      "acquired_at": "2026-07-27T21:42:34.720593+00:00",
+      "acquisition_id": "acq_584fe91c0e354aecbbe747e27faf43f0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2941,8 +2941,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:06.841464+00:00",
-      "acquisition_id": "acq_56ce99345145400691ad07b3c9bc2ba0",
+      "acquired_at": "2026-07-27T21:42:35.128025+00:00",
+      "acquisition_id": "acq_a87fb745c75b4005b7a8e06fe50900aa",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2955,8 +2955,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:07.250479+00:00",
-      "acquisition_id": "acq_4150c0cefa7b44c492aacf2c924a280a",
+      "acquired_at": "2026-07-27T21:42:35.532020+00:00",
+      "acquisition_id": "acq_3553897c45434f5db5fa06b312032325",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2969,8 +2969,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:07.657408+00:00",
-      "acquisition_id": "acq_a68d90c0589346d08c4ca6e09fd46e33",
+      "acquired_at": "2026-07-27T21:42:35.936472+00:00",
+      "acquisition_id": "acq_aa42579bfc8e4e1695c561e65df4d1d7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2983,8 +2983,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:08.066088+00:00",
-      "acquisition_id": "acq_53be2da3eec84396873f56b1af04c841",
+      "acquired_at": "2026-07-27T21:42:36.345127+00:00",
+      "acquisition_id": "acq_060cb9d8acb54a07a203a77c751f654a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -2997,8 +2997,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:08.473442+00:00",
-      "acquisition_id": "acq_b40c02f5042c4559aeb79e11234c54c0",
+      "acquired_at": "2026-07-27T21:42:36.751849+00:00",
+      "acquisition_id": "acq_9a06fda6194f43a6b5e351aa84e9861d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3011,8 +3011,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:08.881982+00:00",
-      "acquisition_id": "acq_38e92261ff7b44a098828d451f5c245f",
+      "acquired_at": "2026-07-27T21:42:37.156498+00:00",
+      "acquisition_id": "acq_1f126ca8e0914aefa2d9946122efe5fa",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3025,8 +3025,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:09.289791+00:00",
-      "acquisition_id": "acq_96da847a62974c5aa78adab4c9b372c3",
+      "acquired_at": "2026-07-27T21:42:37.564250+00:00",
+      "acquisition_id": "acq_25a345204e8e42f5a7e3d840ac7a7442",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3039,8 +3039,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:09.697640+00:00",
-      "acquisition_id": "acq_b8e500819a87403ebb1bab3025bdfd3c",
+      "acquired_at": "2026-07-27T21:42:37.972632+00:00",
+      "acquisition_id": "acq_3316864858364beab2004e9b64cd841d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3053,8 +3053,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:10.106762+00:00",
-      "acquisition_id": "acq_f03e7ae148c147399669265ebae4421a",
+      "acquired_at": "2026-07-27T21:42:38.380282+00:00",
+      "acquisition_id": "acq_da11fa6c19a64c9fb3392f23837e4364",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3067,8 +3067,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:10.518104+00:00",
-      "acquisition_id": "acq_afd0f81681ab471f9cdf85cb6d5231f3",
+      "acquired_at": "2026-07-27T21:42:38.787892+00:00",
+      "acquisition_id": "acq_dd34d8cd9e7047199fc36e3f8c0cf1cf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3081,8 +3081,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:10.927038+00:00",
-      "acquisition_id": "acq_56b0e5f21e0f48ee97411769938d3c55",
+      "acquired_at": "2026-07-27T21:42:39.198236+00:00",
+      "acquisition_id": "acq_7053276867144c879bb8a8273eb33e7b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3095,8 +3095,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:11.336198+00:00",
-      "acquisition_id": "acq_5b50345cb0ba4354b659de50f8eb0cbe",
+      "acquired_at": "2026-07-27T21:42:39.604917+00:00",
+      "acquisition_id": "acq_4dc03620c1c44a16945f93f04b0bcd7a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3109,8 +3109,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:11.748647+00:00",
-      "acquisition_id": "acq_e643deadc9af48c696b9125b57c1da59",
+      "acquired_at": "2026-07-27T21:42:40.013383+00:00",
+      "acquisition_id": "acq_7f1a723dc32445a7ab73cfb83768ac40",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3123,8 +3123,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:12.158048+00:00",
-      "acquisition_id": "acq_3dda6b5a197d4b7b9ff5fc764b43d75e",
+      "acquired_at": "2026-07-27T21:42:40.421681+00:00",
+      "acquisition_id": "acq_b8cda55cb11e427e9d027710ffb1dd3b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3137,8 +3137,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:12.565878+00:00",
-      "acquisition_id": "acq_6bb015127c8c4028a3f0441d5b38ebde",
+      "acquired_at": "2026-07-27T21:42:40.832447+00:00",
+      "acquisition_id": "acq_d4c8809033424646b0e8500b805fe888",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3151,8 +3151,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:12.973617+00:00",
-      "acquisition_id": "acq_cef3824e6e204f9bb328cac7e7cd107d",
+      "acquired_at": "2026-07-27T21:42:41.241306+00:00",
+      "acquisition_id": "acq_922dcd17fa2946d994c15fbdd888d905",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3165,8 +3165,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:13.382361+00:00",
-      "acquisition_id": "acq_f659314670fd42aaacfe9cd543be83d3",
+      "acquired_at": "2026-07-27T21:42:41.648193+00:00",
+      "acquisition_id": "acq_88eb084fae5a416585d57660a76a1c68",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3179,8 +3179,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:13.789976+00:00",
-      "acquisition_id": "acq_b96d10c9e1a94dae94d2bf7a2dbfba1c",
+      "acquired_at": "2026-07-27T21:42:42.056690+00:00",
+      "acquisition_id": "acq_b7e3850f239546309b3f1c3fb672c326",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3193,8 +3193,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:14.198850+00:00",
-      "acquisition_id": "acq_bd792c4026304288b15f65b34ad51abe",
+      "acquired_at": "2026-07-27T21:42:42.463783+00:00",
+      "acquisition_id": "acq_86f9b4452c7a40e19c6a1a6b83394d74",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3207,8 +3207,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:14.607090+00:00",
-      "acquisition_id": "acq_b2d6f059207b4b3091261719e14608bb",
+      "acquired_at": "2026-07-27T21:42:42.872097+00:00",
+      "acquisition_id": "acq_9a6b07b591514680bf9b395fee24d507",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3221,8 +3221,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:15.018094+00:00",
-      "acquisition_id": "acq_2eaa710b4e384e7f8520708430f7da31",
+      "acquired_at": "2026-07-27T21:42:43.280029+00:00",
+      "acquisition_id": "acq_22bf49f19b19445eac8ed34259cedb82",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3235,8 +3235,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:15.429935+00:00",
-      "acquisition_id": "acq_693caebc6a204a5088011721420a2f96",
+      "acquired_at": "2026-07-27T21:42:43.687944+00:00",
+      "acquisition_id": "acq_a05dca81e61047d081b5455bb1becc94",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3249,8 +3249,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:15.843408+00:00",
-      "acquisition_id": "acq_70374440f0204d8c959405ccc8ec7de0",
+      "acquired_at": "2026-07-27T21:42:44.096554+00:00",
+      "acquisition_id": "acq_92bbfeaa55cf403ea126c4a2e9cbdc7e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3263,8 +3263,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:16.249744+00:00",
-      "acquisition_id": "acq_021d94b182e54d3d96d6070b2937139e",
+      "acquired_at": "2026-07-27T21:42:44.504375+00:00",
+      "acquisition_id": "acq_10cc463fc4fa442199d63c71b5de6fe1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3277,8 +3277,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:16.658376+00:00",
-      "acquisition_id": "acq_39751d91fcc24cd3918ae8f99fe0c61e",
+      "acquired_at": "2026-07-27T21:42:44.912363+00:00",
+      "acquisition_id": "acq_8a7a26e1b204412cb00988a0400da4e5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3291,8 +3291,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:17.066018+00:00",
-      "acquisition_id": "acq_e1ba6eb62e6645c6a5b5293d81837a78",
+      "acquired_at": "2026-07-27T21:42:45.320650+00:00",
+      "acquisition_id": "acq_24870f3ad716462f99d29b3ee146b567",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3305,8 +3305,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:17.476421+00:00",
-      "acquisition_id": "acq_881d0f02304e40508cc5fadbad9b83c4",
+      "acquired_at": "2026-07-27T21:42:45.728135+00:00",
+      "acquisition_id": "acq_640c4b752c024f788574ae5036fc56b8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3319,8 +3319,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:17.890185+00:00",
-      "acquisition_id": "acq_9e56cfe54e42484fbb08d62cd6ae640c",
+      "acquired_at": "2026-07-27T21:42:46.133373+00:00",
+      "acquisition_id": "acq_64083d7f50084564a6df553d07aecd59",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3333,8 +3333,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:18.298029+00:00",
-      "acquisition_id": "acq_86458b7560194652adf4ac7e155e8385",
+      "acquired_at": "2026-07-27T21:42:46.540853+00:00",
+      "acquisition_id": "acq_44101676d77f41918579172497eddda3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3347,8 +3347,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:18.706448+00:00",
-      "acquisition_id": "acq_e0ff41fa86c9474c88a141684d67aa89",
+      "acquired_at": "2026-07-27T21:42:46.949210+00:00",
+      "acquisition_id": "acq_a50a710c310b4bd8946149a89d3b1e25",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3361,8 +3361,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:19.112353+00:00",
-      "acquisition_id": "acq_d1c3bb5341094d3a9a7ee33fd36f9662",
+      "acquired_at": "2026-07-27T21:42:47.357052+00:00",
+      "acquisition_id": "acq_220560ea7baa473db20a6233c5982f00",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3375,8 +3375,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:19.521626+00:00",
-      "acquisition_id": "acq_7ec5f0a8c8404e299e0c71fe8d760ec8",
+      "acquired_at": "2026-07-27T21:42:47.764489+00:00",
+      "acquisition_id": "acq_6509dd80a3fd484390bab3bffabbe4cf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3389,8 +3389,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:19.933378+00:00",
-      "acquisition_id": "acq_cafa0461d35243049c7756b8a5199e0e",
+      "acquired_at": "2026-07-27T21:42:48.168305+00:00",
+      "acquisition_id": "acq_52082cc7ed004c00b25336e1e1d5925d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3403,8 +3403,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:20.342112+00:00",
-      "acquisition_id": "acq_b699a65e24454a1281301892bcc7769c",
+      "acquired_at": "2026-07-27T21:42:48.577298+00:00",
+      "acquisition_id": "acq_52bbd5aacff64670a8e8764b9a23f396",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3417,8 +3417,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:20.749420+00:00",
-      "acquisition_id": "acq_1f33756f1e74461fb78f6bea555f5da3",
+      "acquired_at": "2026-07-27T21:42:48.984048+00:00",
+      "acquisition_id": "acq_d1e7907b649a46cfaac75b0e580edf8b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3431,8 +3431,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:21.157991+00:00",
-      "acquisition_id": "acq_cf6e6e07cafe44f4b5676b38b3cb1e7f",
+      "acquired_at": "2026-07-27T21:42:49.392187+00:00",
+      "acquisition_id": "acq_3fc7e93e1e344754900394a4aa5e65e4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3445,8 +3445,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:21.565997+00:00",
-      "acquisition_id": "acq_d435cb78a0e74648a865c3b7241d6824",
+      "acquired_at": "2026-07-27T21:42:49.796101+00:00",
+      "acquisition_id": "acq_ac9a86e491ed41f18d5356bdbbbd1808",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3459,8 +3459,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:21.977594+00:00",
-      "acquisition_id": "acq_99f9c5233bb944d2a798cd018b919bfe",
+      "acquired_at": "2026-07-27T21:42:50.200185+00:00",
+      "acquisition_id": "acq_757db9e344d949b1ad4a2afd45dc12ac",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3473,8 +3473,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:22.386745+00:00",
-      "acquisition_id": "acq_568e5fb487354f3ba6fa8c33263ca036",
+      "acquired_at": "2026-07-27T21:42:50.600348+00:00",
+      "acquisition_id": "acq_601c36d0742d4da1aef7c72c9f34a21c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3487,8 +3487,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:22.794407+00:00",
-      "acquisition_id": "acq_5d62896465bd40db8f8aea9c0a566d01",
+      "acquired_at": "2026-07-27T21:42:51.005191+00:00",
+      "acquisition_id": "acq_b4666f746a31455aaed2f5c4dde2a858",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3501,8 +3501,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:23.202389+00:00",
-      "acquisition_id": "acq_0a210570e33d4e439f2a7b280d86532c",
+      "acquired_at": "2026-07-27T21:42:51.412004+00:00",
+      "acquisition_id": "acq_e804c0ff82d24152afea78942f6c61f4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3515,8 +3515,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:23.609785+00:00",
-      "acquisition_id": "acq_c6d7842cf25d4a9fa7e1097bbecd7afa",
+      "acquired_at": "2026-07-27T21:42:51.816294+00:00",
+      "acquisition_id": "acq_98907f4e0092477bb05dfd7997667927",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3529,8 +3529,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:24.018029+00:00",
-      "acquisition_id": "acq_b82cae4cf4a847129b27a4c4e0f4734a",
+      "acquired_at": "2026-07-27T21:42:52.224459+00:00",
+      "acquisition_id": "acq_817d1c4b9d604988ae4f3b09cd3bfc1a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3543,8 +3543,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:24.426142+00:00",
-      "acquisition_id": "acq_9c49f4c29b904e63bc4b2ca4c9dfe7a2",
+      "acquired_at": "2026-07-27T21:42:52.632101+00:00",
+      "acquisition_id": "acq_b78ae7564a5f4f34898df5a116b612c4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3557,8 +3557,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:24.834255+00:00",
-      "acquisition_id": "acq_48b9732b0245494a896a9b6706fc24fc",
+      "acquired_at": "2026-07-27T21:42:53.040764+00:00",
+      "acquisition_id": "acq_e55f340cf633460895d2b8dd34f6a2b0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3571,8 +3571,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:25.246217+00:00",
-      "acquisition_id": "acq_ff1d6b53e8e245c981d50b2c65d10f66",
+      "acquired_at": "2026-07-27T21:42:53.449415+00:00",
+      "acquisition_id": "acq_0940ec9d679a4234b368472e0279d314",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3585,8 +3585,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:25.654238+00:00",
-      "acquisition_id": "acq_54b516565f744ab8a920ba1450941032",
+      "acquired_at": "2026-07-27T21:42:53.857460+00:00",
+      "acquisition_id": "acq_f461268720b24705b0ea73fd43e7dc32",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3599,8 +3599,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:26.065808+00:00",
-      "acquisition_id": "acq_f80edba29c204535873ea6865c365750",
+      "acquired_at": "2026-07-27T21:42:54.264641+00:00",
+      "acquisition_id": "acq_203cc355c3d445d3962816f2a2e6469b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3613,8 +3613,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:26.470405+00:00",
-      "acquisition_id": "acq_4692e3d3a8f34b3fb0256a03dad11386",
+      "acquired_at": "2026-07-27T21:42:54.668019+00:00",
+      "acquisition_id": "acq_0afb73a51eaf411f80fb3e934c54b84a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3627,8 +3627,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:26.877597+00:00",
-      "acquisition_id": "acq_59f02fb9157f41f391b53f7bc7aa0892",
+      "acquired_at": "2026-07-27T21:42:55.075998+00:00",
+      "acquisition_id": "acq_c2f4e87f05e24d94a564139f9b2b06db",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3641,8 +3641,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:27.285549+00:00",
-      "acquisition_id": "acq_ff853924d45448e49fe5414fe7643f1e",
+      "acquired_at": "2026-07-27T21:42:55.484399+00:00",
+      "acquisition_id": "acq_641f0f6933334447b3139610ebdd0d98",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3655,8 +3655,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:27.693675+00:00",
-      "acquisition_id": "acq_28ce8de3b86a41b3b007f2e7af37e0f8",
+      "acquired_at": "2026-07-27T21:42:55.892470+00:00",
+      "acquisition_id": "acq_8182a43f78d049118387d8e3f10f03b9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3669,8 +3669,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:28.102513+00:00",
-      "acquisition_id": "acq_14bad88c57fc4ba2b6e7bfd43fe9e94b",
+      "acquired_at": "2026-07-27T21:42:56.300598+00:00",
+      "acquisition_id": "acq_9c1958afcc674e3685f057e59f8b8812",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3683,8 +3683,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:28.510332+00:00",
-      "acquisition_id": "acq_27aceaa19e3043b78c148c508df04ee9",
+      "acquired_at": "2026-07-27T21:42:56.708659+00:00",
+      "acquisition_id": "acq_5a8cdb61b03f469d892b86e848a593b5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3697,8 +3697,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:28.917685+00:00",
-      "acquisition_id": "acq_57b19943646d4288acfb56fe6a4bcf52",
+      "acquired_at": "2026-07-27T21:42:57.117188+00:00",
+      "acquisition_id": "acq_3250b91dddd4413191f4375a71f49e8e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3711,8 +3711,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:29.326120+00:00",
-      "acquisition_id": "acq_7ddf515508954fcfb3cdf4203d9a0986",
+      "acquired_at": "2026-07-27T21:42:57.524805+00:00",
+      "acquisition_id": "acq_db96e68003f94df482fe0f8253897516",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3725,8 +3725,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:29.734028+00:00",
-      "acquisition_id": "acq_ef1e74abfde74161955118ae12f715cd",
+      "acquired_at": "2026-07-27T21:42:57.932287+00:00",
+      "acquisition_id": "acq_050517e0bb3c48f58500f94eded69c68",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3739,8 +3739,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:30.141854+00:00",
-      "acquisition_id": "acq_02857ffbc0a6430e8d55ac26eb93bb19",
+      "acquired_at": "2026-07-27T21:42:58.340426+00:00",
+      "acquisition_id": "acq_7face9d401be4ea984086ba5d0fa511f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3753,8 +3753,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:30.550873+00:00",
-      "acquisition_id": "acq_93398845920d471da757c0427b38f010",
+      "acquired_at": "2026-07-27T21:42:58.745402+00:00",
+      "acquisition_id": "acq_872b7638d31745dea9a66ae81b30c26f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3767,8 +3767,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:30.957921+00:00",
-      "acquisition_id": "acq_367c8f8a90ee46bba7f1bd90e02608e1",
+      "acquired_at": "2026-07-27T21:42:59.152916+00:00",
+      "acquisition_id": "acq_8c3928a6e790493db0598bb489bf9bf1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3781,8 +3781,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:31.366082+00:00",
-      "acquisition_id": "acq_cc3a9e73c9c84dc9a331f6979764f972",
+      "acquired_at": "2026-07-27T21:42:59.564428+00:00",
+      "acquisition_id": "acq_ef555eef940646818d955f63511f765f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3795,8 +3795,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:31.774045+00:00",
-      "acquisition_id": "acq_5c66d3c6038f483ebe4b66f88b469ffe",
+      "acquired_at": "2026-07-27T21:42:59.972256+00:00",
+      "acquisition_id": "acq_0f9fbf86c66a43218191ee810800ba76",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3809,8 +3809,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:32.181855+00:00",
-      "acquisition_id": "acq_33052f5e999c44de917a8b991a8a5afa",
+      "acquired_at": "2026-07-27T21:43:00.380135+00:00",
+      "acquisition_id": "acq_8e5d5a463e7c4b4395e047526b1e1b2f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3823,8 +3823,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:32.589732+00:00",
-      "acquisition_id": "acq_df8dec771b464a3aa5aa3def26447184",
+      "acquired_at": "2026-07-27T21:43:00.784040+00:00",
+      "acquisition_id": "acq_cb5f6ffda8574c3cb3bca5ec86b45672",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3837,8 +3837,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:32.997523+00:00",
-      "acquisition_id": "acq_5cc0eb8928474c8bbae1270f4d27196b",
+      "acquired_at": "2026-07-27T21:43:01.192730+00:00",
+      "acquisition_id": "acq_6e18219c1e454fae9689e69d9dbae89e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3851,8 +3851,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:33.405805+00:00",
-      "acquisition_id": "acq_f71130c69d65450892e57e1189e71440",
+      "acquired_at": "2026-07-27T21:43:01.600960+00:00",
+      "acquisition_id": "acq_02607fad7c234465a8afd4d512a34150",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3865,8 +3865,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:33.813930+00:00",
-      "acquisition_id": "acq_e207699040b84663ad47436c72f5e92e",
+      "acquired_at": "2026-07-27T21:43:02.008985+00:00",
+      "acquisition_id": "acq_82be93473cd54c7c81e1788a3bdbd5f9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3879,8 +3879,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:34.222974+00:00",
-      "acquisition_id": "acq_01843b3945d34c618e53553335aa7b97",
+      "acquired_at": "2026-07-27T21:43:02.416405+00:00",
+      "acquisition_id": "acq_495e19584a9d4504b40579db46e5ae70",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3893,8 +3893,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:34.629872+00:00",
-      "acquisition_id": "acq_ab844c618e3f4503943b34d9d91a8aa0",
+      "acquired_at": "2026-07-27T21:43:02.824684+00:00",
+      "acquisition_id": "acq_fad23a0f167e428ba88685c4ec7bce5c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3907,8 +3907,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:35.037964+00:00",
-      "acquisition_id": "acq_156ae69bc6c8466a8d8346adb971cec3",
+      "acquired_at": "2026-07-27T21:43:03.232530+00:00",
+      "acquisition_id": "acq_a34f545108a74a2f8deb10c6a9e071b7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3921,8 +3921,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:35.449702+00:00",
-      "acquisition_id": "acq_c84ad2cbfa294a3c8b25e2c775ac5784",
+      "acquired_at": "2026-07-27T21:43:03.642151+00:00",
+      "acquisition_id": "acq_9891782050fa45f990e4b30248921975",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3935,8 +3935,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:35.858445+00:00",
-      "acquisition_id": "acq_1497dd9eb3114290b281da4956722efb",
+      "acquired_at": "2026-07-27T21:43:04.049323+00:00",
+      "acquisition_id": "acq_1c7265f6390d4eb985e790bfcec3b43f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3949,8 +3949,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:36.265734+00:00",
-      "acquisition_id": "acq_aad9009610914b3d97411263654e59be",
+      "acquired_at": "2026-07-27T21:43:04.458588+00:00",
+      "acquisition_id": "acq_b3a620daabd54749bfae577e95017c80",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3963,8 +3963,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:36.674050+00:00",
-      "acquisition_id": "acq_fdc4fc4f529945eb8c3f81c9a986f053",
+      "acquired_at": "2026-07-27T21:43:04.869348+00:00",
+      "acquisition_id": "acq_53b89c139006457089402962a978b44e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3977,8 +3977,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:37.081765+00:00",
-      "acquisition_id": "acq_fb4a9c3000774fc2896c7d72ac17411b",
+      "acquired_at": "2026-07-27T21:43:05.276940+00:00",
+      "acquisition_id": "acq_6caf9809e12543f984a53b77728703c3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -3991,8 +3991,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:37.489743+00:00",
-      "acquisition_id": "acq_1d8005ee888d4034a5baec36968966ea",
+      "acquired_at": "2026-07-27T21:43:05.685223+00:00",
+      "acquisition_id": "acq_216df6c70ce346ec9cbe8c8a90a49cdb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4005,8 +4005,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:37.898706+00:00",
-      "acquisition_id": "acq_a41a9c02941f427bb08bfdb2ceecf445",
+      "acquired_at": "2026-07-27T21:43:06.093203+00:00",
+      "acquisition_id": "acq_d013f1ed279f4095a5b9410a48da2db4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4019,8 +4019,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:38.305840+00:00",
-      "acquisition_id": "acq_3552d5ec421447c6ada85c2ac8d529b8",
+      "acquired_at": "2026-07-27T21:43:06.500927+00:00",
+      "acquisition_id": "acq_1c510f91463b4049a5af726f60e5ef0c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4033,8 +4033,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:38.713581+00:00",
-      "acquisition_id": "acq_cb48e798b813434fad8c00e97371e466",
+      "acquired_at": "2026-07-27T21:43:06.909561+00:00",
+      "acquisition_id": "acq_be12ed6620d5489a93e97c167d2084e4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4047,8 +4047,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:39.122200+00:00",
-      "acquisition_id": "acq_85fd5f1571744f07a1bc17562e26cafb",
+      "acquired_at": "2026-07-27T21:43:07.316923+00:00",
+      "acquisition_id": "acq_b201aa34906548e6ba9af21f54b8ba16",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4061,8 +4061,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:39.529608+00:00",
-      "acquisition_id": "acq_cf52624e39654fc7809c595f5afe3380",
+      "acquired_at": "2026-07-27T21:43:07.725047+00:00",
+      "acquisition_id": "acq_ccbeda5e16c9409297e68ee2029ec3f6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4075,8 +4075,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:39.937958+00:00",
-      "acquisition_id": "acq_5461bd7007dc497c8e9f6739ccd9c451",
+      "acquired_at": "2026-07-27T21:43:08.134691+00:00",
+      "acquisition_id": "acq_92a53275708e4f6384f9e93e4f6087f3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4089,8 +4089,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:40.346141+00:00",
-      "acquisition_id": "acq_895c6677e79e4be983422d57c39c0bef",
+      "acquired_at": "2026-07-27T21:43:08.541096+00:00",
+      "acquisition_id": "acq_503a5c1838994157a20bab00c0516a1b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4103,8 +4103,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:40.755032+00:00",
-      "acquisition_id": "acq_1e472f6e97be4920ba039a792ce5b008",
+      "acquired_at": "2026-07-27T21:43:08.949432+00:00",
+      "acquisition_id": "acq_4baea62901ee437a90f1fc9298f48d01",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4117,8 +4117,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:41.162139+00:00",
-      "acquisition_id": "acq_72db88f0782644149f8ee547d8b7604d",
+      "acquired_at": "2026-07-27T21:43:09.356817+00:00",
+      "acquisition_id": "acq_9aa27464d8734d4dab20689dedad04c0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4131,8 +4131,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:41.574096+00:00",
-      "acquisition_id": "acq_601f7e64698a422a9b0b9dafd17d270c",
+      "acquired_at": "2026-07-27T21:43:09.765069+00:00",
+      "acquisition_id": "acq_cf58b6fc5ac8422386a95fbf17a81951",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4145,8 +4145,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:41.981716+00:00",
-      "acquisition_id": "acq_4e665416c2c84bf18f0edb823429eace",
+      "acquired_at": "2026-07-27T21:43:10.173194+00:00",
+      "acquisition_id": "acq_0552f697f6734b9e8b67800d5327870e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4159,8 +4159,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:42.389720+00:00",
-      "acquisition_id": "acq_d6d5761e684f4b05a987cad1e61d1924",
+      "acquired_at": "2026-07-27T21:43:10.580568+00:00",
+      "acquisition_id": "acq_b0a3d78b1a8348549b46aaf5af37e203",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4173,8 +4173,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:42.797677+00:00",
-      "acquisition_id": "acq_ca339064e9d043ac96cff6cd57a1d625",
+      "acquired_at": "2026-07-27T21:43:10.989156+00:00",
+      "acquisition_id": "acq_898f9e6874aa4d19b29f15421d2f77b6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4187,8 +4187,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:43.206212+00:00",
-      "acquisition_id": "acq_6e03499784634cb9904437950c3dabaa",
+      "acquired_at": "2026-07-27T21:43:11.396926+00:00",
+      "acquisition_id": "acq_df9cfafeebf94a20bfd00e5a4b63193c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4201,8 +4201,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:43.614064+00:00",
-      "acquisition_id": "acq_a27b2d372a764ea08f749d458782a9dc",
+      "acquired_at": "2026-07-27T21:43:11.805578+00:00",
+      "acquisition_id": "acq_169c1fe833324f56b2afca9f7b48c834",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4215,8 +4215,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:44.017789+00:00",
-      "acquisition_id": "acq_d3a94399970e4aea88187a592ea5ca4e",
+      "acquired_at": "2026-07-27T21:43:12.213391+00:00",
+      "acquisition_id": "acq_67e642d187054b768c95a4ee1e55fff9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4229,8 +4229,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:44.426532+00:00",
-      "acquisition_id": "acq_4bdc469b8b374ebc90311c602b47084a",
+      "acquired_at": "2026-07-27T21:43:12.621255+00:00",
+      "acquisition_id": "acq_717fec179983445683b10c17c496d5cc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4243,8 +4243,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:44.834021+00:00",
-      "acquisition_id": "acq_98f54d75b4b64d35bd54efc06bd55c0d",
+      "acquired_at": "2026-07-27T21:43:13.029312+00:00",
+      "acquisition_id": "acq_e9a8615be8344743bc63c9a58d047717",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4257,8 +4257,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:45.242278+00:00",
-      "acquisition_id": "acq_cb43b138369d48b484d312c5e3fa29c8",
+      "acquired_at": "2026-07-27T21:43:13.436824+00:00",
+      "acquisition_id": "acq_68a29af60c434868bb9fbdab1fbba65a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4271,8 +4271,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:45.650063+00:00",
-      "acquisition_id": "acq_0f19c650a221499bb65be7398a02f115",
+      "acquired_at": "2026-07-27T21:43:13.845414+00:00",
+      "acquisition_id": "acq_b0e58bba078547028231c1898dfd0d4a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4285,8 +4285,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:46.059984+00:00",
-      "acquisition_id": "acq_5419dabf7751447b820462fc0a258534",
+      "acquired_at": "2026-07-27T21:43:14.254031+00:00",
+      "acquisition_id": "acq_ffa9c63b2cd74bea994d8ee573394aec",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4299,8 +4299,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:46.469861+00:00",
-      "acquisition_id": "acq_39f16e11e173430d9ed03b9c1252d945",
+      "acquired_at": "2026-07-27T21:43:14.661358+00:00",
+      "acquisition_id": "acq_7eb8e4d981d046b9a38ad7a2f6dea0ac",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4313,8 +4313,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:46.877663+00:00",
-      "acquisition_id": "acq_808ec3ead37e4605bb6548dcf3c5702d",
+      "acquired_at": "2026-07-27T21:43:15.068920+00:00",
+      "acquisition_id": "acq_2d1b84c60b404582bd19c7c7f6e86297",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4327,8 +4327,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:47.286941+00:00",
-      "acquisition_id": "acq_0256c4aa1b5248c0b9180f7f026973c8",
+      "acquired_at": "2026-07-27T21:43:15.477302+00:00",
+      "acquisition_id": "acq_ebe7cc47f3dc440b9179e59b060ce55f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4341,8 +4341,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:47.698551+00:00",
-      "acquisition_id": "acq_c6828c34dada4928995fd376911690fa",
+      "acquired_at": "2026-07-27T21:43:15.885110+00:00",
+      "acquisition_id": "acq_7d9cbd0869224ce39028fed0b7346c75",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4355,8 +4355,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:48.106832+00:00",
-      "acquisition_id": "acq_0144b035549b45eb9280c477d9cf8fc5",
+      "acquired_at": "2026-07-27T21:43:16.297493+00:00",
+      "acquisition_id": "acq_0e8b7b170cae4920b852a4728529f31a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4369,8 +4369,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:48.513683+00:00",
-      "acquisition_id": "acq_5bd0e1ce108144bb9492fc8ac1953438",
+      "acquired_at": "2026-07-27T21:43:16.704407+00:00",
+      "acquisition_id": "acq_3d9d2dc9337e42fd80539c3190ff69cf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4383,8 +4383,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:48.922434+00:00",
-      "acquisition_id": "acq_a896c61bd673421f80b9e1a98fb401a2",
+      "acquired_at": "2026-07-27T21:43:17.112873+00:00",
+      "acquisition_id": "acq_19e0edaec6cd4edc9d50981eb60c834c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4397,8 +4397,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:49.329989+00:00",
-      "acquisition_id": "acq_8ec5b25962a745b3b6fb7b93b709b7be",
+      "acquired_at": "2026-07-27T21:43:17.520418+00:00",
+      "acquisition_id": "acq_c5775b6f300f43f990e95cd226ba99e0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4411,8 +4411,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:49.738539+00:00",
-      "acquisition_id": "acq_399056309bd64a37acb3be61bdeeb052",
+      "acquired_at": "2026-07-27T21:43:17.927942+00:00",
+      "acquisition_id": "acq_b19fd53f00f440d3b7d7378461bd01a1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4425,8 +4425,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:50.145746+00:00",
-      "acquisition_id": "acq_9e65b66bc9b94e1abc769c3a7a0e050d",
+      "acquired_at": "2026-07-27T21:43:18.336312+00:00",
+      "acquisition_id": "acq_2036573e97f84102be7e14292832d735",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4439,8 +4439,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:50.553676+00:00",
-      "acquisition_id": "acq_c02285d14e0d42848e587444c6c3dc39",
+      "acquired_at": "2026-07-27T21:43:18.747886+00:00",
+      "acquisition_id": "acq_4a68adf288e94aaca4f34c418ff748ae",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4453,8 +4453,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:50.962524+00:00",
-      "acquisition_id": "acq_e9d13a8435154e21a9e3ce2a95557c07",
+      "acquired_at": "2026-07-27T21:43:19.156932+00:00",
+      "acquisition_id": "acq_8e8185cf22fd4e5b9b49a37a0c778398",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4467,8 +4467,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:51.370061+00:00",
-      "acquisition_id": "acq_74ef2b68e4cd48bf95745c13cb1ec16e",
+      "acquired_at": "2026-07-27T21:43:19.564081+00:00",
+      "acquisition_id": "acq_a0367d22be444f58b34f3a21acdb2c66",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4481,8 +4481,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:51.782179+00:00",
-      "acquisition_id": "acq_2fef5b26d975488c92f6973e46e573ac",
+      "acquired_at": "2026-07-27T21:43:19.972011+00:00",
+      "acquisition_id": "acq_37a7a778b3dd4865991fd387e5497662",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4495,8 +4495,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:52.190202+00:00",
-      "acquisition_id": "acq_ce4488228e2f436ba0e15ae0e42af046",
+      "acquired_at": "2026-07-27T21:43:20.379852+00:00",
+      "acquisition_id": "acq_590f8d4a95a7450b911c525fcede3b6f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4509,8 +4509,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:52.598418+00:00",
-      "acquisition_id": "acq_0cc864d28e5c4e1a82a407bdbc7acfac",
+      "acquired_at": "2026-07-27T21:43:20.788559+00:00",
+      "acquisition_id": "acq_d91ca514a14b41029def21ffdd64e172",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4523,8 +4523,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:53.006913+00:00",
-      "acquisition_id": "acq_657a944c3f7549df8bf6b255e2df8c64",
+      "acquired_at": "2026-07-27T21:43:21.196679+00:00",
+      "acquisition_id": "acq_01368dff2ba94ae5bb22c9d80b9a1cb8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4537,8 +4537,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:53.417937+00:00",
-      "acquisition_id": "acq_9d8a85b794dd4843a75eeed5b8c9efa4",
+      "acquired_at": "2026-07-27T21:43:21.604260+00:00",
+      "acquisition_id": "acq_c75638af23b541f793fc736493562e9a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4551,8 +4551,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:53.826933+00:00",
-      "acquisition_id": "acq_f3d9e33ad1c54a6cab474620d767550a",
+      "acquired_at": "2026-07-27T21:43:22.012125+00:00",
+      "acquisition_id": "acq_26ad855388fb439f89c64599d004c99b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4565,8 +4565,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:54.237304+00:00",
-      "acquisition_id": "acq_91c7dce46f3447e9ad6c7cdd8e7a32b0",
+      "acquired_at": "2026-07-27T21:43:22.420234+00:00",
+      "acquisition_id": "acq_9fd6aacf1d2d47b78b9d55392503f363",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4579,8 +4579,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:54.642763+00:00",
-      "acquisition_id": "acq_6c99c4a9367a4a6ea3d2c1c0b21d57e9",
+      "acquired_at": "2026-07-27T21:43:22.828339+00:00",
+      "acquisition_id": "acq_2853d715723a4cb287c3941d949ba707",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4593,8 +4593,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:55.050216+00:00",
-      "acquisition_id": "acq_2729d9d6c26c43dea75406db6839ebd6",
+      "acquired_at": "2026-07-27T21:43:23.236276+00:00",
+      "acquisition_id": "acq_758a567c6c4d4acf839bccc565ff1442",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4607,8 +4607,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:55.459165+00:00",
-      "acquisition_id": "acq_087fc40b7b524dab8a42872c26e1a793",
+      "acquired_at": "2026-07-27T21:43:23.640363+00:00",
+      "acquisition_id": "acq_3649d3ab96c8405caedf416582f42196",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4621,8 +4621,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:55.865658+00:00",
-      "acquisition_id": "acq_e03c2dc9263b4fab82ab3b0a5b8bc9e0",
+      "acquired_at": "2026-07-27T21:43:24.048354+00:00",
+      "acquisition_id": "acq_5479644612b547afb6ab7bc89c4cc3ff",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4635,8 +4635,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:56.274200+00:00",
-      "acquisition_id": "acq_6b1edf486cac4987871cae2cee79272a",
+      "acquired_at": "2026-07-27T21:43:24.456763+00:00",
+      "acquisition_id": "acq_e4cc32f549b841439f751d2a129a8a10",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4649,8 +4649,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:56.682263+00:00",
-      "acquisition_id": "acq_3b80d2325a424524b84cee9bb0ee818a",
+      "acquired_at": "2026-07-27T21:43:24.864406+00:00",
+      "acquisition_id": "acq_ce43d8481d254281a656368fefaa4db0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4663,8 +4663,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:57.089630+00:00",
-      "acquisition_id": "acq_54e77675841e4f73b66de1139ad5e840",
+      "acquired_at": "2026-07-27T21:43:25.272273+00:00",
+      "acquisition_id": "acq_743fdc0711114583afc07a2094efa3f9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4677,8 +4677,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:57.497444+00:00",
-      "acquisition_id": "acq_5d3800f0e470474881c8acd189a3ee43",
+      "acquired_at": "2026-07-27T21:43:25.680841+00:00",
+      "acquisition_id": "acq_bd4b561fe9df45868b93696d9a2302eb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4691,8 +4691,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:57.905949+00:00",
-      "acquisition_id": "acq_c7ba2d45bb7a452696849543520d191c",
+      "acquired_at": "2026-07-27T21:43:26.088247+00:00",
+      "acquisition_id": "acq_99a80ad468374d3fb0c2fc432710e825",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4705,8 +4705,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:58.313956+00:00",
-      "acquisition_id": "acq_23981ef30c1342149a776265db985802",
+      "acquired_at": "2026-07-27T21:43:26.496062+00:00",
+      "acquisition_id": "acq_4ae0f8896a704d10aed3248d0c783d2f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4719,8 +4719,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:58.722859+00:00",
-      "acquisition_id": "acq_3ab53114045c4cd2875fe4acbb3dc77d",
+      "acquired_at": "2026-07-27T21:43:26.903860+00:00",
+      "acquisition_id": "acq_7f34cefef189422a92b3644c9b71c4a8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4733,8 +4733,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:59.133606+00:00",
-      "acquisition_id": "acq_0c53d00c8bba46b5baf504f7e2b99add",
+      "acquired_at": "2026-07-27T21:43:27.312390+00:00",
+      "acquisition_id": "acq_121f4e59e34f471180cf269b8f0f8e2d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4747,8 +4747,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:59.542914+00:00",
-      "acquisition_id": "acq_63a0115b4b8e4b259dbe7778d6774e52",
+      "acquired_at": "2026-07-27T21:43:27.719991+00:00",
+      "acquisition_id": "acq_249417c0cd0344abb6bc12a746427319",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4761,8 +4761,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:33:59.950051+00:00",
-      "acquisition_id": "acq_ced6754f31d8454ca1e8af9130923c38",
+      "acquired_at": "2026-07-27T21:43:28.128069+00:00",
+      "acquisition_id": "acq_3c4c19b8b08b4e6e94321d7b477439f9",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4775,8 +4775,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:00.361754+00:00",
-      "acquisition_id": "acq_37a9b29a6be146b1af9825eee929f652",
+      "acquired_at": "2026-07-27T21:43:28.536566+00:00",
+      "acquisition_id": "acq_fb936d9bfda84fc19942a3061c1260b2",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4789,8 +4789,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:00.770189+00:00",
-      "acquisition_id": "acq_163f6d1cced84d6a9f941783f3abd5bc",
+      "acquired_at": "2026-07-27T21:43:28.944135+00:00",
+      "acquisition_id": "acq_4075904907884b0594178ffacd6cc459",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4803,8 +4803,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:01.177449+00:00",
-      "acquisition_id": "acq_595b66ec90e24ff29b4eedbae03c4155",
+      "acquired_at": "2026-07-27T21:43:29.348196+00:00",
+      "acquisition_id": "acq_aed827cccf04462d9d7ab10117b47e9b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4817,8 +4817,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:01.582013+00:00",
-      "acquisition_id": "acq_2b2fc3b8e0e64be8830a3eb006326183",
+      "acquired_at": "2026-07-27T21:43:29.752390+00:00",
+      "acquisition_id": "acq_0de47ba10c314b3887adfbebb32c20ef",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4831,8 +4831,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:01.990347+00:00",
-      "acquisition_id": "acq_6bc9632e450145df97b87a7091d2e187",
+      "acquired_at": "2026-07-27T21:43:30.160371+00:00",
+      "acquisition_id": "acq_3642e1449be64609ae73520f51ab2596",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4845,8 +4845,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:02.398740+00:00",
-      "acquisition_id": "acq_660e9258e14f42ae9fc948dd5eb6d630",
+      "acquired_at": "2026-07-27T21:43:30.564579+00:00",
+      "acquisition_id": "acq_12876e3b1b354d4396a459e7599d62fc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4859,8 +4859,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:02.806907+00:00",
-      "acquisition_id": "acq_c0530095cac34fc7b535208d531f32e9",
+      "acquired_at": "2026-07-27T21:43:30.973472+00:00",
+      "acquisition_id": "acq_9f511f918dff426cae0dc43c117a95ef",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4873,8 +4873,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:03.218625+00:00",
-      "acquisition_id": "acq_5e64ce74120e4868b8ec6e6ce9e11fa2",
+      "acquired_at": "2026-07-27T21:43:31.380586+00:00",
+      "acquisition_id": "acq_a3d9831ed36b48dfa1f823589a8a14b5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4887,8 +4887,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:03.627537+00:00",
-      "acquisition_id": "acq_a038d48a067b49bbbf41340be1db4c98",
+      "acquired_at": "2026-07-27T21:43:31.787747+00:00",
+      "acquisition_id": "acq_ce17580865dc43dd819b87b91dcd6d97",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4901,8 +4901,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:04.034018+00:00",
-      "acquisition_id": "acq_143e059980ee4c2281a498d89570d210",
+      "acquired_at": "2026-07-27T21:43:32.192392+00:00",
+      "acquisition_id": "acq_208d84395be841e2b232a41f54619ae4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4915,8 +4915,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:04.443286+00:00",
-      "acquisition_id": "acq_1bfe3108bd1e475fb8c1b549c59f83cd",
+      "acquired_at": "2026-07-27T21:43:32.601177+00:00",
+      "acquisition_id": "acq_ad19b48287854eefacdf06ed2d84de33",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4929,8 +4929,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:04.855571+00:00",
-      "acquisition_id": "acq_13834ae27ef248139b2306bc1f554a4b",
+      "acquired_at": "2026-07-27T21:43:33.008263+00:00",
+      "acquisition_id": "acq_c6fa0a962c6640d3b69dd9c0df83f920",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4943,8 +4943,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:05.263473+00:00",
-      "acquisition_id": "acq_60dda0331915413ca9ca0c8a04e1c911",
+      "acquired_at": "2026-07-27T21:43:33.416027+00:00",
+      "acquisition_id": "acq_70b02c5ec6d046119eed2a0a54889b83",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4957,8 +4957,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:05.670105+00:00",
-      "acquisition_id": "acq_2bd576018c9c4bbdbd358c3e654869bb",
+      "acquired_at": "2026-07-27T21:43:33.823230+00:00",
+      "acquisition_id": "acq_0941e90e5c2d40f3a2472cc58660dffc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4971,8 +4971,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:06.078651+00:00",
-      "acquisition_id": "acq_814ebbe5d3aa4aebae82d21731dc619b",
+      "acquired_at": "2026-07-27T21:43:34.232506+00:00",
+      "acquisition_id": "acq_b6ced1617db045e3a81b30b4547aeeb8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4985,8 +4985,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:06.486191+00:00",
-      "acquisition_id": "acq_c73a74eb16c9468a980d9bef820c35a0",
+      "acquired_at": "2026-07-27T21:43:34.640347+00:00",
+      "acquisition_id": "acq_55fa0e5e8d1647df915340c073f80939",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -4999,8 +4999,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:06.895058+00:00",
-      "acquisition_id": "acq_59df1de3e4d14a5a87dfd1cdf82c64cb",
+      "acquired_at": "2026-07-27T21:43:35.048762+00:00",
+      "acquisition_id": "acq_a05f3d062d2b42d188e2e2033071d15a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5013,8 +5013,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:07.302113+00:00",
-      "acquisition_id": "acq_ef803201880f4fd2bb6c8ae778825b9c",
+      "acquired_at": "2026-07-27T21:43:35.456885+00:00",
+      "acquisition_id": "acq_9c2c0959ee554430ad799aa8956ec9e8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5027,8 +5027,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:07.709708+00:00",
-      "acquisition_id": "acq_db66ecc9c3dc4a6fb0990a0874246acb",
+      "acquired_at": "2026-07-27T21:43:35.864260+00:00",
+      "acquisition_id": "acq_4dcaabda575e4cb7b2495a84bee400ac",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5041,8 +5041,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:08.121552+00:00",
-      "acquisition_id": "acq_fb72220c03c9418cb03b88a8bb8a2743",
+      "acquired_at": "2026-07-27T21:43:36.273214+00:00",
+      "acquisition_id": "acq_cdffc19ee55c465288552f6eec19daa8",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5055,8 +5055,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:08.530426+00:00",
-      "acquisition_id": "acq_9cbf9932bd7b40759c88c7580d6d8a90",
+      "acquired_at": "2026-07-27T21:43:36.682135+00:00",
+      "acquisition_id": "acq_35b0227b9c474ef29f26c4552e044dc0",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5069,8 +5069,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:08.939065+00:00",
-      "acquisition_id": "acq_226fc4fed3314a9096258376809c2510",
+      "acquired_at": "2026-07-27T21:43:37.088197+00:00",
+      "acquisition_id": "acq_3a8e2908503a4848bc0de3c45bd843b3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5083,8 +5083,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:09.350598+00:00",
-      "acquisition_id": "acq_5d25e3f1c6ed4f758926fae5d1e744d1",
+      "acquired_at": "2026-07-27T21:43:37.496450+00:00",
+      "acquisition_id": "acq_f0098f6ec4f34e06b2748d65cdde8935",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5097,8 +5097,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:09.761942+00:00",
-      "acquisition_id": "acq_58d063b66c464ecb8f7c70cefb4d39c6",
+      "acquired_at": "2026-07-27T21:43:37.904302+00:00",
+      "acquisition_id": "acq_334a6f97243f496c81df85efc05ba411",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5111,8 +5111,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:10.171136+00:00",
-      "acquisition_id": "acq_771f97397bb64176920b1460189921d2",
+      "acquired_at": "2026-07-27T21:43:38.312024+00:00",
+      "acquisition_id": "acq_2ed602f51bde47ca8598e3e8a36c1212",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5125,8 +5125,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:10.578179+00:00",
-      "acquisition_id": "acq_3254315544cd4ef38aeb188376610306",
+      "acquired_at": "2026-07-27T21:43:38.720074+00:00",
+      "acquisition_id": "acq_0e04dc297927442b884de1110067d889",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5139,8 +5139,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:10.986364+00:00",
-      "acquisition_id": "acq_745b67fe10f14448b8b59bc8aec27651",
+      "acquired_at": "2026-07-27T21:43:39.124963+00:00",
+      "acquisition_id": "acq_82c8e868d59b44af8311687b7a02e87f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5153,8 +5153,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:11.394780+00:00",
-      "acquisition_id": "acq_e30c09b21afd4143aedcadacfc36bad2",
+      "acquired_at": "2026-07-27T21:43:39.532304+00:00",
+      "acquisition_id": "acq_03e0c693199b42fe9c143f253d60f2ff",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5167,8 +5167,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:11.802441+00:00",
-      "acquisition_id": "acq_cfd1cdd55e5d4f509910fece36a9827f",
+      "acquired_at": "2026-07-27T21:43:39.940680+00:00",
+      "acquisition_id": "acq_88179f4aa9a44afd9cacdde761166c4d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5181,8 +5181,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:12.210439+00:00",
-      "acquisition_id": "acq_80508fe5d6dc4d3eb9c771494f83ceae",
+      "acquired_at": "2026-07-27T21:43:40.348830+00:00",
+      "acquisition_id": "acq_bd183cb1d0c745fbb34dbdf6e2dd227a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5195,8 +5195,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:12.618598+00:00",
-      "acquisition_id": "acq_7c8f2b0dcfa64c968e63a18a7043c37e",
+      "acquired_at": "2026-07-27T21:43:40.756881+00:00",
+      "acquisition_id": "acq_ceaed197e19a40eab65e7a1376b3f157",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5209,8 +5209,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:13.027102+00:00",
-      "acquisition_id": "acq_e9ae2675580b45b69dcdbf04dc95e527",
+      "acquired_at": "2026-07-27T21:43:41.164504+00:00",
+      "acquisition_id": "acq_15bfdbca2ed84ff1a3bc29dc9c4762a6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5223,8 +5223,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:13.434816+00:00",
-      "acquisition_id": "acq_a872eac6e8454e3fa66ad2b44230a7cf",
+      "acquired_at": "2026-07-27T21:43:41.573475+00:00",
+      "acquisition_id": "acq_d89f2c4312654769a8bb3d489de3e457",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5237,8 +5237,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:13.842722+00:00",
-      "acquisition_id": "acq_cb69b9e7bcd24a829d44fc3641aae72b",
+      "acquired_at": "2026-07-27T21:43:41.980862+00:00",
+      "acquisition_id": "acq_264b04f5c5a046f3983a79997915ce4f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5251,8 +5251,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:14.251495+00:00",
-      "acquisition_id": "acq_ee01ce28d885464f8b5246714e0bd526",
+      "acquired_at": "2026-07-27T21:43:42.388712+00:00",
+      "acquisition_id": "acq_9ccbeb8301b24bc3ae4b3305ae20e04c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5265,8 +5265,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:14.662156+00:00",
-      "acquisition_id": "acq_7eb87504fc3f4513b003d86a2e499064",
+      "acquired_at": "2026-07-27T21:43:42.796049+00:00",
+      "acquisition_id": "acq_532eede652d849df9699cec023424b1a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5279,8 +5279,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:15.066265+00:00",
-      "acquisition_id": "acq_ea80c330b1dc4c0f821016c0d4d4a280",
+      "acquired_at": "2026-07-27T21:43:43.197256+00:00",
+      "acquisition_id": "acq_51e5c445bd954f6baedc3640377ca789",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5293,8 +5293,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:15.474836+00:00",
-      "acquisition_id": "acq_295f757c2b3d44d793cf9cbe5ea78d29",
+      "acquired_at": "2026-07-27T21:43:43.601208+00:00",
+      "acquisition_id": "acq_13137a4c4bfa4e298119eb37f265553c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5307,8 +5307,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:15.881835+00:00",
-      "acquisition_id": "acq_05767f3a0fec4d74889c8123c2d53b55",
+      "acquired_at": "2026-07-27T21:43:44.008289+00:00",
+      "acquisition_id": "acq_cc7b420fdc0f4318a086782c7825f14c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5321,8 +5321,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:16.290278+00:00",
-      "acquisition_id": "acq_4fd3072949df42a8a12e33d89e85b2bd",
+      "acquired_at": "2026-07-27T21:43:44.416752+00:00",
+      "acquisition_id": "acq_15c34573854641f5b4bce2a221aa6e34",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5335,8 +5335,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:16.698535+00:00",
-      "acquisition_id": "acq_8ec3668d18f94eb9a4c92a6f713df6cd",
+      "acquired_at": "2026-07-27T21:43:44.824324+00:00",
+      "acquisition_id": "acq_37448c5715b7473387e3b3aaa49f9376",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5349,8 +5349,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:17.106227+00:00",
-      "acquisition_id": "acq_81f82aea04354c53a7ff75f9a2efc254",
+      "acquired_at": "2026-07-27T21:43:45.232545+00:00",
+      "acquisition_id": "acq_45f27eab7709438084d038490ba23cb7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5363,8 +5363,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:17.514947+00:00",
-      "acquisition_id": "acq_91802b0761b24fa3b5f99d700a9c86d5",
+      "acquired_at": "2026-07-27T21:43:45.640636+00:00",
+      "acquisition_id": "acq_ea1d696246074e03b63ffba60a39e468",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5377,8 +5377,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:17.922455+00:00",
-      "acquisition_id": "acq_b37a4f42360d464097fd7670e5c799b0",
+      "acquired_at": "2026-07-27T21:43:46.048562+00:00",
+      "acquisition_id": "acq_a750e6688f924562af3474e61cacbfc7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5391,8 +5391,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:18.330027+00:00",
-      "acquisition_id": "acq_fbb401337c1d418a80bdd9ecfe9ed37e",
+      "acquired_at": "2026-07-27T21:43:46.456174+00:00",
+      "acquisition_id": "acq_0cfe48863d2e462386d76a1a8ac022d1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5405,8 +5405,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:18.738616+00:00",
-      "acquisition_id": "acq_db58256028744bb28c24f1a66b171d33",
+      "acquired_at": "2026-07-27T21:43:46.864478+00:00",
+      "acquisition_id": "acq_27eb106d532a401fabef9cce35769b44",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5419,8 +5419,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:19.145622+00:00",
-      "acquisition_id": "acq_f81dc7628b254f12b892f30ee72a74cb",
+      "acquired_at": "2026-07-27T21:43:47.273706+00:00",
+      "acquisition_id": "acq_eec0deff627f4a5280c0adb76bff3ffd",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5433,8 +5433,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:19.553610+00:00",
-      "acquisition_id": "acq_6159b019620e499a9b9ea4f9a6810636",
+      "acquired_at": "2026-07-27T21:43:47.680594+00:00",
+      "acquisition_id": "acq_8deec4c7efc34f92ae9650e491ced08e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5447,8 +5447,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:19.962357+00:00",
-      "acquisition_id": "acq_f63cb8e315f94be5a1614ec8a802b039",
+      "acquired_at": "2026-07-27T21:43:48.088634+00:00",
+      "acquisition_id": "acq_58c426409af049fdbb016676965f6845",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5461,8 +5461,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:20.369627+00:00",
-      "acquisition_id": "acq_ca326427a441420b8ace51a4d49e6f7b",
+      "acquired_at": "2026-07-27T21:43:48.496711+00:00",
+      "acquisition_id": "acq_756ca67fb9ec49afb1f40a94b0260598",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5475,8 +5475,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:20.778031+00:00",
-      "acquisition_id": "acq_97afc4b1a1b0481e8cf5e8f2bea77e4e",
+      "acquired_at": "2026-07-27T21:43:48.904065+00:00",
+      "acquisition_id": "acq_8c1f7ee20e6f4fa0884af53eba72de4a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5489,8 +5489,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:21.185724+00:00",
-      "acquisition_id": "acq_cae3e37242034124957630a7bc3a1051",
+      "acquired_at": "2026-07-27T21:43:49.312506+00:00",
+      "acquisition_id": "acq_d6984c68c9fb442982bb228bd2f6b462",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5503,8 +5503,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:21.593522+00:00",
-      "acquisition_id": "acq_e09653ac3cc2412fa628116f12bcde8f",
+      "acquired_at": "2026-07-27T21:43:49.720055+00:00",
+      "acquisition_id": "acq_cb0ead135fb8409296c4d5e14676690a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5517,8 +5517,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:22.001321+00:00",
-      "acquisition_id": "acq_0e70c6884ab746159a07f0decee8e137",
+      "acquired_at": "2026-07-27T21:43:50.128200+00:00",
+      "acquisition_id": "acq_c48001ffd30a4ddf85b965554e7582a3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5531,8 +5531,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:22.409938+00:00",
-      "acquisition_id": "acq_e1bb9184f5834068a75349f05bc95465",
+      "acquired_at": "2026-07-27T21:43:50.535979+00:00",
+      "acquisition_id": "acq_5a7fcd72530042d6a319286bd3a7f29e",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5545,8 +5545,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:22.817830+00:00",
-      "acquisition_id": "acq_7cb36b3f6ce94e8c9d13365688faf27f",
+      "acquired_at": "2026-07-27T21:43:50.944146+00:00",
+      "acquisition_id": "acq_99b463b2ec7c4c3d8f879c36eff65fa7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5559,8 +5559,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:23.225344+00:00",
-      "acquisition_id": "acq_0841f79a88244a7b907d4b890c6e6e56",
+      "acquired_at": "2026-07-27T21:43:51.351768+00:00",
+      "acquisition_id": "acq_7250187c89fd44bfb5b5ac6849fa1acf",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5573,8 +5573,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:23.633865+00:00",
-      "acquisition_id": "acq_29f04caf9582476c9a629b0d2df29f44",
+      "acquired_at": "2026-07-27T21:43:51.759939+00:00",
+      "acquisition_id": "acq_dd1c211df88741749aa00da103963896",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5587,8 +5587,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:24.045809+00:00",
-      "acquisition_id": "acq_890906f438b947cd8c72bd622e0c5ca6",
+      "acquired_at": "2026-07-27T21:43:52.168022+00:00",
+      "acquisition_id": "acq_411dd49a8d184cd588ce46c2ee432f9c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5601,8 +5601,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:24.453414+00:00",
-      "acquisition_id": "acq_e5dfd9a75ce84da8854a886f81c0d077",
+      "acquired_at": "2026-07-27T21:43:52.576334+00:00",
+      "acquisition_id": "acq_bd297a57fcd44bf9bfecf77a10610e9f",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5615,8 +5615,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:24.862449+00:00",
-      "acquisition_id": "acq_fce8230aa8094f808cd2d09e918f9730",
+      "acquired_at": "2026-07-27T21:43:52.984479+00:00",
+      "acquisition_id": "acq_90d66ece17f140f98b293910d178b31b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5629,8 +5629,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:25.273733+00:00",
-      "acquisition_id": "acq_8478086ca60e47e2a838d51f1e2f0160",
+      "acquired_at": "2026-07-27T21:43:53.392470+00:00",
+      "acquisition_id": "acq_b22657e0073c439c9b11ee3efce75910",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5643,8 +5643,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:25.681567+00:00",
-      "acquisition_id": "acq_ed4a3534db824ee19c4eeeb37d001990",
+      "acquired_at": "2026-07-27T21:43:53.796264+00:00",
+      "acquisition_id": "acq_b1dfc32c55994b63aaa495b58cf4d8e3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5657,8 +5657,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:26.089234+00:00",
-      "acquisition_id": "acq_4c4bda7289764a168df4b97093f3efa1",
+      "acquired_at": "2026-07-27T21:43:54.203965+00:00",
+      "acquisition_id": "acq_47955899b69240e99ed502b562a6bab6",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5671,8 +5671,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:26.497438+00:00",
-      "acquisition_id": "acq_5b236cee3f7047fc91f49e8ffd8a4e8b",
+      "acquired_at": "2026-07-27T21:43:54.611872+00:00",
+      "acquisition_id": "acq_355ac092af624e889ac5721d8a71fc0a",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5685,8 +5685,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:26.905271+00:00",
-      "acquisition_id": "acq_1d8c8b6aa2754fcda3b91ab889412418",
+      "acquired_at": "2026-07-27T21:43:55.020032+00:00",
+      "acquisition_id": "acq_9a4d26cec2fb4424be7f747c8f513c08",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5699,8 +5699,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:27.313720+00:00",
-      "acquisition_id": "acq_62f5d00c0075469da627d6ecb0740765",
+      "acquired_at": "2026-07-27T21:43:55.428158+00:00",
+      "acquisition_id": "acq_efe1dbc6cebe4e708ad000f08b6387ff",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5713,8 +5713,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:27.725321+00:00",
-      "acquisition_id": "acq_739ff1734c7644bd81ff3267232b68dd",
+      "acquired_at": "2026-07-27T21:43:55.836415+00:00",
+      "acquisition_id": "acq_cb72dbd32374439a819de80eabc65139",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5727,8 +5727,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:28.133868+00:00",
-      "acquisition_id": "acq_14c1a099c964431c8aee0e123d336b50",
+      "acquired_at": "2026-07-27T21:43:56.240398+00:00",
+      "acquisition_id": "acq_0d2f6980a98245a6ae83a6db92a41e97",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5741,8 +5741,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:28.545640+00:00",
-      "acquisition_id": "acq_52b3bc96e89246798dd2113a7b577b66",
+      "acquired_at": "2026-07-27T21:43:56.648934+00:00",
+      "acquisition_id": "acq_1fe6431ac9c24ae0b287b84ac6d4d2ab",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5755,8 +5755,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:28.953527+00:00",
-      "acquisition_id": "acq_f817ea189b7e4696b7cf9c42e30bf287",
+      "acquired_at": "2026-07-27T21:43:57.056236+00:00",
+      "acquisition_id": "acq_9b5f9b7f0d8c45e28d1de6d05a15f4e4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5769,8 +5769,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:29.362008+00:00",
-      "acquisition_id": "acq_022a0b9bca3441b59b233be2764da58e",
+      "acquired_at": "2026-07-27T21:43:57.464759+00:00",
+      "acquisition_id": "acq_d7c44bda66484d0a8a748426cea9e562",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5783,8 +5783,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:29.774686+00:00",
-      "acquisition_id": "acq_65029a6622f24dc481fab52b5d042aee",
+      "acquired_at": "2026-07-27T21:43:57.872261+00:00",
+      "acquisition_id": "acq_93c539af1eea4dcfad8ab693efac027b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5797,8 +5797,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:30.181356+00:00",
-      "acquisition_id": "acq_c0fb1bd952d441bbae23b7cfb76af90a",
+      "acquired_at": "2026-07-27T21:43:58.280074+00:00",
+      "acquisition_id": "acq_d64d72f974ec41fc9bd9c3a3a85a81fb",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5811,8 +5811,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:30.589757+00:00",
-      "acquisition_id": "acq_f301c8dd8c8f4f39985073041e3eb196",
+      "acquired_at": "2026-07-27T21:43:58.684912+00:00",
+      "acquisition_id": "acq_7702cd6d1b754e0b9fc2127c89a373de",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5825,8 +5825,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:30.997803+00:00",
-      "acquisition_id": "acq_08eca64e442140ea887e7eb4a44bdfb1",
+      "acquired_at": "2026-07-27T21:43:59.091877+00:00",
+      "acquisition_id": "acq_578640fa9b764d68ba7734c86a025f48",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5839,8 +5839,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:31.405727+00:00",
-      "acquisition_id": "acq_b829ceb499464f699141ffb44189a0ef",
+      "acquired_at": "2026-07-27T21:43:59.500602+00:00",
+      "acquisition_id": "acq_a12784eeabde486294de36b84718ce10",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5853,8 +5853,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:31.814320+00:00",
-      "acquisition_id": "acq_082034cb92ab4cb9a68b5e1696dab822",
+      "acquired_at": "2026-07-27T21:43:59.908686+00:00",
+      "acquisition_id": "acq_ef87185d296c421d9814149d3afae361",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5867,8 +5867,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:32.225641+00:00",
-      "acquisition_id": "acq_c88359852df24e88afd5a92ecc4d22f7",
+      "acquired_at": "2026-07-27T21:44:00.316402+00:00",
+      "acquisition_id": "acq_552b9df35f9e4dac84b606b5b2557bc2",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5881,8 +5881,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:32.633882+00:00",
-      "acquisition_id": "acq_bbd117b32f2f43679290126df0366119",
+      "acquired_at": "2026-07-27T21:44:00.724650+00:00",
+      "acquisition_id": "acq_f9587f794e8540b4a893d1aa1b72173d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5895,8 +5895,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:33.041959+00:00",
-      "acquisition_id": "acq_82b6630d0a90407799a69dfb8165e8b2",
+      "acquired_at": "2026-07-27T21:44:01.131903+00:00",
+      "acquisition_id": "acq_3a8a31e2a6e645a2a1f69e821e8df8ba",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5909,8 +5909,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:33.449765+00:00",
-      "acquisition_id": "acq_8a1f64f3243a4d54b200a3fde8ec609f",
+      "acquired_at": "2026-07-27T21:44:01.540922+00:00",
+      "acquisition_id": "acq_61d310b435074b138d9d2406cf45a8a5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5923,8 +5923,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:33.857520+00:00",
-      "acquisition_id": "acq_b79a7119e450419c8a6ce2b264bbc550",
+      "acquired_at": "2026-07-27T21:44:01.948204+00:00",
+      "acquisition_id": "acq_e1a89a65fe45487085ed9819d60616ea",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5937,8 +5937,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:34.266202+00:00",
-      "acquisition_id": "acq_a6fd5aa227f445798facb437bf5e3a51",
+      "acquired_at": "2026-07-27T21:44:02.356601+00:00",
+      "acquisition_id": "acq_9f4e648968e44963be8450fe2002d1ca",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5951,8 +5951,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:34.673533+00:00",
-      "acquisition_id": "acq_798b126eea9349bc8613057cf3e2c126",
+      "acquired_at": "2026-07-27T21:44:02.764519+00:00",
+      "acquisition_id": "acq_8313d8d4797b4c56a82ae04ca2b41442",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5965,8 +5965,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:35.081461+00:00",
-      "acquisition_id": "acq_806f6ce6cec94dbe8f86edcdd7291cc1",
+      "acquired_at": "2026-07-27T21:44:03.172335+00:00",
+      "acquisition_id": "acq_391f6163b3f44cc4963bd10cd5b154a1",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5979,8 +5979,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:35.490305+00:00",
-      "acquisition_id": "acq_d12d966e0a994845b0978abd124e35b5",
+      "acquired_at": "2026-07-27T21:44:03.581868+00:00",
+      "acquisition_id": "acq_e819491af6d0481aa008e41d10bb3260",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -5993,8 +5993,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:35.898002+00:00",
-      "acquisition_id": "acq_1290bfc0f79d431b823ab122f5a3c3ec",
+      "acquired_at": "2026-07-27T21:44:03.988670+00:00",
+      "acquisition_id": "acq_d30bfa15e6d240cd9e0c61df5b921cbc",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6007,8 +6007,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:36.306608+00:00",
-      "acquisition_id": "acq_aa9ea1f4f194488a8abe4ba2aad2d7de",
+      "acquired_at": "2026-07-27T21:44:04.396354+00:00",
+      "acquisition_id": "acq_bf8ec7b471e8458a8d00ee7b78cd493d",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6021,8 +6021,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:36.713242+00:00",
-      "acquisition_id": "acq_42816de1ef1e494dbeffbf4a4d09cc08",
+      "acquired_at": "2026-07-27T21:44:04.804857+00:00",
+      "acquisition_id": "acq_c741f37c81b14162968f836637f135d7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6035,8 +6035,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:37.121638+00:00",
-      "acquisition_id": "acq_21f01c8db32747308c53863ec32df07b",
+      "acquired_at": "2026-07-27T21:44:05.212631+00:00",
+      "acquisition_id": "acq_8876cd8cc4954e1990fb7024df3b9589",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6049,8 +6049,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:37.537330+00:00",
-      "acquisition_id": "acq_0f1f967d7c7c4e7dbfc68132f0e0ca94",
+      "acquired_at": "2026-07-27T21:44:05.633209+00:00",
+      "acquisition_id": "acq_9682148237cf45ff912e451f36764b99",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6063,8 +6063,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:37.943184+00:00",
-      "acquisition_id": "acq_4a02075a28b34e18bbdbba4bbf18ece2",
+      "acquired_at": "2026-07-27T21:44:06.035656+00:00",
+      "acquisition_id": "acq_6e3c223b61404284bdefdc8eda4967db",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6077,8 +6077,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:38.359734+00:00",
-      "acquisition_id": "acq_384d3c09634947469fffa46caf61fe90",
+      "acquired_at": "2026-07-27T21:44:06.454642+00:00",
+      "acquisition_id": "acq_15babb4741af41888c0b79cd9e8e7e0b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6091,8 +6091,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:38.787213+00:00",
-      "acquisition_id": "acq_4b11ac3f715f46c4b6c2ef0c9264e8b1",
+      "acquired_at": "2026-07-27T21:44:06.881690+00:00",
+      "acquisition_id": "acq_71dfae836b4a4cd5870a72f693c691d5",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6105,8 +6105,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:39.207250+00:00",
-      "acquisition_id": "acq_13afab75b68a458880d46a52715aa8c7",
+      "acquired_at": "2026-07-27T21:44:07.302284+00:00",
+      "acquisition_id": "acq_7a7ab8e3ea974ab39229d70f6abed095",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6119,8 +6119,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:39.621846+00:00",
-      "acquisition_id": "acq_829d5493ef964b9fbb895b07062f3d5b",
+      "acquired_at": "2026-07-27T21:44:07.716086+00:00",
+      "acquisition_id": "acq_d789d0e9515e49bdb1cd7f2e2aa1bfa2",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6133,8 +6133,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:40.043432+00:00",
-      "acquisition_id": "acq_4130923447804d8b9ae6e66d29029afa",
+      "acquired_at": "2026-07-27T21:44:08.134116+00:00",
+      "acquisition_id": "acq_481fd8ccd8524ce693a877aab2de179c",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6147,8 +6147,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:40.473218+00:00",
-      "acquisition_id": "acq_8b9601243c924b308de5774a10a8286a",
+      "acquired_at": "2026-07-27T21:44:08.562546+00:00",
+      "acquisition_id": "acq_9f50f6d1026e4cd58582ef2b16ee0fb4",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6161,8 +6161,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:40.895448+00:00",
-      "acquisition_id": "acq_aa6a00dd85464a4795c325072adbe999",
+      "acquired_at": "2026-07-27T21:44:08.981555+00:00",
+      "acquisition_id": "acq_7b9326e222144c029a3d5a5168da8d64",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6175,8 +6175,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:41.309590+00:00",
-      "acquisition_id": "acq_7d5dc5b803544d33a2c449e4100d51e9",
+      "acquired_at": "2026-07-27T21:44:09.392418+00:00",
+      "acquisition_id": "acq_f7e07d04567d451c991e3b413feb9f5b",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6189,8 +6189,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:41.726457+00:00",
-      "acquisition_id": "acq_0eb0efaa626b4757a7a44f8eeb55a31d",
+      "acquired_at": "2026-07-27T21:44:09.810729+00:00",
+      "acquisition_id": "acq_39b9e5bcf0d84a878db6dd647eb25028",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6203,8 +6203,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:42.152724+00:00",
-      "acquisition_id": "acq_1cd96b6e24ca4f42a70739cbf66d3dce",
+      "acquired_at": "2026-07-27T21:44:10.236441+00:00",
+      "acquisition_id": "acq_f004da00e5f346fe9cf6419469a52cb7",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6217,8 +6217,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:42.562469+00:00",
-      "acquisition_id": "acq_87dc7227925a467482f6b818881bd1c1",
+      "acquired_at": "2026-07-27T21:44:10.654567+00:00",
+      "acquisition_id": "acq_04e5a043350b46ff88c89be09c59b424",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6231,8 +6231,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:42.980781+00:00",
-      "acquisition_id": "acq_1ac4dad9c4254e22b903ccb1e9a687ce",
+      "acquired_at": "2026-07-27T21:44:11.082091+00:00",
+      "acquisition_id": "acq_4e3185dfca75434d9c8fc0bea5a1e195",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6245,8 +6245,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:43.413438+00:00",
-      "acquisition_id": "acq_94e8b7f092274234a4ffa61266b219c1",
+      "acquired_at": "2026-07-27T21:44:11.515883+00:00",
+      "acquisition_id": "acq_aca0324ed4f649a786c9234215648fa3",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6259,8 +6259,8 @@
       "status_code": 200
     },
     {
-      "acquired_at": "2026-07-27T20:34:43.837522+00:00",
-      "acquisition_id": "acq_cf87a0d636df4227b23390214988b154",
+      "acquired_at": "2026-07-27T21:44:11.935148+00:00",
+      "acquisition_id": "acq_6aa8bb0d3fea494d86f1e72f0ee0e746",
       "attempt": 1,
       "backoff_seconds": 0.0,
       "detail": null,
@@ -6273,7 +6273,7 @@
       "status_code": 200
     }
   ],
-  "additive_dataset_id": "ds_e4b29a2928e0772163ea1efa33aa4b901053efbdc06d15b09e0e50dd4b5a64f3",
+  "additive_dataset_id": "ds_3804fdd5c5b38f03a29bf8072041d4193d8ce3011e70a17f1dc1f7d6b06dafc5",
   "additive_symbol_count": 4,
   "additive_symbols": [
     "BNBUSDT",
@@ -6317,18 +6317,18 @@
     "queue_position_after": 5,
     "used_today": 5
   },
-  "canonical_dataset_id": "ds_e4b29a2928e0772163ea1efa33aa4b901053efbdc06d15b09e0e50dd4b5a64f3",
+  "canonical_dataset_id": "ds_3804fdd5c5b38f03a29bf8072041d4193d8ce3011e70a17f1dc1f7d6b06dafc5",
   "catalog_reconciliation": {
     "catalog_registered": true,
-    "manifest_sha256": "e7674bc9e85a8531698968d8da9f89ebf37498ef7000b80c4174870092d74e42",
+    "manifest_sha256": "f72a05a0c891cd118be4208a26fa72c9d359faac98e8212bcf916f5e80569907",
     "output_sha256": "ac79b8d6fd72db7835b797f0f5fb607de2105aa0b685051d304af2d679c7e2a5",
-    "published_dataset_id": "ds_e4b29a2928e0772163ea1efa33aa4b901053efbdc06d15b09e0e50dd4b5a64f3",
-    "resolved_dataset_id": "ds_e4b29a2928e0772163ea1efa33aa4b901053efbdc06d15b09e0e50dd4b5a64f3",
+    "published_dataset_id": "ds_3804fdd5c5b38f03a29bf8072041d4193d8ce3011e70a17f1dc1f7d6b06dafc5",
+    "resolved_dataset_id": "ds_3804fdd5c5b38f03a29bf8072041d4193d8ce3011e70a17f1dc1f7d6b06dafc5",
     "row_count": 9027,
     "state": "reconciled"
   },
-  "code_commit": "843de6facdd4a32c49dc21f94717ac515beeb45e",
-  "config_fingerprint": "65b13af3e4f288421c80aee5b300385ac6c809ca242cf6bbd8f1c11252567efc",
+  "code_commit": "82d90ebd8ff15d0479aee097f26a25f353888412",
+  "config_fingerprint": "e4cef67acb8cc26421b3200b2943fb3d3711327d537d90b6527ce2874039fc43",
   "default_start": "2020-01-01T00:00:00+00:00",
   "deferred_symbols": [
     {
@@ -6347,9 +6347,11 @@
     "base_panel_dataset_id": "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988",
     "cursor_policy": "queue_position_persistent;capacity_per_processing_day",
     "default_start": "2020-01-01T00:00:00+00:00",
+    "evidence_source": "https://api.binance.com",
     "min_history_days": 365,
     "min_quote_volume": 1000000.0,
     "pinned_end": "2026-07-26T00:00:00+00:00",
+    "policy_version": "2026-07-27.2",
     "prefilter_window": "24h",
     "quote_assets": [
       "USDT"
@@ -35630,9 +35632,10 @@
   "exclusion_taxonomy_version": "2026-07-27.1",
   "experiment_id": "DATA-008-BINANCE-UNIVERSE-EXPANSION",
   "failed_acquisition_count": 0,
+  "failed_history_observations": [],
   "failed_measurements": [],
   "failed_symbols": [],
-  "generated_at": "2026-07-27T20:34:44.123161+00:00",
+  "generated_at": "2026-07-27T21:44:12.253649+00:00",
   "live_eligible": false,
   "logical_union_symbol_count": 27,
   "newly_published_symbols": [],
@@ -35663,7 +35666,7 @@
     "byte_size": 436808,
     "declared_raw_object_ids": 448,
     "file_sha256": "ac79b8d6fd72db7835b797f0f5fb607de2105aa0b685051d304af2d679c7e2a5",
-    "prior_dataset_id": "ds_72faed1a84bd26981751703f66bdaca4c14a4973649497a378d007285cc0b62c",
+    "prior_dataset_id": "ds_e4b29a2928e0772163ea1efa33aa4b901053efbdc06d15b09e0e50dd4b5a64f3",
     "row_count": 9027,
     "rows_revalidated": 9027,
     "state": "reconciled"
@@ -35676,11 +35679,11 @@
     {
       "base_asset": "RE",
       "evidence": {
-        "observed_at": "2026-07-27T20:33:48.513683+00:00",
+        "observed_at": "2026-07-27T21:43:16.704407+00:00",
         "quote_volume": 2365496742.28294,
         "raw_object_id": "raw_4d84fb2b16db851176d09472a2cb37f8100095336fe396c0392f030cfbefdce5",
         "symbol": "REUSDT",
-        "trade_count": 30,
+        "trade_count": 16848201,
         "window": "30d"
       },
       "quote_asset": "USDT",
@@ -35690,11 +35693,11 @@
     {
       "base_asset": "ZEC",
       "evidence": {
-        "observed_at": "2026-07-27T20:34:33.857520+00:00",
+        "observed_at": "2026-07-27T21:44:01.948204+00:00",
         "quote_volume": 2246697654.64333,
         "raw_object_id": "raw_865104d18dcc6d0dd4558a4f05a251f568281ec2d2805a226951e0651c0ecf2d",
         "symbol": "ZECUSDT",
-        "trade_count": 30,
+        "trade_count": 8435058,
         "window": "30d"
       },
       "quote_asset": "USDT",
@@ -35704,11 +35707,11 @@
     {
       "base_asset": "BNB",
       "evidence": {
-        "observed_at": "2026-07-27T20:32:10.501664+00:00",
+        "observed_at": "2026-07-27T21:41:38.912374+00:00",
         "quote_volume": 1652424544.84808,
         "raw_object_id": "raw_c5b168ff50f705e87f3dcb332142c280897907930b34231f50b0a0fda6196c48",
         "symbol": "BNBUSDT",
-        "trade_count": 30,
+        "trade_count": 15316781,
         "window": "30d"
       },
       "quote_asset": "USDT",
@@ -35718,11 +35721,11 @@
     {
       "base_asset": "DEXE",
       "evidence": {
-        "observed_at": "2026-07-27T20:32:26.009501+00:00",
+        "observed_at": "2026-07-27T21:41:54.392390+00:00",
         "quote_volume": 912030579.6273,
         "raw_object_id": "raw_d3d81f836d0de2131c9770cbb1cae25af30bb7f8c5b58b81516f393ceb077c6f",
         "symbol": "DEXEUSDT",
-        "trade_count": 30,
+        "trade_count": 18485069,
         "window": "30d"
       },
       "quote_asset": "USDT",
@@ -35732,11 +35735,11 @@
     {
       "base_asset": "TRX",
       "evidence": {
-        "observed_at": "2026-07-27T20:34:16.290278+00:00",
+        "observed_at": "2026-07-27T21:43:44.416752+00:00",
         "quote_volume": 802911139.16691,
         "raw_object_id": "raw_2adfd7df92f3110ff12891bcec716c9add436d032590839ccae02d30f7f6cb7e",
         "symbol": "TRXUSDT",
-        "trade_count": 30,
+        "trade_count": 1880981,
         "window": "30d"
       },
       "quote_asset": "USDT",
