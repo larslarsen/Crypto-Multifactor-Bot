@@ -1,21 +1,21 @@
 # CURRENT_TASK
 
 Ticket: DATA-008
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: READY
+Next required actor: Sr Dev - Grok Build
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
 ## Summary
 
-REVIEW-0245 requires one bounded validation, cursor, and code-identity correction.
-Republish from the final clean source commit; persist `ALREADY_CURRENT` only after prior
-coverage reconciles; fail closed on malformed ranking/history timestamps; keep failed
-history out of deferred evidence; version selection-policy/source identity in the
-queue; and report actual trades rather than bar count. Retain the full non-volume
-measurement field, typed HTTP failure blocking, mixed-batch safe progress, closed-bar
-checks, strict base validation, exact raw lineage, additive architecture, and full
-snapshots.
+REVIEW-0246 confirms the report/manifest now honestly pin executable source `843de6f`,
+but the REVIEW-0245 source correction was not implemented. Correct premature
+`ALREADY_CURRENT` cursor advancement, malformed ranking/history evidence, contradictory
+failed-history reporting, unversioned selection-policy/source queue identity,
+mislabelled trade count, and unguarded production `CodeIdentity`. Commit source and
+tests before one final controlled publication. Retain the full non-volume measurement
+field, mixed-batch safe progress, strict base validation, exact raw lineage, additive
+architecture, and full snapshots.
 
 ## Governing documents
 
@@ -26,8 +26,9 @@ snapshots.
 - docs/reviews/REVIEW-0243_DATA-008_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0244_DATA-008_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0245_DATA-008_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0246_DATA-008_CHANGES_REQUIRED.md
 
 ## Authorization
 
-Only the REVIEW-0245 DATA-008 correction pass is authorized. No other ticket or LIVE
+Only the REVIEW-0246 DATA-008 correction pass is authorized. No other ticket or LIVE
 work may begin.

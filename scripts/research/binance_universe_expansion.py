@@ -88,6 +88,14 @@ BASE_PANEL_TYPE = "market_bars"
 RELATIVE_PATH = "cex/binance_spot_daily_bars/bars.parquet"
 REPORT_PATH = Path("research/sprint_004/36_BINANCE_UNIVERSE_EXPANSION.json")
 
+#: Source whose state the declared commit must describe.
+IDENTITY_PATHS = (
+    "src/cryptofactors/acquisition/binance_universe.py",
+    "src/cryptofactors/acquisition/binance_snapshot.py",
+    "src/cryptofactors/ingest/raw_http.py",
+    "scripts/research/binance_universe_expansion.py",
+)
+
 SNAPSHOT_SCHEMA = pa.schema([
     ("symbol", pa.string()),
     ("open_time", pa.string()),
@@ -102,6 +110,35 @@ SNAPSHOT_SCHEMA = pa.schema([
     ("provider", pa.string()),
     ("raw_object_id", pa.string()),
 ])
+
+
+def verify_source_identity(declared: str, *, paths: Sequence[str]) -> None:
+    """Refuse to publish unless the declared commit is the source actually running.
+
+    The runner previously accepted --code-commit verbatim, so a manifest could name a
+    commit that never produced the artifact. Both halves matter: the checked-out
+    commit must match, and the relevant source must be clean, or the declared commit
+    does not describe what executed.
+    """
+    try:
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--", *paths],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError("cannot verify source identity against git") from exc
+    if head != declared:
+        raise RuntimeError(
+            f"declared code commit {declared} is not the checked-out commit {head}; "
+            "commit the source first, then publish under that commit"
+        )
+    if dirty:
+        raise RuntimeError(
+            "refusing to publish from a dirty source tree:\n" + dirty
+        )
 
 
 def resolve_code_commit(explicit: str | None) -> str:
@@ -192,7 +229,11 @@ def build_report(
     newly_published: set[str] | None = None,
     budget: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    deferred = [item for item in eligibility if not item.eligible]
+    # A failed observation is reported as a failure, never also as a deferral.
+    deferred = [
+        item for item in eligibility if not item.eligible and not item.observation_failed
+    ]
+    failed_observations = [item for item in eligibility if item.observation_failed]
     snapshot_symbols = {bar.symbol for bar in snapshot}
     per_symbol_spans = {
         sym: {
@@ -242,6 +283,7 @@ def build_report(
         "deferred_symbols": [item.as_dict() for item in deferred],
         "eligible_symbols": [item.as_dict() for item in eligibility if item.eligible],
         "symbols_by_state": by_state,
+        "failed_history_observations": [item.as_dict() for item in failed_observations],
         "failed_measurements": [
             {"symbol": s.symbol, "reason": m.reason} for s, m in (failed_measurements or [])
         ],
@@ -303,6 +345,10 @@ def main() -> int:
     parser.add_argument("--min-history-days", type=int, default=None)
     parser.add_argument("--base-url", default=BINANCE_BASE_URL)
     parser.add_argument("--code-commit", default=None)
+    parser.add_argument(
+        "--skip-identity-check", action="store_true",
+        help="test seam only; production publication must prove its declared commit",
+    )
     parser.add_argument("--max-attempts", type=int, default=4)
     parser.add_argument("--backoff-seconds", type=float, default=15.0)
     args = parser.parse_args()
@@ -330,6 +376,8 @@ def main() -> int:
     overrides["pinned_end"] = end_time.isoformat()
     config = SelectionConfig(**overrides)
     code_commit = resolve_code_commit(args.code_commit)
+    if not args.skip_identity_check:
+        verify_source_identity(code_commit, paths=IDENTITY_PATHS)
 
     apply_migrations(args.db_path)
     # Pinned, never resolved: resolve_latest_by_type("market_bars") returns whichever
@@ -455,9 +503,9 @@ def main() -> int:
                 end_time=end_time,
             )
             acquisitions.append(acquired_symbol)
-            if acquired_symbol.state is SymbolState.ALREADY_CURRENT:
-                # Proven terminal regardless of whether anything publishes.
-                attempted.add(acquired_symbol.symbol)
+            # ALREADY_CURRENT is deliberately not persisted here. Its safety depends
+            # on prior canonical coverage, which is only reconciled below; persisting
+            # it now let a coverage-invalid identity be skipped by every later run.
         log = raw_acquirer.log
     finally:
         client.close()
@@ -482,15 +530,22 @@ def main() -> int:
             dataset_catalog, args.store_root
         )
         blocked = [a for a in acquisitions if a.blocks_publication]
+        already_current_gaps: dict[str, list[str]] = {}
         for acquisition in acquisitions:
             if acquisition.state is not SymbolState.ALREADY_CURRENT:
                 continue
-            covered, _missing = symbol_covers_range(
+            covered, missing = symbol_covers_range(
                 prior_bars, symbol=acquisition.symbol,
                 start_time=effective_starts.get(acquisition.symbol, default_start),
                 end_time=end_time,
             )
-            if not covered:
+            if covered:
+                # Safe only now that prior coverage reconciles.
+                attempted.add(acquisition.symbol)
+            else:
+                already_current_gaps[acquisition.symbol] = [
+                    moment.isoformat() for moment in missing
+                ]
                 blocked.append(acquisition)
 
         if blocked or not acquired:
@@ -499,7 +554,10 @@ def main() -> int:
                 config=config, code_commit=code_commit, end_time=end_time,
                 default_start=default_start, selection=selection, eligibility=eligibility, acquisitions=acquisitions,
                 blocked=blocked, failed_measurements=failed_measurements, log=log, prior_reconciliation=prior_reconciliation,
-                reconciliation={"state": state}, covered_symbols=covered_symbols,
+                reconciliation={
+                    "state": state,
+                    "already_current_missing_intervals": already_current_gaps,
+                }, covered_symbols=covered_symbols,
                 base_panel_dataset_id=base_panel_dataset_id,
                 budget={"processing_day": processing_day, "queue_position": budget_start,
                         "queue_position_after": len(attempted), "used_today": used,

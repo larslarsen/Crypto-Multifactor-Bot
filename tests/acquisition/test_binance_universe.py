@@ -40,6 +40,7 @@ from cryptofactors.acquisition.binance_universe import (
     EXCLUSION_TAXONOMY_VERSION,
     FIAT_BASES,
     PREFILTER_WINDOW,
+    SELECTION_POLICY_VERSION,
     STABLECOIN_BASES,
     TOKENIZED_COMMODITY_BASES,
     VOLUME_WINDOW,
@@ -1008,6 +1009,7 @@ def run_runner(
         "--base-panel-dataset-id", base_id,
         *(["--processing-day", processing_day] if processing_day else []),
         *(["--symbols-per-day", str(symbols_per_day)] if symbols_per_day else []),
+        "--skip-identity-check",
         "--max-attempts", "1",
         "--backoff-seconds", "0",
     ])
@@ -1324,7 +1326,8 @@ class TestReview0241Corrections:
             "--watermark-path", str(store.watermark_path),
             "--report-path", str(report_path), "--top-n", "10",
             "--min-history-days", "365", "--base-url", "https://binance.test",
-            "--code-commit", "0" * 40, "--max-attempts", "1", "--backoff-seconds", "0",
+            "--code-commit", "0" * 40, "--skip-identity-check",
+            "--max-attempts", "1", "--backoff-seconds", "0",
             "--base-panel-dataset-id", base_id, "--symbols-per-day", "2",
         ]
         monkeypatch.setattr(sys, "argv", argv)
@@ -2151,4 +2154,291 @@ class TestSelfReviewDefects:
 
         assert error.context == {"status": 500}
         assert "status" in str(error)
+
+
+class TestReview0246Corrections:
+    """One class per REVIEW-0245/0246 finding, each mutation-checked."""
+
+    # --- F2: coverage-invalid ALREADY_CURRENT must stay pending ----------------
+
+    def test_a_coverage_invalid_already_current_identity_stays_pending(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        WatermarkStore(store.watermark_path).save({"BTCUSDT": day(9).isoformat()})
+        node = MockBinance(symbols=[spot_entry("BTCUSDT", "BTC")])
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id,
+        )
+
+        assert code == 1
+        assert "BTCUSDT" in {b["symbol"] for b in report["blocking_symbols"]}
+        assert "BTCUSDT" not in queued_identities(store)
+        assert report["catalog_reconciliation"]["already_current_missing_intervals"]
+
+    def test_the_unresolved_identity_is_retried_on_the_next_run(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Two-run regression: it must not be skipped after a blocking first run."""
+        base_id = seed_base_panel(store)
+        WatermarkStore(store.watermark_path).save({"BTCUSDT": day(9).isoformat()})
+        node = MockBinance(symbols=[spot_entry("BTCUSDT", "BTC")])
+
+        run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27",
+        )
+        _, second = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-28",
+        )
+
+        assert "BTCUSDT" in {b["symbol"] for b in second["blocking_symbols"]}, (
+            "the unresolved identity must be reconsidered, not skipped"
+        )
+
+    def test_a_reconciled_already_current_identity_is_persisted(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id,
+        )
+        _, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, default_start=day(1),
+        )
+
+        assert report["blocking_symbols"] == []
+        assert queued_identities(store)
+
+    # --- F3: ranking timestamp classification ----------------------------------
+
+    def _measure(self, store: Store, rows: Any, *, end_time: datetime = END_TIME) -> Any:
+        node = MockBinance()
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            params = dict(request.url.params)
+            if params.get("limit") == "30":
+                return node._respond(200, rows(int(params["startTime"])))
+            return original(request)
+
+        universe = BinanceUniverseAcquirer(
+            acquirer=RawHttpAcquirer(
+                raw_writer=store.writer,
+                client=REAL_HTTPX_CLIENT(transport=httpx.MockTransport(handler)),
+                log=AcquisitionLog(),
+            ),
+            base_url="https://binance.test",
+        )
+        return universe.fetch_trailing_volume("BTCUSDT", end_time=end_time)
+
+    @staticmethod
+    def _bar(open_ms: int, *, close: Any = None, trades: Any = 3) -> list[Any]:
+        return [
+            open_ms, "1", "2", "0.5", "1", "5",
+            open_ms + 86_399_999 if close is None else close, "1000.0", trades,
+        ]
+
+    def test_an_invalid_close_interval_is_failed_evidence(self, store: Store) -> None:
+        """Sharing INCOMPLETE_WINDOW with a still-forming bar let malformed evidence
+        drop a symbol and promote a lower-ranked survivor."""
+        def rows(start: int) -> list[Any]:
+            bars = [self._bar(start + i * 86_400_000) for i in range(30)]
+            bars[4][6] = bars[4][0] + 1000
+            return bars
+
+        assert self._measure(store, rows).status is MeasurementStatus.FAILED
+
+    @pytest.mark.parametrize("bad", [float("nan"), float("inf"), 1.5, None, "x", True])
+    def test_a_malformed_ranking_timestamp_is_failed_evidence(
+        self, store: Store, bad: Any
+    ) -> None:
+        def rows(start: int) -> list[Any]:
+            bars = [self._bar(start + i * 86_400_000) for i in range(30)]
+            bars[2][0] = bad
+            return bars
+
+        assert self._measure(store, rows).status is MeasurementStatus.FAILED
+
+    def test_a_structurally_valid_unclosed_bar_is_insufficient_not_failed(
+        self, store: Store
+    ) -> None:
+        future = datetime.now(UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(days=1)
+
+        measurement = self._measure(
+            store,
+            lambda start: [self._bar(start + i * 86_400_000) for i in range(30)],
+            end_time=future,
+        )
+
+        assert measurement.status is MeasurementStatus.INCOMPLETE_WINDOW
+
+    def test_a_malformed_close_blocks_publication(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        node = MockBinance()
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            params = dict(request.url.params)
+            if params.get("limit") == "30" and params.get("symbol") == "BTCUSDT":
+                start = int(params["startTime"])
+                bars = [self._bar(start + i * 86_400_000) for i in range(30)]
+                bars[0][6] = bars[0][0] + 5
+                return node._respond(200, bars)
+            return original(request)
+
+        node.handler = handler  # type: ignore[method-assign]
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id,
+        )
+
+        assert code == 1
+        assert "BTCUSDT" in {f["symbol"] for f in report["failed_measurements"]}
+        assert read_snapshot(store) == []
+
+    # --- F8: real trade counts --------------------------------------------------
+
+    def test_trade_count_aggregates_actual_kline_trades(self, store: Store) -> None:
+        measurement = self._measure(
+            store,
+            lambda start: [self._bar(start + i * 86_400_000, trades=7) for i in range(30)],
+        )
+
+        assert measurement.usable
+        assert measurement.evidence is not None
+        assert measurement.evidence.trade_count == 210, "30 bars x 7 trades, not 30"
+
+    @pytest.mark.parametrize("bad", [-1, 1.5, None, "x"])
+    def test_a_malformed_trade_count_is_failed_evidence(
+        self, store: Store, bad: Any
+    ) -> None:
+        def rows(start: int) -> list[Any]:
+            bars = [self._bar(start + i * 86_400_000) for i in range(30)]
+            bars[6][8] = bad
+            return bars
+
+        assert self._measure(store, rows).status is MeasurementStatus.FAILED
+
+    # --- F4: malformed successful history ---------------------------------------
+
+    @pytest.mark.parametrize("bad", [1.5, float("nan"), float("inf"), -1, True, "x"])
+    def test_a_malformed_earliest_bar_is_refused(self, bad: Any) -> None:
+        with pytest.raises(BinanceUniverseError):
+            parse_first_kline_open_time([[bad]], as_of=END_TIME)
+
+    def test_a_non_day_aligned_earliest_bar_is_refused(self) -> None:
+        with pytest.raises(BinanceUniverseError, match="not UTC-day aligned"):
+            parse_first_kline_open_time([[1_700_000_001_000]], as_of=END_TIME)
+
+    def test_a_future_earliest_bar_is_refused(self) -> None:
+        future_ms = int((END_TIME + timedelta(days=30)).timestamp() * 1000)
+        with pytest.raises(BinanceUniverseError, match="after the pinned"):
+            parse_first_kline_open_time([[future_ms]], as_of=END_TIME)
+
+    def test_a_malformed_history_response_keeps_the_symbol_pending(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Provider success does not make malformed evidence a safe deferral."""
+        base_id = seed_base_panel(store)
+        node = MockBinance(symbols=[spot_entry("BTCUSDT", "BTC")])
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if dict(request.url.params).get("startTime") == "0":
+                return node._respond(200, [[1.5, "1", "1", "1", "1", "1", 0, "1", 1]])
+            return original(request)
+
+        node.handler = handler  # type: ignore[method-assign]
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id,
+        )
+
+        assert code == 1
+        assert "BTCUSDT" not in set(report["deferred_symbols_this_run"])
+        assert "BTCUSDT" not in queued_identities(store)
+
+    # --- F6: failed history is never deferred evidence ---------------------------
+
+    def test_a_failed_history_observation_is_excluded_from_deferred_fields(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, monkeypatch=monkeypatch, base_panel_id=base_id,
+            node=MockBinance(history_status_by_symbol={"BTCUSDT": 500}),
+        )
+
+        assert code == 1
+        assert "BTCUSDT" not in {s["symbol"] for s in report["deferred_symbols"]}
+        assert "BTCUSDT" not in set(report["deferred_symbols_this_run"])
+        assert "BTCUSDT" in {f["symbol"] for f in report["failed_history_observations"]}
+        assert "BTCUSDT" in {b["symbol"] for b in report["blocking_symbols"]}
+
+    # --- F7: versioned policy/source queue identity ------------------------------
+
+    def test_policy_version_and_provider_source_identify_the_queue(self) -> None:
+        base = SelectionConfig(base_panel_dataset_id="ds_a")
+
+        assert base.selection_fingerprint() != replace(
+            base, policy_version="other"
+        ).selection_fingerprint()
+        assert base.selection_fingerprint() != replace(
+            base, evidence_source="https://other.test"
+        ).selection_fingerprint()
+        assert base.selection_fingerprint() == replace(
+            base, symbols_per_day=1
+        ).selection_fingerprint(), "capacity must not reset queue position"
+
+    def test_the_policy_version_was_bumped_for_this_correction(self) -> None:
+        assert SELECTION_POLICY_VERSION == "2026-07-27.2"
+
+    # --- F5: production code identity --------------------------------------------
+
+    def test_a_declared_commit_that_is_not_head_is_refused(self) -> None:
+        from scripts.research.binance_universe_expansion import (
+            IDENTITY_PATHS,
+            verify_source_identity,
+        )
+
+        with pytest.raises(RuntimeError, match="not the checked-out commit"):
+            verify_source_identity("0" * 40, paths=IDENTITY_PATHS)
+
+    def test_a_dirty_source_tree_is_refused(self, tmp_path: Path) -> None:
+        """The declared commit cannot describe uncommitted source."""
+        import subprocess
+
+        from scripts.research.binance_universe_expansion import verify_source_identity
+
+        repo = Path(__file__).resolve().parents[2]
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+            cwd=str(repo), check=True,
+        ).stdout.strip()
+        scratch = repo / "tests" / "acquisition" / "test_binance_universe.py"
+
+        with pytest.raises(RuntimeError, match="dirty source tree"):
+            verify_source_identity(head, paths=(str(scratch.relative_to(repo)),))
+
+    def test_the_production_path_runs_the_identity_check(self) -> None:
+        """The seam must be opt-in, so production cannot skip verification."""
+        import inspect
+
+        from scripts.research import binance_universe_expansion as runner
+
+        source = inspect.getsource(runner.main)
+        assert "if not args.skip_identity_check:" in source
+        assert "verify_source_identity(code_commit" in source
 

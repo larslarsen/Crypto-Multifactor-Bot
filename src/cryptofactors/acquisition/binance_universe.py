@@ -42,6 +42,12 @@ KLINES_SOURCE_ID = "binance_klines"
 #: RLUSD and further stablecoin bases, which earlier evidence had allowed to rank.
 EXCLUSION_TAXONOMY_VERSION = "2026-07-27.1"
 
+#: Semantics of selection and eligibility. Bumped whenever the *meaning* of a terminal
+#: outcome changes, so a corrected rule set resets queue progress even when the scalar
+#: configuration is unchanged. Deliberately not the Git commit: unrelated code changes
+#: must not discard multi-day queue position.
+SELECTION_POLICY_VERSION = "2026-07-27.2"
+
 #: The volume evidence this ticket ranks on. The ticket requires top-N by 30-day
 #: volume, so ranking sums quote volume over trailing daily bars rather than reading
 #: the 24-hour ticker. Ranking measures every eligible symbol; 24-hour data is recorded
@@ -127,6 +133,19 @@ def _finite(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return number if math.isfinite(number) else None
+
+
+def _whole_milliseconds(value: Any) -> int | None:
+    """Decode a millisecond field as a finite whole number, or None if malformed.
+
+    int() on a non-finite or fractional value raises outside the typed failure path,
+    and truncating a fractional timestamp would silently invent a different instant.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if isinstance(value, float) and (not math.isfinite(value) or value != int(value)):
+        return None
+    return int(value)
 
 
 # ---------------------------------------------------------------------------
@@ -520,6 +539,8 @@ class SelectionConfig:
     default_start: str = ""
     pinned_end: str = ""
     cursor_policy: str = "queue_position_persistent;capacity_per_processing_day"
+    policy_version: str = SELECTION_POLICY_VERSION
+    evidence_source: str = BINANCE_BASE_URL
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -532,6 +553,8 @@ class SelectionConfig:
             "default_start": self.default_start,
             "pinned_end": self.pinned_end,
             "cursor_policy": self.cursor_policy,
+            "policy_version": self.policy_version,
+            "evidence_source": self.evidence_source,
             "volume_window": VOLUME_WINDOW,
             "prefilter_window": PREFILTER_WINDOW,
             "taxonomy_version": EXCLUSION_TAXONOMY_VERSION,
@@ -549,6 +572,8 @@ class SelectionConfig:
         """
         material = {
             k: v for k, v in self.as_dict().items()
+            # Capacity and cursor mechanics are not selection identity; the policy
+            # version and provider source are.
             if k not in ("symbols_per_day", "cursor_policy")
         }
         return hashlib.sha256(canonical_json(material).encode()).hexdigest()
@@ -741,8 +766,14 @@ class HistoryEligibility:
         }
 
 
-def parse_first_kline_open_time(payload: Any) -> datetime | None:
-    """Earliest available bar open time, or None when the symbol has no history."""
+def parse_first_kline_open_time(payload: Any, *, as_of: datetime | None = None) -> datetime | None:
+    """Earliest available bar open time, or None when the symbol has no history.
+
+    Raises for any malformed successful response. Provider success does not make its
+    contents trustworthy: a fractional, non-aligned, non-finite or future open time is
+    corrupt evidence, and treating it as a fact produced negative history that was
+    then persisted as a terminal deferral.
+    """
     if not isinstance(payload, list):
         raise BinanceUniverseError("klines response must be a list")
     if not payload:
@@ -750,10 +781,19 @@ def parse_first_kline_open_time(payload: Any) -> datetime | None:
     first = payload[0]
     if not isinstance(first, Sequence) or isinstance(first, (str, bytes)) or not first:
         raise BinanceUniverseError("kline entry must be a non-empty sequence")
-    open_time = first[0]
-    if isinstance(open_time, bool) or not isinstance(open_time, (int, float)):
-        raise BinanceUniverseError(f"kline open time must be numeric, got {open_time!r}")
-    return datetime.fromtimestamp(int(open_time) / 1000, UTC)
+    open_ms = _whole_milliseconds(first[0])
+    if open_ms is None:
+        raise BinanceUniverseError(f"kline open time must be whole milliseconds, got {first[0]!r}")
+    if open_ms < 0:
+        raise BinanceUniverseError(f"kline open time must not be negative, got {open_ms}")
+    if open_ms % 86_400_000:
+        raise BinanceUniverseError(f"kline open time {open_ms} is not UTC-day aligned")
+    moment = datetime.fromtimestamp(open_ms / 1000, UTC)
+    if as_of is not None and moment > as_of:
+        raise BinanceUniverseError(
+            f"earliest bar {moment.isoformat()} is after the pinned {as_of.isoformat()}"
+        )
+    return moment
 
 
 def evaluate_history(
@@ -861,40 +901,43 @@ class BinanceUniverseAcquirer:
         acquired_ms = int(outcome.acquired_at.timestamp() * 1000)
         expected = [int(start.timestamp() * 1000) + i * day_ms for i in range(days)]
         seen: dict[int, float] = {}
+        trades_seen: dict[int, int] = {}
+
+        def failed(reason: str) -> VolumeMeasurement:
+            return VolumeMeasurement(
+                symbol=symbol, status=MeasurementStatus.FAILED, evidence=None, reason=reason
+            )
+
         for row in outcome.payload:
-            if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) < 8:
-                return VolumeMeasurement(
-                    symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
-                    reason="malformed kline row",
-                )
-            open_ms, close_ms = row[0], row[6]
-            for value in (open_ms, close_ms):
-                if isinstance(value, bool) or not isinstance(value, (int, float)):
-                    return VolumeMeasurement(
-                        symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
-                        reason="malformed kline timestamps",
-                    )
-            open_ms, close_ms = int(open_ms), int(close_ms)
+            if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) < 9:
+                return failed("malformed kline row")
+            open_raw, close_raw = row[0], row[6]
+            open_ms = _whole_milliseconds(open_raw)
+            close_ms = _whole_milliseconds(close_raw)
+            if open_ms is None or close_ms is None:
+                # Non-finite or fractional timestamps previously escaped through int()
+                # as an untyped exception.
+                return failed("malformed kline timestamps")
             if open_ms % day_ms:
-                return VolumeMeasurement(
-                    symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
-                    reason="kline open time is not day-aligned",
-                )
-            # A bar is only usable once its interval has ended and we observed it after
-            # that; otherwise the final candle is still forming and its volume is
-            # partial, which would silently understate a 30-day measure.
-            if close_ms != open_ms + day_ms - 1 or close_ms >= acquired_ms:
+                return failed("kline open time is not day-aligned")
+            if close_ms != open_ms + day_ms - 1:
+                # Structurally wrong, not merely unobserved: this is failed evidence,
+                # not an incomplete window, and must block rather than silently drop
+                # the symbol out of the ranking.
+                return failed("kline close interval is invalid")
+            if close_ms >= acquired_ms:
                 return VolumeMeasurement(
                     symbol=symbol, status=MeasurementStatus.INCOMPLETE_WINDOW,
                     evidence=None, reason="window contains a bar that had not closed",
                 )
             value = _finite(row[7])
             if value is None or value < 0 or open_ms in seen:
-                return VolumeMeasurement(
-                    symbol=symbol, status=MeasurementStatus.FAILED, evidence=None,
-                    reason="malformed or duplicated kline volume",
-                )
+                return failed("malformed or duplicated kline volume")
+            trades = _whole_milliseconds(row[8])
+            if trades is None or trades < 0:
+                return failed("malformed kline trade count")
             seen[open_ms] = value
+            trades_seen[open_ms] = trades
 
         # Exactly the pinned window: no holes, no partial trailing bar, no extras.
         if sorted(seen) != expected:
@@ -905,7 +948,10 @@ class BinanceUniverseAcquirer:
         return VolumeMeasurement(
             symbol=symbol, status=MeasurementStatus.OK, reason="complete window",
             evidence=VolumeEvidence(
-                symbol=symbol, quote_volume=sum(seen.values()), trade_count=len(seen),
+                # Actual aggregated per-kline trades. Previously len(seen), which made
+                # every complete window claim exactly `days` trades.
+                symbol=symbol, quote_volume=sum(seen.values()),
+                trade_count=sum(trades_seen.values()),
                 window=f"{days}d", observed_at=outcome.acquired_at,
                 raw_object_id=str(outcome.raw_object_id),
             ),
@@ -929,7 +975,7 @@ class BinanceUniverseAcquirer:
                 raw_object_id=outcome.raw_object_id,
             )
         try:
-            first_open = parse_first_kline_open_time(outcome.payload)
+            first_open = parse_first_kline_open_time(outcome.payload, as_of=as_of)
         except BinanceUniverseError:
             return HistoryEligibility(
                 symbol=symbol, eligible=False, first_bar_open_time=None, history_days=None,
