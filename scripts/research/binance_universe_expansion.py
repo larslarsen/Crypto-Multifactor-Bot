@@ -42,7 +42,6 @@ from cryptofactors.acquisition.binance_snapshot import (
 )
 from cryptofactors.acquisition.binance_universe import (
     BASE_PANEL_DATASET_ID,
-    MeasurementStatus,
     BINANCE_BASE_URL,
     EXCLUSION_TAXONOMY_VERSION,
     VOLUME_WINDOW,
@@ -50,7 +49,11 @@ from cryptofactors.acquisition.binance_universe import (
     Exclusion,
     ExclusionReason,
     HistoryEligibility,
+    MeasurementStatus,
     SelectionConfig,
+    SpotSymbol,
+    VolumeEvidence,
+    VolumeMeasurement,
     filter_non_volume_taxonomy,
     load_base_panel_symbols,
 )
@@ -175,7 +178,7 @@ def build_report(
     eligibility: Sequence[HistoryEligibility],
     acquisitions: Sequence[SymbolAcquisition],
     blocked: Sequence[SymbolAcquisition],
-    failed_measurements: Sequence[Any] = (),
+    failed_measurements: Sequence[tuple[SpotSymbol, VolumeMeasurement]] = (),
     log: Any,
     prior_reconciliation: Mapping[str, Any],
     reconciliation: Mapping[str, Any],
@@ -363,12 +366,14 @@ def main() -> int:
         survivors, taxonomy_excluded = filter_non_volume_taxonomy(
             discovered=discovered, config=config, already_covered=covered_symbols,
         )
-        measured: dict[str, Any] = {}
-        short_window: list[Any] = []
-        failed_measurements: list[Any] = []
+        # Typed so the optional evidence must be narrowed explicitly; a dict[str, Any]
+        # let `VolumeEvidence | None` through unchecked.
+        measured: dict[str, VolumeEvidence] = {}
+        short_window: list[tuple[SpotSymbol, VolumeMeasurement]] = []
+        failed_measurements: list[tuple[SpotSymbol, VolumeMeasurement]] = []
         for spot in survivors:
             measurement = universe.fetch_trailing_volume(spot.symbol, end_time=end_time)
-            if measurement.usable:
+            if measurement.evidence is not None and measurement.usable:
                 measured[spot.symbol] = measurement.evidence
             elif measurement.status is MeasurementStatus.INCOMPLETE_WINDOW:
                 short_window.append((spot, measurement))

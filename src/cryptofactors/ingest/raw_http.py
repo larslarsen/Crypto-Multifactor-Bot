@@ -208,7 +208,7 @@ class RawHttpAcquirer:
                 acquired_at=acquired_at,
             ),
         )
-        common = {
+        common: dict[str, Any] = {
             "provider": provider,
             "request": request,
             "acquired_at": acquired_at,

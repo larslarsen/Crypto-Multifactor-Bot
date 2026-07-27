@@ -244,7 +244,9 @@ def build_report(
         "snapshot_row_count": snapshot_rows,
         "published_dataset_id": dataset_id,
         "catalog_reconciliation": dict(reconciliation or {}),
-        "catalog_reconciled": bool(reconciliation) and reconciliation.get("state") == "reconciled",
+        "catalog_reconciled": (
+            reconciliation is not None and reconciliation.get("state") == "reconciled"
+        ),
         "pool_states": {a.identity.key: a.state.value for a in acquisitions},
         # The pools that actually blocked this run, including an ALREADY_CURRENT pool
         # whose completeness the prior snapshot could not confirm.

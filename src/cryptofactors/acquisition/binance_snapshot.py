@@ -19,8 +19,10 @@ from typing import Any
 
 from cryptofactors.acquisition.binance_universe import (
     KLINES_SOURCE_ID,
-    AcquisitionOutcome,
     BinanceUniverseError,
+)
+from cryptofactors.ingest.raw_http import (
+    AcquisitionOutcome,
     RawHttpAcquirer,
     canonical_json,
 )

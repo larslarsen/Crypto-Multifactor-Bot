@@ -28,7 +28,22 @@ DEFAULT_PRIORITY_LOOKBACK_DAYS: Final[int] = 30
 
 
 class UniverseExpansionError(RuntimeError):
-    """Base error for universe expansion."""
+    """Base error for universe expansion.
+
+    Accepts optional context because both raise sites in this module pass it. Without
+    it, RuntimeError rejects the keyword and the error path raises TypeError instead
+    of this error -- so the failure surfaced as an unrelated exception type.
+    """
+
+    def __init__(self, message: str, *, context: Mapping[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.context = dict(context or {})
+
+    def __str__(self) -> str:
+        if self.context:
+            return f"{self.message} | context={self.context!r}"
+        return self.message
 
 
 # ---------------------------------------------------------------------------

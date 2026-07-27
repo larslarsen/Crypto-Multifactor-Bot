@@ -2140,3 +2140,15 @@ class TestSelfReviewDefects:
         with pytest.raises(BinanceUniverseError, match="row count mismatch"):
             load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
 
+    def test_the_legacy_error_class_accepts_its_own_context(self) -> None:
+        """Both raise sites in the superseded module pass context=; without an
+        __init__ accepting it, the error path raised TypeError instead."""
+        from cryptofactors.acquisition.binance_universe_expansion import (
+            UniverseExpansionError,
+        )
+
+        error = UniverseExpansionError("boom", context={"status": 500})
+
+        assert error.context == {"status": 500}
+        assert "status" in str(error)
+
