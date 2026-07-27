@@ -1,21 +1,18 @@
 # CURRENT_TASK
 
 Ticket: DATA-008
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: READY
+Next required actor: Sr Dev - Grok Build
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
 ## Summary
 
-REVIEW-0246 confirms the report/manifest now honestly pin executable source `843de6f`,
-but the REVIEW-0245 source correction was not implemented. Correct premature
-`ALREADY_CURRENT` cursor advancement, malformed ranking/history evidence, contradictory
-failed-history reporting, unversioned selection-policy/source queue identity,
-mislabelled trade count, and unguarded production `CodeIdentity`. Commit source and
-tests before one final controlled publication. Retain the full non-volume measurement
-field, mixed-batch safe progress, strict base validation, exact raw lineage, additive
-architecture, and full snapshots.
+REVIEW-0247 leaves two bounded corrections: remove the public
+`--skip-identity-check` production bypass and normalize out-of-range earliest-history
+timestamp conversion into typed pending failure. Retain all other REVIEW-0246 source
+corrections and the additive architecture. Jr Dev owns tests, controls, Git, and final
+controlled publication after integration.
 
 ## Governing documents
 
@@ -27,8 +24,9 @@ architecture, and full snapshots.
 - docs/reviews/REVIEW-0244_DATA-008_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0245_DATA-008_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0246_DATA-008_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0247_DATA-008_CHANGES_REQUIRED.md
 
 ## Authorization
 
-Only the REVIEW-0246 DATA-008 correction pass is authorized. No other ticket or LIVE
+Only the REVIEW-0247 DATA-008 correction pass is authorized. No other ticket or LIVE
 work may begin.
