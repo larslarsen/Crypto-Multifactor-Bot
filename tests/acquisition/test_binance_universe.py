@@ -190,7 +190,17 @@ class MockBinance:
                 status = self.volume_status_by_symbol.get(symbol, 200)
                 if status != 200:
                     return self._respond(status, {"code": -1})
-                return self._respond(200, [kline(i) for i in range(5)])
+                # A valid 30d observation is exactly the requested closed window.
+                start_ms = int(params["startTime"])
+                limit = int(params["limit"])
+                rows = []
+                for i in range(limit):
+                    open_ms = start_ms + i * 86_400_000
+                    rows.append([
+                        open_ms, "100", "101", "99", "100", "10.5",
+                        open_ms + 86_399_999, "1050000.0", 42,
+                    ])
+                return self._respond(200, rows)
             if is_probe:
                 status = self.history_status_by_symbol.get(symbol, 200)
                 if status != 200:
@@ -219,6 +229,89 @@ class MockBinance:
             raw_http.httpx, "Client",
             lambda **_kw: REAL_HTTPX_CLIENT(transport=httpx.MockTransport(self.handler)),
         )
+
+
+BASE_PANEL_SYMBOLS = {"AAAUSDT", "BBBUSDT"}
+
+
+def seed_base_panel(store: "Store") -> str:
+    """Publish a minimal pinned base panel and its reference rows.
+
+    The runner fails closed without one, so an actual-runner test must supply a real
+    catalog artifact rather than a null base id.
+    """
+    import sqlite3
+
+    import pyarrow as pa
+    from cryptofactors.catalog.dataset.models import (
+        CodeIdentity, ConfigIdentity, CoverageWindow, DatasetStatistics,
+        DatasetStoreConfig, OutputFileSpec, PublishPlan, QualityStatus,
+        RowCountPolicy, RowCountReceipt, SchemaIdentity, TransformSpec,
+    )
+    from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
+    from cryptofactors.catalog.dataset.publisher import DatasetPublisher
+
+    conn = sqlite3.connect(store.db)
+    try:
+        for asset_id, name in ((9101, "AAA"), (9102, "BBB"), (9199, "USDT")):
+            conn.execute(
+                "INSERT OR REPLACE INTO ref_asset (asset_id, asset_class, display_name, "
+                "created_at) VALUES (?, 'CRYPTO', ?, '2026-01-01T00:00:00.000000Z')",
+                (str(asset_id), name),
+            )
+        for iid, base in ((9101, 9101), (9102, 9102)):
+            conn.execute(
+                "INSERT OR REPLACE INTO ref_instrument (instrument_id, asset_id, venue_id, "
+                "instrument_type, base_asset_id, quote_asset_id, created_at) "
+                "VALUES (?, ?, 'venue:binance', 'SPOT', ?, '9199', "
+                "'2026-01-01T00:00:00.000000Z')",
+                (str(iid), str(base), str(base)),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    table = pa.table({"instrument_id": pa.array([9101, 9102], type=pa.int64())})
+    relative = "market_bars/daily/bars.parquet"
+    out = store.store_root / "seed_bars.parquet"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    import pyarrow.parquet as _pq
+
+    _pq.write_table(table, out)
+    sha256, byte_size = stream_sha256_and_size(out)
+    now = datetime.now(UTC)
+    plan = PublishPlan(
+        dataset_type="market_bars",
+        schema=SchemaIdentity(name="market_bars", version="1"),
+        transform=TransformSpec(name="seed_base_panel", version="1"),
+        code=CodeIdentity(commit="1" * 40),
+        config=ConfigIdentity(config_sha256="2" * 64),
+        dependencies=[],
+        output_sources={relative: out},
+        output_specs=[OutputFileSpec(
+            relative_path=relative, sha256=sha256, rows=2, bytes=byte_size,
+            rows_verified=True,
+        )],
+        statistics=DatasetStatistics(row_count=2, byte_size=byte_size),
+        coverage=CoverageWindow(
+            event_start=DAY0, event_end=DAY0, availability_start=now, availability_end=now
+        ),
+        quality_status=QualityStatus.PASS,
+        quality_summary={"seed": True},
+        created_at=now,
+        row_count_policy=RowCountPolicy.REQUIRE_VERIFIER,
+        row_receipts={relative: RowCountReceipt(
+            relative_path=relative, row_count=2, verifier_name="seed"
+        )},
+    )
+    catalog = SqliteDatasetCatalog(store.db)
+    try:
+        result = DatasetPublisher(
+            DatasetStoreConfig(root=store.store_root), catalog
+        ).publish(plan, register_catalog=True)
+    finally:
+        catalog.close()
+    return result.dataset_id
 
 
 class Store:
@@ -871,10 +964,12 @@ def run_runner(
     default_start: datetime = DAY0,
     top_n: int = 10,
     min_history_days: int = 365,
+    base_panel_id: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
     from scripts.research import binance_universe_expansion as runner
 
     node.install(monkeypatch)
+    base_id = base_panel_id or seed_base_panel(store)
     report_path = tmp_path / "report.json"
     monkeypatch.setattr(sys, "argv", [
         "binance_universe_expansion.py",
@@ -889,6 +984,7 @@ def run_runner(
         "--min-history-days", str(min_history_days),
         "--base-url", "https://binance.test",
         "--code-commit", "0" * 40,
+        "--base-panel-dataset-id", base_id,
         "--max-attempts", "1",
         "--backoff-seconds", "0",
     ])
@@ -1143,7 +1239,7 @@ class TestReview0241Corrections:
         assert result.state is SymbolState.PUBLISHABLE
         assert len(result.bars) == 2500
 
-    def test_an_unmeasurable_candidate_is_excluded_with_a_reason(
+    def test_a_candidate_without_a_complete_window_is_excluded_with_a_reason(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         code, report = run_runner(
@@ -1153,7 +1249,9 @@ class TestReview0241Corrections:
 
         assert code == 0
         excluded = {e["symbol"]: e["reason"] for e in report["excluded_symbols"]}
-        assert excluded["BTCUSDT"] == "NO_VOLUME_EVIDENCE"
+        # A failed 30d fetch is reported as an incomplete window, which is the more
+        # precise reason now that the window itself is validated.
+        assert excluded["BTCUSDT"] == "INSUFFICIENT_VOLUME_WINDOW"
 
     def test_the_report_uses_net_rows_and_global_spans(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
@@ -1184,6 +1282,7 @@ class TestReview0241Corrections:
         node = MockBinance()
         node.install(monkeypatch)
         report_path = tmp_path / "r.json"
+        base_id = seed_base_panel(store)
         argv = [
             "x", "--end-time", END_TIME.isoformat(), "--default-start", DAY0.isoformat(),
             "--db-path", str(store.db), "--raw-root", str(store.raw_root),
@@ -1192,21 +1291,30 @@ class TestReview0241Corrections:
             "--report-path", str(report_path), "--top-n", "10",
             "--min-history-days", "365", "--base-url", "https://binance.test",
             "--code-commit", "0" * 40, "--max-attempts", "1", "--backoff-seconds", "0",
-            "--symbols-per-day", "2",
+            "--base-panel-dataset-id", base_id, "--symbols-per-day", "2",
         ]
         monkeypatch.setattr(sys, "argv", argv)
         assert runner.main() == 0
         first = json.loads(report_path.read_text())
 
-        assert first["budget"] == {"day": END_TIME.date().isoformat(), "start": 0,
-                                   "processed": 2, "limit": 2}
-        deferred = [s["symbol"] for s in first["symbols_by_state"].get("BUDGET_DEFERRED", [])]
-        assert len(deferred) == 2, "over-budget symbols are recorded, not dropped"
+        assert first["budget"]["start"] == 0
+        assert first["budget"]["limit"] == 2
+        first_deferred = {s["symbol"] for s in first["symbols_by_state"].get("BUDGET_DEFERRED", [])}
+        first_done = set(first["newly_published_symbols"])
+        assert first_deferred, "over-budget symbols are recorded, not dropped"
 
-        monkeypatch.setattr(sys, "argv", argv)
+        # Same processing day with more capacity: the cursor must skip the two
+        # identities already attempted and move on to the ones it deferred, rather
+        # than re-consuming the same head of the queue.
+        monkeypatch.setattr(sys, "argv", [*argv[:-2], "--symbols-per-day", "4"])
         runner.main()
         second = json.loads(report_path.read_text())
-        assert second["budget"]["start"] == 2, "the cursor resumes where it stopped"
+        second_done = set(second["newly_published_symbols"])
+
+        assert second["budget"]["start"] == 2, "already-attempted identities are recorded"
+        assert second_done - first_done, "the cursor must advance to unattempted symbols"
+        assert not (second_done & first_done), "a completed symbol does not re-consume a slot"
+        assert first_deferred & second_done, "each deferred identity is eventually attempted"
 
     def test_the_base_panel_is_declared_and_reconciled(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
@@ -1219,8 +1327,21 @@ class TestReview0241Corrections:
         # accounting and disjointness must still be reported.
         assert "base_panel_dataset_id" in report
         assert report["base_addition_symbols_disjoint"] is True
-        assert report["logical_union_symbol_count"] == len(report["added_symbols"])
         assert report["additive_dataset_id"] == report["canonical_dataset_id"]
+        assert report["base_panel_dataset_id"]
+        assert report["base_panel_symbol_count"] == len(BASE_PANEL_SYMBOLS)
+        assert report["logical_union_symbol_count"] == (
+            report["base_panel_symbol_count"] + report["additive_symbol_count"]
+        )
+        catalog = SqliteDatasetCatalog(store.db)
+        try:
+            roles = {
+                str(r["input_dataset_id"]): str(r["role"])
+                for r in catalog.list_dataset_inputs(str(report["additive_dataset_id"]))
+            }
+        finally:
+            catalog.close()
+        assert roles.get(report["base_panel_dataset_id"]) == "base_panel"
 
     def test_backoff_durations_are_recorded(self, store: Store) -> None:
         node = MockBinance(klines_status=429)

@@ -344,19 +344,25 @@ class WatermarkStore:
         temporary.replace(self._path)
 
 
-    def load_budget(self, *, day_key: str) -> int:
-        """Symbols already processed today, so a multi-day run resumes mid-panel."""
+    def load_attempted(self, *, day_key: str) -> set[str]:
+        """Identities already attempted on this processing day.
+
+        A count cannot resume: restarting iteration from the first ranked symbol and
+        deferring once the count is reached would attempt the same head of the queue
+        forever. Recording identities lets the next pass skip to the first symbol that
+        has not been tried.
+        """
         section = self._document().get(self.BUDGET_SECTION, {})
         if not isinstance(section, Mapping) or section.get("day") != day_key:
-            return 0
-        try:
-            return int(section.get("processed", 0))
-        except (TypeError, ValueError):
-            return 0
+            return set()
+        symbols = section.get("attempted", [])
+        return {str(s) for s in symbols} if isinstance(symbols, list) else set()
 
-    def save_budget(self, *, day_key: str, processed: int) -> None:
+    def save_attempted(self, *, day_key: str, symbols: Iterable[str]) -> None:
         document = self._document()
-        document[self.BUDGET_SECTION] = {"day": day_key, "processed": int(processed)}
+        document[self.BUDGET_SECTION] = {
+            "day": day_key, "attempted": sorted({str(s) for s in symbols})
+        }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self._path.with_suffix(self._path.suffix + ".tmp")
         temporary.write_text(canonical_json(document) + "\n", encoding="utf-8")

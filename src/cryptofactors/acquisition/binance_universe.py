@@ -81,6 +81,7 @@ class ExclusionReason(str, Enum):
     TOKENIZED_COMMODITY_BASE = "TOKENIZED_COMMODITY_BASE"
     BELOW_VOLUME_FLOOR = "BELOW_VOLUME_FLOOR"
     NO_VOLUME_EVIDENCE = "NO_VOLUME_EVIDENCE"
+    INSUFFICIENT_VOLUME_WINDOW = "INSUFFICIENT_VOLUME_WINDOW"
     ALREADY_COVERED = "ALREADY_COVERED"
     BELOW_TOP_N = "BELOW_TOP_N"
 
@@ -89,6 +90,7 @@ class DeferralReason(str, Enum):
     """Why an otherwise-selectable symbol is not yet research-ready."""
 
     INSUFFICIENT_HISTORY = "INSUFFICIENT_HISTORY"
+    INSUFFICIENT_VOLUME_WINDOW = "INSUFFICIENT_VOLUME_WINDOW"
     HISTORY_UNKNOWN = "HISTORY_UNKNOWN"
 
 
@@ -100,6 +102,8 @@ STABLECOIN_BASES = frozenset({
     # Observed on the exchange but previously only caught by the volume floor, so a
     # volume increase could have admitted them as research assets.
     "BFUSD", "FRAX", "USDE", "USDS", "XUSD",
+    # REVIEW-0211/0242: RLUSD is a stablecoin base, not a research asset.
+    "RLUSD", "USDD", "USDQ", "EURQ", "USDG", "USDX", "USDF",
 })
 FIAT_BASES = frozenset({
     "EUR", "GBP", "AUD", "TRY", "BRL", "RUB", "UAH", "ZAR", "NGN", "IDRT",
@@ -149,32 +153,84 @@ class SpotSymbol:
         }
 
 
-def load_covered_symbols(db_path: Any, *, venue: str = "venue:binance") -> set[str]:
-    """Symbols already carried by the accepted canonical panel.
+BASE_PANEL_DATASET_ID = (
+    "ds_7a0a16834098aa336155bc5cd8085066e09c20343f5933c7017e508250a6c988"
+)
 
-    Read from the reference tables rather than hard-coded, so an added-symbol take
-    never re-adds an instrument the panel already covers. Returns an empty set when
-    the reference tables are absent, which keeps the runner usable on a fresh store.
+
+def load_base_panel_symbols(db_path: Any, dataset_id: str, *, store_root: Any) -> set[str]:
+    """Symbols carried by the pinned accepted base panel.
+
+    Pinned rather than resolved: ``resolve_latest_by_type("market_bars")`` returns
+    whichever dataset published most recently, which is not the reviewer-authorized
+    DATA-006 artifact. Fails closed -- an unavailable base or unmappable membership
+    must stop the run, because an empty base would let the additive take re-add
+    symbols the panel already covers.
     """
     import sqlite3
+    from pathlib import Path
+
+    import pyarrow.parquet as pq
+
+    from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
 
     try:
         conn = sqlite3.connect(str(db_path))
-    except sqlite3.Error:
-        return set()
+    except sqlite3.Error as exc:
+        raise BinanceUniverseError("cannot open the catalog for base-panel lookup") from exc
     try:
+        row = conn.execute(
+            "SELECT dataset_id FROM dataset WHERE dataset_id = ?", (dataset_id,)
+        ).fetchone()
+        if row is None:
+            raise BinanceUniverseError(
+                f"pinned base panel {dataset_id} is not registered in this catalog",
+                context={"dataset_id": dataset_id},
+            )
+        files = [
+            str(r[0]) for r in conn.execute(
+                "SELECT storage_uri FROM dataset_file WHERE dataset_id = ?", (dataset_id,)
+            )
+        ]
+        if not files:
+            raise BinanceUniverseError(f"pinned base panel {dataset_id} declares no files")
+
+        root = dataset_absolute_dir(Path(store_root), dataset_id)
+        instrument_ids: set[Any] = set()
+        for name in files:
+            path = root / name
+            if not path.exists() or path.suffix != ".parquet":
+                continue
+            try:
+                table = pq.read_table(path, columns=["instrument_id"])
+            except Exception:  # noqa: BLE001 - non-bar sidecar files carry other schemas
+                continue
+            instrument_ids |= set(table.column("instrument_id").to_pylist())
+        if not instrument_ids:
+            raise BinanceUniverseError(
+                f"pinned base panel {dataset_id} yielded no instrument identities"
+            )
+
+        placeholders = ",".join("?" * len(instrument_ids))
         rows = conn.execute(
             "SELECT b.display_name, q.display_name FROM ref_instrument i "
             "JOIN ref_asset b ON b.asset_id = i.base_asset_id "
             "JOIN ref_asset q ON q.asset_id = i.quote_asset_id "
-            "WHERE i.venue_id = ? AND i.instrument_type = 'SPOT'",
-            (venue,),
+            f"WHERE i.instrument_id IN ({placeholders})",
+            tuple(str(i) for i in instrument_ids),
         ).fetchall()
-    except sqlite3.Error:
-        return set()
+    except sqlite3.Error as exc:
+        raise BinanceUniverseError("base-panel reference lookup failed") from exc
     finally:
         conn.close()
-    return {f"{str(b).strip().upper()}{str(q).strip().upper()}" for b, q in rows}
+
+    symbols = {f"{str(b).strip().upper()}{str(q).strip().upper()}" for b, q in rows}
+    if len(symbols) != len(instrument_ids):
+        raise BinanceUniverseError(
+            f"pinned base panel {dataset_id} has {len(instrument_ids)} instruments but "
+            f"{len(symbols)} are mappable to symbols",
+        )
+    return symbols
 
 
 def parse_exchange_info(payload: Any, *, raw_object_id: str) -> list[SpotSymbol]:
@@ -390,6 +446,8 @@ class SelectionConfig:
     min_quote_volume: float = DEFAULT_MIN_QUOTE_VOLUME
     min_history_days: int = DEFAULT_MIN_HISTORY_DAYS
     top_n: int | None = 100
+    base_panel_dataset_id: str = ""
+    symbols_per_day: int = 20_000
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -397,7 +455,10 @@ class SelectionConfig:
             "min_quote_volume": self.min_quote_volume,
             "min_history_days": self.min_history_days,
             "top_n": self.top_n,
+            "base_panel_dataset_id": self.base_panel_dataset_id,
+            "symbols_per_day": self.symbols_per_day,
             "volume_window": VOLUME_WINDOW,
+            "prefilter_window": PREFILTER_WINDOW,
             "taxonomy_version": EXCLUSION_TAXONOMY_VERSION,
         }
 
@@ -620,11 +681,12 @@ class BinanceUniverseAcquirer:
     def fetch_trailing_volume(
         self, symbol: str, *, end_time: datetime, days: int = RANKING_DAYS
     ) -> VolumeEvidence | None:
-        """Measured trailing N-day quote volume, summed from daily bars.
+        """Measured trailing N-day quote volume, or None when the window is incomplete.
 
-        Binance exposes no 30-day volume field, so the ticket's measure is computed
-        from the daily bars themselves. Returning None leaves the symbol unranked
-        rather than silently falling back to a different window.
+        Binance exposes no 30-day volume field, so the ticket's measure is summed from
+        daily bars. The window must be exactly N unique, contiguous, closed daily bars
+        ending at the pinned time; anything else is not a 30-day observation and is
+        reported as such rather than labelled one.
         """
         start = end_time - timedelta(days=days - 1)
         outcome = self._acquirer.get_json(
@@ -634,20 +696,33 @@ class BinanceUniverseAcquirer:
                 "startTime": int(start.timestamp() * 1000),
                 "endTime": int(end_time.timestamp() * 1000), "limit": days,
             },
-            source_id=KLINES_SOURCE_ID, original_name=f"binance_vol30_{symbol}.json",
+            source_id=KLINES_SOURCE_ID, original_name=f"binance_vol{days}_{symbol}.json",
         )
-        if not outcome.ok or not isinstance(outcome.payload, list) or not outcome.payload:
+        if not outcome.ok or not isinstance(outcome.payload, list):
             return None
-        total = 0.0
+
+        day_ms = 86_400_000
+        expected = [int(start.timestamp() * 1000) + i * day_ms for i in range(days)]
+        seen: dict[int, float] = {}
         for row in outcome.payload:
             if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) < 8:
                 return None
-            value = _finite(row[7])
-            if value is None or value < 0:
+            open_ms = row[0]
+            if isinstance(open_ms, bool) or not isinstance(open_ms, (int, float)):
                 return None
-            total += value
+            open_ms = int(open_ms)
+            if open_ms % day_ms:
+                return None
+            value = _finite(row[7])
+            if value is None or value < 0 or open_ms in seen:
+                return None
+            seen[open_ms] = value
+
+        # Exactly the pinned window: no holes, no partial trailing bar, no extras.
+        if sorted(seen) != expected:
+            return None
         return VolumeEvidence(
-            symbol=symbol, quote_volume=total, trade_count=0,
+            symbol=symbol, quote_volume=sum(seen.values()), trade_count=len(seen),
             window=f"{days}d", observed_at=outcome.acquired_at,
             raw_object_id=str(outcome.raw_object_id),
         )
@@ -701,7 +776,8 @@ __all__ = [
     "SpotSymbol",
     "VolumeEvidence",
     "classify_base_asset",
-    "load_covered_symbols",
+    "BASE_PANEL_DATASET_ID",
+    "load_base_panel_symbols",
     "evaluate_history",
     "is_leveraged_token",
     "parse_exchange_info",
