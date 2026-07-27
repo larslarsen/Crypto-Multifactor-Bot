@@ -1843,3 +1843,40 @@ class TestTaxonomyVersioning:
             "the version that allowed RLUSD into ranking must not label these rules"
         )
 
+
+class TestAlreadyCurrentUsesEffectiveStart:
+    """A late-listing symbol cannot cover the requested start, and must not block."""
+
+    def test_a_late_listing_already_current_symbol_does_not_block(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        listed = day(2)
+        node = MockBinance(
+            symbols=[spot_entry("LATEUSDT", "LATE")],
+            first_kline_ms={"LATEUSDT": int(listed.timestamp() * 1000)},
+            klines_by_symbol={"LATEUSDT": [kline(i) for i in (2, 3, 4)]},
+        )
+
+        code, _ = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, min_history_days=0,
+        )
+        assert code == 0, "first pass publishes from the listing date"
+
+        # A different requested start is a different selection, so the identity is
+        # queued again. Its watermark is already at the end, making it ALREADY_CURRENT,
+        # while the prior rows start at the listing date -- which is exactly the case
+        # that a raw default_start coverage check would wrongly block.
+        code2, report2 = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, min_history_days=0, default_start=day(1),
+        )
+
+        assert report2["symbols_by_state"].get("ALREADY_CURRENT")
+        assert report2["blocking_symbols"] == [], (
+            "coverage must be judged from the listing date, not the requested start"
+        )
+        assert code2 == 1, "nothing new to publish"
+        assert read_snapshot(store), "prior canonical data survives"
+

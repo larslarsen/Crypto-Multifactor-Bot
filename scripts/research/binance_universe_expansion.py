@@ -325,6 +325,9 @@ def main() -> int:
     client = httpx.Client(timeout=30.0)
     acquisitions: list[SymbolAcquisition] = []
     eligibility: list[HistoryEligibility] = []
+    # A symbol cannot have bars before it listed, so coverage is judged from its
+    # effective start rather than the requested one.
+    effective_starts: dict[str, datetime] = {}
     try:
         raw_acquirer = RawHttpAcquirer(
             raw_writer=RawObjectWriter(RawObjectStoreConfig(root=args.raw_root), raw_catalog),
@@ -407,6 +410,7 @@ def main() -> int:
             # the later of the requested start and its first observed bar. Demanding
             # pre-listing days would otherwise register as a leading coverage gap.
             listed_at = verdict.first_bar_open_time or default_start
+            effective_starts[ranked.symbol] = max(default_start, listed_at)
             acquired_symbol = bars_acquirer.acquire(
                 symbol=ranked.symbol,
                 start_time=max(
@@ -444,7 +448,8 @@ def main() -> int:
                 continue
             covered, _missing = symbol_covers_range(
                 prior_bars, symbol=acquisition.symbol,
-                start_time=default_start, end_time=end_time,
+                start_time=effective_starts.get(acquisition.symbol, default_start),
+                end_time=end_time,
             )
             if not covered:
                 blocked.append(acquisition)
