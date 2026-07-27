@@ -38,13 +38,14 @@ TICKER_SOURCE_ID = "binance_ticker_24hr"
 KLINES_SOURCE_ID = "binance_klines"
 
 #: Bump when the taxonomy or any classification rule changes, so two reports are
-#: only comparable when they were produced under the same rules.
-EXCLUSION_TAXONOMY_VERSION = "2026-07-26.1"
+#: only comparable when they were produced under the same rules. 2026-07-27.1 adds
+#: RLUSD and further stablecoin bases, which earlier evidence had allowed to rank.
+EXCLUSION_TAXONOMY_VERSION = "2026-07-27.1"
 
 #: The volume evidence this ticket ranks on. The ticket requires top-N by 30-day
 #: volume, so ranking sums quote volume over trailing daily bars rather than reading
-#: the 24-hour ticker. The 24h ticker is retained only as a cheap candidacy prefilter,
-#: and is labelled PREFILTER_WINDOW so the two are never conflated again.
+#: the 24-hour ticker. Ranking measures every eligible symbol; 24-hour data is recorded
+#: as a non-truncating observation under PREFILTER_WINDOW and never limits the field.
 VOLUME_WINDOW = "30d"
 
 PREFILTER_WINDOW = "24h"
@@ -172,6 +173,7 @@ def load_base_panel_symbols(db_path: Any, dataset_id: str, *, store_root: Any) -
 
     import pyarrow.parquet as pq
 
+    from cryptofactors.catalog.dataset.outputs import stream_sha256_and_size
     from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
 
     try:
@@ -187,25 +189,48 @@ def load_base_panel_symbols(db_path: Any, dataset_id: str, *, store_root: Any) -
                 f"pinned base panel {dataset_id} is not registered in this catalog",
                 context={"dataset_id": dataset_id},
             )
-        files = [
-            str(r[0]) for r in conn.execute(
-                "SELECT storage_uri FROM dataset_file WHERE dataset_id = ?", (dataset_id,)
+        declared = [
+            (str(r[0]), str(r[1]), int(r[2]), int(r[3])) for r in conn.execute(
+                "SELECT storage_uri, file_sha256, byte_size, row_count "
+                "FROM dataset_file WHERE dataset_id = ?", (dataset_id,)
             )
         ]
-        if not files:
+        if not declared:
             raise BinanceUniverseError(f"pinned base panel {dataset_id} declares no files")
 
         root = dataset_absolute_dir(Path(store_root), dataset_id)
         instrument_ids: set[Any] = set()
-        for name in files:
-            path = root / name
-            if not path.exists() or path.suffix != ".parquet":
+        for storage_uri, sha256, byte_size, row_count in declared:
+            path = root / storage_uri
+            # Every declared file must be present and match the catalog. Skipping an
+            # unreadable file would let partial store corruption pass as reconciled
+            # membership whenever the survivors happened to expose all instruments.
+            if not path.exists():
+                raise BinanceUniverseError(
+                    f"pinned base panel file is missing: {storage_uri}",
+                    context={"dataset_id": dataset_id},
+                )
+            actual_sha, actual_size = stream_sha256_and_size(path)
+            if actual_sha != sha256 or actual_size != byte_size:
+                raise BinanceUniverseError(
+                    f"pinned base panel file does not match the catalog: {storage_uri}",
+                    context={"expected_sha256": sha256, "actual_sha256": actual_sha},
+                )
+            if path.suffix != ".parquet":
                 continue
             try:
-                table = pq.read_table(path, columns=["instrument_id"])
-            except Exception:  # noqa: BLE001 - non-bar sidecar files carry other schemas
-                continue
-            instrument_ids |= set(table.column("instrument_id").to_pylist())
+                table = pq.read_table(path)
+            except Exception as exc:  # noqa: BLE001
+                raise BinanceUniverseError(
+                    f"pinned base panel file is unreadable: {storage_uri}"
+                ) from exc
+            if table.num_rows != row_count:
+                raise BinanceUniverseError(
+                    f"pinned base panel file row count mismatch: {storage_uri}",
+                    context={"expected": row_count, "actual": table.num_rows},
+                )
+            if "instrument_id" in table.column_names:
+                instrument_ids |= set(table.column("instrument_id").to_pylist())
         if not instrument_ids:
             raise BinanceUniverseError(
                 f"pinned base panel {dataset_id} yielded no instrument identities"
@@ -448,6 +473,9 @@ class SelectionConfig:
     top_n: int | None = 100
     base_panel_dataset_id: str = ""
     symbols_per_day: int = 20_000
+    default_start: str = ""
+    pinned_end: str = ""
+    cursor_policy: str = "queue_position_persistent;capacity_per_processing_day"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -457,6 +485,9 @@ class SelectionConfig:
             "top_n": self.top_n,
             "base_panel_dataset_id": self.base_panel_dataset_id,
             "symbols_per_day": self.symbols_per_day,
+            "default_start": self.default_start,
+            "pinned_end": self.pinned_end,
+            "cursor_policy": self.cursor_policy,
             "volume_window": VOLUME_WINDOW,
             "prefilter_window": PREFILTER_WINDOW,
             "taxonomy_version": EXCLUSION_TAXONOMY_VERSION,
@@ -702,16 +733,23 @@ class BinanceUniverseAcquirer:
             return None
 
         day_ms = 86_400_000
+        acquired_ms = int(outcome.acquired_at.timestamp() * 1000)
         expected = [int(start.timestamp() * 1000) + i * day_ms for i in range(days)]
         seen: dict[int, float] = {}
         for row in outcome.payload:
             if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) < 8:
                 return None
-            open_ms = row[0]
-            if isinstance(open_ms, bool) or not isinstance(open_ms, (int, float)):
-                return None
-            open_ms = int(open_ms)
+            open_ms, close_ms = row[0], row[6]
+            for value in (open_ms, close_ms):
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return None
+            open_ms, close_ms = int(open_ms), int(close_ms)
             if open_ms % day_ms:
+                return None
+            # A bar is only usable once its interval has ended and we observed it after
+            # that; otherwise the final candle is still forming and its volume is
+            # partial, which would silently understate a 30-day measure.
+            if close_ms != open_ms + day_ms - 1 or close_ms >= acquired_ms:
                 return None
             value = _finite(row[7])
             if value is None or value < 0 or open_ms in seen:

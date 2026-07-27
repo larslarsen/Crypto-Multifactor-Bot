@@ -344,25 +344,41 @@ class WatermarkStore:
         temporary.replace(self._path)
 
 
-    def load_attempted(self, *, day_key: str) -> set[str]:
-        """Identities already attempted on this processing day.
+    def load_cursor(self, *, selection_key: str, processing_day: str) -> tuple[set[str], int]:
+        """Queue position for a pinned selection, and today's request count.
 
-        A count cannot resume: restarting iteration from the first ranked symbol and
-        deferring once the count is reached would attempt the same head of the queue
-        forever. Recording identities lets the next pass skip to the first symbol that
-        has not been tried.
+        Two separate facts. The attempted set is queue *position* and persists across
+        days, so a constant daily limit still walks down the ranking instead of
+        retrying rank one every morning. The counter is per processing day and resets,
+        because it represents request capacity, not progress.
         """
         section = self._document().get(self.BUDGET_SECTION, {})
-        if not isinstance(section, Mapping) or section.get("day") != day_key:
-            return set()
-        symbols = section.get("attempted", [])
-        return {str(s) for s in symbols} if isinstance(symbols, list) else set()
+        if not isinstance(section, Mapping):
+            return set(), 0
+        queues = section.get("queues", {})
+        queue = queues.get(selection_key, {}) if isinstance(queues, Mapping) else {}
+        attempted = queue.get("attempted", []) if isinstance(queue, Mapping) else []
+        used = 0
+        if section.get("day") == processing_day:
+            try:
+                used = int(section.get("used", 0))
+            except (TypeError, ValueError):
+                used = 0
+        return ({str(s) for s in attempted} if isinstance(attempted, list) else set()), used
 
-    def save_attempted(self, *, day_key: str, symbols: Iterable[str]) -> None:
+    def save_cursor(
+        self, *, selection_key: str, processing_day: str, attempted: Iterable[str], used: int
+    ) -> None:
         document = self._document()
-        document[self.BUDGET_SECTION] = {
-            "day": day_key, "attempted": sorted({str(s) for s in symbols})
-        }
+        section = document.get(self.BUDGET_SECTION)
+        if not isinstance(section, dict):
+            section = {}
+        queues = section.get("queues")
+        if not isinstance(queues, dict):
+            queues = {}
+        queues[selection_key] = {"attempted": sorted({str(s) for s in attempted})}
+        section.update({"day": processing_day, "used": int(used), "queues": queues})
+        document[self.BUDGET_SECTION] = section
         self._path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self._path.with_suffix(self._path.suffix + ".tmp")
         temporary.write_text(canonical_json(document) + "\n", encoding="utf-8")

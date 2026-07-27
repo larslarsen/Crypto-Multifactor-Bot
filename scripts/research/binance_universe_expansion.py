@@ -280,8 +280,11 @@ def main() -> int:
     parser.add_argument("--watermark-path", type=Path, default=Path("data/data008_watermarks.json"))
     parser.add_argument("--report-path", type=Path, default=REPORT_PATH)
     parser.add_argument("--top-n", type=int, default=10)
-    parser.add_argument("--prefilter-top-n", type=int, default=60)
     parser.add_argument("--symbols-per-day", type=int, default=20_000)
+    parser.add_argument(
+        "--processing-day", default=None,
+        help="override the UTC processing day (capacity reset key); testing/ops use",
+    )
     parser.add_argument("--base-panel-dataset-id", default=BASE_PANEL_DATASET_ID)
     parser.add_argument("--min-quote-volume", type=float, default=None)
     parser.add_argument("--min-history-days", type=int, default=None)
@@ -303,6 +306,8 @@ def main() -> int:
         overrides["min_history_days"] = args.min_history_days
     overrides["base_panel_dataset_id"] = args.base_panel_dataset_id
     overrides["symbols_per_day"] = args.symbols_per_day
+    overrides["default_start"] = default_start.isoformat()
+    overrides["pinned_end"] = end_time.isoformat()
     config = SelectionConfig(**overrides)
     code_commit = resolve_code_commit(args.code_commit)
 
@@ -365,19 +370,18 @@ def main() -> int:
         )
 
         bars_acquirer = BinanceBarAcquirer(acquirer=raw_acquirer, base_url=args.base_url)
-        # Processing day governs the reset (a later day starts fresh capacity); the
-        # pinned window is part of the key so a new window is a new queue rather than
-        # being blocked by attempts made for an earlier one.
-        day_key = f"{datetime.now(UTC).date().isoformat()}|{end_time.isoformat()}"
-        attempted = watermark_store.load_attempted(day_key=day_key)
+        processing_day = args.processing_day or datetime.now(UTC).date().isoformat()
+        # Queue position is keyed by the pinned selection and survives day rollover;
+        # capacity is keyed by the processing day and resets with it.
+        selection_key = f"{default_start.isoformat()}|{end_time.isoformat()}"
+        attempted, used = watermark_store.load_cursor(
+            selection_key=selection_key, processing_day=processing_day
+        )
         budget_start = len(attempted)
-        processed = budget_start
         for ranked in selection.ranked:
             if ranked.symbol in attempted:
-                # Already attempted today: skip to the next unprocessed identity
-                # instead of re-consuming the slot.
                 continue
-            if processed >= args.symbols_per_day:
+            if used >= args.symbols_per_day:
                 # Capacity reached: recorded, not dropped, so the next run continues
                 # from here rather than silently shrinking the requested panel.
                 acquisitions.append(SymbolAcquisition(
@@ -385,8 +389,7 @@ def main() -> int:
                     error=f"daily symbol budget {args.symbols_per_day} reached",
                 ))
                 continue
-            processed += 1
-            attempted.add(ranked.symbol)
+            used += 1
             verdict = universe.fetch_history_eligibility(
                 ranked.symbol, as_of=end_time, min_history_days=config.min_history_days
             )
@@ -398,12 +401,13 @@ def main() -> int:
                     symbol=ranked.symbol, state=SymbolState.DEFERRED,
                     error=None if verdict.reason is None else verdict.reason.value,
                 ))
+                attempted.add(ranked.symbol)
                 continue
             # A symbol cannot have bars before it listed, so the effective start is
             # the later of the requested start and its first observed bar. Demanding
             # pre-listing days would otherwise register as a leading coverage gap.
             listed_at = verdict.first_bar_open_time or default_start
-            acquisitions.append(bars_acquirer.acquire(
+            acquired_symbol = bars_acquirer.acquire(
                 symbol=ranked.symbol,
                 start_time=max(
                     resume_start(
@@ -412,7 +416,13 @@ def main() -> int:
                     listed_at,
                 ),
                 end_time=end_time,
-            ))
+            )
+            acquisitions.append(acquired_symbol)
+            if not acquired_symbol.blocks_publication:
+                # Safe terminal outcome: the identity has been resolved for this
+                # selection. A failed/blocking outcome stays off the queue so it is
+                # retried rather than skipped.
+                attempted.add(acquired_symbol.symbol)
         log = raw_acquirer.log
     finally:
         client.close()
@@ -447,12 +457,20 @@ def main() -> int:
                 blocked=blocked, log=log, prior_reconciliation=prior_reconciliation,
                 reconciliation={"state": state}, covered_symbols=covered_symbols,
                 base_panel_dataset_id=base_panel_dataset_id,
-                budget={"day": day_key, "start": budget_start, "processed": processed,
+                budget={"processing_day": processing_day, "queue_position": budget_start,
+                        "queue_position_after": len(attempted), "used_today": used,
                         "limit": args.symbols_per_day},
                 watermarks_before=watermarks_before,
                 watermarks_after=watermarks_before, snapshot=[], dataset_id=None,
             )
             _write_report(args.report_path, report)
+            # Safe terminal outcomes are progress even with nothing to publish; losing
+            # them would make a constant daily limit retry the same head forever.
+            if not blocked:
+                watermark_store.save_cursor(
+                    selection_key=selection_key, processing_day=processing_day,
+                    attempted=attempted, used=used,
+                )
             print(f"DATA-008: {state}; prior snapshot and watermarks retained")
             return 1
 
@@ -561,7 +579,10 @@ def main() -> int:
                 acquisition.watermark_candidate.isoformat()
             )
         watermark_store.save(watermarks_after)
-        watermark_store.save_attempted(day_key=day_key, symbols=attempted)
+        watermark_store.save_cursor(
+            selection_key=selection_key, processing_day=processing_day,
+            attempted=attempted, used=used,
+        )
     finally:
         dataset_catalog.close()
 
@@ -573,7 +594,8 @@ def main() -> int:
         snapshot=snapshot, dataset_id=dataset_id, net_rows_added=net_rows_added,
         covered_symbols=covered_symbols, base_panel_dataset_id=base_panel_dataset_id,
         newly_published=newly_published,
-        budget={"day": day_key, "start": budget_start, "processed": processed,
+        budget={"processing_day": processing_day, "queue_position": budget_start,
+                "queue_position_after": len(attempted), "used_today": used,
                 "limit": args.symbols_per_day},
     )
     _write_report(args.report_path, report)

@@ -38,7 +38,10 @@ from cryptofactors.acquisition.binance_snapshot import (
 )
 from cryptofactors.acquisition.binance_universe import (
     EXCLUSION_TAXONOMY_VERSION,
+    FIAT_BASES,
     PREFILTER_WINDOW,
+    STABLECOIN_BASES,
+    TOKENIZED_COMMODITY_BASES,
     VOLUME_WINDOW,
     BinanceUniverseAcquirer,
     BinanceUniverseError,
@@ -977,6 +980,8 @@ def run_runner(
     top_n: int = 10,
     min_history_days: int = 365,
     base_panel_id: str | None = None,
+    processing_day: str | None = None,
+    symbols_per_day: int | None = None,
 ) -> tuple[int, dict[str, Any]]:
     from scripts.research import binance_universe_expansion as runner
 
@@ -997,6 +1002,8 @@ def run_runner(
         "--base-url", "https://binance.test",
         "--code-commit", "0" * 40,
         "--base-panel-dataset-id", base_id,
+        *(["--processing-day", processing_day] if processing_day else []),
+        *(["--symbols-per-day", str(symbols_per_day)] if symbols_per_day else []),
         "--max-attempts", "1",
         "--backoff-seconds", "0",
     ])
@@ -1309,7 +1316,7 @@ class TestReview0241Corrections:
         assert runner.main() == 0
         first = json.loads(report_path.read_text())
 
-        assert first["budget"]["start"] == 0
+        assert first["budget"]["queue_position"] == 0
         assert first["budget"]["limit"] == 2
         first_deferred = {s["symbol"] for s in first["symbols_by_state"].get("BUDGET_DEFERRED", [])}
         first_done = set(first["newly_published_symbols"])
@@ -1323,7 +1330,7 @@ class TestReview0241Corrections:
         second = json.loads(report_path.read_text())
         second_done = set(second["newly_published_symbols"])
 
-        assert second["budget"]["start"] == 2, "already-attempted identities are recorded"
+        assert second["budget"]["queue_position"] == 2, "queue position persisted"
         assert second_done - first_done, "the cursor must advance to unattempted symbols"
         assert not (second_done & first_done), "a completed symbol does not re-consume a slot"
         assert first_deferred & second_done, "each deferred identity is eventually attempted"
@@ -1425,7 +1432,7 @@ class TestBasePanelFailsClosed:
         for parquet in (store.store_root / "datasets").rglob("bars.parquet"):
             parquet.unlink()
 
-        with pytest.raises(BinanceUniverseError, match="no instrument identities"):
+        with pytest.raises(BinanceUniverseError, match="file is missing"):
             load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
 
     def test_an_unreadable_catalog_fails_closed(self, tmp_path: Path) -> None:
@@ -1576,4 +1583,263 @@ class TestRankingCoversTheFullUniverse:
         assert base.fingerprint() != replace(base, symbols_per_day=11).fingerprint()
         assert base.fingerprint() != replace(base, base_panel_dataset_id="ds_b").fingerprint()
         assert base.fingerprint() != replace(base, top_n=3).fingerprint()
+
+
+class TestQueueProgressAcrossDays:
+    """REVIEW-0243(2): queue position persists; only capacity resets each day."""
+
+    def _node(self) -> MockBinance:
+        # Six ranked symbols so a constant limit of two needs three days.
+        extra = [spot_entry(f"S{i}USDT", f"S{i}") for i in range(1, 3)]
+        return MockBinance(symbols=DEFAULT_SYMBOLS + extra)
+
+    def test_a_constant_daily_limit_walks_the_whole_queue(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The old counter reset each day and retried rank one forever."""
+        base_id = seed_base_panel(store)
+        seen: list[set[str]] = []
+        positions: list[int] = []
+
+        for day_index, processing_day in enumerate(
+            ["2026-07-27", "2026-07-28", "2026-07-29"]
+        ):
+            _, report = run_runner(
+                tmp_path=tmp_path, store=store, node=self._node(),
+                monkeypatch=monkeypatch, base_panel_id=base_id,
+                processing_day=processing_day, symbols_per_day=2,
+            )
+            positions.append(report["budget"]["queue_position"])
+            seen.append(set(report["budget"].get("attempted_this_run", [])) or
+                        set(report["newly_published_symbols"]))
+            assert report["budget"]["used_today"] <= 2, "capacity is per processing day"
+            assert report["budget"]["processing_day"] == processing_day
+            assert report["budget"]["queue_position"] == day_index * 2, (
+                "queue position must persist across the day rollover"
+            )
+
+        assert positions == [0, 2, 4], "each day starts where the previous stopped"
+
+    def test_capacity_resets_but_position_does_not(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base_id = seed_base_panel(store)
+        run_runner(
+            tmp_path=tmp_path, store=store, node=self._node(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+        )
+        _, second = run_runner(
+            tmp_path=tmp_path, store=store, node=self._node(), monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-28", symbols_per_day=2,
+        )
+
+        assert second["budget"]["used_today"] <= 2, "a new day resets capacity"
+        assert second["budget"]["queue_position"] == 2, "but not queue position"
+
+    def test_deferred_identities_do_not_starve_later_ranks(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A history-deferred head symbol is a safe terminal outcome and must not
+        consume the same slot every day."""
+        base_id = seed_base_panel(store)
+        node = self._node()
+        node.first_kline_ms = {s["symbol"]: NEW_LISTING_MS for s in DEFAULT_SYMBOLS[:2]}
+
+        first_code, first = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+        )
+        _, second = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-28", symbols_per_day=2,
+        )
+
+        assert first_code == 1, "the first pass deferred everything it attempted"
+        assert first["deferred_symbols_this_run"], "deferred outcomes recorded"
+        assert second["budget"]["queue_position"] == 2, (
+            "a no-publication pass still advances safe progress"
+        )
+        assert second["newly_published_symbols"], "later ranks are reached"
+
+    def test_a_blocking_outcome_does_not_advance_the_queue(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A failed acquisition must stay retryable rather than be skipped."""
+        base_id = seed_base_panel(store)
+        node = self._node()
+        node.klines_status = 500
+
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=node, monkeypatch=monkeypatch,
+            base_panel_id=base_id, processing_day="2026-07-27", symbols_per_day=2,
+        )
+
+        assert code == 1
+        assert report["budget"]["queue_position_after"] == 0, (
+            "a blocking outcome leaves the identity on the queue"
+        )
+        assert WatermarkStore(store.watermark_path).load() == {}
+
+
+class TestClosedBarValidation:
+    """REVIEW-0243(3): a still-forming final candle is not a closed window."""
+
+    def _measure(self, store: Store, rows: Any) -> Any:
+        node = MockBinance()
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            params = dict(request.url.params)
+            if params.get("limit") == "30":
+                return node._respond(200, rows(int(params["startTime"])))
+            return original(request)
+
+        universe = BinanceUniverseAcquirer(
+            acquirer=RawHttpAcquirer(
+                raw_writer=store.writer,
+                client=REAL_HTTPX_CLIENT(transport=httpx.MockTransport(handler)),
+                log=AcquisitionLog(),
+            ),
+            base_url="https://binance.test",
+        )
+        return universe.fetch_trailing_volume("BTCUSDT", end_time=END_TIME)
+
+    @staticmethod
+    def _closed(open_ms: int) -> list[Any]:
+        return [open_ms, "1", "2", "0.5", "1", "5", open_ms + 86_399_999, "1000.0", 3]
+
+    def test_a_fully_closed_window_is_accepted(self, store: Store) -> None:
+        evidence = self._measure(
+            store, lambda start: [self._closed(start + i * 86_400_000) for i in range(30)]
+        )
+
+        assert evidence is not None
+
+    def test_a_still_forming_final_bar_is_refused(self, store: Store) -> None:
+        """Open timestamps are all correct; only the close proves it has not ended."""
+        def rows(start: int) -> list[Any]:
+            bars = [self._closed(start + i * 86_400_000) for i in range(29)]
+            last_open = start + 29 * 86_400_000
+            # Binance reports the interval close even while the candle forms.
+            bars.append([
+                last_open, "1", "2", "0.5", "1", "5",
+                last_open + 86_399_999, "1.0", 1,
+            ])
+            return bars
+
+        import time as _time
+
+        # Acquire "before" the final bar closes by pinning the window into the future.
+        future = datetime.now(UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(days=1)
+        node = MockBinance()
+        original = node.handler
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            params = dict(request.url.params)
+            if params.get("limit") == "30":
+                return node._respond(200, rows(int(params["startTime"])))
+            return original(request)
+
+        universe = BinanceUniverseAcquirer(
+            acquirer=RawHttpAcquirer(
+                raw_writer=store.writer,
+                client=REAL_HTTPX_CLIENT(transport=httpx.MockTransport(handler)),
+                log=AcquisitionLog(),
+            ),
+            base_url="https://binance.test",
+        )
+        del _time
+        assert universe.fetch_trailing_volume("BTCUSDT", end_time=future) is None
+
+    def test_a_truncated_close_timestamp_is_refused(self, store: Store) -> None:
+        def rows(start: int) -> list[Any]:
+            bars = [self._closed(start + i * 86_400_000) for i in range(30)]
+            bars[7][6] = bars[7][0] + 1000  # not a full interval
+            return bars
+
+        assert self._measure(store, rows) is None
+
+    def test_a_missing_close_timestamp_is_refused(self, store: Store) -> None:
+        def rows(start: int) -> list[Any]:
+            bars = [self._closed(start + i * 86_400_000) for i in range(30)]
+            bars[3][6] = None
+            return bars
+
+        assert self._measure(store, rows) is None
+
+
+class TestBaseFileReconciliation:
+    """REVIEW-0243(6): declared base files must match the catalog exactly."""
+
+    def _parquets(self, store: Store) -> list[Path]:
+        return sorted((store.store_root / "datasets").rglob("*.parquet"))
+
+    def test_an_intact_base_reconciles(self, store: Store) -> None:
+        base_id = seed_base_panel(store)
+
+        assert load_base_panel_symbols(
+            store.db, base_id, store_root=store.store_root
+        ) == BASE_PANEL_SYMBOLS
+
+    def test_a_tampered_base_file_fails_closed(self, store: Store) -> None:
+        """Content changes while every expected instrument id is still present."""
+        base_id = seed_base_panel(store)
+        target = self._parquets(store)[0]
+        target.write_bytes(target.read_bytes() + b"\x00")
+
+        with pytest.raises(BinanceUniverseError, match="does not match the catalog"):
+            load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
+
+    def test_a_partially_missing_base_fails_closed(self, store: Store) -> None:
+        base_id = seed_base_panel(store)
+        conn = sqlite3.connect(store.db)
+        try:
+            # Declare a second file the store does not have; the survivor still
+            # exposes every instrument id.
+            row = conn.execute(
+                "SELECT storage_uri, file_sha256, byte_size, row_count FROM dataset_file "
+                "WHERE dataset_id = ?", (base_id,)
+            ).fetchone()
+            conn.execute(
+                "INSERT INTO dataset_file (dataset_id, storage_uri, file_sha256, "
+                "byte_size, row_count) VALUES (?, ?, ?, ?, ?)",
+                (base_id, "market_bars/daily/absent.parquet", row[1], row[2], row[3]),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        with pytest.raises(BinanceUniverseError, match="file is missing"):
+            load_base_panel_symbols(store.db, base_id, store_root=store.store_root)
+
+
+class TestTaxonomyVersioning:
+    """REVIEW-0243(5): identical version labels must mean identical rules."""
+
+    #: Recomputed from the taxonomy sets. Changing any membership without bumping
+    #: EXCLUSION_TAXONOMY_VERSION breaks the audit comparison between two reports,
+    #: which is exactly what happened when RLUSD was added under 2026-07-26.1.
+    EXPECTED_RULES_DIGEST = "6d2173e4f5588ec29efbda6835f7ad8542d3828a0307fc2b00070cdfb513e94f"
+
+    def test_the_version_matches_the_rule_set(self) -> None:
+        import hashlib
+
+        digest = hashlib.sha256("|".join(
+            ",".join(sorted(group)) for group in
+            (STABLECOIN_BASES, FIAT_BASES, TOKENIZED_COMMODITY_BASES)
+        ).encode()).hexdigest()
+
+        assert digest == self.EXPECTED_RULES_DIGEST, (
+            "taxonomy membership changed; bump EXCLUSION_TAXONOMY_VERSION and update "
+            "this digest so two reports under one version mean the same rules"
+        )
+        assert EXCLUSION_TAXONOMY_VERSION == "2026-07-27.1"
+
+    def test_the_rlusd_rule_change_carries_a_new_version(self) -> None:
+        assert "RLUSD" in STABLECOIN_BASES
+        assert EXCLUSION_TAXONOMY_VERSION != "2026-07-26.1", (
+            "the version that allowed RLUSD into ranking must not label these rules"
+        )
 
