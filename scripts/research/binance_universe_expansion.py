@@ -166,6 +166,7 @@ def load_prior_snapshot(
 def build_report(
     *,
     config: SelectionConfig,
+    code_commit: str,
     end_time: datetime,
     default_start: datetime,
     selection: Any,
@@ -206,6 +207,9 @@ def build_report(
         "default_start": default_start.isoformat(),
         "effective_config": config.as_dict(),
         "config_fingerprint": config.fingerprint(),
+        # Stated so the report can be checked against the catalog manifest without
+        # re-deriving it; a dataset must be reproducible from its own lineage.
+        "code_commit": code_commit,
         "volume_window": VOLUME_WINDOW,
         "exclusion_taxonomy_version": EXCLUSION_TAXONOMY_VERSION,
         "base_panel_dataset_id": base_panel_dataset_id,
@@ -457,8 +461,8 @@ def main() -> int:
         if blocked or not acquired:
             state = "blocked_by_incomplete_symbols" if blocked else "no_publishable_rows"
             report = build_report(
-                config=config, end_time=end_time, default_start=default_start,
-                selection=selection, eligibility=eligibility, acquisitions=acquisitions,
+                config=config, code_commit=code_commit, end_time=end_time,
+                default_start=default_start, selection=selection, eligibility=eligibility, acquisitions=acquisitions,
                 blocked=blocked, log=log, prior_reconciliation=prior_reconciliation,
                 reconciliation={"state": state}, covered_symbols=covered_symbols,
                 base_panel_dataset_id=base_panel_dataset_id,
@@ -592,7 +596,8 @@ def main() -> int:
         dataset_catalog.close()
 
     report = build_report(
-        config=config, end_time=end_time, default_start=default_start, selection=selection,
+        config=config, code_commit=code_commit, end_time=end_time,
+        default_start=default_start, selection=selection,
         eligibility=eligibility, acquisitions=acquisitions, blocked=[], log=log,
         prior_reconciliation=prior_reconciliation, reconciliation=reconciliation,
         watermarks_before=watermarks_before, watermarks_after=watermarks_after,

@@ -1880,3 +1880,24 @@ class TestAlreadyCurrentUsesEffectiveStart:
         assert code2 == 1, "nothing new to publish"
         assert read_snapshot(store), "prior canonical data survives"
 
+
+class TestCodeIdentity:
+    """REVIEW-0243(1): a dataset must be reproducible from its own lineage."""
+
+    def test_the_report_commit_equals_the_catalog_manifest(
+        self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        code, report = run_runner(
+            tmp_path=tmp_path, store=store, node=MockBinance(), monkeypatch=monkeypatch
+        )
+
+        assert code == 0
+        catalog = SqliteDatasetCatalog(store.db)
+        try:
+            row = catalog.get_dataset(str(report["additive_dataset_id"]))
+        finally:
+            catalog.close()
+
+        assert row is not None
+        assert report["code_commit"] == row["code_commit"] == "0" * 40
+
