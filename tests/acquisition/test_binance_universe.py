@@ -2416,8 +2416,12 @@ class TestReview0246Corrections:
         with pytest.raises(RuntimeError, match="not the checked-out commit"):
             verify_source_identity("0" * 40, paths=IDENTITY_PATHS)
 
-    def test_a_dirty_source_tree_is_refused(self, tmp_path: Path) -> None:
-        """The declared commit cannot describe uncommitted source."""
+    def test_a_dirty_source_tree_is_refused(self) -> None:
+        """The declared commit cannot describe uncommitted source.
+
+        Creates its own untracked file rather than relying on the working tree
+        happening to be dirty, which made this pass or fail on environment state.
+        """
         import subprocess
 
         from scripts.research.binance_universe_expansion import verify_source_identity
@@ -2427,10 +2431,40 @@ class TestReview0246Corrections:
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
             cwd=str(repo), check=True,
         ).stdout.strip()
-        scratch = repo / "tests" / "acquisition" / "test_binance_universe.py"
+        scratch = repo / "tests" / "acquisition" / "_identity_probe.tmp"
+        scratch.write_text("untracked\n", encoding="utf-8")
+        try:
+            relative = str(scratch.relative_to(repo))
+            dirty = subprocess.run(
+                ["git", "status", "--porcelain", "--", relative],
+                capture_output=True, text=True, cwd=str(repo), check=True,
+            ).stdout.strip()
+            assert dirty, "the probe file must register as dirty"
 
-        with pytest.raises(RuntimeError, match="dirty source tree"):
-            verify_source_identity(head, paths=(str(scratch.relative_to(repo)),))
+            with pytest.raises(RuntimeError, match="dirty source tree"):
+                verify_source_identity(head, paths=(relative,))
+        finally:
+            scratch.unlink(missing_ok=True)
+
+    def test_a_clean_path_set_verifies(self) -> None:
+        """The counterpart: a clean path set under the real HEAD must pass."""
+        import subprocess
+
+        from scripts.research.binance_universe_expansion import verify_source_identity
+
+        repo = Path(__file__).resolve().parents[2]
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+            cwd=str(repo), check=True,
+        ).stdout.strip()
+        target = "src/cryptofactors/acquisition/binance_universe.py"
+        if subprocess.run(
+            ["git", "status", "--porcelain", "--", target],
+            capture_output=True, text=True, cwd=str(repo), check=True,
+        ).stdout.strip():
+            pytest.skip("identity source is dirty in this working tree")
+
+        verify_source_identity(head, paths=(target,))
 
     def test_the_production_path_runs_the_identity_check(self) -> None:
         """The seam must be opt-in, so production cannot skip verification."""
