@@ -3,17 +3,19 @@
 Ticket: DATA-008
 State: AWAITING_REVIEW
 Next required actor: Reviewer
+Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
 ## Summary
 
-REVIEW-0244 requires one bounded failure-state and cursor correction. Remove the
-remaining 24-hour-evidence gate from the 30-day measurement field; distinguish valid
-insufficient windows/history from failed or malformed acquisitions; block and retry
-unavailable evidence; preserve safe cursor progress in mixed batches; and bind queue
-identity to material selection controls without coupling it to processing-day capacity.
-Retain the reconciled code identity, closed-bar checks, taxonomy version, strict base
-validation, pagination, exact raw lineage, additive architecture, and full snapshots.
+REVIEW-0245 requires one bounded validation, cursor, and code-identity correction.
+Republish from the final clean source commit; persist `ALREADY_CURRENT` only after prior
+coverage reconciles; fail closed on malformed ranking/history timestamps; keep failed
+history out of deferred evidence; version selection-policy/source identity in the
+queue; and report actual trades rather than bar count. Retain the full non-volume
+measurement field, typed HTTP failure blocking, mixed-batch safe progress, closed-bar
+checks, strict base validation, exact raw lineage, additive architecture, and full
+snapshots.
 
 ## Governing documents
 
@@ -23,8 +25,9 @@ validation, pagination, exact raw lineage, additive architecture, and full snaps
 - docs/reviews/REVIEW-0242_DATA-008_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0243_DATA-008_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0244_DATA-008_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0245_DATA-008_CHANGES_REQUIRED.md
 
 ## Authorization
 
-Only the REVIEW-0244 DATA-008 correction pass is authorized. No other ticket or LIVE
+Only the REVIEW-0245 DATA-008 correction pass is authorized. No other ticket or LIVE
 work may begin.
