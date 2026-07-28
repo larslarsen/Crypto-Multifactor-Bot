@@ -1,8 +1,8 @@
 # ARCH-002 — UniverseBinding Contract (Experiments & Paper Fail-Closed)
 
 **Priority:** P0
-**Status:** BLOCKED
-**Dependencies:** ADR-0014 (proposed), UNIVERSE-003 (ACCEPTED), UNIVERSE-006 (ACCEPTED), ASOF-001 (ACCEPTED)
+**Status:** READY
+**Dependencies:** ADR-0014 (ACCEPTED), UNIVERSE-003 (ACCEPTED), UNIVERSE-006 (ACCEPTED), ASOF-001 (ACCEPTED)
 **Layer:** architecture / execution / factors
 **Architecture:** ADR-0014. **No LIVE. No new data vendors.**
 

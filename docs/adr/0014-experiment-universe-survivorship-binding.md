@@ -1,6 +1,6 @@
 # ADR 0014 — Experiment & Paper Must Bind Survivorship-Aware Universe
 
-- **Status:** Proposed (pending reviewer decision)
+- **Status:** Accepted (REVIEW-0249)
 - **Date:** 2026-07-24
 - **Supersedes in part:** implicit practice of hardcoded `PAPER_TO_INSTRUMENT_ID` as experiment universe
 

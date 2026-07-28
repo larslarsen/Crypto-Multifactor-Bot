@@ -1,29 +1,26 @@
 # CURRENT_TASK
 
-Ticket: DATA-008
-State: ACCEPTED
-Next required actor: Reviewer
+Ticket: ARCH-002
+State: READY
+Next required actor: Sr Dev - Claude Opus 5
 Final reviewer: Sol 5.6 High
-Next ticket authorized: NONE
+Next ticket authorized: ARCH-002
 
 ## Summary
 
-REVIEW-0248 accepts DATA-008. No implementation, integration, publication, or LIVE work
-is currently authorized. The reviewer may select the next ticket separately.
+REVIEW-0249 accepts ADR-0014 and authorizes one complete ARCH-002 rework pass. Implement
+the quality-bar panel minus CMC-dead-at-time composite binding, name-safe mapping,
+fail-closed catalog/as-of semantics, complete fingerprints, and real UNIVERSE-006 plus
+DATA-011 integration proof. Claude must finish and self-review the entire source delta
+before one Jr integration pass; do not return for intermediate reviewer rounds.
 
 ## Governing documents
 
-- tickets/DATA-008.md
-- docs/reviews/REVIEW-0240_DATA-008_REWORK_AUTHORIZED.md
-- docs/reviews/REVIEW-0241_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0242_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0243_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0244_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0245_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0246_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0247_DATA-008_CHANGES_REQUIRED.md
-- docs/reviews/REVIEW-0248_DATA-008_ACCEPTED.md
+- tickets/ARCH-002.md
+- docs/adr/0014-experiment-universe-survivorship-binding.md
+- docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md
+- docs/reviews/REVIEW-0249_ARCH-002_REWORK_AUTHORIZED.md
 
 ## Authorization
 
-DATA-008 is accepted. No next ticket or LIVE work is authorized.
+Only ARCH-002 rework is authorized. No other ticket or LIVE work may begin.
