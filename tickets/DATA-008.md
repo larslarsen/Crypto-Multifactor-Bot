@@ -1,7 +1,7 @@
 # DATA-008 — Free CEX Universe Expansion (Binance-first)
 
 **Priority:** P1  
-**Status:** READY
+**Status:** AWAITING_REVIEW
 **Final reviewer:** Sol 5.6 High
 **Dependencies:** DATA-006 (ACCEPTED), DATA-007 (ACCEPTED)  
 **Layer:** acquisition / bars  
