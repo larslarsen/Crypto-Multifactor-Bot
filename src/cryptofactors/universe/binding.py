@@ -106,8 +106,59 @@ SURVIVORSHIP_INVALID_ARTIFACT_IDS: frozenset[str] = frozenset({
 })
 
 
+# Key under which every run artifact carries its binding evidence.
+BINDING_EVIDENCE_KEY: str = "universe_binding"
+
+# A run artifact that omits any of these cannot prove which binding and as-of
+# coverage controlled the decision, which is the whole point of ARCH-002.
+REQUIRED_BINDING_EVIDENCE_FIELDS: frozenset[str] = frozenset({
+    "universe_dataset_id",
+    "bar_panel_dataset_id",
+    "survivorship_policy",
+    "universe_code_version",
+    "decision_time",
+    "eligible_count",
+    "with_bars_count",
+    "excluded_dead_count",
+    "panel_count",
+})
+
+
 class UniverseBindingError(RuntimeError):
     """Raised when a UniverseBinding cannot be resolved or is empty."""
+
+
+def binding_evidence(
+    binding: UniverseBinding,
+    decision_time: datetime,
+) -> dict[str, Any]:
+    """Return the evidence block a run artifact must carry for ``decision_time``.
+
+    Every paper/experiment artifact records this under ``BINDING_EVIDENCE_KEY``
+    so a reader can reconstruct exactly which universe, which bar panel, and
+    which as-of coverage produced the decision.
+    """
+    payload = dict(binding.binding_fingerprint(decision_time))
+    validate_binding_evidence(payload)
+    return payload
+
+
+def validate_binding_evidence(payload: Mapping[str, Any]) -> None:
+    """Raise if a binding evidence block is incomplete.
+
+    Called at artifact-build time so an incomplete artifact fails the run
+    rather than being written and discovered later by a reviewer.
+    """
+    missing = sorted(REQUIRED_BINDING_EVIDENCE_FIELDS - set(payload))
+    if missing:
+        raise UniverseBindingError(
+            f"binding evidence is missing required fields: {missing}",
+        )
+    empty = sorted(k for k in REQUIRED_BINDING_EVIDENCE_FIELDS if payload[k] is None)
+    if empty:
+        raise UniverseBindingError(
+            f"binding evidence has null required fields: {empty}",
+        )
 
 
 def is_survivorship_invalid(artifact_id: str) -> bool:

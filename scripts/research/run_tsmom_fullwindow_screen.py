@@ -44,7 +44,11 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
-from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
+from cryptofactors.universe.binding import (
+    UniverseBinding,
+    binding_evidence,
+    load_paper_universe_binding,
+)
 
 UTC = UTC
 
@@ -404,6 +408,7 @@ def main() -> int:
             decision_times,
             in_memory_store,
         )
+        cell["universe_binding"] = binding_evidence(universe_binding, decision_times[0])
         results.append(cell)
         print(
             f"  {cell['factor_id']}: return={cell['total_net_return']:.4f} gate={cell['live_gate_satisfied']}",
@@ -436,6 +441,7 @@ def main() -> int:
         "canonical_dataset_quality_status": "REJECTED",
         "canonical_dataset_quality_note": "BAR-001 quarantines all native 1d rows; intraday partition is used.",
         "universe": sorted(universe_binding.universe_at(start)),
+        "universe_binding": binding_evidence(universe_binding, start),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

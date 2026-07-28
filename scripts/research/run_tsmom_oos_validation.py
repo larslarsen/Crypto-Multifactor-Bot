@@ -42,7 +42,11 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
-from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
+from cryptofactors.universe.binding import (
+    UniverseBinding,
+    binding_evidence,
+    load_paper_universe_binding,
+)
 
 UTC = UTC
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
@@ -394,6 +398,7 @@ def main() -> int:
                 train_decisions,
                 in_memory_store,
             )
+            cell["universe_binding"] = binding_evidence(universe_binding, train_decisions[0])
             train_results.append(cell)
 
     # Select top-3 risk-compliant profitable configs.
@@ -422,6 +427,7 @@ def main() -> int:
             test_decisions,
             in_memory_store,
         )
+        cell["universe_binding"] = binding_evidence(universe_binding, test_decisions[0])
         test_results.append(cell)
 
     # Ranking on test fold.
@@ -438,6 +444,7 @@ def main() -> int:
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": dataset_id,
         "universe": sorted(universe_binding.universe_at(test_start)),
+        "universe_binding": binding_evidence(universe_binding, test_start),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

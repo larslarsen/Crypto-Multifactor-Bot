@@ -191,7 +191,6 @@ def test_real_csv_no_exclusions_for_major_symbols() -> None:
         pytest.skip("CMC survivorship CSV not found")
 
     provider = CMCSurvivorshipProvider.from_csv(csv_path)
-    univ_2020 = provider.universe_at(BAR_RANGE_START)
 
     # Replicate the name-based exclusion logic from build_bound_bars.py
     from scripts.research.build_bound_bars import PAPER_BASE_TO_NAME, _base_asset

@@ -43,7 +43,11 @@ from cryptofactors.execution.symbols import (
 from cryptofactors.factors.tsmom import TimeSeriesMomentumFactor
 from cryptofactors.portfolio.perpetual_simulation import LongShortRankAllocator
 from cryptofactors.promotion import PromotionRegistry
-from cryptofactors.universe.binding import UniverseBinding, load_paper_universe_binding
+from cryptofactors.universe.binding import (
+    UniverseBinding,
+    binding_evidence,
+    load_paper_universe_binding,
+)
 
 UTC = UTC
 
@@ -406,6 +410,7 @@ def main() -> int:
                 decision_times,
                 in_memory_store,
             )
+            cell["universe_binding"] = binding_evidence(universe_binding, decision_times[0])
             cells.append(cell)
 
     n_configs = len(cells)
@@ -508,6 +513,7 @@ def main() -> int:
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": dataset_id,
         "canonical_dataset_quality_status": "PASS",
+        "universe_binding": binding_evidence(universe_binding, decision_times[0]),
         "session": {
             "start": start.isoformat(),
             "end": end.isoformat(),

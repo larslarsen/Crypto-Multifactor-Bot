@@ -82,6 +82,10 @@ class _StaticBinding:
             "survivorship_policy": self.survivorship_policy,
             "universe_code_version": self.universe_code_version,
             "decision_time": decision_time.isoformat(),
+            "eligible_count": len(self.symbols),
+            "with_bars_count": len(self.symbols),
+            "excluded_dead_count": 0,
+            "panel_count": len(self.symbols),
         }
 
 

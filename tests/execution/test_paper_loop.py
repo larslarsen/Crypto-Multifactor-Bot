@@ -63,6 +63,19 @@ class _StaticUniverseBinding:
             "universe_code_version": self.universe_code_version,
         }
 
+    def binding_fingerprint(self, decision_time: datetime) -> dict[str, Any]:
+        return {
+            "universe_dataset_id": self.universe_dataset_id,
+            "bar_panel_dataset_id": self.bar_panel_dataset_id,
+            "survivorship_policy": self.survivorship_policy,
+            "universe_code_version": self.universe_code_version,
+            "decision_time": decision_time.isoformat(),
+            "eligible_count": len(self.symbols),
+            "with_bars_count": len(self.symbols),
+            "excluded_dead_count": 0,
+            "panel_count": len(self.symbols),
+        }
+
 
 class _StubPriceStore:
     def __init__(self, universe: list[str]) -> None:

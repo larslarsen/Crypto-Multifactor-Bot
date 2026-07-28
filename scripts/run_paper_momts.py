@@ -232,6 +232,9 @@ def format_loop_result(res: PaperLoopResult) -> dict[str, Any]:
             "equity": p.equity,
             "target_weights": p.target_weights,
             "open_positions": p.open_positions,
+            # Per-decision binding identity and as-of coverage, so each rebalance
+            # can be traced to the exact universe that produced it.
+            "universe_binding": p.binding_fingerprint,
         }
         for p in res.period_logs
     ]
@@ -265,6 +268,11 @@ def format_loop_result(res: PaperLoopResult) -> dict[str, Any]:
         "bar_panel_dataset_id": res.bar_panel_dataset_id,
         "survivorship_policy": res.survivorship_policy,
         "universe_code_version": res.universe_code_version,
+        # Artifact-level evidence for the first decision; per-decision blocks live
+        # in period_logs, since coverage changes across the session.
+        "universe_binding": (
+            res.period_logs[0].binding_fingerprint if res.period_logs else {}
+        ),
     }
 
 

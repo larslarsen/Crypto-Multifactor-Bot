@@ -44,7 +44,10 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
-from cryptofactors.universe.binding import load_paper_universe_binding
+from cryptofactors.universe.binding import (
+    binding_evidence,
+    load_paper_universe_binding,
+)
 
 UTC = UTC
 
@@ -393,6 +396,7 @@ def main() -> int:
         "canonical_dataset_quality_status": "REJECTED",
         "canonical_dataset_quality_note": "BAR-001 quarantines all native 1d rows; intraday partition is used.",
         "universe": sorted(universe_binding.universe_at(start)),
+        "universe_binding": binding_evidence(universe_binding, start),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

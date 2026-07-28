@@ -36,7 +36,10 @@ from cryptofactors.promotion import (
     PromotionState,
     PromotionTarget,
 )
-from cryptofactors.universe.binding import load_paper_universe_binding
+from cryptofactors.universe.binding import (
+    binding_evidence,
+    load_paper_universe_binding,
+)
 
 UTC = UTC
 MODEL_ARTIFACT_ID = "mod_tsmom_30_7_v1"
@@ -284,6 +287,7 @@ def main() -> int:
         "dataset_store_root": str(store_root),
         "canonical_dataset_id": canonical_dataset_id,
         "universe": sorted(universe_binding.universe_at(first_decision)),
+        "universe_binding": binding_evidence(universe_binding, first_decision),
         "venue_symbols": sorted(set(PAPER_TO_BINANCE_MAP.values())),
         "risk_policy": {
             "max_single_weight": MAX_SINGLE_ASSET_WEIGHT,

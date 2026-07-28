@@ -26,6 +26,8 @@ from cryptofactors.serving.holdout import (
     ProspectiveHoldoutError,
 )
 
+from cryptofactors.universe.binding import binding_evidence
+
 if TYPE_CHECKING:
     from cryptofactors.universe.binding import UniverseBinding
 
@@ -40,6 +42,10 @@ class PaperLoopPeriodLog:
     equity: float
     target_weights: dict[str, float]
     open_positions: dict[str, float]
+    # Per-decision, not per-session: membership and as-of coverage change between
+    # decision times, so a single session-level identity cannot prove which
+    # universe controlled any individual rebalance.
+    binding_fingerprint: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,6 +222,7 @@ class FactorDrivenPaperLoop:
                     equity=round(state.equity, 2),
                     target_weights={k: round(v, 4) for k, v in target_weights.items()},
                     open_positions={k: round(v, 6) for k, v in state.positions.items()},
+                    binding_fingerprint=binding_evidence(universe_binding, dt),
                 )
             )
 
