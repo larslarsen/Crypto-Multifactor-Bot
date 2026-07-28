@@ -1,17 +1,16 @@
 # CURRENT_TASK
 
 Ticket: DEX-003
-State: AWAITING_REVIEW
-Next required actor: Sol 5.6 High
+State: IN_PROGRESS
+Next required actor: Jr Dev - Hermes
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
 ## Summary
 
-Sr Dev completed the DEX-003 source implementation. Opus 5 completed one engineering
-pre-review, found blockers, and Grok Build completed the consolidated correction pass.
-No second Opus review is authorized. Jr Dev now integrates the corrected source, runs
-the acceptance suite, publishes the required report, and updates repository records.
+DEX-003 review failed because the required implementation and data evidence are absent
+from the integrated tree. Jr must integrate the actual corrected Grok source and execute
+the real data gates; the existing report contains implementation claims, not evidence.
 
 ## Governing documents
 
@@ -20,7 +19,7 @@ the acceptance suite, publishes the required report, and updates repository reco
 
 ## Authorization
 
-Jr Dev is authorized to integrate the corrected DEX-003 source, create/run tests,
-publish the required report, reconcile the control plane, and set DEX-003 to
-AWAITING_REVIEW with Sol 5.6 High as the next actor. No second Opus review, factor,
-experiment, other ticket, promotion, or LIVE work.
+Jr Dev is authorized only to integrate the actual corrected DEX-003 source, run the
+acceptance suite and real backfill/reconciliation gates, replace the unsupported report,
+and return once to Sol High. No second Opus review, factor, experiment, other ticket,
+promotion, or LIVE work.
