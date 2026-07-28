@@ -991,6 +991,9 @@ def run_runner(
     from scripts.research import binance_universe_expansion as runner
 
     node.install(monkeypatch)
+    # Non-production seam: substitute the verifier rather than passing a CLI bypass.
+    # Fixture commits are synthetic, so real identity cannot hold inside a test.
+    monkeypatch.setattr(runner, "verify_source_identity", lambda *a, **k: None)
     base_id = base_panel_id or seed_base_panel(store)
     report_path = tmp_path / "report.json"
     monkeypatch.setattr(sys, "argv", [
@@ -1009,7 +1012,6 @@ def run_runner(
         "--base-panel-dataset-id", base_id,
         *(["--processing-day", processing_day] if processing_day else []),
         *(["--symbols-per-day", str(symbols_per_day)] if symbols_per_day else []),
-        "--skip-identity-check",
         "--max-attempts", "1",
         "--backoff-seconds", "0",
     ])
@@ -1317,6 +1319,7 @@ class TestReview0241Corrections:
 
         node = MockBinance()
         node.install(monkeypatch)
+        monkeypatch.setattr(runner, "verify_source_identity", lambda *a, **k: None)
         report_path = tmp_path / "r.json"
         base_id = seed_base_panel(store)
         argv = [
@@ -1326,7 +1329,7 @@ class TestReview0241Corrections:
             "--watermark-path", str(store.watermark_path),
             "--report-path", str(report_path), "--top-n", "10",
             "--min-history-days", "365", "--base-url", "https://binance.test",
-            "--code-commit", "0" * 40, "--skip-identity-check",
+            "--code-commit", "0" * 40,
             "--max-attempts", "1", "--backoff-seconds", "0",
             "--base-panel-dataset-id", base_id, "--symbols-per-day", "2",
         ]
@@ -2346,6 +2349,22 @@ class TestReview0246Corrections:
         with pytest.raises(BinanceUniverseError, match="after the pinned"):
             parse_first_kline_open_time([[future_ms]], as_of=END_TIME)
 
+    @pytest.mark.parametrize("huge", [
+        10**30,          # whole, aligned, positive - but unrepresentable as a datetime
+        86_400_000 * 10**25,
+        2**63,
+    ])
+    def test_an_out_of_range_earliest_bar_fails_as_typed_evidence(self, huge: int) -> None:
+        """A huge integer must not abort outside the typed failure path.
+
+        These pass the whole/aligned/non-negative checks and reach
+        datetime.fromtimestamp(), which raises OverflowError/OSError/ValueError.
+        Uncaught, that escapes HISTORY_REQUEST_FAILED and loses the audit evidence.
+        """
+        aligned = huge - (huge % 86_400_000)
+        with pytest.raises(BinanceUniverseError, match="not a representable timestamp"):
+            parse_first_kline_open_time([[aligned]], as_of=END_TIME)
+
     def test_a_malformed_history_response_keeps_the_symbol_pending(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2467,14 +2486,109 @@ class TestReview0246Corrections:
         verify_source_identity(head, paths=(target,))
 
     def test_the_production_path_runs_the_identity_check(self) -> None:
-        """The seam must be opt-in, so production cannot skip verification."""
+        """Verification must be unconditional, with no operator-reachable waiver."""
         import inspect
 
         from scripts.research import binance_universe_expansion as runner
 
         source = inspect.getsource(runner.main)
-        assert "if not args.skip_identity_check:" in source
         assert "verify_source_identity(code_commit" in source
+        assert "skip_identity" not in source, "no bypass may guard the identity check"
+        # The static tuple under-covers; main() must pass the derived closure.
+        assert "resolve_identity_paths()" in source
+        assert "paths=IDENTITY_PATHS" not in source
+
+    def test_identity_paths_cover_the_real_import_closure(self) -> None:
+        """The static tuple under-covered every artifact-determining dependency.
+
+        The runner imports the dataset publisher, catalog store, output hashing and
+        raw-object writer. A change to any of them alters the published bytes, so a
+        four-file check would report clean identity for a different artifact.
+        """
+        from scripts.research.binance_universe_expansion import (
+            IDENTITY_PATHS,
+            resolve_identity_paths,
+        )
+
+        derived = set(resolve_identity_paths())
+        assert set(IDENTITY_PATHS) <= derived, "static paths must remain covered"
+        for expected in (
+            "src/cryptofactors/catalog/dataset/publisher.py",
+            "src/cryptofactors/catalog/dataset/catalog_store.py",
+            "src/cryptofactors/catalog/dataset/outputs.py",
+            "src/cryptofactors/ingest/raw/writer.py",
+        ):
+            assert expected in derived, f"{expected} determines the artifact"
+
+    def test_identity_paths_are_repo_relative_and_first_party(self) -> None:
+        """Absolute or third-party paths would make git status meaningless."""
+        from scripts.research.binance_universe_expansion import resolve_identity_paths
+
+        derived = resolve_identity_paths()
+        assert derived == tuple(sorted(set(derived))), "must be sorted and deduplicated"
+        for path in derived:
+            assert not path.startswith("/"), f"{path} is absolute"
+            assert path.endswith(".py"), f"{path} is not a source file"
+            assert path.split("/")[0] in ("src", "scripts"), f"{path} is not first-party"
+            assert "site-packages" not in path, f"{path} is a dependency"
+
+    def test_no_module_level_identity_bypass_remains(self) -> None:
+        """The flag must be gone from the whole runner, not just relocated."""
+        import inspect
+
+        from scripts.research import binance_universe_expansion as runner
+
+        assert "skip-identity-check" not in inspect.getsource(runner)
+        assert "skip_identity_check" not in inspect.getsource(runner)
+
+    def test_the_cli_rejects_the_removed_identity_bypass(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A controlled operator can no longer waive identity from the command line.
+
+        Asserting only on exit code 2 would also pass if argparse rejected the
+        command for some unrelated reason, so the message must name the flag.
+        """
+        from scripts.research import binance_universe_expansion as runner
+
+        monkeypatch.setattr(sys, "argv", [
+            "binance_universe_expansion.py",
+            "--end-time", END_TIME.isoformat(),
+            "--default-start", DAY0.isoformat(),
+            "--code-commit", "0" * 40,
+            "--skip-identity-check",
+        ])
+        with pytest.raises(SystemExit) as excinfo:
+            runner.main()
+        assert excinfo.value.code == 2
+        stderr = capsys.readouterr().err
+        assert "unrecognized arguments" in stderr
+        assert "--skip-identity-check" in stderr
+
+    def test_the_production_path_enforces_identity_without_a_seam(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Behavioural proof that main() actually enforces, not just that it calls.
+
+        The identity gate runs before apply_migrations() and before any network use,
+        so an unpatched main() with a bogus declared commit must abort here. This is
+        the assertion the inspect.getsource() checks cannot make.
+        """
+        from scripts.research import binance_universe_expansion as runner
+
+        monkeypatch.setattr(sys, "argv", [
+            "binance_universe_expansion.py",
+            "--end-time", END_TIME.isoformat(),
+            "--default-start", DAY0.isoformat(),
+            "--db-path", str(tmp_path / "unused.db"),
+            "--report-path", str(tmp_path / "unused.json"),
+            "--watermark-path", str(tmp_path / "unused_watermarks.json"),
+            "--code-commit", "0" * 40,
+        ])
+        with pytest.raises(RuntimeError, match="not the checked-out commit"):
+            runner.main()
+        assert not (tmp_path / "unused.db").exists(), "must abort before migrations"
+        assert not (tmp_path / "unused.json").exists(), "must abort before publication"
 
     def test_the_configured_endpoint_is_the_recorded_evidence_source(
         self, tmp_path: Path, store: Store, monkeypatch: pytest.MonkeyPatch

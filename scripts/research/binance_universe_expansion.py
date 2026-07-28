@@ -96,6 +96,38 @@ IDENTITY_PATHS = (
     "scripts/research/binance_universe_expansion.py",
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def resolve_identity_paths() -> tuple[str, ...]:
+    """Every first-party source file actually loaded, as repo-relative paths.
+
+    The hand-maintained tuple above silently under-covers. This runner also imports
+    the dataset catalog, publisher, output hashing, migration runner and raw-object
+    store, and each of those determines the bytes of the published artifact. A change
+    to any of them alters the dataset while a four-file identity check still reports
+    clean, which is the same false-identity class cited in REVIEW-0243, 0245 and 0247.
+
+    Deriving the set from sys.modules cannot drift as imports change: a new dependency
+    is covered the moment it is imported, with no tuple to remember to update. The
+    static tuple is retained and unioned in so the core four are covered even if a
+    module is somehow not resolvable at call time.
+    """
+    paths: set[str] = set(IDENTITY_PATHS)
+    for module in list(sys.modules.values()):
+        filename = getattr(module, "__file__", None)
+        if not filename:
+            continue
+        try:
+            relative = Path(filename).resolve().relative_to(REPO_ROOT)
+        except (OSError, ValueError):
+            # Outside the repository (stdlib, site-packages) or unresolvable.
+            continue
+        if relative.suffix != ".py" or relative.parts[0] not in ("src", "scripts"):
+            continue
+        paths.add(relative.as_posix())
+    return tuple(sorted(paths))
+
 SNAPSHOT_SCHEMA = pa.schema([
     ("symbol", pa.string()),
     ("open_time", pa.string()),
@@ -345,10 +377,6 @@ def main() -> int:
     parser.add_argument("--min-history-days", type=int, default=None)
     parser.add_argument("--base-url", default=BINANCE_BASE_URL)
     parser.add_argument("--code-commit", default=None)
-    parser.add_argument(
-        "--skip-identity-check", action="store_true",
-        help="test seam only; production publication must prove its declared commit",
-    )
     parser.add_argument("--max-attempts", type=int, default=4)
     parser.add_argument("--backoff-seconds", type=float, default=15.0)
     args = parser.parse_args()
@@ -379,8 +407,10 @@ def main() -> int:
     overrides["evidence_source"] = args.base_url
     config = SelectionConfig(**overrides)
     code_commit = resolve_code_commit(args.code_commit)
-    if not args.skip_identity_check:
-        verify_source_identity(code_commit, paths=IDENTITY_PATHS)
+    # Unconditional in production: there is no operator flag that can waive it. Tests
+    # substitute the module attribute instead, which is not reachable from the CLI.
+    # Paths are derived from what is actually loaded, not a fixed list that can rot.
+    verify_source_identity(code_commit, paths=resolve_identity_paths())
 
     apply_migrations(args.db_path)
     # Pinned, never resolved: resolve_latest_by_type("market_bars") returns whichever

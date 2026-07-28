@@ -788,7 +788,15 @@ def parse_first_kline_open_time(payload: Any, *, as_of: datetime | None = None) 
         raise BinanceUniverseError(f"kline open time must not be negative, got {open_ms}")
     if open_ms % 86_400_000:
         raise BinanceUniverseError(f"kline open time {open_ms} is not UTC-day aligned")
-    moment = datetime.fromtimestamp(open_ms / 1000, UTC)
+    # A whole, aligned, non-negative millisecond count can still be far outside the
+    # representable datetime range. Conversion must fail as typed evidence, not as a
+    # bare OverflowError/OSError/ValueError escaping the HISTORY_REQUEST_FAILED path.
+    try:
+        moment = datetime.fromtimestamp(open_ms / 1000, UTC)
+    except (OverflowError, OSError, ValueError) as exc:
+        raise BinanceUniverseError(
+            f"kline open time {open_ms} is not a representable timestamp"
+        ) from exc
     if as_of is not None and moment > as_of:
         raise BinanceUniverseError(
             f"earliest bar {moment.isoformat()} is after the pinned {as_of.isoformat()}"
