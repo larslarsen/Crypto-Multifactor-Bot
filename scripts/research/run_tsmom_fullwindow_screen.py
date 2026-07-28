@@ -47,6 +47,7 @@ from cryptofactors.promotion import (
 from cryptofactors.universe.binding import (
     UniverseBinding,
     binding_evidence,
+    binding_evidence_series,
     load_paper_universe_binding,
 )
 
@@ -354,6 +355,9 @@ def _run_screen_config(
         "skip_days": cfg.skip_days,
         "factor_id": factor_id,
         "decision_count": len(result.period_logs),
+        # Complete ordered per-decision evidence, one entry per executed
+        # decision. A first-decision summary alone loses later coverage.
+        "universe_binding_series": binding_evidence_series(result.period_logs),
         "total_trades_executed": result.total_trades_executed,
         "initial_cash": result.initial_cash,
         "final_equity": result.final_equity,

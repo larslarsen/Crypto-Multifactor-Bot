@@ -26,8 +26,6 @@ from cryptofactors.serving.holdout import (
     ProspectiveHoldoutError,
 )
 
-from cryptofactors.universe.binding import binding_evidence
-
 if TYPE_CHECKING:
     from cryptofactors.universe.binding import UniverseBinding
 
@@ -128,6 +126,11 @@ class FactorDrivenPaperLoop:
         Membership is resolved at each decision time through ``universe_binding``;
         passing a static list of symbols is no longer supported.
         """
+        # Imported here, not at module scope: cryptofactors.universe.binding imports
+        # execution.symbols, so a module-level import reinstates the circular import
+        # that REVIEW-0217 required the TYPE_CHECKING guard to keep broken.
+        from cryptofactors.universe.binding import binding_evidence
+
         if not decision_times:
             raise PaperExecutionError("decision_times must be non-empty")
 

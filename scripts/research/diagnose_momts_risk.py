@@ -46,6 +46,7 @@ from cryptofactors.promotion import (
 from cryptofactors.universe.binding import (
     UniverseBinding,
     binding_evidence,
+    binding_evidence_series,
     load_paper_universe_binding,
 )
 
@@ -262,6 +263,9 @@ def _run_session(
         "total_net_return": result.total_net_return,
         "total_trades_executed": result.total_trades_executed,
         "decision_count": len(result.period_logs),
+        # Complete ordered per-decision evidence, one entry per executed
+        # decision. A first-decision summary alone loses later coverage.
+        "universe_binding_series": binding_evidence_series(result.period_logs),
         "observation_is_complete": result.observation_result.is_complete if result.observation_result else False,
         "observation_meets_risk_limits": result.observation_result.meets_risk_limits if result.observation_result else False,
         "observation_max_single_weight": float(result.observation_result.max_single_asset_weight) if result.observation_result else None,
@@ -501,6 +505,10 @@ def main() -> int:
         "backfill_start": start_date.isoformat(),
         "backfill_end": end_date.isoformat(),
         "decision_count": enforced_summary["decision_count"],
+        # Carried across explicitly: this artifact cherry-picks scalars from the
+        # session summary, so without this line it would keep only the
+        # first-decision summary and drop every later decision's coverage.
+        "universe_binding_series": enforced_summary["universe_binding_series"],
         "total_trades_executed": enforced_summary["total_trades_executed"],
         "initial_cash": enforced_summary["initial_cash"],
         "final_equity": enforced_summary["final_equity"],

@@ -14,7 +14,7 @@ a declared liquid panel, not to supply the panel itself.
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -107,7 +107,12 @@ SURVIVORSHIP_INVALID_ARTIFACT_IDS: frozenset[str] = frozenset({
 
 
 # Key under which every run artifact carries its binding evidence.
+# BINDING_EVIDENCE_KEY holds a compact first-decision summary; the complete
+# ordered per-decision series lives under BINDING_EVIDENCE_SERIES_KEY. The
+# summary alone loses the coverage of every decision after the first, which is
+# the whole point of recording as-of membership.
 BINDING_EVIDENCE_KEY: str = "universe_binding"
+BINDING_EVIDENCE_SERIES_KEY: str = "universe_binding_series"
 
 # A run artifact that omits any of these cannot prove which binding and as-of
 # coverage controlled the decision, which is the whole point of ARCH-002.
@@ -140,7 +145,109 @@ def binding_evidence(
     """
     payload = dict(binding.binding_fingerprint(decision_time))
     validate_binding_evidence(payload)
+    _require_same_instant(
+        payload["decision_time"],
+        decision_time,
+        context="binding fingerprint",
+    )
     return payload
+
+
+def _require_same_instant(
+    recorded: Any,
+    expected: datetime,
+    *,
+    context: str,
+) -> None:
+    """Raise unless ``recorded`` denotes the same instant as ``expected``.
+
+    A fingerprint that reports a different decision time than the one requested
+    is stale evidence: the artifact would attribute coverage to a decision that
+    never produced it. Compared as instants rather than strings so an equivalent
+    offset spelling is accepted while a genuinely different time is not.
+    """
+    want = expected if expected.tzinfo else expected.replace(tzinfo=UTC)
+    got = _parse_iso(str(recorded))
+    if got is None:
+        raise UniverseBindingError(
+            f"{context} has an unparseable decision_time {recorded!r}",
+        )
+    if got != want:
+        raise UniverseBindingError(
+            f"{context} records decision_time {got.isoformat()} but the decision "
+            f"was {want.isoformat()}; refusing stale binding evidence",
+        )
+
+
+def binding_evidence_series(period_logs: Sequence[Any]) -> list[dict[str, Any]]:
+    """Complete ordered per-decision binding evidence for an executed session.
+
+    Sourced from ``PaperLoopResult.period_logs``, so there is exactly one entry
+    per decision the loop actually executed, in execution order. Serializing
+    only the first decision discards the as-of coverage of every later one, and
+    a reader then cannot tell which universe controlled any rebalance but the
+    first.
+    """
+    series: list[dict[str, Any]] = []
+    for index, log in enumerate(period_logs):
+        payload = dict(getattr(log, "binding_fingerprint", None) or {})
+        if not payload:
+            raise UniverseBindingError(
+                f"period log {index} carries no binding fingerprint; the loop must "
+                "record one per decision",
+            )
+        validate_binding_evidence(payload)
+        # The fingerprint must describe the period that actually executed. Without
+        # this, a log could carry a stale or copied fingerprint and the series
+        # would silently misattribute coverage to the wrong decision.
+        expected = getattr(log, "decision_time", None)
+        if not isinstance(expected, datetime):
+            raise UniverseBindingError(
+                f"period log {index} has no decision_time to validate against",
+            )
+        _require_same_instant(
+            payload["decision_time"],
+            expected,
+            context=f"period log {index}",
+        )
+        series.append(payload)
+    if not series:
+        raise UniverseBindingError(
+            "binding evidence series is empty; a run artifact must record at least "
+            "one executed decision",
+        )
+    return series
+
+
+def validate_binding_evidence_series(
+    series: Sequence[Mapping[str, Any]],
+    *,
+    decision_count: int | None = None,
+    decision_times: Sequence[datetime] | None = None,
+) -> None:
+    """Raise unless the series covers exactly the executed decisions.
+
+    Guards the two ways a series silently degrades: dropping entries (so the
+    count no longer matches the decisions), and carrying stale or duplicated
+    timestamps that do not correspond to the periods actually executed.
+    """
+    if not series:
+        raise UniverseBindingError("binding evidence series is empty")
+    for entry in series:
+        validate_binding_evidence(entry)
+    if decision_count is not None and len(series) != decision_count:
+        raise UniverseBindingError(
+            f"binding evidence series has {len(series)} entries for "
+            f"{decision_count} decisions",
+        )
+    if decision_times is not None:
+        expected = [t.isoformat() for t in decision_times]
+        actual = [str(e["decision_time"]) for e in series]
+        if actual != expected:
+            raise UniverseBindingError(
+                "binding evidence series timestamps do not match the executed "
+                f"decisions: {actual[:3]}... != {expected[:3]}...",
+            )
 
 
 def validate_binding_evidence(payload: Mapping[str, Any]) -> None:

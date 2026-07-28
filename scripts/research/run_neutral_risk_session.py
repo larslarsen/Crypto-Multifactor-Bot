@@ -38,6 +38,7 @@ from cryptofactors.promotion import (
 )
 from cryptofactors.universe.binding import (
     binding_evidence,
+    binding_evidence_series,
     load_paper_universe_binding,
 )
 
@@ -300,6 +301,9 @@ def main() -> int:
         "backfill_start": start_date.isoformat(),
         "backfill_end": end_date.isoformat(),
         "decision_count": len(result.period_logs),
+        # Complete ordered per-decision evidence, one entry per executed
+        # decision. A first-decision summary alone loses later coverage.
+        "universe_binding_series": binding_evidence_series(result.period_logs),
         "total_trades_executed": result.total_trades_executed,
         "initial_cash": result.initial_cash,
         "final_cash": result.final_cash,
