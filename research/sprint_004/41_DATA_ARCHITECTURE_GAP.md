@@ -84,12 +84,43 @@ decision_time t
 
 ## Status update: ARCH-002 landed
 
-The `UniverseBinding` protocol, `CMCSurvivorshipBinding` adapter, and
-`FactorDrivenPaperLoop` binding integration are now in `src/`. The static
-`universe = list(PAPER_TO_INSTRUMENT_ID.keys())` pattern is removed from all
-paper scripts. All 11 paper/experiment entrypoints load the binding from a
-catalog-published CMC survivorship dataset and fail closed if the dataset is
-missing or empty.
+The `UniverseBinding` protocol and `FactorDrivenPaperLoop` binding integration
+are in `src/`. The static `universe = list(PAPER_TO_INSTRUMENT_ID.keys())`
+pattern is removed from all paper scripts. All 11 paper/experiment entrypoints
+load the binding from catalog-published datasets and fail closed if either is
+missing, empty, or does not cover the decision time.
+
+### REVIEW-0249 rework — membership semantics corrected
+
+The first pass inverted membership: it treated the CMC dead-coin graveyard as
+the research universe, so liquid names (absent from the graveyard) were never
+members and the panel went empty at recent decision times. Membership is now:
+
+```
+universe(t) = quality_bar_panel_with_coverage(t)  minus  cmc_dead_at(t)
+```
+
+- The panel comes from the accepted DATA-011 artifact
+  `ds_2bf3bf42…`, read from published bars. `PAPER_TO_INSTRUMENT_ID` is used
+  only to render numeric instrument ids as paper symbols — translation, never
+  membership. `PAPER_PANEL_SYMBOLS` and `CMCSurvivorshipBinding` were removed
+  because both were static/dead-list membership paths.
+- Names are excluded only when the CMC record agrees on **both** ticker and
+  coin name, so the SOL/UNI/CRV/OP collisions no longer drop live names.
+- Run artifacts fingerprint `universe_dataset_id` **and**
+  `bar_panel_dataset_id`, plus policy `quality_bar_panel_minus_cmc_dead_v1`,
+  code version `v3`, decision time, and coverage counts.
+
+Two latent defects were found and fixed during this rework: the catalog loader
+read a non-existent `relative_path` column instead of `storage_uri` (so it had
+never resolved a real published dataset), and `period_start` was read as epoch
+seconds when `market_bars` stores microseconds.
+
+**Known data gap:** DATA-011 carries bars for 22 of the 23 mapped paper
+symbols — `DOGEUSD` (instrument 11) has no bars in either the `daily/` or
+`intraday/` tree, so the bound panel is 22. This contradicts REVIEW-0216's
+"all 23 paper symbols backfilled, 0 excluded" and is recorded here for the
+reviewer; ARCH-002 correctly excludes it rather than inventing coverage.
 
 ## Next tickets (see ADR-0014)
 

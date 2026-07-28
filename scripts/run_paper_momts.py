@@ -262,6 +262,7 @@ def format_loop_result(res: PaperLoopResult) -> dict[str, Any]:
         "period_logs": logs,
         "session_run_at": res.session_run_at.isoformat(),
         "universe_dataset_id": res.universe_dataset_id,
+        "bar_panel_dataset_id": res.bar_panel_dataset_id,
         "survivorship_policy": res.survivorship_policy,
         "universe_code_version": res.universe_code_version,
     }

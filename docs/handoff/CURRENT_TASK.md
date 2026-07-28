@@ -1,18 +1,18 @@
 # CURRENT_TASK
 
 Ticket: ARCH-002
-State: READY
-Next required actor: Sr Dev - Claude Opus 5
+State: AWAITING_REVIEW
+Next required actor: Reviewer
 Final reviewer: Sol 5.6 High
 Next ticket authorized: ARCH-002
 
 ## Summary
 
-REVIEW-0249 accepts ADR-0014 and authorizes one complete ARCH-002 rework pass. Implement
-the quality-bar panel minus CMC-dead-at-time composite binding, name-safe mapping,
-fail-closed catalog/as-of semantics, complete fingerprints, and real UNIVERSE-006 plus
-DATA-011 integration proof. Claude must finish and self-review the entire source delta
-before one Jr integration pass; do not return for intermediate reviewer rounds.
+REVIEW-0250 leaves one cross-cutting correction: persist per-decision binding
+fingerprints in `PaperLoopResult`/period evidence and serialize complete universe,
+bar-panel, policy/code, decision-time, and coverage identity in all 11 affected
+paper/experiment artifacts. All composite membership semantics are otherwise approved.
+Claude must finish all output builders before one Jr integration pass.
 
 ## Governing documents
 
@@ -20,6 +20,7 @@ before one Jr integration pass; do not return for intermediate reviewer rounds.
 - docs/adr/0014-experiment-universe-survivorship-binding.md
 - docs/reviews/REVIEW-0217_ARCH-002_CHANGES_REQUIRED.md
 - docs/reviews/REVIEW-0249_ARCH-002_REWORK_AUTHORIZED.md
+- docs/reviews/REVIEW-0250_ARCH-002_CHANGES_REQUIRED.md
 
 ## Authorization
 

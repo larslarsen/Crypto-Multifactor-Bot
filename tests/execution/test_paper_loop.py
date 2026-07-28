@@ -46,6 +46,7 @@ class _StaticUniverseBinding:
 
     symbols: tuple[str, ...]
     universe_dataset_id: str = "static_test"
+    bar_panel_dataset_id: str = "static_bar_panel"
     survivorship_policy: str = "none"
     universe_code_version: str = "test"
 

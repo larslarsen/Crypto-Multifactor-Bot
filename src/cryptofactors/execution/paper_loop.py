@@ -60,6 +60,9 @@ class PaperLoopResult:
     universe_dataset_id: str | None = None
     universe_code_version: str | None = None
     survivorship_policy: str | None = None
+    # Membership is the bar panel minus dead names, so the universe id alone does
+    # not reproduce the run: the panel and its as-of coverage live in this dataset.
+    bar_panel_dataset_id: str | None = None
 
 
 class FactorDrivenPaperLoop:
@@ -125,6 +128,15 @@ class FactorDrivenPaperLoop:
         universe_dataset_id = universe_binding.universe_dataset_id
         survivorship_policy = universe_binding.survivorship_policy
         universe_code_version = universe_binding.universe_code_version
+        # Required, not optional: membership is the bar panel minus dead names, so a
+        # result recording only the universe id cannot be reproduced. Fail closed with
+        # a diagnosable error rather than letting an AttributeError escape.
+        bar_panel_dataset_id = getattr(universe_binding, "bar_panel_dataset_id", None)
+        if not bar_panel_dataset_id:
+            raise PaperExecutionError(
+                "universe_binding must expose bar_panel_dataset_id",
+                context={"universe_dataset_id": universe_dataset_id},
+            )
 
         logs: list[PaperLoopPeriodLog] = []
         sim_periods: list[SimulationPeriod] = []
@@ -252,4 +264,5 @@ class FactorDrivenPaperLoop:
             universe_dataset_id=universe_dataset_id,
             universe_code_version=universe_code_version,
             survivorship_policy=survivorship_policy,
+            bar_panel_dataset_id=bar_panel_dataset_id,
         )

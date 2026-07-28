@@ -20,6 +20,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+import pyarrow as pa
+import pyarrow.parquet as pq
+
 from cryptofactors.catalog.dataset.catalog_store import SqliteDatasetCatalog
 from cryptofactors.catalog.dataset.models import DatasetStoreConfig
 from cryptofactors.catalog.dataset.paths import dataset_absolute_dir
@@ -32,9 +35,29 @@ from cryptofactors.universe.cmc_survivorship import (
     CMCSurvivorshipProvider,
 )
 
-UNIVERSE_BINDING_CODE_VERSION: str = "v2"
+# Bumped from v2: membership is now the catalog-published quality-bar panel minus
+# CMC-dead names, and is gated on as-of bar coverage. A v2 fingerprint describes
+# different semantics and must not be mistaken for this one.
+UNIVERSE_BINDING_CODE_VERSION: str = "v3"
 SURVIVORSHIP_POLICY: str = "cmc_aware_proxy_v1"
-PAPER_PANEL_SURVIVORSHIP_POLICY: str = "paper_panel_minus_cmc_dead_v1"
+PAPER_PANEL_SURVIVORSHIP_POLICY: str = "quality_bar_panel_minus_cmc_dead_v1"
+
+QUALITY_BAR_PANEL_DATASET_TYPE: str = "market_bars"
+
+# Pinned, never resolved by recency: resolve_latest_by_type("market_bars") returns
+# whichever bar dataset published most recently (currently a 953k-row unrelated
+# panel), not the reviewer-accepted DATA-011 artifact. ARCH-002 membership must be
+# anchored to the exact accepted panel, the same way DATA-008 pins DATA-006.
+DATA011_QUALITY_BAR_PANEL_DATASET_ID: str = (
+    "ds_2bf3bf423a0c751e856dad506f12b6d8b4185b01f7408c46d76a9e7eed3f1497"
+)
+
+# DATA-011 writes each 1d bar into both a daily/ and an intraday/ tree. Reading both
+# double-counts every row, so membership and coverage read the daily tree only.
+_BAR_TREE_PREFIX: str = "market_bars/daily/"
+
+# market_bars timestamps are epoch microseconds.
+_US_PER_SECOND: int = 1_000_000
 
 # Known names for paper symbols to disambiguate ticker collisions.
 # Key is the base asset (e.g., "SOL"), value is the expected CMC coin name.
@@ -64,7 +87,9 @@ PAPER_BASE_TO_NAME: dict[str, str] = {
     "PEPE": "Pepe",
 }
 
-PAPER_PANEL_SYMBOLS: frozenset[str] = frozenset(PAPER_TO_INSTRUMENT_ID.keys())
+# PAPER_PANEL_SYMBOLS (frozenset(PAPER_TO_INSTRUMENT_ID)) was removed deliberately.
+# A module-level "the panel is these names" constant is precisely the static-map
+# membership ADR-0014 forbids; the panel now comes from load_quality_bar_panel().
 
 # Prior sprint_004 artifacts listed in 41_DATA_ARCHITECTURE_GAP.md as
 # survivorship-invalid for research conclusions.
@@ -102,6 +127,7 @@ class UniverseBinding(Protocol):
     """Protocol for a survivorship-aware universe membership binding."""
 
     universe_dataset_id: str
+    bar_panel_dataset_id: str
     survivorship_policy: str
     universe_code_version: str
 
@@ -113,50 +139,139 @@ class UniverseBinding(Protocol):
         """Return a coverage report for the universe at ``decision_time``."""
         ...
 
+    def binding_fingerprint(self, decision_time: datetime) -> dict[str, Any]:
+        """Return the identity a run artifact must record to be reproducible."""
+        ...
+
 
 @dataclass(frozen=True, slots=True)
-class CMCSurvivorshipBinding:
-    """Binding backed by a catalog-published CMC survivorship universe dataset.
+class QualityBarPanel:
+    """The declared research panel, read from a catalog-published bar dataset.
 
-    Maps CMC ``instrument_id`` values (e.g. ``cmc_7``) to paper symbols when a
-    ``key_map`` is provided. Without a map, the raw instrument ids are returned.
+    ADR-0014 permits static maps as venue/symbol *translation* only. The panel
+    membership therefore comes from the instrument ids actually present in the
+    accepted DATA-011 artifact; ``PAPER_TO_INSTRUMENT_ID`` is used solely to render
+    those ids as paper symbols.
     """
 
-    universe_dataset_id: str
-    provider: CMCSurvivorshipProvider
-    key_map: Mapping[str, str] = field(default_factory=dict)
-    survivorship_policy: str = SURVIVORSHIP_POLICY
-    universe_code_version: str = UNIVERSE_BINDING_CODE_VERSION
+    dataset_id: str
+    symbols: frozenset[str]
+    first_bar_at: Mapping[str, datetime]
+    last_bar_at: Mapping[str, datetime]
 
-    def __post_init__(self) -> None:
-        if self.provider.get_table().num_rows == 0:
-            raise UniverseBindingError(
-                "CMCSurvivorshipBinding cannot be constructed from an empty provider",
-            )
+    def covered_at(self, t: datetime) -> frozenset[str]:
+        """Panel symbols whose bar coverage actually spans ``t``.
 
-    def universe_at(self, decision_time: datetime) -> frozenset[str]:
-        """Return eligible paper/instrument keys at ``decision_time``."""
-        ids = self.provider.universe_at(decision_time)
-        if not self.key_map:
-            return frozenset(ids)
-        # Only return mapped keys; unmapped ids are dropped to avoid leakage.
+        A name with no bar on or before ``t`` cannot be scored at ``t``; including
+        it would silently hand the factor a symbol with no price history.
+        """
         return frozenset(
-            self.key_map[iid]
-            for iid in ids
-            if iid in self.key_map
+            sym for sym in self.symbols
+            if self.first_bar_at[sym] <= t <= self.last_bar_at[sym]
         )
 
-    def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
-        """Return coverage metadata for the universe at ``decision_time``."""
-        univ = self.universe_at(decision_time)
-        return {
-            "eligible": len(univ),
-            "with_bars": None,
-            "missing": None,
-            "universe_dataset_id": self.universe_dataset_id,
-            "survivorship_policy": self.survivorship_policy,
-            "universe_code_version": self.universe_code_version,
-        }
+
+def _instrument_id_to_paper() -> dict[int, str]:
+    """Reverse the paper translation map: numeric instrument id -> paper symbol."""
+    return {iid: paper for paper, iid in PAPER_TO_INSTRUMENT_ID.items()}
+
+
+def load_quality_bar_panel(
+    db_path: Path | str,
+    store_root: Path | str,
+    dataset_id: str | None = None,
+) -> QualityBarPanel:
+    """Load the declared quality-bar panel and its per-symbol coverage.
+
+    Fail-closed on every degenerate outcome: missing catalog row, no bar files,
+    an instrument id absent from the translation map, or an empty panel. Any of
+    those silently shrinking the research universe is exactly the survivorship
+    failure ADR-0014 exists to prevent.
+    """
+    resolved_id = dataset_id or DATA011_QUALITY_BAR_PANEL_DATASET_ID
+    catalog: SqliteDatasetCatalog | None = None
+    try:
+        catalog = SqliteDatasetCatalog(db_path)
+        files = catalog.list_files(resolved_id)
+    except (sqlite3.Error, OSError) as exc:
+        raise UniverseBindingError(
+            f"Catalog lookup failed for quality bar panel {resolved_id}: {exc}",
+        ) from exc
+    finally:
+        if catalog is not None:
+            catalog.close()
+
+    if not files:
+        raise UniverseBindingError(
+            f"Quality bar panel dataset {resolved_id} is not present in the catalog",
+        )
+
+    bar_files = [
+        str(f.get("storage_uri", ""))
+        for f in files
+        if str(f.get("storage_uri", "")).startswith(_BAR_TREE_PREFIX)
+    ]
+    if not bar_files:
+        raise UniverseBindingError(
+            f"Quality bar panel {resolved_id} contains no {_BAR_TREE_PREFIX} files",
+        )
+
+    root = Path(DatasetStoreConfig(root=Path(store_root)).root).expanduser()
+    if not root.is_absolute():
+        root = Path.cwd() / root
+    abs_dir = dataset_absolute_dir(root, resolved_id)
+
+    id_to_paper = _instrument_id_to_paper()
+    first: dict[str, datetime] = {}
+    last: dict[str, datetime] = {}
+    for relative in bar_files:
+        full_path = abs_dir / relative
+        if not full_path.exists():
+            raise UniverseBindingError(f"Quality bar panel file missing: {full_path}")
+        try:
+            table = pq.read_table(full_path, columns=["instrument_id", "period_start"])
+        except (OSError, pa.ArrowInvalid) as exc:
+            raise UniverseBindingError(
+                f"Cannot read quality bar panel file {full_path}: {exc}",
+            ) from exc
+        for raw_id, raw_start in zip(
+            table.column("instrument_id").to_pylist(),
+            table.column("period_start").to_pylist(),
+            strict=True,
+        ):
+            paper = id_to_paper.get(int(raw_id)) if raw_id is not None else None
+            if paper is None:
+                raise UniverseBindingError(
+                    f"Quality bar panel {resolved_id} contains instrument id "
+                    f"{raw_id!r} with no paper translation; refusing to emit a "
+                    "raw identity into the research universe",
+                )
+            # market_bars stores period_start in epoch microseconds, matching
+            # CMC_SURVIVORSHIP's _US_PER_SECOND convention. Treating it as seconds
+            # yields year-50001627 timestamps and silently breaks as-of coverage.
+            try:
+                moment = datetime.fromtimestamp(int(raw_start) / _US_PER_SECOND, UTC)
+            except (OverflowError, OSError, ValueError, TypeError) as exc:
+                raise UniverseBindingError(
+                    f"Quality bar panel {resolved_id} has unrepresentable "
+                    f"period_start {raw_start!r} for instrument {raw_id!r}",
+                ) from exc
+            if paper not in first or moment < first[paper]:
+                first[paper] = moment
+            if paper not in last or moment > last[paper]:
+                last[paper] = moment
+
+    if not first:
+        raise UniverseBindingError(
+            f"Quality bar panel {resolved_id} produced an empty panel",
+        )
+
+    return QualityBarPanel(
+        dataset_id=resolved_id,
+        symbols=frozenset(first),
+        first_bar_at=dict(first),
+        last_bar_at=dict(last),
+    )
 
 
 def _base_asset(venue_symbol: str) -> str:
@@ -201,8 +316,9 @@ class PaperPanelSurvivorshipBinding:
     """
 
     universe_dataset_id: str
+    bar_panel_dataset_id: str
     provider: CMCSurvivorshipProvider
-    panel: frozenset[str]
+    panel: QualityBarPanel
     base_to_name: Mapping[str, str]
     survivorship_policy: str = PAPER_PANEL_SURVIVORSHIP_POLICY
     universe_code_version: str = UNIVERSE_BINDING_CODE_VERSION
@@ -211,7 +327,7 @@ class PaperPanelSurvivorshipBinding:
     )
 
     def __post_init__(self) -> None:
-        if not self.panel:
+        if not self.panel.symbols:
             raise UniverseBindingError(
                 "PaperPanelSurvivorshipBinding requires a non-empty panel",
             )
@@ -219,7 +335,7 @@ class PaperPanelSurvivorshipBinding:
             raise UniverseBindingError(
                 "PaperPanelSurvivorshipBinding cannot be constructed from an empty provider",
             )
-        for sym in self.panel:
+        for sym in self.panel.symbols:
             if _paper_symbol_to_base(sym) is None:
                 raise UniverseBindingError(
                     f"Paper symbol {sym!r} cannot be resolved to a base asset",
@@ -252,7 +368,7 @@ class PaperPanelSurvivorshipBinding:
     def _dead_symbols(self, t: datetime) -> set[str]:
         """Return the subset of the panel that is CMC-dead at time ``t``."""
         dead: set[str] = set()
-        for paper_sym in self.panel:
+        for paper_sym in self.panel.symbols:
             base = _paper_symbol_to_base(paper_sym)
             if base is None:
                 continue
@@ -268,56 +384,64 @@ class PaperPanelSurvivorshipBinding:
                 break
         return dead
 
-    def universe_at(self, decision_time: datetime) -> frozenset[str]:
-        """Return the survivorship-filtered paper panel at ``decision_time``."""
+    def _resolve(self, decision_time: datetime) -> tuple[datetime, frozenset[str], set[str], frozenset[str]]:
+        """Return ``(t, with_bars, dead, eligible)`` for ``decision_time``."""
         t = decision_time if decision_time.tzinfo else decision_time.replace(tzinfo=UTC)
+        with_bars = self.panel.covered_at(t)
         dead = self._dead_symbols(t)
-        result = self.panel - dead
-        if not result:
+        return t, with_bars, dead, frozenset(with_bars - dead)
+
+    def universe_at(self, decision_time: datetime) -> frozenset[str]:
+        """Return the survivorship-filtered, bar-covered paper panel at ``decision_time``."""
+        t, with_bars, dead, eligible = self._resolve(decision_time)
+        if not with_bars:
             raise UniverseBindingError(
-                f"Paper panel is empty after survivorship filter at {decision_time.isoformat()}; "
-                f"panel={len(self.panel)}, dead={len(dead)}",
+                f"Quality bar panel {self.bar_panel_dataset_id} has no as-of coverage at "
+                f"{t.isoformat()}; panel={len(self.panel.symbols)}. Membership cannot be "
+                "resolved outside the published bar window",
             )
-        return frozenset(result)
+        if not eligible:
+            raise UniverseBindingError(
+                f"Paper panel is empty after survivorship filter at {t.isoformat()}; "
+                f"panel={len(self.panel.symbols)}, with_bars={len(with_bars)}, dead={len(dead)}",
+            )
+        return eligible
 
     def coverage_report(self, decision_time: datetime) -> dict[str, Any]:
         """Return coverage metadata for the panel at ``decision_time``."""
-        t = decision_time if decision_time.tzinfo else decision_time.replace(tzinfo=UTC)
-        dead = self._dead_symbols(t)
-        result = self.panel - dead
+        t, with_bars, dead, eligible = self._resolve(decision_time)
         return {
-            "eligible": len(result),
-            "excluded": len(dead),
-            "panel": len(self.panel),
-            "with_bars": None,
-            "missing": None,
+            "eligible": len(eligible),
+            "excluded_dead": len(dead),
+            "panel": len(self.panel.symbols),
+            "with_bars": len(with_bars),
+            "missing": sorted(self.panel.symbols - with_bars),
+            "decision_time": t.isoformat(),
             "universe_dataset_id": self.universe_dataset_id,
+            "bar_panel_dataset_id": self.bar_panel_dataset_id,
             "survivorship_policy": self.survivorship_policy,
             "universe_code_version": self.universe_code_version,
         }
 
+    def binding_fingerprint(self, decision_time: datetime) -> dict[str, Any]:
+        """Return the identity a run artifact must record to be reproducible.
 
-def _default_symbol_to_paper_map() -> dict[str, str]:
-    """Build a CMC/base-symbol -> paper-symbol map from the venue map.
-
-    ``PAPER_TO_BINANCE_MAP`` maps ``XBTUSD`` -> ``BTCUSDT``. Stripping the
-    quote leaves ``BTC`` -> ``XBTUSD``.
-
-    Only canonical paper symbols (those present in ``PAPER_TO_INSTRUMENT_ID``)
-    are included, so duplicates like ``BTCUSD`` do not overwrite ``XBTUSD``.
-    """
-    symbol_map: dict[str, str] = {}
-    for paper, venue in PAPER_TO_BINANCE_MAP.items():
-        if paper not in PAPER_TO_INSTRUMENT_ID:
-            continue
-        if venue.upper().endswith("USDT"):
-            base = venue.upper()[:-len("USDT")]
-        elif venue.upper().endswith("USD"):
-            base = venue.upper()[:-len("USD")]
-        else:
-            base = venue.upper()
-        symbol_map[base] = paper
-    return symbol_map
+        Both dataset identities are required: the universe alone does not
+        determine membership, because the panel and its as-of coverage come
+        from the bar dataset.
+        """
+        t, with_bars, dead, eligible = self._resolve(decision_time)
+        return {
+            "universe_dataset_id": self.universe_dataset_id,
+            "bar_panel_dataset_id": self.bar_panel_dataset_id,
+            "survivorship_policy": self.survivorship_policy,
+            "universe_code_version": self.universe_code_version,
+            "decision_time": t.isoformat(),
+            "eligible_count": len(eligible),
+            "with_bars_count": len(with_bars),
+            "excluded_dead_count": len(dead),
+            "panel_count": len(self.panel.symbols),
+        }
 
 
 def _load_cmc_provider(
@@ -349,9 +473,11 @@ def _load_cmc_provider(
         if catalog is not None:
             catalog.close()
 
+    # The catalog file column is `storage_uri`; the previous `relative_path` lookup
+    # matched nothing, so this loader could never resolve a real published dataset.
     parquet_path: Path | None = None
     for f in files:
-        rel = str(f.get("relative_path", ""))
+        rel = str(f.get("storage_uri", ""))
         if rel.endswith(".parquet"):
             parquet_path = Path(rel)
             break
@@ -387,54 +513,29 @@ def _load_cmc_provider(
     return resolved_id, provider
 
 
-def load_cmc_survivorship_binding(
-    db_path: Path | str,
-    store_root: Path | str,
-    dataset_id: str | None = None,
-    symbol_map: Mapping[str, str] | None = None,
-) -> CMCSurvivorshipBinding:
-    """Load the latest (or requested) CMC survivorship dataset and bind it."""
-    resolved_id, provider = _load_cmc_provider(db_path, store_root, dataset_id)
-
-    symbol_map = symbol_map or _default_symbol_to_paper_map()
-    try:
-        key_map = {
-            r["instrument_id"]: symbol_map[symbol]
-            for r in provider.records()
-            if (symbol := str(r.get("symbol", "")).upper()) in symbol_map
-        }
-    except KeyError as exc:
-        raise UniverseBindingError(
-            f"Universe dataset {resolved_id} is missing required field: {exc}",
-        ) from exc
-
-    return CMCSurvivorshipBinding(
-        universe_dataset_id=resolved_id,
-        provider=provider,
-        key_map=key_map,
-    )
-
-
 def load_paper_universe_binding(
     db_path: Path | str,
     store_root: Path | str,
     dataset_id: str | None = None,
-    panel: frozenset[str] | None = None,
     base_to_name: Mapping[str, str] | None = None,
+    *,
+    bar_panel_dataset_id: str | None = None,
 ) -> PaperPanelSurvivorshipBinding:
-    """Load a survivorship-filtered paper panel binding.
+    """Load the composite survivorship binding used by every experiment and paper run.
 
-    The panel is the declared liquid set (defaults to the DATA-011 23-symbol
-    paper map). The CMC dead-coin registry is used only to exclude symbols that
-    are name-matched as dead at the decision time.
+    Membership is the catalog-published DATA-011 quality-bar panel, restricted to
+    names whose bar coverage spans the decision time, minus names that CMC records
+    as dead at that time. There is deliberately no ``panel`` override and no static
+    fallback: accepting a caller-supplied panel would reintroduce exactly the
+    "universe of whoever we like" failure ADR-0014 closes.
     """
     resolved_id, provider = _load_cmc_provider(db_path, store_root, dataset_id)
-    selected_panel = panel or PAPER_PANEL_SYMBOLS
-    selected_base_to_name = base_to_name or PAPER_BASE_TO_NAME
+    panel = load_quality_bar_panel(db_path, store_root, bar_panel_dataset_id)
 
     return PaperPanelSurvivorshipBinding(
         universe_dataset_id=resolved_id,
+        bar_panel_dataset_id=panel.dataset_id,
         provider=provider,
-        panel=selected_panel,
-        base_to_name=selected_base_to_name,
+        panel=panel,
+        base_to_name=base_to_name or PAPER_BASE_TO_NAME,
     )
