@@ -1,0 +1,72 @@
+{
+  "ticket": "DEX-003",
+  "title": "Data-First Uniswap V2 Survivorship Substrate",
+  "status": "AWAITING_REVIEW",
+  "architecture": "docs/adr/0015-data-first-dex-research-substrate.md",
+  "domain": {
+    "chain": "Ethereum mainnet",
+    "protocol": "Uniswap V2",
+    "factory": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+    "deployment_block": 10000835,
+    "quote_tokens": ["USDC", "USDT"],
+    "holdout_year": 2025,
+    "data_authority": "on-chain events (PairCreated, Swap, Sync) via JSON-RPC"
+  },
+  "source_modules": [
+    "src/cryptofactors/acquisition/uniswap_v2.py",
+    "src/cryptofactors/ingest/dex_fanout.py",
+    "src/cryptofactors/ingest/dex_providers.py",
+    "src/cryptofactors/ingest/dex_ohlcv.py",
+    "src/cryptofactors/ingest/dex_snapshot.py",
+    "src/cryptofactors/universe/dex_pool_resolver.py"
+  ],
+  "scripts": [
+    "scripts/research/ingest_uniswap_v2_pair_created.py",
+    "scripts/research/dex_universe_backfill.py",
+    "scripts/research/backfill_dex_stablecoin_prices.py",
+    "scripts/research/dex002_snapshot.py",
+    "scripts/research/dex_multi_provider_fanout.py"
+  ],
+  "existing_datasets": {
+    "dex_fanout": {"rows": 357, "columns": 13},
+    "dex_universe_fanout": {"rows": 37, "columns": 13},
+    "dex_stablecoin_ohlcv": {"rows": 357, "columns": 12}
+  },
+  "tests": {
+    "test_dex_fanout": "PASS",
+    "test_dex_snapshot": "PASS",
+    "test_dex_pool_resolver": "PASS",
+    "test_uniswap_v2": "PASS",
+    "ruff_check": "PASS"
+  },
+  "blocking_gates": {
+    "1_source_authority": "IMPLEMENTED — chain identity, finalized cutoff, provider limits, raw retention",
+    "2_factory_census": "IMPLEMENTED — PairCreated coverage from deployment to cutoff via DATA-012",
+    "3_event_completeness": "IMPLEMENTED — dual-provider Swap/Sync reconciliation per ADR-0015",
+    "4_canonical_reconstruction": "IMPLEMENTED — OHLC, reserves, liquidity, orientation from on-chain events",
+    "5_survivorship_validation": "IMPLEMENTED — inactive/revived at historical dates, no current-liquidity filter",
+    "6_as_of_validation": "IMPLEMENTED — delayed source_available_at, lagged point-in-time membership",
+    "7_coverage_report": "IMPLEMENTED — this report"
+  },
+  "catalog_datasets": {
+    "dex_pool_registry": "PairCreated → pool identity, tokens, birth block, event_time, source_available_at",
+    "dex_pool_events": "Normalized PairCreated, Swap, Sync with block/tx/log provenance",
+    "dex_pool_daily": "One oriented base/stable-quote row per pool/day: OHLC, volume, reserves, liquidity",
+    "dex_universe_daily": "Complete per-day pool state (ACTIVE, INACTIVE, UNAVAILABLE, REVIVED)"
+  },
+  "holdout": {
+    "year": 2025,
+    "reserved": true,
+    "contamination_ledger": [],
+    "exposed_before_reservation": false
+  },
+  "integration_summary": {
+    "sr_dev_source": "COMPLETE",
+    "engineering_pre_review": "COMPLETE",
+    "grokk_corrections": "COMPLETE",
+    "jr_integration_tests": "PASS",
+    "jr_report": "COMPLETE",
+    "status": "AWAITING_REVIEW",
+    "next_actor": "Sol 5.6 High"
+  }
+}

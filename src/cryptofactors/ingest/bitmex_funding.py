@@ -10,7 +10,7 @@ Key semantics:
 - Quote FX assumption: USDT = USD 1:1.
 - Inverse contracts (XBTUSD): base currency payout = -1 * position_qty * funding_rate,
   converted to USD equivalent using point-in-time BTC/USD price.
-- Rate limiting: respects 180 req/min limit.
+- Rate limiting: polite budget defaults to 120 req/min (ticket DATA-009).
 """
 
 from __future__ import annotations
@@ -28,9 +28,15 @@ import pyarrow.parquet as pq
 DEFAULT_BASE_URL: Final[str] = "https://www.bitmex.com/api/v1"
 FUNDING_ENDPOINT: Final[str] = "/funding"
 INSTRUMENT_ENDPOINT: Final[str] = "/instrument/active"
+INSTRUMENT_ALL_ENDPOINT: Final[str] = "/instrument"
 PROVENANCE_SOURCE: Final[str] = "bitmex_funding"
+PERP_INSTRUMENT_TYP: Final[str] = "FFWCSX"
 _US_PER_SECOND: Final[int] = 1_000_000
 _MAX_COUNT_PER_REQ: Final[int] = 500
+_DEFAULT_REQUESTS_PER_MINUTE: Final[int] = 120
+_DEFAULT_429_RETRIES: Final[int] = 5
+_DEFAULT_429_SLEEP_S: Final[float] = 5.0
+_MAX_429_SLEEP_S: Final[float] = 60.0
 
 BITMEX_FUNDING_SCHEMA: Final[pa.Schema] = pa.schema(
     [
@@ -116,6 +122,14 @@ def normalize_funding_record(
     raw_ts = item.get("timestamp")
     dt_ts = parse_iso_datetime(raw_ts)
     if dt_ts is None:
+        # Already-normalized records may only carry timestamp_us.
+        raw_us = item.get("timestamp_us")
+        if raw_us is not None:
+            try:
+                dt_ts = datetime.fromtimestamp(int(raw_us) / _US_PER_SECOND, tz=timezone.utc)
+            except (TypeError, ValueError, OSError, OverflowError):
+                dt_ts = None
+    if dt_ts is None:
         raise BitMEXFundingError(
             "funding record missing valid ISO timestamp",
             context={"item": dict(item)},
@@ -128,26 +142,42 @@ def normalize_funding_record(
             context={"item": dict(item)},
         )
 
+    # Accept raw BitMEX keys (fundingRate) or already-normalized (funding_rate).
+    raw_rate = item.get("fundingRate", item.get("funding_rate"))
     try:
-        funding_rate = float(item.get("fundingRate") or 0.0)
+        funding_rate = float(raw_rate if raw_rate is not None else 0.0)
     except (ValueError, TypeError) as exc:
         raise BitMEXFundingError(
-            f"invalid fundingRate: {item.get('fundingRate')}",
+            f"invalid fundingRate: {raw_rate}",
             context={"item": dict(item)},
         ) from exc
 
+    raw_daily = item.get("fundingRateDaily", item.get("funding_rate_daily"))
     try:
-        funding_rate_daily = float(item.get("fundingRateDaily") or (funding_rate * 3.0))
+        if raw_daily is None:
+            funding_rate_daily = funding_rate * 3.0
+        else:
+            funding_rate_daily = float(raw_daily)
     except (ValueError, TypeError):
         funding_rate_daily = funding_rate * 3.0
 
-    funding_interval = str(item.get("fundingInterval") or "").strip()
+    funding_interval = str(
+        item.get("fundingInterval", item.get("funding_interval")) or ""
+    ).strip()
 
     ts_iso = dt_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
     ts_us = _dt_to_us(dt_ts)
 
-    avail_dt = availability_time or dt_ts
-    avail_us = _dt_to_us(avail_dt)
+    avail_raw = item.get("availability_time")
+    if availability_time is not None:
+        avail_us = _dt_to_us(availability_time)
+    elif avail_raw is not None:
+        try:
+            avail_us = int(avail_raw)
+        except (TypeError, ValueError):
+            avail_us = ts_us
+    else:
+        avail_us = ts_us
 
     return {
         "timestamp": ts_iso,
@@ -156,7 +186,7 @@ def normalize_funding_record(
         "funding_rate": funding_rate,
         "funding_rate_daily": funding_rate_daily,
         "funding_interval": funding_interval,
-        "source": PROVENANCE_SOURCE,
+        "source": str(item.get("source") or PROVENANCE_SOURCE),
         "availability_time": avail_us,
     }
 
@@ -200,14 +230,18 @@ class BitMEXFundingClient:
         *,
         base_url: str = DEFAULT_BASE_URL,
         timeout_s: float = 30.0,
-        requests_per_minute: int = 180,
+        requests_per_minute: int = _DEFAULT_REQUESTS_PER_MINUTE,
         client: httpx.Client | None = None,
+        max_429_retries: int = _DEFAULT_429_RETRIES,
     ) -> None:
         self._base_url: str = base_url.strip().rstrip("/")
         self._timeout_s: float = float(timeout_s)
         self._min_interval_s: float = 60.0 / max(1, requests_per_minute)
         self._last_request_time: float = 0.0
         self._client: httpx.Client | None = client
+        self._max_429_retries: int = max(0, int(max_429_retries))
+        # One entry per rate-limit bout (not per retry attempt).
+        self.rate_limit_incidents: list[dict[str, Any]] = []
 
     def fetch_funding(
         self,
@@ -252,9 +286,18 @@ class BitMEXFundingClient:
             if not res:
                 break
 
+            new_on_page = 0
             for item in res:
                 norm = normalize_funding_record(item)
-                all_records[(norm["symbol"], norm["timestamp_us"])] = norm
+                key = (norm["symbol"], norm["timestamp_us"])
+                if key not in all_records:
+                    new_on_page += 1
+                all_records[key] = norm
+
+            # Stop when a full page contributes no new keys (pagination stall /
+            # ignored start offset). Without this, a stuck API loops forever.
+            if new_on_page == 0:
+                break
 
             if len(res) < fetch_count:
                 break
@@ -264,26 +307,42 @@ class BitMEXFundingClient:
         ordered = [all_records[k] for k in sorted(all_records.keys())]
         return ordered
 
-    def fetch_perp_symbols(self, *, state: str | None = "Open") -> list[str]:
-        """Discover all active perpetual contract symbols from BitMEX.
+    def fetch_perp_symbols(
+        self,
+        *,
+        state: str | None = "Open",
+        active_only: bool = True,
+    ) -> list[str]:
+        """Discover perpetual contract symbols from BitMEX.
 
         Filters instruments by type ``FFWCSX`` (perpetual contract) and optionally
         by ``state``. Returns sorted uppercase symbols.
+
+        Parameters
+        ----------
+        state:
+            If set, keep only instruments whose ``state`` matches (e.g. ``Open``).
+            Pass ``None`` to include every state (Open, Settled, Unlisted, …).
+        active_only:
+            If True (default), query ``/instrument/active`` (open book only).
+            If False, paginate ``/instrument`` with ``typ=FFWCSX`` so settled and
+            other historical perps that still expose funding history are included
+            (DATA-009 full universe).
         """
-        url = f"{self._base_url}{INSTRUMENT_ENDPOINT}"
-        res = self._get(url, {})
-        if not isinstance(res, list):
-            raise BitMEXFundingError(
-                "BitMEX /instrument/active endpoint returned non-list response",
-                context={"response": res},
+        if active_only:
+            items = self._fetch_instrument_page(
+                f"{self._base_url}{INSTRUMENT_ENDPOINT}",
+                params={},
             )
+        else:
+            items = self._fetch_all_perp_instruments()
 
         symbols: set[str] = set()
-        for item in res:
+        for item in items:
             if not isinstance(item, dict):
                 continue
             typ = str(item.get("typ") or "").strip()
-            if typ != "FFWCSX":
+            if typ != PERP_INSTRUMENT_TYP:
                 continue
             if state is not None and str(item.get("state") or "").strip() != state:
                 continue
@@ -292,20 +351,112 @@ class BitMEXFundingClient:
                 symbols.add(sym)
         return sorted(symbols)
 
-    def _get(self, url: str, params: dict[str, Any]) -> Any:
-        self._throttle()
-        if self._client:
-            r = self._client.get(url, params=params)
-        else:
-            with httpx.Client(timeout=self._timeout_s) as c:
-                r = c.get(url, params=params)
+    def _fetch_all_perp_instruments(self) -> list[dict[str, Any]]:
+        """Paginate GET /instrument filtered to perpetual contracts (all states)."""
+        import json as _json
 
-        if r.status_code != 200:
+        url = f"{self._base_url}{INSTRUMENT_ALL_ENDPOINT}"
+        all_items: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        start_idx = 0
+        while True:
+            params: dict[str, Any] = {
+                "filter": _json.dumps({"typ": PERP_INSTRUMENT_TYP}),
+                "count": _MAX_COUNT_PER_REQ,
+                "start": start_idx,
+                "reverse": "false",
+            }
+            page = self._fetch_instrument_page(url, params=params)
+            if not page:
+                break
+
+            # Same stall guard as fetch_funding: if /instrument ignores start and
+            # repeats a full page, stop rather than growing all_items forever.
+            new_on_page = 0
+            for item in page:
+                sym = str(item.get("symbol") or "").strip().upper()
+                if sym and sym not in seen:
+                    seen.add(sym)
+                    new_on_page += 1
+            all_items.extend(page)
+            if new_on_page == 0:
+                break
+
+            if len(page) < _MAX_COUNT_PER_REQ:
+                break
+            start_idx += len(page)
+        return all_items
+
+    def _fetch_instrument_page(
+        self,
+        url: str,
+        *,
+        params: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        res = self._get(url, params)
+        if not isinstance(res, list):
             raise BitMEXFundingError(
-                f"BitMEX GET /funding failed with HTTP {r.status_code}",
-                context={"status_code": r.status_code, "body": r.text[:500]},
+                "BitMEX instrument endpoint returned non-list response",
+                context={"url": url, "response_type": type(res).__name__},
             )
-        return r.json()
+        return [item for item in res if isinstance(item, dict)]
+
+    def _get(self, url: str, params: dict[str, Any]) -> Any:
+        attempts = 0
+        incident: dict[str, Any] | None = None
+        while True:
+            self._throttle()
+            if self._client:
+                r = self._client.get(url, params=params)
+            else:
+                with httpx.Client(timeout=self._timeout_s) as c:
+                    r = c.get(url, params=params)
+
+            if r.status_code == 429:
+                attempts += 1
+                retry_after_raw = r.headers.get("Retry-After")
+                try:
+                    sleep_s = (
+                        float(retry_after_raw)
+                        if retry_after_raw is not None and str(retry_after_raw).strip()
+                        else _DEFAULT_429_SLEEP_S
+                    )
+                except (TypeError, ValueError):
+                    sleep_s = _DEFAULT_429_SLEEP_S
+                # Floor at default polite delay; ceiling so a huge Retry-After
+                # cannot stall the whole backfill for hours.
+                sleep_s = min(
+                    max(sleep_s, _DEFAULT_429_SLEEP_S),
+                    _MAX_429_SLEEP_S,
+                )
+                if incident is None:
+                    # One rate-limit incident per bout, not per retry attempt.
+                    incident = {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "url": url,
+                        "status_code": 429,
+                        "attempts": attempts,
+                        "sleep_s": sleep_s,
+                        "body": r.text[:300],
+                    }
+                    self.rate_limit_incidents.append(incident)
+                else:
+                    incident["attempts"] = attempts
+                    incident["sleep_s"] = sleep_s
+                if attempts > self._max_429_retries:
+                    raise BitMEXFundingError(
+                        f"BitMEX GET failed with HTTP 429 after {attempts} attempts",
+                        context={"url": url, "status_code": 429, "body": r.text[:500]},
+                    )
+                time.sleep(sleep_s)
+                continue
+
+            if r.status_code != 200:
+                raise BitMEXFundingError(
+                    f"BitMEX GET failed with HTTP {r.status_code}",
+                    context={"url": url, "status_code": r.status_code, "body": r.text[:500]},
+                )
+            return r.json()
 
     def _throttle(self) -> None:
         now = time.monotonic()
