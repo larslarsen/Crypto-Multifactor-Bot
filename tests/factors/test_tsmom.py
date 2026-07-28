@@ -1,8 +1,8 @@
-"""MOMTS-001 — Time-series momentum factor (MOM-TS-01) unit tests.
+"""MOMTS-001 / EXP-009 — Time-series momentum factor (MOM-TS-01) unit tests.
 
-Tests assert the exact 30-7 / 90-7 skip-window log-return formulas on a fixed
-synthetic price series, missing-history omission (never imputed to zero), and
-exactly-zero signal yielding a flat score.
+Tests assert the exact 30-7 / 90-7 / 365-30 skip-window log-return formulas on a
+fixed synthetic price series, missing-history omission (never imputed to zero),
+and exactly-zero signal yielding a flat score.
 """
 
 from __future__ import annotations
@@ -18,10 +18,12 @@ from cryptofactors.factors.contract import Factor
 from cryptofactors.factors.tsmom import (
     TSMOM_30_7_FACTOR_ID,
     TSMOM_90_7_FACTOR_ID,
+    TSMOM_365_30_FACTOR_ID,
     TSMOMError,
     TimeSeriesMomentumFactor,
     make_tsmom_30_7,
     make_tsmom_90_7,
+    make_tsmom_365_30,
 )
 
 UTC = timezone.utc
@@ -175,6 +177,41 @@ def test_30_7_and_90_7_produce_different_signals() -> None:
     r90 = f90.compute(("1",), decision)
 
     assert r30.values[0].raw_value != pytest.approx(r90.values[0].raw_value, rel=1e-6)
+
+
+def test_tsmom_365_30_formula_and_identity() -> None:
+    """EXP-009 frozen factor: log(P[t-30d] / P[t-365d])."""
+    prices = _flat_prices("1", days=400, start_price=100.0, growth=0.001)
+    store = _FakeAsOf(prices)
+    factor = make_tsmom_365_30(store, market_dataset_id=_DATASET)
+
+    assert factor.factor_id == TSMOM_365_30_FACTOR_ID
+    assert factor.lookback_days == 365
+    assert factor.skip_days == 30
+    assert isinstance(factor, Factor)
+
+    decision = _ts(380)
+    frame = factor.compute(("1",), decision)
+
+    # t-30d = day 350; latest avail bar period_start <= 349.
+    p_recent = 100.0 * (1.001 ** 349)
+    # t-365d = day 15; latest avail bar period_start <= 14.
+    p_far = 100.0 * (1.001 ** 14)
+    expected = math.log(p_recent / p_far)
+
+    assert len(frame.values) == 1
+    assert frame.values[0].raw_value == pytest.approx(expected, rel=1e-9)
+    assert frame.values[0].score == pytest.approx(expected, rel=1e-9)
+    assert frame.values[0].factor_id == TSMOM_365_30_FACTOR_ID
+
+
+def test_tsmom_365_30_omits_missing_history() -> None:
+    """Insufficient lookback history omits the instrument (never imputed)."""
+    prices = _flat_prices("1", days=50, start_price=100.0, growth=0.01)
+    store = _FakeAsOf(prices)
+    factor = make_tsmom_365_30(store, market_dataset_id=_DATASET)
+    frame = factor.compute(("1",), _ts(40))
+    assert frame.values == ()
 
 
 # ---------------------------------------------------------------------------

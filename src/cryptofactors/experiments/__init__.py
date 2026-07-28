@@ -1,5 +1,26 @@
-"""Experiments domain package (MOMTS-001 confirmatory runner)."""
+"""Experiments domain package (MOMTS-001 confirmatory runner + EXP-009)."""
 
+from cryptofactors.experiments.exp009 import (
+    ARTIFACT_RELATIVE_PATH,
+    BAR_PANEL_DATASET_ID,
+    EXPERIMENT_ID as EXP009_ID,
+    FACTOR_ID as EXP009_FACTOR_ID,
+    MODEL_ARTIFACT_ID as EXP009_MODEL_ARTIFACT_ID,
+    EXP009Error,
+    EXP009HoldoutNotReadyError,
+    EXP009Mode,
+    EXP009ReadinessReport,
+    EXP009Runner,
+    HoldoutReadiness,
+    HypothesisVerdict,
+    apply_decision_rule,
+    assess_holdout_readiness,
+    build_artifact,
+    holdout_decision_times,
+    require_holdout_ready,
+    run_readiness_checks,
+    stationary_bootstrap_mean_pvalue,
+)
 from cryptofactors.experiments.momts_runner import (
     MOMTSRunner,
     MOMTSRunnerResult,
@@ -8,8 +29,27 @@ from cryptofactors.experiments.momts_runner import (
 )
 
 __all__ = [
+    "ARTIFACT_RELATIVE_PATH",
+    "BAR_PANEL_DATASET_ID",
+    "EXP009_FACTOR_ID",
+    "EXP009_ID",
+    "EXP009_MODEL_ARTIFACT_ID",
+    "EXP009Error",
+    "EXP009HoldoutNotReadyError",
+    "EXP009Mode",
+    "EXP009ReadinessReport",
+    "EXP009Runner",
+    "HoldoutReadiness",
+    "HypothesisVerdict",
     "MOMTSRunner",
     "MOMTSRunnerResult",
+    "apply_decision_rule",
+    "assess_holdout_readiness",
+    "build_artifact",
     "build_momts_30_7_bundle",
     "build_momts_90_7_bundle",
+    "holdout_decision_times",
+    "require_holdout_ready",
+    "run_readiness_checks",
+    "stationary_bootstrap_mean_pvalue",
 ]

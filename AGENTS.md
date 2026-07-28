@@ -52,6 +52,12 @@ This file governs how AI agents (and humans acting as agents) work in this repos
   authority. Publication (commit + push) is Hermes's duty, not a gated owner-only
   action.
 
+## Archive
+
+Historical tickets and intermediate review records have been moved to `~/cmb_archive/`.
+Agents must not read, search, or reference files in `~/cmb_archive/`. The archive is
+excluded from the agent search path. All active work lives in the repo tree.
+
 ## Enforcement
 
 A governance control script (`scripts/check_repo_control.py`) is run as part of reviews.

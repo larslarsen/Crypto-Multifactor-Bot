@@ -49,3 +49,6 @@ logs/
 # Local control databases and scratch dirs
 .local/
 *.db
+
+# Graphify knowledge graph (regenerable artifact)
+graphify-out/

@@ -27,6 +27,7 @@ DEFAULT_PRICE_FIELD: str = "close"
 TSMOM_FACTOR_VERSION: str = "1"
 TSMOM_30_7_FACTOR_ID: str = "tsmom_30_7"
 TSMOM_90_7_FACTOR_ID: str = "tsmom_90_7"
+TSMOM_365_30_FACTOR_ID: str = "tsmom_365_30"
 
 _US_PER_SECOND: int = 1_000_000
 
@@ -388,4 +389,26 @@ def make_tsmom_90_7(
         market_dataset_id=market_dataset_id,
         price_field=price_field,
         factor_id=TSMOM_90_7_FACTOR_ID,
+    )
+
+
+def make_tsmom_365_30(
+    as_of_store: AsOfMarketAccess,
+    *,
+    market_dataset_id: str,
+    price_field: str = DEFAULT_PRICE_FIELD,
+) -> TimeSeriesMomentumFactor:
+    """Construct the frozen EXP-009 factor ``tsmom_365_30`` (lookback=365, skip=30).
+
+    Canonical ~12-month TSMOM with a ~1-month skip, adopted a priori from
+    Moskowitz, Ooi & Pedersen (2012). Parameters are locked by the signed
+    EXP-009 pre-registration and must not be changed after the test begins.
+    """
+    return TimeSeriesMomentumFactor(
+        as_of_store,
+        lookback_days=365,
+        skip_days=30,
+        market_dataset_id=market_dataset_id,
+        price_field=price_field,
+        factor_id=TSMOM_365_30_FACTOR_ID,
     )
