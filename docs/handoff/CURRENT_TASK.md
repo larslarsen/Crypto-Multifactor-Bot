@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: ARCH-002
-State: AWAITING_REVIEW
-Next required actor: Reviewer
+State: READY
+Next required actor: Sr Dev - Claude Opus 5
 Final reviewer: Sol 5.6 High
 Next ticket authorized: ARCH-002
 
