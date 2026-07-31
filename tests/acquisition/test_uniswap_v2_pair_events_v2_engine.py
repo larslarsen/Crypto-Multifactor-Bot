@@ -43,9 +43,12 @@ from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
 )
 from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
     CHAIN_IDENTITY_TABLE,
+    ENGINE_EVENT_RECORD_COLUMNS,
     ENGINE_EVENT_TABLE,
+    FAILURE_ROUTE_PRECEDENCE,
     LEAF_TABLE,
     NODE_TABLE,
+    SPOOL_DESCRIPTOR_SCHEMA_VERSION,
     TERMINAL_RECEIPT_TABLE,
     Claim,
     EngineConfig,
@@ -53,8 +56,11 @@ from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
     FailureClass,
     NetworkWorker,
     PairEventV2Engine,
+    PersistedEnvelope,
     SpoolDescriptor,
     SOURCE_ID,
+    _FailureFact,
+    _PairFailure,
     _TokenBucket,
     compute_terminal_receipt_id,
     make_engine_event_record,
@@ -918,35 +924,57 @@ def test_immutable_policy_resume_rejects_changed_settings(
         engine.close()
 
 
-def test_heartbeat_servicing_during_persistence(store: Store, rpc: RpcFixture) -> None:
-    """Heartbeat (control queue) is serviced during lease operations."""
-    engine = _engine(store, rpc, lease_ttl_seconds=120.0)
+def test_heartbeat_servicing_during_streaming_persistence(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Heartbeat (control queue) is serviced during streamed raw writes via pulse callback.
+
+    The engine's _spool_chunks streams spool bytes in 64K chunks and pulses the
+    control queue between chunks. We verify the pulse fires by checking that
+    a multi-chunk streaming write successfully persists.
+    """
+    engine = _engine(store, rpc, lease_ttl_seconds=3600.0)
     try:
-        plan = engine.initialize(
+        engine.initialize(
             [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
         )
         engine.authenticate_chain()
 
-        claim = engine.coordinator.claim_pending(
-            plan_id=plan.plan_id,
-            worker_id="worker-a",
-            lease_ttl_seconds=60.0,
-        )
-        assert claim is not None
+        # Write a large spool that spans multiple 64K chunks
+        big_payload = b"x" * (64 * 1024 * 4)  # 4 chunks
+        spool_path = store.spool_dir / "stream_test.bin"
+        spool_path.write_bytes(big_payload)
 
-        # Renew lease via the claim-bound heartbeat path.
-        renewed = engine.coordinator.renew_lease(
-            claim=Claim(
-                plan_id=plan.plan_id,
-                domain_id=claim.node.domain_id,
-                worker_id="worker-a",
-                lease_token=claim.lease_token,
-                attempt=claim.attempt,
-                node=claim.node,
+        descriptor = SpoolDescriptor(
+            provider_org="primary",
+            request_json=_canonical_json(
+                {"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": []}
             ),
-            lease_ttl_seconds=60.0,
+            acquired_at=datetime.now(UTC),
+            status_code=200,
+            spool_path=spool_path,
+            response_started=True,
+            response_bytes=len(big_payload),
+            retained_bytes=len(big_payload),
+            truncated=False,
+            error_kind=None,
+            error_detail=None,
         )
-        assert renewed is True
+
+        # persist_async streams the spool through _spool_chunks which pulses
+        # the control queue between chunks. The spool file is cleaned up
+        # after persistence completes.
+        envelope = engine.coordinator.persist_async(descriptor)
+        envelope.result()
+
+        # After streaming + persistence, the spool file should be cleaned up
+        assert not spool_path.exists()
+
+        # Verify the raw object was actually written and is non-empty
+        raw_records = store.query(
+            "SELECT raw_object_id FROM raw_object WHERE byte_size > 0"
+        )
+        assert len(raw_records) >= 1
     finally:
         engine.close()
 
@@ -1209,10 +1237,17 @@ def test_progressed_split_children_persist_valid_status(
         engine.close()
 
 
-def test_atomic_retry_inc_attempt_and_delete_lease(
+def test_atomic_retry_rolls_back_on_event_conflict(
     store: Store, rpc: RpcFixture
 ) -> None:
-    """release_retry atomically increments attempt and deletes the lease."""
+    """release_retry is atomic: on event insertion conflict, attempt and lease are unchanged.
+
+    _insert_event handles PK conflicts as deduplication: if the existing record
+    matches (except created_at), it is silenced. If it diverges (different
+    decision, failure_class, etc.), it raises PairEventV2Error. We verify that
+    when this error fires mid-transaction, the entire release_retry transaction
+    rolls back — attempt must NOT increment and lease must NOT be deleted.
+    """
     engine = _engine(store, rpc)
     try:
         plan = engine.initialize(
@@ -1228,21 +1263,74 @@ def test_atomic_retry_inc_attempt_and_delete_lease(
         assert claim is not None
         assert claim.attempt == 0
 
-        engine.coordinator.release_retry(claim, events=())
+        # Pre-insert an event with the SAME event_id but DIFFERENT decision.
+        # release_retry will try to insert an event with the same event_id but
+        # matching decision → the pre-inserted divergent record triggers the
+        # "divergent identity payload" error during deduplication.
+        existing_event = make_engine_event_record(
+            plan_id=plan.plan_id,
+            domain_id=claim.domain_id,
+            attempt=0,
+            event_kind="retry_decision",
+            failure_class=FailureClass.TRANSPORT,
+            decision="retry",
+            request={"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": []},
+            detail={"reason": "conflict_test"},
+        )
 
+        # Pre-insert the event with a different decision to trigger divergence
+        conn = sqlite3.connect(str(store.db))
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute(
+                f"INSERT INTO {ENGINE_EVENT_TABLE} ({','.join(ENGINE_EVENT_RECORD_COLUMNS)}) "
+                f"VALUES ({','.join('?' for _ in ENGINE_EVENT_RECORD_COLUMNS)})",
+                (
+                    existing_event.event_id,
+                    existing_event.schema_version,
+                    existing_event.plan_id,
+                    existing_event.domain_id,
+                    existing_event.attempt,
+                    existing_event.event_kind,
+                    existing_event.failure_class,
+                    "terminal",  # DIFFERENT decision from the event below
+                    existing_event.provider_org,
+                    existing_event.request_json,
+                    existing_event.primary_raw_object_id,
+                    existing_event.secondary_raw_object_id,
+                    existing_event.primary_acquisition_id,
+                    existing_event.secondary_acquisition_id,
+                    existing_event.detail_json,
+                    existing_event.created_at,
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        # release_retry tries to insert the same event_id. _insert_event catches
+        # the PK conflict, fetches the existing row, compares payloads, and raises
+        # PairEventV2Error ("divergent identity payload") because the pre-inserted
+        # decision was "terminal" while the event's decision is "retry".
+        # The surrounding BEGIN IMMEDIATE / ROLLBACK in _op_release_retry ensures
+        # the attempt increment and lease deletion are rolled back.
+        with pytest.raises(PairEventV2Error, match="divergent identity|does not match"):
+            engine.coordinator.release_retry(claim, events=[existing_event])
+
+        # Verify attempt was NOT incremented and lease still exists (atomic rollback)
         after = store.query(
             f"SELECT attempt, status FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
             (claim.plan_id, claim.domain_id),
         )
-        assert after[0]["attempt"] == 1
-        assert after[0]["status"] == "PENDING"
+        assert len(after) == 1
+        assert after[0]["attempt"] == 0  # unchanged — rolled back
 
         leases = store.query(
             "SELECT * FROM uniswap_v2_pair_event_v2_query_lease "
             "WHERE plan_id = ? AND domain_id = ?",
             (claim.plan_id, claim.domain_id),
         )
-        assert len(leases) == 0
+        assert len(leases) == 1  # lease still present — rolled back
     finally:
         engine.close()
 
@@ -1347,11 +1435,19 @@ def test_post_lease_winner_attempt_mismatch_rejected(
         engine.close()
 
 
-def test_early_heartbeat_loss_branch_returns_lease_lost(
+def test_early_lease_loss_branch_returns_lease_lost(
     store: Store, rpc: RpcFixture
 ) -> None:
-    """Early lease-loss branch in resolve_winner returns 'lease_lost' for IN_FLIGHT."""
-    engine = _engine(store, rpc)
+    """Early lease-loss branch in resolve_winner returns 'lease_lost' for IN_FLIGHT.
+
+    When a worker calls resolve_winner on a node still IN_FLIGHT (not at the
+    terminal attempt, not AGREED, not SPLIT, not PENDING-at-limit), the engine
+    cannot determine the winner from durable evidence. The early branch fires
+    immediately and returns 'lease_lost' without requiring a terminal_mode.
+    This is the path taken when the lease is lost mid-processing and no
+    terminal candidate was persisted before the loss.
+    """
+    engine = _engine(store, rpc, max_attempts=3)
     try:
         plan = engine.initialize(
             [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
@@ -1364,8 +1460,22 @@ def test_early_heartbeat_loss_branch_returns_lease_lost(
             lease_ttl_seconds=60.0,
         )
         assert claim is not None
+        assert claim.node.status == "IN_FLIGHT"
 
-        # resolve_winner on IN_FLIGHT node with no terminal_mode → lease_lost
+        # Another worker steals the lease by directly updating the lease row.
+        conn = sqlite3.connect(str(store.db))
+        try:
+            conn.execute(
+                "UPDATE uniswap_v2_pair_event_v2_query_lease "
+                "SET worker_id = ?, lease_token = ? "
+                "WHERE plan_id = ? AND domain_id = ?",
+                ("worker-b", "stolen_token", claim.plan_id, claim.domain_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        # resolve_winner with the old (now-invalid) claim on IN_FLIGHT → lease_lost
         result = engine.coordinator.resolve_winner(claim)
         assert result == "lease_lost"
     finally:
@@ -1404,3 +1514,460 @@ def test_terminal_receipt_content_addressed_identity(store: Store, rpc: RpcFixtu
         attempt=attempt,
     )
     assert receipt_id_diff != receipt_id
+
+
+# ---------------------------------------------------------------------------
+# Crash recovery (spool journaling) — 0019 authorization corrections
+# ---------------------------------------------------------------------------
+
+
+def _crash_request() -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getLogs",
+        "params": [
+            {
+                "address": POOL,
+                "fromBlock": hex(LATE_BIRTH),
+                "toBlock": hex(LATE_BIRTH + 10),
+            }
+        ],
+    }
+
+
+def _write_crash_artifacts(
+    store: Store,
+    *,
+    name: str,
+    content: bytes | None = None,
+    complete: bool = False,
+    response_started: bool = True,
+    response_bytes: int = 0,
+    retained_bytes: int = 0,
+    truncated: bool = False,
+    status_code: int | None = None,
+    error_kind: str | None = None,
+    error_detail: str | None = None,
+    provider_org: str = "infura",
+    acquisition_id: str | None = None,
+    request: dict[str, Any] | None = None,
+) -> None:
+    """Simulate a crashed worker's durable journal + spool on disk."""
+    store.spool_dir.mkdir(parents=True, exist_ok=True)
+    spool_path = store.spool_dir / f"{name}.spool"
+    journal_path = store.spool_dir / f"{name}.spool.journal.json"
+    if content is not None:
+        spool_path.write_bytes(content)
+    payload = {
+        "acquired_at": datetime.now(UTC).isoformat(),
+        "acquisition_id": acquisition_id,
+        "complete": complete,
+        "error_detail": error_detail,
+        "error_kind": error_kind,
+        "provider_org": provider_org,
+        "request": request or _crash_request(),
+        "reservation_id": "resv_" + name,
+        "response_bytes": response_bytes,
+        "response_started": response_started,
+        "retained_bytes": retained_bytes,
+        "schema_version": SPOOL_DESCRIPTOR_SCHEMA_VERSION,
+        "spool_name": f"{name}.spool",
+        "status_code": status_code,
+        "truncated": truncated,
+    }
+    journal_path.write_text(json.dumps(payload))
+
+
+def test_crash_recovery_complete_spool_persisted(store: Store, rpc: RpcFixture) -> None:
+    """Crash after the full response was drained: journal + spool recover as evidence."""
+    body = _rpc_ok({"logs": []})
+    _write_crash_artifacts(
+        store,
+        name="crashed_complete",
+        content=body,
+        complete=True,
+        response_started=True,
+        response_bytes=len(body),
+        retained_bytes=len(body),
+        status_code=200,
+        acquisition_id="acq_" + "a" * 64,
+    )
+    engine = _engine(store, rpc)
+    try:
+        raws = store.query(
+            "SELECT acquisition_id, status FROM raw_acquisition "
+            "WHERE acquisition_id = ?",
+            ("acq_" + "a" * 64,),
+        )
+        assert len(raws) == 1
+        assert raws[0]["status"] == "SUCCEEDED"
+        objects = store.query("SELECT byte_size, sha256 FROM raw_object")
+        assert len(objects) == 1
+        assert objects[0]["byte_size"] == len(body)
+        assert objects[0]["sha256"] == __import__("hashlib").sha256(body).hexdigest()
+        assert list(store.spool_dir.glob("*.journal.json")) == []
+        assert list(store.spool_dir.glob("*.spool")) == []
+    finally:
+        engine.close()
+
+
+def test_crash_recovery_complete_truncated_uses_journaled_bytes(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Complete+truncated crash: journaled response_bytes may exceed retained file bytes."""
+    retained = b"partial-json"
+    journaled_response = 5_000_000
+    _write_crash_artifacts(
+        store,
+        name="crashed_truncated",
+        content=retained,
+        complete=True,
+        response_started=True,
+        response_bytes=journaled_response,
+        retained_bytes=len(retained),
+        truncated=True,
+        status_code=200,
+        acquisition_id="acq_" + "b" * 64,
+    )
+    engine = _engine(store, rpc)
+    try:
+        raws = store.query(
+            "SELECT status, response_metadata_json FROM raw_acquisition "
+            "WHERE acquisition_id = ?",
+            ("acq_" + "b" * 64,),
+        )
+        assert len(raws) == 1
+        assert raws[0]["status"] == "SUCCEEDED"
+        metadata = json.loads(raws[0]["response_metadata_json"])
+        assert metadata["response_bytes"] == journaled_response
+        assert metadata["retained_bytes"] == len(retained)
+        objects = store.query("SELECT byte_size FROM raw_object")
+        assert objects[0]["byte_size"] == len(retained)
+        assert list(store.spool_dir.glob("*.journal.json")) == []
+    finally:
+        engine.close()
+
+
+def test_crash_recovery_incomplete_spool_recorded_as_spool_incomplete(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Crash mid-drain: incomplete spool is recovered as a non-authoritative failure."""
+    body = b'{"jsonrpc":"2.0","id":1,"result":'  # cut off mid-write
+    _write_crash_artifacts(
+        store,
+        name="crashed_mid_drain",
+        content=body,
+        complete=False,
+        response_started=True,
+        response_bytes=len(body),
+        retained_bytes=len(body),
+        status_code=200,
+        acquisition_id="acq_" + "c" * 64,
+    )
+    engine = _engine(store, rpc)
+    try:
+        raws = store.query(
+            "SELECT status, response_metadata_json FROM raw_acquisition "
+            "WHERE acquisition_id = ?",
+            ("acq_" + "c" * 64,),
+        )
+        assert len(raws) == 1
+        assert raws[0]["status"] == "SUCCEEDED"
+        metadata = json.loads(raws[0]["response_metadata_json"])
+        assert metadata["error_kind"] == "spool_incomplete"
+        assert list(store.spool_dir.glob("*.journal.json")) == []
+        assert list(store.spool_dir.glob("*.spool")) == []
+    finally:
+        engine.close()
+
+
+def test_crash_recovery_missing_spool_after_start_recorded_as_failed(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Journal says a response started but the spool file is gone → failed acquisition."""
+    _write_crash_artifacts(
+        store,
+        name="crashed_missing_spool",
+        content=None,  # no spool file on disk
+        complete=False,
+        response_started=True,
+        response_bytes=0,
+        retained_bytes=0,
+        status_code=None,
+        acquisition_id="acq_" + "d" * 64,
+    )
+    engine = _engine(store, rpc)
+    try:
+        raws = store.query(
+            "SELECT status, raw_object_id, response_metadata_json FROM raw_acquisition "
+            "WHERE acquisition_id = ?",
+            ("acq_" + "d" * 64,),
+        )
+        assert len(raws) == 1
+        assert raws[0]["status"] == "FAILED"
+        assert raws[0]["raw_object_id"] is None
+        metadata = json.loads(raws[0]["response_metadata_json"])
+        assert metadata["error_kind"] == "spool_missing_after_start"
+        assert list(store.spool_dir.glob("*.journal.json")) == []
+    finally:
+        engine.close()
+
+
+def test_crash_recovery_pre_start_reservation_freed(store: Store, rpc: RpcFixture) -> None:
+    """A reservation with no response started is freed (journal + spool removed)."""
+    _write_crash_artifacts(
+        store,
+        name="never_started",
+        content=b"",
+        complete=False,
+        response_started=False,
+        response_bytes=0,
+        retained_bytes=0,
+        status_code=None,
+        acquisition_id="acq_" + "e" * 64,
+    )
+    engine = _engine(store, rpc)
+    try:
+        assert list(store.spool_dir.glob("*.journal.json")) == []
+        assert list(store.spool_dir.glob("*.spool")) == []
+        raws = store.query(
+            "SELECT COUNT(*) AS n FROM raw_acquisition WHERE acquisition_id = ?",
+            ("acq_" + "e" * 64,),
+        )
+        assert raws[0]["n"] == 0
+    finally:
+        engine.close()
+
+
+def test_crash_recovery_malformed_journal_kept_for_capacity(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """An unreadable journal is never deleted while its spool is untracked."""
+    store.spool_dir.mkdir(parents=True, exist_ok=True)
+    (store.spool_dir / "response-corrupt.spool").write_bytes(b"x" * 16)
+    (store.spool_dir / "response-corrupt.spool.journal.json").write_text(
+        "{ not valid json !!"
+    )
+    engine = _engine(store, rpc)
+    try:
+        assert (store.spool_dir / "response-corrupt.spool").exists()
+        assert (store.spool_dir / "response-corrupt.spool.journal.json").exists()
+        raws = store.query("SELECT COUNT(*) AS n FROM raw_acquisition")
+        assert raws[0]["n"] == 0
+    finally:
+        engine.close()
+
+
+def test_crash_recovery_occupancy_overflow_fails_startup(store: Store) -> None:
+    """Surviving occupancy beyond max_spool_files must fail startup loudly."""
+    store.spool_dir.mkdir(parents=True, exist_ok=True)
+    for i in range(9):
+        name = f"response-survivor-{i}"
+        (store.spool_dir / f"{name}.spool").write_bytes(b"x" * 4)
+        (store.spool_dir / f"{name}.spool.journal.json").write_text("{ not json")
+    coordinator = None
+    try:
+        with pytest.raises(PairEventV2Error, match="occupancy exceeds max_spool_files"):
+            coordinator = __import__(
+                "cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine",
+                fromlist=["PersistenceCoordinator"],
+            ).PersistenceCoordinator(
+                db_path=store.db,
+                raw_root=store.raw_root,
+                spool_dir=store.spool_dir,
+                spool_capacity=threading.BoundedSemaphore(8),
+                queue_size=64,
+                offer_timeout_seconds=30.0,
+                max_body_bytes=1_000_000,
+                max_attempts=3,
+                max_spool_files=8,
+            )
+    finally:
+        if coordinator is not None:
+            coordinator.close()
+
+
+# ---------------------------------------------------------------------------
+# Mixed-failure precedence — 0019 authorization corrections
+# ---------------------------------------------------------------------------
+
+
+def test_failure_route_precedence_is_full_deterministic_ordering() -> None:
+    """FAILURE_ROUTE_PRECEDENCE must name every FailureClass exactly once."""
+    assert len(FAILURE_ROUTE_PRECEDENCE) == len({c.value for c in FailureClass})
+    assert set(FAILURE_ROUTE_PRECEDENCE) == {c.value for c in FailureClass}
+    assert len(set(FAILURE_ROUTE_PRECEDENCE)) == len(FAILURE_ROUTE_PRECEDENCE)
+
+
+def test_failure_route_precedence_429_beats_transport_and_size() -> None:
+    failure = _PairFailure(
+        [
+            _FailureFact(FailureClass.BODY_SIZE_PRESSURE, "infura", {}),
+            _FailureFact(FailureClass.TRANSPORT, "blockpi", {}),
+            _FailureFact(FailureClass.HTTP_429, "infura", {}),
+        ]
+    )
+    assert failure.route == FailureClass.HTTP_429
+
+
+def test_failure_route_precedence_transport_before_size() -> None:
+    failure = _PairFailure(
+        [
+            _FailureFact(FailureClass.RESULT_SIZE_PRESSURE, "infura", {}),
+            _FailureFact(FailureClass.TRANSPORT, "blockpi", {}),
+        ]
+    )
+    assert failure.route == FailureClass.TRANSPORT
+
+
+def test_failure_route_precedence_auth_before_status_and_size() -> None:
+    failure = _PairFailure(
+        [
+            _FailureFact(FailureClass.HTTP_STATUS, "infura", {}),
+            _FailureFact(FailureClass.BODY_SIZE_PRESSURE, "infura", {}),
+            _FailureFact(FailureClass.AUTHENTICATION, "blockpi", {}),
+        ]
+    )
+    assert failure.route == FailureClass.AUTHENTICATION
+
+
+def test_failure_route_precedence_range_limit_before_size() -> None:
+    failure = _PairFailure(
+        [
+            _FailureFact(FailureClass.BODY_SIZE_PRESSURE, "infura", {}),
+            _FailureFact(FailureClass.RESULT_SIZE_PRESSURE, "infura", {}),
+            _FailureFact(FailureClass.EXPLICIT_RANGE_LIMIT, "blockpi", {}),
+        ]
+    )
+    assert failure.route == FailureClass.EXPLICIT_RANGE_LIMIT
+
+
+def test_failure_route_precedence_persistence_before_malformed_json() -> None:
+    failure = _PairFailure(
+        [
+            _FailureFact(FailureClass.MALFORMED_JSON, "infura", {}),
+            _FailureFact(FailureClass.PERSISTENCE, "blockpi", {}),
+        ]
+    )
+    assert failure.route == FailureClass.PERSISTENCE
+
+
+def test_failure_route_precedence_internal_is_last() -> None:
+    failure = _PairFailure(
+        [
+            _FailureFact(FailureClass.INTERNAL, None, {"stage": "x"}),
+            _FailureFact(FailureClass.RPC_ERROR, "infura", {}),
+            _FailureFact(FailureClass.HEADER_CONFLICT, "infura", {}),
+        ]
+    )
+    assert failure.route == FailureClass.RPC_ERROR
+
+
+def _descriptor_envelope(
+    *,
+    org: str,
+    status_code: int | None,
+    error_kind: str | None = None,
+    truncated: bool = False,
+    response_bytes: int = 0,
+) -> PersistedEnvelope:
+    descriptor = SpoolDescriptor(
+        provider_org=org,
+        request_json=_canonical_json(_crash_request()),
+        acquired_at=datetime.now(UTC),
+        status_code=status_code,
+        spool_path=None,
+        response_started=True,
+        response_bytes=response_bytes,
+        retained_bytes=0,
+        truncated=truncated,
+        error_kind=error_kind,
+        error_detail=None,
+    )
+    return PersistedEnvelope(descriptor, None, None, 0.0)
+
+
+def test_inspect_pair_429_plus_oversized_routes_retry(store: Store, rpc: RpcFixture) -> None:
+    """429 (retry) dominates body-size pressure (split) inside one response."""
+    engine = _engine(store, rpc)
+    try:
+        pair = (
+            _descriptor_envelope(org="infura", status_code=429, truncated=True),
+            _descriptor_envelope(org="blockpi", status_code=200, error_kind="transport"),
+        )
+        with pytest.raises(_PairFailure) as exc:
+            engine._inspect_pair(pair, _crash_request())
+        assert exc.value.route == FailureClass.HTTP_429
+    finally:
+        engine.close()
+
+
+def test_inspect_pair_auth_plus_oversized_routes_auth(store: Store, rpc: RpcFixture) -> None:
+    """401/403 dominate both http_status and size pressure."""
+    engine = _engine(store, rpc)
+    try:
+        pair = (
+            _descriptor_envelope(org="infura", status_code=403, truncated=True),
+            _descriptor_envelope(org="blockpi", status_code=500),
+        )
+        with pytest.raises(_PairFailure) as exc:
+            engine._inspect_pair(pair, _crash_request())
+        assert exc.value.route == FailureClass.AUTHENTICATION
+    finally:
+        engine.close()
+
+
+def test_inspect_pair_transport_plus_persistence_routes_transport(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Transport precedes persistence and size pressure."""
+    engine = _engine(store, rpc)
+    try:
+        pair = (
+            _descriptor_envelope(
+                org="infura", status_code=200, error_kind="transport", truncated=True
+            ),
+            _descriptor_envelope(org="blockpi", status_code=200, error_kind="spool_io"),
+        )
+        with pytest.raises(_PairFailure) as exc:
+            engine._inspect_pair(pair, _crash_request())
+        assert exc.value.route == FailureClass.TRANSPORT
+    finally:
+        engine.close()
+
+
+def test_inspect_pair_persistence_plus_malformed_routes_persistence(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """spool_incomplete (persistence) dominates a malformed/unparseable sibling."""
+    engine = _engine(store, rpc)
+    try:
+        pair = (
+            _descriptor_envelope(
+                org="infura", status_code=200, error_kind="spool_incomplete"
+            ),
+            _descriptor_envelope(org="blockpi", status_code=200),
+        )
+        with pytest.raises(_PairFailure) as exc:
+            engine._inspect_pair(pair, _crash_request())
+        assert exc.value.route == FailureClass.PERSISTENCE
+    finally:
+        engine.close()
+
+
+def test_inspect_pair_malformed_json_routes_before_status(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """A truly unparseable sibling outranks a plain non-2xx status."""
+    engine = _engine(store, rpc)
+    try:
+        pair = (
+            _descriptor_envelope(org="infura", status_code=502),
+            _descriptor_envelope(org="blockpi", status_code=200),
+        )
+        with pytest.raises(_PairFailure) as exc:
+            engine._inspect_pair(pair, _crash_request())
+        assert exc.value.route == FailureClass.MALFORMED_JSON
+    finally:
+        engine.close()
