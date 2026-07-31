@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: DEX-003
-State: AWAITING_REVIEW
-Next required actor: Sol 5.6 High
+State: IN_PROGRESS
+Next required actor: Jr Dev - Hermes
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -54,7 +54,7 @@ duplicated plan fields against the canonical payload, supports all 1/8/32/64/128
 cohorts, conserves deterministic splits, and proves exact coverage with constant-size
 per-pool/topic streaming cursors.
 
-Jr's v2 integration correction is complete. Migration 0017 declares SQLite-valid inline
+Jr's v2 foundation integration is accepted. Migration 0017 declares SQLite-valid inline
 plan/node/lease/leaf/header/coverage FKs plus normalized
 `uniswap_v2_pair_event_v2_leaf_header_dependency` rows that bind leaves to canonical
 headers without equating their IDs. The failed partial schema was verified empty, only its
@@ -66,6 +66,46 @@ plan row, composite node parentage, leases/leaves to query nodes, and normalized
 dependencies. The two v2 targets pass 41 focused offline tests, targeted ruff passes, and
 repository control passes. No networking, acquisition, v1 evidence, or publication changed.
 
+Grok's v2 engine rewrite exists at
+`src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py` but remains rejected for
+Jr integration. It now has persistent network/node executors, a dedicated persistence-owner
+thread, lease-token-keyed active work, an explicit chain-authenticated phase, dual header
+comparison, cached evidence replay, log-to-header binding, adaptive 429 handling, and
+versioned 0018 record declarations. Those corrections are retained.
+
+The latest correction additionally fixes both retry-affecting timeout identities, complete
+truncated-spool crash recovery, control-queue servicing during streamed raw writes,
+configured-root canonical raw replay, legitimate SPLIT-child status progression, early
+split-reason derivation, unsplittable lease-loss event persistence, complete simultaneous
+per-response precedence, and exact mandatory composite acquisition/raw pairing for 0018.
+Those corrections are retained.
+
+The v2 engine source is accepted for Jr integration. The final correction defines the exact
+16-value terminal-mode domain in source and the 0018 contract, rejects unknown modes and
+non-max terminal attempts, binds receipt attempt to node attempt and configured max attempts,
+and derives/persists ordinary or unsplittable terminal candidates before early lease-loss
+resolution. All five frozen Sol assertions pass. No additional Sr source correction is
+authorized.
+
+Jr Dev integration is IN_PROGRESS. Migration 0018 (`0018_uniswap_v2_pair_event_v2_engine_persistence.sql`)
+implements all 0018 engine contracts: chain identity, execution policy, engine event, terminal
+receipt, raw_acquisition composite UNIQUE index, header/leaf uniqueness indexes, dependency
+ownership index, and NULL parity CHECKs. Migration 0018 was applied to `dex003_full.db`;
+`PRAGMA foreign_key_check` is empty, and all v2 acquisition tables remain empty.
+
+## Completed integration steps
+- Migration 0018 created with all contracts (8 sections: raw_acquisition composite unique key,
+  chain identity, execution policy, engine event, terminal receipt, header uniqueness, leaf
+  uniqueness, dependency ownership).
+- 22 focused migration tests created in `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0018.py`.
+- 17 existing engine tests fixed to current API; 12 new focused engine tests added (total 29).
+- All 39 tests pass: `.venv/bin/python -m pytest tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0018.py -q`
+- Ruff passes on both test files.
+- Migration 0018 applied to `dex003_full.db`; `PRAGMA foreign_key_check` empty, all v2 tables empty.
+
+## Remaining integration steps
+6. Update DEX-003 repository records and commit/push.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -73,6 +113,31 @@ repository control passes. No networking, acquisition, v1 evidence, or publicati
 
 ## Authorization
 
-Sol 5.6 High reviews the completed Jr v2 integration and either accepts or returns a
-bounded correction. No further Jr work, networking/concurrency, acquisition, v1 evidence
-changes, publication, downstream transforms, factor design, or LIVE work is authorized.
+Jr integrates only the accepted engine source, migration 0018, focused offline tests, and
+required repository records. Do not redesign production behavior. If a focused test exposes
+a production-source defect, stop and route the exact failure to Sol/Grok rather than editing
+the engine logic.
+
+1. Create one forward migration `0018` implementing every exact contract declared at the top
+   of `uniswap_v2_pair_events_v2_engine.py`: chain identity, engine event, execution policy,
+   terminal receipt, raw/acquisition composite pairing, header/leaf uniqueness and pairing,
+   and same-plan dependency ownership with the stated FK actions and checks.
+2. Add the parent `UNIQUE(acquisition_id, raw_object_id)` key required for all composite
+   acquisition/raw FKs. Preserve existing raw catalog rows and migration history.
+3. Add focused offline migration tests proving fresh application, upgrade after 0017,
+   `PRAGMA foreign_key_check`, all unique/check/FK actions, rejection of mismatched
+   acquisition/raw pairs, event NULL parity, and the exact 16 terminal modes.
+4. Add focused offline engine tests for immutable policy resume, complete-truncated and
+   incomplete spool recovery, heartbeat servicing during streamed persistence, complete raw
+   authentication, deterministic mixed-failure precedence, progressed SPLIT children,
+   atomic retry, lease-expiry/ordinary/unsplittable terminal receipts, and post-lease winner
+   mode/attempt mismatch rejection including the early heartbeat-loss branch.
+5. Run only the new engine/migration tests, the accepted v2 foundation tests, targeted ruff,
+   and `scripts/check_repo_control.py`. Do not run broad tests or contact any RPC endpoint.
+6. After focused tests pass, apply migration 0018 to `dex003_full.db`, verify
+   `PRAGMA foreign_key_check` is empty and all v2 acquisition tables remain empty, update the
+   DEX-003 repository records, then commit and push the integration.
+
+No acquisition, dataset publication, metadata/downstream transforms, factor design, PAPER,
+or LIVE work is authorized. Return the commit hash and focused command evidence for Sol
+review. Next ticket remains `NONE`.
