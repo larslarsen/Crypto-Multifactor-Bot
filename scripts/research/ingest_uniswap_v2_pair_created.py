@@ -67,6 +67,12 @@ def main() -> int:
             rpc_url=rpc_url,
             raw_writer=RawObjectWriter(RawObjectStoreConfig(root=args.raw_root), catalog),
             raw_root=args.raw_root,
+            provider_id="blockpi_public",
+            finality_cutoff_block=args.end_block,
+            header_batch_size=1,
+            header_max_in_flight=1,
+            header_requests_per_second=2.0,
+            use_header_batches=False,
         )
         try:
             ingestor.fetch(

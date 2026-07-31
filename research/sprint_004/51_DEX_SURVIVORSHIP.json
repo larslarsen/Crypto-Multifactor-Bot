@@ -8,224 +8,182 @@
     "protocol": "Uniswap V2",
     "factory": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
     "deployment_block": 10000835,
-    "quote_tokens": [
-      "USDC",
-      "USDT"
-    ],
+    "quote_tokens": ["USDC", "USDT"],
     "holdout_year": 2025,
     "data_authority": "on-chain events (PairCreated, Swap, Sync) via JSON-RPC"
   },
   "source_modules": [
     "src/cryptofactors/acquisition/uniswap_v2.py",
-    "src/cryptofactors/ingest/dex_fanout.py",
-    "src/cryptofactors/ingest/dex_providers.py",
-    "src/cryptofactors/ingest/dex_ohlcv.py",
-    "src/cryptofactors/ingest/dex_snapshot.py",
-    "src/cryptofactors/universe/dex_pool_resolver.py"
+    "src/cryptofactors/acquisition/uniswap_v2_pair_events.py",
+    "src/cryptofactors/acquisition/uniswap_v2_pair_event_orchestrator.py",
+    "src/cryptofactors/market/dex_pool_registry.py"
   ],
   "source_lines": {
-    "uniswap_v2.py": 53329,
-    "dex_fanout.py": 34675,
-    "dex_providers.py": 17878,
-    "dex_ohlcv.py": 15027,
-    "dex_snapshot.py": 33196,
-    "dex_pool_resolver.py": 16633
+    "uniswap_v2.py": 1799,
+    "uniswap_v2_pair_events.py": 2657,
+    "uniswap_v2_pair_event_orchestrator.py": 1097,
+    "dex_pool_registry.py": 888
   },
   "test_evidence": {
-    "test_dex_fanout": {
-      "file": "tests/ingest/test_dex_fanout.py",
-      "size": 9128,
-      "result": "PASS"
-    },
-    "test_dex_snapshot": {
-      "file": "tests/ingest/test_dex_snapshot.py",
-      "size": 81741,
-      "result": "PASS"
-    },
-    "test_dex_pool_resolver": {
-      "file": "tests/universe/test_dex_pool_resolver.py",
-      "size": 8000,
-      "result": "PASS"
-    },
     "test_uniswap_v2": {
       "file": "tests/acquisition/test_uniswap_v2.py",
-      "size": 82248,
-      "result": "PASS"
+      "result": "PASS",
+      "test_count": 152
+    },
+    "test_uniswap_v2_pair_events": {
+      "file": "tests/acquisition/test_uniswap_v2_pair_events.py",
+      "result": "PASS",
+      "test_count": 30
+    },
+    "test_uniswap_v2_pair_event_orchestrator": {
+      "file": "tests/acquisition/test_uniswap_v2_pair_event_orchestrator.py",
+      "result": "PASS",
+      "test_count": 21
+    },
+    "test_dex_pool_registry": {
+      "file": "tests/market/test_dex_pool_registry.py",
+      "result": "PASS",
+      "test_count": 22
     }
   },
   "test_run": {
-    "total": 331,
-    "passed": 331,
+    "total": 51,
+    "passed": 51,
     "failed": 0,
-    "time_seconds": 24.12,
-    "command": "pytest tests/ingest/test_dex_fanout.py tests/ingest/test_dex_snapshot.py tests/universe/test_dex_pool_resolver.py tests/acquisition/test_uniswap_v2.py -v --tb=long"
+    "target": "tests/acquisition/test_uniswap_v2_pair_events.py tests/acquisition/test_uniswap_v2_pair_event_orchestrator.py"
   },
   "ruff_check": {
-    "targets": [
-      "src/cryptofactors/",
-      "scripts/"
-    ],
-    "result": "All checks passed",
-    "command": "ruff check src/cryptofactors/ scripts/"
+    "targets": ["src/cryptofactors/", "scripts/"],
+    "result": "All checks passed"
   },
   "control_plane": {
-    "check_repo_control": "PASS",
-    "command": "scripts/check_repo_control.py"
+    "check_repo_control": "PASS"
   },
-  "existing_datasets": {
-    "dex_universe_fanout": {
-      "rows": 37,
-      "columns": 13,
-      "path": "data/exp003_store/staged/dex_fanout/dex_universe_fanout.parquet",
-      "sha256": "0012f200fa0dc4fd0f2fe08b545e5bae36c14e039c83410d0b38aaffe28c0971",
-      "size_bytes": 7389,
-      "schema": {
-        "timestamp": "string",
-        "timestamp_us": "int64",
-        "chain": "string",
-        "pool_address": "string",
-        "fee_tier": "string",
-        "open": "double",
-        "high": "double",
-        "low": "double",
-        "close": "double",
-        "volume": "double",
-        "provider": "string",
-        "liquidity": "double",
-        "volume_24h": "double"
-      }
+  "census_execution": {
+    "rpc": "https://ethereum.public.blockpi.network/v1/rpc/public",
+    "blocks": "10000835 - 25600000",
+    "chunk_size": 5000,
+    "total_chunks": 3120,
+    "completed_chunks": 3129,
+    "transport_failures": 13,
+    "raw_objects": 506301,
+    "raw_acquisitions": 536275,
+    "runtime_hours": 22,
+    "header_mode": "sequential (BlockPI 503/429 for batches)",
+    "strategy": "full sequential, finality_cutoff_block, conservative rate limit",
+    "quality": "PASS"
+  },
+  "pair_event_pilot": {
+    "status": "PASS",
+    "pool": "0xfb7623cf6fb1b7db71b8256d5bb4642bf0ec5c33",
+    "block_range": [23581664, 23586663],
+    "chunk_size": 5000,
+    "event_authority": {
+      "primary": "infura",
+      "secondary": "blockpi",
+      "swap_logs": 14,
+      "sync_logs": 16,
+      "reconciliation": "AGREED",
+      "end_block_hashes_match": true
     },
-    "dex_fanout": {
-      "rows": 357,
-      "columns": 13,
-      "path": "data/exp003_store/staged/dex_fanout/dex_fanout.parquet",
-      "sha256": "0f7d2e7dfd4990954288dcfe4e9f9bed799d2ff5d3f3c90951c4d49f795c98a6",
-      "size_bytes": 22684,
-      "schema": {
-        "timestamp": "string",
-        "timestamp_us": "int64",
-        "chain": "string",
-        "pool_address": "string",
-        "fee_tier": "string",
-        "open": "double",
-        "high": "double",
-        "low": "double",
-        "close": "double",
-        "volume": "double",
-        "provider": "string",
-        "liquidity": "double",
-        "volume_24h": "double"
-      }
+    "decimals_authority": {
+      "primary": "infura",
+      "secondary": "alchemy",
+      "base_token": "0x9646e6941fa4093f7f8a740f0e46f1bead31fad7",
+      "base_decimals": 18,
+      "quote_token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "quote_decimals": 6,
+      "generic_label_receipts_rejected": 2,
+      "rejected_acquisition_ids_retained": [
+        "acq_19355894f18d407ab03d1534cf041498",
+        "acq_800165bee589412cb2d711d56baa33f8",
+        "acq_a2209a0523fe43f0a2054a2d27f1a8c2",
+        "acq_ef3bfbf1805b4e55969255acf8743227"
+      ]
     },
-    "dex_stablecoin_ohlcv": {
-      "rows": 357,
-      "columns": 12,
-      "path": "data/exp003_store/staged/dex_stablecoin_ohlcv/dex_stablecoin_ohlcv.parquet",
-      "sha256": "0f3ecfb364b1f00855f27f00ad3127a9b1d2a7c54ddd02128a3fb288e3864b5e",
-      "size_bytes": 24085,
-      "schema": {
-        "timestamp": "string",
-        "timestamp_us": "int64",
-        "pool_address": "string",
-        "fee_tier": "string",
-        "network": "string",
-        "open": "double",
-        "high": "double",
-        "low": "double",
-        "close": "double",
-        "volume": "double",
-        "source": "string",
-        "availability_time": "int64"
-      }
+    "offline_replay": {
+      "status": "PASS",
+      "swap_rows": 14,
+      "sync_rows": 16,
+      "base_decimals": 18,
+      "quote_decimals": 6
+    },
+    "provider_disagreements": 0,
+    "credentials_persisted": false
+  },
+  "scalar_event_acquisition": {
+    "status": "PAUSED_RETIRED_FOR_FULL_COVERAGE",
+    "retained_v1_receipts": 2891,
+    "v2_coverage_credit": 0,
+    "legacy_pool_topic_chunks": 29709060,
+    "legacy_minimum_rpc_calls": 118836240,
+    "measured_receipts_per_hour": 1811,
+    "estimated_years": 1.9
+  },
+  "v2_batch_architecture": {
+    "status": "ACCEPTED_FOR_IMPLEMENTATION",
+    "adr_amendment": "docs/adr/0015-data-first-dex-research-substrate.md#9-high-throughput-event-acquisition-amendment",
+    "root_block_width": 5000,
+    "initial_address_cohort_candidate": 64,
+    "root_filters_before_splits": 233694,
+    "scalar_filter_reduction": 127.1,
+    "full_run_started": false
+  },
+  "published_datasets": {
+    "uniswap_v2_pair_created": {
+      "dataset_id": "ds_0eab9b797fafac840b85175f40966f54c33d2ae3b0e8cc73ea63c9c9f2e5da5c",
+      "rows": 516111,
+      "coverage": "2020-05-05 to 2026-07-23",
+      "quality": "PASS"
+    },
+    "dex_pool_registry": {
+      "dataset_id": "ds_42ce2515e226258557a06a374498547393bbc984db791c56fa19d81d7ef16d15",
+      "code_commit": "a1aba05a7e8c6d6fcdd67bda8bc2aa0a8d747cde",
+      "supersedes_dataset_id": "ds_1db3071508f50557a0f2bf57190ce43141a4c273ce8068bdb320e6cebbf8da6c",
+      "rows": 7659,
+      "usdc_quote": 4181,
+      "usdt_quote": 3478,
+      "creation_range": "2020-05-05 to 2026-07-23",
+      "quality": "PASS",
+      "staged_at": "data/dex003_full/store/staged/dex/dex_pool_registry/pools.parquet"
     }
   },
   "blocking_gates": {
-    "1_source_authority": {
-      "status": "IMPLEMENTED",
-      "evidence": "chain identity, finalized cutoff, provider limits, raw retention \u2014 proven by 331 unit tests across acquisition/ingest/universe layers"
+    "1_factory_census": {
+      "status": "PASS",
+      "evidence": "complete PairCreated census 10000835-25600000 via BlockPI public RPC, 516111 pools, 3129 chunk receipts, 13 retried transport failures, dataset published PASS"
     },
-    "2_factory_census": {
-      "status": "IMPLEMENTED",
-      "evidence": "PairCreated coverage from deployment to cutoff via DATA-012 \u2014 UniswapV2PairCreatedIngestor in uniswap_v2.py ingests PairCreated events via eth_getLogs with chunked replay"
+    "2_pool_registry": {
+      "status": "PASS",
+      "evidence": "deterministic local transform selected 7659 direct stable-quote pools (4181 USDC, 3478 USDT) with frozen orientation, published PASS"
     },
     "3_event_completeness": {
-      "status": "IMPLEMENTED",
-      "evidence": "dual-provider Swap/Sync reconciliation per ADR-0015 \u2014 DEXFanOutEngine and DexSnapshotEngine reconcile across GeckoTerminal/DexScreener/DefiLlama"
+      "status": "NOT_YET_EXECUTED",
+      "evidence": "One aligned scalar pilot passed; the scalar full run was retired after 2891 retained receipts. Block-major batched v2 implementation and complete coverage for all 7659 pools remain pending."
     },
     "4_canonical_reconstruction": {
-      "status": "IMPLEMENTED",
-      "evidence": "OHLC, reserves, liquidity, orientation from on-chain events \u2014 build_dex_ohlcv_table and DexSnapshotEngine produce 13-column OHLCV schema with provider provenance"
+      "status": "NOT_YET_EXECUTED",
+      "evidence": "dex_pool_events, dex_pool_daily, dex_universe_daily transforms not yet implemented or executed. Current scope: PairCreated foundation only."
     },
     "5_survivorship_validation": {
-      "status": "IMPLEMENTED",
-      "evidence": "inactive/revived at historical dates, no current-liquidity filter \u2014 DexPoolResolver resolves pools without API liquidity gate; DexSnapshotEngine produces watermarked snapshots"
+      "status": "NOT_YET_EXECUTED",
+      "evidence": "point-in-time ACTIVE/INACTIVE/UNAVAILABLE/REVIVED state machine requires Swap/Sync event data and daily aggregates."
     },
     "6_as_of_validation": {
-      "status": "IMPLEMENTED",
-      "evidence": "delayed source_available_at, lagged point-in-time membership \u2014 AvailabilityTimeInjector, ShardedWatermarkStore, and source_available_at in staging schema"
+      "status": "NOT_YET_EXECUTED",
+      "evidence": "as-of correctness tests require daily pool state data that does not yet exist."
     },
     "7_coverage_report": {
-      "status": "IMPLEMENTED",
+      "status": "PASS",
       "evidence": "this report"
     }
   },
-  "script_execution": {
-    "backfill_dex_stablecoin_prices": {
-      "mode": "synthetic",
-      "rows": 358,
-      "pools": 2,
-      "quality": "PASS",
-      "pool_details": [
-        {
-          "address": "0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6",
-          "fee_tier": "0.01%",
-          "network": "arbitrum",
-          "record_count": 179,
-          "first_timestamp": "2026-01-30T10:43:49Z",
-          "last_timestamp": "2026-07-27T10:43:49Z"
-        },
-        {
-          "address": "0xbce73c2e5a623054b0e8e2428e956f4b9d0412a5",
-          "fee_tier": "0.05%",
-          "network": "arbitrum",
-          "record_count": 179,
-          "first_timestamp": "2026-01-30T10:43:49Z",
-          "last_timestamp": "2026-07-27T10:43:49Z"
-        }
-      ],
-      "coverage": {
-        "start": "2026-01-29T10:43:49.526976+00:00",
-        "end": "2026-07-28T10:43:49.526976+00:00"
-      },
-      "report_path": "research/sprint_004/33_DEX_STABLECOIN_BACKFILL_REPORT.json"
-    },
-    "dex_universe_backfill": {
-      "mode": "synthetic",
-      "rows": 115,
-      "pools_resolved": 23,
-      "pools_backfilled": 23,
-      "coverage": {
-        "start": "2026-07-23T10:43:50+00:00",
-        "end": "2026-07-27T10:43:52+00:00"
-      },
-      "assets": [
-        "BTC",
-        "ETH"
-      ],
-      "report_path": "/var/tmp/40_DEX_UNIVERSE_BACKFILL.json"
-    }
-  },
-  "holdout": {
-    "year": 2025,
-    "reserved": true,
-    "contamination_ledger": [],
-    "exposed_before_reservation": false
-  },
+  "scope_note": "Gates 1-2 are accepted milestones within DEX-003. Gates 3-6 remain in the same active ticket and require Swap/Sync acquisition, daily aggregates, and the PIT universe before final acceptance.",
   "catalog_datasets": {
-    "dex_pool_registry": "PairCreated \u2192 pool identity, tokens, birth block, event_time, source_available_at",
-    "dex_pool_events": "Normalized PairCreated, Swap, Sync with block/tx/log provenance",
-    "dex_pool_daily": "One oriented base/stable-quote row per pool/day: OHLC, volume, reserves, liquidity",
-    "dex_universe_daily": "Complete per-day pool state (ACTIVE, INACTIVE, UNAVAILABLE, REVIVED)"
+    "dex_pool_registry": "PUBLISHED — ds_42ce2515e226258557a06a374498547393bbc984db791c56fa19d81d7ef16d15 (supersedes ds_1db3071508f50557a0f2bf57190ce43141a4c273ce8068bdb320e6cebbf8da6c)",
+    "dex_pool_events": "NOT YET PUBLISHED — code exists, needs real RPC execution",
+    "dex_pool_daily": "NOT YET PUBLISHED — not implemented",
+    "dex_universe_daily": "NOT YET PUBLISHED — not implemented"
   },
-  "generated_at": "2026-07-28T10:44:00Z"
+  "generated_at": "2026-07-31T02:54:09Z"
 }

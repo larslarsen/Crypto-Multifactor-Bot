@@ -171,30 +171,33 @@ class MockEthereumNode:
     def _error(message: str) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": message}}
 
-    def handler(self, request: httpx.Request) -> httpx.Response:
-        payload = json.loads(request.read())
+    def _dispatch_one(self, payload: dict[str, Any]) -> dict[str, Any]:
         method = payload["method"]
         params = payload["params"]
+        request_id = payload.get("id", 1)
         self.calls.append((method, params))
 
         if method in self.transport_error_for:
-            raise httpx.ConnectError("connection refused", request=request)
+            raise httpx.ConnectError("connection refused", request=None)
         if method in self.fail_status_for:
-            return self._respond(500, self._error("upstream failure"))
+            return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32000, "message": "upstream failure"}}
         if method in self.rpc_error_for:
-            return self._respond(200, self._error("rejected by node"))
+            return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32000, "message": "rejected by node"}}
         if method in self.invalid_json_for:
-            body = b"<html><body>502 Bad Gateway</body></html>"
-            self.served.append(body)
-            return httpx.Response(200, content=body, headers={"content-type": "text/html"})
+            # Caller handles non-JSON at the batch/single boundary for invalid_json tests.
+            raise ValueError("invalid_json_for must be handled by handler wrapper")
 
         if method == "eth_chainId":
-            return self._respond(200, {"jsonrpc": "2.0", "id": 1, "result": self.chain_id})
+            return {"jsonrpc": "2.0", "id": request_id, "result": self.chain_id}
 
         if method == "eth_getBlockByNumber":
             number = int(params[0], 16)
             if number not in self.block_hashes:
-                return self._respond(200, self._error(f"unknown block {number}"))
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {"code": -32000, "message": f"unknown block {number}"},
+                }
             reported = self.header_number_override.get(number, number)
             header: dict[str, Any] = {
                 "number": hex(reported),
@@ -204,7 +207,7 @@ class MockEthereumNode:
             }
             for field in self.omit_header_fields:
                 header.pop(field, None)
-            return self._respond(200, {"jsonrpc": "2.0", "id": 1, "result": header})
+            return {"jsonrpc": "2.0", "id": request_id, "result": header}
 
         if method == "eth_getLogs":
             from_block = int(params[0]["fromBlock"], 16)
@@ -215,9 +218,42 @@ class MockEthereumNode:
                 or (isinstance(log, dict)
                     and from_block <= int(log["blockNumber"], 16) <= to_block)
             ]
-            return self._respond(200, {"jsonrpc": "2.0", "id": 1, "result": selected})
+            return {"jsonrpc": "2.0", "id": request_id, "result": selected}
 
-        return self._respond(200, self._error(f"unsupported method {method}"))
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": -32601, "message": f"unsupported method {method}"},
+        }
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.read())
+        # JSON-RPC batch array: respond (optionally reordered) so callers correlate by id.
+        if isinstance(payload, list):
+            responses = [
+                self._dispatch_one(item) for item in payload if isinstance(item, dict)
+            ]
+            responses = list(reversed(responses))
+            body = json.dumps(responses).encode()
+            self.served.append(body)
+            return httpx.Response(
+                200, content=body, headers={"content-type": "application/json"}
+            )
+
+        if not isinstance(payload, dict):
+            return self._respond(200, self._error("bad request"))
+
+        method = payload.get("method")
+        if method in self.invalid_json_for:
+            body = b"<html><body>502 Bad Gateway</body></html>"
+            self.served.append(body)
+            return httpx.Response(200, content=body, headers={"content-type": "text/html"})
+        if method in self.fail_status_for:
+            return self._respond(500, self._error("upstream failure"))
+        if method in self.transport_error_for:
+            raise httpx.ConnectError("connection refused", request=request)
+
+        return self._respond(200, self._dispatch_one(payload))
 
     def client(self) -> httpx.Client:
         return httpx.Client(transport=httpx.MockTransport(self.handler))
@@ -430,6 +466,10 @@ def make_ingestor(
         "raw_writer": store.writer,
         "raw_root": store.raw_root,
         "client": exploding_client() if node is None else node.client(),
+        # Fast local rate limit; production defaults remain in the ingestor.
+        "header_requests_per_second": 1000.0,
+        "header_max_in_flight": 4,
+        "header_batch_size": 8,
     }
     kwargs.update(overrides)
     return UniswapV2PairCreatedIngestor(**kwargs)
@@ -712,7 +752,7 @@ class TestFetch:
             logs=[], header_number_override={BLOCK_CHUNK1_END: BLOCK_CHUNK1_END + 1}
         )
 
-        with pytest.raises(UniswapV2IngestionError, match="end-block header is for block"):
+        with pytest.raises(UniswapV2IngestionError, match="reports block"):
             run_fetch(store, node)
 
     def test_each_block_header_is_fetched_exactly_once(self, store: Store) -> None:
@@ -1334,7 +1374,7 @@ class TestReplay:
         run_fetch(store, scenario_node())
         store.update_receipt(BLOCK_CHUNK1_END + 1, start_block=BLOCK_CHUNK1_END + 50)
 
-        with pytest.raises(UniswapV2IngestionError, match="not contiguous"):
+        with pytest.raises(UniswapV2IngestionError, match="block gap"):
             run_replay(store)
 
     def test_a_range_that_stops_short_of_the_end_block_is_refused(self, store: Store) -> None:
@@ -1943,3 +1983,244 @@ class TestRunnerPublication:
         assert {r["factory"] for r in records} == {UNISWAP_V2_FACTORY}
         assert [r["pair"] for r in records] == [PAIR_1, PAIR_2, PAIR_3]
         assert {r["raw_object_id"] for r in records} <= declared
+
+
+# ---------------------------------------------------------------------------
+# PairCreated header batching — equivalence against real pilot receipts
+# ---------------------------------------------------------------------------
+
+PILOT_DB = Path("dex003_full.db")
+PILOT_RAW_ROOT = Path("data/dex003_full/raw")
+
+
+class TestPairCreatedPilotEquivalence:
+    """Replay the 2,120 existing PairCreated receipts through optimized code.
+
+    Does not regenerate fixtures. Gaps between chunks are expected; each receipt
+    is replayed on its own [start_block, end_block] range.
+    """
+
+    def test_log_identity_module_does_not_touch_pair_created(self) -> None:
+        """Swap/Sync LogIdentity must not appear on the PairCreated path."""
+        import cryptofactors.acquisition.uniswap_v2 as mod
+
+        assert not hasattr(mod, "LogIdentity")
+        assert not hasattr(mod, "log_identity_digest")
+        # decode_pair_created still uses (tx_hash, log_index) only for identity.
+        source = Path(mod.__file__).read_text(encoding="utf-8")
+        assert "log_identity_sha256" not in source
+        assert "LogIdentity" not in source
+
+    def test_existing_receipts_replay_identically_twice(self, tmp_path: Path) -> None:
+        if not PILOT_DB.is_file() or not PILOT_RAW_ROOT.is_dir():
+            pytest.skip("dex003_full PairCreated pilot store not present")
+
+        conn = sqlite3.connect(PILOT_DB)
+        try:
+            ranges = conn.execute(
+                f"SELECT start_block, end_block FROM {RECEIPT_TABLE} ORDER BY start_block"
+            ).fetchall()
+            stored_raw_ids: set[str] = set()
+            stored_end_hashes: list[str] = []
+            for row in conn.execute(
+                f"SELECT logs_raw_object_id, end_header_raw_object_id, "
+                f"chain_id_raw_object_id, end_block_hash, header_dependencies_json "
+                f"FROM {RECEIPT_TABLE}"
+            ):
+                stored_raw_ids.add(str(row[0]))
+                stored_raw_ids.add(str(row[1]))
+                stored_raw_ids.add(str(row[2]))
+                stored_end_hashes.append(str(row[3]))
+                deps = json.loads(str(row[4]))
+                for dep in deps:
+                    stored_raw_ids.add(str(dep["raw_object_id"]))
+                    assert "batch_index" not in dep  # pilot receipts are pre-batch
+        finally:
+            conn.close()
+
+        assert len(ranges) == 2120, f"expected 2120 receipts, got {len(ranges)}"
+
+        # Content digests: every stored raw_object_id must match on-disk SHA-256.
+        for raw_id in sorted(stored_raw_ids):
+            assert raw_id.startswith("raw_")
+            digest = raw_id.removeprefix("raw_")
+            path = content_addressed_absolute_path(PILOT_RAW_ROOT, digest)
+            body = path.read_bytes()
+            assert hashlib.sha256(body).hexdigest() == digest
+
+        # Writer is unused for offline replay; isolate it from the pilot DB.
+        scratch = Store(tmp_path / "scratch")
+        try:
+            ingestor = UniswapV2PairCreatedIngestor(
+                rpc_url="http://unused.invalid",
+                raw_writer=scratch.writer,
+                raw_root=PILOT_RAW_ROOT,
+                client=exploding_client(),
+                use_header_batches=True,
+            )
+            try:
+                def replay_all() -> tuple[list[dict[str, Any]], frozenset[str], list[str]]:
+                    all_rows: list[dict[str, Any]] = []
+                    raw_ids: set[str] = set()
+                    digests: list[str] = []
+                    for start, end in ranges:
+                        result = ingestor.replay_receipts(
+                            start_block=int(start),
+                            end_block=int(end),
+                            receipt_db_path=str(PILOT_DB),
+                            raw_root=PILOT_RAW_ROOT,
+                            # Pilot store has nested 5k/10k chunks; range queries nest.
+                            exact_chunk=True,
+                        )
+                        assert result.completed_ranges == ((int(start), int(end)),)
+                        all_rows.extend(row.as_dict() for row in result.rows)
+                        raw_ids |= set(result.raw_object_ids)
+                        # Stored digests = content-addressed raw_object_id names.
+                        digests.extend(sorted(result.raw_object_ids))
+                    return all_rows, frozenset(raw_ids), digests
+
+                first_rows, first_raw_ids, first_digests = replay_all()
+                second_rows, second_raw_ids, second_digests = replay_all()
+            finally:
+                ingestor.close()
+        finally:
+            scratch.close()
+
+        assert first_rows == second_rows
+        assert first_raw_ids == second_raw_ids
+        assert first_digests == second_digests
+        assert first_raw_ids <= stored_raw_ids
+        assert len(first_rows) > 0
+        # Pilot end-block hashes remain the authority for chain identity per chunk.
+        assert len(stored_end_hashes) == 2120
+        assert all(len(h) == 66 and h.startswith("0x") for h in stored_end_hashes)
+
+
+class TestMixedChunkPartitionReplay:
+    """Full-range replay must tile mixed 5k/10k receipts without nesting failures."""
+
+    def test_full_range_replay_selects_outer_partition(
+        self, store: Store
+    ) -> None:
+        """Nested 5k under 10k: range replay prefers longest chunks and succeeds."""
+        # Build three receipts: outer 10k + two nested 5k covering the same span,
+        # plus a following 5k so the requested range is contiguous.
+        # Use real acquisition for the first full span at deployment, then surgically
+        # insert overlapping receipt rows by cloning.
+        node = scenario_node()
+        # First chunk of scenario is 100 blocks — use custom wider chunks via fetch.
+        # Create two adjacent real chunks at deployment with chunk_size=50 over 100 blocks
+        # (same as SCENARIO), then insert a synthetic outer receipt spanning both by
+        # cloning/merging is hard. Simpler: write three receipt rows directly after one
+        # real acquisition for the outer span only, plus nested copies.
+
+        # Acquire two contiguous real chunks covering [START, END].
+        run_fetch(store, node, emit_rows=False)
+        receipts = store.receipts()
+        assert len(receipts) == 2
+        first, second = receipts[0], receipts[1]
+        assert first["start_block"] == SCENARIO_START
+        assert second["end_block"] == SCENARIO_END
+
+        # Insert an outer receipt spanning both chunks by cloning first's lineage
+        # fields but widening the range — NOT valid for logs request identity.
+        # Instead: clone first and second as-is (nested under a synthetic outer that
+        # we build only for partition selection) — the outer must have valid logs
+        # request for its range. Easiest valid approach: re-acquire the full span
+        # as one chunk into a second store, copy that outer receipt into the mixed db.
+
+        outer_store = Store(store.store_root.parent / "outer")
+        try:
+            # One chunk covering entire scenario range.
+            run_fetch(
+                outer_store,
+                scenario_node(),
+                start_block=SCENARIO_START,
+                end_block=SCENARIO_END,
+                chunk_size=SCENARIO_END - SCENARIO_START + 1,
+                emit_rows=False,
+            )
+            outer = outer_store.receipts()
+            assert len(outer) == 1
+            outer_row = outer[0]
+
+            # Copy outer receipt + its raw acquisitions into the mixed store DB/raw.
+            # Raw objects already live under different roots — copy raw files and
+            # acquisition rows so offline replay authenticates.
+            import shutil
+            for raw_id_key in (
+                "logs_raw_object_id",
+                "end_header_raw_object_id",
+                "chain_id_raw_object_id",
+            ):
+                rid = outer_row[raw_id_key]
+                src = outer_store.raw_path(rid)
+                dst = store.raw_path(rid)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if not dst.exists():
+                    shutil.copy2(src, dst)
+            for dep in json.loads(outer_row["header_dependencies_json"]):
+                rid = dep["raw_object_id"]
+                src = outer_store.raw_path(rid)
+                dst = store.raw_path(rid)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if not dst.exists():
+                    shutil.copy2(src, dst)
+
+            # Copy acquisition rows referenced by the outer receipt.
+            conn_outer = sqlite3.connect(outer_store.db)
+            conn_mixed = sqlite3.connect(store.db)
+            try:
+                acq_ids = {
+                    outer_row["logs_acquisition_id"],
+                    outer_row["end_header_acquisition_id"],
+                    outer_row["chain_id_acquisition_id"],
+                    *(
+                        d["acquisition_id"]
+                        for d in json.loads(outer_row["header_dependencies_json"])
+                    ),
+                }
+                for aid in acq_ids:
+                    row = conn_outer.execute(
+                        "SELECT * FROM raw_acquisition WHERE acquisition_id = ?",
+                        (aid,),
+                    ).fetchone()
+                    assert row is not None
+                    col_names = [
+                        str(c[1])
+                        for c in conn_outer.execute("PRAGMA table_info(raw_acquisition)")
+                    ]
+                    placeholders = ", ".join("?" for _ in col_names)
+                    conn_mixed.execute(
+                        f"INSERT OR IGNORE INTO raw_acquisition "
+                        f"({', '.join(col_names)}) VALUES ({placeholders})",
+                        tuple(row),
+                    )
+                # Insert outer receipt (nested over the two existing 50-block receipts).
+                rcols = list(outer_row.keys())
+                conn_mixed.execute(
+                    f"INSERT INTO {RECEIPT_TABLE} ({', '.join(rcols)}) "
+                    f"VALUES ({', '.join('?' for _ in rcols)})",
+                    tuple(outer_row[c] for c in rcols),
+                )
+                conn_mixed.commit()
+            finally:
+                conn_outer.close()
+                conn_mixed.close()
+        finally:
+            outer_store.close()
+
+        # Mixed DB now has outer 100-block receipt + two nested 50-block receipts.
+        conn = sqlite3.connect(store.db)
+        try:
+            n = conn.execute(f"SELECT COUNT(*) FROM {RECEIPT_TABLE}").fetchone()[0]
+        finally:
+            conn.close()
+        assert n == 3
+
+        # Full-range replay must succeed and use the outer partition only once.
+        result = run_replay(store)
+        assert result.completed_ranges == ((SCENARIO_START, SCENARIO_END),)
+        assert len(result.rows) == len(SCENARIO_LOGS)
+        # Rows are well-formed PairCreated rows.
+        assert [row.pair for row in result.rows] == [PAIR_1, PAIR_2, PAIR_3]

@@ -17,7 +17,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
+import time
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -35,9 +38,15 @@ UNISWAP_V2_FACTORY = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
 UNISWAP_V2_DEPLOYMENT_BLOCK = 10_000_835
 PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 SOURCE_ID = "ethereum_json_rpc_uniswap_v2"
+DEFAULT_PROVIDER_ID = "rpc_primary"
 
 RECEIPT_TABLE = "uniswap_v2_pair_created_chunk_receipt_v3"
 FAILURE_TABLE = "uniswap_v2_pair_created_transport_failure"
+
+# Default batching / concurrency for eth_getBlockByNumber (event-block headers).
+DEFAULT_HEADER_BATCH_SIZE = 64
+DEFAULT_HEADER_MAX_IN_FLIGHT = 4
+DEFAULT_HEADER_REQUESTS_PER_SECOND = 20.0
 
 _HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
 _ADDRESS_PAD = "0" * 24
@@ -153,6 +162,27 @@ def block_header_request(block_number: int) -> dict[str, Any]:
     }
 
 
+def block_header_batch_request(block_numbers: Sequence[int]) -> list[dict[str, Any]]:
+    """Build a JSON-RPC batch of eth_getBlockByNumber calls with distinct ids.
+
+    ``id`` equals the index in the request array so a dependency's ``batch_index``
+    can locate the matching request element. Responses must be correlated by
+    ``id``, never by position — servers may reorder batch replies.
+    """
+    return [{**block_header_request(number), "id": index} for index, number in enumerate(block_numbers)]
+
+
+def header_request_core(request: Mapping[str, Any]) -> dict[str, Any]:
+    """JSON-RPC header request identity ignoring the correlation ``id`` field."""
+    if not isinstance(request, Mapping):
+        raise UniswapV2IngestionError("header request element must be an object")
+    return {
+        "jsonrpc": request.get("jsonrpc"),
+        "method": request.get("method"),
+        "params": request.get("params"),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Records
 # ---------------------------------------------------------------------------
@@ -211,8 +241,84 @@ class RpcCall:
 
 
 @dataclass(frozen=True, slots=True)
+class RpcBatchCall:
+    """One JSON-RPC batch acquisition that produced preserved array bytes."""
+
+    request: list[dict[str, Any]]
+    payload: list[Any]
+    raw_object_id: str
+    acquisition_id: str
+    acquired_at: datetime
+
+    @property
+    def request_json(self) -> str:
+        return _canonical_json(self.request)
+
+
+@dataclass(frozen=True, slots=True)
+class CachedHeader:
+    """Finalized block header retained for cross-chunk reuse."""
+
+    block_number: int
+    header: dict[str, Any]
+    block_hash: str
+    request_json: str
+    raw_object_id: str
+    acquisition_id: str
+    acquired_at: str
+    batch_index: int | None
+    provider_id: str
+
+
+class _TokenBucket:
+    """Thread-safe token bucket limiting request starts per provider."""
+
+    def __init__(self, *, rate: float, capacity: float) -> None:
+        if rate <= 0 or capacity <= 0:
+            raise ValueError("token bucket rate and capacity must be positive")
+        self._rate = rate
+        self._capacity = capacity
+        self._tokens = capacity
+        self._updated = time.monotonic()
+        self._lock = threading.Lock()
+
+    def acquire(self, tokens: float = 1.0) -> None:
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                elapsed = now - self._updated
+                self._tokens = min(self._capacity, self._tokens + elapsed * self._rate)
+                self._updated = now
+                if self._tokens >= tokens:
+                    self._tokens -= tokens
+                    return
+                wait = (tokens - self._tokens) / self._rate
+            time.sleep(wait)
+
+
+def find_batch_response_by_id(payload: Sequence[Any], request_id: Any) -> Mapping[str, Any]:
+    """Locate one batch response element by JSON-RPC id (never by position)."""
+    matches = [
+        item for item in payload
+        if isinstance(item, Mapping) and item.get("id") == request_id
+    ]
+    if len(matches) != 1:
+        raise UniswapV2IngestionError(
+            f"expected exactly one batch response for id={request_id!r}, got {len(matches)}"
+        )
+    return matches[0]
+
+
+@dataclass(frozen=True, slots=True)
 class HeaderDependency:
-    """A preserved block header bound to the request that produced it."""
+    """A preserved block header bound to the request that produced it.
+
+    ``batch_index`` is ``None`` when ``raw_object_id`` holds a single JSON-RPC
+    response object (legacy / sequential path). When set, the raw object is a
+    JSON-RPC batch response array and ``batch_index`` indexes the request
+    element in ``request_json`` (also a batch array). Responses are matched by
+    request ``id``, never by array position.
+    """
 
     block_number: int
     block_hash: str
@@ -220,9 +326,10 @@ class HeaderDependency:
     raw_object_id: str
     acquisition_id: str
     acquired_at: str
+    batch_index: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "block_number": self.block_number,
             "block_hash": self.block_hash,
             "request_json": self.request_json,
@@ -230,11 +337,17 @@ class HeaderDependency:
             "acquisition_id": self.acquisition_id,
             "acquired_at": self.acquired_at,
         }
+        # Omit when None so pilot / pre-batch receipts stay byte-stable on rewrite.
+        if self.batch_index is not None:
+            payload["batch_index"] = self.batch_index
+        return payload
 
     @classmethod
     def from_dict(cls, payload: Any) -> HeaderDependency:
         if not isinstance(payload, Mapping):
             raise UniswapV2IngestionError("header dependency must be an object")
+        batch_index_raw = payload.get("batch_index")
+        batch_index = None if batch_index_raw is None else int(batch_index_raw)
         return cls(
             block_number=int(_require(payload, "block_number", label="header dependency")),
             block_hash=str(_require(payload, "block_hash", label="header dependency")),
@@ -242,6 +355,7 @@ class HeaderDependency:
             raw_object_id=str(_require(payload, "raw_object_id", label="header dependency")),
             acquisition_id=str(_require(payload, "acquisition_id", label="header dependency")),
             acquired_at=str(_require(payload, "acquired_at", label="header dependency")),
+            batch_index=batch_index,
         )
 
 
@@ -571,21 +685,56 @@ class UniswapV2PairCreatedIngestor:
         client: httpx.Client | None = None,
         factory: str = UNISWAP_V2_FACTORY,
         raw_root: Path | None = None,
+        provider_id: str = DEFAULT_PROVIDER_ID,
+        finality_cutoff_block: int | None = None,
+        header_batch_size: int = DEFAULT_HEADER_BATCH_SIZE,
+        header_max_in_flight: int = DEFAULT_HEADER_MAX_IN_FLIGHT,
+        header_requests_per_second: float = DEFAULT_HEADER_REQUESTS_PER_SECOND,
+        use_header_batches: bool = True,
     ) -> None:
         if not rpc_url:
             raise ValueError("rpc_url is required")
+        if not provider_id:
+            raise ValueError("provider_id is required")
+        if header_batch_size <= 0:
+            raise ValueError("header_batch_size must be positive")
+        if header_max_in_flight <= 0:
+            raise ValueError("header_max_in_flight must be positive")
+        if header_requests_per_second <= 0:
+            raise ValueError("header_requests_per_second must be positive")
+        if (
+            finality_cutoff_block is not None
+            and finality_cutoff_block < UNISWAP_V2_DEPLOYMENT_BLOCK
+        ):
+            raise ValueError(
+                "finality_cutoff_block must be >= Uniswap V2 deployment block when set"
+            )
         self._rpc_url = rpc_url
         self._raw_writer = raw_writer
         self._client = client or httpx.Client(timeout=30.0)
         self._owns_client = client is None
         self._factory = factory
         self._raw_root = raw_root
+        self._provider_id = provider_id
         self._chain_id: str | None = None
         self._chain_call: RpcCall | None = None
+        self._finality_cutoff_block = finality_cutoff_block
+        self._header_batch_size = header_batch_size
+        self._header_max_in_flight = header_max_in_flight
+        self._use_header_batches = use_header_batches
+        self._header_bucket = _TokenBucket(
+            rate=header_requests_per_second, capacity=float(header_max_in_flight)
+        )
+        self._header_cache: dict[tuple[str, int], CachedHeader] = {}
+        self._header_cache_lock = threading.Lock()
 
     def close(self) -> None:
         if self._owns_client:
             self._client.close()
+
+    def clear_header_cache(self) -> None:
+        with self._header_cache_lock:
+            self._header_cache.clear()
 
     # -- transport ---------------------------------------------------------
 
@@ -752,7 +901,7 @@ class UniswapV2PairCreatedIngestor:
         return resolved
 
     @staticmethod
-    def _read_raw_json(raw_root: Path, raw_object_id: str) -> dict[str, Any]:
+    def _read_raw_bytes(raw_root: Path, raw_object_id: str) -> Any:
         if not raw_object_id.startswith("raw_"):
             raise UniswapV2IngestionError("invalid raw object id")
         digest = raw_object_id.removeprefix("raw_")
@@ -764,11 +913,24 @@ class UniswapV2PairCreatedIngestor:
         if hashlib.sha256(body).hexdigest() != digest:
             raise UniswapV2IngestionError(f"raw object SHA-256 mismatch: {raw_object_id}")
         try:
-            decoded = json.loads(body)
+            return json.loads(body)
         except json.JSONDecodeError as exc:
             raise UniswapV2IngestionError(f"cannot replay raw object {raw_object_id}") from exc
+
+    @classmethod
+    def _read_raw_json(cls, raw_root: Path, raw_object_id: str) -> dict[str, Any]:
+        """Read a single JSON-RPC response object (strict)."""
+        decoded = cls._read_raw_bytes(raw_root, raw_object_id)
         if not isinstance(decoded, dict):
             raise UniswapV2IngestionError("raw RPC response must be an object")
+        return decoded
+
+    @classmethod
+    def _read_raw_batch(cls, raw_root: Path, raw_object_id: str) -> list[Any]:
+        """Read a JSON-RPC batch response array (strict)."""
+        decoded = cls._read_raw_bytes(raw_root, raw_object_id)
+        if not isinstance(decoded, list):
+            raise UniswapV2IngestionError("raw RPC batch response must be an array")
         return decoded
 
     def _authenticate_header(
@@ -780,16 +942,54 @@ class UniswapV2PairCreatedIngestor:
         expected_block_number: int,
         expected_block_hash: str | None,
         label: str,
+        batch_index: int | None = None,
     ) -> dict[str, Any]:
         """Prove a preserved header answers the request the receipt claims, for the
-        block the receipt claims, with the hash the receipt claims."""
-        expected_request = _canonical_json(block_header_request(expected_block_number))
-        if request_json != expected_request:
-            raise UniswapV2IngestionError(
-                f"{label} was acquired by a different request than the receipt claims"
-            )
-        response = self._read_raw_json(raw_root, raw_object_id)
-        header = response.get("result")
+        block the receipt claims, with the hash the receipt claims.
+
+        ``batch_index is None``: single JSON-RPC object (pilot / sequential path).
+        Otherwise ``request_json`` and the raw object are batch arrays; the element
+        is located by request id, never by response array position.
+        """
+        expected_core = header_request_core(block_header_request(expected_block_number))
+        if batch_index is None:
+            expected_request = _canonical_json(block_header_request(expected_block_number))
+            if request_json != expected_request:
+                raise UniswapV2IngestionError(
+                    f"{label} was acquired by a different request than the receipt claims"
+                )
+            response = self._read_raw_json(raw_root, raw_object_id)
+            header = response.get("result")
+        else:
+            try:
+                request_batch = json.loads(request_json)
+            except json.JSONDecodeError as exc:
+                raise UniswapV2IngestionError(
+                    f"{label} batch request_json is not valid JSON"
+                ) from exc
+            if not isinstance(request_batch, list):
+                raise UniswapV2IngestionError(
+                    f"{label} batch request_json must be a JSON array"
+                )
+            if batch_index < 0 or batch_index >= len(request_batch):
+                raise UniswapV2IngestionError(
+                    f"{label} batch_index {batch_index} out of range for request batch "
+                    f"of length {len(request_batch)}"
+                )
+            element = request_batch[batch_index]
+            if not isinstance(element, Mapping):
+                raise UniswapV2IngestionError(
+                    f"{label} batch request element must be an object"
+                )
+            if header_request_core(element) != expected_core:
+                raise UniswapV2IngestionError(
+                    f"{label} batch request element does not match "
+                    f"block_header_request({expected_block_number}) ignoring id"
+                )
+            response_batch = self._read_raw_batch(raw_root, raw_object_id)
+            response = find_batch_response_by_id(response_batch, element.get("id"))
+            header = response.get("result")
+
         if not isinstance(header, dict):
             raise UniswapV2IngestionError(f"{label} raw object has no block result")
         number = _hex_quantity(_require(header, "number", label=label), label=f"{label} number")
@@ -897,9 +1097,302 @@ class UniswapV2PairCreatedIngestor:
                 expected_block_number=dependency.block_number,
                 expected_block_hash=dependency.block_hash,
                 label=f"header for block {dependency.block_number}",
+                batch_index=dependency.batch_index,
             )
         _parse_timestamp(receipt.logs_acquired_at, label="receipt logs_acquired_at")
         _parse_timestamp(receipt.completed_at, label="receipt completed_at")
+
+    # -- header cache / batched acquisition --------------------------------
+
+    def _cacheable_block(self, block_number: int) -> bool:
+        cutoff = self._finality_cutoff_block
+        return cutoff is not None and block_number < cutoff
+
+    def _get_cached_header(self, block_number: int) -> CachedHeader | None:
+        if not self._cacheable_block(block_number):
+            return None
+        with self._header_cache_lock:
+            return self._header_cache.get((self._provider_id, block_number))
+
+    def _put_cached_header(self, entry: CachedHeader) -> None:
+        if not self._cacheable_block(entry.block_number):
+            return
+        with self._header_cache_lock:
+            self._header_cache[(entry.provider_id, entry.block_number)] = entry
+
+    def _header_from_single_call(
+        self, call: RpcCall, *, expected_block_number: int
+    ) -> CachedHeader:
+        header = call.payload.get("result")
+        if not isinstance(header, dict):
+            raise UniswapV2IngestionError(
+                f"missing block header for block {expected_block_number}"
+            )
+        number = _hex_quantity(
+            _require(header, "number", label="block header"), label="header number"
+        )
+        if number != expected_block_number:
+            raise UniswapV2IngestionError(
+                f"header for block {expected_block_number} reports block {number}"
+            )
+        block_hash = _hex_bytes(
+            _require(header, "hash", label="block header"), 32, label="header hash"
+        )
+        entry = CachedHeader(
+            block_number=expected_block_number,
+            header=header,
+            block_hash=block_hash,
+            request_json=call.request_json,
+            raw_object_id=call.raw_object_id,
+            acquisition_id=call.acquisition_id,
+            acquired_at=call.acquired_at.isoformat(),
+            batch_index=None,
+            provider_id=self._provider_id,
+        )
+        self._put_cached_header(entry)
+        return entry
+
+    def _http_batch(
+        self, batch: list[dict[str, Any]]
+    ) -> tuple[int, bytes, datetime]:
+        """POST a JSON-RPC batch under the provider token bucket (HTTP only)."""
+        self._header_bucket.acquire()
+        try:
+            response = self._client.post(self._rpc_url, json=batch)
+        except httpx.HTTPError as exc:
+            raise UniswapV2IngestionError(
+                f"JSON-RPC batch transport failure: {exc}"
+            ) from exc
+        return response.status_code, response.content, datetime.now(UTC)
+
+    def _preserve_batch_response(
+        self,
+        *,
+        batch: list[dict[str, Any]],
+        status_code: int,
+        body: bytes,
+        acquired_at: datetime,
+        event_start: int,
+        event_end: int,
+        receipts: sqlite3.Connection | None,
+        transport_error: str | None = None,
+    ) -> RpcBatchCall:
+        """Preserve batch bytes and validate payload on the caller thread."""
+        method = "batch"
+        request_json = _canonical_json(batch)
+        if transport_error is not None:
+            self._raw_writer.record_failed_acquisition(
+                AcquisitionMetadata(
+                    source_id=SOURCE_ID, request=batch, acquired_at=acquired_at
+                ),
+                transport_error,
+            )
+            self._record_failure(
+                receipts, method=method, request_json=request_json,
+                start_block=event_start, end_block=event_end,
+                kind="transport", detail=transport_error,
+            )
+            raise UniswapV2IngestionError(transport_error)
+
+        raw = self._raw_writer.write_stream(
+            [body],
+            AcquisitionMetadata(
+                source_id=SOURCE_ID,
+                request=batch,
+                response_metadata={
+                    "status_code": status_code,
+                    "method": method,
+                    "provider_id": self._provider_id,
+                    "batch_size": len(batch),
+                },
+                original_name=f"{self._provider_id}_{method}_{event_start}_{event_end}.json",
+                acquired_at=acquired_at,
+            ),
+        )
+
+        if status_code >= 400:
+            detail = f"JSON-RPC HTTP {status_code} (batch)"
+            self._record_failure(
+                receipts, method=method, request_json=request_json,
+                start_block=event_start, end_block=event_end,
+                kind="http_status", detail=detail, status_code=status_code,
+                raw_object_id=raw.raw_object_id, acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail)
+
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError as exc:
+            detail = "JSON-RPC batch returned invalid JSON"
+            self._record_failure(
+                receipts, method=method, request_json=request_json,
+                start_block=event_start, end_block=event_end,
+                kind="invalid_json", detail=detail, status_code=status_code,
+                raw_object_id=raw.raw_object_id, acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail) from exc
+
+        if not isinstance(payload, list):
+            detail = "JSON-RPC batch response must be an array"
+            self._record_failure(
+                receipts, method=method, request_json=request_json,
+                start_block=event_start, end_block=event_end,
+                kind="invalid_json", detail=detail, status_code=status_code,
+                raw_object_id=raw.raw_object_id, acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail)
+
+        if len(payload) != len(batch):
+            detail = (
+                f"JSON-RPC batch size mismatch: sent {len(batch)}, received {len(payload)}"
+            )
+            self._record_failure(
+                receipts, method=method, request_json=request_json,
+                start_block=event_start, end_block=event_end,
+                kind="rpc_error", detail=detail, status_code=status_code,
+                raw_object_id=raw.raw_object_id, acquisition_id=raw.acquisition_id,
+            )
+            raise UniswapV2IngestionError(detail)
+
+        for item in payload:
+            if not isinstance(item, dict):
+                raise UniswapV2IngestionError("JSON-RPC batch element must be an object")
+            if item.get("error") is not None:
+                detail = f"JSON-RPC batch element failed: {item['error']!r}"
+                self._record_failure(
+                    receipts, method=method, request_json=request_json,
+                    start_block=event_start, end_block=event_end,
+                    kind="rpc_error", detail=detail, status_code=status_code,
+                    raw_object_id=raw.raw_object_id, acquisition_id=raw.acquisition_id,
+                )
+                raise UniswapV2IngestionError(detail)
+
+        return RpcBatchCall(
+            request=batch,
+            payload=payload,
+            raw_object_id=raw.raw_object_id,
+            acquisition_id=raw.acquisition_id,
+            acquired_at=acquired_at,
+        )
+
+    def _fetch_headers_for_blocks(
+        self,
+        block_numbers: Sequence[int],
+        *,
+        receipts: sqlite3.Connection | None,
+    ) -> dict[int, CachedHeader]:
+        """Acquire headers via cache, sequential singles, or JSON-RPC batch.
+
+        Does not serve resume-path reorg checks — those always hit the network.
+        Only blocks strictly below ``finality_cutoff_block`` enter the cache.
+        """
+        ordered = sorted({int(number) for number in block_numbers})
+        results: dict[int, CachedHeader] = {}
+        to_fetch: list[int] = []
+        for number in ordered:
+            cached = self._get_cached_header(number)
+            if cached is not None:
+                results[number] = cached
+            else:
+                to_fetch.append(number)
+        if not to_fetch:
+            return results
+
+        # Single-block "batches" stay as single JSON-RPC objects so receipt
+        # dependencies match the pilot shape (batch_index omitted, id:1 request).
+        if not self._use_header_batches or len(to_fetch) == 1:
+            for number in to_fetch:
+                call = self._rpc(
+                    block_header_request(number),
+                    event_start=number, event_end=number, receipts=receipts,
+                )
+                results[number] = self._header_from_single_call(
+                    call, expected_block_number=number
+                )
+            return results
+
+        batches = [
+            to_fetch[index:index + self._header_batch_size]
+            for index in range(0, len(to_fetch), self._header_batch_size)
+        ]
+
+        def run_http(
+            blocks: list[int],
+        ) -> tuple[
+            list[int], list[dict[str, Any]], int | None, bytes | None, datetime, str | None
+        ]:
+            request = block_header_batch_request(blocks)
+            try:
+                status_code, body, acquired_at = self._http_batch(request)
+                return blocks, request, status_code, body, acquired_at, None
+            except UniswapV2IngestionError as exc:
+                return blocks, request, None, None, datetime.now(UTC), str(exc)
+
+        # Bounded concurrency on HTTP only; raw-store/SQLite stay on this thread.
+        with ThreadPoolExecutor(max_workers=self._header_max_in_flight) as executor:
+            futures = [executor.submit(run_http, batch) for batch in batches]
+            for future in as_completed(futures):
+                blocks, request, status_code, body, acquired_at, transport_error = (
+                    future.result()
+                )
+                if transport_error is not None or status_code is None or body is None:
+                    self._preserve_batch_response(
+                        batch=request,
+                        status_code=0,
+                        body=b"",
+                        acquired_at=acquired_at,
+                        event_start=blocks[0],
+                        event_end=blocks[-1],
+                        receipts=receipts,
+                        transport_error=transport_error
+                        or "JSON-RPC batch transport failure",
+                    )
+                    raise AssertionError("transport failure must raise")  # pragma: no cover
+                batch_call = self._preserve_batch_response(
+                    batch=request,
+                    status_code=status_code,
+                    body=body,
+                    acquired_at=acquired_at,
+                    event_start=blocks[0],
+                    event_end=blocks[-1],
+                    receipts=receipts,
+                )
+                for batch_index, number in enumerate(blocks):
+                    request_element = batch_call.request[batch_index]
+                    response = find_batch_response_by_id(
+                        batch_call.payload, request_element.get("id")
+                    )
+                    header = response.get("result")
+                    if not isinstance(header, dict):
+                        raise UniswapV2IngestionError(
+                            f"missing batch header for block {number}"
+                        )
+                    reported = _hex_quantity(
+                        _require(header, "number", label="block header"),
+                        label="header number",
+                    )
+                    if reported != number:
+                        raise UniswapV2IngestionError(
+                            f"header for block {number} reports block {reported}"
+                        )
+                    block_hash = _hex_bytes(
+                        _require(header, "hash", label="block header"),
+                        32, label="header hash",
+                    )
+                    entry = CachedHeader(
+                        block_number=number,
+                        header=header,
+                        block_hash=block_hash,
+                        request_json=batch_call.request_json,
+                        raw_object_id=batch_call.raw_object_id,
+                        acquisition_id=batch_call.acquisition_id,
+                        acquired_at=batch_call.acquired_at.isoformat(),
+                        batch_index=batch_index,
+                        provider_id=self._provider_id,
+                    )
+                    self._put_cached_header(entry)
+                    results[number] = entry
+        return results
 
     # -- acquisition -------------------------------------------------------
 
@@ -999,9 +1492,10 @@ class UniswapV2PairCreatedIngestor:
                 if not isinstance(logs, list):
                     raise UniswapV2IngestionError("eth_getLogs result must be a list")
 
-                headers: dict[int, tuple[dict[str, Any], str]] = {}
-                header_calls: dict[int, RpcCall] = {}
-                dependencies: list[HeaderDependency] = []
+                # Collect distinct event-block numbers first, then acquire headers in
+                # one batched/pooled pass instead of one sequential RPC per log.
+                event_blocks: list[int] = []
+                seen_blocks: set[int] = set()
                 for log in logs:
                     if not isinstance(log, Mapping):
                         raise UniswapV2IngestionError("log entry must be an object")
@@ -1009,59 +1503,54 @@ class UniswapV2PairCreatedIngestor:
                         _require(log, "blockNumber", label="log"), label="blockNumber"
                     )
                     if block_number < chunk_start or block_number > chunk_end:
-                        raise UniswapV2IngestionError("RPC returned log outside requested chunk")
-                    if block_number in headers:
-                        continue
-                    header_call = self._rpc(
-                        block_header_request(block_number),
-                        event_start=block_number, event_end=block_number, receipts=receipts,
-                    )
-                    header = header_call.payload.get("result")
-                    if not isinstance(header, dict):
-                        raise UniswapV2IngestionError("missing block result")
-                    header_number = _hex_quantity(
-                        _require(header, "number", label="block header"), label="header number"
-                    )
-                    if header_number != block_number:
                         raise UniswapV2IngestionError(
-                            f"header for block {block_number} reports block {header_number}"
+                            "RPC returned log outside requested chunk"
                         )
-                    header_hash = _hex_bytes(
-                        _require(header, "hash", label="block header"), 32, label="header hash"
-                    )
-                    headers[block_number] = (header, header_call.raw_object_id)
-                    header_calls[block_number] = header_call
-                    dependencies.append(HeaderDependency(
-                        block_number=block_number,
-                        block_hash=header_hash,
-                        request_json=header_call.request_json,
-                        raw_object_id=header_call.raw_object_id,
-                        acquisition_id=header_call.acquisition_id,
-                        acquired_at=header_call.acquired_at.isoformat(),
-                    ))
+                    if block_number in seen_blocks:
+                        continue
+                    seen_blocks.add(block_number)
+                    event_blocks.append(block_number)
 
-                # When the chunk's last block also carries an event its header is already
-                # acquired and authenticated; re-requesting it would cost one redundant
-                # round trip per chunk against a metered endpoint.
-                end_call = header_calls.get(chunk_end) or self._rpc(
+                # End-block is always a single eth_getBlockByNumber: receipt identity,
+                # resume reorg checks, and pilot receipts all bind that shape. Event
+                # blocks other than chunk_end are batch/pooled; when the end block also
+                # carries events its single response is reused as the dependency.
+                end_call = self._rpc(
                     block_header_request(chunk_end),
                     event_start=chunk_end, event_end=chunk_end, receipts=receipts,
                 )
-                end_header = end_call.payload.get("result")
-                if not isinstance(end_header, dict):
-                    raise UniswapV2IngestionError("missing end-block header")
-                end_number = _hex_quantity(
-                    _require(end_header, "number", label="end-block header"),
-                    label="end-block header number",
+                end_entry = self._header_from_single_call(
+                    end_call, expected_block_number=chunk_end
                 )
-                if end_number != chunk_end:
-                    raise UniswapV2IngestionError(
-                        f"end-block header is for block {end_number}, expected {chunk_end}"
-                    )
-                end_hash = _hex_bytes(
-                    _require(end_header, "hash", label="end-block header"),
-                    32, label="end-block header hash",
+                blocks_to_batch = [number for number in event_blocks if number != chunk_end]
+                fetched = self._fetch_headers_for_blocks(
+                    blocks_to_batch, receipts=receipts
                 )
+                if chunk_end in seen_blocks:
+                    fetched[chunk_end] = end_entry
+
+                headers: dict[int, tuple[dict[str, Any], str]] = {}
+                dependencies: list[HeaderDependency] = []
+                for number in sorted(event_blocks):
+                    entry = fetched[number]
+                    headers[number] = (entry.header, entry.raw_object_id)
+                    dependencies.append(HeaderDependency(
+                        block_number=number,
+                        block_hash=entry.block_hash,
+                        request_json=entry.request_json,
+                        raw_object_id=entry.raw_object_id,
+                        acquisition_id=entry.acquisition_id,
+                        acquired_at=entry.acquired_at,
+                        batch_index=entry.batch_index,
+                    ))
+                # Deterministic receipt bytes independent of concurrent fetch order.
+                dependencies.sort(key=lambda dep: dep.block_number)
+
+                end_hash = end_entry.block_hash
+                end_request_json = end_call.request_json
+                end_raw_object_id = end_call.raw_object_id
+                end_acquisition_id = end_call.acquisition_id
+                end_acquired_at = end_call.acquired_at
 
                 if emit_rows:
                     rows.extend(decode_pair_created(
@@ -1077,7 +1566,7 @@ class UniswapV2PairCreatedIngestor:
 
                 if receipts is not None:
                     completed_at = max(
-                        [logs_call.acquired_at, end_call.acquired_at,
+                        [logs_call.acquired_at, end_acquired_at,
                          *(_parse_timestamp(dep.acquired_at, label="header acquired_at")
                            for dep in dependencies)]
                     )
@@ -1089,9 +1578,13 @@ class UniswapV2PairCreatedIngestor:
                          chunk_start, chunk_end,
                          logs_call.request_json, logs_call.raw_object_id,
                          logs_call.acquisition_id, logs_call.acquired_at.isoformat(),
-                         chunk_end, end_hash, end_call.request_json, end_call.raw_object_id,
-                         end_call.acquisition_id, end_call.acquired_at.isoformat(),
-                         json.dumps([dep.as_dict() for dep in dependencies], sort_keys=True),
+                         chunk_end, end_hash, end_request_json, end_raw_object_id,
+                         end_acquisition_id, end_acquired_at.isoformat(),
+                         json.dumps(
+                             [dep.as_dict() for dep in dependencies],
+                             sort_keys=True,
+                             separators=(",", ":"),
+                         ),
                          completed_at.isoformat(),
                          chain_call.request_json, chain_call.raw_object_id,
                          chain_call.acquisition_id, chain_call.acquired_at.isoformat()),
@@ -1111,6 +1604,52 @@ class UniswapV2PairCreatedIngestor:
 
     # -- replay ------------------------------------------------------------
 
+    @staticmethod
+    def _select_chunk_partition(
+        candidates: Sequence[ChunkReceipt],
+        *,
+        start_block: int,
+        end_block: int,
+    ) -> list[ChunkReceipt]:
+        """Pick a non-overlapping contiguous tiling of ``[start_block, end_block]``.
+
+        The pilot store (and any resumable re-chunk) may hold nested partitions
+        (for example both 5k and 10k receipts covering the same span). Loading every
+        receipt with ``start >= S AND end <= E`` then breaks continuity. Production
+        replay therefore selects, at each expected start, the longest candidate that
+        still ends within the requested range — a greedy exact partition of the range.
+        """
+        if end_block < start_block:
+            raise UniswapV2IngestionError("invalid replay range")
+        by_start: dict[int, list[ChunkReceipt]] = {}
+        for receipt in candidates:
+            if receipt.end_block < receipt.start_block:
+                raise UniswapV2IngestionError("receipt end_block precedes start_block")
+            if receipt.start_block < start_block or receipt.end_block > end_block:
+                continue
+            by_start.setdefault(receipt.start_block, []).append(receipt)
+
+        selected: list[ChunkReceipt] = []
+        expected = start_block
+        while expected <= end_block:
+            options = [
+                receipt for receipt in by_start.get(expected, [])
+                if receipt.end_block <= end_block
+            ]
+            if not options:
+                raise UniswapV2IngestionError(
+                    f"receipt coverage has a block gap at {expected} "
+                    f"(requested [{start_block}, {end_block}])"
+                )
+            # Longest chunk at this start prefers the outer partition when 5k and 10k
+            # nest; ties break by earliest end (unique under PK).
+            chosen = max(options, key=lambda receipt: (receipt.end_block, -receipt.start_block))
+            selected.append(chosen)
+            expected = chosen.end_block + 1
+        if expected != end_block + 1:
+            raise UniswapV2IngestionError("receipt coverage has a block gap")
+        return selected
+
     def replay_receipts(
         self,
         *,
@@ -1118,28 +1657,56 @@ class UniswapV2PairCreatedIngestor:
         end_block: int,
         receipt_db_path: str,
         raw_root: Path | None = None,
+        exact_chunk: bool = False,
     ) -> ReplayResult:
         """Decode only preserved receipt bytes; never contacts the network.
 
         Coverage must be exactly contiguous over the requested range, every preserved
         object must hash to the id that names it, and every response must answer the
         request the receipt records. Anything less is not a replay, it is a guess.
+
+        Range replay selects a non-overlapping chunk partition when the store holds
+        nested/mixed chunk sizes (see ``_select_chunk_partition``). When
+        ``exact_chunk`` is True, load only the receipt with this exact
+        ``(start_block, end_block)`` primary key.
         """
         root = self._resolve_raw_root(raw_root)
         conn = sqlite3.connect(receipt_db_path)
         try:
-            rows_raw = conn.execute(
-                f"SELECT {', '.join(_RECEIPT_COLUMNS)} FROM {RECEIPT_TABLE} "
-                "WHERE chain = ? AND factory = ? AND topic = ? "
-                "AND start_block >= ? AND end_block <= ? ORDER BY start_block",
-                (ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC, start_block, end_block),
-            ).fetchall()
-            receipts = [_receipt_from_row(row) for row in rows_raw]
+            if exact_chunk:
+                rows_raw = conn.execute(
+                    f"SELECT {', '.join(_RECEIPT_COLUMNS)} FROM {RECEIPT_TABLE} "
+                    "WHERE chain = ? AND factory = ? AND topic = ? "
+                    "AND start_block = ? AND end_block = ?",
+                    (
+                        ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC,
+                        start_block, end_block,
+                    ),
+                ).fetchall()
+                receipts = [_receipt_from_row(row) for row in rows_raw]
+            else:
+                rows_raw = conn.execute(
+                    f"SELECT {', '.join(_RECEIPT_COLUMNS)} FROM {RECEIPT_TABLE} "
+                    "WHERE chain = ? AND factory = ? AND topic = ? "
+                    "AND start_block >= ? AND end_block <= ? ORDER BY start_block",
+                    (
+                        ETHEREUM_CHAIN, self._factory, PAIR_CREATED_TOPIC,
+                        start_block, end_block,
+                    ),
+                ).fetchall()
+                candidates = [_receipt_from_row(row) for row in rows_raw]
+                receipts = self._select_chunk_partition(
+                    candidates, start_block=start_block, end_block=end_block
+                )
             acquisitions = _load_acquisitions(
                 conn, [aid for receipt in receipts for aid in sorted(receipt.acquisition_ids)]
             )
         finally:
             conn.close()
+        if exact_chunk and not receipts:
+            raise UniswapV2IngestionError(
+                f"no receipt for exact chunk [{start_block}, {end_block}]"
+            )
         expected = start_block
         rows: list[PairCreatedRow] = []
         raw_ids: set[str] = set()
@@ -1185,6 +1752,7 @@ class UniswapV2PairCreatedIngestor:
                     expected_block_number=dependency.block_number,
                     expected_block_hash=dependency.block_hash,
                     label=f"header for block {dependency.block_number}",
+                    batch_index=dependency.batch_index,
                 )
                 headers[dependency.block_number] = (header, dependency.raw_object_id)
 

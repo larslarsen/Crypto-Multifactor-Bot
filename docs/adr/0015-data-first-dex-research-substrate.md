@@ -2,6 +2,7 @@
 
 **Status:** ACCEPTED
 **Date:** 2026-07-28
+**Amended:** 2026-07-30 (high-throughput event acquisition)
 **Governing ticket:** DEX-003
 **Authority:** Lead Quantitative Finance Researcher/Engineer, Max architecture pass
 
@@ -165,6 +166,136 @@ from `dex_pool_daily` and `dex_universe_daily` into the existing as-of factor co
 The first experiment tests one transparent factor once. Until DEX-specific gas, pool
 fees, routing, and price impact are evidenced, its claim is limited to predictive or
 gross-return research. It cannot claim executable net return, promotion, PAPER, or LIVE.
+
+### 9. High-throughput event acquisition amendment
+
+The original scalar execution plan produces 29,709,060 `(pool, topic, 5,000-block)`
+units and requires at least 118,836,240 RPC calls before event-block headers. At the
+measured 1,811 receipts per hour it would take about 1.9 years. Adding workers cannot
+remove that request count and would make the existing SQLite/raw-writer boundaries unsafe.
+
+This amendment changes acquisition mechanics only. The complete domain, dual-provider
+authority, raw retention, temporal semantics, holdout, and blocking gates above remain
+unchanged.
+
+#### 9.1 Versioned block-major plan
+
+The authoritative event plan is identified by a canonical hash over:
+
+- the accepted `dex_pool_registry` dataset ID;
+- Ethereum chain and canonical factory identities;
+- deployment anchor 10,000,835 and cutoff block 25,600,000;
+- 5,000-block root windows;
+- the ordered Swap and Sync topics;
+- initial address-cohort size and deterministic split-policy version;
+- credential-free provider organization identities;
+- log-identity and receipt schema versions.
+
+For each root window, include every registry pool born on or before the window end. Sort
+addresses deterministically and partition them into initial cohorts. The initial cohort
+candidate is 64 addresses and is frozen only after the live provider matrix passes.
+
+Each provider receives the same filter with an address array and a topic-position OR for
+Swap and Sync. A pool born inside a root is covered only from its creation block, even
+though the shared filter starts at the root boundary. Topic-combined acquisition does not
+combine semantic rows: replay still partitions by pool address and event topic.
+
+At 64 addresses this plan has 233,694 root filters before adaptive splits, a 127x
+reduction from the scalar filter count.
+
+#### 9.2 Deterministic adaptive leaves
+
+Every query node has a deterministic ID derived from the plan ID and its block interval,
+sorted address set, and topic set. A parent contributes no coverage after it is split.
+Terminal agreed children must form a disjoint, exact partition of the parent domain.
+
+- HTTP 429 and quota pressure trigger bounded backoff and lower concurrency, not splitting.
+- Explicit block-range limits split the block interval.
+- Oversized bodies/results, provider result-limit errors, or repeated size-related timeouts
+  split the address set first; singleton-address nodes then split the block interval.
+- A successful response at or above a configured conservative log/body cap is split before
+  it may become authority.
+- Provider disagreement is retained, retried only under the versioned policy, and then
+  split to localize the disagreement. One address at one block remains fail-closed.
+
+All started provider responses, including failed and superseded parent attempts, are
+retained before cancellation or retry.
+
+#### 9.3 Dual-provider identity v2
+
+Paired provider calls run concurrently but are authoritative only after both raw responses
+are durably retained and reconciled. Provider independence is by organization, not URL,
+label, endpoint, or API key. Multiple keys from one vendor remain one authority.
+
+The v2 order-independent log identity includes every field that can affect a published
+row: address, block number/hash, transaction hash/index, log index, all topics, data, and
+removed status. This corrects the v1 digest omission of `transactionIndex`. Malformed,
+removed, duplicate, out-of-range, out-of-cohort, or unsupported-topic logs fail closed.
+
+#### 9.4 Durable scheduler and persistence ownership
+
+Query state is database-authoritative: `PENDING -> IN_FLIGHT -> AGREED` or `SPLIT`, with
+expiring leases for crash recovery. JSON cursors and pool offsets are progress displays,
+never completeness authority. Duplicate workers must converge on one terminal node and
+verify the winner rather than race terminal inserts.
+
+Network workers perform bounded HTTP only and return bounded response envelopes or spool
+descriptors. One persistence coordinator owns raw-object/catalog registration, receipt
+mutations, failure/disagreement records, and deterministic commit ordering. SQLite
+connections and `RawObjectWriter` instances are not shared across worker threads.
+
+Provider-global token buckets and in-flight limits cover every RPC method. Primary and
+secondary calls for one node may overlap, and multiple nodes may be in flight, but all
+started responses are drained and retained before stop-on-error completes. Queue depth,
+response bytes, memory, retries, 429s, and writer latency are bounded and reported.
+
+#### 9.5 Global canonical headers
+
+Acquire each required event or boundary block header once per provider authority, then
+persist one dual-agreed canonical-header receipt. Both providers must agree on block hash
+and timestamp. Event leaves reference these shared receipts instead of reacquiring the
+same block header for each pool/topic query. The in-memory header cache is bounded; the
+receipt/raw store is the durable cache.
+
+#### 9.6 Exact per-pool coverage
+
+For every selected pool and each of Swap and Sync, the expected domain is the inclusive
+block interval from pool creation through cutoff. Terminal `AGREED` v2 leaves must form an
+exact, non-overlapping union of that domain after birth clamping. The coverage product
+records expected/covered block counts, first/last block, leaf/event counts, gaps,
+overlaps, unresolved failures/disagreements, and a deterministic hash of supporting
+receipts.
+
+An agreed empty leaf proves no matching event. A missing leaf remains `UNAVAILABLE`.
+Existing scalar v1 receipts and the accepted pilot remain audit/cross-check evidence but
+receive no v2 coverage credit; v2 reacquires their domains to avoid mixed digest and
+receipt semantics.
+
+#### 9.7 Separate provider phases
+
+Event logs use independent Infura and BlockPI authority. Historical token metadata uses
+independent Infura and Alchemy archive authority. The orchestrator exposes explicit event
+and metadata phases rather than forcing one provider pair to support both workloads.
+Token metadata calls authenticate Ethereum chain identity before durable receipt credit.
+
+#### 9.8 Performance and validity gates
+
+Before a full v2 run:
+
+1. Batched offline replay must equal the union of scalar reference rows, including empty
+   results and pools born inside a root window.
+2. Identity-v2 tests must reject a secondary-only difference in every published log field.
+3. Live 1/8/32/64/128-address filters over sparse, medium, and hot pre-2025 ranges must
+   equal scalar reference queries from both providers.
+4. Forced address and block splitting must conserve the exact parent domain and result
+   union.
+5. Shared headers must remain fully replayable while eliminating duplicate acquisition.
+6. Crash tests at every persistence boundary must resume without lost evidence,
+   duplicate coverage, or unauthenticated completion.
+7. A 6-24 hour endurance pilot must achieve at least 20x the scalar baseline under the
+   same provider quotas with bounded memory, queues, retries, and SQLite latency.
+8. Final publication still requires zero coverage gaps/overlaps and zero unresolved
+   provider disagreement for every pool/topic domain.
 
 ## Consequences
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 
 class ChecksumAlgorithm(str, Enum):
@@ -77,7 +77,8 @@ class AcquisitionMetadata:
 
     source_id: str
     acquisition_id: str | None = None
-    request: Mapping[str, Any] = field(default_factory=dict)
+    # Mapping for single JSON-RPC calls; Sequence for JSON-RPC batch arrays.
+    request: Mapping[str, Any] | Sequence[Any] = field(default_factory=dict)
     response_metadata: Mapping[str, Any] = field(default_factory=dict)
     original_name: str | None = None
     provider_checksum: ProviderChecksum | None = None
@@ -163,7 +164,7 @@ class FailedAcquisitionRecord:
     source_id: str
     status: str
     error_message: str
-    request: Mapping[str, Any]
+    request: Mapping[str, Any] | Sequence[Any]
     checksum_algorithm: str | None
     checksum_value: str | None
     checksum_verification: ChecksumVerification

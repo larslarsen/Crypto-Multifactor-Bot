@@ -44,9 +44,25 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
-def _dumps(value: Mapping[str, Any] | None) -> str:
+def _request_value(value: Any) -> Any:
+    """Normalize request for provenance snapshots (object or JSON-RPC batch array)."""
+    if value is None:
+        return {}
+    if isinstance(value, Mapping):
+        return dict(value)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return list(value)
+    return value
+
+
+def _dumps(value: Any) -> str:
+    """Serialize acquisition request/response metadata.
+
+    Requests are normally JSON objects, but JSON-RPC batches are arrays. Both
+    must round-trip byte-stably for receipt-bound authentication.
+    """
     return json.dumps(
-        dict(value or {}),
+        _request_value(value),
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
@@ -54,13 +70,10 @@ def _dumps(value: Mapping[str, Any] | None) -> str:
     )
 
 
-def _loads_obj(text: str | None) -> dict[str, Any]:
+def _loads_obj(text: str | None) -> Any:
     if not text:
         return {}
-    data = json.loads(text)
-    if not isinstance(data, dict):
-        return {}
-    return data
+    return json.loads(text)
 
 
 def _sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
@@ -227,7 +240,7 @@ def _provenance_snapshot(
     return {
         "source_id": metadata.source_id,
         "raw_object_id": raw_object_id,
-        "request": dict(metadata.request),
+        "request": _request_value(metadata.request),
         "response_metadata": dict(metadata.response_metadata),
         "original_name": metadata.original_name,
         "checksum_algorithm": algo,
@@ -585,7 +598,7 @@ class SqliteRawObjectCatalog:
             checksum_verification=checksum_verification,
             raw_object_id=None,
         )
-        failure = {"error": error_message, "request": dict(metadata.request)}
+        failure = {"error": error_message, "request": _request_value(metadata.request)}
         now = _utc_now()
 
         existing = self.get_acquisition(acquisition_id)
@@ -603,7 +616,7 @@ class SqliteRawObjectCatalog:
                         source_id=str(existing["source_id"]),
                         status="FAILED",
                         error_message=error_message,
-                        request=dict(metadata.request),
+                        request=_request_value(metadata.request),
                         checksum_algorithm=algo,
                         checksum_value=cval,
                         checksum_verification=checksum_verification,
@@ -655,7 +668,7 @@ class SqliteRawObjectCatalog:
             source_id=metadata.source_id,
             status="FAILED",
             error_message=error_message,
-            request=dict(metadata.request),
+            request=_request_value(metadata.request),
             checksum_algorithm=algo,
             checksum_value=cval,
             checksum_verification=checksum_verification,
