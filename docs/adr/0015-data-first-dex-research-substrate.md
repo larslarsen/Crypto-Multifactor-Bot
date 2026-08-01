@@ -296,6 +296,11 @@ Before a full v2 run:
    same provider quotas with bounded memory, queues, retries, and SQLite latency.
 8. Final publication still requires zero coverage gaps/overlaps and zero unresolved
    provider disagreement for every pool/topic domain.
+9. The endurance evidence must project full event-log plus shared-header acquisition to a
+   target of seven days and a hard maximum of fourteen days, including observed adaptive
+   split/retry amplification. Projected retained evidence must fit available storage with at
+   least 2x free-disk headroom. A projection above either hard bound stops full acquisition
+   for redesign even if the 20x relative-throughput floor passes.
 
 ## Consequences
 

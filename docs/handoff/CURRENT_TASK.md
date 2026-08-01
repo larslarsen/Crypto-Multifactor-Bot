@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Sol 5.6 High - re-review integrated v2 matrix harness
+Next required actor: Sr Dev - Grok Build - replace rejected matrix harness with fresh-run design
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -403,3 +403,83 @@ parquet SHA-256 `8e41a9fb1e1b05f126345ca0a7a9eb04792cd0e92d45406a9b5c031105d8325
 contract, with anchor `0x3139ffc91b99aa94da8a2dc13f1fc36f9bdc98ee` and birth boundary 10,388,500.
 Plan-only remains non-PASS by design; no RPC call was made, and no live matrix execution,
 endurance, or downstream phase is authorized. Sol re-review is the next required actor.
+
+## Sol review - Jr integration rejected at c9819c2
+
+Sol reviewed commit `c9819c2`. The integrated scope is correct, the frozen matrix suite passes
+32/32, the repository-control suite passes 17/17, targeted ruff passes, repository control
+passes, and plan-only preserves the frozen matrix ID. No RPC call was made. The integration is
+nevertheless rejected because passing tests do not execute several promised production paths.
+
+Independent offline probes against the committed source confirmed that:
+
+- changing `registry_parquet_sha256` in `plan.json` while retaining the old matrix ID is accepted;
+- reserializing the catalog to noncanonical bytes is accepted despite the byte-exact contract;
+- deleting one call's attempt row, logical state, and sidecar is accepted as a lower prior count;
+- deleting `matrix_state.sqlite3` causes constructor-time recreation before authentication and
+  the rolled-back store is accepted;
+- an older run can write after a newer PASS and restore itself as `current_run` because the
+  claimed CAS has no expected predecessor/generation argument; and
+- an endpoint/credential string beyond the retained response cap is drained without scanning and
+  the safe-looking prefix is promoted.
+
+Additional review found incomplete live-snapshot authentication, mutable resume budgets/wall
+time, non-atomic raw/row/sidecar promotion, missing attempt run-ID authentication, report hashes
+that bind counts rather than the complete evidence set, and tests that assert helper shapes or
+hand-written booleans instead of stale-writer, production PASS, direct HTTP, reservation-failure,
+safety-report, and constructor-failure paths.
+
+The bespoke resumable matrix state machine is retired before any live use. A 1,568-call provider
+preflight does not justify a second durable scheduler beside the already accepted production v2
+engine. No matrix evidence exists that requires backward compatibility.
+
+Grok is authorized to replace, not patch, the matrix implementation and senior-authored tests in
+exactly these files:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_matrix.py`
+- `scripts/research/run_uniswap_v2_pair_events_v2_matrix.py`
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py`
+
+The replacement contract is intentionally smaller:
+
+1. Keep the frozen registry, cohort hashes, ranges, providers, topics, 15 cells, 1,568 logical
+   calls, retry/request/byte/time/concurrency ceilings, scalar-union equality, identity-v2, and
+   credential-free reporting contract above.
+2. Remove SQLite, resume, `current_run`, pointer generations, mutable shared call state, and all
+   compatibility code. Every live attempt uses a new exclusive run directory. An interrupted,
+   failed, or incomplete run receives no PASS and is rerun from the beginning in another fresh
+   directory.
+3. Write one exclusive immutable plan/catalog at run start, exclusive attempt receipts and
+   race-safe content-addressed raw objects during execution, then exactly one exclusive terminal
+   `COMPLETE.json` or `FAILED.json`. The terminal manifest must enumerate and hash every allowed
+   file; missing, extra, duplicate, changed, or path-escaping evidence fails authentication.
+4. Standalone replay takes an explicit completed live run directory. It is strictly read-only for
+   that directory, authenticates the terminal manifest and every plan/catalog/attempt/raw file,
+   recomputes all 15 cells and the complete evidence hash, and writes any replay result only to a
+   separate new output path. There is no implicit latest/current run.
+5. Stream each response once into its unique bounded spool while hashing and scanning all bytes,
+   including bytes beyond the retention cap and scanner chunk boundaries. Reserve retained-byte
+   capacity before starting a request. Credential evidence is never persisted; truncation,
+   malformed/empty/missing-result evidence, budget breach, or unauthenticated body cannot become
+   successful authority.
+6. Use a real per-provider semaphore plus RPS limiter and bounded submission. On safety stop,
+   submit nothing new, drain only already-started responses, retain credential-free evidence, and
+   seal `FAILED.json`. Close all owned clients/spools on every path.
+7. Reports must include complete bounded call/provider/cell metrics and distinct evidence/report
+   hashes. PASS requires dual mainnet authentication, all 15 cells PASS, and in-process
+   zero-network replay of the just-sealed evidence. It grants no coverage or downstream authority.
+
+Grok must replace the test suite with tests that execute public production paths. Required tests
+include one complete 1,568-call fake live run plus explicit read-only standalone replay; exact
+request-count and cohort/range assertions; missing/extra/tampered plan/catalog/attempt/raw/terminal
+files; path escapes; duplicate attempts/logs; equal-body promotion races; per-provider in-flight
+high-water; stop/drain behavior; reservation exhaustion; credential strings before, across, and
+after the retained cap; malformed/empty/missing-result responses; truncation; provider errors and
+disagreement; immutable terminal collision; incomplete-run non-PASS; full metrics; and resource
+closure. Tests use only fake transports and temporary paths. Grok writes but does not run them;
+Jr integrates the replacement and runs the unchanged suite.
+
+No live matrix, endurance, production acquisition, coverage credit, or downstream work is
+authorized. After eventual matrix acceptance, endurance must project full logs plus shared headers
+to a target of seven days and a hard maximum of fourteen days, with at least 2x free-disk headroom;
+otherwise acquisition stops for redesign.
