@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: DEX-003
-State: AWAITING_REVIEW
-Next required actor: Sol 5.6 High
+State: IN_PROGRESS
+Next required actor: Sol 5.6 High - authorize bounded v2 live matrix separately
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -148,49 +148,21 @@ Complete-truncated recovery proves persisted bytes/hash equal the retained spool
 both spool and journal. Credential coverage reads a live test spool journal and persisted
 event/raw-acquisition JSON and proves neither endpoint nor key appears. The 0019 migration
 target gains the secondary engine-event mismatch tests (raw-object and acquisition). All five
-v2 targets pass 155 focused tests, targeted ruff passes, and repository control passes. DEX-003
-remains AWAITING_REVIEW for Sol 5.6 High; next ticket remains NONE.
+v2 targets pass 155 focused tests, targeted ruff passes, and repository control passes. Sol
+accepts the complete engine integration at test-only follow-up commit `ad30bf9`; the heartbeat
+path also passes five repeated runs. Accepted source and migrations 0018/0019 are unchanged.
 
 ## Governing documents
 
 - tickets/DEX-003.md
 - docs/adr/0015-data-first-dex-research-substrate.md
 
-## Authorization
+## Acceptance
 
-Jr makes one test-only follow-up commit. Do not edit production source or migrations 0018/0019;
-both migrations and the applied database are accepted. Do not amend `8bbfd0e`.
+The bounded v2 engine integration, migrations 0018/0019, applied database state, and focused
+offline evidence are accepted at `ad30bf9`. No further engine source, migration, or integration
+test work is authorized.
 
-1. Replace `test_heartbeat_servicing_during_streaming_persistence`: create a real claim, hold
-   a multi-chunk raw stream behind thread events, enqueue `renew_lease` while persistence is
-   still blocked, release one chunk, and assert renewal completes and advances `expires_at`
-   before the persistence future completes.
-2. Replace the policy test with a same-plan resume using a second engine configured with a
-   changed `http_timeout_seconds` and, parametrically, `command_offer_timeout_seconds`; do not
-   mutate the stored policy row. Assert initialization rejects each changed setting.
-3. Add cached chain/header raw replay tests that tamper one complete-success metadata field
-   (`truncated`, status, or byte count) and one canonical raw identity (file bytes or
-   `storage_uri`), then call the public coordinator load path and assert authentication fails.
-4. Fix the unsplittable fixture so both unique logs and required header are at the singleton's
-   exact block. Extend the existing process-path transport terminal test to assert one terminal
-   receipt with exact mode, attempt, domain, and recomputed receipt ID.
-5. Replace the progressed-child test: commit a parent SPLIT, progress one exact child to
-   `IN_FLIGHT`, call parent `resolve_winner(split_reason=...)`, assert `split_winner`, and compare
-   every child ID, parent, bounds, addresses, topics, and reason to `split_node` output.
-6. Replace the early-loss test: seed a durable terminal winner with mode `transport`, force
-   `_lease_lost` true, call `_route_failure` with a different max-attempt candidate, assert mode
-   mismatch, and assert its failure plus terminal-candidate events were durably inserted. This
-   must execute `_route_failure`, not call `resolve_winner` directly.
-7. Strengthen retry rollback assertions: node remains `IN_FLIGHT`, attempt unchanged, exact
-   lease remains, and the pre-existing conflicting event is byte-identical. Assert
-   `FAILURE_ROUTE_PRECEDENCE` equals the exact accepted tuple, not only the same set.
-8. Complete-truncated recovery must assert persisted bytes/hash equal the retained spool and
-   both spool/journal are removed. Credential coverage must read a live test spool journal and
-   persisted event/raw-acquisition JSON and prove neither endpoint nor key appears.
-9. Add the missing secondary engine-event mismatch test in the 0019 migration target. Then run
-   the five v2 targets, targeted ruff, and repository control; update records and create/push a
-   new follow-up commit.
-
-No acquisition, dataset publication, metadata/downstream transforms, factor design, PAPER,
-or LIVE work is authorized. Return the commit hash and focused command evidence for Sol
-review. Next ticket remains `NONE`.
+No live matrix, endurance pilot, acquisition, dataset publication, metadata/downstream
+transforms, factor design, PAPER, or LIVE work is authorized by this acceptance. The next
+phase requires a separate bounded Sol authorization. Next ticket remains `NONE`.
