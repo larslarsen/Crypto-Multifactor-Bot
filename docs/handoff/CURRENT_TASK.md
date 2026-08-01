@@ -96,7 +96,7 @@ Sol rejected the prior integration because 0018 paired acquisition/raw only for 
 identity, leaving engine events, canonical header receipts, and leaf receipts without
 composite pairing FKs, and several engine tests were placeholders.
 
-Jr applied the authorized correction. Migration 0019
+Jr applied the migration correction in follow-up commit `8bbfd0e`. Migration 0019
 (`0019_uniswap_v2_pair_event_v2_engine_raw_fks.sql`) rebuilds
 `uniswap_v2_pair_event_v2_engine_event`, `uniswap_v2_pair_event_v2_canonical_header_receipt`,
 and `uniswap_v2_pair_event_v2_leaf_receipt` with mandatory primary and secondary composite
@@ -109,18 +109,47 @@ intact). Tests cover fresh apply and a populated 0018 upgrade with surviving
 plan/node/header/leaf/dependency/event/raw rows and empty `PRAGMA foreign_key_check`, grouped
 `PRAGMA foreign_key_list` signatures proving both pairing FKs plus exact RESTRICT actions,
 primary and secondary mismatch insert rejection for event/header/leaf, delete/update RESTRICT,
-and atomic rollback on an invalid legacy row. The engine placeholders were replaced with real
-path tests: complete and complete-truncated spool journal recovery, incomplete
-(`spool_incomplete`) and missing-spool (`spool_missing_after_start`) recovery, pre-start
-reservation cleanup, malformed-journal retention, occupancy-overflow startup failure, and
-deterministic mixed-failure precedence across every `FailureClass`. 142 focused tests pass
-across the five v2 targets, targeted ruff passes, and repository control passes.
+and atomic rollback on an invalid legacy row. Sol accepts migration 0019 and its applied
+database state. The test-only portion remains rejected because several named tests still do
+not execute their promised paths: heartbeat has no claim/renewal or blocked stream; cached raw
+authentication is absent; policy resume still tampers stored JSON; unsplittable logs remain
+outside the singleton domain; progressed-child winner and early `_route_failure` are not
+called; and normal process terminal/credential persistence are not asserted. The 142 focused
+tests pass, but passing placeholders are not acceptance evidence.
 
 0019 was applied to `dex003_full.db`: 19 migrations recorded with 0018 checksum unchanged
 (`9acb1f1586392ced1ab9f1845906f650c5bb42eb6c9f5c487e74806821089922`), `PRAGMA
 foreign_key_check` is empty, all 548,721 raw_acquisition and 509,711 raw_object rows are
 preserved, all v2 acquisition tables remain empty, and the three rebuilt tables carry the
 composite pairing FKs.
+
+The test-only follow-up replaces the rejected placeholder tests with paths that actually
+execute their promises. Heartbeat now creates a real claim, holds a multi-chunk raw stream
+behind thread events, renews the lease while persistence is blocked, and asserts the renewal
+advances `expires_at` before the persistence future completes. Policy resume uses a second
+engine on the same plan with a changed `http_timeout_seconds` and, parametrically, changed
+`command_offer_timeout_seconds`, rejecting each without mutating the stored policy row. Cached
+chain and cached header replay tamper one complete-success metadata field (`truncated`, status)
+and one canonical raw identity (file bytes, `storage_uri`), then re-run the public load path
+and fail closed (`cached chain identity load failed` / `retry:authentication`). The unsplittable
+fixture puts both unique logs and the required header at the singleton's exact block and
+asserts the exact terminal receipt (mode, attempt, domain, recomputed receipt ID). The
+process-path transport terminal asserts one receipt with exact mode, attempt, domain, and
+recomputed ID. The progressed-child test commits a parent SPLIT through `process_one`,
+progresses one exact child to `IN_FLIGHT`, calls the parent `resolve_winner(split_reason=...)`,
+asserts `split_winner`, and compares every child ID, parent, bounds, addresses, topics, and
+reason to the `split_node` output. Early-loss executes `_route_failure` with `_lease_lost`
+true: a durable transport-mode winner is seeded, a max-attempt persistence candidate routes
+through `_route_failure`, the winner-mode mismatch is rejected, and the candidate's failure
+plus terminal-blocker events are durably inserted. Retry rollback keeps the node `IN_FLIGHT`
+with unchanged attempt and the exact lease, and the pre-existing conflicting event is
+byte-identical; `FAILURE_ROUTE_PRECEDENCE` is asserted as the exact accepted tuple.
+Complete-truncated recovery proves persisted bytes/hash equal the retained spool and removes
+both spool and journal. Credential coverage reads a live test spool journal and persisted
+event/raw-acquisition JSON and proves neither endpoint nor key appears. The 0019 migration
+target gains the secondary engine-event mismatch tests (raw-object and acquisition). All five
+v2 targets pass 155 focused tests, targeted ruff passes, and repository control passes. DEX-003
+remains AWAITING_REVIEW for Sol 5.6 High; next ticket remains NONE.
 
 ## Governing documents
 
@@ -129,39 +158,38 @@ composite pairing FKs.
 
 ## Authorization
 
-Jr makes only the correction below. Do not edit migration 0018 or production engine source;
-both are already committed/applied or source-accepted. Create a new commit, never amend
-`741e0ba`.
+Jr makes one test-only follow-up commit. Do not edit production source or migrations 0018/0019;
+both migrations and the applied database are accepted. Do not amend `8bbfd0e`.
 
-1. Add forward migration 0019. Rebuild `engine_event`, `canonical_header_receipt`, and
-   `leaf_receipt` with mandatory primary and secondary composite FKs
-   `(acquisition_id, raw_object_id) REFERENCES raw_acquisition(acquisition_id, raw_object_id)
-   ON DELETE RESTRICT ON UPDATE RESTRICT`. Preserve every existing column/check/FK/index and
-   all rows. Rebuild the leaf-header dependency table around the parent swaps so same-plan
-   composite ownership remains valid. Copying any legacy mismatched row must fail atomically.
-2. Keep the applied 0018 checksum unchanged. Test 0019 both from a fresh database and as an
-   upgrade from 0018 containing valid non-empty raw, plan, node, header, leaf, dependency, and
-   event rows; prove all rows survive and `PRAGMA foreign_key_check` is empty.
-3. Add direct schema assertions grouping `PRAGMA foreign_key_list` rows and proving both
-   pairing FKs plus exact RESTRICT actions exist on each of the three rebuilt tables. Add
-   primary and secondary mismatch insert tests for event/header/leaf, and delete/update
-   RESTRICT tests. Add one invalid-legacy-row upgrade test proving 0019 rolls back and is not
-   entered in migration history.
-4. Replace the engine placeholders with real path tests: complete-truncated and incomplete
-   journal recovery; lease renewal while raw streaming is actively blocked; cached raw replay
-   rejection for incomplete metadata or noncanonical bytes/path; simultaneous mixed-failure
-   precedence; progressed child winner verification with exact partition fields; retry
-   rollback after injected event insertion failure; valid in-domain unsplittable logs; normal
-   process-path terminal receipt; and actual early `_route_failure` lease-loss mode/event
-   persistence with winner-mode mismatch rejection.
-5. Resume policy testing must instantiate the same plan with changed accepted timeout/policy
-   settings rather than tampering with stored JSON. Credential tests must inspect persisted
-   spool/event/acquisition metadata rather than asserting that request JSON never contained
-   the endpoint.
-6. Run the four authorized v2 targets, targeted ruff, and repository control. Apply 0019 to
-   `dex003_full.db`; verify both migration checksums, empty `foreign_key_check`, zero v2
-   acquisition rows, and composite pairing FKs on event/header/leaf. Update ticket/handoff,
-   create a follow-up commit, push, and return the hash plus command evidence.
+1. Replace `test_heartbeat_servicing_during_streaming_persistence`: create a real claim, hold
+   a multi-chunk raw stream behind thread events, enqueue `renew_lease` while persistence is
+   still blocked, release one chunk, and assert renewal completes and advances `expires_at`
+   before the persistence future completes.
+2. Replace the policy test with a same-plan resume using a second engine configured with a
+   changed `http_timeout_seconds` and, parametrically, `command_offer_timeout_seconds`; do not
+   mutate the stored policy row. Assert initialization rejects each changed setting.
+3. Add cached chain/header raw replay tests that tamper one complete-success metadata field
+   (`truncated`, status, or byte count) and one canonical raw identity (file bytes or
+   `storage_uri`), then call the public coordinator load path and assert authentication fails.
+4. Fix the unsplittable fixture so both unique logs and required header are at the singleton's
+   exact block. Extend the existing process-path transport terminal test to assert one terminal
+   receipt with exact mode, attempt, domain, and recomputed receipt ID.
+5. Replace the progressed-child test: commit a parent SPLIT, progress one exact child to
+   `IN_FLIGHT`, call parent `resolve_winner(split_reason=...)`, assert `split_winner`, and compare
+   every child ID, parent, bounds, addresses, topics, and reason to `split_node` output.
+6. Replace the early-loss test: seed a durable terminal winner with mode `transport`, force
+   `_lease_lost` true, call `_route_failure` with a different max-attempt candidate, assert mode
+   mismatch, and assert its failure plus terminal-candidate events were durably inserted. This
+   must execute `_route_failure`, not call `resolve_winner` directly.
+7. Strengthen retry rollback assertions: node remains `IN_FLIGHT`, attempt unchanged, exact
+   lease remains, and the pre-existing conflicting event is byte-identical. Assert
+   `FAILURE_ROUTE_PRECEDENCE` equals the exact accepted tuple, not only the same set.
+8. Complete-truncated recovery must assert persisted bytes/hash equal the retained spool and
+   both spool/journal are removed. Credential coverage must read a live test spool journal and
+   persisted event/raw-acquisition JSON and prove neither endpoint nor key appears.
+9. Add the missing secondary engine-event mismatch test in the 0019 migration target. Then run
+   the five v2 targets, targeted ruff, and repository control; update records and create/push a
+   new follow-up commit.
 
 No acquisition, dataset publication, metadata/downstream transforms, factor design, PAPER,
 or LIVE work is authorized. Return the commit hash and focused command evidence for Sol

@@ -435,6 +435,22 @@ class TestEngineEventRawFKs:
         conn.commit()
         return plan_id, acq_id, raw_id, ""
 
+    def _setup_dual(
+        self, conn: sqlite3.Connection
+    ) -> tuple[str, str, str, str, str]:
+        """Plan plus a primary and a secondary raw_acquisition pair."""
+        _insert_plan(conn, PlanConfig())
+        conn.commit()
+        plan_id = conn.execute(
+            f"SELECT plan_id FROM {PLAN_TABLE}"
+        ).fetchone()[0]
+        acq_p, raw_p = _next_acq_id(), _next_raw_id()
+        acq_s, raw_s = _next_acq_id(), _next_raw_id()
+        _insert_raw_acquisition(conn, acq_p, raw_p)
+        _insert_raw_acquisition(conn, acq_s, raw_s)
+        conn.commit()
+        return plan_id, acq_p, raw_p, acq_s, raw_s
+
     def test_valid_event_insert_accepted(self, tmp_path: Path) -> None:
         _, _, conn = _applied_db(tmp_path)
         plan_id, acq_id, raw_id, _ = self._setup(conn)
@@ -531,6 +547,58 @@ class TestEngineEventRawFKs:
                     "1", plan_id, None, 0, "failure", "transport", "retry",
                     "primary", '{"jsonrpc": "2.0"}',
                     "raw_present", None, None, None, '{}', "2026-01-01T00:00:00Z",
+                ),
+            )
+        conn.close()
+
+    def test_secondary_mismatched_raw_object_rejected(self, tmp_path: Path) -> None:
+        _, _, conn = _applied_db(tmp_path)
+        plan_id, _, _, acq_s, raw_s = self._setup_dual(conn)
+        # raw_other exists but is not paired with acq_s → composite FK violation
+        raw_other = _next_raw_id()
+        _insert_source(conn, "ethereum_json_rpc")
+        conn.execute(
+            "INSERT INTO raw_object (raw_object_id, source_id, sha256, byte_size, "
+            "storage_uri, status, acquired_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (raw_other, "ethereum_json_rpc", _next_raw_id(), 100, "raw/x", "PRESENT", "2026-01-01T00:00:00Z"),
+        )
+        with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
+            conn.execute(
+                f"INSERT INTO {ENGINE_EVENT_TABLE_NAME} "
+                "(event_id, schema_version, plan_id, domain_id, attempt, event_kind, "
+                "failure_class, decision, provider_org, request_json, "
+                "primary_raw_object_id, secondary_raw_object_id, "
+                "primary_acquisition_id, secondary_acquisition_id, detail_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"evt_{_next_raw_id()[:64]}",
+                    "1", plan_id, None, 0, "failure", "transport", "retry",
+                    "secondary", '{"jsonrpc": "2.0"}',
+                    None, raw_other, None, acq_s, '{}', "2026-01-01T00:00:00Z",
+                ),
+            )
+        conn.close()
+
+    def test_secondary_mismatched_acquisition_rejected(self, tmp_path: Path) -> None:
+        _, _, conn = _applied_db(tmp_path)
+        plan_id, _, _, acq_s, raw_s = self._setup_dual(conn)
+        # acq_other is paired with a different raw_object_id than raw_s
+        acq_other = _next_acq_id()
+        raw_other = _next_raw_id()
+        _insert_raw_acquisition(conn, acq_other, raw_other)
+        with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
+            conn.execute(
+                f"INSERT INTO {ENGINE_EVENT_TABLE_NAME} "
+                "(event_id, schema_version, plan_id, domain_id, attempt, event_kind, "
+                "failure_class, decision, provider_org, request_json, "
+                "primary_raw_object_id, secondary_raw_object_id, "
+                "primary_acquisition_id, secondary_acquisition_id, detail_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"evt_{_next_raw_id()[:64]}",
+                    "1", plan_id, None, 0, "failure", "transport", "retry",
+                    "secondary", '{"jsonrpc": "2.0"}',
+                    None, raw_s, None, acq_other, '{}', "2026-01-01T00:00:00Z",
                 ),
             )
         conn.close()

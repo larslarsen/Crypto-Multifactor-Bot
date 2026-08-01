@@ -40,12 +40,16 @@ from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
     QueryNode,
     RegistryPoolBirth,
     build_acquisition_plan_v2,
+    request_for_domain,
+    split_node,
 )
 from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
     CHAIN_IDENTITY_TABLE,
     ENGINE_EVENT_RECORD_COLUMNS,
     ENGINE_EVENT_TABLE,
+    EXECUTION_POLICY_TABLE,
     FAILURE_ROUTE_PRECEDENCE,
+    HEADER_TABLE,
     LEAF_TABLE,
     NODE_TABLE,
     SPOOL_DESCRIPTOR_SCHEMA_VERSION,
@@ -59,6 +63,7 @@ from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
     PersistedEnvelope,
     SpoolDescriptor,
     SOURCE_ID,
+    _ActiveWork,
     _FailureFact,
     _PairFailure,
     _TokenBucket,
@@ -254,6 +259,8 @@ def _engine(
     max_nodes_in_flight: int = 1,
     backoff_base_seconds: float = 0.01,
     backoff_max_seconds: float = 0.02,
+    http_timeout_seconds: float = 60.0,
+    command_offer_timeout_seconds: float = 60.0,
 ) -> PairEventV2Engine:
     config = EngineConfig(
         receipt_db_path=store.db,
@@ -272,6 +279,8 @@ def _engine(
         max_in_flight_per_provider=4,
         backoff_base_seconds=backoff_base_seconds,
         backoff_max_seconds=backoff_max_seconds,
+        http_timeout_seconds=http_timeout_seconds,
+        command_offer_timeout_seconds=command_offer_timeout_seconds,
     )
     return PairEventV2Engine(
         config,
@@ -392,6 +401,102 @@ def test_engine_event_record_rejects_sensitive_detail() -> None:
         )
 
 
+def test_spool_journal_and_persisted_artifacts_are_credential_free(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Live spool journals, engine events, and raw acquisitions never leak the endpoint or key.
+
+    The engine runs against credential-bearing URLs (https://primary.example/v3/KEY
+    and https://secondary.example/v1/KEY). The spool journal is read live from disk,
+    and the persisted engine-event and raw-acquisition JSON are read back from the
+    receipt database; neither the endpoint host, the key path segment, nor the key
+    material may appear in any of them.
+    """
+    # 1. Live NetworkWorker fetch writes a journal beside the retained spool.
+    payload = _rpc_ok("0x1")
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, content=payload))
+    )
+    worker = NetworkWorker(
+        client=client,
+        rpc_url="https://primary.example/v3/KEY",
+        provider_org="infura",
+        bucket=_TokenBucket(rate=1000.0, capacity=2.0),
+        limiter=__import__(
+            "cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine",
+            fromlist=["_AdaptiveLimiter"],
+        )._AdaptiveLimiter(2),
+        spool_dir=store.spool_dir,
+        spool_capacity=threading.BoundedSemaphore(4),
+        max_body_bytes=1_000_000,
+        chunk_bytes=16,
+        response_drain_deadline_seconds=30.0,
+    )
+    descriptor = None
+    try:
+        descriptor = worker.fetch(
+            {"jsonrpc": "2.0", "id": 1, "method": "eth_chainId", "params": []}
+        )
+        assert descriptor.journal_path is not None
+        assert descriptor.journal_path.exists()
+        journal_text = descriptor.journal_path.read_text()
+        assert "primary.example" not in journal_text
+        assert "/v3/" not in journal_text
+        assert "KEY" not in journal_text
+        assert json.loads(journal_text)["request"]["method"] == "eth_chainId"
+    finally:
+        client.close()
+        if descriptor is not None:
+            if descriptor.journal_path is not None:
+                descriptor.journal_path.unlink(missing_ok=True)
+            if descriptor.spool_path is not None:
+                descriptor.spool_path.unlink(missing_ok=True)
+
+    # 2. End-to-end transport failure persists engine events and raw acquisitions.
+    class TransportFail(RpcFixture):
+        def _handle(self, request: httpx.Request, *, org: str) -> httpx.Response:
+            body = json.loads(request.content)
+            method = str(body.get("method", ""))
+            if method == "eth_chainId":
+                return httpx.Response(
+                    200, content=_rpc_ok("0x1", req_id=body.get("id", 1))
+                )
+            if method == "eth_getLogs":
+                raise httpx.ConnectError("transport down")
+            return super()._handle(request, org=org)
+
+    broken = TransportFail()
+    engine = _engine(store, broken, max_attempts=1)
+    try:
+        plan = engine.initialize(
+            [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        )
+        engine.authenticate_chain()
+        assert engine.process_one() == "terminal:transport"
+
+        event_rows = store.query(
+            f"SELECT request_json FROM {ENGINE_EVENT_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert event_rows, "engine events must be persisted"
+        for row in event_rows:
+            assert "primary.example" not in (row["request_json"] or "")
+            assert "secondary.example" not in (row["request_json"] or "")
+            assert "KEY" not in (row["request_json"] or "")
+
+        raw_rows = store.query(
+            "SELECT request_json, response_metadata_json FROM raw_acquisition"
+        )
+        assert raw_rows, "raw acquisitions must be persisted"
+        for row in raw_rows:
+            for field in ("request_json", "response_metadata_json"):
+                assert "primary.example" not in (row[field] or "")
+                assert "secondary.example" not in (row[field] or "")
+                assert "KEY" not in (row[field] or "")
+    finally:
+        engine.close()
+
+
 # ---------------------------------------------------------------------------
 # Plan / lease contracts
 # ---------------------------------------------------------------------------
@@ -450,6 +555,173 @@ def test_initialize_plan_claim_and_idempotent_reinit(
             lease_ttl_seconds=60.0,
         )
         assert renewed is True
+    finally:
+        engine.close()
+
+
+def _tamper_raw_evidence(store: Store, acquisition_id: str, tamper: str) -> None:
+    """Apply one tamper to a persisted complete-success raw acquisition."""
+    conn = sqlite3.connect(str(store.db))
+    try:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT a.acquisition_id, a.raw_object_id, a.response_metadata_json, "
+            "o.storage_uri FROM raw_acquisition a JOIN raw_object o "
+            "ON o.raw_object_id = a.raw_object_id WHERE a.acquisition_id = ?",
+            (acquisition_id,),
+        ).fetchone()
+        assert row is not None, f"raw evidence for {acquisition_id} is missing"
+        if tamper == "metadata_truncated":
+            meta = json.loads(row["response_metadata_json"])
+            meta["truncated"] = True
+            conn.execute(
+                "UPDATE raw_acquisition SET response_metadata_json = ? "
+                "WHERE acquisition_id = ?",
+                (json.dumps(meta), acquisition_id),
+            )
+        elif tamper == "metadata_status":
+            conn.execute(
+                "UPDATE raw_acquisition SET status = 'REGISTRATION_PENDING' "
+                "WHERE acquisition_id = ?",
+                (acquisition_id,),
+            )
+        elif tamper == "raw_bytes":
+            path = store.raw_root / row["storage_uri"]
+            original = path.read_bytes()
+            flipped = bytearray(original)
+            flipped[-1] ^= 0xFF
+            path.write_bytes(bytes(flipped))
+        elif tamper == "storage_uri":
+            # Same content at a non-canonical path defeats the digest-derived URI.
+            original = (store.raw_root / row["storage_uri"]).read_bytes()
+            wrong = store.raw_root / "raw/sha256/zz/zz/wrong-location"
+            wrong.parent.mkdir(parents=True, exist_ok=True)
+            wrong.write_bytes(original)
+            conn.execute(
+                "UPDATE raw_object SET storage_uri = ? WHERE raw_object_id = ?",
+                ("raw/sha256/zz/zz/wrong-location", row["raw_object_id"]),
+            )
+        else:
+            raise AssertionError(f"unknown tamper kind: {tamper}")
+        conn.commit()
+    finally:
+        conn.close()
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["metadata_truncated", "metadata_status", "raw_bytes", "storage_uri"],
+)
+def test_cached_chain_replay_rejects_tampered_evidence(
+    store: Store, rpc: RpcFixture, tamper: str
+) -> None:
+    """Cached chain identity replay re-authenticates raw evidence; any tamper fails closed."""
+    engine = _engine(store, rpc)
+    try:
+        engine.initialize(
+            [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        )
+        engine.authenticate_chain()
+    finally:
+        engine.close()
+
+    chain = store.query(f"SELECT * FROM {CHAIN_IDENTITY_TABLE}")[0]
+    _tamper_raw_evidence(store, chain["primary_acquisition_id"], tamper)
+
+    # A fresh engine on the same store re-runs the cached load path and must fail.
+    engine = _engine(store, rpc)
+    try:
+        engine.initialize(
+            [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        )
+        with pytest.raises(PairEventV2Error, match="cached chain identity load failed"):
+            engine.authenticate_chain()
+    finally:
+        engine.close()
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["metadata_truncated", "metadata_status", "raw_bytes", "storage_uri"],
+)
+def test_cached_header_replay_rejects_tampered_evidence(
+    store: Store, rpc: RpcFixture, tamper: str
+) -> None:
+    """Cached header replay re-authenticates raw evidence; any tamper routes AUTHENTICATION."""
+    rpc.set_agreed_swap(LATE_BIRTH)
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(
+            [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        )
+        engine.authenticate_chain()
+        assert engine.process_one() == "agreed"
+    finally:
+        engine.close()
+
+    # End-block header (block_number = PINNED_FINALITY_CUTOFF_BLOCK) is cached.
+    header = store.query(
+        f"SELECT primary_acquisition_id FROM {HEADER_TABLE} "
+        "WHERE plan_id = ? ORDER BY block_number DESC LIMIT 1",
+        (plan.plan_id,),
+    )
+    assert len(header) == 1
+    _tamper_raw_evidence(store, header[0]["primary_acquisition_id"], tamper)
+
+    engine = _engine(store, rpc)
+    try:
+        plan2 = engine.initialize(
+            [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        )
+        assert plan2.plan_id == plan.plan_id
+        engine.authenticate_chain()
+
+        # Fresh node ending at the cached block with no logs must re-load it.
+        rpc.set_empty_logs()
+        domain = QueryDomain(
+            start_block=LATE_BIRTH + 5,
+            end_block=PINNED_FINALITY_CUTOFF_BLOCK,
+            addresses=(POOL,),
+            topics=ORDERED_EVENT_TOPICS,
+        )
+        conn = sqlite3.connect(str(store.db))
+        try:
+            conn.execute("PRAGMA busy_timeout = 5000")
+            node = QueryNode(plan_id=plan.plan_id, domain=domain, status="PENDING")
+            conn.execute(
+                f"INSERT INTO {NODE_TABLE} (plan_id, domain_id, start_block, end_block, "
+                "addresses_json, topics_json, status, parent_domain_id, split_reason, "
+                "attempt, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    node.plan_id,
+                    node.domain_id,
+                    domain.start_block,
+                    domain.end_block,
+                    _canonical_json(list(domain.addresses)),
+                    _canonical_json(list(domain.topics)),
+                    "PENDING",
+                    None,
+                    None,
+                    0,
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        outcome = engine.process_one()
+        assert outcome == "retry:authentication"
+        events = store.query(
+            f"SELECT failure_class, event_kind FROM {ENGINE_EVENT_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, node.domain_id),
+        )
+        assert any(
+            e["failure_class"] == FailureClass.AUTHENTICATION.value
+            and e["event_kind"] == "failure"
+            for e in events
+        )
     finally:
         engine.close()
 
@@ -647,7 +919,7 @@ def test_process_one_transport_does_not_masquerade_as_size(
         engine.authenticate_chain()
         outcome = engine.process_one()
         # Transport is not a size class → terminal after max attempts, no split.
-        assert outcome.startswith("terminal:")
+        assert outcome == "terminal:transport"
         assert "oversized" not in outcome
         assert engine.metrics.splits == 0
         assert engine.metrics.terminal_blockers == 1
@@ -658,6 +930,30 @@ def test_process_one_transport_does_not_masquerade_as_size(
         assert any(e["event_kind"] == "terminal_blocker" for e in events)
         # Node not claimable at limit.
         assert engine.coordinator.count_by_status(plan.plan_id)["PENDING"] == 1
+
+        # One durable terminal receipt with exact mode, attempt, domain, and
+        # recomputed content-addressed ID.
+        claim = store.query(
+            f"SELECT domain_id FROM {NODE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert len(claim) == 1
+        domain_id = claim[0]["domain_id"]
+        terminals = store.query(
+            f"SELECT * FROM {TERMINAL_RECEIPT_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert len(terminals) == 1
+        assert terminals[0]["terminal_mode"] == "transport"
+        assert int(terminals[0]["attempt"]) == 1  # max_attempts
+        assert terminals[0]["domain_id"] == domain_id
+        expected_id = compute_terminal_receipt_id(
+            plan_id=plan.plan_id,
+            domain_id=domain_id,
+            terminal_mode="transport",
+            attempt=1,
+        )
+        assert terminals[0]["terminal_receipt_id"] == expected_id
     finally:
         engine.close()
 
@@ -896,53 +1192,86 @@ def test_source_id_is_v2() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    "setting, value",
+    [
+        ("http_timeout_seconds", 30.0),
+        ("command_offer_timeout_seconds", 30.0),
+    ],
+)
 def test_immutable_policy_resume_rejects_changed_settings(
-    store: Store, rpc: RpcFixture
+    store: Store, rpc: RpcFixture, setting: str, value: float
 ) -> None:
-    """Re-initialize with same plan must match stored execution policy exactly."""
+    """Same-plan resume must match the stored execution policy exactly.
+
+    The second engine uses the same plan but a changed runtime setting; the
+    stored policy row is never mutated. Initialization must reject the drift.
+    """
     engine = _engine(store, rpc)
+    resumed: PairEventV2Engine | None = None
     try:
         pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
         plan = engine.initialize(pools)
         engine.authenticate_chain()
+        stored = store.query(
+            f"SELECT identity_payload_json FROM {EXECUTION_POLICY_TABLE} "
+            "WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert len(stored) == 1
+        engine.close()
 
-        # Tamper with the stored policy to simulate drift.
-        conn = sqlite3.connect(store.db)
-        try:
-            conn.execute(
-                "UPDATE uniswap_v2_pair_event_v2_execution_policy "
-                "SET identity_payload_json = ?",
-                (json.dumps({"plan_id": plan.plan_id, "tampered": True}),),
-            )
-            conn.commit()
-        finally:
-            conn.close()
-
+        resumed = _engine(store, rpc, **{setting: value})
         with pytest.raises(PairEventV2Error, match="execution policy mismatch"):
-            engine.initialize(pools)
+            resumed.initialize(pools)
+
+        # The stored policy row is byte-identical to the original identity.
+        after = store.query(
+            f"SELECT identity_payload_json FROM {EXECUTION_POLICY_TABLE} "
+            "WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert after[0]["identity_payload_json"] == stored[0]["identity_payload_json"]
     finally:
         engine.close()
+        if resumed is not None:
+            resumed.close()
 
 
 def test_heartbeat_servicing_during_streaming_persistence(
     store: Store, rpc: RpcFixture
 ) -> None:
-    """Heartbeat (control queue) is serviced during streamed raw writes via pulse callback.
+    """Heartbeat (control queue) is serviced during streamed raw writes via pulse.
 
-    The engine's _spool_chunks streams spool bytes in 64K chunks and pulses the
-    control queue between chunks. We verify the pulse fires by checking that
-    a multi-chunk streaming write successfully persists.
+    A real claim owns the lease. A multi-chunk spool stream is held behind
+    thread events: the persistence thread consumes the first chunk and then
+    blocks. renew_lease is enqueued while the stream is blocked, one chunk is
+    released, and the renewal must complete and advance ``expires_at`` before
+    the persistence future finishes.
     """
     engine = _engine(store, rpc, lease_ttl_seconds=3600.0)
     try:
-        engine.initialize(
+        plan = engine.initialize(
             [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
         )
         engine.authenticate_chain()
 
-        # Write a large spool that spans multiple 64K chunks
-        big_payload = b"x" * (64 * 1024 * 4)  # 4 chunks
-        spool_path = store.spool_dir / "stream_test.bin"
+        claim = engine.coordinator.claim_pending(
+            plan_id=plan.plan_id,
+            worker_id="worker-a",
+            lease_ttl_seconds=3600.0,
+        )
+        assert claim is not None
+
+        lease_before = store.query(
+            "SELECT leased_at, expires_at FROM uniswap_v2_pair_event_v2_query_lease "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (claim.plan_id, claim.domain_id),
+        )
+        assert len(lease_before) == 1
+
+        big_payload = b"x" * (64 * 1024 * 3)  # 3 chunks
+        spool_path = store.spool_dir / "heartbeat_stream.bin"
         spool_path.write_bytes(big_payload)
 
         descriptor = SpoolDescriptor(
@@ -961,16 +1290,62 @@ def test_heartbeat_servicing_during_streaming_persistence(
             error_detail=None,
         )
 
-        # persist_async streams the spool through _spool_chunks which pulses
-        # the control queue between chunks. The spool file is cleaned up
-        # after persistence completes.
+        reached_gate = threading.Event()
+        allow_next_chunk = threading.Event()
+        allow_eof = threading.Event()
+
+        def _gated_spool_chunks(path: Path, *, pulse=None):
+            """Replay the real chunk loop but hold the stream on thread events."""
+            body = Path(path).read_bytes()
+            chunks = [body[i : i + 64 * 1024] for i in range(0, len(body), 64 * 1024)]
+            for index, chunk in enumerate(chunks):
+                if index == 1:
+                    reached_gate.set()
+                    if not allow_next_chunk.wait(timeout=30.0):
+                        raise RuntimeError("heartbeat chunk gate timed out")
+                if pulse is not None:
+                    pulse()
+                yield chunk
+            if not allow_eof.wait(timeout=30.0):
+                raise RuntimeError("heartbeat EOF gate timed out")
+
+        engine.coordinator._spool_chunks = _gated_spool_chunks
         envelope = engine.coordinator.persist_async(descriptor)
-        envelope.result()
 
-        # After streaming + persistence, the spool file should be cleaned up
+        assert reached_gate.wait(timeout=30.0)
+        assert not envelope.done()
+
+        renew_result: dict[str, bool] = {}
+        renew_error: list[BaseException] = []
+
+        def _renew() -> None:
+            try:
+                renew_result["value"] = engine.coordinator.renew_lease(
+                    claim, lease_ttl_seconds=3600.0
+                )
+            except BaseException as exc:  # pragma: no cover - failure path
+                renew_error.append(exc)
+
+        renew_thread = threading.Thread(target=_renew)
+        renew_thread.start()
+        allow_next_chunk.set()
+        renew_thread.join(timeout=30.0)
+        assert not renew_thread.is_alive()
+        assert not renew_error
+        assert renew_result == {"value": True}
+
+        lease_after = store.query(
+            "SELECT expires_at FROM uniswap_v2_pair_event_v2_query_lease "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (claim.plan_id, claim.domain_id),
+        )
+        assert lease_after[0]["expires_at"] > lease_before[0]["expires_at"]
+
+        assert not envelope.done()
+        allow_eof.set()
+        envelope.result(timeout=30.0)
+
         assert not spool_path.exists()
-
-        # Verify the raw object was actually written and is non-empty
         raw_records = store.query(
             "SELECT raw_object_id FROM raw_object WHERE byte_size > 0"
         )
@@ -1050,7 +1425,12 @@ def test_lease_expired_terminal_receipt_persisted(
 def test_ordinary_terminal_receipt_on_internal_failure(
     store: Store, rpc: RpcFixture
 ) -> None:
-    """Internal failure at max attempts creates terminal receipt with 'internal' mode."""
+    """Internal failure at max attempts creates a terminal receipt via process_one.
+
+    An unexpected exception inside the claimed processing path routes INTERNAL
+    through process_one (never a direct terminalize call) and persists one
+    durable terminal receipt with exact mode, attempt, domain, and recomputed ID.
+    """
     engine = _engine(store, rpc, max_attempts=1)
     try:
         plan = engine.initialize(
@@ -1058,30 +1438,20 @@ def test_ordinary_terminal_receipt_on_internal_failure(
         )
         engine.authenticate_chain()
 
-        claim = engine.coordinator.claim_pending(
-            plan_id=plan.plan_id,
-            worker_id="worker-a",
-            lease_ttl_seconds=60.0,
-        )
-        assert claim is not None
+        def _boom(claim: Claim, block_number: int):
+            raise RuntimeError("unexpected header failure")
 
-        terminal_event = make_engine_event_record(
-            plan_id=plan.plan_id,
-            domain_id=claim.domain_id,
-            attempt=0,
-            event_kind="terminal_blocker",
-            failure_class=FailureClass.INTERNAL,
-            decision="terminal",
-            request={"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": []},
-            detail={"reason": "internal"},
-        )
+        engine._get_header = _boom  # type: ignore[assignment]
+        outcome = engine.process_one()
+        assert outcome == "terminal:internal"
+        assert engine.metrics.terminal_blockers == 1
 
-        engine.coordinator.terminalize(
-            claim,
-            [terminal_event],
-            terminal_mode="internal",
+        claim = store.query(
+            f"SELECT domain_id FROM {NODE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
         )
-
+        assert len(claim) == 1
+        domain_id = claim[0]["domain_id"]
         terminals = store.query(
             f"SELECT * FROM {TERMINAL_RECEIPT_TABLE} WHERE plan_id = ?",
             (plan.plan_id,),
@@ -1089,6 +1459,14 @@ def test_ordinary_terminal_receipt_on_internal_failure(
         assert len(terminals) == 1
         assert terminals[0]["terminal_mode"] == "internal"
         assert int(terminals[0]["attempt"]) == 1  # max_attempts
+        assert terminals[0]["domain_id"] == domain_id
+        expected_id = compute_terminal_receipt_id(
+            plan_id=plan.plan_id,
+            domain_id=domain_id,
+            terminal_mode="internal",
+            attempt=1,
+        )
+        assert terminals[0]["terminal_receipt_id"] == expected_id
 
         assert engine.coordinator.count_by_status(plan.plan_id)["TERMINAL_BLOCKER"] == 1
     finally:
@@ -1142,33 +1520,55 @@ def test_unsplittable_terminal_receipt_persisted(
         finally:
             conn.close()
 
-        # Two logs for single-address domain → exceeds max_log_count=1,
-        # but can't split by address → unsplittable_singleton terminal
+        # Both unique logs AND the required header are at the singleton's exact block.
         rpc.logs = [
-            _swap_log(block_number=LATE_BIRTH + 1, log_index=0),
-            _swap_log(block_number=LATE_BIRTH + 1, log_index=1, tx_hash="0x" + "ee" * 32),
+            _swap_log(block_number=LATE_BIRTH, log_index=0),
+            _swap_log(
+                block_number=LATE_BIRTH,
+                log_index=1,
+                tx_hash="0x" + "ee" * 32,
+                block_hash="0x" + "ab" * 32,
+            ),
         ]
-        root = plan.root_filters[0]
-        rpc.headers[root.domain.end_block] = _header_result(
-            block_number=root.domain.end_block
-        )
+        rpc.headers[LATE_BIRTH] = _header_result(block_number=LATE_BIRTH)
         outcome = engine.process_one()
         assert outcome == "terminal:unsplittable_singleton"
 
+        claim = store.query(
+            f"SELECT domain_id FROM {NODE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert len(claim) == 1
+        domain_id = claim[0]["domain_id"]
         terminals = store.query(
             f"SELECT * FROM {TERMINAL_RECEIPT_TABLE} WHERE plan_id = ?",
             (plan.plan_id,),
         )
         assert len(terminals) == 1
         assert terminals[0]["terminal_mode"] == "unsplittable_singleton"
+        assert int(terminals[0]["attempt"]) == engine.config.max_attempts
+        assert terminals[0]["domain_id"] == domain_id
+        expected_id = compute_terminal_receipt_id(
+            plan_id=plan.plan_id,
+            domain_id=domain_id,
+            terminal_mode="unsplittable_singleton",
+            attempt=engine.config.max_attempts,
+        )
+        assert terminals[0]["terminal_receipt_id"] == expected_id
     finally:
         engine.close()
 
 
-def test_progressed_split_children_persist_valid_status(
+def test_progressed_split_children_resolve_winner_matches_split_node(
     store: Store, rpc: RpcFixture
 ) -> None:
-    """SPLIT children are created with PENDING status and correct split_reason."""
+    """SPLIT winner resolution authenticates a progressed child against split_node.
+
+    Commit a parent SPLIT through process_one, progress one exact child to
+    IN_FLIGHT, call the parent's resolve_winner(split_reason=...), and compare
+    every child ID, parent, bounds, addresses, topics, and reason to the
+    versioned split_node partition.
+    """
     engine = _engine(store, rpc, max_log_count=1)
     try:
         plan = build_acquisition_plan_v2(
@@ -1193,8 +1593,6 @@ def test_progressed_split_children_persist_valid_status(
         try:
             conn.execute("PRAGMA busy_timeout = 5000")
             conn.execute(f"DELETE FROM {NODE_TABLE} WHERE plan_id = ?", (plan.plan_id,))
-            from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import QueryNode
-
             node = QueryNode(plan_id=plan.plan_id, domain=domain, status="PENDING")
             conn.execute(
                 f"INSERT INTO {NODE_TABLE} (plan_id, domain_id, start_block, end_block, "
@@ -1225,14 +1623,73 @@ def test_progressed_split_children_persist_valid_status(
         outcome = engine.process_one()
         assert outcome == "split:oversized_result"
 
-        children = store.query(
-            f"SELECT domain_id, status, split_reason FROM {NODE_TABLE} "
-            "WHERE parent_domain_id IS NOT NULL AND plan_id = ?",
-            (plan.plan_id,),
+        # Parent is durably SPLIT with the exact reason.
+        parent_rows = store.query(
+            f"SELECT status, split_reason FROM {NODE_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, node.domain_id),
         )
-        assert len(children) == 2
-        assert all(child["split_reason"] == "oversized_result" for child in children)
-        assert all(child["status"] == "PENDING" for child in children)
+        assert len(parent_rows) == 1
+        assert parent_rows[0]["status"] == "SPLIT"
+        assert parent_rows[0]["split_reason"] == "oversized_result"
+
+        # Progress one exact child to IN_FLIGHT (real claim + lease).
+        child_claim = engine.coordinator.claim_pending(
+            plan_id=plan.plan_id,
+            worker_id="worker-a",
+            lease_ttl_seconds=60.0,
+        )
+        assert child_claim is not None
+        assert child_claim.attempt == 0
+        child_row = store.query(
+            f"SELECT status FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, child_claim.domain_id),
+        )
+        assert child_row[0]["status"] == "IN_FLIGHT"
+
+        # Winner resolution on the parent with the exact split reason.
+        parent_node = QueryNode(
+            plan_id=plan.plan_id,
+            domain=domain,
+            status="SPLIT",
+        )
+        parent_claim = Claim(
+            plan_id=plan.plan_id,
+            domain_id=node.domain_id,
+            worker_id="worker-a",
+            lease_token="winner-token",
+            attempt=0,
+            node=parent_node,
+        )
+        assert (
+            engine.coordinator.resolve_winner(parent_claim, split_reason="oversized_result")
+            == "split_winner"
+        )
+
+        # Compare every child to the versioned split_node partition.
+        expected = split_node(parent_node, reason="oversized_result")
+        rows = store.query(
+            f"SELECT * FROM {NODE_TABLE} WHERE plan_id = ? AND parent_domain_id = ?",
+            (plan.plan_id, node.domain_id),
+        )
+        assert {row["domain_id"] for row in rows} == {
+            child.domain_id for child in expected
+        }
+        by_id = {row["domain_id"]: row for row in rows}
+        for child in expected:
+            row = by_id[child.domain_id]
+            assert row["parent_domain_id"] == node.domain_id
+            assert row["split_reason"] == "oversized_result"
+            assert int(row["start_block"]) == child.domain.start_block
+            assert int(row["end_block"]) == child.domain.end_block
+            assert row["addresses_json"] == _canonical_json(
+                list(child.domain.addresses)
+            )
+            assert row["topics_json"] == _canonical_json(list(child.domain.topics))
+        inflight = [row for row in rows if row["status"] == "IN_FLIGHT"]
+        assert len(inflight) == 1
+        assert inflight[0]["domain_id"] == child_claim.domain_id
+        assert int(inflight[0]["attempt"]) == 0
     finally:
         engine.close()
 
@@ -1317,22 +1774,68 @@ def test_atomic_retry_rolls_back_on_event_conflict(
         with pytest.raises(PairEventV2Error, match="divergent identity|does not match"):
             engine.coordinator.release_retry(claim, events=[existing_event])
 
-        # Verify attempt was NOT incremented and lease still exists (atomic rollback)
+        # Verify the entire transaction rolled back: node stays IN_FLIGHT with
+        # attempt unchanged, and the exact lease remains.
         after = store.query(
             f"SELECT attempt, status FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
             (claim.plan_id, claim.domain_id),
         )
         assert len(after) == 1
         assert after[0]["attempt"] == 0  # unchanged — rolled back
+        assert after[0]["status"] == "IN_FLIGHT"  # unchanged — rolled back
 
         leases = store.query(
-            "SELECT * FROM uniswap_v2_pair_event_v2_query_lease "
+            "SELECT lease_token, worker_id, expires_at "
+            "FROM uniswap_v2_pair_event_v2_query_lease "
             "WHERE plan_id = ? AND domain_id = ?",
             (claim.plan_id, claim.domain_id),
         )
         assert len(leases) == 1  # lease still present — rolled back
+        assert leases[0]["lease_token"] == claim.lease_token  # exact lease
+        assert leases[0]["worker_id"] == claim.worker_id
+        assert datetime.fromisoformat(leases[0]["expires_at"]) > datetime.now(UTC)  # live lease
+
+        # The pre-existing conflicting event is byte-identical after the
+        # rollback: every stored column matches the original record.
+        stored = store.query(
+            f"SELECT {','.join(ENGINE_EVENT_RECORD_COLUMNS)} FROM {ENGINE_EVENT_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (claim.plan_id, claim.domain_id),
+        )
+        assert len(stored) == 1
+        row = stored[0]
+        assert row["event_id"] == existing_event.event_id
+        assert row["schema_version"] == existing_event.schema_version
+        assert row["decision"] == "terminal"  # divergent decision preserved
+        assert row["detail_json"] == existing_event.detail_json
+        assert row["request_json"] == existing_event.request_json
     finally:
         engine.close()
+
+
+def test_failure_route_precedence_exact_tuple() -> None:
+    """FAILURE_ROUTE_PRECEDENCE equals the exact accepted precedence tuple.
+
+    Routing order is acceptance-critical: transport must outrank size classes
+    and provider disagreement must come after header conflicts. The tuple must
+    match exactly, not merely share the same element set.
+    """
+    assert FAILURE_ROUTE_PRECEDENCE == (
+        "http_429",
+        "authentication",
+        "transport",
+        "persistence",
+        "boundary_mismatch",
+        "malformed_json",
+        "http_status",
+        "rpc_error",
+        "header_conflict",
+        "provider_disagreement",
+        "explicit_range_limit",
+        "body_size_pressure",
+        "result_size_pressure",
+        "internal",
+    )
 
 
 def test_post_lease_winner_mode_mismatch_rejected(
@@ -1435,17 +1938,17 @@ def test_post_lease_winner_attempt_mismatch_rejected(
         engine.close()
 
 
-def test_early_lease_loss_branch_returns_lease_lost(
+def test_early_loss_route_failure_mode_mismatch(
     store: Store, rpc: RpcFixture
 ) -> None:
-    """Early lease-loss branch in resolve_winner returns 'lease_lost' for IN_FLIGHT.
+    """_route_failure on a lost lease detects terminal winner mode mismatch.
 
-    When a worker calls resolve_winner on a node still IN_FLIGHT (not at the
-    terminal attempt, not AGREED, not SPLIT, not PENDING-at-limit), the engine
-    cannot determine the winner from durable evidence. The early branch fires
-    immediately and returns 'lease_lost' without requiring a terminal_mode.
-    This is the path taken when the lease is lost mid-processing and no
-    terminal candidate was persisted before the loss.
+    Seed a durable terminal winner with mode 'transport' (via claim-bound
+    terminalize). Force ``_lease_lost`` true, then call ``_route_failure`` with
+    a different max-attempt candidate (mode 'persistence'). The candidate's
+    failure and terminal_blocker events are durably inserted before resolve_winner
+    rejects the winner-mode mismatch. This executes ``_route_failure``, never a
+    direct resolve_winner call.
     """
     engine = _engine(store, rpc, max_attempts=3)
     try:
@@ -1454,30 +1957,85 @@ def test_early_lease_loss_branch_returns_lease_lost(
         )
         engine.authenticate_chain()
 
-        claim = engine.coordinator.claim_pending(
+        live = engine.coordinator.claim_pending(
             plan_id=plan.plan_id,
             worker_id="worker-a",
             lease_ttl_seconds=60.0,
         )
-        assert claim is not None
-        assert claim.node.status == "IN_FLIGHT"
+        assert live is not None
 
-        # Another worker steals the lease by directly updating the lease row.
-        conn = sqlite3.connect(str(store.db))
-        try:
-            conn.execute(
-                "UPDATE uniswap_v2_pair_event_v2_query_lease "
-                "SET worker_id = ?, lease_token = ? "
-                "WHERE plan_id = ? AND domain_id = ?",
-                ("worker-b", "stolen_token", claim.plan_id, claim.domain_id),
+        # Durable terminal winner: mode 'transport' at max attempts.
+        transport_event = make_engine_event_record(
+            plan_id=plan.plan_id,
+            domain_id=live.domain_id,
+            attempt=0,
+            event_kind="terminal_blocker",
+            failure_class=FailureClass.TRANSPORT,
+            decision="terminal",
+            request={"jsonrpc": "2.0", "id": 1, "method": "eth_getLogs", "params": []},
+            detail={"reason": "transport"},
+        )
+        engine.coordinator.terminalize(
+            live, [transport_event], terminal_mode="transport"
+        )
+
+        # Lost-lease candidate at max attempts with a different terminal mode.
+        candidate = Claim(
+            plan_id=plan.plan_id,
+            domain_id=live.domain_id,
+            worker_id="worker-b",
+            lease_token="never-active-token",
+            attempt=engine.config.max_attempts,
+            node=QueryNode(
+                plan_id=plan.plan_id,
+                domain=live.node.domain,
+                status="PENDING",
+            ),
+        )
+        work = _ActiveWork(candidate)
+        work.lost.set()
+        with engine._active_lock:
+            engine._active_by_token[candidate.lease_token] = work
+        assert engine._lease_lost(candidate)
+
+        failure = _PairFailure(
+            [_FailureFact(FailureClass.PERSISTENCE, None, {"stage": "leaf"})]
+        )
+        with pytest.raises(PairEventV2Error, match="mode mismatch"):
+            engine._route_failure(
+                candidate,
+                failure,
+                request_for_domain(candidate.node.domain),
+                allow_split=False,
             )
-            conn.commit()
-        finally:
-            conn.close()
 
-        # resolve_winner with the old (now-invalid) claim on IN_FLIGHT → lease_lost
-        result = engine.coordinator.resolve_winner(claim)
-        assert result == "lease_lost"
+        # Failure observations and the candidate terminal_blocker event are
+        # durably inserted even though winner resolution rejects the mismatch.
+        events = store.query(
+            f"SELECT failure_class, event_kind, decision FROM {ENGINE_EVENT_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, live.domain_id),
+        )
+        assert any(
+            e["event_kind"] == "failure"
+            and e["failure_class"] == FailureClass.PERSISTENCE.value
+            for e in events
+        )
+        assert any(
+            e["event_kind"] == "terminal_blocker"
+            and e["failure_class"] == FailureClass.PERSISTENCE.value
+            and e["decision"] == "terminal"
+            for e in events
+        )
+
+        # Seeded transport winner receipt is untouched.
+        receipts = store.query(
+            f"SELECT terminal_mode FROM {TERMINAL_RECEIPT_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, live.domain_id),
+        )
+        assert len(receipts) == 1
+        assert receipts[0]["terminal_mode"] == "transport"
     finally:
         engine.close()
 
@@ -1642,9 +2200,12 @@ def test_crash_recovery_complete_truncated_uses_journaled_bytes(
         metadata = json.loads(raws[0]["response_metadata_json"])
         assert metadata["response_bytes"] == journaled_response
         assert metadata["retained_bytes"] == len(retained)
-        objects = store.query("SELECT byte_size FROM raw_object")
+        objects = store.query("SELECT byte_size, sha256 FROM raw_object")
         assert objects[0]["byte_size"] == len(retained)
+        assert objects[0]["sha256"] == __import__("hashlib").sha256(retained).hexdigest()
+        # Both the journal and the retained spool file are removed after recovery.
         assert list(store.spool_dir.glob("*.journal.json")) == []
+        assert list(store.spool_dir.glob("*.spool")) == []
     finally:
         engine.close()
 
