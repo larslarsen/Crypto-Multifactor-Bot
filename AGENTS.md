@@ -35,11 +35,11 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     engineering decisions, accepts or rejects work, selects the minimum-usage capable
     developer, and authorizes the next ticket.
   - **Sr Dev — Grok Build:** agentic, using Grok 4.5. Sole formal senior production-code
-    role: owns senior code reasoning and source edits only. No tests, integration,
-    repository records, Git, commits, or pushes.
+    role: owns senior code reasoning, production-source edits, and test-source creation.
+    Does not execute tests or own integration, repository records, Git, commits, or pushes.
   - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
-    available. Owns source-drop integration, test creation/execution, repository records,
-    Git, commits, and pushes.
+    available. Owns production/test source-drop integration, test and acceptance-command
+    execution, repository records, Git, commits, and pushes. Does not design or author tests.
   - **Owner:** relays one-way prompts and supplies repository URLs, hashes, ZIPs, and
     source drops.
 - Routing is based on end-to-end accepted-result quality, engineering risk, and
@@ -64,4 +64,3 @@ A governance control script (`scripts/check_repo_control.py`) is run as part of 
 It validates the repository-native control plane: exactly one active ticket, a matching
 ticket status and current-task state, the existence of referenced governing documents,
 and the `NONE` next-ticket rule for blocked / awaiting-review work.
-

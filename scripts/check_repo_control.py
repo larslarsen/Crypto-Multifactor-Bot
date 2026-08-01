@@ -13,8 +13,8 @@ fixed field format. This script checks that:
 - every document referenced under `Governing documents:` exists;
 - `Next ticket authorized` is `NONE` or a complete ticket ID containing digits;
 - blocked or awaiting-review work requires `NONE`;
-- the control plane enforces role separation: Sr Dev (Sandbox / Grok Build) performs
-  source edits only (no Git, integration, commits, pushes, or acceptance testing),
+- the control plane enforces role separation: Sr Dev (Sandbox / Grok Build) authors
+  production and test source (no Git, integration, commits, pushes, or test execution),
   while Jr Dev — Hermes owns Git, commits, and pushes. Governance docs must not grant
   Sr Dev those duties, nor prohibit Hermes from pushing.
 
@@ -49,9 +49,9 @@ TICKET_ID_RE = re.compile(r"^[A-Z]{2,}-\d")
 HARD_CODED_RE = re.compile(r"(?:implement|do|complete)\s+`?tickets/[A-Z]{2,}-\d+", re.IGNORECASE)
 
 # Role-separation enforcement (replaces the fragile "Sr Dev.{0,15}?(duty)" regex).
-# Sr Dev (Sandbox / Grok Build) does source edits only; it must not be positively
+# Sr Dev (Sandbox / Grok Build) authors production and test source; it must not be positively
 # assigned Git, integration, commit, push, repository-administration, or
-# acceptance-testing duties in any governance doc. Explicit prohibitions
+# test-execution duties in any governance doc. Explicit prohibitions
 # ("must not push", "no Git") are accepted; only positive duty assertions are
 # rejected, regardless of role qualifiers or ordinary wording. Dependency-free:
 # we anchor on "Sr Dev", scan a bounded window, and require a duty verb/modal
@@ -243,7 +243,8 @@ def validate(root: Path) -> Tuple[bool, List[str]]:
     else:
         errors.append("HERMES_START_HERE.md missing")
 
-    # Role separation: Sr Dev does source edits only; Hermes owns Git/commit/push.
+    # Role separation: Sr Dev authors production/test source; Hermes executes tests and
+    # owns Git/commit/push.
     # No governance doc may grant Sr Dev Git/integration/commit/push/acceptance-test
     # duties, and none may prohibit Hermes from pushing.
     gov_docs = [root / "AGENTS.md", current_task_p, hermes]

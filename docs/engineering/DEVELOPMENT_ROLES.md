@@ -10,18 +10,19 @@ no code, migrations, tickets, or acceptance state.
   engineering decisions, accepts or rejects work, selects the minimum-usage capable
   developer, and authorizes the next ticket.
 - **Sr Dev — Grok Build:** agentic, using Grok 4.5. The sole formal senior
-  production-code role. Owns senior code reasoning and source edits only. No tests,
-  integration, repository records, Git, commits, or pushes.
+  production-code role. Owns senior code reasoning, production-source edits, and
+  test-source creation. Does not execute tests or own integration, repository records,
+  Git, commits, or pushes.
 - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
-  available. Owns source-drop integration, test creation and execution, repository
-  records, Git, commits, and pushes.
+  available. Owns production/test source-drop integration, test and acceptance-command
+  execution, repository records, Git, commits, and pushes. Does not design or author tests.
 - **Owner:** relays one-way prompts and supplies repository hashes, ZIPs, URLs, and
   source drops.
 
 ## Routing order
 
-1. **Jr Dev — Hermes** for integration, testing, records, and Git duties.
-2. **Sr Dev — Grok Build** as the default senior production coder.
+1. **Jr Dev — Hermes** for integration, test execution, records, and Git duties.
+2. **Sr Dev — Grok Build** as the default production and test-source author.
 3. **Sr Dev — Grok Build escalation tiers** (or an alternate capable senior agent) only
    when the difficulty or prior failure justifies higher usage.
 
@@ -36,6 +37,6 @@ surface, not a formal development role in this policy.
 ## Removed roles
 
 **Sr Dev — Hermes** and **Sr Dev — Sandbox** are no longer formal roles in this
-repository's governance. Their prior source-edits-only responsibilities are consolidated
-under **Sr Dev — Grok Build** (sole senior coder). References to Sr Dev — Hermes or Sr
-Dev — Sandbox in other documents are superseded by this policy.
+repository's governance. Their prior source/test-authoring responsibilities are consolidated
+under **Sr Dev — Grok Build** (sole senior coder and test author). References to Sr Dev —
+Hermes or Sr Dev — Sandbox in other documents are superseded by this policy.

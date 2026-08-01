@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Sol 5.6 High - authorize bounded v2 live matrix separately
+Next required actor: Sol 5.6 High - re-review integrated v2 matrix harness
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -164,5 +164,242 @@ offline evidence are accepted at `ad30bf9`. No further engine source, migration,
 test work is authorized.
 
 No live matrix, endurance pilot, acquisition, dataset publication, metadata/downstream
-transforms, factor design, PAPER, or LIVE work is authorized by this acceptance. The next
-phase requires a separate bounded Sol authorization. Next ticket remains `NONE`.
+transforms, factor design, PAPER, or LIVE work is authorized by this acceptance. The
+source-only harness phase authorized below does not authorize RPC execution. Next ticket
+remains `NONE`.
+
+## Authorized next phase - source only
+
+Sol authorizes Sr Dev - Grok Build to implement only the isolated v2 provider-matrix
+harness. This is a source drop for later Jr integration and offline testing. Grok may add
+`src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_matrix.py` and
+`scripts/research/run_uniswap_v2_pair_events_v2_matrix.py`; it may not edit the accepted
+v2 engine/foundation, migrations, tests, repository records, or production data. It may
+not run RPC calls. No live matrix execution is authorized by this source pass.
+
+The harness contract is frozen as follows:
+
+- Verify the accepted registry manifest, dataset ID, parquet path, byte count, and SHA-256
+  before deriving any address. Execute mode must reject caller-supplied pools, ranges,
+  topics, provider organizations, or cohort ordering.
+- Use anchor pool `0x3139ffc91b99aa94da8a2dc13f1fc36f9bdc98ee`. Build one ordered
+  maximum cohort as the anchor followed by the lexicographically lowest 127 other accepted
+  registry addresses born on or before block 10,388,500. Exactly 129 registry pools are
+  eligible at that boundary. The compact-JSON ordered-array SHA-256 of the selected 128 is
+  `24f5924de5560ac988a7b5623c493d53dfd470b8419cd1c4c7fcb189fdf2a86e`.
+- Derive nested prefix cohorts of 1, 8, 32, 64, and 128 addresses. Their compact-JSON
+  ordered-array SHA-256 values are, respectively,
+  `592ed81e9c6fcde816e9096d0e7a5e9f2cc2722e7c5325178d7c219661fde751`,
+  `0b9a87c4066849a798bcdf3e310dd61de86ebdb961c86203dbced29aecdd292a`,
+  `e3fc4ddcd7054818814004209d48e59cebb913ace5247b6189a3e79c47dcc015`,
+  `78c973533295d96130bc108f76d904903fc79d5e7b242af1b01a45c1782c57be`, and
+  `24f5924de5560ac988a7b5623c493d53dfd470b8419cd1c4c7fcb189fdf2a86e`.
+- Use exactly these inclusive pre-2025 ranges: sparse 10,388,500-10,393,499;
+  medium 11,893,500-11,898,499; hot 16,353,500-16,358,499. Retained agreed v1
+  Infura/BlockPI Swap receipts for the anchor contain 0, 3, and 18 logs. These counts
+  select the ranges only and confer no v2 coverage credit.
+- For each range, query each provider once per scalar `(address, topic)` for the maximum
+  cohort, then derive every nested scalar union without duplicate scalar calls. Query each
+  provider once for each of the 15 combined-topic batched cells. Every provider's batch
+  must equal its own scalar union under log identity v2, and the two providers' scalar and
+  batched unions must agree. Reject malformed, removed, duplicate, unsupported-topic,
+  out-of-range, or out-of-cohort logs. Do not split a matrix request; a provider limit,
+  truncation, conservative-cap hit, or oversized response makes that cell fail.
+- Authenticate chain ID with both provider organizations before any log request. Retain
+  every attempted response before retry or stop. Support zero-network offline replay that
+  reproduces all cell decisions and report hashes from retained raw evidence.
+- The logical-call ceiling is 1,568: two chain calls, 1,536 scalar calls, and 30 batched
+  calls. Permit at most three retained attempts per logical call, 4,704 provider attempts,
+  90 minutes wall time, 2 GiB total retained response bytes, 8 MB per response, eight
+  requests/second/provider, and four in-flight requests/provider. Runtime options may only
+  lower these ceilings.
+- Default to plan-only/offline behavior. A future live path must require an explicit
+  `--execute-live` flag plus confirmation of the computed matrix ID. Endpoints/credentials
+  are runtime-only and must never enter plan identity, receipts, raw metadata, logs, reports,
+  commands, or exceptions.
+- Use a dedicated matrix output root and receipt state. Refuse `dex003_full.db`, the
+  accepted dataset directory, accepted staged files, and all production v2 tables. Write a
+  canonical plan, resumable request receipts, raw-object hashes, and an atomic final report;
+  an incomplete run must remain visibly incomplete and receive no PASS.
+- Report each cell's provider status, attempts, 429s, latency, response bytes, log count,
+  identity-v2 digest, scalar-union digest, and equality decisions, plus global limits/high
+  water marks and credential scans. PASS requires all 15 cells and offline replay to pass.
+  The report may recommend but must not freeze 64, modify production configuration, grant
+  v2 coverage, start endurance, or authorize full acquisition.
+
+Immediate safety stops are chain disagreement, registry/cohort/hash drift, raw-persistence
+failure, malformed or out-of-domain evidence, credential detection, or any global budget
+breach. Ordinary RPC/429/size/cap failures are retained as cell failures and may continue
+only while every global bound remains satisfied. Grok stops after delivering source and a
+concise implementation note; the next step remains Jr integration and offline tests under a
+separate Sol review. Endurance and all production acquisition remain unauthorized.
+
+## Sol review - source drop rejected
+
+Sol reviewed the two-file Grok source drop without RPC credentials or network calls. Targeted
+ruff, repository control, and plan-only execution pass; plan-only derives matrix ID
+`mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2` and remains
+non-PASS. The source is not accepted for Jr integration because offline probes confirmed:
+
+- Concurrent equal response bodies race on one digest-derived `.tmp` path, causing a false
+  `raw-persistence failure`; raw content-addressed writes are not concurrency-safe.
+- The token bucket is not an in-flight limiter. Eight slow Infura calls reached provider
+  high-water 8 while the configured hard ceiling was 4.
+- `MatrixSafetyStop` is caught as ordinary `MatrixError` during cell evaluation, so malformed
+  or out-of-domain evidence returns 15 incomplete cells instead of propagating an immediate
+  safety stop.
+- `load_body()` trusts the filename and accepts tampered bytes without recomputing SHA-256 or
+  checking the receipt byte count.
+- `data/dex003_full/store` is accepted as a matrix output root, despite the required dedicated
+  isolation from the production registry store.
+- Resume initializes all global counters at zero and does not authenticate prior attempts,
+  requests, bodies, or cumulative retained bytes. `INSERT OR REPLACE` can overwrite attempt
+  evidence.
+- HTTP buffers `response.content` without a streaming bound and then retains only a silent
+  8 MB prefix. Submitting all 1,566 log futures at once also means executor shutdown can keep
+  issuing queued work after a safety stop.
+- Offline replay writes a new final report instead of authenticating an immutable live report;
+  timestamps/high-water values prevent exact report-hash reproduction, and a new incomplete
+  run can leave an older PASS `report.json` in place.
+- Failed/incomplete cells omit required per-provider attempts, 429s, latency, bytes, status,
+  and error evidence. HTTP clients are not closed.
+
+Grok is authorized for one source-only correction pass in exactly
+`src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_matrix.py` and
+`scripts/research/run_uniswap_v2_pair_events_v2_matrix.py`. No other file, RPC call, test,
+migration, record, Git action, or production artifact is authorized. The correction must:
+
+1. Use a real per-provider semaphore/limiter in addition to RPS control, a bounded work queue,
+   and a shared stop signal. On a safety stop, submit no new work, cancel queued work, drain and
+   retain only already-started responses, then write one authenticated incomplete result.
+2. Stream each response to a unique attempt spool without unbounded `response.content`.
+   Content-addressed promotion must be race-safe for equal bodies. An over-cap response must
+   retain and authenticate the bounded observed prefix with explicit `truncated=true` and
+   observed-over-cap evidence, and it must never be usable as a successful body.
+3. Make attempts append-only: no replace/upsert path may rewrite prior attempt evidence. On
+   every resume/replay, validate the stored plan/matrix ID, exact logical-call catalog,
+   canonical request JSON/SHA, provider/kind, contiguous attempts, terminal state, raw SHA-256,
+   and raw byte count before credit. Reconstruct cumulative logical calls, attempts, retained
+   bytes, 429s, and applicable high-water/budget state before new work.
+4. Reject any output root equal to, inside, or containing the registry store, accepted dataset
+   or staged production tree, `data/dex003_full`, or a state database containing production v2
+   tables. Resolve symlinks before comparison.
+5. Propagate `MatrixSafetyStop` ahead of ordinary cell exceptions. Preserve complete provider
+   metrics and error classification for pass, fail, and incomplete cells; no malformed,
+   duplicate, removed, unsupported-topic, out-of-domain, or unauthenticated body may become a
+   cell failure or replay input.
+6. Give each execution an immutable run identity. A new run must not leave an older PASS as the
+   current result. Offline replay must never overwrite live evidence: authenticate the exact
+   live plan, attempts, raw bodies, cell decisions, and a stable evidence/report hash that
+   excludes runtime-only timestamps while retaining those timestamps as unhashed metadata.
+7. Close all clients and spools deterministically. Scan every persisted/logged/error string for
+   endpoint URLs and credential material, not only mapping keys or credential query-parameter
+   spellings.
+
+Grok must include concise offline reasoning for each correction and stop. No live matrix,
+endurance, full acquisition, coverage credit, or production cohort freeze is authorized.
+
+## Sol re-review - corrected source still rejected
+
+Sol re-reviewed the corrected two-file drop using the updated local graph plus static and
+offline-only probes. Targeted ruff, repository control, plan-only execution, equal-body
+concurrency, provider in-flight enforcement, malformed-log propagation, raw-tamper rejection,
+and production-store output rejection pass. Matrix ID remains
+`mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`.
+
+The correction is not accepted for Jr integration. Confirmed remaining blockers are:
+
+- `build_plan()` rewrites the logical-call catalog before `authenticate_resume()`. An offline
+  probe changed a stored request hash; the next build erased the tamper and resume passed.
+- Resume iterates only expected call IDs. A persisted unknown attempt/raw body remained in the
+  store but authenticated counters reported zero attempts. Missing catalogs, logical-call
+  terminal state, sidecar receipts, and prior high-water are also not fully authenticated.
+- Every `run()` writes an incomplete report and repoints `current_run.json` before replay loads
+  the prior live report. A plan-only report is accepted as a live report when loaded directly;
+  normal replay then loses that pointer and reports `live_report_authenticated=false`.
+  `MatrixSafetyStop` is also swallowed by replay's broad `except MatrixError`, while matrix PASS
+  does not require authenticated live evidence.
+- Run IDs and run directories may be reused, reports use replacement writes, and concurrent
+  processes can race the unguarded current pointer. The evidence hash excludes run identity and
+  all high-water/budget counters; `report_hash` currently equals `evidence_hash` and is not
+  independently authenticated.
+- Live HTTP still collects chunk lists and joins them in memory before a second spool pass.
+  Raw promotion occurs before cumulative retained-byte admission/receipt commit, so a budget
+  stop can orphan raw evidence.
+- Raw response strings are not scanned before promotion. An offline fake response containing an
+  endpoint URL was persisted. Empty successful bodies and JSON-RPC envelopes missing `result`
+  remain ordinary cell failures instead of immediate malformed-evidence safety stops.
+- Failure/safety reports still omit complete per-provider status, observed bytes, truncation,
+  and attempt evidence; deterministic closure and output-ancestor isolation remain incomplete
+  in edge paths.
+
+Grok is authorized for one final source-and-test correction in exactly the same two matrix files
+plus `tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py`. No RPC call, test execution,
+migration, record, Git action, engine/foundation edit, or production artifact is authorized.
+The final correction must:
+
+1. Split pure plan construction from persistence. For an existing output root, authenticate the
+   immutable stored plan, byte-exact catalog including request JSON, exact expected call-ID set,
+   every attempt row, logical-call state row, receipt sidecar, raw SHA/bytes, and cumulative
+   counters before any write. Reject missing, extra, duplicate, non-contiguous, or terminally
+   inconsistent evidence. Only a fresh empty root may create plan/catalog state.
+2. Make run creation exclusive and immutable. Reject an existing run ID/directory, use
+   append/exclusive report creation, and serialize or compare-and-swap current-pointer updates so
+   an older process cannot restore stale PASS. Attempts and reports must bind to the execution
+   run or to an explicitly authenticated resume identity.
+3. Separate live execution from standalone replay. In-process zero-network replay may evaluate
+   newly retained evidence before the immutable live report is sealed. Standalone replay must
+   load a pre-existing complete `mode=execute_live` report before creating any replay run or
+   changing any pointer; verify pointer/run/path/matrix ID, report hash, evidence hash, complete
+   attempt snapshot, raw bodies, and cell decisions. Never catch `MatrixSafetyStop` as absence.
+   PASS must explicitly require the applicable authenticated replay result.
+4. Hash all evidence-bearing fields: run/resume identity, plan, budgets, cumulative logical calls,
+   attempts, retained bytes, 429s, provider high-water, call/receipt/raw snapshot, cells, and
+   replay decision. Exclude only wall-clock timestamps and elapsed duration. Define a distinct
+   report hash that binds the evidence hash and verify both on replay.
+5. Stream live HTTP bytes directly into the unique attempt spool; do not retain a chunk list or
+   joined duplicate. Reserve worst-case retained-byte capacity before starting each request so
+   every started response can be committed within the global bound, then release unused
+   reservation. Promote raw and receipt/state atomically enough that neither can become orphaned
+   authority after a safety stop.
+6. Scan every decodable response/error string before raw promotion for any endpoint URL or
+   credential form, including bearer values and key/token/password query parameters. Credential
+   detection must persist only credential-free blocker metadata. Empty 2xx bodies, missing
+   `result`, malformed envelopes/logs, and unauthenticated/truncated bodies are safety stops,
+   never cell failures or replay inputs.
+7. Preserve complete bounded provider/call metrics in PASS, fail, incomplete, and safety reports;
+   close every owned resource on constructor and runtime failures; and reject output roots that
+   equal, contain, or sit inside the resolved project `data/dex003_full` tree regardless of the
+   supplied registry-store location.
+
+Grok must author the offline test suite that freezes these requirements. At minimum, tests must
+execute the previously failing paths for pre-write catalog tamper, missing/extra/unknown attempt
+and logical-state evidence, receipt/raw tamper, cumulative resume budgets, exclusive run creation,
+stale-pointer races, plan-only-as-live rejection, standalone replay ordering, replay safety-stop
+propagation, PASS requiring authenticated replay, distinct evidence/report hash tamper, direct
+bounded spooling, retained-byte reservation/rollback, equal-body promotion concurrency, hard
+per-provider in-flight limits, endpoint/credential response rejection, malformed empty/missing-
+result envelopes, complete failure metrics, output-tree isolation, and deterministic closure.
+Tests may use only temporary stores and fake transports; they must not access RPC credentials,
+make network calls, or mutate production data. Grok writes but does not run the tests.
+
+Grok stops after production/test source plus concise reasoning that maps every correction to a
+named test. Jr then integrates both drops and runs the frozen suite and acceptance commands; Jr
+does not add or redesign tests. No live matrix or downstream phase is authorized.
+
+## Jr integration - matrix harness source drop integrated
+
+Jr integrated both corrected drops into `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_matrix.py`,
+`scripts/research/run_uniswap_v2_pair_events_v2_matrix.py`, and the frozen offline suite
+`tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py`, together with the role-separation
+governance updates (AGENTS.md, DEVELOPMENT_ROLES.md, HERMES_START_HERE.md, check_repo_control.py,
+and its tests). Jr added or redesigned no tests.
+
+The frozen matrix suite passes 32/32. Targeted ruff passes on all three matrix files. Repository
+control passes. An offline plan-only probe against the accepted registry store
+(`data/dex003_full/store`, dataset `ds_42ce2515e226258557a06a374498547393bbc984db791c56fa19d81d7ef16d15`,
+parquet SHA-256 `8e41a9fb1e1b05f126345ca0a7a9eb04792cd0e92d45406a9b5c031105d83256`) derives matrix ID
+`mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`, identical to the frozen
+contract, with anchor `0x3139ffc91b99aa94da8a2dc13f1fc36f9bdc98ee` and birth boundary 10,388,500.
+Plan-only remains non-PASS by design; no RPC call was made, and no live matrix execution,
+endurance, or downstream phase is authorized. Sol re-review is the next required actor.

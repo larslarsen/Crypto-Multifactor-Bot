@@ -163,7 +163,7 @@ def test_all_valid_states_accepted(tmp_path: Path) -> None:
 
 def test_sr_dev_granted_git_duties_is_rejected(tmp_path: Path) -> None:
     make_valid_structure(tmp_path)
-    # Sr Dev must do source edits only; granting it Git/commit/push violates
+    # Sr Dev authors production/test source; granting it Git/commit/push violates
     # role separation.
     (tmp_path / "AGENTS.md").write_text(
         "# AGENTS.md\nSr Dev must push and commit to origin/main.\n"
