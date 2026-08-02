@@ -704,3 +704,99 @@ rerun was aborted and is not counted as acceptance evidence. No RPC call was mad
 The immutable fresh-run provider-matrix harness is accepted for DEX-003. This acceptance does not
 authorize a live RPC matrix, endurance, production acquisition, coverage credit, publication, or
 downstream research. The next phase requires a separate explicit bounded live-matrix authorization.
+
+## Authorized next phase - one bounded live provider matrix
+
+Sol authorizes Jr Dev - Hermes to execute exactly one fresh live provider matrix using the accepted
+harness at `0002b70`, followed by one standalone read-only replay only if the live run is COMPLETE
+and PASS. This is a validity matrix, not endurance or production acquisition. No other RPC command,
+automatic retry, second live run, source edit, test redesign, migration, publication, or downstream
+work is authorized.
+
+### Preconditions
+
+All preconditions are mandatory:
+
+1. Jr first integrates and pushes this acceptance/authorization record without including unrelated
+   staged DATA-009 or acquisition-daemon work. The three matrix files must remain byte-identical to
+   commit `0002b70`.
+2. Re-run the no-network plan-ID command below. It must print exactly
+   `mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`.
+3. The owner supplies `ETHEREUM_RPC_URL` at runtime for an Infura organization account and
+   `ETHEREUM_RPC_URL_SECONDARY` for an independent BlockPI organization account. The owner must
+   attest that the organizations are Infura and BlockPI and that the URLs are distinct. Never place
+   endpoint values, keys, or tokens in commands, shell history, records, logs, or chat.
+4. `data/dex003_v2_matrix/live_0002b70_mtx_29211422` and
+   `data/dex003_v2_matrix/replay_0002b70_mtx_29211422` must not already exist or resolve through a
+   symlink. Do not delete, reuse, or overwrite any prior run to satisfy this precondition.
+5. At least 4 GiB must remain free on the output filesystem. Sol observed 439,430,504,448 bytes free
+   before authorization. Both endpoint variables are currently unset in Sol's shell, so execution
+   cannot begin there without owner-supplied runtime injection.
+6. Do not run the matrix alongside tests, acquisition daemons, backfills, or another high-load job.
+
+### Authorized commands
+
+No-network plan verification:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --print-matrix-id
+```
+
+After every precondition passes, the one authorized live command is:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --output-root data/dex003_v2_matrix/live_0002b70_mtx_29211422 \
+  --execute-live \
+  --confirm-matrix-id mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2 \
+  --max-logical-calls 1568 \
+  --max-attempts-per-call 3 \
+  --max-provider-attempts 4704 \
+  --max-wall-seconds 5400 \
+  --max-retained-response-bytes 2147483648 \
+  --max-response-bytes 8388608 \
+  --requests-per-second 2 \
+  --max-in-flight 2 \
+  --http-timeout-seconds 60
+```
+
+The reduced 2 requests/second/provider and 2 in-flight/provider limits isolate filter validity from
+quota pressure and reduce workstation load; the immutable 1,568-call plan, three-attempt policy,
+90-minute wall, 2 GiB retained-byte cap, and 8 MB response cap remain frozen. Runtime options must
+not be raised or otherwise changed.
+
+If and only if the live summary reports COMPLETE and PASS, copy its credential-free `run_dir` value
+into `LIVE_RUN_DIR` and execute one standalone replay to the separate fresh output root:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --output-root data/dex003_v2_matrix/replay_0002b70_mtx_29211422 \
+  --offline-replay \
+  --live-run-dir "$LIVE_RUN_DIR"
+```
+
+### Immediate stops
+
+Any missing/mismatched precondition, nonzero live exit, `FAILED.json`, missing terminal, safety stop,
+chain disagreement, registry/cohort/matrix-ID drift, malformed or out-of-domain evidence,
+credential detection, provider disagreement, truncation, response/cumulative budget breach, or any
+cell other than PASS stops the phase. Preserve the entire immutable run directory. Do not clean it,
+edit it, replay a failed source, change limits/providers, or start another live run. Return evidence
+to Sol for review.
+
+### Required evidence
+
+Jr records only credential-free evidence: integration/authorization commit, matrix ID, live run ID
+and path, terminal kind, exit code, elapsed time, all 15 cell statuses, logical/provider attempt
+counts, retained/observed bytes, 429s, in-flight high-water, evidence hash, report hash, output bytes,
+remaining free disk, and any blocker class. For PASS, also record the standalone replay run ID/path,
+exit code, authenticated live evidence/report hashes, all-cell decision, and source-inventory hash.
+Never record endpoint values or command environments.
+
+Matrix PASS does not freeze cohort 64 or any other cohort and does not authorize endurance. Sol must
+review the immutable live and replay evidence and issue a separate endurance decision. Full event
+acquisition, headers, metadata, publication, factors, PAPER, and LIVE trading remain prohibited.
