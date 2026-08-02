@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - replace rejected matrix harness with fresh-run design
+Next required actor: Sol 5.6 High - source-accept final stream-drain matrix correction
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -483,3 +483,163 @@ No live matrix, endurance, production acquisition, coverage credit, or downstrea
 authorized. After eventual matrix acceptance, endurance must project full logs plus shared headers
 to a target of seven days and a hard maximum of fourteen days, with at least 2x free-disk headroom;
 otherwise acquisition stops for redesign.
+
+## Sol review - fresh-run replacement rejected
+
+Sol reviewed the uncommitted three-file fresh-run replacement. The rewrite removes SQLite,
+resume, and current-pointer state; targeted ruff and repository control pass; and the 23-test
+senior suite passes, including one complete 1,568-call fake run. The focused suite takes more than
+two minutes because it honors production request pacing. No RPC call was made.
+
+The source remains rejected after public-path probes confirmed:
+
+- an HTTP-200 JSON-RPC error is stored as success, raises `MatrixCellFailure` during chain parsing,
+  and leaves the run without either `COMPLETE.json` or `FAILED.json`;
+- same-process replay reads cached receipts/raw, so tampering a promoted raw file is not detected;
+- terminal authentication accepts a forged logical-call receipt and its unreferenced raw body;
+- offline replay allows its output root to equal the live source directory; and
+- generic completed-run authentication accepts a `mode=plan_only` run as a replay source candidate.
+
+Static review additionally found that PASS is based on pre-seal cache-backed evaluation, terminal
+authentication validates file hashes but not exact call/attempt/request/raw relationships,
+standalone replay does not require dual chain evidence or a sealed live PASS, response bytes are
+written before credential scanning and bytes after a credential hit are not scanned, wall time is
+not hard across waits/HTTP, provider/call metrics are incomplete, and several tests still exercise
+private helpers rather than scheduler/terminal/public CLI paths.
+
+Grok is authorized for a bounded correction in the same three files only. It must:
+
+1. Remove receipt/body authority caches or bypass them for every replay/authentication decision.
+   Before sealing, evaluate through a read-only disk adapter that rehashes all raw and receipt
+   bytes and validates the exact plan-derived call inventory.
+2. Authenticate plan identity, canonical catalog bytes, receipt filename/call/attempt/run/request
+   bindings, contiguous attempts, success/error semantics, referenced raw SHA/bytes, and zero
+   unknown/orphan receipts/raw. Completed live runs must contain all 1,568 logical calls; generic
+   authentication and standalone replay must require `mode=execute_live`, dual mainnet evidence,
+   complete=true, PASS=true, and all 15 cells.
+3. Reject replay output equal to, inside, or containing the live source after symlink resolution.
+   Snapshot the source inventory before and after replay and fail if it changes.
+4. Parse/classify JSON-RPC envelopes before an attempt becomes success. Retry bounded provider
+   errors according to policy. Every exception after run creation, including `MatrixCellFailure`,
+   must drain started work, close resources, and exclusively seal `FAILED.json`; no run may exit
+   live execution without exactly one terminal.
+5. Scan every response byte with a rolling boundary-safe scanner before writing that byte to disk,
+   continue scanning drained bytes beyond the retention cap, and hash all observed bytes while
+   separately hashing the retained prefix. Enforce wall time after semaphore/RPS waits and cap HTTP
+   timeout by the remaining wall budget.
+6. Provide exact per-call, per-provider, and per-cell metrics in all terminal reports and bind them
+   in the hashes. Remove unsynchronized mutable HTTP-response tracking or protect it with a lock.
+
+Senior tests must execute the five probes above through public APIs, plus public live scheduler
+tests for provider retry/error FAILED sealing, disk tamper before in-process PASS, exact unknown/
+orphan/duplicate receipt and raw rejection, source/output overlap and symlink escapes, source-tree
+immutability across replay, credentials split across scanner chunks and beyond cap, hard wall-time
+expiry while waiting/in HTTP, stop/drain behavior, complete terminal metrics, and CLI plan/live/
+replay failure paths. Helper-only assertions do not satisfy these requirements. Grok writes but
+does not run tests; Jr will integrate and execute only after Sol source acceptance.
+
+No live matrix or downstream work is authorized.
+
+## Sol re-review - bounded correction rejected
+
+Sol re-reviewed the uncommitted three-file correction. The correction closes the five public
+failures from the prior review: HTTP-200 JSON-RPC errors seal `FAILED.json`, pre-seal evaluation
+rehashes raw evidence from disk, forged unknown receipt/raw evidence is rejected, replay output
+overlap is rejected, and plan-only runs cannot authenticate as live replay sources. The senior
+suite passes 29/29; targeted ruff, repository control, and diff checks pass. No RPC call was made.
+
+The source and suite remain rejected only against requirements already frozen above:
+
+- a public execute-live probe with `max_wall_seconds=0.05` and a blocking fake transport returned
+  only after 0.573 seconds. `HttpxTransport` retains its constructor-time fixed timeout and the
+  remaining-wall `BudgetTracker.http_timeout_seconds()` value is not applied to an HTTP request;
+  therefore wall time is not hard while in HTTP;
+- `test_stop_drain_behavior` calls private `_signal`/`_raise_if_stopped` methods and does not
+  exercise bounded scheduler submission, cancellation, or draining of already-started work;
+- no hard-wall test exists, and `test_credentials_split_across_scanner_chunks` supplies a single
+  roughly 525-byte body to a helper that chunks at 65,536 bytes, so it does not cross a scanner
+  chunk boundary;
+- the replay test checks that `COMPLETE.json` still exists but does not compare the full source
+  inventory before and after replay, and there is no symlink-overlap probe;
+- no public CLI plan/live/replay failure-path tests exist, the JSON-RPC error test lowers retries to
+  one rather than freezing bounded provider retry, and the terminal-metrics test asserts only
+  broad key presence rather than exact per-call/provider/cell completeness.
+
+Grok is authorized for one bounded correction in the same three matrix files only. Apply the
+remaining wall budget to each real HTTP operation and make the frozen public-path tests above
+execute the actual scheduler, streaming chunk boundary, replay inventory/symlink, exact terminal
+metrics, retry, and CLI paths. This is completion of the existing contract, not a new requirement.
+Grok writes but does not execute tests; Jr integrates and executes only after Sol source
+acceptance.
+
+No live matrix, endurance, production acquisition, coverage credit, or downstream work is
+authorized.
+
+## Sol review - second bounded correction rejected
+
+Sol reviewed the new uncommitted three-file correction. It adds remaining-wall request timeouts,
+locks mutable HTTP-response tracking, exercises the live scheduler stop path, crosses the real
+65,536-byte scanner boundary, compares replay source inventories, resolves symlink overlap, freezes
+three-attempt provider retry, and strengthens terminal metric assertions. Six of the seven new
+decisive public-path tests pass. Targeted ruff, repository control, and diff checks pass. No RPC
+call was made.
+
+The correction remains rejected against the existing hard-wall, stop/drain, and CLI requirements:
+
+- `test_cli_plan_live_replay_failure_paths` fails before exercising the CLI with
+  `ModuleNotFoundError: No module named 'scripts'`, so the senior suite is not passing;
+- a public execute-live streamed-response probe with `max_wall_seconds=0.05` returned after 0.522
+  seconds. The remaining-wall timeout covers provider invocation/response headers, but
+  `stream_to_receipt` consumes response chunks without checking the tracker deadline. Per-read
+  HTTP timeouts therefore do not provide the required absolute wall bound for a slowly streaming
+  response; and
+- an injectable provider timeout calls `shutdown(wait=False)` on a still-running future and can
+  seal `FAILED.json` before that started provider operation finishes. That is abandonment, not the
+  required draining and closure of already-started work.
+
+Grok is authorized for one narrow correction in the same three files only. Enforce the absolute
+remaining wall while consuming response chunks; make timed-out injectable work cooperatively stop
+and finish before terminal sealing; and load/exercise the CLI through an import path that works in
+the repository test environment. Add public regression assertions for streamed wall expiry and no
+active provider work at terminal return. These are direct completions of the already frozen
+requirements, not new scope. Grok writes but does not execute tests; Jr integrates and executes the
+unchanged drop only after Sol source acceptance.
+
+No live matrix, endurance, production acquisition, coverage credit, or downstream work is
+authorized.
+
+## Sol review - stream-drain correction rejected
+
+Sol reviewed the latest uncommitted correction. The CLI failure-path test now loads the executable
+script by file path, timed-out cooperative provider calls finish before terminal return, and an
+explicit streamed-response wall-expiry test passes. All four focused regression tests pass;
+targeted ruff, repository control, and diff checks pass. No RPC call was made.
+
+One existing stop/drain requirement remains blocking. `stream_to_receipt` starts a new daemon
+thread for each blocking `next(chunks_iter)` call. When the wall expires, the caller raises and
+decrements `_active_provider_ops` without stopping or joining that chunk-reader thread. A public
+execute-live probe returned `FAILED` while `stream_finished_at_return=false`, even though both
+`active_provider_ops()` and the terminal report claimed zero. For a real HTTP response, the caller
+can also close the response concurrently while its unjoined reader remains inside `iter_bytes`.
+This is abandoned started response work, not drain-before-terminal behavior.
+
+Grok is authorized for one final narrow correction in the same source and test files. On streamed
+wall expiry, cooperatively stop/close the response iterator and join its reader before decrementing
+provider-operation accounting or sealing either terminal. The regression test must assert the
+stream reader has finished at terminal return, not only that the counter is zero. Do not change any
+other accepted behavior or scope. Grok writes but does not execute tests; Jr integrates and
+executes the unchanged drop only after Sol source acceptance.
+
+No live matrix, endurance, production acquisition, coverage credit, or downstream work is
+authorized.
+
+## Jr status - final stream-drain correction drop present
+
+Sr Dev delivered the authorized final correction in the same three matrix files (working tree,
+2026-08-01 21:44, newer than the records above). `stream_to_receipt` now starts a non-daemon chunk
+reader, joins it on every path including wall expiry (stop/close the response iterator, join the
+reader), and decrements provider-operation accounting and seals a terminal only after the join. The
+suite includes `test_streamed_response_wall_expiry`, `test_hard_wall_timeout_during_blocking_provider_call`,
+`test_cli_plan_live_replay_failure_paths`, and `test_symlink_replay_output_overlap_rejected`. The
+drop is uncommitted and awaits Sol source acceptance; Jr integrates and executes the unchanged drop
+only after acceptance. Next required actor is Sol 5.6 High.
