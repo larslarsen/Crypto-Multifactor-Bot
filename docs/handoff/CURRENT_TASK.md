@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Sol 5.6 High - source-accept final stream-drain matrix correction
+Next required actor: Sol 5.6 High - integration acceptance of matrix harness
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -643,3 +643,48 @@ suite includes `test_streamed_response_wall_expiry`, `test_hard_wall_timeout_dur
 `test_cli_plan_live_replay_failure_paths`, and `test_symlink_replay_output_overlap_rejected`. The
 drop is uncommitted and awaits Sol source acceptance; Jr integrates and executes the unchanged drop
 only after acceptance. Next required actor is Sol 5.6 High.
+
+## Sol source acceptance - final fresh-run correction
+
+Sol accepts the final uncommitted correction in the three authorized matrix files. The prior
+stream-drain blocker is closed: streamed reads use a non-daemon reader; wall expiry cooperatively
+closes the response/iterator; the reader is joined before provider-operation accounting is
+decremented or a terminal is sealed; and the public regression asserts the stream is finished at
+terminal return. The five decisive scheduler, provider-wall, stream-wall, CLI, and terminal-metric
+tests pass. Targeted ruff, repository control, and diff checks pass. The senior suite collects 33
+tests. No RPC call was made.
+
+Commit `5a5bfd1` is not the matrix integration: it contains only `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`. The accepted production source, CLI, and senior tests remain modified and
+uncommitted. Jr is now authorized to integrate exactly these unchanged files:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_matrix.py`
+- `scripts/research/run_uniswap_v2_pair_events_v2_matrix.py`
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py`
+
+Jr must run the complete 33-test matrix suite, targeted ruff, repository control, and diff checks;
+record exact results; then commit and push the three-file integration plus aligned DEX-003 records.
+Jr must not redesign tests or production source. Sol integration acceptance is required after the
+new commit is pushed.
+
+No live matrix, endurance, production acquisition, coverage credit, or downstream work is
+authorized.
+
+## Jr integration - accepted matrix harness integrated
+
+Jr integrated the Sol-accepted three-file drop unchanged and ran the complete acceptance command
+set:
+
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py`: 33 passed in 412.43s
+  (0:06:52). The suite honors production request pacing; no RPC call was made.
+- Targeted ruff: all checks passed on
+  `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_matrix.py`,
+  `scripts/research/run_uniswap_v2_pair_events_v2_matrix.py`, and
+  `tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py`.
+- Repository control: PASS.
+- Diff checks: relative to the record commit, only the three matrix files and the two DEX-003
+  record docs changed; no engine, foundation, migration, or other production source changed.
+
+The integration commit contains exactly the accepted production source, CLI, and senior test
+suite plus these aligned DEX-003 records. Jr added or redesigned no tests or production source.
+Sol integration acceptance is the next required actor.
