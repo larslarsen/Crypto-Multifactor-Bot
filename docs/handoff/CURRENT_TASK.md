@@ -800,3 +800,44 @@ Never record endpoint values or command environments.
 Matrix PASS does not freeze cohort 64 or any other cohort and does not authorize endurance. Sol must
 review the immutable live and replay evidence and issue a separate endurance decision. Full event
 acquisition, headers, metadata, publication, factors, PAPER, and LIVE trading remain prohibited.
+
+## Jr evidence - bounded live matrix COMPLETE but NOT PASS
+
+Jr executed the one authorized live matrix from the accepted harness at `0002b70` with the frozen
+runtime options (2 requests/second/provider, 2 in-flight/provider, 1,568 logical calls, 3 attempts
+per call, 90-minute wall, 2 GiB retained cap, 8 MB response cap) on 2026-08-02T19:11Z, matrix ID
+`mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`.
+
+**Incident disclosure - two concurrent live runs (Jr procedural error):** the first launch detached
+via `setsid`; `setsid` forked a child whose PID differed from the recorded wrapper PID, so the
+wrapper appeared dead while the real process survived in a new session and kept running. Believing
+the first run had been killed, Jr launched a second live run in the foreground. Both processes then
+ran concurrently from 19:13:48Z until the first finished at 19:29:51Z. This violates the
+one-live-run precondition and the concurrent-run precondition. Both immutable run directories are
+preserved unmodified as evidence.
+
+Run A (setsid survivor) - `run_5ed38a9ada6942d5964eeb622963d2d5`:
+- started 2026-08-02T19:11:23Z, finished 19:29:51Z (~18.5 min), status COMPLETE, `pass=false`.
+- cells 5 pass / 10 fail; logical calls started 1,568; provider attempts 1,988; 429s 451;
+  retained response bytes 141,370,620; in-flight high-water 2; credential scan pass.
+- evidence hash `db083430a7ac7af27258eb8f5087c11d9a40c899312a578da4187661e869a115`; report hash
+  `970639d0e0d6d4a879844f87d6693aee8c14c556934b5c765d76e5ecdb29e43b`; output bytes 95,312,242.
+
+Run B (foreground) - `run_70e886dd31674d259042d11ac4194763`:
+- started 2026-08-02T19:13:48Z, finished 19:32:05Z (~18.3 min), exit code 1, status COMPLETE,
+  `pass=false`.
+- cells 7 pass / 8 fail; logical calls started 1,568; provider attempts 1,942; 429s 411;
+  retained response bytes 144,864,686; in-flight high-water 2; credential scan pass.
+- evidence hash `dbd4591046b72783854e2ca2f90703c78f1d1f57f0e07774c9e481d7bcee121d`; report hash
+  `69863959d13254a69dbc4b49975f21c0a14035f3c28ec598f70b8e5770712b1f`; output bytes 98,753,821.
+
+Common blockers (both runs): `credential_detection` on several Infura scalar calls (scan matched
+endpoint/credential patterns in provider responses for pools such as
+`0x05556053d0966c7701201a2103dcb56cf75bdd92` (sparse sync), `0xed049cb4d4a4ee4b7e124297871c452036dfb881`
+(hot swap), and `0x2cf500dccf4b8f68126ed155acd351aad8b328fe` (medium sync)); plus
+`provider_limit_or_size` / `body_size_pressure` on both providers for medium-cohort cells. Both runs
+report `credential_scan: pass` (no credentials persisted).
+
+No standalone replay was run: PASS is a hard precondition for replay, and neither run is PASS. No
+other live run is running or retained. Free disk after the runs: 433,185,316,864 bytes. The phase
+stops here per the immediate-stop contract; the evidence above is returned to Sol for review.
