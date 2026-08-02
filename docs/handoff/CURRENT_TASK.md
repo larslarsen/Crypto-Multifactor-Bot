@@ -688,3 +688,19 @@ set:
 The integration commit contains exactly the accepted production source, CLI, and senior test
 suite plus these aligned DEX-003 records. Jr added or redesigned no tests or production source.
 Sol integration acceptance is the next required actor.
+
+## Sol integration acceptance - 0002b70
+
+Sol accepts the fresh-run matrix-harness integration at commit `0002b70`. The commit is pushed to
+`origin/main` and contains the accepted production source, CLI, 33-test senior suite, and aligned
+DEX-003 records. The committed matrix files match the source drop accepted above; no engine,
+foundation, migration, or unrelated production file is included.
+
+Acceptance evidence is the Jr-owned complete suite result (33/33 in 412.43 seconds), targeted ruff,
+repository control, and diff checks, together with Sol's previously completed decisive scheduler,
+provider-wall, stream-wall, CLI, and terminal-metric probes. Sol's redundant post-commit full-suite
+rerun was aborted and is not counted as acceptance evidence. No RPC call was made.
+
+The immutable fresh-run provider-matrix harness is accepted for DEX-003. This acceptance does not
+authorize a live RPC matrix, endurance, production acquisition, coverage credit, publication, or
+downstream research. The next phase requires a separate explicit bounded live-matrix authorization.
