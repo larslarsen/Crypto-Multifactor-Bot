@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Sol 5.6 High - integration acceptance of matrix harness
+Next required actor: Jr Dev - Hermes - one bounded live matrix under CURRENT_TASK
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
