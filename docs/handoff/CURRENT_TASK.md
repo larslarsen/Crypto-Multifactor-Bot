@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol acceptance and design authorization
+Next required actor: Jr Dev - Hermes - publish Sol endurance-design rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1788,3 +1788,110 @@ The proposal must specify the smallest fail-closed 6-24 hour endurance harness a
 No endurance harness implementation or execution is authorized by this design phase. Production
 acquisition, publication, coverage credit, metadata/downstream transforms, factor work, PAPER, and
 LIVE trading remain prohibited. Next ticket authorized remains `NONE`.
+
+## Sol review - endurance-harness design rejected (2026-08-07)
+
+Jr published the matrix acceptance/design authorization at commit `ac5a282`; `HEAD` and
+`origin/main` both resolve to that commit. Sr then delivered the sole authorized uncommitted proposal
+`research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md`, SHA-256
+`f6c343b3ccb02fe1cea783c924bffa1db58683ec336e8e6bbf58e81c0e0d87e6`. No production/test
+source, migrations, ADR, data, RPC, pytest, Git, commit, or push work accompanied the proposal.
+
+The proposal correctly identifies that the accepted engine cannot install a representative partial
+pilot under the full production plan identity and that direct private-SQLite scheduling would be a
+second scheduler. It also correctly distinguishes AGREED birth-clamped coverage from requests and
+shows that the 20x floor alone cannot meet the fourteen-day projection. The design is nevertheless
+rejected before implementation for these blocking defects:
+
+1. The proposed `eplan_<hash>` identity cannot enter the accepted foundation or database. Every
+   `_require_plan_id`/record validator requires `plan_<64 hex>`; `PlanRecord` reconstructs a production
+   `PlanConfig`; and migrations 0017-0019 constrain/foreign-key the same production plan rows. The
+   proposal authorizes no migration and does not define the discriminated pilot-plan record, schema,
+   authentication, or fresh-database bootstrap needed by its own API changes. Applying only migrations
+   0017-0019 to a fresh DB is also invalid because 0018 references earlier raw-object tables.
+2. The schedule cannot produce a PASS. Its ceiling of 25,000 roots contains at most 400,000 SEU
+   (`25,000 * 8 pools * 2 topics`) before birth clamping. Even if every root agrees, six hours caps the
+   rate at 66,666.67 SEU/hour, below the 176,793.71 SEU/hour required to project 29,701,343.35 SEU to
+   seven days. At the proposed default continuation to 24 hours it caps at 16,666.67 SEU/hour, below
+   even the 36,220 floor. The under-2,000 expansion rule is not an exact selection algorithm. In
+   addition, `S_late` selects windows near block 25,600,000 rather than remaining inside the authorized
+   pre-2025 pilot span.
+3. `R_net` already measures net AGREED SEU per elapsed hour after observed splits, retries, headers,
+   and persistence. Multiplying `U_full / R_net` by absolute observed split/retry amplification counts
+   those costs twice. The fixed `w_hot=0.35` penalty is unsupported. Projection must use explicit
+   full-lattice stratum weights and conservative observed stratum rates without fitted or arbitrary
+   constants.
+4. PASS semantics are contradictory. Section 5 requires seven days, but the terminal table allows
+   PASS whenever only the fourteen-day hard maximum is met. The frozen contract requires projection
+   at or below seven days for PASS. A result above seven and at/below fourteen days is COMPLETE
+   non-PASS; above fourteen days is COMPLETE non-PASS plus mandatory stop-for-redesign unless another
+   safety defect independently requires FAILED.
+5. Wall-clock subtraction alone does not satisfy the monotonic-duration gate, and downtime cannot
+   count toward six hours of endurance observation. The proposal explicitly permits PASS after an
+   interrupted wall span without six active monotonic hours. It also lacks fail-closed wall-clock
+   rollback/jump handling across checkpoints and resumes.
+6. The accepted engine rejects sensitive JSON keys but does not scan every streamed response byte for
+   exact runtime endpoints/secrets or credential forms before raw persistence. The proposal incorrectly
+   assumes engine-scanned raw bodies and proposes only a later partial metadata scan. Credential-bearing
+   bytes must never be persisted; the design must include the minimum engine streaming-scanner surface
+   and boundary/over-cap/error-body tests.
+7. The proposal has no complete immutable evidence inventory or public read-only terminal
+   authenticator. Hashing a report/checkpoint is insufficient while `receipt.db`, raw objects,
+   checkpoints, logs, and run files remain mutable or unauthenticated. It must define clean-close,
+   exact file inventory/hash sealing, extra/missing/path-escape rejection, authenticated DB/row/raw
+   relationships, offline recomputation of SEU and projections, and source-tree immutability during
+   review.
+8. Several required resource metrics are not exposed by `EngineMetrics`, including provider attempt
+   totals and provider in-flight high-water. The minimum additive engine surface and tests must be
+   listed rather than assigning unavailable values to the harness. Disk headroom must use free space
+   at the terminal decision (and exact total projected storage categories), not only pre-run free space.
+
+## Authorized correction - same design file only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding both untracked research files. After publication, Sr Dev - Grok Build
+may revise only `research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md`. No source, tests,
+migration, ADR, other record, data, command, RPC, pytest, Git, commit, or push work is authorized.
+
+The corrected proposal must:
+
+1. Choose one exact pilot-plan persistence design that is valid through foundation validators,
+   authenticated record reconstruction, SQLite checks/FKs, and the migration runner. Specify every
+   additive production/test/migration/ADR file that a later implementation would require and the exact
+   fresh dedicated-DB bootstrap. Do not use `eplan_` with current validators, reuse the production plan
+   identity for a subset, weaken production authentication, or bypass the coordinator with private SQL.
+2. Replace the root-count target with deterministic scheduled-SEU sizing. For an intended active
+   duration `D` in 6-24 hours, the schedule must contain enough birth-clamped SEU to sustain at least
+   `U_full / 168 * D`, plus a declared conservative reserve for partial cohorts and unusable/failed
+   strata. Define the expansion algorithm byte-exactly, prevent premature idle/exhaustion, and use only
+   authenticated windows ending in the authorized pre-2025 span. The selected duration and schedule
+   digest are immutable identity inputs.
+3. Define projection from net observed per-stratum AGREED rates and exact full-lattice SEU weights.
+   Observed split/retry/header/persistence costs remain reported diagnostics but are not multiplied into
+   the same net rate again. Define conservative handling for sparse or unobserved strata without an
+   unsupported fitted constant. Require `<=7 days` for PASS, classify `>7 and <=14` as COMPLETE
+   non-PASS, and classify `>14` as COMPLETE non-PASS with mandatory redesign stop.
+4. Require at least six accumulated active monotonic hours for PASS; downtime never satisfies that
+   minimum. Preserve first wall start, monotonic process segments, downtime, and resume count; include
+   downtime in the throughput denominator; reject wall-clock regression/inconsistent jumps; stop new
+   work by the immutable 24-hour wall deadline and an in-process monotonic backstop. State exact early
+   stop and schedule-exhaustion semantics.
+5. Add pre-persistence rolling scanning of every streamed response byte, including chunk boundaries,
+   provider error bodies, truncation/over-cap drains, exact runtime URLs and extracted secrets, and
+   generic credential forms. A hit drains safely, persists no secret bytes, and seals FAILED with only
+   a canonical redacted marker.
+6. Define an immutable terminal evidence protocol and public zero-network authenticator: clean engine
+   closure, exact inventory and SHA-256 for the plan, dedicated DB snapshot, raw objects, checkpoints,
+   metrics, and terminal artifacts; no extras; path/symlink rejection; relational/raw authentication;
+   recomputed schedule/SEU/projection/outcome; and read-only review that cannot mutate the source tree.
+7. Enumerate all new engine metrics/APIs required for provider attempts, actual in-flight high-water,
+   spool/queue bounds, authenticated leaf/header iteration, pilot initialization/resume, and clean
+   drain. Define terminal disk projection from exact observed total tree/DB/checkpoint bytes per SEU and
+   conservative stratum statistics, tested against current terminal free space with 2x headroom.
+8. Resolve the run/root/checkpoint model so crashes leave an authenticatable incomplete run, one resume
+   cannot reset identity/time/counters, and exactly one immutable terminal exists for the endurance
+   identity. Expand the decisive offline test list to cover every correction above.
+
+Sr stops after replacing the design proposal for Sol re-review. Endurance implementation/execution,
+production acquisition, publication, coverage credit, metadata/downstream transforms, factor work,
+PAPER, and LIVE trading remain prohibited. Next ticket authorized remains `NONE`.
