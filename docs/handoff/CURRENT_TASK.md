@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol endurance-design rejection
+Next required actor: Jr Dev - Hermes - publish Sol corrected-design rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1895,3 +1895,109 @@ The corrected proposal must:
 Sr stops after replacing the design proposal for Sol re-review. Endurance implementation/execution,
 production acquisition, publication, coverage credit, metadata/downstream transforms, factor work,
 PAPER, and LIVE trading remain prohibited. Next ticket authorized remains `NONE`.
+
+## Sol re-review - corrected endurance design rejected (2026-08-07)
+
+Jr published the first design rejection/correction authorization at commit `5b4af4a`; `HEAD` and
+`origin/main` both resolve to that commit. Sr revised only the authorized untracked proposal. The
+corrected `research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md` has SHA-256
+`51f36d9e1f9c9f36bd0ea868d9d4f4f25b8ebaba79bc1b31130b8d85e29924c7`; the unrelated GMGN
+draft remains untracked, and no source/test/migration/ADR/record/data/Git change accompanies the design.
+
+The correction closes the invalid `eplan_` prefix, standalone-0017 bootstrap, 25,000-root capacity,
+seven-versus-fourteen-day terminal class, downtime-as-active-time, missing scanner, missing public
+authenticator, and missing-metrics acknowledgements. It is still rejected before implementation for
+the following blockers:
+
+1. Construction order is not execution order. The proposed schedule round-robins strata while
+   selecting roots, but accepted `_op_claim_pending` executes `ORDER BY start_block, domain_id`.
+   Consequently early roots can consume the observation window before hot/late/post-pin strata run;
+   mandatory roots in the DB do not prove representative work. The design neither persists an
+   identity-bound root priority nor defines deterministic priority inheritance for split children.
+2. The stratum projection is mathematically invalid. `SEU_s / total_wall_elapsed` is each stratum's
+   contribution to global throughput, not that stratum's processing rate. Weighting those contributions
+   by `w_s` applies sample shares again. Even with valid stratum rates, completion time is additive:
+   `T_work = sum_s(U_s / R_s_use)` (the weighted-harmonic equivalent), not
+   `U_full / sum_s(w_s * R_s_use)`. If total wall already includes initialization/finalization, adding
+   `T_init + T_final` again also double-counts them.
+3. Treating every unobserved post-pin stratum as the slowest observed pre-pin rate is not a conservative
+   bound on denser later data. A full-cutoff PASS cannot rely on that assumption. DEX-003's holdout rule
+   permits structural acquisition/quality metrics but no factor, return, ranking, or portfolio output;
+   the next design may include deterministic structural-only strata through the pinned cutoff so every
+   projection stratum is actually observed.
+4. The plan/schema choice remains non-exact. It alternates between adding pilot fields to `PlanConfig`
+   and an `AcquisitionPlanV2`-shaped object, while migration 0020 enforcement is left as “triggers or
+   documented app-level” behavior. Changing the parent plan-table CHECK requires an exact forward
+   migration that preserves existing populated v1 rows and all child FKs. The proposed migration test
+   covers only an empty DB and omits populated upgrade, v1 identity preservation, invalid-v2 rejection,
+   and atomic rollback.
+5. Identity arithmetic is still float-based: millions of fractional SEUs are summed as IEEE float and
+   rounded to twelve decimals. SEU has an exact integer numerator in pool-topic-blocks over denominator
+   5,000; schedule identity and all gates must use that rational/integer authority, never float rounding.
+6. `wall_segments.jsonl` is declared append-only but its start record is later “filled” with end fields.
+   A crashed process cannot recover an unpersisted `mono_end`. The design must use immutable start/end/
+   checkpoint events and state exactly how much active monotonic time an unmatched crash segment earns.
+7. The credential path says scanning precedes promotion, not every spool write. A secret spanning chunks
+   can place its prefix in a disk spool before the next chunk completes the match. The scanner needs a
+   bounded holdback window at least as long as its longest exact needle and must release only bytes proven
+   safe; tests must assert no secret bytes in spool, raw, DB, logs, checkpoints, or terminals.
+8. Terminal hashing remains ambiguous/self-referential. `TERMINAL.json` claims every allowed file but
+   cannot inventory/hash itself; optional sidecars and empty directories are not canonicalized; and the
+   design permits authority-bearing wall timestamps/elapsed fields to remain unhashed even though they
+   determine throughput and PASS. The pre-terminal manifest, terminal hash construction, exact allowed
+   inventory, immutable authority fields, SQLite sidecars, and post-seal no-write rule must be explicit.
+   Disk projection's 75th-percentile interval rate is also not conservative for a hard 2x gate.
+
+## Authorized second correction - design file only
+
+Jr Dev - Hermes must first commit and push only this re-review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding both untracked research files. After publication, Sr Dev - Grok Build
+may revise only `research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md`. No source, tests,
+migration, ADR, other record, data, RPC, pytest, Git, commit, or push work is authorized.
+
+The next revision must:
+
+1. Define an identity-bound execution schedule, not merely a selected root set. Specify the minimum
+   persisted `schedule_rank`/stratum fields, exact coordinator claim order, resume authentication, and
+   deterministic placement/priority of adaptive children. Prove each required stratum receives a
+   minimum scheduled and executed SEU allocation before PASS eligibility; schedule exhaustion or a
+   missing stratum is COMPLETE non-PASS.
+2. Measure stratum rates in non-overlapping, identity-bound execution epochs (or another exact method
+   that assigns both SEU and elapsed cost once under concurrency). Project
+   `T_work = sum_s(U_s / R_s_use)` and add fixed costs only if excluded from rate denominators. Report
+   the equivalent harmonic net rate. Splits/retries/headers remain inside measured net epoch rates and
+   are not multiplied again.
+3. Remove the unauthenticated post-pin substitution. The structural endurance schedule may sample
+   deterministic windows through block 25,600,000, including holdout/post-holdout periods, solely for
+   request/byte/log-count/split/header/latency/resource metrics. It must not decode, report, rank, or
+   expose prices, returns, factors, pools, or portfolio outcomes. Every full-lattice projection stratum
+   must have a minimum observed allocation; otherwise PASS is impossible.
+4. Choose explicit `EndurancePilotPlanConfig`/record types and a complete schema-v2 payload rather than
+   optional pilot fields on production `PlanConfig`. Specify migration 0020's exact table/trigger/index/
+   FK operations and fresh bootstrap. Require tests for a populated 0019-to-0020 upgrade with all v1
+   rows/child relationships preserved, byte-identical v1 identities, valid v2 insertion, malformed or
+   coverage-granting v2 rejection, FK checks, and atomic rollback. No “app-level or trigger” alternative
+   may remain.
+5. Represent scheduled and completed coverage as exact integer `pool_topic_blocks`; derive SEU only as
+   the rational `pool_topic_blocks / 5000` for display. Identity, thresholds, schedule exhaustion,
+   projections, and authentication use integers/rationals or fixed cross-multlication.
+6. Replace mutable segment rows with append-only START, CHECKPOINT, END, CRASH/RESUME events. Credit a
+   crashed segment only through its last durable monotonic checkpoint; bind boot/process identity,
+   reject unmatched/reordered events, and hash every wall/monotonic duration that affects eligibility,
+   deadline, throughput, projection, or outcome.
+7. Define the stream scanner's pre-write holdback algorithm and maximum-needle bound. No candidate byte
+   may reach spool/raw persistence until it can no longer participate in a secret match. Continue scanning
+   all drained over-cap/error bytes; on detection delete any safe-prefix spool, persist no response body,
+   and retain only the canonical redacted failure record.
+8. Use a separate canonical `MANIFEST.json` that hashes every pre-seal regular file and excludes only
+   itself, the final terminal, the held lock file, and canonical empty transient directories by explicit
+   rule. `TERMINAL.json` hashes the manifest and every decision/clock/projection field with hash fields
+   omitted during canonicalization; it is then exclusive-created and no source-root writes are allowed.
+   The authenticator rejects WAL/SHM or any unlisted object and opens the DB immutable read-only. Disk
+   projection uses exact total observed bytes and the maximum authenticated per-stratum bytes-per-
+   pool-topic-block rate plus declared fixed overhead, tested against terminal free space at 2x.
+
+Sr stops after replacing the same design for Sol re-review. Harness implementation, migration/ADR/source
+work, test execution, RPC, endurance execution, production acquisition, publication, coverage credit,
+metadata/downstream transforms, factor work, PAPER, and LIVE trading remain prohibited. Next ticket
+authorized remains `NONE`.
