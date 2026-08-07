@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish review then run one clean replacement confirmation
+Next required actor: Jr Dev - Hermes - publish Sol acceptance and design authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1680,8 +1680,10 @@ tests SHA-256 afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8 (
 - Terminal COMPLETE, pass true, exit 0; started 16:54:42Z, finished 17:24:45Z, elapsed 1803.696s.
 - Logical calls started 1568, provider attempts 1580, HTTP 429s 0, high-water in-flight 1.
 - Retained bytes 144,991,333; observed body bytes 177,521,737; 1580 receipts, 298 raw files.
-- Cells (15): 12 PASS with providers-agree; 3 capacity FAIL (medium:cohort32/64/128, providers
-  disagree on batch/scalar equality, digests equal). All sparse and hot cells PASS.
+- Cells (15): 12 PASS with provider agreement; 3 capacity FAIL (medium:cohort32/64/128).
+  For each failed cell, both scalar references succeeded with equal identity-v2 digests, while
+  both batches failed authenticated capacity limits, so batch/scalar equality was not evaluable.
+  All sparse and hot cells PASS.
 - Capacity selection: valid, selected_cohort_size 8, viable_sizes [1,8],
   capacity_failure_cells medium:cohort32/64/128, nonmonotonic false.
 - credential_scan pass; evidence_hash e42e987dade698af6af4fb47598abe88eb78116ac6fc004ff6fc4d0a84b4a114;
@@ -1701,3 +1703,88 @@ tests SHA-256 afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8 (
 
 No result authorizes endurance, production acquisition, publication, factors, PAPER, or LIVE trading.
 Next actor: reviewer/Sol - capacity-selection and evidence review of the clean replacement.
+
+## Sol acceptance - authenticated matrix capacity 8 (2026-08-07)
+
+Sol accepts the clean replacement and its standalone replay at pushed record commit `38b8d70`.
+Sol independently ran the read-only `authenticate_completed_run` path against both preserved trees;
+Sol did not rerun pytest and made no RPC call. `HEAD` and `origin/main` both resolved to `38b8d70`
+before this review, and the production/test identities remain:
+
+- production source SHA-256
+  `9f84dd007264372ed6499ba3782c0bb34ae0b83090acbf6ed31ff62d715d6a42`
+- senior tests SHA-256
+  `afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8`
+
+The authenticated live run `run_f2fd323fcd69403a923f6329b9f0c320` is COMPLETE/PASS with 1,568
+logical calls, 1,580 provider attempts, zero HTTP 429s, 144,991,333 retained bytes, credential scan
+PASS, evidence hash `e42e987dade698af6af4fb47598abe88eb78116ac6fc004ff6fc4d0a84b4a114`, and report
+hash `2062d1f8717672de645f07bd761354bea31cdca9dbe20908cfe3941fb00189ef`. Twelve cells are
+universally viable. In `medium:cohort32`, `medium:cohort64`, and `medium:cohort128`, both providers'
+mandatory scalar references succeeded and produced equal identity-v2 digests; Infura batches failed
+`provider_limit_or_size` and BlockPI batches failed `body_size_pressure`. These are authenticated
+capacity boundaries under ADR-0015 section 9.8, not quota, credential, malformed-evidence, digest,
+provider-disagreement, or nonmonotonic blockers.
+
+The read-only standalone replay `run_bd066d2e228d46728a97fdb61138e365` is COMPLETE/PASS with zero
+logical calls and zero provider attempts. It reproduces all 15 cell decisions and the valid capacity
+selection exactly, with evidence hash `f7b536de7823a298688e935efae82f85971957c440c7ccdea96881b0b72b88a2`
+and report hash `6c27a8df5211991487d2d0d61dbac548a94f2f4c41a17393ee2846a5ec165786`.
+
+Sol therefore accepts cohort size `8` as the authenticated initial-cohort input to the next bounded
+endurance-design phase. This does not grant v2 coverage, accept an endurance result, authorize an
+endurance execution, freeze production execution settings other than the initial cohort, or authorize
+full acquisition. The three lost historical runs and FAILED
+`run_f135dda6ab1a48c8967a4b0165547dd7` remain incident evidence only and receive no capacity or
+coverage credit. Preserve all current live, replay, and FAILED evidence trees unchanged.
+
+## Authorized next phase - endurance-harness design only
+
+Jr Dev - Hermes must first commit and push only this Sol acceptance/design authorization in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the unrelated untracked GMGN
+draft. After that publication, Sol authorizes Sr Dev - Grok Build to produce exactly one uncommitted
+design proposal at `research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md`. The senior phase
+is reasoning and design only: no production source, test source, migrations, ADR, repository records,
+data, commands, RPC, pytest, Git, commit, or push work is authorized.
+
+The proposal must specify the smallest fail-closed 6-24 hour endurance harness around the accepted
+`PairEventV2Engine` and answer each of these points concretely:
+
+1. Authenticate the exact accepted matrix plan, live tree, replay tree, run IDs, terminal manifests,
+   evidence/report hashes, valid selected cohort `8`, accepted registry manifest, dataset ID, parquet
+   path, byte count, and SHA-256 before creating endurance state. No caller-supplied pools, cohort,
+   ranges, topics, providers, or production plan identity may override those authorities.
+2. Define a dedicated endurance identity, root, receipt database, raw store, spool, immutable
+   checkpoints, and terminal report. Refuse `dex003_full.db`, accepted registry/catalog paths, matrix
+   evidence trees, production v2 state, path overlap, and symlinks. The pilot grants no production
+   coverage and may not present a partial or sampled node set under the full production plan identity.
+3. Define a deterministic workload schedule that is representative across the pre-2025 block span,
+   pool-birth growth, sparse/medium/hot event density, adaptive address/block splits, retries, and
+   shared-header demand. Explain how that schedule uses only public authenticated engine/foundation
+   APIs. If the accepted APIs cannot support it without misrepresenting plan identity or directly
+   mutating private SQLite state, identify the minimum API/schema/ADR change instead of bypassing the
+   boundary.
+4. Define the exact throughput numerator and clock denominator. The numerator must be durably AGREED,
+   non-overlapping, birth-clamped pool/topic/block coverage converted to 5,000-block scalar-equivalent
+   units, not claims, requests, raw receipts, attempted nodes, or optimistic parent domains. PASS must
+   require at least `36,220` such units/hour, exactly 20 times the recorded scalar baseline of 1,811.
+5. Define end-to-end projections for complete event logs plus shared headers using observed net
+   authoritative throughput, split/retry amplification, header fan-out/cache behavior, evidence bytes,
+   and initialization/finalization cost. PASS requires a target projection of at most seven days, a
+   hard maximum of fourteen days, and projected retained evidence that leaves at least 2x free-disk
+   headroom; state exact formulas and conservative treatment of unobserved strata.
+6. Define bounded memory, provider requests/in-flight work, node/persistence queues, spool files,
+   retries, response bytes, writer latency, SQLite latency/size, checkpoint cadence, credential scans,
+   and process/resource high-water metrics. Define immediate safety stops and terminal FAILED versus
+   completed-non-PASS semantics.
+7. Define monotonic 6-hour minimum and 24-hour hard-stop behavior, including stop-new-work, drain,
+   durable checkpoint, clean engine/thread/client closure, crash recovery, resume accounting, and
+   prevention of elapsed-time or evidence-counter reset across process restarts.
+8. List the proposed production/test file scope, public CLI contract, fake-clock/fake-transport
+   offline tests, decisive tamper/crash/resource/projection regressions, and any strictly necessary
+   accepted-engine or foundation change. Prefer new isolated files; justify every edit to accepted
+   source. Sr stops after delivering this design for Sol review.
+
+No endurance harness implementation or execution is authorized by this design phase. Production
+acquisition, publication, coverage credit, metadata/downstream transforms, factor work, PAPER, and
+LIVE trading remain prohibited. Next ticket authorized remains `NONE`.
