@@ -2,9 +2,11 @@
 
 **Status:** ACCEPTED
 **Date:** 2026-07-28
-**Amended:** 2026-07-30 (high-throughput event acquisition)
+**Amended:** 2026-07-30 (high-throughput event acquisition); 2026-08-05
+(provider-capacity selection)
 **Governing ticket:** DEX-003
-**Authority:** Lead Quantitative Finance Researcher/Engineer, Max architecture pass
+**Authority:** Lead Quantitative Finance Researcher/Engineer, Max architecture pass;
+Sol 5.6 provider-capacity amendment
 
 ## Context
 
@@ -193,7 +195,8 @@ The authoritative event plan is identified by a canonical hash over:
 
 For each root window, include every registry pool born on or before the window end. Sort
 addresses deterministically and partition them into initial cohorts. The initial cohort
-candidate is 64 addresses and is frozen only after the live provider matrix passes.
+is selected only by the authenticated live provider-capacity procedure below. No cohort
+size is frozen in advance.
 
 Each provider receives the same filter with an address array and a topic-position OR for
 Swap and Sync. A pool born inside a root is covered only from its creation block, even
@@ -278,15 +281,40 @@ independent Infura and Alchemy archive authority. The orchestrator exposes expli
 and metadata phases rather than forcing one provider pair to support both workloads.
 Token metadata calls authenticate Ethereum chain identity before durable receipt credit.
 
-#### 9.8 Performance and validity gates
+#### 9.8 Provider-capacity selection
+
+The live matrix tests nested address prefixes of 1, 8, 32, 64, and 128 for each frozen
+sparse, medium, and hot scenario and each Swap/Sync topic. A cohort size is universally
+viable only when every required scalar reference succeeds, the two independent providers
+agree on the scalar union, both providers complete the corresponding batched query, and
+each successful batch equals that agreed scalar union.
+
+The selected initial cohort is the largest universally viable nested prefix. An
+authenticated provider limit, body-size limit, or timeout caused by capacity pressure at
+larger prefixes may establish a capacity boundary and does not by itself invalidate a
+smaller universally viable prefix. Quota exhaustion, authentication or credential failure,
+malformed evidence, provider disagreement, successful-response digest mismatch, or
+nonmonotonic viability is not capacity evidence and blocks selection. If no tested prefix
+is universally viable, the matrix does not select a cohort.
+
+The terminal report records every scalar and batch decision plus the deterministic
+capacity-selection result. Generic authentication and standalone replay must recompute
+that result from retained raw evidence and reject any mismatch. A COMPLETE non-PASS run
+remains authenticatable evidence; authentication never converts it to PASS.
+
+Only one live matrix may own a canonical output root at a time. The harness must acquire
+an OS-backed exclusive root lock before creating or mutating run state and hold it through
+terminal sealing. Process-local or pointer-file checks are not sufficient.
+
+#### 9.9 Performance and validity gates
 
 Before a full v2 run:
 
 1. Batched offline replay must equal the union of scalar reference rows, including empty
    results and pools born inside a root window.
 2. Identity-v2 tests must reject a secondary-only difference in every published log field.
-3. Live 1/8/32/64/128-address filters over sparse, medium, and hot pre-2025 ranges must
-   equal scalar reference queries from both providers.
+3. The live nested-prefix matrix over sparse, medium, and hot pre-2025 ranges must select
+   capacity only under section 9.8 and must authenticate the same selection on replay.
 4. Forced address and block splitting must conserve the exact parent domain and result
    union.
 5. Shared headers must remain fully replayable while eliminating duplicate acquisition.

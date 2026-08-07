@@ -6,12 +6,16 @@ and are not continued; rerun from the beginning in a fresh directory.
 
 Frozen contract retained: accepted registry, cohort pins, ranges, providers,
 topics, 15 cells, 1,568 logical calls, ceilings, log identity v2, credential-free
-reporting. PASS requires dual mainnet chain auth, all 15 cells PASS, and
-in-process zero-network replay of the just-sealed evidence. No coverage credit.
+reporting. PASS requires dual mainnet chain auth, ADR-0015 §9.8 capacity selection
+(largest viable nested cohort prefix), exclusive live lock, and in-process
+zero-network replay. Larger capacity-only failures need not pass. No coverage credit.
+
+Fresh regeneration from baseline 0002b70 after artifact-loss incident (git reset).
 """
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -25,6 +29,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final, Literal
+from urllib.parse import parse_qs, unquote, urlparse
 
 import httpx
 
@@ -136,19 +141,46 @@ _UNHASHED_METADATA: Final[frozenset[str]] = frozenset(
     }
 )
 
-_URL_RE = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
 _URL_CREDS_RE = re.compile(r"://[^/\s]*:[^/\s]*@")
-_QUERY_SECRET_RE = re.compile(
-    r"([?&](api[_-]?key|apikey|key|token|password|secret|access_token)=)",
-    re.IGNORECASE,
-)
-_BEARER_RE = re.compile(r"bearer\s+[a-z0-9._\-+/=]+", re.IGNORECASE)
 _SENSITIVE_KEY_RE = re.compile(
     r"(api[_-]?key|authorization|password|secret|token|private[_-]?key|bearer)",
     re.IGNORECASE,
 )
+# Form-based credential detection (supplements exact runtime endpoint/secret echoes).
+# Safe credential-free generic help URLs without secret query values remain allowed.
+_BEARER_FORM_RE = re.compile(
+    r"(?i)(?:authorization\s*[:=]\s*)?bearer\s+([A-Za-z0-9\-._~+/]+=*)"
+)
+_SECRET_QUERY_FORM_RE = re.compile(
+    r"(?i)[?&](api[_-]?key|key|authorization|password|secret|token|private[_-]?key|"
+    r"access[_-]?token|bearer)=([^\s&#]+)"
+)
 _SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 _RUN_ID_RE = re.compile(r"^run_[a-f0-9]{32}$")
+# Capacity-only failure classes (ADR-0015 §9.8): larger cohorts may fail these.
+# Successful-body digest inequality is NEVER capacity — it is a hard blocker.
+_CAPACITY_ERROR_MARKERS: Final[tuple[str, ...]] = (
+    "provider_limit_or_size",
+    "body_size_pressure",
+    "truncated",
+    "response size",
+    "query returned more",
+    "oversized",
+    "response_truncated_over_max_response_bytes",
+)
+# Explicit capacity error_class values from retained receipts only.
+_CAPACITY_ERROR_CLASSES: Final[frozenset[str]] = frozenset(
+    {
+        "provider_limit_or_size",
+        "body_size_pressure",
+        "truncated",
+    }
+)
+_CANONICAL_CELL_IDS: Final[tuple[str, ...]] = tuple(
+    f"{range_name}:cohort{size}"
+    for range_name in ("sparse", "medium", "hot")
+    for size in (1, 8, 32, 64, 128)
+)
 
 CallKind = Literal["chain", "scalar", "batch"]
 CellStatus = Literal["pass", "fail", "incomplete"]
@@ -211,36 +243,199 @@ def compact_json_array_hash(values: Sequence[str]) -> str:
     return _sha256_text(json.dumps(list(values), separators=(",", ":")))
 
 
-def _scan_text(text: str, *, label: str) -> None:
-    if _URL_CREDS_RE.search(text) or _URL_RE.search(text):
-        raise MatrixSafetyStop(
-            f"endpoint URL detected in {label}",
-            context={"label": label},
-        )
-    if _QUERY_SECRET_RE.search(text) or _BEARER_RE.search(text):
-        raise MatrixSafetyStop(
-            f"credential material detected in {label}",
-            context={"label": label},
-        )
+def _path_secret_from_frozen_provider_url(parsed: Any) -> str | None:
+    """Extract opaque path secrets only for Infura v3 and BlockPI v1/rpc forms."""
+    host = (getattr(parsed, "hostname", None) or "").lower()
+    parts = [p for p in (getattr(parsed, "path", None) or "").split("/") if p]
+    if not parts:
+        return None
+    # Infura: *.infura.io/v3/<project_id>
+    if host == "infura.io" or host.endswith(".infura.io"):
+        for index, part in enumerate(parts[:-1]):
+            if part.lower() == "v3":
+                tail = parts[index + 1]
+                if len(tail) >= 16:
+                    return tail
+        return None
+    # BlockPI: *.blockpi.network/v1/rpc/<key>
+    if host == "blockpi.network" or host.endswith(".blockpi.network"):
+        for index in range(len(parts) - 2):
+            if parts[index].lower() == "v1" and parts[index + 1].lower() == "rpc":
+                tail = parts[index + 2]
+                if len(tail) >= 16:
+                    return tail
+        return None
+    return None
+
+
+def _is_explicit_size_capacity_message(text: str) -> bool:
+    """True only for authenticated provider result/body-size capacity messages."""
     lower = text.lower()
-    if "api_key=" in lower or "apikey=" in lower or "authorization:" in lower:
-        raise MatrixSafetyStop(
-            f"credential material detected in {label}",
-            context={"label": label},
+    return any(
+        m in lower
+        for m in (
+            "query returned more",
+            "response size",
+            "response too large",
+            "log response size exceeded",
+            "body_size_pressure",
+            "provider_limit_or_size",
+            "oversized",
         )
+    ) or ("too many" in lower and "result" in lower)
 
 
-def _scan_bytes(data: bytes, *, label: str) -> None:
-    if not data:
-        return
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        text = data.decode("utf-8", errors="replace")
-    _scan_text(text, label=label)
+def _is_ambiguous_timeout_message(text: str) -> bool:
+    lower = text.lower()
+    return "timeout" in lower and not _is_explicit_size_capacity_message(lower)
 
 
-def _reject_sensitive(payload: object, *, label: str) -> None:
+@dataclass
+class CredentialScanner:
+    """In-memory credential scanner (ADR-0015 §9.8).
+
+    Exact runtime endpoint URLs and extracted credential values are forbidden
+    patterns and are never serialized. Form-based bearer and secret-query checks
+    always apply and supplement exact matches. Generic credential-free help URLs
+    without secret forms are allowed. Plain host netloc without userinfo is not
+    an exact-match pattern.
+    """
+
+    forbidden_substrings: tuple[str, ...] = ()
+
+    @classmethod
+    def from_rpc_urls(
+        cls, *urls: str | None, extra_secrets: Sequence[str] = ()
+    ) -> CredentialScanner:
+        forbidden: list[str] = []
+        for raw in urls:
+            if not raw:
+                continue
+            u = str(raw).strip()
+            if not u:
+                continue
+            forbidden.append(u)
+            try:
+                parsed = urlparse(u)
+            except Exception:
+                continue
+            if parsed.password:
+                forbidden.append(unquote(parsed.password))
+            if parsed.username:
+                forbidden.append(unquote(parsed.username))
+            # Netloc only when userinfo is present (user:pass@host).
+            if parsed.username or parsed.password:
+                if parsed.netloc:
+                    forbidden.append(parsed.netloc)
+            if parsed.query:
+                qs = parse_qs(parsed.query, keep_blank_values=False)
+                for key, values in qs.items():
+                    # Exact secret values only (key names alone are not secrets).
+                    if key.lower() in {
+                        "api_key",
+                        "apikey",
+                        "key",
+                        "token",
+                        "password",
+                        "secret",
+                        "access_token",
+                        "authorization",
+                        "bearer",
+                    } or _SENSITIVE_KEY_RE.search(key):
+                        for v in values:
+                            if v:
+                                forbidden.append(v)
+            # Path-tail secrets only for frozen Infura / BlockPI endpoint forms.
+            # Generic /v3/ or /rpc/ path slugs on other hosts are not secrets.
+            path_secret = _path_secret_from_frozen_provider_url(parsed)
+            if path_secret:
+                forbidden.append(path_secret)
+        for s in extra_secrets:
+            if s:
+                forbidden.append(str(s))
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in forbidden:
+            if not item or item in seen:
+                continue
+            if item in {"http:", "https:", "http://", "https://"}:
+                continue
+            seen.add(item)
+            cleaned.append(item)
+        return cls(forbidden_substrings=tuple(cleaned))
+
+    @property
+    def max_needle_bytes(self) -> int:
+        """Rolling scan window must cover the longest exact secret needle."""
+        if not self.forbidden_substrings:
+            return 512
+        return max(512, max(len(s.encode("utf-8", errors="replace")) for s in self.forbidden_substrings) + 64)
+
+    def scan_text(self, text: str, *, label: str) -> None:
+        if not text:
+            return
+        if _URL_CREDS_RE.search(text):
+            raise MatrixSafetyStop(
+                f"credential material detected in {label}",
+                context={"label": label, "kind": "url_userinfo"},
+            )
+        bearer = _BEARER_FORM_RE.search(text)
+        if bearer:
+            token = bearer.group(1).strip()
+            if token and token.lower() not in {"null", "undefined", "redacted"}:
+                raise MatrixSafetyStop(
+                    f"credential material detected in {label}",
+                    context={"label": label, "kind": "bearer_form"},
+                )
+        secret_q = _SECRET_QUERY_FORM_RE.search(text)
+        if secret_q:
+            value = secret_q.group(2).strip()
+            if value and value.lower() not in {"null", "undefined", "redacted"}:
+                raise MatrixSafetyStop(
+                    f"credential material detected in {label}",
+                    context={"label": label, "kind": "secret_query_form"},
+                )
+        lower = text.lower()
+        for needle in self.forbidden_substrings:
+            if not needle:
+                continue
+            if needle in text or needle.lower() in lower:
+                raise MatrixSafetyStop(
+                    f"credential material detected in {label}",
+                    context={"label": label, "kind": "exact_endpoint_or_secret"},
+                )
+
+    def scan_bytes(self, data: bytes, *, label: str) -> None:
+        if not data:
+            return
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = data.decode("utf-8", errors="replace")
+        self.scan_text(text, label=label)
+
+
+def _default_scanner() -> CredentialScanner:
+    """Form-only scanner (no runtime endpoint secrets) for non-live paths."""
+    return CredentialScanner()
+
+
+def _scan_text(
+    text: str, *, label: str, scanner: CredentialScanner | None = None
+) -> None:
+    (scanner or _default_scanner()).scan_text(text, label=label)
+
+
+def _scan_bytes(
+    data: bytes, *, label: str, scanner: CredentialScanner | None = None
+) -> None:
+    (scanner or _default_scanner()).scan_bytes(data, label=label)
+
+
+def _reject_sensitive(
+    payload: object, *, label: str, scanner: CredentialScanner | None = None
+) -> None:
+    sc = scanner or _default_scanner()
     try:
         text = json.dumps(payload, default=str)
     except TypeError as exc:
@@ -248,25 +443,76 @@ def _reject_sensitive(payload: object, *, label: str) -> None:
             f"credential scan could not serialize {label}",
             context={"error": type(exc).__name__},
         ) from exc
-    _scan_text(text, label=label)
+    sc.scan_text(text, label=label)
 
     def walk(node: object, path: str) -> None:
         if isinstance(node, Mapping):
             for key, value in node.items():
                 key_s = str(key)
-                if _SENSITIVE_KEY_RE.search(key_s):
-                    raise MatrixSafetyStop(
-                        f"sensitive key {key_s!r} in {label}",
-                        context={"path": f"{path}.{key_s}"},
-                    )
+                if _SENSITIVE_KEY_RE.search(key_s) and isinstance(value, str) and value:
+                    if any(s and s in value for s in sc.forbidden_substrings):
+                        raise MatrixSafetyStop(
+                            f"sensitive key {key_s!r} in {label}",
+                            context={"path": f"{path}.{key_s}"},
+                        )
                 walk(value, f"{path}.{key_s}")
         elif isinstance(node, (list, tuple)):
             for i, item in enumerate(node):
                 walk(item, f"{path}[{i}]")
         elif isinstance(node, str):
-            _scan_text(node, label=f"{label}:{path}")
+            sc.scan_text(node, label=f"{label}:{path}")
 
     walk(payload, "$")
+
+
+class LiveOutputLock:
+    """OS-backed exclusive live lock for a matrix output root (ADR-0015 §9.8)."""
+
+    def __init__(self, output_root: Path) -> None:
+        self.output_root = _resolve(output_root)
+        self.lock_path = self.output_root / ".matrix_live.lock"
+        self._fd: Any = None
+
+    def acquire(self) -> None:
+        self.output_root.mkdir(parents=True, exist_ok=True)
+        self._fd = open(self.lock_path, "a+", encoding="utf-8")
+        try:
+            fcntl.flock(self._fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            try:
+                self._fd.close()
+            except Exception:
+                pass
+            self._fd = None
+            raise MatrixSafetyStop(
+                "live matrix lock held by another process",
+                context={"lock_path": str(self.lock_path)},
+            ) from exc
+        self._fd.seek(0)
+        self._fd.truncate()
+        self._fd.write(f"pid={os.getpid()}\nacquired_at={_now_iso()}\n")
+        self._fd.flush()
+        os.fsync(self._fd.fileno())
+
+    def release(self) -> None:
+        if self._fd is None:
+            return
+        try:
+            fcntl.flock(self._fd.fileno(), fcntl.LOCK_UN)
+        except Exception:
+            pass
+        try:
+            self._fd.close()
+        except Exception:
+            pass
+        self._fd = None
+
+    def __enter__(self) -> LiveOutputLock:
+        self.acquire()
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.release()
 
 
 def _resolve(path: Path | str) -> Path:
@@ -980,6 +1226,28 @@ def iter_logical_calls(plan: MatrixPlan) -> tuple[LogicalCall, ...]:
     return tuple(calls)
 
 
+def fair_schedule_calls(calls: Sequence[LogicalCall]) -> tuple[LogicalCall, ...]:
+    """Round-robin by provider so one org's full scalar segment is not submitted first.
+
+    Catalog identity is unchanged; only execution order is interleaved.
+    """
+    by_org: dict[str, list[LogicalCall]] = {}
+    order: list[str] = []
+    for call in calls:
+        if call.provider_org not in by_org:
+            order.append(call.provider_org)
+            by_org[call.provider_org] = []
+        by_org[call.provider_org].append(call)
+    scheduled: list[LogicalCall] = []
+    while any(by_org[o] for o in order):
+        for org in order:
+            if by_org[org]:
+                scheduled.append(by_org[org].pop(0))
+    if len(scheduled) != len(calls):
+        raise MatrixError("fair schedule lost calls")
+    return tuple(scheduled)
+
+
 def catalog_entries(plan: MatrixPlan) -> list[dict[str, Any]]:
     return [
         {
@@ -1003,9 +1271,19 @@ def _receipt_name(logical_call_id: str, attempt: int) -> str:
 
 
 class MatrixRun:
-    """One exclusive immutable run directory (no resume)."""
+    """One exclusive immutable run directory (no resume).
 
-    def __init__(self, output_root: Path, *, run_id: str | None = None) -> None:
+    Credential scanning is bound to this run (not process-global), so concurrent
+    plan/replay/live harnesses on other roots cannot clear or replace it.
+    """
+
+    def __init__(
+        self,
+        output_root: Path,
+        *,
+        run_id: str | None = None,
+        credential_scanner: CredentialScanner | None = None,
+    ) -> None:
         self.output_root = assert_safe_matrix_output_root(output_root)
         self.output_root.mkdir(parents=True, exist_ok=True)
         self.runs_root = self.output_root / "runs"
@@ -1035,14 +1313,19 @@ class MatrixRun:
         self._open_spools: list[Path] = []
         self._lock = threading.Lock()
         self._attempt_index: dict[str, int] = {}
+        # Live runs inject exact runtime endpoint secrets; plan/replay keep form-only.
+        self.credential_scanner = credential_scanner or _default_scanner()
+
     def write_plan_and_catalog(self, plan: MatrixPlan) -> None:
         if self.plan_path.exists() or self.catalog_path.exists():
             raise MatrixSafetyStop("plan/catalog already written for this run")
         plan_text = json.dumps(plan.to_public_dict(), indent=2, sort_keys=True) + "\n"
         cat = catalog_entries(plan)
         cat_text = json.dumps(cat, indent=2, sort_keys=True) + "\n"
-        _reject_sensitive(plan.to_public_dict(), label="plan.json")
-        _reject_sensitive(cat, label="catalog.json")
+        _reject_sensitive(
+            plan.to_public_dict(), label="plan.json", scanner=self.credential_scanner
+        )
+        _reject_sensitive(cat, label="catalog.json", scanner=self.credential_scanner)
         _exclusive_write_text(self.plan_path, plan_text, fsync=True)
         _exclusive_write_text(self.catalog_path, cat_text, fsync=True)
 
@@ -1089,16 +1372,17 @@ class MatrixRun:
         observed = 0
         truncated = False
         # Rolling window so secrets split across chunk boundaries are still found
-        # *before* the completing bytes are written.
+        # *before* the completing bytes are written. Window covers longest exact needle.
         scan_tail = bytearray()
-        keep = 512
+        keep = self.credential_scanner.max_needle_bytes
         credential_hit = False
         label = f"response:{call.logical_call_id}"
+        scanner = self.credential_scanner
         # Non-daemon chunk reader; must be joined before return on every path.
         active_reader: list[threading.Thread | None] = [None]
 
         def _scan_window(window: bytes) -> None:
-            _scan_bytes(window, label=label)
+            scanner.scan_bytes(window, label=label)
 
         def _deadline() -> None:
             if wall_check is not None:
@@ -1233,7 +1517,7 @@ class MatrixRun:
                 except OSError:
                     pass
                 final_error = "credential_detection"
-                final_detail = "credential_or_endpoint_detected"
+                final_detail = "redacted_credential_or_endpoint"
                 body_sha = None
                 body_bytes = 0
             else:
@@ -1251,7 +1535,10 @@ class MatrixRun:
                     and status_code < 400
                 ):
                     try:
-                        parse_json_rpc_result(data if data else b"")
+                        parse_json_rpc_result(
+                            data if data else b"",
+                            scanner=scanner,
+                        )
                     except MatrixSafetyStop:
                         raise
                     except MatrixCellFailure as exc:
@@ -1269,6 +1556,9 @@ class MatrixRun:
             if http_429 and final_error is None:
                 final_error = "http_429"
                 final_detail = final_detail or "HTTP_429"
+            if status_code in {401, 403} and final_error is None:
+                final_error = f"http_{int(status_code)}"
+                final_detail = final_detail or f"HTTP_{int(status_code)}"
 
             success = (
                 final_error is None
@@ -1276,6 +1566,16 @@ class MatrixRun:
                 and body_sha is not None
                 and (status_code is None or status_code < 400)
             )
+            # Ordinary HTTP status text (e.g. "HTTP_401") is not credential material.
+            # Only the per-run scanner may redact and reclassify error details.
+            persisted_error = final_error
+            persisted_detail = final_detail
+            if final_detail:
+                try:
+                    scanner.scan_text(str(final_detail), label="error_detail")
+                except MatrixSafetyStop:
+                    persisted_detail = "redacted_credential_or_endpoint"
+                    persisted_error = "credential_detection"
             receipt = {
                 "logical_call_id": call.logical_call_id,
                 "attempt": attempt,
@@ -1292,25 +1592,14 @@ class MatrixRun:
                 "truncated": truncated,
                 "latency_ms": latency_ms,
                 "http_429": bool(http_429),
-                "error_class": final_error,
-                "error_detail": (
-                    "redacted_credential_or_endpoint"
-                    if final_detail
-                    and (
-                        "http" in str(final_detail).lower()
-                        or "bearer" in str(final_detail).lower()
-                    )
-                    else final_detail
-                ),
+                "error_class": persisted_error,
+                "error_detail": persisted_detail,
                 "retained_at": _now_iso(),
                 "success": success,
             }
-            if receipt["error_detail"]:
-                try:
-                    _scan_text(str(receipt["error_detail"]), label="error_detail")
-                except MatrixSafetyStop:
-                    receipt["error_detail"] = "redacted_credential_or_endpoint"
-            _reject_sensitive(receipt, label="attempt_receipt")
+            _reject_sensitive(
+                receipt, label="attempt_receipt", scanner=scanner
+            )
             _exclusive_write_text(
                 receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n"
             )
@@ -1455,7 +1744,9 @@ class MatrixRun:
         payload["evidence_hash"] = evidence_hash
         report_hash = compute_report_hash(evidence_hash=evidence_hash, payload=payload)
         payload["report_hash"] = report_hash
-        _reject_sensitive(payload, label=f"{kind}.json")
+        _reject_sensitive(
+            payload, label=f"{kind}.json", scanner=self.credential_scanner
+        )
         text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
         terminal = self.complete_path if kind == "COMPLETE" else self.failed_path
         _exclusive_write_text(terminal, text, fsync=True)
@@ -1609,9 +1900,15 @@ def authenticate_completed_run(
 ) -> dict[str, Any]:
     """Read-only authentication of a sealed COMPLETE run directory.
 
-    When ``require_live_pass`` is True (standalone replay source), require
-    mode=execute_live, complete/pass true, dual chain evidence, all 15 cells, and
-    the full 1,568-call inventory.
+    Every COMPLETE ``mode=execute_live`` report must carry a sealed
+    ``capacity_selection`` mapping that byte-equivalently matches a recompute
+    from its sealed cells. This runs during generic authentication so
+    ``pass=false`` matrix evidence remains trustworthy for review. Plan-only
+    reports need no selection.
+
+    When ``require_live_pass`` is True (standalone replay source), also require
+    complete/pass true, valid ADR-0015 capacity selection (not necessarily all
+    15 cells), dual chain evidence, and the full 1,568-call inventory.
     """
     root = _resolve(run_dir)
     if not root.is_dir():
@@ -1682,6 +1979,52 @@ def authenticate_completed_run(
     if report.get("matrix_id") != plan.matrix_id:
         raise MatrixSafetyStop("terminal matrix_id disagrees with plan")
 
+    # Generic path: every COMPLETE execute-live report must recompute cells and
+    # capacity_selection from authenticated retained receipts/raw and match the seal
+    # (including pass=false matrix evidence under review).
+    recomputed_selection: dict[str, Any] | None = None
+    if report.get("mode") == "execute_live":
+        sealed_cells = report.get("cells") or []
+        if not isinstance(sealed_cells, list):
+            raise MatrixSafetyStop("execute-live COMPLETE cells must be a list")
+        sealed_selection = report.get("capacity_selection")
+        if not isinstance(sealed_selection, Mapping):
+            raise MatrixSafetyStop(
+                "execute-live COMPLETE must include sealed capacity_selection"
+            )
+        # Topology on sealed cells first (duplicates/unknown fail closed).
+        sealed_ordered = validate_cell_topology(sealed_cells)
+        # Recompute from disk evidence (receipts + raw bodies), not sealed report alone.
+        disk = _ReadOnlyRun(root)
+        disk_cells = evaluate_cells(disk, plan)  # type: ignore[arg-type]
+        disk_ordered = validate_cell_topology(disk_cells)
+        recomputed_selection = select_capacity_from_cells(disk_ordered)
+        sealed_from_cells = select_capacity_from_cells(sealed_ordered)
+        if compute_evidence_hash({"cells": sealed_ordered}) != compute_evidence_hash(
+            {"cells": disk_ordered}
+        ):
+            raise MatrixSafetyStop(
+                "sealed cells disagree with cells recomputed from retained receipts/raw"
+            )
+        if compute_evidence_hash(
+            {"capacity_selection": sealed_selection}
+        ) != compute_evidence_hash({"capacity_selection": recomputed_selection}):
+            raise MatrixSafetyStop(
+                "capacity_selection does not match selection recomputed from retained evidence",
+                context={
+                    "sealed_selected": sealed_selection.get("selected_cohort_size"),
+                    "recomputed_selected": recomputed_selection.get(
+                        "selected_cohort_size"
+                    ),
+                },
+            )
+        if compute_evidence_hash(
+            {"capacity_selection": sealed_selection}
+        ) != compute_evidence_hash({"capacity_selection": sealed_from_cells}):
+            raise MatrixSafetyStop(
+                "sealed capacity_selection does not match selection from sealed cells"
+            )
+
     if require_live_pass:
         if report.get("mode") != "execute_live":
             raise MatrixError(
@@ -1690,9 +2033,16 @@ def authenticate_completed_run(
             )
         if report.get("complete") is not True or report.get("pass") is not True:
             raise MatrixError("live PASS replay source must be complete with pass=true")
-        cells = report.get("cells") or []
-        if len(cells) != 15 or not all(c.get("status") == "pass" for c in cells):
-            raise MatrixError("live PASS replay source must have 15 passing cells")
+        if recomputed_selection is None:
+            raise MatrixError("live PASS replay source missing recomputed selection")
+        if (
+            not recomputed_selection.get("selection_valid")
+            or recomputed_selection.get("selected_cohort_size") is None
+        ):
+            raise MatrixError(
+                "live PASS replay source must have valid capacity selection",
+                context={"selection": recomputed_selection},
+            )
         if inventory["calls_with_attempts"] != LOGICAL_CALL_CEILING:
             raise MatrixSafetyStop(
                 "live PASS run must contain attempts for all 1,568 logical calls",
@@ -1846,7 +2196,9 @@ class HttpxTransport:
 # ---------------------------------------------------------------------------
 
 
-def parse_json_rpc_result(body: bytes) -> Any:
+def parse_json_rpc_result(
+    body: bytes, *, scanner: CredentialScanner | None = None
+) -> Any:
     if not body:
         raise MatrixSafetyStop("empty response body is malformed evidence")
     try:
@@ -1859,15 +2211,28 @@ def parse_json_rpc_result(body: bytes) -> Any:
         err = payload["error"]
         detail = str(err.get("message", err) if isinstance(err, Mapping) else err)
         try:
-            _scan_text(detail, label="rpc_error")
+            _scan_text(detail, label="rpc_error", scanner=scanner)
         except MatrixSafetyStop:
             detail = "redacted_credential_or_endpoint"
         lower = detail.lower()
-        if any(
-            t in lower
-            for t in ("limit", "too many", "query returned more", "response size", "timeout")
+        # Quota/429 must not be absorbed into capacity "limit" markers.
+        if (
+            "429" in lower
+            or "rate limit" in lower
+            or "too many requests" in lower
+            or "quota" in lower
         ):
-            raise MatrixCellFailure("provider_limit_or_size", context={"rpc_error": detail[:200]})
+            raise MatrixCellFailure("http_429", context={"rpc_error": detail[:200]})
+        # Ambiguous timeout is a hard block, not capacity.
+        if _is_ambiguous_timeout_message(lower):
+            raise MatrixCellFailure(
+                "ambiguous_timeout", context={"rpc_error": detail[:200]}
+            )
+        # Capacity only for explicit result/body-size provider messages.
+        if _is_explicit_size_capacity_message(lower):
+            raise MatrixCellFailure(
+                "provider_limit_or_size", context={"rpc_error": detail[:200]}
+            )
         raise MatrixCellFailure("rpc_error", context={"rpc_error": detail[:200]})
     if "result" not in payload:
         raise MatrixSafetyStop("json-rpc missing result is malformed evidence")
@@ -1931,8 +2296,12 @@ def _receipt_metrics(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "status": "missing",
             "error_class": "missing_attempts",
             "last_status_code": None,
+            "dominant_failure_class": "incomplete",
+            "has_success": False,
         }
     last = rows[-1]
+    dominant = _dominant_failure_class_from_rows(rows)
+    has_success = any(bool(r.get("success")) for r in rows)
     return {
         "attempts": len(rows),
         "http_429s": sum(1 for r in rows if r.get("http_429")),
@@ -1943,7 +2312,86 @@ def _receipt_metrics(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "status": "success" if last.get("success") else "error",
         "error_class": last.get("error_class"),
         "last_status_code": last.get("status_code"),
+        "dominant_failure_class": dominant,
+        "has_success": has_success,
     }
+
+
+# Specific hard blockers retain class ahead of fallback scalar_failure.
+_HARD_BLOCK_CLASSES: Final[tuple[str, ...]] = (
+    "credential_or_endpoint",
+    "quota_or_429",
+    "provider_disagreement",
+    "blocking_failure",
+    "incomplete",
+    "scalar_failure",  # fallback only when no stronger blocker on either side
+)
+
+
+def _classify_one_attempt_row(row: Mapping[str, Any]) -> str | None:
+    """Classify one retained attempt. None means pure success contribution."""
+    err = str(row.get("error_class") or "")
+    detail = str(row.get("error_detail") or "")
+    text = f"{err} {detail}".lower()
+    status_code = row.get("status_code")
+    try:
+        status_i = int(status_code) if status_code is not None else None
+    except (TypeError, ValueError):
+        status_i = None
+
+    # Persisted credential_detection always wins taxonomy precedence (before 429/status/capacity).
+    if err == "credential_detection" or err.endswith("credential_detection"):
+        return "credential_or_endpoint"
+    if "credential" in err and err != "redacted_credential_or_endpoint":
+        return "credential_or_endpoint"
+    if row.get("http_429") or err == "http_429" or "429" in text:
+        return "quota_or_429"
+    # Explicit HTTP 401/403 without credential_detection is authorization, not credential.
+    # Ordinary "HTTP_401" detail text is not credential material.
+    if (
+        status_i in {401, 403}
+        or err in {"http_401", "http_403"}
+        or any(t in text for t in ("unauthorized", "forbidden", "http_401", "http_403"))
+    ):
+        return "blocking_failure"
+    if err == "ambiguous_timeout" or _is_ambiguous_timeout_message(text):
+        return "blocking_failure"
+    if any(
+        t in err or t in text
+        for t in ("malformed", "transport", "connection", "dns", "tls")
+    ):
+        return "blocking_failure"
+    if row.get("truncated") or err in _CAPACITY_ERROR_CLASSES or _is_explicit_size_capacity_message(
+        text
+    ):
+        return "capacity"
+    if row.get("success"):
+        return None
+    if err:
+        # Unknown non-success error class is a hard block, not capacity.
+        return "blocking_failure"
+    if not row.get("success"):
+        return "blocking_failure"
+    return None
+
+
+def _dominant_failure_class_from_rows(rows: Sequence[Mapping[str, Any]]) -> str | None:
+    """Aggregate every retained attempt. Hard blockers dominate capacity and success."""
+    if not rows:
+        return "incomplete"
+    found: list[str] = []
+    if any(bool(r.get("http_429")) for r in rows):
+        found.append("quota_or_429")
+    for row in rows:
+        cls = _classify_one_attempt_row(row)
+        if cls:
+            found.append(cls)
+    for hard in _HARD_BLOCK_CLASSES:
+        if hard in found:
+            return hard
+    if "capacity" in found:
+        return "capacity"
+    return None
 
 
 def provider_side_metrics(
@@ -1997,6 +2445,87 @@ def provider_side_metrics(
     }
 
 
+def _scalar_side(
+    run: MatrixRun,
+    plan: MatrixPlan,
+    range_name: str,
+    provider_org: str,
+    addresses: Sequence[str],
+) -> dict[str, Any]:
+    """Evaluate one provider's full scalar reference set independently.
+
+    Completeness and blocker class are separate: missing required attempts set
+    ``incomplete=True`` while ``failure_class`` retains the strongest specific
+    blocker (credential/quota/auth/malformed/transport/ambiguous) ahead of
+    fallback ``scalar_failure``. Raw-integrity failures from ``load_body``
+    propagate immediately; only interpret_logs malformations are accumulated.
+    """
+    start, end = plan.ranges[range_name]
+    all_ids: list[Any] = []
+    side_classes: list[str] = []
+    incomplete = False
+    # Specific hard classes for lid-level dominance (exclude scalar_failure fallback).
+    specific_hard = tuple(c for c in _HARD_BLOCK_CLASSES if c != "scalar_failure")
+    for address in addresses:
+        for topic in plan.topics:
+            tag = "swap" if topic == SWAP_TOPIC else "sync"
+            lid = f"scalar:{range_name}:{provider_org}:{address}:{tag}"
+            rows = run.list_receipts(lid)
+            if not rows:
+                incomplete = True
+                continue
+            dominant = _dominant_failure_class_from_rows(rows)
+            success = run.best_success_body(lid)
+            # Specific hard blockers dominate later capacity or success on this lid.
+            if dominant is not None and dominant in specific_hard:
+                side_classes.append(dominant)
+                continue
+            if success is None:
+                # Capacity-only failures without a success body are scalar_failure.
+                side_classes.append("scalar_failure")
+                continue
+            # Raw integrity (missing/digest/bytes) must remain immediate safety stops.
+            body = run.load_body(success[0], expected_bytes=success[1])
+            domain = _domain_for(
+                addresses=[address], start=start, end=end, topics=[topic]
+            )
+            try:
+                identities, _ = interpret_logs(body, domain=domain)
+            except MatrixSafetyStop:
+                # Malformed/out-of-domain body after authenticated load: accumulate.
+                side_classes.append("blocking_failure")
+                continue
+            all_ids.extend(identities)
+    fail_class: str | None = None
+    for hard in _HARD_BLOCK_CLASSES:
+        if hard in side_classes:
+            fail_class = hard
+            break
+    if fail_class is None and incomplete:
+        fail_class = "incomplete"
+    if fail_class is not None or incomplete:
+        return {
+            "ok": False,
+            "incomplete": incomplete,
+            "digest": None,
+            "log_count": 0,
+            "failure_class": fail_class,
+            "error_class": fail_class,
+            "error_detail": fail_class,
+        }
+    unique = {i.as_tuple(): i for i in all_ids}
+    ordered = tuple(sorted(unique.values(), key=lambda i: i.sort_key()))
+    return {
+        "ok": True,
+        "incomplete": False,
+        "digest": log_identity_v2_digest(ordered),
+        "log_count": len(ordered),
+        "failure_class": None,
+        "error_class": None,
+        "error_detail": None,
+    }
+
+
 def scalar_union_digest(
     run: MatrixRun,
     *,
@@ -2005,33 +2534,20 @@ def scalar_union_digest(
     provider_org: str,
     addresses: Sequence[str],
 ) -> tuple[str, int]:
-    start, end = plan.ranges[range_name]
-    all_ids: list[Any] = []
-    for address in addresses:
-        for topic in plan.topics:
-            tag = "swap" if topic == SWAP_TOPIC else "sync"
-            lid = f"scalar:{range_name}:{provider_org}:{address}:{tag}"
-            success = run.best_success_body(lid)
-            if success is None:
-                rows = run.list_receipts(lid)
-                if not rows:
-                    raise MatrixError(
-                        "missing scalar attempts",
-                        context={"logical_call_id": lid},
-                    )
-                raise MatrixCellFailure(
-                    "scalar call has no successful body",
-                    context={"logical_call_id": lid, "error_class": rows[-1].get("error_class")},
-                )
-            body = run.load_body(success[0], expected_bytes=success[1])
-            domain = _domain_for(
-                addresses=[address], start=start, end=end, topics=[topic]
-            )
-            identities, _ = interpret_logs(body, domain=domain)
-            all_ids.extend(identities)
-    unique = {i.as_tuple(): i for i in all_ids}
-    ordered = tuple(sorted(unique.values(), key=lambda i: i.sort_key()))
-    return log_identity_v2_digest(ordered), len(ordered)
+    """Backward-compatible single-provider scalar digest (raises on side failure)."""
+    side = _scalar_side(run, plan, range_name, provider_org, addresses)
+    if not side["ok"]:
+        raise MatrixCellFailure(
+            f"scalar hard blocker: {side['failure_class']}"
+            if side["failure_class"] in _HARD_BLOCK_CLASSES
+            and side["failure_class"] != "scalar_failure"
+            else "scalar call has no successful body",
+            context={
+                "error_class": side.get("error_class"),
+                "failure_class": side.get("failure_class") or "scalar_failure",
+            },
+        )
+    return str(side["digest"]), int(side["log_count"])
 
 
 def _collect_call_metrics(run: Any, plan: MatrixPlan) -> dict[str, Any]:
@@ -2078,7 +2594,231 @@ def _collect_call_metrics(run: Any, plan: MatrixPlan) -> dict[str, Any]:
     }
 
 
+def _classify_from_error_class(error_class: str | None, *, detail: str | None = None) -> str:
+    """Map retained receipt error_class/detail to selection class.
+
+    Capacity is only explicit provider-limit / body-size / truncation evidence.
+    """
+    err = str(error_class or "").lower()
+    text = f"{err} {detail or ''}".lower()
+    if err in _HARD_BLOCK_CLASSES:
+        return err
+    if "credential" in err or "credential" in text:
+        return "credential_or_endpoint"
+    if err == "http_429" or "429" in text or "quota" in text:
+        return "quota_or_429"
+    if err == "ambiguous_timeout" or _is_ambiguous_timeout_message(text):
+        return "blocking_failure"
+    if err in _CAPACITY_ERROR_CLASSES or _is_explicit_size_capacity_message(text):
+        return "capacity"
+    if "disagreement" in text:
+        return "provider_disagreement"
+    if "malformed" in text:
+        return "blocking_failure"
+    if "scalar" in text and ("no successful body" in text or "missing" in text):
+        return "scalar_failure"
+    if err:
+        return "blocking_failure"
+    return "blocking_failure"
+
+
+def _classify_cell_failure(
+    detail: str | None, *, metrics: Mapping[str, Any] | None = None
+) -> str:
+    """Classify fail reason for ADR-0015 capacity selection."""
+    text = (detail or "").lower()
+    if any(m in text for m in ("credential", "endpoint")):
+        return "credential_or_endpoint"
+    if "disagreement" in text or "providers_agree" in text:
+        return "provider_disagreement"
+    if "429" in text or "quota" in text or "rate limit" in text:
+        return "quota_or_429"
+    if "malformed" in text:
+        return "blocking_failure"
+    if metrics:
+        classes: list[str] = []
+        for side in ("primary", "secondary"):
+            m = metrics.get(side) if isinstance(metrics, Mapping) else None
+            if not isinstance(m, Mapping):
+                continue
+            err = str(m.get("error_class") or "")
+            if err or m.get("status") not in {None, "success", ""}:
+                classes.append(
+                    _classify_from_error_class(
+                        err, detail=str(m.get("error_class") or detail or "")
+                    )
+                )
+            if int(m.get("truncated_attempts") or 0) > 0:
+                classes.append("capacity")
+        if classes:
+            # Hard blockers dominate pure capacity.
+            for hard in (
+                "credential_or_endpoint",
+                "quota_or_429",
+                "provider_disagreement",
+                "scalar_failure",
+                "blocking_failure",
+                "incomplete",
+            ):
+                if hard in classes:
+                    return hard
+            if all(c == "capacity" for c in classes):
+                return "capacity"
+            return classes[0]
+    if "scalar" in text and ("missing" in text or "no successful body" in text):
+        return "scalar_failure"
+    if any(
+        m in text
+        for m in (
+            "provider_limit_or_size",
+            "body_size_pressure",
+            "truncated",
+            "response size",
+            "query returned more",
+            "oversized",
+        )
+    ):
+        return "capacity"
+    return "blocking_failure"
+
+
+def validate_cell_topology(cells: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Require exactly one canonical cell for each range×size with exact cell_id."""
+    if len(cells) != 15:
+        raise MatrixSafetyStop(
+            "cell topology requires exactly 15 cells",
+            context={"observed": len(cells)},
+        )
+    ordered: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    by_id: dict[str, Mapping[str, Any]] = {}
+    for cell in cells:
+        if not isinstance(cell, Mapping):
+            raise MatrixSafetyStop("cell entry must be an object")
+        try:
+            range_name = str(cell["range_name"])
+            size = int(cell["cohort_size"])
+            cell_id = str(cell["cell_id"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise MatrixSafetyStop("cell missing range_name/cohort_size/cell_id") from exc
+        expected_id = f"{range_name}:cohort{size}"
+        if cell_id != expected_id:
+            raise MatrixSafetyStop(
+                "cell_id does not match range_name/cohort_size",
+                context={"cell_id": cell_id, "expected": expected_id},
+            )
+        if expected_id not in _CANONICAL_CELL_IDS:
+            raise MatrixSafetyStop(
+                "unknown cell topology",
+                context={"cell_id": expected_id},
+            )
+        if expected_id in seen:
+            raise MatrixSafetyStop(
+                "duplicate cell topology entry",
+                context={"cell_id": expected_id},
+            )
+        seen.add(expected_id)
+        by_id[expected_id] = cell
+    missing = [cid for cid in _CANONICAL_CELL_IDS if cid not in seen]
+    if missing:
+        raise MatrixSafetyStop(
+            "missing canonical cell topology entries",
+            context={"missing": missing},
+        )
+    for cid in _CANONICAL_CELL_IDS:
+        ordered.append(dict(by_id[cid]))
+    return ordered
+
+
+def select_capacity_from_cells(cells: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """ADR-0015 §9.8 capacity selection: largest viable nested prefix of cohort sizes.
+
+    A size is viable only when all three ranges pass. Viable sizes must form a
+    nonempty nested prefix without holes. Larger non-viable cells may be pure
+    capacity failures; credential/quota/disagreement/scalar/nonmonotonic blocks.
+    Requires canonical 15-cell topology.
+    """
+    ordered = validate_cell_topology(cells)
+    by_size: dict[int, list[Mapping[str, Any]]] = {s: [] for s in NESTED_COHORT_SIZES}
+    for cell in ordered:
+        by_size[int(cell["cohort_size"])].append(cell)
+
+    viable: list[int] = []
+    for size in NESTED_COHORT_SIZES:
+        size_cells = by_size[size]
+        if len(size_cells) == len(RANGE_ORDER) and all(
+            c.get("status") == "pass" for c in size_cells
+        ):
+            viable.append(size)
+
+    prefix: list[int] = []
+    for size in NESTED_COHORT_SIZES:
+        if size in viable:
+            prefix.append(size)
+        else:
+            break
+    selected: int | None = prefix[-1] if prefix else None
+    nonmonotonic = any(s not in prefix for s in viable)
+
+    hard_blockers: list[str] = []
+    capacity_failures: list[str] = []
+    if nonmonotonic:
+        hard_blockers.append("nonmonotonic_viability")
+        selected = None
+
+    for cell in ordered:
+        if cell.get("status") == "pass":
+            continue
+        cls = str(
+            cell.get("failure_class")
+            or _classify_cell_failure(str(cell.get("detail")))
+        )
+        cell_id = str(cell.get("cell_id"))
+        if cls in {
+            "credential_or_endpoint",
+            "quota_or_429",
+            "provider_disagreement",
+            "scalar_failure",
+            "blocking_failure",
+            "incomplete",
+        }:
+            hard_blockers.append(f"{cell_id}:{cls}")
+            selected = None
+        elif cls == "capacity":
+            capacity_failures.append(cell_id)
+        else:
+            hard_blockers.append(f"{cell_id}:{cls}")
+            selected = None
+
+    if hard_blockers and "nonmonotonic_viability" not in hard_blockers:
+        selected = None
+        prefix = []
+    elif selected is not None:
+        prefix = [s for s in NESTED_COHORT_SIZES if s <= selected]
+
+    selection_valid = selected is not None and not hard_blockers
+
+    return {
+        "viable_sizes": viable,
+        "nested_prefix": prefix,
+        "selected_cohort_size": selected,
+        "selection_valid": bool(selection_valid),
+        "nonmonotonic": nonmonotonic,
+        "capacity_failure_cells": capacity_failures,
+        "blocking_reasons": hard_blockers,
+        "all_cells_pass": all(c.get("status") == "pass" for c in ordered),
+    }
+
+
 def evaluate_cells(run: MatrixRun, plan: MatrixPlan) -> list[dict[str, Any]]:
+    """Evaluate all 15 cells from disk receipts (no caches).
+
+    Scalar unions are fully computed and compared *before* any batch call.
+    Scalar provider disagreement is preserved as a hard blocker even when a later
+    batch would fail for capacity. Successful-body digest inequality (batch vs
+    scalar or cross-provider batch) is always a hard blocker, never capacity.
+    Capacity is only authenticated provider-limit / size / truncation / cap failure.
+    """
     primary, secondary = plan.provider_orgs
     cells: list[dict[str, Any]] = []
     for range_name in RANGE_ORDER:
@@ -2102,102 +2842,272 @@ def evaluate_cells(run: MatrixRun, plan: MatrixPlan) -> list[dict[str, Any]]:
                 addresses=addresses,
                 cohort_size=size,
             )
+
+            def _fail_cell(
+                *,
+                status: str,
+                failure_class: str | None,
+                detail: str | None,
+                s_p: str | None = None,
+                s_s: str | None = None,
+                n_p: int | None = None,
+                n_s: int | None = None,
+                b_p: str | None = None,
+                b_s: str | None = None,
+                eq_p: bool | None = None,
+                eq_s: bool | None = None,
+                providers_agree: bool | None = False,
+            ) -> dict[str, Any]:
+                primary_side: dict[str, Any] = dict(p_m)
+                secondary_side: dict[str, Any] = dict(s_m)
+                if n_p is not None:
+                    primary_side["log_count"] = n_p
+                if s_p is not None:
+                    primary_side["identity_v2_digest"] = s_p
+                if b_p is not None:
+                    primary_side["batch_digest"] = b_p
+                if n_s is not None:
+                    secondary_side["log_count"] = n_s
+                if s_s is not None:
+                    secondary_side["identity_v2_digest"] = s_s
+                if b_s is not None:
+                    secondary_side["batch_digest"] = b_s
+                return {
+                    "range_name": range_name,
+                    "cohort_size": size,
+                    "cell_id": cell_id,
+                    "status": status,
+                    "failure_class": failure_class,
+                    "primary": primary_side,
+                    "secondary": secondary_side,
+                    "scalar_union_digest_primary": s_p,
+                    "scalar_union_digest_secondary": s_s,
+                    "batch_digest_primary": b_p,
+                    "batch_digest_secondary": b_s,
+                    "batch_equals_scalar_primary": eq_p,
+                    "batch_equals_scalar_secondary": eq_s,
+                    "providers_agree": providers_agree,
+                    "detail": detail,
+                }
+
+            # Independent dual-provider scalar evaluation (no short-circuit).
             try:
-                s_p, n_p = scalar_union_digest(
-                    run,
-                    plan=plan,
-                    range_name=range_name,
-                    provider_org=primary,
-                    addresses=addresses,
+                scalar_p = _scalar_side(
+                    run, plan, range_name, primary, addresses
                 )
-                s_s, n_s = scalar_union_digest(
-                    run,
-                    plan=plan,
-                    range_name=range_name,
-                    provider_org=secondary,
-                    addresses=addresses,
-                )
-                batch_p = _batch_digest(run, plan, range_name, size, primary, addresses, start, end)
-                batch_s = _batch_digest(run, plan, range_name, size, secondary, addresses, start, end)
-                eq_p = batch_p["digest"] == s_p
-                eq_s = batch_s["digest"] == s_s
-                agree = s_p == s_s and batch_p["digest"] == batch_s["digest"] and eq_p and eq_s
-                cells.append(
-                    {
-                        "range_name": range_name,
-                        "cohort_size": size,
-                        "cell_id": cell_id,
-                        "status": "pass" if agree else "fail",
-                        "primary": {
-                            **p_m,
-                            "log_count": n_p,
-                            "identity_v2_digest": s_p,
-                            "batch_digest": batch_p["digest"],
-                            "batch_log_count": batch_p["log_count"],
-                        },
-                        "secondary": {
-                            **s_m,
-                            "log_count": n_s,
-                            "identity_v2_digest": s_s,
-                            "batch_digest": batch_s["digest"],
-                            "batch_log_count": batch_s["log_count"],
-                        },
-                        "scalar_union_digest_primary": s_p,
-                        "scalar_union_digest_secondary": s_s,
-                        "batch_digest_primary": batch_p["digest"],
-                        "batch_digest_secondary": batch_s["digest"],
-                        "batch_equals_scalar_primary": eq_p,
-                        "batch_equals_scalar_secondary": eq_s,
-                        "providers_agree": agree,
-                        "detail": None if agree else "batch/scalar/provider disagreement",
-                    }
+                scalar_s = _scalar_side(
+                    run, plan, range_name, secondary, addresses
                 )
             except MatrixSafetyStop:
                 raise
-            except MatrixCellFailure as exc:
-                cells.append(
-                    {
-                        "range_name": range_name,
-                        "cohort_size": size,
-                        "cell_id": cell_id,
-                        "status": "fail",
-                        "primary": p_m,
-                        "secondary": s_m,
-                        "scalar_union_digest_primary": None,
-                        "scalar_union_digest_secondary": None,
-                        "batch_digest_primary": None,
-                        "batch_digest_secondary": None,
-                        "batch_equals_scalar_primary": None,
-                        "batch_equals_scalar_secondary": None,
-                        "providers_agree": False,
-                        "detail": str(exc),
-                    }
-                )
             except MatrixError as exc:
                 cells.append(
-                    {
-                        "range_name": range_name,
-                        "cohort_size": size,
-                        "cell_id": cell_id,
-                        "status": "incomplete",
-                        "primary": p_m,
-                        "secondary": s_m,
-                        "scalar_union_digest_primary": None,
-                        "scalar_union_digest_secondary": None,
-                        "batch_digest_primary": None,
-                        "batch_digest_secondary": None,
-                        "batch_equals_scalar_primary": None,
-                        "batch_equals_scalar_secondary": None,
-                        "providers_agree": None,
-                        "detail": str(exc),
-                    }
+                    _fail_cell(
+                        status="incomplete",
+                        failure_class="incomplete",
+                        detail=str(exc),
+                        providers_agree=None,
+                    )
                 )
+                continue
+
+            if not scalar_p["ok"] or not scalar_s["ok"]:
+                side_classes: list[str] = []
+                if not scalar_p["ok"] and scalar_p.get("failure_class"):
+                    side_classes.append(str(scalar_p["failure_class"]))
+                if not scalar_s["ok"] and scalar_s.get("failure_class"):
+                    side_classes.append(str(scalar_s["failure_class"]))
+                fail_class = "scalar_failure"
+                for hard in _HARD_BLOCK_CLASSES:
+                    if hard in side_classes:
+                        fail_class = hard
+                        break
+                # Completeness is independent of blocker class: any missing required
+                # scalar keeps status incomplete while failure_class may be stronger.
+                cell_incomplete = bool(
+                    scalar_p.get("incomplete") or scalar_s.get("incomplete")
+                )
+                cell_status = "incomplete" if cell_incomplete else "fail"
+                detail_parts = []
+                if not scalar_p["ok"]:
+                    detail_parts.append(
+                        f"primary:{scalar_p.get('failure_class') or 'scalar_failure'}"
+                        + (";incomplete" if scalar_p.get("incomplete") else "")
+                    )
+                if not scalar_s["ok"]:
+                    detail_parts.append(
+                        f"secondary:{scalar_s.get('failure_class') or 'scalar_failure'}"
+                        + (";incomplete" if scalar_s.get("incomplete") else "")
+                    )
+                cells.append(
+                    _fail_cell(
+                        status=cell_status,
+                        failure_class=fail_class,
+                        detail=";".join(detail_parts),
+                        s_p=scalar_p.get("digest"),
+                        s_s=scalar_s.get("digest"),
+                        n_p=scalar_p.get("log_count"),
+                        n_s=scalar_s.get("log_count"),
+                        providers_agree=False,
+                    )
+                )
+                continue
+
+            s_p = str(scalar_p["digest"])
+            s_s = str(scalar_s["digest"])
+            n_p = int(scalar_p["log_count"])
+            n_s = int(scalar_s["log_count"])
+            if s_p != s_s:
+                cells.append(
+                    _fail_cell(
+                        status="fail",
+                        failure_class="provider_disagreement",
+                        detail="scalar provider disagreement",
+                        s_p=s_p,
+                        s_s=s_s,
+                        n_p=n_p,
+                        n_s=n_s,
+                        providers_agree=False,
+                    )
+                )
+                continue
+
+            # Always evaluate both provider batch sides independently.
+            try:
+                batch_p = _batch_side(
+                    run, plan, range_name, size, primary, addresses, start, end
+                )
+                batch_s = _batch_side(
+                    run, plan, range_name, size, secondary, addresses, start, end
+                )
+            except MatrixSafetyStop:
+                raise
+            except MatrixError as exc:
+                cells.append(
+                    _fail_cell(
+                        status="incomplete",
+                        failure_class="incomplete",
+                        detail=str(exc),
+                        s_p=s_p,
+                        s_s=s_s,
+                        n_p=n_p,
+                        n_s=n_s,
+                        providers_agree=None,
+                    )
+                )
+                continue
+
+            side_classes: list[str] = []
+            if not batch_p["ok"]:
+                side_classes.append(
+                    str(
+                        batch_p.get("failure_class")
+                        or _classify_from_error_class(
+                            batch_p.get("error_class"),
+                            detail=str(
+                                batch_p.get("error_detail") or batch_p.get("error_class")
+                            ),
+                        )
+                    )
+                )
+            if not batch_s["ok"]:
+                side_classes.append(
+                    str(
+                        batch_s.get("failure_class")
+                        or _classify_from_error_class(
+                            batch_s.get("error_class"),
+                            detail=str(
+                                batch_s.get("error_detail") or batch_s.get("error_class")
+                            ),
+                        )
+                    )
+                )
+            if side_classes:
+                fail_class = "capacity"
+                for hard in _HARD_BLOCK_CLASSES:
+                    if hard in side_classes:
+                        fail_class = hard
+                        break
+                else:
+                    if not all(c == "capacity" for c in side_classes):
+                        fail_class = "blocking_failure"
+                detail_parts = []
+                if not batch_p["ok"]:
+                    detail_parts.append(
+                        f"primary:{batch_p.get('failure_class') or batch_p.get('error_class') or 'batch_failure'}"
+                    )
+                if not batch_s["ok"]:
+                    detail_parts.append(
+                        f"secondary:{batch_s.get('failure_class') or batch_s.get('error_class') or 'batch_failure'}"
+                    )
+                cells.append(
+                    _fail_cell(
+                        status="fail",
+                        failure_class=fail_class,
+                        detail=";".join(detail_parts),
+                        s_p=s_p,
+                        s_s=s_s,
+                        n_p=n_p,
+                        n_s=n_s,
+                        b_p=batch_p.get("digest"),
+                        b_s=batch_s.get("digest"),
+                        providers_agree=False,
+                    )
+                )
+                continue
+
+            eq_p = batch_p["digest"] == s_p
+            eq_s = batch_s["digest"] == s_s
+            batch_agree = batch_p["digest"] == batch_s["digest"]
+            agree = eq_p and eq_s and batch_agree
+            fail_class = None
+            detail = None
+            if not agree:
+                # Successful-body digest inequality is never capacity.
+                fail_class = "provider_disagreement"
+                if not eq_p or not eq_s:
+                    detail = "batch/scalar digest inequality"
+                else:
+                    detail = "batch provider disagreement"
+            cells.append(
+                {
+                    "range_name": range_name,
+                    "cohort_size": size,
+                    "cell_id": cell_id,
+                    "status": "pass" if agree else "fail",
+                    "failure_class": fail_class,
+                    "primary": {
+                        **p_m,
+                        "log_count": n_p,
+                        "identity_v2_digest": s_p,
+                        "batch_digest": batch_p["digest"],
+                        "batch_log_count": batch_p["log_count"],
+                        "batch_error_class": batch_p.get("error_class"),
+                    },
+                    "secondary": {
+                        **s_m,
+                        "log_count": n_s,
+                        "identity_v2_digest": s_s,
+                        "batch_digest": batch_s["digest"],
+                        "batch_log_count": batch_s["log_count"],
+                        "batch_error_class": batch_s.get("error_class"),
+                    },
+                    "scalar_union_digest_primary": s_p,
+                    "scalar_union_digest_secondary": s_s,
+                    "batch_digest_primary": batch_p["digest"],
+                    "batch_digest_secondary": batch_s["digest"],
+                    "batch_equals_scalar_primary": eq_p,
+                    "batch_equals_scalar_secondary": eq_s,
+                    "providers_agree": agree,
+                    "detail": detail,
+                }
+            )
     if len(cells) != 15:
         raise MatrixError("cell count drift", context={"observed": len(cells)})
-    return cells
+    return validate_cell_topology(cells)
 
 
-def _batch_digest(
+def _batch_side(
     run: MatrixRun,
     plan: MatrixPlan,
     range_name: str,
@@ -2207,21 +3117,62 @@ def _batch_digest(
     start: int,
     end: int,
 ) -> dict[str, Any]:
+    """Inspect one provider's batch receipts; all attempts participate in classification."""
     lid = f"batch:{range_name}:{size}:{provider_org}"
     rows = run.list_receipts(lid)
     metrics = _receipt_metrics(rows)
+    if not rows:
+        return {
+            "ok": False,
+            "digest": None,
+            "log_count": 0,
+            "error_class": "missing_batch_attempts",
+            "error_detail": "missing batch attempts",
+            "failure_class": "incomplete",
+            **metrics,
+        }
+    dominant = metrics.get("dominant_failure_class") or _dominant_failure_class_from_rows(
+        rows
+    )
+    # Hard blockers dominate later capacity-classified or successful attempts.
+    if dominant is not None and dominant in _HARD_BLOCK_CLASSES:
+        return {
+            "ok": False,
+            "digest": None,
+            "log_count": 0,
+            "error_class": dominant,
+            "error_detail": dominant,
+            "failure_class": dominant,
+            **metrics,
+        }
     success = run.best_success_body(lid)
     if success is None:
-        raise MatrixCellFailure(
-            "batch call has no successful body",
-            context={"logical_call_id": lid, "error_class": metrics["error_class"]},
-        )
+        err = dominant or metrics.get("error_class") or rows[-1].get("error_class") or "batch_failure"
+        detail = rows[-1].get("error_detail") or err
+        fail_class = dominant if dominant else _classify_from_error_class(str(err), detail=str(detail))
+        return {
+            "ok": False,
+            "digest": None,
+            "log_count": 0,
+            "error_class": err,
+            "error_detail": detail,
+            "failure_class": fail_class,
+            **metrics,
+        }
     body = run.load_body(success[0], expected_bytes=success[1])
     identities, digest = interpret_logs(
         body,
         domain=_domain_for(addresses=addresses, start=start, end=end, topics=plan.topics),
     )
-    return {"digest": digest, "log_count": len(identities), **metrics}
+    return {
+        "ok": True,
+        "digest": digest,
+        "log_count": len(identities),
+        "error_class": None,
+        "error_detail": None,
+        "failure_class": None,
+        **metrics,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -2265,11 +3216,14 @@ class MatrixConfig:
                 raise MatrixError("execute_live rejects caller-supplied provider organizations")
             if not self.confirm_matrix_id:
                 raise MatrixError("execute_live requires confirm_matrix_id")
-            if self.transport is None:
-                if not self.primary_rpc_url or not self.secondary_rpc_url:
-                    raise MatrixError("execute_live requires RPC URLs or injectable transport")
-                if self.primary_rpc_url.rstrip("/") == self.secondary_rpc_url.rstrip("/"):
-                    raise MatrixError("RPC URLs must be distinct")
+            # Injected transports need the same scanner inputs as HTTP (exact runtime URLs).
+            if not self.primary_rpc_url or not self.secondary_rpc_url:
+                raise MatrixError(
+                    "execute_live requires primary_rpc_url and secondary_rpc_url "
+                    "for credential scanner inputs (including injectable transports)"
+                )
+            if self.primary_rpc_url.rstrip("/") == self.secondary_rpc_url.rstrip("/"):
+                raise MatrixError("RPC URLs must be distinct")
         if self.mode == "offline_replay" and self.live_run_dir is None:
             raise MatrixError("offline_replay requires live_run_dir")
 
@@ -2292,6 +3246,9 @@ class PairEventV2MatrixHarness:
         self._owns_transport = False
         self._closed = False
         self.active_run: MatrixRun | None = None
+        self._live_lock: LiveOutputLock | None = None
+        # Deterministic executor submission order (provider_org per submitted call).
+        self.submission_order: list[str] = []
         # Count of started provider operations not yet finished (for drain assertions).
         self._active_provider_ops = 0
         self._provider_ops_lock = threading.Lock()
@@ -2659,7 +3616,10 @@ class PairEventV2MatrixHarness:
 
     def _execute_live_calls(self, run: MatrixRun, plan: MatrixPlan) -> None:
         self._auth_chain(run, plan)
-        work = [c for c in iter_logical_calls(plan) if c.kind != "chain"]
+        # Fair interleave by provider; catalog identity unchanged.
+        work = fair_schedule_calls(
+            [c for c in iter_logical_calls(plan) if c.kind != "chain"]
+        )
         max_workers = self.config.budgets.max_in_flight * len(self.config.provider_orgs)
         pending: set[Future[None]] = set()
         work_iter = iter(work)
@@ -2672,6 +3632,8 @@ class PairEventV2MatrixHarness:
                     call = next(work_iter)
                 except StopIteration:
                     return False
+                # Record deterministic submission order (not concurrent entry order).
+                self.submission_order.append(call.provider_org)
                 pending.add(executor.submit(self._execute_one, run, call))
                 return True
 
@@ -2750,7 +3712,21 @@ class PairEventV2MatrixHarness:
                             "matrix_id": plan.matrix_id,
                         },
                     )
-            self.active_run = MatrixRun(self.config.output_root, run_id=self.config.run_id)
+                # Exclusive live-root lock before run creation or RPC.
+                self._live_lock = LiveOutputLock(self.config.output_root)
+                self._live_lock.acquire()
+            live_scanner: CredentialScanner | None = None
+            if self.config.mode == "execute_live":
+                # Scanner bound to this run only (no process-global cross-talk).
+                live_scanner = CredentialScanner.from_rpc_urls(
+                    self.config.primary_rpc_url,
+                    self.config.secondary_rpc_url,
+                )
+            self.active_run = MatrixRun(
+                self.config.output_root,
+                run_id=self.config.run_id,
+                credential_scanner=live_scanner,
+            )
             self.active_run.write_plan_and_catalog(plan)
             base = self._base_report(plan, mode=self.config.mode)
 
@@ -2787,12 +3763,16 @@ class PairEventV2MatrixHarness:
                 validate_run_call_inventory(self.active_run.run_dir, plan)
                 disk = _ReadOnlyRun(self.active_run.run_dir)
                 cells = evaluate_cells(disk, plan)  # type: ignore[arg-type]
-                all_pass = all(c["status"] == "pass" for c in cells)
+                selection = select_capacity_from_cells(cells)
+                all_pass = bool(selection["all_cells_pass"])
                 incomplete = any(c["status"] == "incomplete" for c in cells)
                 # In-process zero-network replay re-reads disk again.
                 replay_cells = evaluate_cells(disk, plan)  # type: ignore[arg-type]
-                if compute_evidence_hash({"cells": cells}) != compute_evidence_hash(
-                    {"cells": replay_cells}
+                replay_selection = select_capacity_from_cells(replay_cells)
+                if compute_evidence_hash({"cells": cells, "selection": selection}) != (
+                    compute_evidence_hash(
+                        {"cells": replay_cells, "selection": replay_selection}
+                    )
                 ):
                     raise MatrixSafetyStop(
                         "in-process disk replay cell decisions disagree"
@@ -2801,28 +3781,30 @@ class PairEventV2MatrixHarness:
                     "kind": "in_process_disk_replay",
                     "authenticated": True,
                     "all_cells_pass": all(c["status"] == "pass" for c in replay_cells),
+                    "selection_valid": replay_selection["selection_valid"],
+                    "selected_cohort_size": replay_selection["selected_cohort_size"],
                     "cell_count": len(replay_cells),
                     "cells": replay_cells,
+                    "selection": replay_selection,
                 }
                 in_process["replay_hash"] = compute_evidence_hash(in_process)
                 call_metrics = _collect_call_metrics(disk, plan)
-                suggested = 128 if all_pass else None
-                if not all_pass:
-                    for size in reversed(NESTED_COHORT_SIZES):
-                        size_cells = [c for c in cells if c["cohort_size"] == size]
-                        if size_cells and all(c["status"] == "pass" for c in size_cells):
-                            suggested = size
-                            break
+                suggested = selection["selected_cohort_size"]
+                # ADR-0015 §9.8: PASS = valid nested capacity selection + replay, not all 15.
                 matrix_pass = bool(
-                    all_pass
+                    selection["selection_valid"]
+                    and selection["selected_cohort_size"] is not None
                     and in_process["authenticated"]
-                    and in_process["all_cells_pass"]
+                    and in_process["selection_valid"]
+                    and in_process["selected_cohort_size"]
+                    == selection["selected_cohort_size"]
                     and len(cells) == 15
                     and not incomplete
                 )
                 base.update(
                     {
                         "cells": cells,
+                        "capacity_selection": selection,
                         "offline_replay": in_process,
                         "call_metrics": call_metrics,
                         "complete": not incomplete,
@@ -2834,6 +3816,7 @@ class PairEventV2MatrixHarness:
                         "recommendation": {
                             **base["recommendation"],
                             "suggested_cohort_size": suggested,
+                            "capacity_selection_valid": selection["selection_valid"],
                         },
                     }
                 )
@@ -2870,7 +3853,10 @@ class PairEventV2MatrixHarness:
                 try:
                     disk = _ReadOnlyRun(self.active_run.run_dir)
                     base["call_metrics"] = _collect_call_metrics(disk, plan)
-                    base["cells"] = evaluate_cells(disk, plan)  # type: ignore[arg-type]
+                    fail_cells = evaluate_cells(disk, plan)  # type: ignore[arg-type]
+                    base["cells"] = fail_cells
+                    base["capacity_selection"] = select_capacity_from_cells(fail_cells)
+                    base["all_cells_pass"] = base["capacity_selection"]["all_cells_pass"]
                 except Exception as eval_exc:
                     base["cells"] = []
                     base["cell_evaluation_error"] = type(eval_exc).__name__
@@ -2880,6 +3866,9 @@ class PairEventV2MatrixHarness:
                     return sealed
                 raise
         finally:
+            if self._live_lock is not None:
+                self._live_lock.release()
+                self._live_lock = None
             self.close()
 
     def _run_standalone_replay(self) -> dict[str, Any]:
@@ -2903,7 +3892,23 @@ class PairEventV2MatrixHarness:
             raise MatrixSafetyStop(
                 "standalone replay cells disagree with sealed live report"
             )
-        all_pass = all(c["status"] == "pass" for c in cells)
+        selection = select_capacity_from_cells(cells)
+        live_selection = live.get("capacity_selection")
+        if not isinstance(live_selection, Mapping):
+            raise MatrixSafetyStop(
+                "live report missing capacity_selection for standalone replay"
+            )
+        if compute_evidence_hash({"capacity_selection": selection}) != compute_evidence_hash(
+            {"capacity_selection": live_selection}
+        ):
+            raise MatrixSafetyStop(
+                "standalone replay capacity_selection disagrees with sealed live selection",
+                context={
+                    "replay_selected": selection.get("selected_cohort_size"),
+                    "live_selected": live_selection.get("selected_cohort_size"),
+                },
+            )
+        all_pass = bool(selection["all_cells_pass"])
         after = _inventory_snapshot(live_root)
         if before != after:
             raise MatrixSafetyStop("live source tree changed during standalone replay")
@@ -2912,6 +3917,13 @@ class PairEventV2MatrixHarness:
         # Copy authenticated references (not rewrite live). Write minimal plan/catalog
         # for this replay run so it is self-describing, exclusive.
         self.active_run.write_plan_and_catalog(plan)
+        replay_pass = bool(
+            selection["selection_valid"]
+            and selection["selected_cohort_size"] is not None
+            and selection["selected_cohort_size"]
+            == live_selection.get("selected_cohort_size")
+            and len(cells) == 15
+        )
         report = {
             "schema_version": MATRIX_SCHEMA_VERSION,
             "matrix_id": plan.matrix_id,
@@ -2924,10 +3936,11 @@ class PairEventV2MatrixHarness:
             "plan": plan.to_public_dict(),
             "budgets": self.config.budgets.as_dict(),
             "cells": cells,
+            "capacity_selection": selection,
             "all_cells_pass": all_pass,
             "cell_count": len(cells),
             "complete": True,
-            "pass": bool(all_pass and len(cells) == 15),
+            "pass": replay_pass,
             "started_at": _now_iso(),
             "finished_at": _now_iso(),
             "high_water": self.tracker.snapshot(),
@@ -2938,7 +3951,8 @@ class PairEventV2MatrixHarness:
                     "dictate production configuration, grant v2 coverage, start "
                     "endurance, or authorize full acquisition."
                 ),
-                "suggested_cohort_size": 128 if all_pass else None,
+                "suggested_cohort_size": selection["selected_cohort_size"],
+                "capacity_selection_valid": selection["selection_valid"],
                 "frozen": False,
                 "grants_v2_coverage": False,
                 "authorizes_endurance": False,
@@ -2950,6 +3964,9 @@ class PairEventV2MatrixHarness:
                 "kind": "standalone_read_only",
                 "authenticated": True,
                 "all_cells_pass": all_pass,
+                "selection_valid": selection["selection_valid"],
+                "selected_cohort_size": selection["selected_cohort_size"],
+                "live_capacity_selection": dict(live_selection),
                 "live_run_dir": str(live_root),
                 "source_inventory_sha256": _sha256_text(_canonical_json(before)),
             },
@@ -3017,6 +4034,7 @@ def plan_only(
 __all__ = [
     "ANCHOR_POOL",
     "BIRTH_BOUNDARY_BLOCK",
+    "DEFAULT_MAX_RESPONSE_BYTES",
     "DEFAULT_PROVIDER_ORGS",
     "LOGICAL_CALL_CEILING",
     "MATRIX_RANGES",
@@ -3025,9 +4043,12 @@ __all__ = [
     "PINNED_COHORT_HASHES",
     "STREAM_CHUNK_BYTES",
     "BudgetTracker",
+    "CredentialScanner",
     "HttpxTransport",
+    "LiveOutputLock",
     "LogicalCall",
     "MatrixBudgets",
+    "MatrixCellFailure",
     "MatrixConfig",
     "MatrixError",
     "MatrixPlan",
@@ -3043,10 +4064,13 @@ __all__ = [
     "compute_evidence_hash",
     "compute_report_hash",
     "evaluate_cells",
+    "fair_schedule_calls",
     "iter_logical_calls",
     "parse_json_rpc_result",
     "plan_only",
+    "select_capacity_from_cells",
     "select_matrix_maximum_cohort",
+    "validate_cell_topology",
     "validate_run_call_inventory",
     "verify_and_load_accepted_registry",
     "verify_pinned_cohort_hashes",
