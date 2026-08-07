@@ -1478,3 +1478,31 @@ The no-network matrix ID still resolves exactly to
 free on the data filesystem; RPC endpoint variables were unset in Sol's shell. Replay, live
 confirmation, endurance, production acquisition, coverage credit, publication, factors, PAPER, and
 LIVE trading remain prohibited.
+
+## Jr live-confirmation evidence - run_f135dda6ab1a48c8967a4b0165547dd7 FAILED (2026-08-07)
+
+Record commit: 89a8491. Source SHA-256 9f84dd007264372ed6499ba3782c0bb34ae0b83090acbf6ed31ff62d715d6a42;
+tests SHA-256 afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8 (unchanged).
+
+- Matrix ID: mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2 (matches precondition)
+- Run ID: run_f135dda6ab1a48c8967a4b0165547dd7
+- Terminal kind: FAILED; error_type MatrixSafetyStop; safety_stop "global wall-time budget breached during HTTP"
+  context timeout_seconds 60.0; exit code 1; started 16:12:49Z, finished 16:16:53Z, elapsed 244.517s
+  (max_wall_seconds 5400 not consumed; per-request 60s budget breached on the blockpi chain call).
+- Cells (15/15): all `incomplete` (sparse/medium/hot x cohort 1/8/32/64/128), failure_class incomplete,
+  missing_attempts. Detail per cell "primary:incomplete;incomplete;secondary:incomplete;incomplete".
+- Capacity selection: selection_valid false, selected_cohort_size null, viable_sizes [], blocking_reasons = all 15
+  incomplete cells, capacity_failure_cells [].
+- Chain calls: chain:infura SUCCESS (HTTP 200, 39 B, latency 3259.8 ms, body sha256
+  1b4c9948350921489f387c8ac3eddf70c737d393b182e71eba1ff4c83a96dc9e); chain:blockpi started but never
+  completed (no receipt retained, provider_attempts 2, logical_calls_started 2).
+- 429s: 0. Retained response bytes 39, observed 39. In-flight high-water 1 (budget 1).
+- Credential scan: pass. evidence_hash 2a9d9eb1a662509bd873908766eadd904185ba5b485b6d01df10639f1626dc58;
+  report_hash 188512ff9b3ff665463ae57fa2bc883c1fe5fa4f0b279cb8f6545550bc567812.
+- Output bytes: catalog.json 905077, plan.json 8131, raw/1b4c...dc9e.bin 39, receipts/chain__infura__a1.json 779.
+- Free disk at seal: 190,280,192,000 bytes (~177 GiB).
+- No replay: replay is conditionally authorized only on COMPLETE and PASS; this run is FAILED.
+- Output tree preserved untouched; no rerun, no edits, no push of source/tests.
+
+Blocker class: MatrixSafetyStop (transport/timeout on secondary provider chain probe before any cell attempt).
+No capacity, replay, endurance, or coverage credit. Next actor: reviewer/Sol - diagnostic decision.
