@@ -1663,3 +1663,41 @@ dual-stack clients fall back to IPv4 (verified with curl -4). Marks are IP-based
 would require re-adding new addresses. Rules are in-memory only; persistence (nftables.conf) is the
 owner's decision. No matrix rerun was executed; FAILED verdict for run_f135dda6ab1a48c8967a4b0165547dd7
 stands. Reviewer may now consider authorizing one fresh live confirmation.
+
+## Jr clean replacement evidence - live COMPLETE+PASS, replay COMPLETE+PASS (2026-08-07)
+
+Record commit 483a5e2. Source SHA-256 9f84dd007264372ed6499ba3782c0bb34ae0b83090acbf6ed31ff62d715d6a42;
+tests SHA-256 afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8 (unchanged after runs).
+
+### Preflight (immediately before execution)
+- No grok/dex_ohlcv_sampler/data_poller/backfill_dex_history_gt/collector_daemon process.
+- No matrix or matrix pytest process. All four legacy services inactive AND disabled.
+- Matrix ID matches exactly. Replacement roots absent and non-symlinked.
+- Free disk 189,833,768,960 bytes; only GUI processes at load (no high-CPU agent).
+- RPC URLs loaded from owner .env; values never displayed or persisted.
+
+### Live replacement - run_f2fd323fcd69403a923f6329b9f0c320
+- Terminal COMPLETE, pass true, exit 0; started 16:54:42Z, finished 17:24:45Z, elapsed 1803.696s.
+- Logical calls started 1568, provider attempts 1580, HTTP 429s 0, high-water in-flight 1.
+- Retained bytes 144,991,333; observed body bytes 177,521,737; 1580 receipts, 298 raw files.
+- Cells (15): 12 PASS with providers-agree; 3 capacity FAIL (medium:cohort32/64/128, providers
+  disagree on batch/scalar equality, digests equal). All sparse and hot cells PASS.
+- Capacity selection: valid, selected_cohort_size 8, viable_sizes [1,8],
+  capacity_failure_cells medium:cohort32/64/128, nonmonotonic false.
+- credential_scan pass; evidence_hash e42e987dade698af6af4fb47598abe88eb78116ac6fc004ff6fc4d0a84b4a114;
+  report_hash 2062d1f8717672de645f07bd761354bea31cdca9dbe20908cfe3941fb00189ef.
+- Both chain probes succeeded (infura, blockpi) - BlockPI bypass confirmed.
+- Recommendation: capacity_selection_valid true, suggested_cohort_size 8, authorizes_endurance false,
+  grants_v2_coverage false, frozen false.
+
+### Standalone replay - run_bd066d2e228d46728a97fdb61138e365
+- Terminal COMPLETE, pass true, exit 0; 31.359s; offline (0 logical calls, 0 provider attempts).
+- All 15 cells identical to live (12 PASS, 3 capacity FAIL); capacity selection identical (cohort 8).
+- credential_scan pass; evidence_hash f7b536de7823a298688e935efae82f85971957c440c7ccdea96881b0b72b88a2;
+  report_hash 6c27a8df5211991487d2d0d61dbac548a94f2f4c41a17393ee2846a5ec165786.
+- Output roots: data/dex003_v2_matrix/live_951e127_clean_mtx_29211422 and
+  data/dex003_v2_matrix/replay_951e127_clean_mtx_29211422. Both trees preserved.
+- Free disk after runs 556,977,242,112 bytes.
+
+No result authorizes endurance, production acquisition, publication, factors, PAPER, or LIVE trading.
+Next actor: reviewer/Sol - capacity-selection and evidence review of the clean replacement.
