@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish records then run one fresh live confirmation
+Next required actor: Owner - stop high-load Grok process and prove process-level quiescence
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1507,6 +1507,106 @@ tests SHA-256 afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8 (
 Blocker class: MatrixSafetyStop (transport/timeout on secondary provider chain probe before any cell attempt).
 No capacity, replay, endurance, or coverage credit. Next actor: reviewer/Sol - diagnostic decision.
 
+## Sol failed-run review - external isolation violated
+
+Sol accepts `run_f135dda6ab1a48c8967a4b0165547dd7` only as immutable FAILED incident evidence. The harness
+behaved correctly: it retained the completed Infura chain response, failed closed when the BlockPI
+chain request exceeded its 60-second HTTP budget, drained provider work, sealed FAILED, marked all
+cells incomplete, selected no capacity, and did not replay. The run receives no validity or capacity
+credit.
+
+Legacy `/home/lars/trading-bot` user services were running or enabled during the attempt, violating the
+no-concurrent-work precondition. Their causal role in the BlockPI timeout is not provable; they use
+other exchange/GeckoTerminal workloads and may only have contributed workstation or network pressure.
+The failure is transport timeout evidence, not provider capacity evidence.
+
+The owner stopped and disabled the legacy services. Sol independently verified all four units are now
+`inactive` and `disabled`, with no matching acquisition/backfill process running:
+
+- `trading-bot-data.service`
+- `trading-bot-dex-sampler.service`
+- `trading-bot-dex-backfill.service`
+- `collector-daemon.service`
+
+The failed root `data/dex003_v2_matrix/live_90c4082_mtx_29211422` must remain untouched. Its lock file,
+run directory, FAILED terminal, raw object, and receipts may not be deleted, edited, resumed, or reused.
+
+## Authorized clean replacement - one run only
+
+Because the authorized run began under a violated isolation precondition and failed before any matrix
+cell call, Sol authorizes exactly one separately named clean replacement run. This is a new run, not a
+resume or automatic retry. One standalone replay remains conditional on replacement COMPLETE and PASS.
+
+### Replacement preconditions
+
+1. Jr first commits and pushes only this Sol review in `docs/handoff/CURRENT_TASK.md` and
+   `tickets/DEX-003.md`; exclude the untracked GMGN draft. Source/test hashes remain the accepted
+   `9f84dd007264372ed6499ba3782c0bb34ae0b83090acbf6ed31ff62d715d6a42` and
+   `afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8`.
+2. Immediately before execution, all four named legacy services must report both `inactive` and
+   `disabled`, and no legacy acquisition/backfill process may be running. Preserve the command output
+   without endpoint values.
+3. The no-network matrix-ID command must print exactly
+   `mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`.
+4. The owner supplies distinct Infura and BlockPI URLs through the two runtime environment variables;
+   never display or persist their values.
+5. Both new roots must be absent and non-symlinked:
+   `data/dex003_v2_matrix/live_951e127_clean_mtx_29211422` and
+   `data/dex003_v2_matrix/replay_951e127_clean_mtx_29211422`.
+6. At least 8 GiB free disk and no tests, daemons, backfills, acquisition, or other high-load work.
+   Foreground execution only; no detachment or automatic restart.
+
+The replacement uses the prior authorized command unchanged except for its fresh output root:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --output-root data/dex003_v2_matrix/live_951e127_clean_mtx_29211422 \
+  --execute-live \
+  --confirm-matrix-id mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2 \
+  --max-logical-calls 1568 \
+  --max-attempts-per-call 3 \
+  --max-provider-attempts 4704 \
+  --max-wall-seconds 5400 \
+  --max-retained-response-bytes 2147483648 \
+  --max-response-bytes 8388608 \
+  --requests-per-second 0.5 \
+  --max-in-flight 1 \
+  --http-timeout-seconds 60
+```
+
+If and only if replacement live is COMPLETE and PASS, run one standalone replay to
+`data/dex003_v2_matrix/replay_951e127_clean_mtx_29211422` using its credential-free `run_dir`.
+
+All prior immediate stops and evidence requirements remain in force. Any replacement failure ends the
+phase with no third run. Preserve both the original failed tree and the replacement tree. No result
+authorizes endurance, production acquisition, publication, factors, PAPER, or LIVE trading.
+
+## Replacement authorization suspended - orphan process discovered
+
+After the replacement decision, the owner disclosed a second isolation violation present during the
+failed live window: orphan process PID 2687 ran `/home/lars/trading-bot/dex_ohlcv_sampler.py` from July
+25 even though `trading-bot-dex-sampler.service` later reported inactive/disabled. The orphan is now
+absent, proving service-unit state alone is not a sufficient process-isolation check.
+
+Sol also observes Grok PID `2309342`, started 2026-08-02T20:39:20 local time, still running at about
+87% CPU. That is a prohibited high-load concurrent process. Grok PID `2470211` is present at low CPU,
+but any agent work must be idle during the live window.
+
+The clean replacement authorization above is suspended and must not be executed or published as
+executable authorization yet. The owner must stop or otherwise terminate the high-CPU Grok process and
+confirm no legacy sampler/poller/backfill/collector process remains. Sol must then verify:
+
+- no `dex_ohlcv_sampler.py`, `data_poller.py`, `backfill_dex_history_gt.py`, or
+  `collector_daemon.py` process;
+- all four named legacy units inactive and disabled;
+- no Grok or other agent process consuming sustained high CPU;
+- no matrix/test/acquisition process and no new replacement output root.
+
+Only after a fresh process-level check passes may Sol reactivate the single clean replacement. No RPC,
+record publication, replacement root creation, replay, or other DEX-003 execution is authorized while
+this suspension is active.
+
 ## Environmental context - FAILED live run possibly confounded (2026-08-07)
 
 Post-run inspection by owner/Jr:
@@ -1524,3 +1624,24 @@ Post-run inspection by owner/Jr:
 - No rerun is authorized or executed; this context does not alter the FAILED verdict of
   run_f135dda6ab1a48c8967a4b0165547dd7. Evidence tree preserved. Reviewer decides next step
   (e.g., bypass-tag RPC hosts, re-check preconditions, then one fresh live run).
+
+## Network change - RPC/DEX provider fwmark bypass installed (2026-08-07)
+
+Owner installed nftables table `inet dex_bypass` (chain output, priority mangle) tagging egress to
+non-geoblocking data providers with fwmark 0xca6c, which policy rule `not from all fwmark 0xca6c
+lookup 51820` routes via the main table (enp6s0) instead of the AzireVPN South-Africa WireGuard
+tunnel. Providers bypassed (14 rules, verified in `nft list table inet dex_bypass`):
+- RPC: Infura (mainnet.infura.io v4 x3), Alchemy (eth-mainnet.g.alchemy.com v4 x3),
+  BlockPI (ethereum.public.blockpi.network v4+v6) - the provider whose probe hung in the FAILED run.
+- DEX/aggregator: DexScreener (v4+v6), GeckoTerminal (v4+v6), Birdeye (v4+v6), CoinGecko (v4+v6),
+  DefiLlama coins.llama.fi + yields.llama.fi (v4+v6).
+- CEXes with geoblocking (Binance api.binance.com, Bitmex www.bitmex.com) intentionally remain on
+  the tunnel and are NOT tagged.
+
+Verification: `ip route get <provider-ip> mark 0xca6c` -> via 192.168.1.1 dev enp6s0 (direct);
+live probes via IPv4: BlockPI reachable, DexScreener 200, CoinGecko 200, Birdeye 401 (auth, reachable).
+Caveat: IPv6 for tagged providers is now unreachable via the main table (no direct IPv6 default);
+dual-stack clients fall back to IPv4 (verified with curl -4). Marks are IP-based, so DNS rotations
+would require re-adding new addresses. Rules are in-memory only; persistence (nftables.conf) is the
+owner's decision. No matrix rerun was executed; FAILED verdict for run_f135dda6ab1a48c8967a4b0165547dd7
+stands. Reviewer may now consider authorizing one fresh live confirmation.
