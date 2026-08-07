@@ -1506,3 +1506,21 @@ tests SHA-256 afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8 (
 
 Blocker class: MatrixSafetyStop (transport/timeout on secondary provider chain probe before any cell attempt).
 No capacity, replay, endurance, or coverage credit. Next actor: reviewer/Sol - diagnostic decision.
+
+## Environmental context - FAILED live run possibly confounded (2026-08-07)
+
+Post-run inspection by owner/Jr:
+- Concurrent background processes running the entire time (not just collector_daemon PID 2680):
+  `/home/lars/trading-bot/dex_ohlcv_sampler.py` PID 2687 (up since Jul 25) — a DEX-related OHLCV
+  sampler; plus `grok` PID 2309342 at ~87% CPU, xeoma, browsers. Precondition 6 (no concurrent
+  daemon/acquisition/high-load jobs) was therefore NOT satisfied during the live window.
+- VPN: WireGuard tunnel `azirevpn-za-jnb` (AzireVPN, Johannesburg/ZA, mtu 1420) is UP since Aug 4
+  with policy rule `not from all fwmark 0xca6c lookup 51820`. RPC endpoints are NOT tagged to bypass:
+  - mainnet.infura.io -> 63.186.95.78 routes via table 51820 (tunnel)
+  - ethereum.public.blockpi.network -> 2606:4700:3034::6815:2838 (IPv6) routes via tunnel
+- Interpretation: the BlockPI probe hang (MatrixSafetyStop, per-request 60s budget) may be caused by
+  the South Africa tunnel path (IPv6 egress) and/or concurrent DEX sampler load, not by a harness
+  defect. Infura (IPv4 via tunnel) succeeded in 3.26s.
+- No rerun is authorized or executed; this context does not alter the FAILED verdict of
+  run_f135dda6ab1a48c8967a4b0165547dd7. Evidence tree preserved. Reviewer decides next step
+  (e.g., bypass-tag RPC hosts, re-check preconditions, then one fresh live run).
