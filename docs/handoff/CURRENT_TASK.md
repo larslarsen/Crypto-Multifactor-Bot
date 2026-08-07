@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - rerun failed credential test then full matrix suite
+Next required actor: Jr Dev - Hermes - publish records then run one fresh live confirmation
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1144,6 +1144,94 @@ record new SHA-256 identities before Jr receives another integration/test author
 confirmation, endurance, production acquisition, coverage credit, publication, factors, PAPER, and
 LIVE trading remain prohibited.
 
+## Owner confirmation - prior live evidence lost
+
+The owner confirms that all three prior immutable run directories were lost. Their committed
+credential-free summaries and hashes remain incident audit records, but the underlying responses,
+receipts, and terminal files can no longer be authenticated or replayed. The prior runs receive no
+capacity-selection, replay, endurance, or coverage credit. A fresh run is new evidence and cannot
+retroactively replace the lost historical evidence.
+
+## Authorized next phase - one fresh live confirmation at 90c4082
+
+Sol authorizes Jr Dev - Hermes to publish this integration-acceptance/evidence-loss record and then
+execute exactly one fresh live provider-matrix confirmation from the accepted source at `90c4082`.
+One standalone read-only replay is conditionally authorized only if that live run is COMPLETE and
+PASS. No retry, second live run, detached process, source/test edit, endurance, or production
+acquisition is authorized.
+
+### Preconditions
+
+1. Jr first commits and pushes only `docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`; exclude
+   the unrelated untracked GMGN research draft. The committed source/test hashes must remain exactly
+   `9f84dd007264372ed6499ba3782c0bb34ae0b83090acbf6ed31ff62d715d6a42` and
+   `afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8`.
+2. Re-run the no-network matrix-ID command. It must print exactly
+   `mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`.
+3. The owner supplies distinct runtime URLs for Infura and BlockPI through
+   `ETHEREUM_RPC_URL` and `ETHEREUM_RPC_URL_SECONDARY`. Never persist or display either value.
+4. Neither `data/dex003_v2_matrix/live_90c4082_mtx_29211422` nor
+   `data/dex003_v2_matrix/replay_90c4082_mtx_29211422` may exist or resolve through a symlink. Do not
+   delete or reuse another directory to satisfy this precondition.
+5. At least 8 GiB must remain free on the data filesystem. Sol observed 192,001,794,048 bytes free.
+6. No tests, daemon, backfill, acquisition, or other high-load job may run concurrently. Execute in
+   the foreground only: no `setsid`, `nohup`, shell backgrounding, terminal multiplexer detachment, or
+   automatic restart.
+
+### Authorized commands
+
+No-network identity check:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --print-matrix-id
+```
+
+After every precondition passes, the sole authorized live command is:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --output-root data/dex003_v2_matrix/live_90c4082_mtx_29211422 \
+  --execute-live \
+  --confirm-matrix-id mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2 \
+  --max-logical-calls 1568 \
+  --max-attempts-per-call 3 \
+  --max-provider-attempts 4704 \
+  --max-wall-seconds 5400 \
+  --max-retained-response-bytes 2147483648 \
+  --max-response-bytes 8388608 \
+  --requests-per-second 0.5 \
+  --max-in-flight 1 \
+  --http-timeout-seconds 60
+```
+
+If and only if the live terminal is COMPLETE and PASS, use its credential-free `run_dir` as
+`LIVE_RUN_DIR` and run exactly one standalone replay:
+
+```bash
+uv run python scripts/research/run_uniswap_v2_pair_events_v2_matrix.py \
+  --registry-store-root data/dex003_full/store \
+  --output-root data/dex003_v2_matrix/replay_90c4082_mtx_29211422 \
+  --offline-replay \
+  --live-run-dir "$LIVE_RUN_DIR"
+```
+
+### Stops and evidence
+
+Any failed precondition, nonzero live exit, FAILED or missing terminal, safety stop, credential
+detection, quota exhaustion, malformed/incomplete evidence, provider disagreement, digest mismatch,
+nonmonotonic viability, budget breach, or invalid capacity selection stops the phase. Preserve the
+entire output tree; do not edit, delete, resume, replay, or rerun it. A COMPLETE non-PASS run may be
+authenticated for review but is not replay-authorized.
+
+Jr returns only credential-free evidence: record commit, source/test hashes, matrix/run IDs, terminal
+kind, exit code, duration, all 15 cells, capacity selection, logical/provider attempts, 429s, retained
+and observed bytes, in-flight high-water, evidence/report hashes, output bytes, free disk, and blocker
+class. For conditional replay also record replay run/path, exit, authenticated source hashes, selected
+cohort, all-cell decision, and source-inventory hash. No live result authorizes endurance or production.
+
 ## Sol authorization-classification review - credential precedence correction required
 
 The correction closes the observed failures: ordinary retained HTTP 401 and 403 details are no longer
@@ -1351,3 +1439,42 @@ Sequence executed by Jr:
 Hashes re-verified unchanged after suite. All five DEX-003 files committed; GMGN research draft
 (research/sprint_004/52_GMGN_SOLANA_DEX_PROSPECTIVE.md) intentionally excluded, uncommitted.
 Live and downstream work remain unauthorized.
+
+## Sol integration acceptance - 90c4082
+
+Sol accepts the corrected capacity-selection integration at pushed commit `90c4082`. The commit
+contains exactly the accepted production source, unchanged senior tests, ADR-0015, CURRENT_TASK, and
+DEX-003 ticket. The unrelated GMGN prospective research draft remains untracked and is not included.
+
+Committed identities match the accepted drop:
+
+- production source SHA-256
+  `9f84dd007264372ed6499ba3782c0bb34ae0b83090acbf6ed31ff62d715d6a42`
+- senior tests SHA-256
+  `afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8`
+
+Jr evidence records the three authorization regressions PASS in 32.09 seconds, the prior isolated
+failure PASS in 12.48 seconds, and the complete suite at 74 collected / 74 passed / 0 failed / exit 0
+in 2,341 seconds. Hashes remained unchanged; targeted ruff, repository control, and diff checks passed.
+Sol did not rerun pytest or RPC. `HEAD` and `origin/main` both resolve to `90c4082`.
+
+### Evidence-retention blocker
+
+No live confirmation is authorized yet. The recorded prior evidence root
+`data/dex003_v2_matrix/live_0002b70_mtx_29211422` is absent, and none of the three retained run IDs can
+be found in the active repository tree:
+
+- `run_32d7c4d9fdc0406f90c768f179663c5a`
+- `run_5ed38a9ada6942d5964eeb622963d2d5`
+- `run_70e886dd31674d259042d11ac4194763`
+
+Those directories were previously declared immutable retained incident evidence. The owner must
+provide their current active location or explicitly report that they were lost. Do not search or use
+the historical archive. Do not create a replacement live root, rerun RPC, or treat a future run as a
+replacement for missing historical evidence until Sol resolves this retention incident.
+
+The no-network matrix ID still resolves exactly to
+`mtx_29211422a0ea5148c1601d39d647e916a57c3227d78026289685a6fb910901c2`; 192,001,794,048 bytes were
+free on the data filesystem; RPC endpoint variables were unset in Sol's shell. Replay, live
+confirmation, endurance, production acquisition, coverage credit, publication, factors, PAPER, and
+LIVE trading remain prohibited.
