@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Owner - stop high-load Grok process and prove process-level quiescence
+Next required actor: Jr Dev - Hermes - publish review then run one clean replacement confirmation
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1606,6 +1606,24 @@ confirm no legacy sampler/poller/backfill/collector process remains. Sol must th
 Only after a fresh process-level check passes may Sol reactivate the single clean replacement. No RPC,
 record publication, replacement root creation, replay, or other DEX-003 execution is authorized while
 this suspension is active.
+
+## Sol process-level clearance - replacement reactivated
+
+Sol rechecked the host after the owner stopped the remaining processes. Both Grok PIDs `2309342` and
+`2470211` are absent. No `dex_ohlcv_sampler.py`, `data_poller.py`,
+`backfill_dex_history_gt.py`, `collector_daemon.py`, matrix runner, or matrix pytest process is running.
+All four named legacy units remain inactive and disabled. The two replacement roots remain absent and
+nonexistent. Free data-filesystem space is 189,923,172,352 bytes.
+
+The single clean replacement authorization above is reactivated. Jr must first commit and push only
+the accumulated Sol review/suspension/clearance records in CURRENT_TASK and DEX-003, excluding the
+untracked GMGN draft. Immediately before RPC execution, Jr must repeat and preserve the process-level
+and service checks. Any matching process, active/enabled legacy unit, sustained high-CPU agent job,
+new output root, or concurrent high-load task reinstates the stop automatically.
+
+If the immediate preflight remains clean, Jr may execute exactly the one foreground replacement
+command already frozen above, followed by one standalone replay only on COMPLETE and PASS. Any
+replacement failure ends the phase; no third run is authorized.
 
 ## Environmental context - FAILED live run possibly confounded (2026-08-07)
 
