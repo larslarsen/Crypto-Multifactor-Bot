@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol production-foundation source rejection
+Next required actor: Jr Dev - Hermes - publish Sol production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2354,3 +2354,72 @@ stops for a fresh Sol source review with new hashes. Jr integration and test exe
 unauthorized. No production controller/CLI, live readiness preflight, RPC, staged production start,
 coverage credit, publication, downstream work, PAPER, LIVE trading, or next ticket is authorized. Next
 ticket remains `NONE`.
+
+## Sol source re-review - production foundation correction rejected (2026-08-08)
+
+Jr published the first rejection at commit `11519b0`; `HEAD` and `origin/main` both resolve to that
+commit. Sol reviewed the corrected uncommitted Sr Dev drop in the same six authorized files. The new
+SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `b685d125f4c4e17fa0707e6873513dda5cf01660174c1b540e12d129bbe4a342`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `07d8c9661beb29943c7e7627b3430415b681ec8badfd74a4337ce1f445061a88`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `fb7956249ddc8554ff20684a1b39c5662b17fee5c5e285d47cdeca266d6639b4`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `2145b0dab5c044a968076b7463619c56f90cffcb8c927d326bbba4cbd7cb5158`.
+
+The correction adds streamed external root hashing, READY re-authentication, candidate/raw replay,
+batch parsing, scanner-over-cap coverage, and metric update sites. It remains rejected before Jr
+integration for these blockers:
+
+1. The public header-batch path cannot persist a batch request. `NetworkWorker.fetch()` accepts a JSON
+   array, but `SpoolDescriptor.__post_init__` rejects every non-mapping request. Even if that validator
+   were bypassed, `_op_persist_envelope` executes `dict(request)` and `request.get(...)`, which are invalid
+   for the batch list. Both new batch tests therefore exercise a path that cannot reach batch parsing.
+2. Batch-backed cached headers cannot replay through `acquire_header_batch`: its cache branch calls the
+   scalar-only `_verify_cached_header`, which requires a mapping request/response and JSON-RPC object.
+   Batch raw authority is an array and needs the batch-aware member authenticator already used later in
+   finalization.
+3. No global production header/finalization worker exists. `acquire_header_batch` and
+   `finalize_candidate` have no production call sites; `run_until_idle` schedules only query-node work.
+   Once log candidates exist, claim exclusion makes the node scheduler idle without enumerating distinct
+   candidate blocks, batching missing headers, or finalizing ready candidates.
+4. Claim exclusion still treats every candidate row as authenticated solely through SQL `NOT EXISTS`.
+   It performs no resume replay before excluding the domain, so a tampered candidate/raw pair can suppress
+   log reacquisition indefinitely. Authentication only occurs if a caller later invokes finalization.
+5. Required senior evidence remains incomplete. The migration upgrade test claims every 0017-0019 table
+   but populates only plan, node, lease, and execution policy; it omits coverage, chain identity, engine
+   events, terminal receipts, raw rows, headers, leaves, and dependencies. Its query-plan assertion accepts
+   any plan text containing `domain` or `using index` and never rejects `USE TEMP B-TREE`. Engine tests add
+   only batch success and missing-member cases, not reorder/extra/duplicate/disagreement/tamper/shared-
+   replay; candidate crash/tamper and atomic finalization public paths are also absent.
+6. Exact metrics are not closed. Provider in-flight high-water is sampled immediately after future
+   submission, before workers are guaranteed to acquire their limiters, so it can remain zero despite
+   completed attempts. `header_backlog` is never measured or changed, and the batch/finalization metrics
+   are not driven by an actual production work loop.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized second correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this re-review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop, `opencode.json`, and both untracked
+research files. After publication, Sr Dev - Grok Build may correct only the same six production-
+foundation source/test files against the unchanged frozen contract. The correction must make batch
+requests first-class through spool, persistence, recovery, authentication, and cached replay; add the
+bounded global candidate-block/header/finalization work loop; authenticate candidates before claim
+exclusion on resume; and replace the incomplete tests with decisive public-path coverage of every frozen
+case, including exact query-plan and metrics assertions.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
