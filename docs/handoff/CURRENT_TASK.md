@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol second-correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol final endurance-design rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2107,3 +2107,84 @@ Sr stops after replacing the proposal for Sol re-review. Harness implementation,
 work, test execution, RPC, endurance execution, production acquisition, publication, coverage credit,
 metadata/downstream transforms, factor work, PAPER, and LIVE trading remain prohibited. Next ticket
 authorized remains `NONE`.
+
+## Sol final review - endurance design rejected; redesign stop (2026-08-08)
+
+Jr published the final-correction authorization at commit `446bf4f`; `HEAD` and `origin/main` both
+resolve to that commit. Sr replaced only the authorized untracked proposal. The reviewed
+`research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md` has SHA-256
+`7369431fbe10d52d7c3c4f31f48325385b7d2352026426a042ce88c2fb3013f2`. The unrelated modified
+`opencode.json` and untracked GMGN research draft remain outside DEX-003 review scope. A notification
+from a killed offline schedule-builder process was stale residue, not another deliverable. No source,
+test, migration, ADR, data, RPC, pytest, or Git work accompanied the design.
+
+The final correction successfully makes the registry schedule reproducible. Sol independently
+reconciles the accepted registry anchors: 1,858,348 full cohort-8 roots,
+`U_full_ptb=148,506,716,734`, D=24 schedule entry count 345,378, scheduled PTB 27,579,820,088, and
+schedule digest `bb177563c1a589a92b1c27f99915b1badf47ed32e0e77ec9416f6046c1f5057f`. The exact strata,
+mandatory-pick deduplication, integer PTB arithmetic, and no-optional-continuation rule close the prior
+schedule-identity defects. The proposal remains rejected before implementation for these blockers:
+
+1. The reachability proof is invalidated by its own rank barrier. Every root has a unique rank, while
+   the claim query permits only PENDING work at the single minimum open rank. After one ordinary root is
+   claimed and becomes IN_FLIGHT, no second root at that rank exists and rank `r+1` remains blocked.
+   Ordinary unsplit roots therefore execute serially; only adaptive siblings can share a rank. The
+   asserted eight-root-per-second ideal and 2.69/5.37-day projections do not describe the proposed
+   scheduler. Seven-day coverage would require serial dual-provider root completion below about 325 ms,
+   and the D=24 schedule would require below about 250 ms, with no accepted evidence for either bound.
+2. The proposed 8/8 provider/node concurrency is not an accepted engine default or validated matrix
+   ceiling. The accepted engine defaults are 8 RPS, four in-flight requests per provider, and four nodes
+   in flight. At four effective nodes and the proposal's own 2x slowdown allowance, the ideal full
+   projection is again 10.74 days. Even ignoring the rank serialization, 345,378 entries at four roots
+   per second consume 23.9846 hours, leaving only 55.5 seconds for initialization, finalization, partial
+   roots, latency, headers, splits, retries, persistence, and shutdown. This is not overhead margin.
+   Calling D=24 intended active time while the hard wall is also 24 hours is independently impossible
+   once initialization, downtime, and sealing are nonzero.
+3. The rank barrier also deadlocks on accepted terminal-node semantics. The engine intentionally leaves
+   an exhausted terminal node `PENDING` with `attempt=max_attempts` and a durable terminal receipt. The
+   barrier CTE counts every PENDING node as open, but the claim predicate excludes max-attempt rows. One
+   terminal root therefore pins `min_open` forever and prevents all later strata from running.
+4. Migration 0020 remains pseudocode rather than the complete runner-valid migration required by the
+   authorization. It contains ellipses, `SELECT v1 columns`, `CREATE T_new`, shorthand drop/rename lists,
+   and references to prior text instead of exact plan/node/child table DDL, copy columns, triggers,
+   indexes, and foreign keys. The populated self-referential query-node ancestry and every 0017-0019
+   child cannot be proven to survive under the accepted FK-on transactional runner from this contract.
+5. Elapsed-cost authority is neither exact nor durably recomputable. The nanosecond ledger leaves its
+   remainder algorithm as `...`, does not define pre/post-transition state ordering, and assigns zero-
+   inflight gaps through an undefined synthetic weighted fold. Its samples and concurrency state are
+   in memory while checkpoints store only asserted aggregates, so resume cannot reconstruct the ledger.
+   `T_final` is defined through TERMINAL even though the outcome and projection are decided before the
+   manifest and terminal writes, creating a circular decision input.
+6. Resume and evidence authentication remain below accepted engine authority. A shared lock permits two
+   resumptions to authenticate the same snapshot and then race appends/claims. The proposal does not
+   fully specify canonical request, provider/source, acquisition/raw pairing, HTTP/JSON-RPC success,
+   truncation and byte-count equality, receipt IDs, terminal modes/attempts, chain identity, policy,
+   split ancestry, header replay, dependency closure, and table-by-table unknown/orphan rejection before
+   AGREED credit.
+7. Clock and sealing recovery are not deterministic. Segment events lack sufficient boot/segment binding,
+   torn JSONL and wall anomalies have no exact rule, and no final durable checkpoint is required before
+   DECISION. A MANIFEST-only crash may become either COMPLETE or FAILED without one reproducible outcome.
+   The degraded FAILED path permits WAL/spool remnants that the normal topology rejects and has no exact
+   alternate manifest, terminal schema, hash domain, or fsync protocol.
+8. Scanner, terminal, and disk authority remain non-executable. The scanner references an undeclared
+   scanner-only phase, lacks exact generic credential grammar and observed-suffix authentication, and may
+   write pending bytes at EOF after an over-cap transition. MANIFEST/TERMINAL schemas and distinct hash
+   domains are not enumerated. Disk reconciliation mixes external raw bytes with shared SQLite row/page
+   bytes, double-counts `receipt.db`, and tries to include/project MANIFEST and TERMINAL at a DECISION that
+   precedes their creation; the required byte identity cannot hold as written.
+
+Repository control and `git diff --check` pass. Sol ran no pytest or RPC because neither was authorized.
+
+## Decision and stop
+
+The endurance-harness design phase is stopped for architecture redesign. The reviewed proposal is not
+accepted, no part of it is authorized for implementation, and no further same-file Sr correction is
+authorized. Jr Dev - Hermes must commit and push only this Sol decision in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding `opencode.json` and both untracked
+research files.
+
+After publication, DEX-003 remains IN_PROGRESS but blocked pending a separate Sol architecture decision.
+No developer is authorized to edit the proposal, foundation, engine, migration, ADR, tests, or other
+records after that publication. No RPC, endurance execution, production acquisition, publication,
+coverage credit, metadata/downstream transform, factor work, PAPER, LIVE trading, or next ticket is
+authorized. Next ticket authorized remains `NONE`.
