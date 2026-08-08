@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol final endurance-design rejection
+Next required actor: Jr Dev - Hermes - publish Sol production-path architecture decision
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2188,3 +2188,108 @@ No developer is authorized to edit the proposal, foundation, engine, migration, 
 records after that publication. No RPC, endurance execution, production acquisition, publication,
 coverage credit, metadata/downstream transform, factor work, PAPER, LIVE trading, or next ticket is
 authorized. Next ticket authorized remains `NONE`.
+
+## Sol architecture decision - staged full production path (2026-08-08)
+
+Jr published the final endurance-design rejection at commit `74975e6`; `HEAD` and `origin/main` both
+resolve to that commit. Repository control passes. The unrelated modified `opencode.json` and untracked
+GMGN and rejected endurance-design files remain outside this decision.
+
+Sol retires the separate endurance plan, schema, scheduler, and terminal protocol. DEX-003 retains the
+complete accepted domain and its seven-day target/fourteen-day hard maximum; it will not reduce the pool
+set, weaken dual-provider authority, or treat a subset as the production plan. The eventual execution
+model is staged work on the one real full cohort-8 production plan, so every authenticated completed leaf
+is reusable production evidence and no second scheduler exists.
+
+The decision is based on repository and accepted live evidence:
+
+- The clean matrix proves cohort 8 filter validity at 0.5 requests/second and one in-flight request, not
+  production throughput. Its medium cohort-8 provider batches took about 1.44 and 1.39 seconds and its hot
+  batches about 1.69 and 1.44 seconds before production header and persistence cost.
+- The accepted engine defaults are 8 requests/second but only four in-flight requests per provider and
+  four nodes. Four ideal roots/second imply 5.37 days with zero overhead; a 2x slowdown implies 10.74
+  days. There is no accepted margin for the seven-day target.
+- The current engine fetches every required event/boundary header sequentially inside each node before
+  leaf commit, waits for complete node waves before replenishment, materializes all 1,858,348 roots and a
+  second root dictionary, lacks a covering claim-order index, writes response bytes before an exact
+  credential-value scan, and has no aggregate storage or production terminal controller.
+
+Building another pilot would measure these bottlenecks without fixing them. ADR-0015 section 9.10 now
+replaces the endurance gate with a production-path capacity redesign followed, only after separate
+authorizations, by an authenticated readiness preflight and staged execution of the full plan.
+
+The exact full-plan anchors independently recompute from the accepted registry:
+
+- registry dataset `ds_42ce2515e226258557a06a374498547393bbc984db791c56fa19d81d7ef16d15`;
+- parquet SHA-256 `8e41a9fb1e1b05f126345ca0a7a9eb04792cd0e92d45406a9b5c031105d83256`;
+- production plan ID `plan_2b96356463410b9d0a3f4f7313a06260360853207ed1bf1e42eec9eb4d756584`;
+- 1,858,348 roots and 148,506,716,734 birth-clamped pool-topic-blocks; and
+- root-domain-set SHA-256 `081a12f780d065a7596ba073ba80819d173e8d74b3b16235672da673942ea907`,
+  computed over lexicographically ordered `domain_id` ASCII values, each followed by LF.
+
+## Authorized phase - production foundation source and senior tests only
+
+Jr Dev - Hermes must first commit and push only this architecture decision in
+`docs/adr/0015-data-first-dex-research-substrate.md`, `docs/handoff/CURRENT_TASK.md`, and
+`tickets/DEX-003.md`, excluding `opencode.json` and both untracked research files. After publication,
+Sol authorizes Sr Dev - Grok Build to implement only the offline production-path foundation in:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`.
+
+This phase must implement:
+
+1. A bounded-memory root iterator and additive, resumable, idempotent production initializer. The new
+   root-manifest row binds the exact registry/parquet/plan/root-count/root-digest/PTB anchors above and
+   remains non-READY until every expected root authenticates and no extra root exists. Existing generic
+   plan APIs may remain, but the production initializer must reject caller-substituted pools, config,
+   cohort, providers, topics, ranges, or anchors. No network phase may start before READY.
+2. Migration 0020 as additive tables/indexes only: do not rebuild or weaken any 0017-0019 table. Add the
+   root manifest, immutable reconciled-log candidate and normalized candidate-block authority with exact
+   plan/node/raw composite FKs, plus covering indexes for hash-ordered claims and candidate/header work.
+   A populated 0019 upgrade must preserve every existing row and pass `foreign_key_check`; forced failure
+   must roll back atomically.
+3. Production claim order `ORDER BY domain_id`, bound by a claim-order version in execution policy. Claims
+   must exclude `attempt >= max_attempts` and authenticated candidates, permit normal four-node concurrency,
+   and use a tested covering index without a temporary sort. Existing generic/v1 chronological behavior
+   must remain unchanged unless the authenticated production policy selects `domain_hash_v1`. Do not add
+   schedule ranks or a barrier. Correct the stale source comment claiming production cohort 64; the generic
+   default may remain non-authoritative, while the production initializer explicitly requires cohort 8.
+4. A logs-first state transition: dual log bodies are retained/replayed/reconciled, then one immutable
+   candidate plus required block rows (expected hash nullable only for a boundary-only block) is committed,
+   the node returns to PENDING at unchanged attempt, and its lease is released without AGREED coverage.
+   Candidate replay must authenticate canonical requests, acquisitions/raw pairs, bytes/hashes, provider
+   organizations, log identity, domain, attempts, and exact required blocks. Unknown, duplicate, missing,
+   or orphan authority fails closed.
+5. Global bounded JSON-RPC header batches for distinct candidate blocks. Retain and authenticate both batch
+   bodies; reject missing/extra/duplicate response IDs, malformed members, block/hash/timestamp mismatch,
+   provider disagreement, truncation, or unauthenticated evidence. Multiple header receipts may reference
+   one batch raw pair. Finalization must atomically replay candidate plus headers, insert leaf/dependencies,
+   and set AGREED; a candidate alone always has zero coverage credit.
+6. The accepted matrix-style rolling endpoint/credential scanner moved into every engine response path
+   before spool persistence, including chunk boundaries, error bodies, and over-cap drains. A hit drains
+   safely, persists no body bytes or secret text, and records only the canonical redacted blocker.
+7. Rolling node replenishment instead of slowest-wave barriers, clean stop/drain, and additive exact metrics
+   for provider attempts/429s/latency/bytes/in-flight high-water, node high-water, spool/queue high-water,
+   candidates, header batches/members/cache/backlog, finalizations, and writer/SQLite latency. No metric
+   grants authority; DB/raw replay remains authoritative.
+
+Senior tests must execute public paths for the exact full-plan anchors without materializing all roots;
+bounded/crash-resumable initialization; missing/extra/tampered roots; arbitrary-pool rejection; populated
+0020 apply/rollback/FKs; indexed four-way hash claims; terminal/candidate exclusion; candidate crash
+boundaries and raw tamper; batch-header reorder/missing/extra/duplicate/disagreement/tamper; shared-batch
+header replay; atomic leaf finalization; zero pre-header coverage; scanner hits across chunks and beyond
+cap with no secret-bearing spool/raw/DB evidence; rolling replenishment; stop/drain; and exact metrics.
+All tests use fake transports and temporary stores except one read-only accepted-registry anchor test.
+
+Sr writes source and senior tests but does not run tests or migrations, edit the matrix/controller/CLI/ADR/
+records, use RPC credentials, make network calls, touch production data, or perform Git actions. Sr stops
+for Sol source review. Jr integration and test execution are not authorized until that source review.
+
+No production controller or CLI, live readiness preflight, RPC, staged production start, coverage credit,
+publication, metadata/downstream transform, factor work, PAPER, LIVE trading, or next ticket is authorized.
+Next ticket remains `NONE`.

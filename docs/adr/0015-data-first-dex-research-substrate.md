@@ -330,6 +330,92 @@ Before a full v2 run:
    least 2x free-disk headroom. A projection above either hard bound stops full acquisition
    for redesign even if the 20x relative-throughput floor passes.
 
+#### 9.10 Staged full-plan production readiness
+
+This section supersedes the separate endurance-pilot requirements in section 9.9 items 7
+and 9. The pilot-plan/schema approach is retired. It duplicated the accepted durable
+scheduler without improving provider, header, or storage capacity and could not establish
+a reachable seven-day path under accepted execution bounds.
+
+Readiness and eventual execution use the one complete production plan selected by the
+authenticated matrix: cohort size 8, all 7,659 accepted registry pools, all root windows,
+and both ordered topics. A subset must never share the production plan identity. The
+production root authority is additionally pinned by:
+
+- plan ID `plan_2b96356463410b9d0a3f4f7313a06260360853207ed1bf1e42eec9eb4d756584`;
+- 1,858,348 root domains;
+- 148,506,716,734 birth-clamped pool-topic-blocks; and
+- SHA-256 `081a12f780d065a7596ba073ba80819d173e8d74b3b16235672da673942ea907`
+  over the lexicographically ordered root `domain_id` values, each encoded as lowercase
+  ASCII followed by one LF byte.
+
+Plan construction and initialization must stream in bounded memory. An additive root-
+manifest record binds the accepted registry parquet identity, root count, root digest, and
+pool-topic-block total. Initialization may commit authenticated batches and resume
+idempotently, but no RPC may begin until every expected root is present, no extra root
+exists, the manifest is `READY`, and the full anchors above recompute.
+
+Production claims use deterministic `domain_id` order, not a pilot rank or a caller-
+selected schedule. This hash order samples the complete time/cohort lattice during staged
+execution while preserving eventual exhaustive coverage. The immutable execution policy
+binds the claim-order version. A covering claim index is mandatory. Claims exclude both
+max-attempt terminal nodes and domains with an authenticated reconciled-log candidate;
+there is no minimum-rank barrier.
+
+Event-log agreement and header finalization are separate durable phases:
+
+1. A node's two log responses are retained, authenticated, and reconciled under log
+   identity v2. Their immutable candidate records and normalized required-block rows grant
+   no coverage and atomically return the node to `PENDING` with unchanged attempt while
+   releasing its lease; the candidate exclusion prevents refetching the logs. A required
+   block carries the expected hash when supplied by a log; a boundary-only block has no
+   expected hash until the two providers establish one.
+2. Missing distinct blocks are acquired globally through bounded dual-provider JSON-RPC
+   header batches. Every response is retained; response IDs, block numbers, hashes, and
+   timestamps must reconcile exactly. One canonical header receipt may reference a shared
+   batch acquisition, and each block is credited once globally.
+3. Candidate finalization replays both log bodies and all canonical headers, then atomically
+   writes the leaf/dependencies and changes the node to `AGREED`. Header disagreement,
+   malformed/missing batch members, raw mismatch, or exhausted attempts remain terminal
+   blockers. Candidates alone contribute zero pool-topic-blocks.
+
+This removes sequential per-leaf header acquisition from the event-node critical path and
+deduplicates headers across the full plan. Header batch size and provider/node concurrency
+are execution-policy inputs selected only by a later authenticated production-readiness
+preflight; current engine defaults or untested higher values are not accepted capacity
+evidence.
+
+Every network response byte must pass a bounded rolling endpoint/credential scanner before
+any spool/raw write, including error and over-cap drains. The engine also requires bounded
+rolling replenishment, provider-attempt and actual in-flight high-water metrics, candidate/
+header backlog metrics, total retained-byte admission, and clean stop/drain behavior. All
+state and raw evidence must authenticate before resume.
+
+After source/integration acceptance and a separately authorized live readiness preflight,
+the real full production plan may run in stages. Stages are checkpoints over reusable
+production evidence, never sampled pilot coverage. The first six active hours must include
+all provider, header, persistence, retry, split, and backlog cost and meet all of:
+
+- at least 181,100,000 pool-topic-blocks/hour (the retained 20x diagnostic floor);
+- projected full completion at or below seven days using integer arithmetic and a
+  conservative authenticated rate over the hash-ordered work;
+- projected remaining evidence fitting current free storage with at least 2x headroom; and
+- no credential/authentication failure, unresolved disagreement, terminal blocker,
+  persistence/internal failure, unknown authority, gap, overlap, or resource-bound breach.
+
+The exact seven-day and fourteen-day mean thresholds are respectively 883,968,552 and
+441,984,276 pool-topic-blocks/hour. A six-hour projection in `(7 days, 14 days]` pauses for
+review and is not PASS; a projection above 14 days stops for redesign. Checkpoints repeat
+at 24 hours and every 24 hours thereafter. Seven days remains the target. Fourteen days is
+an unconditional stop-new-work deadline, followed by drain and authenticated non-PASS
+sealing if full coverage is not complete. Final PASS still requires every section 9.6
+coverage product with zero gaps, overlaps, or unresolved blockers.
+
+No source-only, offline, readiness-preflight, or staged-start decision grants coverage by
+itself or authorizes publication. A production controller, CLI, live preflight, staged RPC
+start, continuation after any pause, and final publication each require explicit reviewer
+authorization.
+
 ## Consequences
 
 - The prior current-pool/web-API design in DEX-003 is superseded for historical
