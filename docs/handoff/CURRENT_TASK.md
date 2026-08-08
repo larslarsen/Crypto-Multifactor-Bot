@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol corrected-design rejection
+Next required actor: Jr Dev - Hermes - publish Sol second-correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -1998,6 +1998,112 @@ The next revision must:
    pool-topic-block rate plus declared fixed overhead, tested against terminal free space at 2x.
 
 Sr stops after replacing the same design for Sol re-review. Harness implementation, migration/ADR/source
+work, test execution, RPC, endurance execution, production acquisition, publication, coverage credit,
+metadata/downstream transforms, factor work, PAPER, and LIVE trading remain prohibited. Next ticket
+authorized remains `NONE`.
+
+## Sol re-review - second endurance-design correction rejected (2026-08-08)
+
+Jr published the preceding rejection and correction authorization at commit `afac3b4`; `HEAD` and
+`origin/main` both resolve to that commit. Sr revised only the authorized untracked proposal. The current
+`research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md` has SHA-256
+`e7787881247e30507b351dc53810f46da57c2659f9d9eac0f495697963d098e3`. The unrelated modified
+`opencode.json` and untracked GMGN research draft remain outside DEX-003 review scope. No implementation,
+migration, ADR, test execution, RPC, data, or Git action accompanied the design.
+
+The proposal correctly moves schedule and gate authority to integer pool-topic-blocks, samples structural
+windows through the cutoff, adds persisted schedule ranks, uses an additive stratum projection, separates
+the pilot config, defines append-only clock events and pre-write scanner holdback, and separates manifest
+from terminal hashing. It remains rejected before implementation for the following blocking defects:
+
+1. COMPLETE PASS is mathematically unreachable under the declared resource ceilings. The accepted
+   registry independently reconciles to `U_full_ptb = 148,506,716,734`. A full cohort-8 root contributes
+   at most 80,000 PTB. At two requests/second per provider and two nodes in flight, the ideal no-overhead
+   ceiling is 576,000,000 PTB/hour, implying 10.74 days for the full lattice. The required seven-day rate
+   is about 883,968,552 PTB/hour. Retries, splits, headers, partial cohorts, latency, and persistence only
+   reduce the observed rate. The default 12-hour schedule floor also requires at least 172,374 perfect
+   roots and 23.94 hours at that ideal ceiling, leaving no credible execution margin before the 24-hour
+   wall deadline.
+2. The identity schedule is not byte-exact. `birth_growth` does not define its quantile convention or
+   tie/window mapping; `header_band` does not identify its four windows or eight cohort bands; the deploy
+   stratum has only two roots under the literal first-three-window rule, so picks `(0, -1, mid)` can select
+   one root twice; and the builder may "optionally continue" after its gates. No exact entry count,
+   per-stratum PTB totals, or resulting digest is supplied. Each choice changes plan identity.
+3. Rank inheritance does not enforce the stated child-before-later-root execution order. With two nodes
+   in flight, rank `r+1` may already be claimed before rank `r` splits. Assigning children rank `r` only
+   orders still-PENDING rows; it cannot recall later work already in flight. A rank barrier or an exact
+   equivalent is required if descendant completion is part of schedule-order authority.
+4. Migration 0020 is not valid under the accepted migration runner. The runner enables foreign keys and
+   begins `BEGIN IMMEDIATE` before executing migration statements, so the proposed in-transaction
+   `PRAGMA foreign_keys = OFF` is ineffective. Dropping/replacing the populated plan parent while its
+   0017-0019 children remain attached can fail or cascade data. The query-node rebuild is only described
+   conceptually and omits complete DDL, copy/drop order, dependent-table handling, triggers, and index/FK
+   recreation. The populated-upgrade test also omits coverage, chain-identity, execution-policy, and
+   terminal-receipt rows. This is not the exact populated forward migration previously required.
+5. The concurrency cost ledger does not assign all elapsed work exactly once. It discards intervals with
+   zero nodes marked IN_FLIGHT even though claim, coordinator, commit, queue, and persistence gaps can
+   occur there; those intervals are not assigned to initialization or finalization either. Converting
+   each interval to integer milliseconds before allocation can repeatedly discard sub-millisecond time.
+   `P_s > 0, C_s_ms = 0` also has no explicit non-PASS rule. The displayed additive projection is
+   dimensionally correct, but its proposed measurements are incomplete.
+6. Resume and terminal authentication remain insufficient. The terminal authenticator lists schedule,
+   PTB, and FK recomputation but does not specify full raw-byte/byte-count/acquisition/receipt-ID/domain/
+   attempt/provider/header/leaf-dependency authentication or unknown/orphan row rejection before AGREED
+   credit. No pre-write resume protocol authenticates prior plan, clock, checkpoints, DB/raw evidence,
+   cumulative counters, or cost ledger before appending CRASH/RESUME. A crash after exclusive MANIFEST
+   creation but before TERMINAL leaves no defined repair or authenticatable incomplete state.
+7. The authoritative wall denominator is asserted rather than independently derivable. `wall_ms` ends at
+   the TERMINAL decision, but no durable terminal-decision timestamp or final clock event defines that
+   instant. The event grammar also omits exact boot/segment bindings for CRASH and checkpoints and lacks
+   the required in-process monotonic 24-hour backstop.
+8. Scanner, inventory, and disk details are still not closed. The scanner pseudocode references undefined
+   `safe_tail`, stops evidentiary scanning after a credential hit, and does not define a scanner-only
+   no-write transition beyond the retained cap. The manifest protocol does not give exact non-regular/
+   hard-link/directory/duplicate-path rules or degraded FAILED sealing when clean WAL/spool closure fails.
+   Disk projection computes `tree_bytes` but never reconciles it to per-stratum attributed bytes plus
+   fixed overhead; growing SQLite, event, checkpoint, manifest, and run-record bytes can therefore be
+   omitted, and shared-header attribution depends on completion order.
+
+Targeted repository control passes. No pytest or RPC was run because neither is authorized for this
+design review.
+
+## Authorized final design correction - same file only
+
+Jr Dev - Hermes must first commit and push only this Sol review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding `opencode.json` and both untracked research files. After publication,
+Sr Dev - Grok Build may replace only
+`research/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md`. No source, tests, migration, ADR, other
+record, data, RPC, pytest, Git, commit, or push work is authorized.
+
+The final proposal must retain the accepted improvements and:
+
+1. Prove the seven-day projection is reachable under its immutable provider/node ceilings before any
+   run, choose one exact intended duration/default, and give exact schedule entry count, global/per-
+   stratum PTB totals, and digest anchors from the accepted registry. If safe provider limits cannot make
+   PASS reachable with overhead margin, stop for redesign rather than proposing an impossible pilot.
+2. Define every stratum predicate, quantile, tie, mandatory-pick deduplication, stopping rule, and rank
+   barrier byte-exactly. Adaptive descendants must have an executable priority rule under concurrency,
+   and resume authentication must recompute the same order and ancestry.
+3. Specify a complete runner-valid 0019-to-0020 migration with foreign keys enabled: every affected table,
+   column, trigger, index, detach/rebuild/copy/drop operation, and child relationship must be explicit.
+   The upgrade test must populate every 0017-0019 table and prove row/identity preservation, FK validity,
+   invalid-v2 rejection, and atomic rollback.
+4. Account for all active execution elapsed time exactly once using integer monotonic authority, including
+   coordinator/claim/commit/persistence gaps, with no per-event truncation loss. Define zero-cost and
+   missing-stratum outcomes and report both work-only harmonic rate and total end-to-end net rate.
+5. Define a pre-write resume authenticator and complete raw/row semantic authenticator. No prior identity,
+   clock, cost, counter, DB row, receipt, or raw object may be changed/reset before resume credit; all
+   AGREED PTB must derive from authenticated dual-provider evidence with no unknown/orphan authority.
+6. Make the clock grammar, terminal-decision instant, monotonic deadline backstop, torn-event handling,
+   MANIFEST-before-TERMINAL crash recovery, fsync order, exact terminal schema/hash domain, and degraded
+   FAILED evidence path deterministic and independently recomputable.
+7. Complete the scanner state machine for exact and generic credential forms, all drained bytes, and the
+   over-cap scanner-only phase; no secret-bearing candidate byte may reach any persistence surface.
+8. Reconcile every observed tree byte exactly once to deterministic stratum-variable or fixed/growing
+   overhead authority, define the full allowed filesystem object topology, and conservatively project
+   all categories at 2x terminal free-space headroom.
+
+Sr stops after replacing the proposal for Sol re-review. Harness implementation, migration/ADR/source
 work, test execution, RPC, endurance execution, production acquisition, publication, coverage credit,
 metadata/downstream transforms, factor work, PAPER, and LIVE trading remain prohibited. Next ticket
 authorized remains `NONE`.
