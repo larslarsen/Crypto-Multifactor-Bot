@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol production-path architecture decision
+Next required actor: Jr Dev - Hermes - publish Sol production-foundation source rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2293,3 +2293,64 @@ for Sol source review. Jr integration and test execution are not authorized unti
 No production controller or CLI, live readiness preflight, RPC, staged production start, coverage credit,
 publication, metadata/downstream transform, factor work, PAPER, LIVE trading, or next ticket is authorized.
 Next ticket remains `NONE`.
+
+## Sol source review - production foundation rejected (2026-08-08)
+
+Sol reviewed the uncommitted Sr Dev production-foundation drop in exactly the six authorized files.
+The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `202666b8d385e9add7e8631540d5ff7670d92c8c6f06499f3eca995f16316771`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `6fc5eb36ffc7b6aa260f982fee2463c58087385337f74d5a181d3156607c59b1`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `07d8c9661beb29943c7e7627b3430415b681ec8badfd74a4337ce1f445061a88`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `8831e68e5cd05b3cbfead8372c7a2944d9a2407c735d1c97ae2668919897ff3b`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `23ea02296e78dccd42d2109f8d1bfeb939b333123fdc7f2ab93ef3f6578b9710`.
+
+The file scope is correct, but the drop is rejected before Jr integration for these blockers:
+
+1. The production header phase is absent. The only implemented header acquisition remains scalar
+   `_get_header`; there is no bounded dual-provider JSON-RPC header batching, batch-member validation,
+   shared-batch receipt replay, or production header-work loop.
+2. Candidate finalization is not authenticated replay. Candidate loading trusts database columns and
+   finalization does not reload/authenticate the two raw log bodies, canonical request, acquisition/raw
+   pairs, provider identities, log digest/count, attempt/domain, candidate ID, or exact required-block
+   derivation. It also does not replay the retained header bodies before granting `AGREED`.
+3. The production READY gate can be bypassed. Initialization sets `PLAN_INITIALIZED` before root
+   insertion finishes, while `authenticate_chain()` checks only that phase; an interrupted initializer
+   can therefore begin network work without READY. An existing READY manifest returns without
+   re-authenticating its pinned fields and complete root rows.
+4. Initialization is not bounded-memory: anchor computation retains and sorts all 1,858,348 domain IDs,
+   and database finalization uses `fetchall()` plus a second complete domain-ID list.
+5. The senior tests do not execute the frozen acceptance paths. The populated-0019 upgrade test inserts
+   only plan/node rows; the rollback test uses a synthetic migration and explicitly permits partial
+   state; the claim-index test does not run `EXPLAIN QUERY PLAN`; candidate exclusion may skip; the
+   metrics test checks only attribute existence; rolling replenishment uses the vacuous assertion
+   `claims >= 0`; and zero-coverage is only a structural comment. Required batch, replay/tamper,
+   crash-boundary, scanner-over-cap, stop/drain, and exact-metric public paths are absent.
+6. Most required production metrics are declarations only, with no update sites for provider attempts,
+   provider in-flight high-water, spool high-water, header batches/members/backlog, credential detections,
+   or provider latency. Targeted ruff fails with five unused-import/unused-variable findings.
+
+Repository control and `git diff --check` pass. Sol ran targeted ruff only; no pytest, migration, RPC,
+production-data mutation, or Git operation was performed.
+
+## Authorized correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this source-review decision in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six authorized production-foundation source/test files against the unchanged frozen
+contract. This is completion of the already authorized phase, not new scope.
+
+Sr writes source and senior tests but does not run tests or migrations, edit the matrix/controller/CLI/
+ADR/records, use RPC credentials, make network calls, touch production data, or perform Git actions. Sr
+stops for a fresh Sol source review with new hashes. Jr integration and test execution remain
+unauthorized. No production controller/CLI, live readiness preflight, RPC, staged production start,
+coverage credit, publication, downstream work, PAPER, LIVE trading, or next ticket is authorized. Next
+ticket remains `NONE`.
