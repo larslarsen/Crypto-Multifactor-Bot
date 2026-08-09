@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol third production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol fourth production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2426,6 +2426,81 @@ claims/pages and bounded work per scheduling turn; preserve immediate rolling no
 replaying an ever-growing candidate prefix on every claim while still authenticating all resumed
 candidates before credit/exclusion; semantically re-authenticate every READY root row; and add decisive
 non-monkeypatched public-path tests for every missing crash/tamper/atomicity/metric case.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol fourth source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior decision at commit `db7bc62`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's fourth correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `025f3ef05f89627327001ed33cfd7600cea37213e2dd2fbc905db018d8b1c80b`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `aae2396957431419a7c72500d47f859b0c3a58e191e9bb6a137bc9690f6bc36d`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `6ef9ff48e3eb39306ef42738bdd0ea0e9d5d48e12231510a8de026bfb0dd51da`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `5c10ed36fc2f572cd22f88074cc9e69c9411e20f83ef79695fa06fd3bf8ec540`.
+
+The correction replaces claim-time candidate-prefix/N+1 walking with one indexed anti-candidate seek,
+uses only an O(plans) session set, moves completed-slot refill before header work, keyset-pages
+finalization discovery, and adds a valid forced failure after leaf/dependency writes. Those fixes are
+retained. The drop remains rejected before Jr integration for these blockers:
+
+1. Resume authentication is still an unbounded scheduling operation. The first `claim_pending` for a
+   plan synchronously streams and fully raw-replays every stored candidate before it can claim one node.
+   At production scale this can replay up to the full candidate population in one persistence command;
+   every process repeats the full resume scan independently. It must be a bounded, resumable phase rather
+   than one unbounded first-claim operation.
+2. The alleged one-shot fast path still executes `SELECT COUNT(*)` across the plan's complete candidate
+   table on every later claim even though the caller discards the count. Thus repeated claims retain
+   population-sized database work despite removal of the N+1 prefix loop.
+3. Missing-header discovery restarts at the beginning on every scheduling turn. Although its public API
+   accepts `after_block_number`, the production loop never supplies or advances that keyset cursor. As
+   acquired headers accumulate, `DISTINCT ... NOT EXISTS ... LIMIT` must repeatedly scan the growing
+   already-covered prefix and can scan the whole candidate-block table when no missing block remains.
+   Returned page size alone does not bound database work.
+4. `header_backlog` is no longer the exact backlog required by the frozen contract. It is set to the
+   length of a maximum-32 result page, explicitly saturating at 32 whenever more work exists. The test
+   only asserts integer/nonnegative rather than the exact backlog.
+5. The renamed `test_production_work_loop_exact_metrics` remains non-exact: it uses an `or`, lower bounds,
+   a conditional assertion, and only `finalizations <= candidates`. It never pins the exact public-path
+   deltas for claims, candidates, attempts, header backlog/batches/members/cache, or finalizations.
+6. The new candidate crash test is not executable as written. Its trigger exception occurs inside
+   `process_one`, whose broad exception handler converts it into an internal retry and returns a string;
+   the test instead requires that `process_one` raise. The READY-root tamper test exercises a generic
+   helper on a non-READY generic plan, not `authenticate_ready_root_manifest` on the resume gate. The
+   refill test proves only the initial two-slot fill: two log calls before header work do not prove a
+   completed slot was refilled, and its high-water assertion accepts one.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized fifth correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this fourth re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must make resumed-candidate authentication bounded and resumable without allowing an
+unauthenticated candidate to suppress reacquisition; remove every per-claim population scan; actually
+advance bounded missing-header inventory without restarting through covered history; preserve an exact
+header-backlog metric without a full scan per scheduling turn; and replace the remaining nominal tests
+with decisive public-path assertions. The candidate crash test must observe the engine's real routed
+outcome or invoke a public coordinator boundary that raises, READY tamper must exercise the READY resume
+gate, refill ordering must distinguish a refill from initial capacity fill, and production metrics must
+assert exact known deltas. Existing batch authority, semantic root replay, indexed claim seek, immediate
+refill implementation, keyset finalization, and forced in-transaction finalization rollback must remain.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
