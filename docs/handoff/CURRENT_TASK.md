@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol sixth production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol seventh production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2426,6 +2426,74 @@ claims/pages and bounded work per scheduling turn; preserve immediate rolling no
 replaying an ever-growing candidate prefix on every claim while still authenticating all resumed
 candidates before credit/exclusion; semantically re-authenticate every READY root row; and add decisive
 non-monkeypatched public-path tests for every missing crash/tamper/atomicity/metric case.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol seventh source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior decision at commit `7f44a05`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's seventh correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `caa75ceb0da61b13350b36501fdcad5d0ac94854e70f6e80b162e534ccbc7bc7`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `845ae17ec6b399dd07f13206dbedcd0efb11712f072ab174ce97b1d95e9123fd`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `ba0c1776118c4831268656ae2c1d2e342a48bd0383feaf84e69a55e30287c51c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `5fd8f18f2161c2e5cf4d00c8a0a68b7c90308bf6eacb679304bc56600a42adea`.
+
+The correction makes candidate authentication current-session scoped, makes `force=True` select marked
+candidates, removes the full backlog bootstrap, initializes coherent zero metrics with plan creation, and
+fails closed if metric state is missing after candidate/backlog state exists. Those fixes are retained.
+The drop remains rejected before Jr integration for these blockers:
+
+1. Current-session auth rows grow without bound. The schema primary key includes
+   `(plan_id, domain_id, resume_session_id)`, every coordinator process inserts one row per candidate, and
+   no session registry, expiry, bounded garbage collection, or replacement exists. The 1,858,348-root
+   plan therefore adds millions of rows per process/restart and an ever-growing index. Moving the session
+   set into durable SQLite does not satisfy bounded production state.
+2. Normal claim flow authenticates one page and then selects the first node without a current-session auth
+   mark. If that node has a valid candidate just beyond the page, claim deletes the immutable candidate
+   and its required-block rows, changes backlog, and reacquires logs rather than allowing later bounded
+   authentication to validate and reuse it. At the default page size this systematically destroys and
+   reacquires roughly one valid candidate per page per resume session; concurrent engine processes repeat
+   the behavior. This defeats durable candidate reuse and creates avoidable full-range RPC work on restart.
+3. `force=True` still drains every candidate page synchronously inside one persistence command. The
+   `limit` bounds each SQL page but not the call's total raw replay, duration, or control-plane occupancy.
+   The authorized correction required bounded/resumable validation; force must return page progress for
+   the caller to continue rather than hide a population drain inside one call.
+4. The named beyond-page test uses three candidates with an artificial `limit=1`, manually assigns the
+   restarted engine's private plan/phase, and invokes the unbounded force drain. It does not execute the
+   default 32-row boundary or prove that normal public restart/claim scheduling preserves all valid
+   candidates while surfacing later tamper. No test bounds/cleans auth rows across multiple sessions.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized eighth correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this seventh re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must keep current-session exclusion authority bounded across repeated/multi-process
+sessions, with bounded cleanup or another design that cannot accumulate one permanent row per
+candidate/session. Normal claims must not delete and reacquire valid candidates merely because resume
+authentication has not reached them; advance validation in bounded scheduling turns and defer exclusion/
+claim decisions until safe. `force=True` must itself be page-bounded/resumable. Add a default-page-plus-one
+public restart test that preserves every valid candidate, detects later tamper, and proves bounded auth
+state across sessions. Existing exact durable backlog, coherent zero initialization, metrics, batch/READY
+authority, indexed claims, keyset scheduling, refill, and atomicity fixes must remain.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
