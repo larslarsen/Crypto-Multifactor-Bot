@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol eighth production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol ninth production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2565,6 +2565,82 @@ the default 32+1 boundary, repeated and concurrent coordinators, insertion behin
 of every valid candidate, later-tamper detection, and an asserted bound on durable/process authentication
 state. All previously retained batch/READY, durable backlog, metrics, indexed/keyset scheduling, refill,
 crash, and atomicity fixes must remain.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol ninth source re-review - production foundation still rejected (2026-08-09)
+
+Jr published the prior decision at commit `1645b10`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's ninth correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `aa3b5329c0f50a9fa6d67af9748d265026bbe2099aa0f4fb02ab19c3a79a32c8`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `8d3feab5e43eaf6348ba3edc8bc4aa5658d9688580f8741dd5b70b77916b3c35`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `e77b2d08c10d96a475621ef9f161c8972b4bf78e6fbabb4854cb8d974cc94f67`.
+
+The correction bounds durable resume state to one generation integer per candidate plus one active row per
+plan, selects stale/null candidates without a fragile keyset watermark, stamps candidates only after raw
+replay, defers unauthenticated candidate nodes rather than deleting them, retains one-page forced replay,
+adds a public attach method, and gives the production loop an independent bounded authentication turn.
+Those fixes are retained. The drop remains rejected before Jr integration for these blockers:
+
+1. `attach_existing_plan` bypasses the immutable plan and execution-policy resume authority. It authenticates
+   only the cached chain receipt, bumps the generation, assigns `_plan_id`/phase, and returns. It does not
+   authenticate the persisted plan row against `config.plan_config` or compare the stored execution-policy
+   ID/payload/schema with `execution_policy_identity`, which binds max attempts, concurrency, rate, timeouts,
+   body/spool limits, and claim order. A caller can therefore publicly resume the same plan under changed
+   authority settings that `initialize` correctly rejects.
+2. `run_until_idle` stores authentication completion as an unversioned local Boolean. If another coordinator
+   calls `attach_existing_plan` after that Boolean becomes true, the shared active generation increments and
+   invalidates every prior mark, but the running coordinator never reopens its auth phase. If the new
+   coordinator exits before validating, the old process can defer all stale candidates and stop idle without
+   reaching the new generation's safe boundary.
+3. One authentication page is not generation-atomic. The operation reads the active generation, replays rows
+   outside a transaction, then stamps that captured generation in later transactions. A concurrent attach can
+   increment the generation between those steps; the page may then report `complete=True` for the old
+   generation even though the active generation has unauthenticated rows. Claim predicates remain fail-closed,
+   but the advertised safe-boundary result and the run-loop completion Boolean are false. The operation must
+   recheck/compare the active generation before stamping and before declaring completion, returning explicit
+   restart/progress when it changed.
+4. The new test does not execute the promised public run lifecycle or a concurrency race. Both attaches and
+   authentication calls are sequential; `run_until_idle` is never called; insertion behind progress is
+   simulated by setting an existing row's generation to NULL rather than committing a candidate concurrently;
+   `found_mid` becomes true when any row authenticates and its fallback merely asserts that a query returned a
+   row; and `len(gens) == len(remaining)` is tautological. It does not prove generation-change recovery,
+   public safe-boundary completion, actual insert-behind behavior, or attach policy mismatch rejection.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized tenth correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this ninth re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The public attach path must authenticate the complete persisted plan and immutable execution-policy identity
+against the engine configuration before changing generation or lifecycle state. Authentication-page results
+and the run-loop safe boundary must be explicitly bound to the active generation; a concurrent generation
+bump during or after a page must invalidate local completion and drive bounded revalidation rather than let
+the old process stop. Keep claim predicates fail-closed and `force=True` page-bounded. Replace the current
+test with decisive public-path evidence: real overlapping coordinators/threads, an actual candidate commit or
+equivalent public write behind active progress, a generation bump after one runner completes its old boundary,
+the first runner detecting and completing the new boundary through `run_until_idle`, exact per-candidate and
+O(plans) state bounds, and attach rejection for changed immutable policy/plan settings. All prior retained
+batch/READY, backlog, metrics, scheduling, refill, crash, tamper, and atomicity fixes must remain.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
