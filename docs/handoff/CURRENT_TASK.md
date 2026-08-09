@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol fifth production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol sixth production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2426,6 +2426,73 @@ claims/pages and bounded work per scheduling turn; preserve immediate rolling no
 replaying an ever-growing candidate prefix on every claim while still authenticating all resumed
 candidates before credit/exclusion; semantically re-authenticate every READY root row; and add decisive
 non-monkeypatched public-path tests for every missing crash/tamper/atomicity/metric case.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol sixth source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior decision at commit `096f4cf`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's sixth correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `e7e31b7ec4200a0473b6dec904231b1ffac28e42d7803cbe221d02eed96c9040`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `789288e94732a05a23fde41861313c23356eef6df1bb1d13385e22fc1686539f`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `c925ec7cd215a1d132257cd41da306fbf6ecf15fae64ce64c910641a1a7df6bb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `5fd8f18f2161c2e5cf4d00c8a0a68b7c90308bf6eacb679304bc56600a42adea`.
+
+The correction replaces the process-local backlog set with transactionally updated database rows plus an
+O(1) counter, makes header store and candidate commit update them in the same transactions, and closes
+the exact one-root metric assertions. Those fixes are retained. The drop remains rejected before Jr
+integration for these blockers:
+
+1. `candidate_auth` is lifetime state, not current-resume authentication. Candidate commit inserts a
+   durable auth row that survives every engine restart. The resume query selects only candidates without
+   that row, so an existing marked candidate is never raw-replayed before suppressing reacquisition in a
+   new session. This violates the frozen requirement that all resumed candidate state/raw evidence
+   authenticate before exclusion.
+2. `force=True` resets only an in-memory cursor; it neither deletes/invalidates durable auth rows nor
+   selects marked candidates. A candidate row or raw body tampered after commit remains trusted by claim
+   exclusion. The existing `test_claim_fails_closed_on_tampered_candidate` commits a marked candidate,
+   tampers its digest, then expects `force=True` to raise; the implementation examines zero candidates, so
+   that senior test cannot pass.
+3. The purported beyond-page test creates only two candidates, both within the 32-row page, manually
+   deletes the later auth mark, and therefore does not exercise a candidate beyond the resume cursor. No
+   test restarts a coordinator with more than one page of marked candidates, tampers a later raw/candidate,
+   and proves it cannot suppress reacquisition.
+4. Backlog bootstrap still contains the expressly prohibited one-time full population operation:
+   `INSERT ... SELECT DISTINCT` scans all candidate-block rows and `COUNT(*)` scans all backlog rows under
+   one `BEGIN IMMEDIATE`. Moving materialization from Python to SQLite fixes memory but not bounded work.
+   Normal plan/migration initialization must establish coherent zero-state transactionally, and any repair
+   path must be explicitly bounded/resumable rather than a full write-locked rebuild.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized seventh correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this sixth re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must distinguish current-session resume validation from commit-time validation so every
+pre-existing candidate is replayed before it can suppress reacquisition, in bounded pages, without
+unbounded per-candidate memory; `force=True` must actually revalidate marked candidates. Add a true
+beyond-page restart/tamper test. Remove the full backlog bootstrap transaction: initialize durable metric
+state coherently when the plan/migration is created and use only bounded/resumable repair if missing or
+inconsistent. Existing transactionally coherent backlog updates/counter, exact metrics, batch authority,
+READY gate, indexed claim seek, keyset scheduling, immediate refill, and atomicity tests must remain.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
