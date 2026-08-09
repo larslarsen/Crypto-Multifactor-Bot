@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol ninth production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol tenth production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2641,6 +2641,78 @@ equivalent public write behind active progress, a generation bump after one runn
 the first runner detecting and completing the new boundary through `run_until_idle`, exact per-candidate and
 O(plans) state bounds, and attach rejection for changed immutable policy/plan settings. All prior retained
 batch/READY, backlog, metrics, scheduling, refill, crash, tamper, and atomicity fixes must remain.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol tenth source re-review - production foundation still rejected (2026-08-09)
+
+Jr published the prior decision at commit `eb7492a`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's tenth correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `530357c9b1680fb79a7fc7662c1a6854e4888bf4e7fe79f9256afd25d7eef232`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `1e97e15541d5cdd33fa7eacb1176e33c90c776d3222481620bc43971e6d371f9`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `e77b2d08c10d96a475621ef9f161c8972b4bf78e6fbabb4854cb8d974cc94f67`.
+
+The correction authenticates the persisted plan and most immutable policy fields before attach mutation,
+rechecks the live generation before stamping and completing authentication pages, returns an explicit
+generation-restart result, re-probes generation-bound authentication on every production scheduling turn,
+and replaces private lifecycle mutation with threaded public attach/run/process calls. Those fixes are
+retained. The drop remains rejected before Jr integration for these blockers:
+
+1. Attach still does not independently authenticate `claim_order_version`. It first reads that value from
+   the stored execution-policy JSON and then uses the stored value to construct the supposedly expected
+   policy. If the persisted payload and its unkeyed `policy_id` are changed together, attach accepts either
+   claim order. For the pinned production plan this can switch `domain_hash_v1` to chronological and disable
+   the required logs-first production path. Expected claim order must come from independent caller/config or
+   the pinned production identity, not from the record being authenticated.
+2. The new required concurrency test cannot execute its public run path. `runner_a` and `runner_b` call
+   logs-first `run_until_idle`, which invokes `acquire_header_batch` with a JSON-RPC request list. This test
+   never calls `_install_batch_header_handler`. The default `RpcFixture._handle` assumes a mapping and calls
+   `body.get`, so the first header-batch request raises on the list before either safe-boundary proof can
+   complete. Every other production header-loop test explicitly installs the batch handler.
+3. The test does not exercise the generation-change-during-page branch it claims to cover. It lets A's first
+   `run_until_idle` return, then B bumps the generation, then explicitly calls A's `run_until_idle` a second
+   time. No barrier or hook bumps while candidate replay is in progress, and nothing asserts
+   `generation_restart=True` or proves that a single already-running scheduling invocation reopens its
+   boundary on a mid-page bump.
+4. The purported insert-behind proof is not tied to authentication progress or the committed domain. B loops
+   until any `process_one` returns `candidate`, but the test neither captures that candidate's domain/order
+   relative to A's live page nor asserts its exact generation transition. The final whole-table zero-stale
+   count cannot distinguish the intended race from ordinary later full revalidation. A deterministic overlap
+   hook and exact row assertions are required.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized eleventh correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this tenth re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+Attach must derive the expected claim order independently and pin `domain_hash_v1` for the production plan;
+stored payload plus stored hash cannot define its own expected authority. Keep all generation-atomic source
+fixes. Make the required concurrent test executable through the real batch-header path, deterministically
+pause a bounded authentication page, bump the generation from the other public coordinator while that page
+is active, and prove the same already-running public `run_until_idle` invocation receives/reopens on the
+generation restart and completes the new boundary. Coordinate an actual public candidate commit after a
+known auth page boundary, capture its domain, and assert that exact row is initially stale/current as
+expected and is then authenticated without deletion or reacquisition. Preserve the exact per-candidate and
+O(plans) state bounds, policy mismatch tests, forced page bound, and every earlier retained fix.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
