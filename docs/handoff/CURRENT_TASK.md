@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol second production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2354,6 +2354,84 @@ stops for a fresh Sol source review with new hashes. Jr integration and test exe
 unauthorized. No production controller/CLI, live readiness preflight, RPC, staged production start,
 coverage credit, publication, downstream work, PAPER, LIVE trading, or next ticket is authorized. Next
 ticket remains `NONE`.
+
+## Sol second source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior re-review at commit `a579228`; `HEAD` and `origin/main` both resolve to that
+commit. Sol reviewed Sr's second correction in the same six authorized files. The reviewed SHA-256
+values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `94aa063ae66483de36cf657cc98ff323705d2b27e3443d4556c1707cf83b6b5d`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `07d8c9661beb29943c7e7627b3430415b681ec8badfd74a4337ce1f445061a88`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `cf707fa01ef865200e4e6f4537a99ce9774a3d928746b0e5d9c31c87e2ab759b`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `5c10ed36fc2f572cd22f88074cc9e69c9411e20f83ef79695fa06fd3bf8ec540`.
+
+The correction makes batch requests first-class in spool descriptors and raw acquisition metadata,
+adds batch-aware engine cache replay, candidate authentication before claim exclusion, a production
+header/finalization pass, complete populated-migration fixtures, and stronger batch tests. It remains
+rejected before Jr integration for these blockers:
+
+1. Batch header receipts still cannot be stored or loaded. `acquire_header_batch` calls
+   `coordinator.store_header`, whose `_op_store_header` first calls `_replay_header_record`.
+   `_replay_header_record` constructs a scalar `block_header_request`, requires the raw acquisition's
+   request to equal that scalar object, and parses the body through `_load_authenticated_rpc` as one JSON
+   object. Batch evidence has an array request and array response, so the first batch-backed
+   `store_header` fails before the new engine-level batch-aware verifier can run. `_op_load_header` uses
+   the same scalar-only replay, making batch-backed cache replay unreachable as well.
+2. The global header work path is not bounded-memory or bounded-work. Both
+   `list_missing_candidate_blocks` and `list_finalizable_candidates` use `fetchall()` with no limit or
+   cursor, and `_run_production_header_finalization_once` materializes and processes the complete backlog
+   in one synchronous pass. Chunking the already materialized list into groups of 32 does not bound the
+   inventory or the duration of one pass.
+3. Claim selection is not production-scalable. Every claim starts from the first PENDING node and fully
+   replays each preceding candidate's raw bodies inside `BEGIN IMMEDIATE` before reaching a claimable
+   domain. Repeated claims therefore re-hash the same prefix and can become quadratic while holding the
+   write transaction across filesystem reads and JSON reconciliation. This defeats the covering
+   hash-ordered claim path and multi-process lease design.
+4. READY root authentication still hashes only stored `domain_id` values. It does not stream each root's
+   start/end/address/topic fields and recompute its `domain_id`; a root payload can therefore be altered
+   after READY while preserving the pinned count and domain-ID digest. No missing/extra/tampered-root
+   senior test executes this resume path.
+5. Rolling replenishment is interrupted by synchronous global header work before the main loop refills a
+   completed node slot. A large header/finalization pass can monopolize the coordinator and network
+   executor, partially recreating the capacity bottleneck that logs-first separation was meant to remove.
+6. Senior tests still do not close the frozen evidence contract. Production candidate/finalization tests
+   monkeypatch `_production_logs_first_enabled` on a generic plan instead of executing authenticated
+   production policy. There is no batch-raw tamper test, candidate-raw tamper test, candidate persistence-
+   boundary crash test, root-row tamper test, or forced atomic-finalization rollback. The production-loop
+   metric test accepts `claims >= 1 OR candidates >= 1`, checks only nonnegative backlog, and accepts
+   either a real in-flight high-water or merely two attempts; these are not exact metric assertions.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized third correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this second re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must make the coordinator's canonical-header store/load/replay authority natively accept
+and fully authenticate scalar or batch raw pairs; replace complete backlog materialization with bounded
+claims/pages and bounded work per scheduling turn; preserve immediate rolling node replenishment; avoid
+replaying an ever-growing candidate prefix on every claim while still authenticating all resumed
+candidates before credit/exclusion; semantically re-authenticate every READY root row; and add decisive
+non-monkeypatched public-path tests for every missing crash/tamper/atomicity/metric case.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
 
 ## Sol source re-review - production foundation correction rejected (2026-08-08)
 
