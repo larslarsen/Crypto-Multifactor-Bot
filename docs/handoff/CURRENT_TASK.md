@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol fourth production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol fifth production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2426,6 +2426,74 @@ claims/pages and bounded work per scheduling turn; preserve immediate rolling no
 replaying an ever-growing candidate prefix on every claim while still authenticating all resumed
 candidates before credit/exclusion; semantically re-authenticate every READY root row; and add decisive
 non-monkeypatched public-path tests for every missing crash/tamper/atomicity/metric case.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol fifth source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior decision at commit `4aced85`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's fifth correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `bb3423ec5cb4e264e04a1717aa273d9097cd4c9a323d20b6a53f21992191864a`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `aae2396957431419a7c72500d47f859b0c3a58e191e9bb6a137bc9690f6bc36d`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `7a0f15046b9701b1cd8c955794e212360c94976cc90948c95d9de9631898902d`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `5c10ed36fc2f572cd22f88074cc9e69c9411e20f83ef79695fa06fd3bf8ec540`.
+
+The correction removes the per-claim count, makes resume replay keyset-paged, advances the missing-header
+cursor, exercises semantic tamper through the READY method, calls the coordinator directly for the
+candidate crash boundary, and distinguishes a one-slot refill from initial capacity. Those fixes are
+retained. The drop remains rejected before Jr integration for these blockers:
+
+1. Bounded resume authentication does not control candidate exclusion. `claim_pending` authenticates at
+   most 32 candidates, then its `NOT EXISTS` predicate excludes every candidate row in the plan, including
+   all rows beyond the authenticated cursor. A missing/raw-tampered 33rd candidate can therefore suppress
+   reacquisition before it has authenticated. The source comment claiming exclusion applies only after
+   replay is false; no authentication state participates in the SQL predicate.
+2. Exact header backlog is implemented as a process-local `set[int]` containing every distinct missing
+   block. Its first use performs a complete ordered distinct scan and materializes the full population.
+   On resume, the first candidate commit can invoke that rebuild inside `BEGIN IMMEDIATE`; the first
+   header scheduling turn can do the same. This restores unbounded memory and unbounded work precisely
+   where the correction was required to remain bounded.
+3. The process-local set cannot be an exact multi-process metric. A candidate committed by another engine
+   process is not added to an already initialized set, and a header stored by another process is not
+   removed. The set is also mutated during candidate transaction work without transactional rollback
+   coupling. Exact backlog must derive from transactionally coherent repository state, not per-process
+   mutable inventory.
+4. No senior test places a tampered candidate beyond the resume page and proves it cannot suppress
+   reacquisition. No test covers backlog population larger than the page, bounded-memory resume rebuild,
+   or two-process candidate/header updates against exact backlog. The renamed exact-metrics test still
+   uses `>=` for header members, in-flight high-water, and provider-attempt deltas even though its
+   one-root fake-transport path has exact known values.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized sixth correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this fifth re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must ensure only candidates authenticated for the current resume authority can suppress
+reacquisition while keeping every claim/authentication turn bounded; replace the full in-memory backlog
+set and one-time population scan with bounded, transactionally coherent, multi-process-safe exact backlog
+state; and prove both properties with beyond-page tamper and cross-process backlog tests. The one-root
+metric test must assert all exact known deltas. Existing batch replay, semantic READY gate, indexed claim
+seek, header/finalization keyset cursors, immediate refill, coordinator crash-boundary, and forced
+in-transaction finalization rollback must remain intact.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
