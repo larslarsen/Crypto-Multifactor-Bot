@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol second production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol third production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2426,6 +2426,75 @@ claims/pages and bounded work per scheduling turn; preserve immediate rolling no
 replaying an ever-growing candidate prefix on every claim while still authenticating all resumed
 candidates before credit/exclusion; semantically re-authenticate every READY root row; and add decisive
 non-monkeypatched public-path tests for every missing crash/tamper/atomicity/metric case.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol third source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior decision at commit `9c7add1`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's third correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `9efa400b59f20dce4db8c10554a623d6572f7df56e7c24f35209e034f15ab815`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `aae2396957431419a7c72500d47f859b0c3a58e191e9bb6a137bc9690f6bc36d`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `b6cd5bc8bad3f8b18e090b561a6e1540515af48795175c6ab9d06f8860cd4ccd`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `5c10ed36fc2f572cd22f88074cc9e69c9411e20f83ef79695fa06fd3bf8ec540`.
+
+The correction makes canonical-header coordinator replay scalar-or-batch aware, reopens and hashes both
+providers' retained evidence, recomputes every READY root identity from semantic fields, hard-bounds the
+returned header/finalization pages, and adds useful batch/candidate tamper and exact batch-metric tests.
+Those fixes are retained. The drop remains rejected before Jr integration for these blockers:
+
+1. Claim selection remains production-quadratic. Every claim opens `BEGIN IMMEDIATE`, restarts at the
+   first PENDING node, walks the entire candidate-backed prefix, and issues an additional candidate query
+   for every row before reaching one claimable domain. The session set prevents repeated raw-file replay
+   only after first authentication; it does not prevent the repeated prefix scan/N+1 SQL work under the
+   write transaction, and the set itself grows without bound toward the full 1,858,348-root population.
+2. Each header scheduling turn still performs two global `COUNT(DISTINCT block_number)` backlog scans.
+   A scalar result does not make the database work bounded. `list_finalizable_candidates` can likewise
+   inspect the complete candidate population when fewer than a page are ready. The correction therefore
+   does not satisfy bounded work per scheduling turn even though returned lists are capped.
+3. Immediate rolling replenishment is still absent. After `FIRST_COMPLETED`, `run_until_idle` consumes
+   completed futures and then synchronously runs header acquisition/finalization before returning to the
+   loop top that fills the newly open node slots. The smaller header page reduces the delay but does not
+   preserve immediate logs-first capacity.
+4. The required decisive senior tests remain incomplete. There is no READY root-row semantic-tamper
+   resume test and no candidate-persistence crash-boundary test. The claimed atomic-finalization rollback
+   test fails before entering the finalization transaction because headers are missing; it does not force
+   a failure after leaf/dependency writes and prove transaction rollback. No test proves node-slot refill
+   occurs before header work.
+5. The production-loop metric test remains explicitly non-exact: it accepts claims *or* candidates,
+   nonnegative backlog, and in-flight high-water *or* merely two provider attempts. The new exact batch
+   metric test does not close the public production scheduling/aggregate metric contract.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized fourth correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this third re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must remove the repeated candidate-prefix/N+1 claim path and unbounded session set while
+authenticating all resumed candidates before they can suppress reacquisition; make every scheduling turn
+bounded in database work as well as returned rows; refill completed node slots before any header turn;
+and add decisive non-monkeypatched public-path tests for semantic READY-root tamper, candidate commit
+crash boundaries, forced in-transaction finalization rollback, refill ordering, and exact production-loop
+metrics. Existing scalar/batch replay, root semantic authentication, and bounded result-page fixes must
+remain intact.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
