@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol seventh production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol eighth production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2494,6 +2494,77 @@ claim decisions until safe. `force=True` must itself be page-bounded/resumable. 
 public restart test that preserves every valid candidate, detects later tamper, and proves bounded auth
 state across sessions. Existing exact durable backlog, coherent zero initialization, metrics, batch/READY
 authority, indexed claims, keyset scheduling, refill, and atomicity fixes must remain.
+
+Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
+touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
+integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
+publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
+`NONE`.
+
+## Sol eighth source re-review - production foundation still rejected (2026-08-08)
+
+Jr published the prior decision at commit `b05fe44`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's eighth correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `c9326dd70b333f14fc3c3be926edf09ed4274b461b549f68cc06d6b75b4c2c41`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `b26ba24deaf0daa3de797ab09b07da5dbd894ee52bce016ca2350bf2c7cf5027`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `c8f9695d0204f3d638063dca61bd2dd1cd15e3524650491b7394f30df8e55900`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `519e0621a0f72a10b54d67cbdc655254f184bcc62738e145202af3a77107b4f6`.
+
+The correction removes permanent candidate-by-session authentication rows, retains only O(plans)
+coordinator watermarks, preserves valid candidates during claim selection, and makes each `force=True`
+call authenticate at most one bounded page. Those fixes are retained. The drop remains rejected before
+Jr integration for these blockers:
+
+1. Candidate existence is still trusted as claim-exclusion authority before current-session replay. Each
+   claim authenticates one page, but its SQL then excludes every candidate row, including rows beyond the
+   coordinator's validated frontier. A tampered or otherwise unauthenticated candidate therefore suppresses
+   reacquisition immediately. This violates the frozen requirement to authenticate resumed candidates
+   before exclusion; removing the auth table bounds storage but does not make unvalidated rows authoritative.
+2. The process-local lexicographic watermark is not coherent with multi-process candidate creation. After a
+   coordinator passes a domain ID or marks the scan complete, another process may commit a candidate whose
+   domain ID sorts behind that watermark. The first coordinator never revisits it during normal scheduling,
+   yet its claim query excludes it. A session UUID returned to callers does not close this race because it
+   has no durable generation/snapshot boundary and participates in no claim predicate.
+3. Resume authentication is advanced only as a side effect of `claim_pending`; it is not an independently
+   scheduled bounded phase with completion authority. Once candidate-free claims are exhausted,
+   `run_until_idle` suppresses further claim submissions unless header/finalization work happens to report
+   progress. It can therefore stop with most candidate rows beyond the normal-auth watermark. The bounded
+   force primitive is useful, but no public restart/run path drives it to a safe session boundary.
+4. The required default-page-plus-one public restart test still assigns `engine2._plan_id` and
+   `engine2._phase` directly. It creates only one replacement coordinator, asserts no database auth-state
+   bound, and detects the later tamper only through a hand-written force loop. It does not prove a public
+   resume lifecycle, repeated/multi-process bounded authority, insertion behind a live watermark, or that
+   normal scheduling reaches a safe authentication boundary.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized ninth correction - same six files only
+
+Jr Dev - Hermes must first commit and push only this eighth re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may correct
+only the same six production-foundation source/test files against the unchanged frozen contract.
+
+The correction must make only current-session-authenticated candidates authoritative for claim exclusion
+without unbounded per-candidate/session growth. It must define a bounded, race-safe multi-process
+generation/snapshot or equivalent protocol so candidates committed behind a live cursor cannot escape
+normal authentication. The public engine restart/run lifecycle must advance bounded authentication turns
+to an explicit safe boundary even when no candidate-free node or header/finalization work remains;
+`force=True` must remain page-bounded. Replace the private-field test with public lifecycle coverage over
+the default 32+1 boundary, repeated and concurrent coordinators, insertion behind a live cursor, preservation
+of every valid candidate, later-tamper detection, and an asserted bound on durable/process authentication
+state. All previously retained batch/READY, durable backlog, metrics, indexed/keyset scheduling, refill,
+crash, and atomicity fixes must remain.
 
 Sr does not run tests or migrations, edit other files or records, use RPC credentials, make network calls,
 touch production data, or perform Git actions. Sr stops for fresh Sol source review with new hashes. Jr
