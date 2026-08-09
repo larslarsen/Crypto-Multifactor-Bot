@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol tenth production-foundation correction rejection
+Next required actor: Jr Dev - Hermes - publish Sol eleventh production-foundation correction rejection
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2719,6 +2719,66 @@ touch production data, or perform Git actions. Sr stops for fresh Sol source rev
 integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
 publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
 `NONE`.
+
+## Sol eleventh source re-review - source fixes retained, test evidence rejected (2026-08-09)
+
+Jr published the prior decision at commit `b34c893`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's eleventh correction in the same six authorized files. The reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `fc5ad160b88c2ef6f47100b60d1f607caadde528ecbdd8606513e28a05d1bbba`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `6fdcbf31a3d90fd650f2b5075d7602602fd510a8f1633ec2f7c6d41972ba8ca6`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `e77b2d08c10d96a475621ef9f161c8972b4bf78e6fbabb4854cb8d974cc94f67`.
+
+The engine now takes expected claim order independently at attach, pins `domain_hash_v1` for the production
+identity, retains complete plan/policy comparison before mutation, and preserves the generation-atomic page
+and per-turn run-loop fixes. The test also installs the real batch-header fixture and attempts an exact
+public candidate/generation proof. Those production-source fixes are retained; no further production source
+or migration change is authorized by this review. The drop remains rejected before Jr integration because
+the decisive test cannot reach its intended generation race:
+
+1. The test monkeypatches `eng_a.coordinator._authenticate_candidate_row` globally and pauses on its first
+   invocation. That method is used both by resume-page validation and by `commit_log_candidate` while the
+   latter holds `BEGIN IMMEDIATE`. The setup makes this deterministic: A authenticates the first 32 of the
+   33 initial candidates, then B's public `process_one` calls `claim_pending`, authenticates the remaining
+   stale candidate, claims another node, and commits a new current-generation candidate. Consequently A's
+   later `run_until_idle` has no stale candidate for its resume page; its first hooked authentication occurs
+   when A commits another candidate inside the open write transaction.
+2. The hook then waits on `mid_page_resume` while A holds SQLite's write lock. B observes the pause and calls
+   `attach_existing_plan`, whose generation bump requires its own `BEGIN IMMEDIATE`; it blocks/fails with the
+   database locked and cannot set the intended mid-page generation restart. The collected thread error is
+   re-raised, so assertions for `generation_restart`, final safe-boundary completion, and the exact retained
+   candidate are unreachable.
+
+Targeted ruff, repository control, and `git diff --check` pass. Sol ran no pytest, migration, RPC,
+production-data mutation, or Git operation.
+
+## Authorized twelfth correction - engine test source only
+
+Jr Dev - Hermes must first commit and push only this eleventh re-review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted six-file Sr drop,
+`opencode.json`, and both untracked research files. After publication, Sr Dev - Grok Build may edit only
+`tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`; the other five reviewed files are frozen at
+the hashes above for this correction.
+
+The test must pause specifically inside `_op_authenticate_resumed_candidates` after a successful raw replay
+and before its generation-stamp transaction, without intercepting commit-time authentication or holding any
+SQLite write transaction. Arrange at least one known stale candidate for that page, then bump through B's
+public attach while A's single public `run_until_idle` remains active. Assert the returned restart page, the
+same invocation's completion of the new generation, and the exact previously captured public candidate's
+survival and final generation. Preserve the batch handler, independent policy/order rejection, 32+1 boundary,
+and exact bounded-state assertions. Sr does not run tests, edit source/migration/other tests or records, use
+RPC/network/production data, or perform Git actions; it stops for fresh Sol review. Jr integration/testing
+and all controller/CLI, live readiness, RPC, staged production, coverage, publication, downstream, PAPER,
+LIVE, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
 
 ## Sol sixth source re-review - production foundation still rejected (2026-08-08)
 
