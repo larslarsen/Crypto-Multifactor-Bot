@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol eleventh production-foundation correction rejection
+Next required actor: Sol - review Jr integration evidence - focused suite fails 3/128
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2779,6 +2779,108 @@ and exact bounded-state assertions. Sr does not run tests, edit source/migration
 RPC/network/production data, or perform Git actions; it stops for fresh Sol review. Jr integration/testing
 and all controller/CLI, live readiness, RPC, staged production, coverage, publication, downstream, PAPER,
 LIVE, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol twelfth source re-review - production foundation accepted for Jr integration (2026-08-09)
+
+Jr published the prior decision at commit `fb5775d`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed the authorized test-only twelfth correction and verified that the other five files remain frozen.
+The accepted SHA-256 values for the complete six-file drop are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `fc5ad160b88c2ef6f47100b60d1f607caadde528ecbdd8606513e28a05d1bbba`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `bc721212a8ba9a5390099627158c97cc7a02d77e76efb57b45af12244b701968`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `e77b2d08c10d96a475621ef9f161c8972b4bf78e6fbabb4854cb8d974cc94f67`.
+
+The corrected decisive test leaves 65 initial candidates so a known stale row remains after the explicit
+32-row page and the claim-path page. Its wrapper installs the pause hook only while
+`_op_authenticate_resumed_candidates` runs, after successful raw replay and before the generation-stamp
+transaction; commit-time authentication is untouched and no SQLite write lock is held. B's public attach can
+therefore bump the generation while A's single public `run_until_idle` remains active. The test records the
+explicit restart page, proves the same invocation finishes the new safe boundary, and proves the exact public
+candidate survives with the final generation. It retains independent plan/policy/order rejection, the real
+batch-header path, 32+1 coverage, and exact one-integer-per-candidate plus O(plans) state assertions.
+
+Sol accepts this production-foundation source/test drop for Jr integration. Targeted ruff, repository control,
+and `git diff --check` pass. Sol ran no pytest, migration, RPC, production-data mutation, or Git operation.
+
+## Authorized Jr integration and offline acceptance
+
+Jr Dev - Hermes must verify the six hashes above, integrate exactly those six files without redesign, and
+exclude `opencode.json` and both untracked research files. Jr owns test/migration execution, records, Git,
+commit, and push. Jr must run at minimum:
+
+1. `.venv/bin/python -m pytest tests/acquisition/test_uniswap_v2_pair_events_v2.py tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py -q --tb=short`;
+2. `.venv/bin/python -m ruff check src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py tests/acquisition/test_uniswap_v2_pair_events_v2.py tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`;
+3. `python3 scripts/check_repo_control.py`; and
+4. `git diff --check` before commit.
+
+If the focused suite passes, Jr may apply migration 0020 through the repository migration mechanism to the
+existing offline `dex003_full.db`, then record its exact checksum/history row, pre/post counts for every
+pre-0020 v2/raw table, the empty/new-table counts, and `PRAGMA foreign_key_check`. Any failure, hash drift,
+unexpected populated new table, lost prior row, FK finding, or migration-history mismatch stops integration
+without source redesign and returns to Sol. Jr then updates the two governance records with command/evidence
+results, commits and pushes only the six accepted files plus those records, and stops for Sol integration
+review.
+
+This source acceptance does not authorize a controller/CLI, live readiness preflight, RPC, staged production
+start, coverage credit, dataset publication, metadata/downstream transforms, factors, PAPER, LIVE, or another
+ticket. Next ticket remains `NONE`.
+
+## Jr integration evidence - focused suite fails 3/128 (2026-08-09)
+
+Jr verified the six accepted SHA-256 values exactly (unchanged after execution):
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `fc5ad160b88c2ef6f47100b60d1f607caadde528ecbdd8606513e28a05d1bbba`;
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `793fcf689aa32116db104cbd08566d79e9a104050f736fef808de336712e386c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `bc721212a8ba9a5390099627158c97cc7a02d77e76efb57b45af12244b701968`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `e77b2d08c10d96a475621ef9f161c8972b4bf78e6fbabb4854cb8d974cc94f67`.
+
+Focused suite command (as authorized, minus `-q` to capture the summary line that the repository pytest
+configuration suppresses under `-q`):
+
+```bash
+.venv/bin/python -m pytest tests/acquisition/test_uniswap_v2_pair_events_v2.py tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py -v --tb=short
+```
+
+Result: 128 collected, 125 passed, 3 failed, exit 1, duration 115.82s (0:01:55). Full log:
+`logs/dex003/production_foundation_suite_run.log`. The three deterministic failures:
+
+1. `test_iter_production_roots_rejects_wrong_cohort` (test file line 706): `pytest.raises(PairEventV2Error,
+   match="cohort size=8")` fails because the actual error message is
+   `production root iterator requires initial_cohort_size=8`, which does not contain the literal substring
+   `cohort size=8` (the message spells the parameter `initial_cohort_size=8`).
+2. `test_finalize_atomic_rollback_after_leaf_write` (test file line 3264): the public
+   `engine.finalize_candidate(...)` path reaches `_op_finalize_log_candidate` (engine line 3845) and its leaf
+   `INSERT` with `reconciliation_status='AGREED'` raises
+   `sqlite3.IntegrityError: CHECK constraint failed: status IN ('PENDING', 'IN_FLIGHT', 'AGREED', 'SPLIT')`
+   before the test can force the intended post-leaf-write failure and prove atomic rollback.
+3. `test_0020_claim_index_no_temp_btree_for_domain_order` (test file line 521): the assertion
+   `"CLAIM_DOMAIN" in plan_text or "USING INDEX" in plan_text` fails because `plan_text` is built with
+   `" ".join(str(r) for r in plan_rows)` over `sqlite3.Row` objects, producing
+   `<SQLITE3.ROW OBJECT AT 0x...>` representations rather than the plan detail; the `TEMP B-TREE` absence
+   assertion passed, but the positive index assertion cannot match a row-object repr.
+
+All other acceptance checks passed: targeted ruff on the five source/test files (all checks passed), repo
+control PASS, `git diff --check` clean. No migration 0020 was applied, no database was touched, no commit
+contains the six-file drop, and no source/test redesign was performed. The six accepted files remain
+uncommitted in the working tree exactly as reviewed. Per the stop contract, Jr returns this evidence to Sol
+without integration.
 
 ## Sol sixth source re-review - production foundation still rejected (2026-08-08)
 
