@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol first-correction rejection and second correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol second-correction rejection and third correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -175,6 +175,13 @@ readiness command still performs no workload and `stage-run` still performs no a
 correction also continues to trust unauthenticated terminals and caller assertions, leaves attempt
 attribution disconnected, and lacks the frozen controller/authenticator/migration/test semantics.
 
+Sr's second correction is also rejected before Jr integration. Its synthetic readiness smoke now calls
+`process_one`, but the live CLI still substitutes caller pool births and optional bounds for the pinned
+production-root sample, cannot execute independent complete rungs, and does not retain/authenticate the
+required evidence. The stage CLI constructs an unattached engine that cannot run the existing production
+plan, while attempt attribution, authoritative credit, controller clocks/storage, semantic authentication,
+and decisive migration/test coverage remain incomplete.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -184,7 +191,7 @@ attribution disconnected, and lacks the frozen controller/authenticator/migratio
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first correction are rejected; no part is accepted for Jr
+controller source/test drop and its first two corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -3579,6 +3586,127 @@ above. The correction must implement ADR-0015 section 9.11 rather than stubbing 
 - Strengthen migration 0021 with same-plan/stage composite authority and exact domains/indexes/triggers,
   then replace shallow tests with every decisive public-path and populated-upgrade case required by the
   architecture and original source authorization. Targeted ruff must pass.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or
+evidence data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr
+integration/testing and all live readiness, production initialization/RPC/stages, coverage, publication,
+downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - second controller correction rejected (2026-08-10)
+
+Jr published the first-correction rejection at pushed commit
+`343e93149167109ce195ff298e6a7051de539696`; `HEAD == origin/main`. Sr delivered a second
+correction in all seven authorized files. Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `00df7d1fb73a24fd11dfd4797bc28669498cd360f6749ee6b04b5c51329473b4`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `72f2202ec460d4a20ce1b28ec6e8f95e2b2d1e7d1e48dc4cae2754d3184a0bd5`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `5921d5dcbc751defb275b46b24e2c8b4a238798a2d4ab306ca3b24fba9d33349`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `47399301106357eec9f79f43a4286804eaea5425cd931d53617e99f485df91cb`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `1dc1fbb5ff967b80b2907ca823b1f5675fb5d76b35968bdeafe800d91311fb2b`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `f529a2705b0cd03b19fa9d26fb17931a3e957ec04ebd1c85fb92b13813472324`; and
+- unchanged `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `c5a0d523d559fa81f575b2c597617d6daf69661a982ec7cb539e11ad8df0dc91`.
+
+The correction is rejected for these blocking defects:
+
+1. The live readiness authority remains caller-substitutable. The CLI requires
+   `--pool-births-json`, permits caller `--max-rungs`, and makes the production sample pin optional.
+   It supplies no accepted registry parquet/manifest, matrix live/replay terminals, or accepted source
+   paths to the executor. The executor's optional authority arguments therefore default to absent and
+   its “authentication” again compares frozen constants to themselves before creating state.
+2. The implemented workload is not the frozen 128-root workload. `run_with_pools` initializes every root
+   produced by a default non-production `PlanConfig` from caller pools; it never streams all 1,858,348
+   production roots, retains the lowest 128 `RootFilterPlan` geometries, or initializes exactly those
+   eight-address birth-clamped roots. Requiring `len(root_domain_ids) == 128` after full plan initialization
+   cannot authenticate the real production authority. The default CLI does not even require that check.
+3. Rungs are neither complete nor independent. Each rung processes at most `len(pools) * 4` claims rather
+   than all 128 roots and adaptive descendants, and all rungs reuse one database/plan whose prior rung has
+   already consumed pending work. Later rungs therefore cannot repeat the same workload. The non-production
+   plan also does not exercise the production logs-first/global-header-finalization path required by the
+   ADR. `attempts_total` counts calls to `process_one`, not retained provider attempts, and `first_ok` means
+   only that no Python exception escaped.
+4. Capacity selection still omits the frozen evidence and gates. There is no per-attempt/first-attempt
+   reconciliation, zero-network raw replay, split/header/PTB conservation, error-domain classification,
+   4096-header/response/retained/wall/spool/worker safety accounting, four consecutive 32-root byte groups,
+   `bptb_max`, fixed overhead, provisional 2x storage gate, or exact contiguous-rung selection. Eligibility
+   is only `processed >= 1` plus reachability of the partial smoke duration.
+5. Readiness sealing/authentication is non-authoritative. The manifest inventories only EVIDENCE and REPORT,
+   excluding `readiness.db`, raw objects, receipts, spool, migrations/source identities, and their semantic
+   relations; EVIDENCE/REPORT writes are not fsynced. Raw and database state remain mutable after TERMINAL.
+   `readiness-authenticate` checks only identity and manifest hash and does not recompute the report/evidence,
+   inventory, raw pairing/replay, decisions, byte model, safety facts, credentials, extras, or unknown/orphan
+   authority.
+6. Production preparation still does not prepare production. It checks only terminal/manifest presence and
+   lengths, trusts caller source hashes and unverified selected-rung/report/evidence fields, uses total PTB as
+   a byte proxy, and inserts only runtime policy. It does not call the readiness semantic authenticator,
+   authenticate registry/matrix/source/path authorities, initialize/replay 1,858,348 production roots, seal
+   READY, prove empty network/coverage state, measure actual initialized bytes/free space, or authenticate a
+   SQLite checkpoint. Its public API still allows `confirm_policy_id=None`, which the senior test treats as
+   successful mutation.
+7. `stage-run` cannot run the accepted production engine. It opens `ProductionControlStore` before acquiring
+   the OS lock, accepts caller-selected rung JSON and step count instead of the stored policy/permit, creates
+   an engine but never calls `attach_existing_plan` or otherwise establishes plan/chain phase, then calls
+   `run_until_idle`. That fails at the first readiness check, is converted into a sealed FAILED result, and
+   the CLI still returns success. Actual filesystem free space is not supplied; the controller defaults to
+   `10**18` bytes.
+8. The stage controller is not durable over work. `run_until_idle` blocks the controller loop; lease renewal
+   and checkpoint occur only after it returns, guarded by the literal `or True`, so no 60-second renewal/
+   checkpoint can occur during a long response or run. Permit active/wall bounds, six-hour/24-hour stops,
+   first-start authentication, crash/CRASH/RESUME, wall/monotonic consistency, and stage classification are
+   absent. Checkpoints still record zero authoritative counts/roots, absolute monotonic process age, and PTB
+   as bytes. Drain still calls `run_until_idle(max_steps=0)`, swallows failure, and can assert DRAINED without
+   proving started work and persistence drained.
+9. Engine authority remains incomplete. No chain/log/header/retry/scanner path calls `record_stage_attempt`.
+   Capability is checked at outer public calls, not transactionally at every provider/persistence/finalization
+   boundary. Atomic leaf credit still computes width times all addresses/topics rather than pinned-registry
+   birth-clamped PTB, checks only immediate parent/child credit, and is inserted without same-transaction
+   durable capability authentication. A separate store credit API remains outside the accepted finalizer.
+10. Migration/test evidence remains insufficient. Migration 0021 adds a policy/ordinal stage FK and a stage
+    update trigger, but leaf credit can still pair one domain with another domain's leaf receipt, terminal can
+    reference another same-plan stage's checkpoint, and `prior_terminal_id` deliberately has no FK. The
+    migration tests are byte-identical to the rejected correction and still contain only six shallow cases.
+    Production tests were reduced to eight: one smoke rung with four pools, no production pin, no independent
+    higher rung or failure class; an engine-less seal; an API prepare that explicitly omits confirmation; and
+    only offline CLI plan coverage. The new engine test again mutates private `_plan_id`/`_phase` and proves
+    no real READY/capability public lifecycle. The required public stage, attribution/credit, controller,
+    tamper/replay, generic non-regression, populated migration, rollback, FK mismatch, trigger, and query-plan
+    cases remain absent.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized third correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked
+research files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files.
+Do not add another summary/smoke facade. The next drop must make these exact public paths authoritative:
+
+- `readiness-run` must accept only canonical accepted registry/matrix/source authorities and fixed frozen
+  limits; stream the complete production root iterator, retain the exact lowest 128 root objects, and execute
+  each rung independently over those exact geometries through the accepted transport/raw/split/header/
+  finalization/replay primitives. It must retain and seal every attempt/raw/receipt/decision/byte fact, apply
+  every safety/capacity/reachability/storage rule, and expose one zero-network semantic authenticator that
+  reconstructs the result from the complete immutable inventory.
+- `production-prepare` must first invoke that authenticator, require exact source/policy confirmation before
+  mutation, then use existing public foundation APIs to initialize/authenticate all production roots, empty
+  state, READY, SQLite checkpoint, actual bytes, and 2x remaining projection without RPC. No caller hashes,
+  policy values, paths, sample limits, or PTB assertions may substitute authenticated authorities.
+- `stage-run` must acquire the OS lock before opening mutable production state; load the immutable policy and
+  exact permit; attach/authenticate the existing production plan; run with automatic concurrent lease renewal,
+  60-second checkpoints and deadline/storage stops; atomically attribute every real attempt/raw and recompute
+  registry-birth credit in the accepted finalizer; and implement clean drain/close plus crash/resume and exact
+  terminal classification. CLI failure must be nonzero.
+- The public immutable stage authenticator must recompute all filesystem/DB/raw/engine/controller semantics.
+  Migration 0021 must enforce domain/leaf, stage/checkpoint, and prior-terminal composites. Replace the unchanged
+  migration tests and smoke production tests with the full decisive public-path matrix already named twice;
+  private phase mutation and injected summary assertions are not evidence. Targeted ruff must remain clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or
 evidence data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr
