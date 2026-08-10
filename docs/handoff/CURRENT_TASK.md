@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol sixth-correction rejection and seventh correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol seventh-correction rejection and eighth correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -210,6 +210,13 @@ nonfunctional because caller-thread-local context is read by the distinct persis
 readiness replay/bytes, controller clocks/crash/sealing, storage projection, stage semantics, and the explicitly
 required decisive migration/public-path tests remain incomplete.
 
+Sr's seventh correction is rejected before Jr integration. It carries attempt fields on immutable descriptors,
+adds concurrent attribution tests, final policy preview, mandatory birth checks, richer clock/control handling,
+post-mutation database hashing, and expanded migration/production tests. The actual matrix report shape is still
+read incorrectly, raw registration and attempt attribution are separate commits and crash journals lose authority,
+the real stage CLI never seeds readiness byte authority or enforces NON_ARMED, and newly sealed stages compare
+incompatible core/full manifest hashes during authentication.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -219,7 +226,7 @@ required decisive migration/public-path tests remain incomplete.
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first six corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first seven corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -4160,6 +4167,112 @@ files. After publication, Sr Dev - Grok Build may correct only the same seven au
 - Deliver the previously required real populated migration rollback/exact query-plan/full immutability tests and
   successful public preview/prepare/stage/authentication tests, plus adversarial concurrency, no-response, birth,
   clock, storage, and seal tests. Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - seventh controller correction rejected (2026-08-10)
+
+Jr published the sixth-correction rejection and seventh-correction authorization at pushed commit
+`c375580a8026a197e54161bd6d789d4e49222278`; `HEAD == origin/main`. Sr delivered a seventh
+correction in six of the seven authorized files; migration 0021 source is unchanged. Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `ca80607780a8a9d6d3639f1c6b69c9c028eecc2955a54d1dbc2cb67f294292d8`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `df32cc09e0e8baa58b5e132e299bdfd9c4794d9228cfbdeb9794ebc558e8b8ce`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `b0e98d47acefbe76038f71c2e34b61c9993ba9794abcb2adf81da51ba1bd84e8`;
+- unchanged `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `5577ca080172d3ed63329f230a7fc91b917f23a195ab2e32363ae509a25d19ed`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `72488aa2960241c531340e5989f843e9c7281fbd99c6452d99fadeccbf7bf769`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `682240a7abf9fa10f09b2bbda093a7c51b8664d64ab191dfaac01223555e7339`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `e10bbe696a5714269428f31ae78979e36ede1264a31660fd231116086d53b678`.
+
+The correction is rejected for these blocking defects:
+
+1. The new mandatory matrix-fact extraction does not match the accepted matrix authenticator's real result.
+   `authenticate_completed_run` returns the sealed report; the accepted cohort is under
+   `capacity_selection.selected_cohort_size` and providers are under `plan.provider_orgs`. The correction searches
+   only top-level/plan `cohort_size`, `initial_cohort_size`, or `matrix_cohort_size`, none of which the accepted
+   MatrixPlan report supplies. It therefore reports “cohort ... missing” and cannot authenticate the pinned live
+   or replay run, so live readiness cannot start.
+2. Descriptor-carried attempt identity fixes the ordinary cross-thread swap, but persistence is still not atomic.
+   `RawObjectWriter.write_stream` and `record_failed_acquisition` commit the raw catalog transaction before
+   `_maybe_insert_stage_attempt` opens its savepoint. An attempt insert failure leaves a committed raw acquisition
+   without its mandatory attempt. The worker writes its crash journal before `_dual_fetch` stamps production
+   authority; `_recover_journaled_spools` reconstructs descriptors without any production fields, so crash recovery
+   can also persist raw success/failure with no stage attempt. Stage authentication does not reconcile all raw
+   acquisitions to attempts, and the new tests cover only direct in-memory `persist_async` descriptors.
+3. Readiness byte authority is still not the frozen exact model. It attributes raw-object bytes to groups but
+   declares the entire SQLite database fixed overhead; variable receipt/database row and index growth is therefore
+   absent. `fixed_bytes` remains one accumulator across attempted rungs while group facts are overwritten, and the
+   CLI still supplies zero current production-tree bytes. PASS authentication permits `bptb_max_num == 0`.
+4. The real production stage never receives the readiness maximum. `prepare_production_offline` returns and writes
+   the rational only in `PREPARE_OUTCOME.json`/the returned top-level object, not immutable runtime-policy payload.
+   The stage CLI never reads that outcome and never calls `seed_readiness_bptb`; only a private unit test calls the
+   method. Production checkpoints therefore start at zero and use a current-tree-size floor rather than the sealed
+   readiness maximum until production credit happens to establish a new ratio.
+5. NON_ARMED is not enforcement authority. A failure after policy/READY initialization merely overwrites
+   `PREPARE_OUTCOME.json`; immutable runtime policy and READY roots remain, the outcome file is not bound into the
+   policy/control schema, and `stage-run` never authenticates `armed == true`. A failed preparation can therefore
+   leave the same durable state that later code treats as network-capable. Re-prepare may overwrite NON_ARMED.
+6. First-start binding remains forgeable. A pre-created canonical six-field JSON with the production plan ID and
+   arbitrary stage/policy/permit/controller/time is accepted by the constructor; `start_stage` checks only plan ID
+   when the file already exists and never reconciles the other fields or timestamp to a durable START event. The
+   new tests reject only malformed or wall-only files. CRASH handling appends RESUME immediately under the crashed
+   stage, not under a newly authenticated permit/stage as the frozen new-permit RESUME path requires.
+7. Live-thread refusal is not proven or safely owned. The new test constructs a literal refused-result dictionary
+   without executing `run_stage_session`. The real function returns while the non-daemon control thread is still
+   live; the CLI `finally` then closes the engine/store and releases the OS lock that thread may still use. This is
+   not a safe refusal boundary even though drain/seal is skipped.
+8. A newly generated stage cannot authenticate its own manifest identity. Sealing stores the durable terminal row
+   with `manifest_hash = core_hash`, then writes a larger MANIFEST whose file SHA is `full_manifest_hash`.
+   `authenticate_stage_directory` correctly handles the terminal file's two hashes initially, but later compares
+   durable `term["manifest_hash"]` to the full MANIFEST file hash, which must differ. Every generated stage fails
+   that check. The authenticator also never recomputes `core_hash` from the core fields and never walks/verifies the
+   manifest's `trees` entries, so the claimed recursive raw/controller inventory is unauthenticated.
+9. Readiness/stage semantics and decisive tests remain incomplete. Readiness selection still trusts sealed timing,
+   attempt, metric, PTB, and assessment summaries and does not replay every retained JSON-RPC/raw/split/header/leaf
+   relation; its raw-file membership failure branch still executes `pass`. Stage attempts receive row-shape checks
+   rather than complete raw/acquisition/request/outcome reconciliation. The “live thread” test is synthetic, final
+   preview only tests a bad pool count, no successful public prepare/stage/auth path exists, and migration query-plan
+   assertions still accept generic table-name/`scan` fallbacks rather than the exact required indexes.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized eighth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Read the authenticated matrix report's actual `capacity_selection.selected_cohort_size` and
+  `plan.provider_orgs` for both live and replay runs, and add fixtures with the real accepted report shape.
+- Put production authority into the durable journal before a network response can survive a crash. Make raw catalog
+  registration and stage-attempt insertion one SQLite transaction, including failed/no-response and recovery paths;
+  any attribution failure must roll back both. Reconcile every production raw acquisition to exactly one attempt.
+- Attribute exact variable raw, receipt, database-row/index growth per readiness group without cross-rung fixed-byte
+  accumulation. Require a positive PASS rational and actual existing production-tree bytes. Persist the authenticated
+  readiness maximum in immutable arming/policy authority and make the real stage CLI load/verify/seed it before work.
+- Make prepare failure atomically/durably non-network-capable; stage-run must require and authenticate an immutable
+  ARMED authority bound to policy, births, readiness rational, initialized bytes, and READY anchors. NON_ARMED must
+  not be overwriteable into authority without a fresh clean prepare transaction.
+- Derive first-start wall from or fully reconcile it to durable START identity; reject a forged full canonical file.
+  Implement RESUME only with the authenticated new permit/stage authority. A live work/control thread must retain
+  exclusive ownership and prevent caller cleanup/lock release, with a real public-path test rather than a literal.
+- Use one unambiguous self-authenticating stage-manifest scheme: recompute its core, compare the durable terminal to
+  the correct hash, verify the full file hash, recursively verify every DB/raw/spool/controller entry and reject
+  extras/orphans. Reconstruct complete attempt/receipt/replay/clock/storage semantics.
+- Add successful public matrix/readiness preview/prepare/stage/seal/authentication tests and precise adversarial
+  crash-journal, atomic rollback, full-forged-start, NON_ARMED, readiness-seed, recursive-tree, and exact query-plan
+  cases. Targeted ruff must remain clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
