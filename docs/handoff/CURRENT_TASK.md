@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Sol - review Jr integration evidence - focused suite fails 3/128
+Next required actor: Jr Dev - Hermes - publish Sol 3-failure routing and test-only correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2881,6 +2881,52 @@ control PASS, `git diff --check` clean. No migration 0020 was applied, no databa
 contains the six-file drop, and no source/test redesign was performed. The six accepted files remain
 uncommitted in the working tree exactly as reviewed. Per the stop contract, Jr returns this evidence to Sol
 without integration.
+
+## Sol integration-failure review - production source retained; three test corrections required (2026-08-09)
+
+Jr published the failed integration evidence at commit `4836693`; `HEAD` and `origin/main` both resolve to
+that commit. Sol inspected the exact failures and the retained log. All six hashes still match the accepted
+drop. The three failures are deterministic Sr-owned test-source defects, not environment, Jr integration,
+production-source, or migration-SQL defects:
+
+1. `test_iter_production_roots_rejects_wrong_cohort` expects regex `cohort size=8`, while the source correctly
+   raises `production root iterator requires initial_cohort_size=8`. The test must assert the actual stable
+   authority term; production source must not be changed merely to satisfy the inaccurate regex.
+2. `test_finalize_atomic_rollback_after_leaf_write` installs an AFTER-leaf trigger that writes node status
+   `FAILED`, which migration 0017 correctly rejects because the allowed domain is `PENDING`, `IN_FLIGHT`,
+   `AGREED`, or `SPLIT`. The trigger's own invalid update raises during the leaf insert, before dependency
+   insertion and the intended post-write guard. Use an allowed non-`PENDING` status (for example
+   `IN_FLIGHT`) so the transaction reaches the engine's `node status changed during finalize` check and then
+   prove leaf, dependency, and trigger state all roll back to the original PENDING node.
+3. `test_0020_claim_index_no_temp_btree_for_domain_order` receives `sqlite3.Row` values and joins `str(row)`,
+   producing only `<sqlite3.Row object at ...>`. It must build plan text from the EXPLAIN detail column (or
+   tuple values), then prove both no temporary B-tree and actual use of the claim-domain index.
+
+The production files remain accepted and frozen at:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `fc5ad160b88c2ef6f47100b60d1f607caadde528ecbdd8606513e28a05d1bbba`; and
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`.
+
+## Authorized thirteenth correction - three test files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted six-file drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only:
+
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`.
+
+The correction is limited to the three exact failures above. It must preserve the accepted concurrency test
+and every other test contract. Sr does not edit production source, migration SQL, records, or other tests;
+does not run tests, migrations, RPC, or production data; performs no Git action; and stops for fresh Sol
+source review with the three new hashes. Jr rerun/integration remains unauthorized until that review. No
+controller/CLI, live readiness, staged production, coverage, publication, downstream, PAPER, LIVE, or next
+ticket is authorized. Next ticket remains `NONE`.
 
 ## Sol sixth source re-review - production foundation still rejected (2026-08-08)
 
