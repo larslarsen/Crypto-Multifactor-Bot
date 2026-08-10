@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol production-foundation integration acceptance
+Next required actor: Jr Dev - Hermes - publish Sol acceptance and ADR-0015 controller architecture
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -158,6 +158,11 @@ recorded at its accepted checksum, every pre-0020 v2/raw count is preserved, all
 tables are empty, and `PRAGMA foreign_key_check` is empty. This completes only the offline
 production-foundation source/integration prerequisite in ADR-0015 section 9.10.
 
+ADR-0015 section 9.11 now freezes the production control plane: an isolated deterministic live-
+readiness protocol, one reviewer-capability-gated production controller, additive migration 0021,
+exact PTB/clock/storage checkpoints, and separately permitted stages. Only the offline source/test
+implementation phase recorded below is authorized after Jr publishes this decision.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -166,11 +171,11 @@ production-foundation source/integration prerequisite in ADR-0015 section 9.10.
 ## Acceptance
 
 The offline production-foundation source/integration, migration 0020, applied database state,
-and focused evidence are accepted at pushed commit `179233a`. No production controller or CLI,
-live readiness preflight, RPC, staged production start, coverage credit, publication,
-metadata/downstream transform, factor design, PAPER, or LIVE work is authorized by this
-acceptance. A further engineering phase requires a separate explicit Sol decision. Next ticket
-remains `NONE`.
+and focused evidence are accepted at pushed commit `179233a`. ADR-0015 section 9.11 is the
+separate architecture decision for the bounded source/test phase below. It does not authorize
+live readiness, RPC, production initialization, a staged production start, coverage credit,
+publication, metadata/downstream transform, factor design, PAPER, or LIVE work. Next ticket remains
+`NONE`.
 
 ## Authorized next phase - source only
 
@@ -3382,7 +3387,89 @@ unchanged. Repository control passes after this review, and the unrelated modifi
 This acceptance completes only the offline production-foundation source/integration prerequisite
 in ADR-0015 section 9.10. It does not authorize a production controller or CLI, live readiness
 preflight, RPC, staged production start or continuation, coverage credit, publication,
-metadata/downstream work, factor work, PAPER, LIVE, or a next ticket. Jr Dev - Hermes must commit
-and push only this Sol decision in the two governance records, excluding all unrelated working-tree
-files, then stop. Any further engineering phase requires a separate explicit Sol authorization.
-Next ticket remains `NONE`.
+metadata/downstream work, factor work, PAPER, LIVE, or a next ticket. Jr Dev - Hermes must publish
+this acceptance together with the subsequent ADR-0015 section 9.11 architecture decision in the
+three aligned governance files, excluding all unrelated working-tree files, then stop at the
+authorized source-phase handoff. Next ticket remains `NONE`.
+
+## Sol architecture decision - production controller and staged authority (2026-08-09)
+
+With the production foundation accepted, Sol freezes the missing control plane in ADR-0015 section
+9.11. The accepted engine is the sole scheduler and evidence path, but its READY manifest alone is
+not production authority: it has no reviewer-bound stage capability, durable controller/clock/
+checkpoint/terminal state, or isolated protocol for selecting runtime concurrency. Direct production-
+plan RPC through the bare engine must therefore become impossible.
+
+The readiness authority is pinned to
+`rdy_abadab41f5f4221a0f2e5c36e11b5bbe3893393dfab85e614be65ff2f26975bb`.
+It streams the complete 1,858,348-root authority and selects the 128 lexicographically lowest
+`domain_id` values; their LF-delimited digest is
+`7f009be09d1268008d69940078fea3e62264314d39754ed8f399537e283b90ea` and their exact workload is
+10,240,000 PTB. The six immutable `(RPS, provider in-flight, nodes, header batch)` rungs are
+`(0.5,1,1,8)`, `(1,1,1,8)`, `(2,2,2,16)`, `(4,4,4,32)`, `(8,4,4,32)`, and `(8,8,8,64)`.
+Capacity selection, 20% haircut reachability, byte projection, terminal authentication, and every
+safety stop are exact in ADR-0015; this decision does not authorize executing that live preflight.
+
+The readiness implementation must authenticate the accepted clean matrix authorities before any
+future live state: live run `run_f2fd323fcd69403a923f6329b9f0c320`, evidence hash
+`e42e987dade698af6af4fb47598abe88eb78116ac6fc004ff6fc4d0a84b4a114`, report hash
+`2062d1f8717672de645f07bd761354bea31cdca9dbe20908cfe3941fb00189ef`; and standalone replay
+`run_bd066d2e228d46728a97fdb61138e365`, evidence hash
+`f7b536de7823a298688e935efae82f85971957c440c7ccdea96881b0b72b88a2`, report hash
+`6c27a8df5211991487d2d0d61dbac548a94f2f4c41a17393ee2846a5ec165786`.
+
+### Authorized next phase - production controller source and senior tests only
+
+Jr Dev - Hermes must first commit and push only the aligned acceptance/architecture record in:
+
+- `docs/adr/0015-data-first-dex-research-substrate.md`;
+- `docs/handoff/CURRENT_TASK.md`; and
+- `tickets/DEX-003.md`.
+
+The commit must exclude `opencode.json` and both untracked research files. After that publication,
+Sol selects Sr Dev - Grok Build for the high-risk production-source work and authorizes changes only
+in these seven files:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py` (new);
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py` (new);
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql` (new);
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py` (new); and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py` (new).
+
+The source drop must implement ADR-0015 section 9.11 literally:
+
+1. Derive/authenticate the exact readiness identity, 128-root sample, digest/PTB anchors, rung order,
+   limits, isolated output topology, immutable terminal, and public zero-network authenticator. Use
+   the same public scanner/network/raw/split/header primitives as the engine; no copied private
+   transport or sampled production plan is allowed.
+2. Make header batch size an authenticated engine input and add the durable runtime-policy, permit,
+   controller lease/event, stage-attempt attribution, leaf-credit, checkpoint, and terminal coordinator
+   APIs. Migration 0021 is additive only with the exact nine authorities, FKs, triggers, indexes,
+   state domains, and rollback rules in the ADR.
+3. Require an active production stage capability at every production network/finalization boundary,
+   atomically attribute every attempt and finalized leaf, and fail closed on capability/permit/policy/
+   lease drift. Preserve all accepted generic-engine behavior and prevent a READY-only production
+   engine from making RPC calls.
+4. Implement the exclusive controller state machine, 60-second append-only clock/checkpoint chain,
+   clean stop/drain/close, crash non-PASS semantics, exact integer PTB/projection/storage gates,
+   first-six-hour and later-stage boundaries, global fourteen-day stop, credential-free sealing, and
+   immutable/read-only stage authentication.
+5. Expose only the seven ADR commands. Every live command remains doubly gated by an explicit execute
+   flag and exact identity/permit confirmations; plan, status, and authenticators default offline.
+   Caller substitution and path overlap must fail before state creation or network access.
+6. Add decisive fake-clock/fake-transport/public-CLI tests for every rung and selection class; sample/
+   identity drift; path/symlink/lock exclusion; live-flag/permit gates; direct-engine bypass; capability
+   expiry/loss; generic-engine non-regression; populated 0020-to-0021 migration/FKs/triggers/rollback;
+   raw attribution and atomic PTB credit; split conservation/no double credit; checkpoint/hash/clock/
+   crash/torn-event behavior; drain/close; seven-/fourteen-day and 20% haircut cross-products; 2x disk
+   projection; credential chunk/over-cap/error drains; manifest/terminal/raw/DB tamper; extras/WAL/spool/
+   unknown-orphan rejection; and zero-network replay.
+
+Sr writes source and senior tests but does not run tests or migrations, edit any other file or record,
+use RPC credentials, make network calls, touch production/readiness/matrix data, or perform Git actions.
+Sr stops for fresh Sol source review with hashes. Jr integration/test execution is not authorized until
+that review. Live readiness, production initialization, production RPC/stages, coverage credit,
+publication, downstream work, PAPER, LIVE, and a next ticket remain unauthorized. Next ticket remains
+`NONE`.
