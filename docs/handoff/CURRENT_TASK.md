@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol fourth-correction rejection and fifth correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol fifth-correction rejection and sixth correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -195,6 +195,14 @@ safety authentication is still asserted rather than reconstructed, production at
 transactionally attributable, stage clocks/storage/sealing violate the frozen rules, and tests preserve
 placeholder paths.
 
+Sr's fifth correction is rejected before Jr integration. It adds the public matrix authenticator, exact source
+paths, stronger isolation, public readiness work, partial raw attribution, a pre-SQLite OS lock, integer clock
+arithmetic, non-daemon control, event/checkpoint identity recomputation, immediate-prior migration authority,
+and last stage-directory terminal creation. The submission nevertheless cannot prepare production because it
+changes the confirmed policy identity after confirmation, still uses PTB/database-allocation byte proxies,
+attributes concurrent engine attempts through one shared mutable context, seals before all controller work is
+joined, and neither readiness nor stage authentication reconstructs the frozen complete authority.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -204,7 +212,7 @@ placeholder paths.
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first four corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first five corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -3943,6 +3951,106 @@ Sr does not run tests or migrations, edit other files/records, use RPC/network, 
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing and
 all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE, and
 next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - fifth controller correction rejected (2026-08-10)
+
+Jr published the fourth-correction rejection and fifth-correction authorization at pushed commit
+`87ea0fddfefc3eb5bc2244003135d9bdc4f49994`; `HEAD == origin/main`. Sr delivered a fifth
+correction in all seven authorized files. Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `f85f54cf1431350a9b7eee8a88201947a82459e46e27f247293ef973f6ca5699`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `924eb09dd5103dae494999069a32052f46d8fdf4c8d5d2a74f53292007a854d0`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `272336ea41232f148068c59b77618a9011ea2b0cf8155b99f57fe8e69b45c5df`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `5577ca080172d3ed63329f230a7fc91b917f23a195ab2e32363ae509a25d19ed`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `cc744cf1e9ac3a17e5010902ca4435b766091090501c45457e7a5ae7601391fe`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `90a2ccb371ff38832f6f17bb805e8829e40553604b3ad02a78ff2f23b4dba4ba`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `5a5ce955a67a052acf6e4816df967f2022836758dc03aeb9afc04849362e29fd`.
+
+The correction is rejected for these blocking defects:
+
+1. Matrix pinning is still fail-open. The accepted public matrix authenticator is now called, but each exact
+   live/replay run, evidence, and report pin is checked only when the extracted value is nonempty. A successful
+   authenticator result that omits one identity is accepted and replaced in the readiness plan with the frozen
+   constant. Cohort/provider validation checks the locally frozen readiness payload, not authenticated matrix facts.
+2. Readiness hard bounds are post-hoc observations, not hard controls. Blocking `authenticate_chain` and
+   `run_until_idle` complete before the 7,200-second wall and aggregate 8 GiB retained-byte checks run, so an
+   over-bound or hung workload is not stopped and drained at the boundary. The public authenticator trusts sealed
+   rung, timing, byte, metric, and selection summaries and performs only shallow DB/leaf/raw-link checks; it does
+   not reconstruct all attempts, responses, retries, splits, headers, dependencies, PTB, replay, or selection.
+3. The frozen exact storage model is not implemented. Readiness assigns SQLite bytes above an arbitrary
+   200,000-byte shell to groups in proportion to PTB, accumulates fixed bytes across attempted rungs, and lets
+   the CLI leave current production-tree bytes at zero. Production gates still use remaining PTB as bytes.
+   Checkpoints omit raw/spool trees, treat the first full tree as interval growth, retain no maximum across
+   readiness plus completed intervals, and fall back to remaining PTB when an interval has no credit.
+4. Offline prepare is impossible through its own confirmation contract. It first requires
+   `confirm_policy_id == preview_policy_id`, then binds the registry-birth core hash into a rebuilt policy and
+   requires the same confirmation to equal the necessarily different policy ID. The CLI exposes no prior preview
+   of that final identity. Stage-run also loads `REGISTRY_BIRTHS.json` by embedded policy ID only and never
+   recomputes the policy-bound core hash, so same-count birth-map tampering is not rejected at the work boundary.
+5. Real attempt attribution is unsafe and fail-open. Every concurrent `_dual_fetch` shares one mutable
+   coordinator attempt-context dictionary, so overlapping work can acquire another call's stage/domain/attempt
+   identity. Missing context/table and insert errors are silently ignored; unknown provider organizations become
+   `primary`. The failed/no-descriptor fallback is guarded by `capability is None`, when its recorder cannot write,
+   so no-response attempts disappear. Finalizer reauthentication uses a different connection from its transaction.
+6. Controller clocks and crash authority remain incomplete. `FIRST_START_WALL.json` is canonical but freely
+   pre-creatable with any valid timestamp and is not bound to durable START/policy authority. The control loop
+   checks limits only after a real-time 60-second wait, stage-1 continuation is evaluated before the current
+   active delta is credited and does not drive required classification, and crash handling appends CRASH then
+   pauses without fully authenticating prior state or appending RESUME under a new permit.
+7. Drain/sealing can race live work and its database inventory is non-authoritative. If the control thread
+   survives the timed join, code records an error but immediately drains/seals while it remains live. Drain uses
+   stale session-start free space. The manifest hashes SQLite before terminal-row, stage-state, and lease-release
+   mutations, while the authenticator never checks that database metadata, binds no recursive raw/controller
+   inventory, and falls back from immutable SQLite to mutable `mode=ro`.
+8. Stage semantic authentication remains insufficient. It verifies only that each credit is positive and
+   references a leaf; it does not load authenticated births and recompute exact birth-clamped PTB per credit.
+   Attempts are reduced to a count rather than reconciled to every call, exact raw pair, byte, outcome, retry,
+   and receipt. Engine split/header/dependency/credential and clock/storage classifications remain unauthenticated.
+9. Tests do not prove the frozen public paths. There is no successful authenticated prepare or real successful
+   stage workload. First-start rejects only malformed JSON, not a canonical forged timestamp. The stage seal test
+   passes because database metadata is not authenticated. Migration rollback manually rolls back a normal insert,
+   query-plan coverage asserts only nonempty result lists, and immutability omits checkpoint/terminal/credit rows.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized sixth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Make every matrix identity mandatory and derive cohort/provider facts from authenticated evidence. Enforce
+  readiness wall/retained limits while work is live and join/drain it. Make zero-network readiness authentication
+  reconstruct complete attempt/raw/receipt/replay/split/header/dependency/PTB/byte/capacity/selection authority.
+- Use exact attributed raw, receipt, database, fixed, and existing-tree bytes per readiness group and carry the
+  maximum rational through every production checkpoint. Measure all production trees/current free space and
+  remove every PTB-as-byte and proportional/equal-share proxy.
+- Compute the final birth-bound policy before confirmation and mutation. Recompute the complete sealed birth
+  authority against policy and production anchors at every prepare/stage/credit/auth boundary, and persist a
+  durable non-armed failure outcome when preparation cannot arm safely.
+- Replace the shared attempt context with concurrency-safe per-operation authority; record every provider/retry/
+  no-response attempt with exact raw/byte/outcome identity in the actual persistence transaction and fail closed
+  on attribution failure. Reauthenticate capability on the same finalizer connection used for atomic credit.
+- Bind first START to durable authority; implement authenticated CRASH plus new-permit RESUME and exact six-hour/
+  24-hour/seven-day/fourteen-day classifications. Join all work before seal, make terminal the last write across
+  all sealed authority, recursively bind DB/raw/controller state, require immutable SQLite, and fully reconstruct
+  attempts, credits, clocks, storage, and engine semantics.
+- Replace placeholders with successful public prepare/readiness/stage/auth paths, adversarial concurrency/no-
+  response/birth/clock/seal cases, and real populated migration rollback/exact-plan/full immutability coverage.
+  Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
 
 ## Sol source review - first controller correction rejected (2026-08-09)
 
