@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol 3-failure routing and test-only correction authorization
+Next required actor: Jr Dev - Hermes - integrate accepted test correction and rerun offline acceptance
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -2928,6 +2928,50 @@ source review with the three new hashes. Jr rerun/integration remains unauthoriz
 controller/CLI, live readiness, staged production, coverage, publication, downstream, PAPER, LIVE, or next
 ticket is authorized. Next ticket remains `NONE`.
 
+## Sol thirteenth source re-review - three-test correction accepted (2026-08-09)
+
+Jr published the failure routing at commit `a59255e`; `HEAD` and `origin/main` both resolve to that commit.
+Sol reviewed Sr's authorized three-test correction. The frozen production files remain byte-identical:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2.py`:
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `fc5ad160b88c2ef6f47100b60d1f607caadde528ecbdd8606513e28a05d1bbba`; and
+- `sql/migrations/0020_uniswap_v2_pair_event_v2_production_foundation.sql`:
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`.
+
+The accepted corrected test hashes are:
+
+- `tests/acquisition/test_uniswap_v2_pair_events_v2.py`:
+  `1876ac59bda81434cb9bf523b0699717352b2e8c5738899d0e77439e225fec3d`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `a27a80809e953d096489f3adf48c5d203a1a45bc859a51f4c21f6d3523c12ddd`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py`:
+  `69f5a41e94dfdc1890d975284f56c3a26cebee0c759ebd71435b09673ff7b289`.
+
+The cohort test now matches the exact stable `initial_cohort_size=8` authority term. The finalize trigger uses
+allowed non-PENDING state `IN_FLIGHT`, permitting leaf/dependency insertion and the intended engine post-write
+guard before transaction rollback. The index test extracts EXPLAIN's `detail` column (with a tuple fallback),
+so both no-temp-sort and positive claim-index assertions inspect the real plan. The accepted concurrency test
+and all other contracts remain intact.
+
+Sol accepts the three-test correction for Jr rerun. Targeted ruff, repository control, and `git diff --check`
+pass. Sol ran no pytest, migration, RPC, production-data mutation, or Git operation.
+
+## Authorized Jr rerun and integration continuation
+
+Jr Dev - Hermes must verify all six hashes above, integrate the exact drop without redesign, and rerun the
+same complete focused command over all three targets. Jr must also rerun targeted ruff, repository control,
+and `git diff --check`. Any failure or hash drift stops and returns to Sol. If all 128 focused tests pass, Jr
+may apply migration 0020 through the repository mechanism to offline `dex003_full.db` and record the exact
+checksum/history row, unchanged pre-0020 v2/raw counts, expected empty new tables, and empty
+`PRAGMA foreign_key_check`. Jr then updates both governance records, commits and pushes only the six accepted
+files plus those records, excluding `opencode.json` and both untracked research files, and stops for Sol
+integration review.
+
+No controller/CLI, live readiness, RPC, staged production, coverage, publication, downstream, PAPER, LIVE,
+or next ticket is authorized. Next ticket remains `NONE`.
+
 ## Sol sixth source re-review - production foundation still rejected (2026-08-08)
 
 Jr published the prior decision at commit `096f4cf`; `HEAD` and `origin/main` both resolve to that commit.
@@ -3275,3 +3319,39 @@ touch production data, or perform Git actions. Sr stops for fresh Sol source rev
 integration/test execution and all controller/CLI, live readiness, RPC, staged production, coverage,
 publication, downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains
 `NONE`.
+
+## Jr integration run - accepted six-file drop fully integrated (2026-08-10)
+
+Jr verified all six accepted SHA-256 values byte-identical to the reviewed drop (three frozen production files
+plus the three accepted test files, as recorded above), reran the full three-target focused suite, reran
+targeted ruff, repository control, and `git diff --check`, and applied migration 0020 to the offline
+`dex003_full.db` through the repository migration mechanism. All acceptance evidence:
+
+- All six accepted SHA-256 hashes match the reviewed drop exactly (production sources unchanged at
+  `edc24e8b449aee96515d16455fbcbdb259231775ca621210a6560f8e14187a1c` and
+  `fc5ad160b88c2ef6f47100b60d1f607caadde528ecbdd8606513e28a05d1bbba`; migration 0020 at
+  `f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb`; tests at
+  `1876ac59bda81434cb9bf523b0699717352b2e8c5738899d0e77439e225fec3d`,
+  `a27a80809e953d096489f3adf48c5d203a1a45bc859a51f4c21f6d3523c12ddd`, and
+  `69f5a41e94dfdc1890d975284f56c3a26cebee0c759ebd71435b09673ff7b289`).
+- Focused suite: `.venv/bin/python -m pytest tests/acquisition/test_uniswap_v2_pair_events_v2.py
+  tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py
+  tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py -v --tb=short` -> 128 passed,
+  0 failed, exit 0, 109.91s (0:01:49). Log: `logs/dex003/production_foundation_suite_run2.log`.
+- Targeted ruff on the five source/test files: all checks passed.
+- Repository control: PASS. `git diff --check`: clean.
+- Migration 0020 applied to offline `dex003_full.db` via `cryptofactors.catalog.runner.apply_migrations`
+  with `sql/migrations/` as the migration directory. Pre-apply state verified against the 0019 record:
+  19 migrations in history (0017 at `2026-07-31T07:05:59.555357+00:00`, 0018 at
+  `2026-07-31T22:33:56.162420+00:00`, 0019 at `2026-07-31T23:21:43.264218+00:00`), all 11 pre-0020 v2
+  tables empty, 548,721 `raw_acquisition` and 509,711 `raw_object` rows, empty `PRAGMA
+  foreign_key_check`. Evidence: `logs/dex003/migration_0020_pre_evidence.log`.
+- Post-apply: 20 migrations recorded; 0020 history row at `2026-08-10T02:01:47.498495+00:00`; all six new
+  tables (`uniswap_v2_pair_event_v2_root_manifest`, `_log_candidate`, `_log_candidate_block`,
+  `_plan_resume_session`, `_header_backlog`, `_header_backlog_metric`) exist and are empty; every pre-0020
+  v2/raw count unchanged (all v2 tables empty, 548,721 / 509,711 raw rows); `PRAGMA foreign_key_check`
+  empty. Post-apply database SHA-256 (after WAL checkpoint): `7d5277bfa94d7fd465251e4d01708c4ea29268b16e5888db8ef84c1ab72ec7b6`.
+  Evidence: `logs/dex003/migration_0020_post_evidence.log`.
+
+Jr committed and pushed only the six accepted files plus these two governance records, excluding
+`opencode.json` and both untracked research files. Stopped for Sol integration review.

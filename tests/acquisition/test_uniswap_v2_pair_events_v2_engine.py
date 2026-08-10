@@ -32,6 +32,7 @@ import pytest
 from cryptofactors.acquisition.uniswap_v2 import _canonical_json
 from cryptofactors.acquisition.uniswap_v2_pair_events import SWAP_TOPIC
 from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+    CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
     ORDERED_EVENT_TOPICS,
     PINNED_FINALITY_CUTOFF_BLOCK,
     PairEventV2Error,
@@ -2530,5 +2531,1412 @@ def test_inspect_pair_malformed_json_routes_before_status(
         with pytest.raises(_PairFailure) as exc:
             engine._inspect_pair(pair, _crash_request())
         assert exc.value.route == FailureClass.MALFORMED_JSON
+    finally:
+        engine.close()
+
+
+# ---------------------------------------------------------------------------
+# ADR-0015 §9.10 production foundation paths
+# ---------------------------------------------------------------------------
+
+
+def test_credential_scanner_blocks_secret_before_spool(tmp_path: Path) -> None:
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        CREDENTIAL_REDACTED_DETAIL,
+        CredentialScanner,
+        NetworkWorker,
+        _AdaptiveLimiter,
+        _TokenBucket,
+    )
+
+    secret = "supersecretprojectid99"
+    url = f"https://mainnet.infura.io/v3/{secret}"
+    scanner = CredentialScanner.from_rpc_urls(url)
+    assert scanner.contains_credential(f"see {url} for help")
+
+    spool = tmp_path / "spool"
+    spool.mkdir()
+    body = json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "result": f"leak {secret} value"}
+    ).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    worker = NetworkWorker(
+        client=client,
+        rpc_url=url,
+        provider_org="infura",
+        bucket=_TokenBucket(rate=1000.0, capacity=4.0),
+        limiter=_AdaptiveLimiter(4),
+        spool_dir=spool,
+        spool_capacity=threading.BoundedSemaphore(8),
+        max_body_bytes=1_000_000,
+        chunk_bytes=16,  # force multi-chunk
+        response_drain_deadline_seconds=30.0,
+        credential_scanner=scanner,
+    )
+    desc = worker.fetch({"jsonrpc": "2.0", "id": 1, "method": "eth_chainId", "params": []})
+    assert desc.error_kind == "credential_detection"
+    assert desc.error_detail == CREDENTIAL_REDACTED_DETAIL
+    assert desc.retained_bytes == 0
+    # No secret-bearing spool residue.
+    for path in spool.glob("*.spool"):
+        data = path.read_bytes()
+        assert secret.encode() not in data
+    client.close()
+
+
+def test_credential_scanner_allows_generic_url_without_secret() -> None:
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        CredentialScanner,
+    )
+
+    scanner = CredentialScanner.from_rpc_urls(
+        "https://mainnet.infura.io/v3/abc1234567890abcdef"
+    )
+    # Generic docs URL without secret form must not trip form scanners alone.
+    assert not scanner.contains_credential(
+        "see https://docs.example.com/v3/rpc for eth_getLogs help"
+    )
+
+
+def test_execution_policy_binds_claim_order_version(store: Store, rpc: RpcFixture) -> None:
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+        CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+        CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
+    )
+
+    engine = _engine(store, rpc)
+    try:
+        policy = engine.execution_policy_identity("plan_" + "a" * 64)
+        assert policy["claim_order_version"] == CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1
+        prod = engine.execution_policy_identity(
+            "plan_" + "a" * 64,
+            claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
+        )
+        assert prod["claim_order_version"] == CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+    finally:
+        engine.close()
+
+
+def test_production_init_rejects_wrong_parquet_pin(store: Store, rpc: RpcFixture) -> None:
+    config = EngineConfig(
+        receipt_db_path=store.db,
+        raw_root=store.raw_root,
+        spool_dir=store.spool_dir,
+        primary_rpc_url="https://primary.example/v3/KEY",
+        secondary_rpc_url="https://secondary.example/v1/KEY",
+        worker_id="worker-a",
+        plan_config=PlanConfig(initial_cohort_size=8),
+        max_nodes_in_flight=1,
+        max_spool_files=8,
+        requests_per_second=1000.0,
+    )
+    engine = PairEventV2Engine(
+        config,
+        primary_client=rpc.primary_client(),
+        secondary_client=rpc.secondary_client(),
+    )
+    try:
+        with pytest.raises(PairEventV2Error, match="parquet_sha256"):
+            engine.initialize_production(
+                [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)],
+                registry_parquet_sha256="0" * 64,
+                registry_parquet_bytes=1_606_417,
+            )
+    finally:
+        engine.close()
+
+
+def test_network_blocked_without_ready_manifest_for_production_plan(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """authenticate_chain must fail closed if production plan is not READY."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+        PRODUCTION_PLAN_ID,
+        production_plan_config,
+    )
+
+    config = EngineConfig(
+        receipt_db_path=store.db,
+        raw_root=store.raw_root,
+        spool_dir=store.spool_dir,
+        primary_rpc_url="https://primary.example/v3/KEY",
+        secondary_rpc_url="https://secondary.example/v1/KEY",
+        worker_id="worker-a",
+        plan_config=production_plan_config(),
+        max_nodes_in_flight=1,
+        max_spool_files=8,
+        requests_per_second=1000.0,
+    )
+    engine = PairEventV2Engine(
+        config,
+        primary_client=rpc.primary_client(),
+        secondary_client=rpc.secondary_client(),
+    )
+    try:
+        # Shell only — no READY.
+        policy = engine.execution_policy_identity(
+            PRODUCTION_PLAN_ID,
+            claim_order_version="domain_hash_v1",
+        )
+        engine.coordinator.ensure_production_plan_shell(
+            config=production_plan_config(), execution_policy=policy
+        )
+        engine._plan_id = PRODUCTION_PLAN_ID
+        engine._phase = EnginePhase.PLAN_INITIALIZED
+        with pytest.raises(PairEventV2Error, match="READY root manifest"):
+            engine.authenticate_chain()
+    finally:
+        engine.close()
+
+
+def _install_batch_header_handler(
+    rpc: RpcFixture,
+    *,
+    mode: str = "ok",
+    disagree_block: int | None = None,
+) -> None:
+    """Replace RpcFixture handler to serve JSON-RPC header batches."""
+
+    original = rpc._handle
+
+    def handler(request: httpx.Request, *, org: str) -> httpx.Response:
+        try:
+            payload = json.loads(request.content.decode())
+        except Exception:
+            return original(request, org=org)
+        if not isinstance(payload, list):
+            return original(request, org=org)
+        out = []
+        for item in payload:
+            params = item.get("params") or []
+            block = int(params[0], 16) if params else 0
+            hdr = rpc.headers.get(block) or _header_result(block_number=block)
+            if mode == "disagree" and org == "secondary" and block == disagree_block:
+                hdr = _header_result(block_number=block, block_hash="0x" + "ee" * 32)
+            out.append(
+                {"jsonrpc": "2.0", "id": item.get("id"), "result": hdr}
+            )
+        if mode == "missing":
+            out = out[:1]
+        elif mode == "extra":
+            out = out + [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 999,
+                    "result": _header_result(block_number=0),
+                }
+            ]
+        elif mode == "duplicate":
+            out = out + [out[0]]
+        elif mode == "reorder":
+            out = list(reversed(out))
+        return httpx.Response(200, content=json.dumps(out).encode())
+
+    rpc._handle = handler  # type: ignore[method-assign]
+
+
+def test_header_batch_dual_provider_shared_raw_and_replay(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Batch path persists shared raw and cache replay uses batch-aware auth."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    b1 = LATE_BIRTH + 1
+    b2 = LATE_BIRTH + 2
+    rpc.headers[b1] = _header_result(block_number=b1, block_hash="0x" + "ab" * 32)
+    rpc.headers[b2] = _header_result(block_number=b2, block_hash="0x" + "cd" * 32)
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(pools)
+        engine.authenticate_chain()
+        records = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        assert len(records) == 2
+        assert records[0].primary_raw_object_id == records[1].primary_raw_object_id
+        assert records[0].secondary_raw_object_id == records[1].secondary_raw_object_id
+        snap = engine.metrics
+        assert snap.header_batches >= 1
+        assert snap.header_batch_members >= 2
+        assert snap.provider_attempts_total >= 2
+        # Second call must use cache / stored batch evidence (shared-replay).
+        again = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        assert len(again) == 2
+        assert again[0].header_receipt_id == records[0].header_receipt_id
+        assert engine.metrics.headers_cached >= 2
+    finally:
+        engine.close()
+
+
+def test_header_batch_rejects_missing_extra_duplicate_disagree(
+    store: Store, rpc: RpcFixture
+) -> None:
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    b1 = LATE_BIRTH + 5
+    b2 = LATE_BIRTH + 6
+    rpc.headers[b1] = _header_result(block_number=b1)
+    rpc.headers[b2] = _header_result(block_number=b2)
+
+    for mode, match in (
+        ("missing", "missing response"),
+        ("extra", "extra response"),
+        ("duplicate", "duplicate"),
+        ("disagree", "disagreement"),
+    ):
+        _install_batch_header_handler(
+            rpc, mode=mode, disagree_block=b1 if mode == "disagree" else None
+        )
+        engine = _engine(store, rpc)
+        try:
+            plan = engine.initialize(pools)
+            engine.authenticate_chain()
+            with pytest.raises(PairEventV2Error, match=match):
+                engine.acquire_header_batch(
+                    plan_id=plan.plan_id, block_numbers=[b1, b2]
+                )
+        finally:
+            engine.close()
+
+
+def test_header_batch_reorder_ok(store: Store, rpc: RpcFixture) -> None:
+    """Response array may be reordered; matching is by id."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    b1 = LATE_BIRTH + 7
+    b2 = LATE_BIRTH + 8
+    rpc.headers[b1] = _header_result(block_number=b1, block_hash="0x" + "11" * 32)
+    rpc.headers[b2] = _header_result(block_number=b2, block_hash="0x" + "22" * 32)
+    _install_batch_header_handler(rpc, mode="reorder")
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(pools)
+        engine.authenticate_chain()
+        records = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        assert {r.block_number for r in records} == {b1, b2}
+    finally:
+        engine.close()
+
+
+def test_metrics_increment_on_dual_fetch(store: Store, rpc: RpcFixture) -> None:
+    engine = _engine(store, rpc)
+    try:
+        pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        engine.initialize(pools)
+        before = engine.metrics.provider_attempts_total
+        engine.authenticate_chain()
+        after = engine.metrics
+        assert after.provider_attempts_total >= before + 2
+        assert after.provider_attempts_primary >= 1
+        assert after.provider_attempts_secondary >= 1
+        assert after.in_flight_high_water_primary >= 1
+        assert after.provider_latency_ms_total >= 0.0
+    finally:
+        engine.close()
+
+
+def test_rolling_replenish_run_until_idle_makes_claims(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """run_until_idle rolling path claims and processes at least one node."""
+    engine = _engine(store, rpc, max_nodes_in_flight=2)
+    try:
+        pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        plan = engine.initialize(pools)
+        rpc.set_empty_logs()
+        # Headers for end blocks of claimed roots — chronological path.
+        for row in store.query(
+            f"SELECT end_block FROM {NODE_TABLE} WHERE plan_id = ? LIMIT 5",
+            (plan.plan_id,),
+        ):
+            bn = int(row["end_block"])
+            rpc.headers[bn] = _header_result(block_number=bn)
+        engine.authenticate_chain()
+        before = engine.metrics.claims
+        metrics = engine.run_until_idle(max_steps=3)
+        assert metrics.claims > before
+        engine.request_stop()
+        # Stop/drain: close joins workers
+        engine.close()
+        assert engine.metrics is not None
+    except Exception:
+        engine.close()
+        raise
+
+
+def test_scanner_over_cap_still_scans_drained_bytes(tmp_path: Path) -> None:
+    """Secret only past retention cap still triggers credential_detection."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        CREDENTIAL_REDACTED_DETAIL,
+        CredentialScanner,
+        NetworkWorker,
+        _AdaptiveLimiter,
+        _TokenBucket,
+    )
+
+    secret = "abcdefghijklmnopqrstuvwxyz99"
+    url = f"https://mainnet.infura.io/v3/{secret}"
+    scanner = CredentialScanner.from_rpc_urls(url)
+    # Body: safe prefix then secret after 32-byte cap
+    safe = b'{"jsonrpc":"2.0","id":1,"result":"'
+    body = safe + (b"A" * 40) + secret.encode() + b'"}'
+    spool = tmp_path / "spool"
+    spool.mkdir()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    worker = NetworkWorker(
+        client=client,
+        rpc_url=url,
+        provider_org="infura",
+        bucket=_TokenBucket(rate=1000.0, capacity=4.0),
+        limiter=_AdaptiveLimiter(4),
+        spool_dir=spool,
+        spool_capacity=threading.BoundedSemaphore(8),
+        max_body_bytes=32,
+        chunk_bytes=8,
+        response_drain_deadline_seconds=30.0,
+        credential_scanner=scanner,
+    )
+    desc = worker.fetch({"jsonrpc": "2.0", "id": 1, "method": "eth_chainId", "params": []})
+    assert desc.error_kind == "credential_detection"
+    assert desc.error_detail == CREDENTIAL_REDACTED_DETAIL
+    assert desc.retained_bytes == 0
+    for path in spool.glob("*.spool"):
+        assert secret.encode() not in path.read_bytes()
+    client.close()
+
+
+def _init_logs_first(
+    engine: PairEventV2Engine, pools: list[RegistryPoolBirth]
+) -> Any:
+    """Public initialize with domain_hash_v1 (logs-first) — no engine monkeypatch."""
+    return engine.initialize(
+        pools, claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+    )
+
+
+def test_zero_coverage_candidate_without_leaf(store: Store, rpc: RpcFixture) -> None:
+    """Candidate commit leaves node PENDING and no leaf row (zero coverage)."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        LEAF_TABLE,
+        LOG_CANDIDATE_TABLE,
+    )
+
+    engine = _engine(store, rpc)
+    try:
+        pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        outcome = engine.process_one()
+        assert outcome == "candidate"
+        leaves = store.query(
+            f"SELECT COUNT(*) AS c FROM {LEAF_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert int(leaves[0]["c"]) == 0
+        assert engine.metrics.candidates_committed >= 1
+        cands = store.query(
+            f"SELECT COUNT(*) AS c FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert int(cands[0]["c"]) >= 1
+        statuses = store.query(
+            f"SELECT n.status FROM {NODE_TABLE} n "
+            f"JOIN {LOG_CANDIDATE_TABLE} c "
+            "ON c.plan_id = n.plan_id AND c.domain_id = n.domain_id "
+            "WHERE n.plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert statuses
+        assert all(s["status"] == "PENDING" for s in statuses)
+    finally:
+        engine.close()
+
+
+def test_claim_fails_closed_on_tampered_candidate(store: Store, rpc: RpcFixture) -> None:
+    """force=True page revalidates existing candidates and fails closed on tamper."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        LOG_CANDIDATE_TABLE,
+    )
+
+    engine = _engine(store, rpc)
+    try:
+        pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        assert engine.process_one() == "candidate"
+        assert store.query(
+            f"SELECT 1 AS ok FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        conn = sqlite3.connect(store.db)
+        conn.execute(
+            f"UPDATE {LOG_CANDIDATE_TABLE} SET log_identity_sha256 = ? "
+            "WHERE plan_id = ?",
+            ("0" * 64, plan.plan_id),
+        )
+        conn.commit()
+        conn.close()
+        with pytest.raises(PairEventV2Error, match="digest authentication failed|candidate"):
+            engine.coordinator.authenticate_resumed_candidates(
+                plan_id=plan.plan_id, force=True, limit=32
+            )
+        # Bad candidate dropped; domain free for reacquisition.
+        assert not store.query(
+            f"SELECT 1 AS ok FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+    finally:
+        engine.close()
+
+
+def test_finalize_candidate_after_header_batch(store: Store, rpc: RpcFixture) -> None:
+    """Public path: candidate → header batch → authenticated finalize → AGREED leaf."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        LEAF_TABLE,
+        LOG_CANDIDATE_TABLE,
+    )
+
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        assert engine.process_one() == "candidate"
+        cands = store.query(
+            f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert cands
+        domain_id = cands[0]["domain_id"]
+        missing = engine.coordinator.list_missing_candidate_blocks(plan_id=plan.plan_id)
+        assert missing
+        for bn in missing:
+            rpc.headers[int(bn)] = _header_result(block_number=int(bn))
+        engine.acquire_header_batch(plan_id=plan.plan_id, block_numbers=missing)
+        page = engine.coordinator.list_finalizable_candidates(plan_id=plan.plan_id)
+        assert domain_id in page["ready_domain_ids"]
+        leaf_id = engine.finalize_candidate(plan_id=plan.plan_id, domain_id=domain_id)
+        assert leaf_id.startswith("leaf_")
+        leaves = store.query(
+            f"SELECT status FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, domain_id),
+        )
+        assert leaves[0]["status"] == "AGREED"
+        assert (
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LEAF_TABLE} WHERE plan_id = ?",
+                (plan.plan_id,),
+            )[0]["c"]
+            == 1
+        )
+        assert engine.metrics.finalizations == 1
+    finally:
+        engine.close()
+
+
+def test_production_work_loop_exact_metrics(store: Store, rpc: RpcFixture) -> None:
+    """Public production path: every known delta is exact on the one-root fixture."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc, max_nodes_in_flight=1)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        for row in store.query(
+            f"SELECT end_block, start_block FROM {NODE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        ):
+            for bn in (int(row["start_block"]), int(row["end_block"])):
+                rpc.headers[bn] = _header_result(block_number=bn)
+        before = engine.metrics
+        # Single root: 1 claim → 1 candidate → 1 header batch (1 boundary block) → finalize.
+        metrics = engine.run_until_idle(max_steps=1)
+        assert metrics.claims == before.claims + 1
+        assert metrics.candidates_committed == before.candidates_committed + 1
+        assert metrics.finalizations == before.finalizations + 1
+        assert metrics.header_batches == before.header_batches + 1
+        assert metrics.header_batch_members == before.header_batch_members + 1
+        assert metrics.headers_fetched == before.headers_fetched + 1
+        assert metrics.header_backlog == 0
+        assert metrics.in_flight_high_water_primary == 1
+        assert metrics.in_flight_high_water_secondary == 1
+        # Dual chain already ran; production turn does dual logs + dual batch headers.
+        assert metrics.provider_attempts_primary == before.provider_attempts_primary + 2
+        assert metrics.provider_attempts_secondary == before.provider_attempts_secondary + 2
+        assert metrics.provider_attempts_total == before.provider_attempts_total + 4
+        assert engine.coordinator.header_backlog_count(plan_id=plan.plan_id) == 0
+    finally:
+        engine.close()
+
+
+def test_batch_header_store_load_replay_is_native(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Coordinator store_header/load_header fully authenticate batch raw pairs."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    b1 = LATE_BIRTH + 11
+    b2 = LATE_BIRTH + 12
+    rpc.headers[b1] = _header_result(block_number=b1, block_hash="0x" + "aa" * 32)
+    rpc.headers[b2] = _header_result(block_number=b2, block_hash="0x" + "bb" * 32)
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(pools)
+        engine.authenticate_chain()
+        records = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        assert len(records) == 2
+        # Public load_header must re-auth batch-backed receipts without scalar mismatch.
+        for rec in records:
+            loaded = engine.coordinator.load_header(
+                plan_id=plan.plan_id,
+                block_number=rec.block_number,
+                primary_org=engine.config.primary_org,
+                secondary_org=engine.config.secondary_org,
+            )
+            assert loaded is not None
+            out, p_ev, s_ev = loaded
+            assert out.header_receipt_id == rec.header_receipt_id
+            assert out.primary_raw_object_id == rec.primary_raw_object_id
+            # Evidence request is a batch array covering multiple blocks.
+            p_req = json.loads(p_ev.request_json)
+            s_req = json.loads(s_ev.request_json)
+            assert isinstance(p_req, list) and len(p_req) == 2
+            assert isinstance(s_req, list) and len(s_req) == 2
+    finally:
+        engine.close()
+
+
+def test_batch_header_raw_tamper_fails_closed(store: Store, rpc: RpcFixture) -> None:
+    """Tampering batch raw bytes must fail load_header / store replay authority."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    b1 = LATE_BIRTH + 21
+    b2 = LATE_BIRTH + 22
+    rpc.headers[b1] = _header_result(block_number=b1, block_hash="0x" + "cc" * 32)
+    rpc.headers[b2] = _header_result(block_number=b2, block_hash="0x" + "dd" * 32)
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(pools)
+        engine.authenticate_chain()
+        records = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        raw_id = records[0].primary_raw_object_id
+        # Locate raw file via catalog and flip one byte.
+        rows = store.query(
+            "SELECT storage_uri, sha256, byte_size FROM raw_object WHERE raw_object_id = ?",
+            (raw_id,),
+        )
+        assert rows
+        path = store.raw_root / rows[0]["storage_uri"]
+        data = bytearray(path.read_bytes())
+        assert data
+        data[0] = (data[0] + 1) % 256
+        path.write_bytes(bytes(data))
+        with pytest.raises(PairEventV2Error):
+            engine.coordinator.load_header(
+                plan_id=plan.plan_id,
+                block_number=b1,
+                primary_org=engine.config.primary_org,
+                secondary_org=engine.config.secondary_org,
+            )
+    finally:
+        engine.close()
+
+
+def test_candidate_raw_tamper_fails_finalize(store: Store, rpc: RpcFixture) -> None:
+    """Tampered candidate log raw fails finalize (no coverage credit)."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        LEAF_TABLE,
+        LOG_CANDIDATE_TABLE,
+    )
+
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        assert engine.process_one() == "candidate"
+        cands = store.query(
+            f"SELECT domain_id, primary_logs_raw_object_id FROM {LOG_CANDIDATE_TABLE} "
+            "WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert cands
+        domain_id = cands[0]["domain_id"]
+        raw_id = cands[0]["primary_logs_raw_object_id"]
+        missing = engine.coordinator.list_missing_candidate_blocks(plan_id=plan.plan_id)
+        for bn in missing:
+            rpc.headers[int(bn)] = _header_result(block_number=int(bn))
+        engine.acquire_header_batch(plan_id=plan.plan_id, block_numbers=missing)
+        # Tamper candidate primary log raw after headers are in place.
+        rows = store.query(
+            "SELECT storage_uri FROM raw_object WHERE raw_object_id = ?",
+            (raw_id,),
+        )
+        path = store.raw_root / rows[0]["storage_uri"]
+        data = bytearray(path.read_bytes())
+        data[-1] = (data[-1] + 1) % 256
+        path.write_bytes(bytes(data))
+        with pytest.raises(PairEventV2Error):
+            engine.finalize_candidate(plan_id=plan.plan_id, domain_id=domain_id)
+        # Still PENDING — no leaf.
+        status = store.query(
+            f"SELECT status FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, domain_id),
+        )
+        assert status[0]["status"] == "PENDING"
+        assert (
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LEAF_TABLE} WHERE plan_id = ?",
+                (plan.plan_id,),
+            )[0]["c"]
+            == 0
+        )
+    finally:
+        engine.close()
+
+
+def test_finalize_atomic_rollback_after_leaf_write(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Force failure after leaf/deps inserts; transaction rolls back (no leaf)."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        DEP_TABLE,
+        LEAF_TABLE,
+        LOG_CANDIDATE_TABLE,
+    )
+
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        assert engine.process_one() == "candidate"
+        domain_id = store.query(
+            f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        )[0]["domain_id"]
+        missing = engine.coordinator.list_missing_candidate_blocks(plan_id=plan.plan_id)
+        for bn in missing:
+            rpc.headers[int(bn)] = _header_result(block_number=int(bn))
+        engine.acquire_header_batch(plan_id=plan.plan_id, block_numbers=missing)
+        # AFTER INSERT ON leaf: flip node to an allowed non-PENDING status so the
+        # engine's post-write PENDING check fails and rolls back leaf + deps.
+        # (FAILED is not in the 0017 CHECK domain; IN_FLIGHT is.)
+        conn = sqlite3.connect(store.db)
+        conn.execute(
+            f"""
+            CREATE TRIGGER trg_finalize_post_leaf_fail
+            AFTER INSERT ON {LEAF_TABLE}
+            BEGIN
+              UPDATE {NODE_TABLE}
+              SET status = 'IN_FLIGHT'
+              WHERE plan_id = NEW.plan_id AND domain_id = NEW.domain_id;
+            END;
+            """
+        )
+        conn.commit()
+        conn.close()
+        with pytest.raises(
+            PairEventV2Error, match="node status changed during finalize"
+        ):
+            engine.finalize_candidate(plan_id=plan.plan_id, domain_id=domain_id)
+        assert (
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LEAF_TABLE} WHERE plan_id = ?",
+                (plan.plan_id,),
+            )[0]["c"]
+            == 0
+        )
+        assert (
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {DEP_TABLE} WHERE plan_id = ?",
+                (plan.plan_id,),
+            )[0]["c"]
+            == 0
+        )
+        # Trigger change is rolled back with the TX; node remains PENDING.
+        status = store.query(
+            f"SELECT status FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+            (plan.plan_id, domain_id),
+        )
+        assert status[0]["status"] == "PENDING"
+    finally:
+        engine.close()
+
+
+def test_list_missing_and_finalizable_are_bounded(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """list_missing / list_finalizable respect page bounds (no unbounded scan)."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    engine = _engine(store, rpc)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        assert engine.process_one() == "candidate"
+        page = engine.coordinator.list_missing_candidate_blocks(
+            plan_id=plan.plan_id, limit=1
+        )
+        assert len(page) <= 1
+        with pytest.raises(PairEventV2Error, match="positive|hard bound"):
+            engine.coordinator.list_missing_candidate_blocks(
+                plan_id=plan.plan_id, limit=0
+            )
+        with pytest.raises(PairEventV2Error, match="hard bound"):
+            engine.coordinator.list_finalizable_candidates(
+                plan_id=plan.plan_id, limit=100
+            )
+        fin = engine.coordinator.list_finalizable_candidates(
+            plan_id=plan.plan_id, limit=1
+        )
+        assert isinstance(fin, dict)
+        assert fin["examined"] <= 1
+        assert "ready_domain_ids" in fin
+        assert "exhausted" in fin
+    finally:
+        engine.close()
+
+
+def test_header_batch_metrics_are_exact(store: Store, rpc: RpcFixture) -> None:
+    """header_batches / header_batch_members / headers_cached exact increments."""
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    b1 = LATE_BIRTH + 31
+    b2 = LATE_BIRTH + 32
+    rpc.headers[b1] = _header_result(block_number=b1, block_hash="0x" + "11" * 32)
+    rpc.headers[b2] = _header_result(block_number=b2, block_hash="0x" + "22" * 32)
+    _install_batch_header_handler(rpc, mode="ok")
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(pools)
+        engine.authenticate_chain()
+        before = engine.metrics
+        records = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        mid = engine.metrics
+        assert len(records) == 2
+        assert mid.header_batches == before.header_batches + 1
+        assert mid.header_batch_members == before.header_batch_members + 2
+        assert mid.headers_fetched == before.headers_fetched + 2
+        again = engine.acquire_header_batch(
+            plan_id=plan.plan_id, block_numbers=[b1, b2]
+        )
+        after = engine.metrics
+        assert len(again) == 2
+        assert after.headers_cached == mid.headers_cached + 2
+        # No new batch fetch when fully cached.
+        assert after.header_batches == mid.header_batches
+    finally:
+        engine.close()
+
+
+def test_ready_root_semantic_tamper_via_ready_gate(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """READY resume gate fails closed when a root field no longer recomputes domain_id."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+        ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID,
+    )
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        ROOT_MANIFEST_TABLE,
+    )
+
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    engine = _engine(store, rpc)
+    try:
+        plan = engine.initialize(pools)
+        base = engine.coordinator.reauthenticate_root_domain_set(plan_id=plan.plan_id)
+        assert base["root_count"] >= 1
+        # Insert READY manifest matching recomputed set (non-production pins so pin
+        # checks are not the first failure after field recompute).
+        now = "2026-01-01T00:00:00+00:00"
+        conn = sqlite3.connect(store.db)
+        conn.execute(
+            f"INSERT INTO {ROOT_MANIFEST_TABLE} ("
+            "plan_id, registry_dataset_id, registry_parquet_sha256, "
+            "registry_parquet_bytes, root_count, root_domain_set_sha256, "
+            "pool_topic_blocks, status, created_at, updated_at"
+            ") VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (
+                plan.plan_id,
+                ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID,
+                "a" * 64,
+                1,
+                int(base["root_count"]),
+                str(base["root_domain_set_sha256"]),
+                1,
+                "READY",
+                now,
+                now,
+            ),
+        )
+        row = conn.execute(
+            f"SELECT domain_id, addresses_json FROM {NODE_TABLE} "
+            "WHERE plan_id = ? AND parent_domain_id IS NULL LIMIT 1",
+            (plan.plan_id,),
+        ).fetchone()
+        assert row is not None
+        addresses = json.loads(row[1])
+        bad = list(addresses)
+        a0 = bad[0]
+        bad[0] = a0[:-1] + ("0" if a0[-1] != "0" else "1")
+        conn.execute(
+            f"UPDATE {NODE_TABLE} SET addresses_json = ? "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (json.dumps(bad), plan.plan_id, row[0]),
+        )
+        conn.commit()
+        conn.close()
+        with pytest.raises(
+            PairEventV2Error, match="does not recompute|addresses|domain_id"
+        ):
+            engine.coordinator.authenticate_ready_root_manifest(
+                plan_id=plan.plan_id,
+                registry_parquet_sha256="a" * 64,
+                registry_parquet_bytes=1,
+            )
+    finally:
+        engine.close()
+
+def test_candidate_commit_crash_boundary_atomic(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Public commit_log_candidate aborts mid-block insert; zero durable candidate rows."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        LOG_CANDIDATE_BLOCK_TABLE,
+        LOG_CANDIDATE_TABLE,
+    )
+
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    engine = _engine(store, rpc)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        # Claim a node via public coordinator, then abort block insert in commit.
+        claim = engine.coordinator.claim_pending(
+            plan_id=plan.plan_id,
+            worker_id="worker-a",
+            lease_ttl_seconds=30.0,
+        )
+        assert claim is not None
+        # Dual-fetch logs so we have real raw pairs for the commit kwargs.
+        request = request_for_domain(claim.node.domain)
+        pair = engine._dual_fetch(request)
+        assert pair[0].evidence is not None and pair[1].evidence is not None
+        conn = sqlite3.connect(store.db)
+        conn.execute(
+            f"""
+            CREATE TRIGGER trg_cand_block_crash
+            AFTER INSERT ON {LOG_CANDIDATE_BLOCK_TABLE}
+            BEGIN
+              SELECT RAISE(ABORT, 'simulated candidate crash boundary');
+            END;
+            """
+        )
+        conn.commit()
+        conn.close()
+        domain = claim.node.domain
+        candidate_kwargs = {
+            "log_identity_sha256": "0" * 64,
+            "log_count": 0,
+            "primary_provider_org": engine.config.primary_org,
+            "secondary_provider_org": engine.config.secondary_org,
+            "primary_logs_raw_object_id": pair[0].evidence.raw_object_id,
+            "secondary_logs_raw_object_id": pair[1].evidence.raw_object_id,
+            "primary_logs_acquisition_id": pair[0].evidence.acquisition_id,
+            "secondary_logs_acquisition_id": pair[1].evidence.acquisition_id,
+            "request_json": _canonical_json(request),
+        }
+        blocks = [(domain.end_block, None, True)]
+        with pytest.raises(Exception, match="simulated candidate crash|ABORT|candidate"):
+            engine.coordinator.commit_log_candidate(
+                claim, candidate_kwargs=candidate_kwargs, blocks=blocks
+            )
+        assert (
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+                (plan.plan_id,),
+            )[0]["c"]
+            == 0
+        )
+        assert (
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+                "WHERE plan_id = ?",
+                (plan.plan_id,),
+            )[0]["c"]
+            == 0
+        )
+    finally:
+        engine.close()
+
+
+def test_public_resume_lifecycle_default_page_plus_one_and_concurrent(
+    store: Store, rpc: RpcFixture
+) -> None:
+    """Public attach/run lifecycle: mid-page gen bump + exact insert-behind row.
+
+    Decisive public-path evidence:
+    - attach rejects changed immutable policy before gen bump
+    - attach claim_order is independent (logs-first domain_hash supplied by caller)
+    - real batch-header path installed so run_until_idle can complete
+    - 32+1 (and surplus) candidates; known auth page boundary; public process_one
+      commit with exact domain/gen capture
+    - pause only inside ``_op_authenticate_resumed_candidates`` after raw replay
+      and before the stamp write transaction (never on commit-time auth)
+    - concurrent public attach bumps generation while a single run_until_idle is
+      mid-page; assert generation_restart and same-invocation new-boundary complete
+    - exact committed domain survives and ends at final generation
+    - one generation integer per candidate; O(plans) session rows
+    """
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        CLAIM_SCAN_PAGE_SIZE,
+        LOG_CANDIDATE_TABLE,
+        PLAN_RESUME_SESSION_TABLE,
+    )
+
+    assert CLAIM_SCAN_PAGE_SIZE == 32
+    # Batch header path required by production run_until_idle header turns.
+    _install_batch_header_handler(rpc, mode="ok")
+    # Enough roots so after one full auth page + claim-path auth page during
+    # process_one, at least one known stale candidate remains for run_until_idle.
+    # 2*page + 1 initial candidates → after page + claim-auth page → ≥1 stale.
+    target_initial = CLAIM_SCAN_PAGE_SIZE * 2 + 1
+    pools = [
+        RegistryPoolBirth(
+            pool_address="0x" + f"{i:02x}" * 20,
+            creation_block=max(LATE_BIRTH - (i * 7_000), 10_008_355),
+        )
+        for i in range(1, target_initial + 40)
+    ]
+    eng1 = _engine(store, rpc, max_nodes_in_flight=1)
+    plan_id: str
+    try:
+        plan = _init_logs_first(eng1, pools)
+        plan_id = plan.plan_id
+        eng1.authenticate_chain()
+        rpc.set_empty_logs()
+        for _ in range(target_initial):
+            outcome = eng1.process_one()
+            if outcome is None:
+                break
+            assert outcome == "candidate"
+        n_cands = int(
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+                (plan_id,),
+            )[0]["c"]
+        )
+        assert n_cands >= CLAIM_SCAN_PAGE_SIZE + 1, n_cands
+        assert n_cands >= target_initial, n_cands
+        before_ids = {
+            r["domain_id"]
+            for r in store.query(
+                f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+                (plan_id,),
+            )
+        }
+        gen_init = int(
+            store.query(
+                f"SELECT active_generation FROM {PLAN_RESUME_SESSION_TABLE} "
+                "WHERE plan_id = ?",
+                (plan_id,),
+            )[0]["active_generation"]
+        )
+    finally:
+        eng1.close()
+
+    def _active_generation() -> int:
+        return int(
+            store.query(
+                f"SELECT active_generation FROM {PLAN_RESUME_SESSION_TABLE} "
+                "WHERE plan_id = ?",
+                (plan_id,),
+            )[0]["active_generation"]
+        )
+
+    def _unauth_count(generation: int) -> int:
+        return int(
+            store.query(
+                f"SELECT COUNT(*) AS c FROM {LOG_CANDIDATE_TABLE} "
+                "WHERE plan_id = ? AND (session_auth_generation IS NULL "
+                "OR session_auth_generation != ?)",
+                (plan_id, generation),
+            )[0]["c"]
+        )
+
+    def _row_gen(domain_id: str) -> int | None:
+        rows = store.query(
+            f"SELECT session_auth_generation FROM {LOG_CANDIDATE_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan_id, domain_id),
+        )
+        if not rows:
+            return None
+        val = rows[0]["session_auth_generation"]
+        return None if val is None else int(val)
+
+    # Attach with changed immutable policy must fail before generation mutation.
+    gen_before_reject = _active_generation()
+    eng_bad = _engine(store, rpc, max_nodes_in_flight=1, max_attempts=99, worker_id="bad")
+    try:
+        with pytest.raises(PairEventV2Error, match="execution policy mismatch"):
+            eng_bad.attach_existing_plan(
+                plan_id, claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+            )
+    finally:
+        eng_bad.close()
+    assert _active_generation() == gen_before_reject == gen_init
+
+    # Wrong independent claim order (chronological vs stored domain_hash) rejects
+    # without reading the stored claim order as its own expected value.
+    eng_wrong_order = _engine(store, rpc, max_nodes_in_flight=1, worker_id="wrong-order")
+    try:
+        with pytest.raises(PairEventV2Error, match="execution policy mismatch"):
+            eng_wrong_order.attach_existing_plan(plan_id)
+    finally:
+        eng_wrong_order.close()
+    assert _active_generation() == gen_init
+
+    eng_a = _engine(store, rpc, max_nodes_in_flight=1, worker_id="worker-a")
+    eng_b = _engine(store, rpc, max_nodes_in_flight=1, worker_id="worker-b")
+    errors: list[BaseException] = []
+    shared: dict[str, Any] = {}
+    auth_pages: list[dict[str, Any]] = []
+    mid_page_pause = threading.Event()
+    mid_page_resume = threading.Event()
+    try:
+        attach_a = eng_a.attach_existing_plan(
+            plan_id, claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+        )
+        attach_b = eng_b.attach_existing_plan(
+            plan_id, claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+        )
+        gen_live = int(attach_b["active_generation"])
+        assert gen_live >= int(attach_a["active_generation"]) >= gen_init + 1
+        assert attach_a["claim_order_version"] == CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+
+        # Known auth page boundary (one full page, not complete) — 32+1 invariant.
+        page1 = eng_a.coordinator.authenticate_resumed_candidates(
+            plan_id=plan_id, force=False, limit=CLAIM_SCAN_PAGE_SIZE
+        )
+        assert page1["examined"] == CLAIM_SCAN_PAGE_SIZE
+        assert page1["complete"] is False
+        assert page1.get("generation_restart") is False
+        page_through = str(page1["through_domain_id"])
+        gen_at_page = int(page1["active_generation"])
+        assert gen_at_page == _active_generation()
+        stale_after_page = _unauth_count(gen_at_page)
+        assert stale_after_page >= CLAIM_SCAN_PAGE_SIZE + 1, stale_after_page
+        shared["page_through"] = page_through
+        shared["gen_at_page"] = gen_at_page
+
+        # Public candidate commit after that page boundary; capture exact domain.
+        # claim_pending will auth one more page of stale first; surplus ensures
+        # ≥1 known stale remains for the subsequent run_until_idle resume page.
+        ids_before_commit = {
+            r["domain_id"]
+            for r in store.query(
+                f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+                (plan_id,),
+            )
+        }
+        rpc.set_empty_logs()
+        committed_domain: str | None = None
+        for _ in range(64):
+            outcome = eng_b.process_one()
+            if outcome == "candidate":
+                ids_after = {
+                    r["domain_id"]
+                    for r in store.query(
+                        f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} "
+                        "WHERE plan_id = ?",
+                        (plan_id,),
+                    )
+                }
+                new_ids = ids_after - ids_before_commit
+                assert len(new_ids) == 1, new_ids
+                committed_domain = next(iter(new_ids))
+                break
+            time.sleep(0.01)
+        assert committed_domain is not None, "expected public process_one commit"
+        assert committed_domain not in ids_before_commit
+        assert committed_domain not in before_ids
+        # Committed under the live generation (current, not SQL-null simulation).
+        commit_gen = _row_gen(committed_domain)
+        assert commit_gen == gen_at_page
+        shared["committed_domain"] = committed_domain
+        shared["committed_gen_at_commit"] = commit_gen
+        # At least one known stale candidate remains for the resume page under race.
+        stale_for_race = _unauth_count(gen_at_page)
+        assert stale_for_race >= 1, stale_for_race
+        shared["stale_for_race"] = stale_for_race
+
+        # Pause only inside resume-auth page op: after successful raw replay and
+        # before the generation-stamp BEGIN IMMEDIATE. Never intercept commit-time
+        # authentication (which holds a write transaction).
+        orig_auth_op = eng_a.coordinator._op_authenticate_resumed_candidates
+        orig_auth_row = eng_a.coordinator._authenticate_candidate_row
+        pause_used = {"n": 0}
+
+        def _auth_op_hook(
+            conn: sqlite3.Connection,
+            writer: Any,
+            *,
+            plan_id: str,
+            force: bool = False,
+            limit: int = CLAIM_SCAN_PAGE_SIZE,
+        ) -> dict[str, Any]:
+            def _row_after_replay_before_stamp(
+                row_conn: sqlite3.Connection, *, plan_id: str, domain_id: str
+            ) -> None:
+                # Raw replay only — stamp TX is opened by the op after this returns.
+                orig_auth_row(row_conn, plan_id=plan_id, domain_id=domain_id)
+                if pause_used["n"] == 0:
+                    pause_used["n"] = 1
+                    mid_page_pause.set()
+                    # No SQLite write lock held here; B can BEGIN IMMEDIATE for attach.
+                    assert mid_page_resume.wait(timeout=60)
+
+            eng_a.coordinator._authenticate_candidate_row = (  # type: ignore[method-assign]
+                _row_after_replay_before_stamp
+            )
+            try:
+                result = orig_auth_op(
+                    conn, writer, plan_id=plan_id, force=force, limit=limit
+                )
+            finally:
+                eng_a.coordinator._authenticate_candidate_row = (  # type: ignore[method-assign]
+                    orig_auth_row
+                )
+            auth_pages.append(dict(result))
+            return result
+
+        eng_a.coordinator._op_authenticate_resumed_candidates = _auth_op_hook  # type: ignore[method-assign]
+
+        def runner_a() -> None:
+            try:
+                # Single already-running public scheduling invocation spans the bump.
+                eng_a.run_until_idle()
+                shared["a_finished_gen"] = _active_generation()
+                shared["a_ok"] = True
+            except BaseException as exc:  # noqa: BLE001 — surface on main thread
+                errors.append(exc)
+                mid_page_pause.set()
+                mid_page_resume.set()
+
+        def runner_b() -> None:
+            try:
+                assert mid_page_pause.wait(timeout=60), "A never paused mid auth-page"
+                # Bump while A's resume-auth page is between raw replay and stamp TX.
+                gen_before_bump = _active_generation()
+                assert _row_gen(committed_domain) == gen_before_bump
+                bump = eng_b.attach_existing_plan(
+                    plan_id, claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+                )
+                gen_after_bump = int(bump["active_generation"])
+                shared["gen_after_bump"] = gen_after_bump
+                assert gen_after_bump > gen_before_bump
+                # Exact committed domain is now stale for the new generation.
+                assert _row_gen(committed_domain) == commit_gen
+                assert _row_gen(committed_domain) != gen_after_bump
+                assert _unauth_count(gen_after_bump) >= 1
+                mid_page_resume.set()
+                eng_b.run_until_idle()
+                shared["b_ok"] = True
+            except BaseException as exc:  # noqa: BLE001 — surface on main thread
+                errors.append(exc)
+                mid_page_resume.set()
+
+        t_a = threading.Thread(target=runner_a, name="resume-a")
+        t_b = threading.Thread(target=runner_b, name="resume-b")
+        t_a.start()
+        t_b.start()
+        t_a.join(timeout=180)
+        t_b.join(timeout=180)
+        assert not t_a.is_alive() and not t_b.is_alive(), "coordinator threads timed out"
+        if errors:
+            raise errors[0]
+        assert shared.get("a_ok") is True
+        assert shared.get("b_ok") is True
+        assert pause_used["n"] == 1
+
+        # Same run_until_idle's resume-auth path returned generation_restart.
+        restart_pages = [p for p in auth_pages if p.get("generation_restart") is True]
+        assert restart_pages, auth_pages[:8]
+        assert restart_pages[0].get("complete") is False
+        gen_final = _active_generation()
+        assert gen_final >= shared["gen_after_bump"]
+        assert _unauth_count(gen_final) == 0
+        # Exact committed domain retained and re-authenticated for final generation.
+        assert _row_gen(committed_domain) == gen_final
+        remaining = {
+            r["domain_id"]
+            for r in store.query(
+                f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} WHERE plan_id = ?",
+                (plan_id,),
+            )
+        }
+        assert committed_domain in remaining
+        assert before_ids <= remaining
+        gens = store.query(
+            f"SELECT session_auth_generation FROM {LOG_CANDIDATE_TABLE} "
+            "WHERE plan_id = ?",
+            (plan_id,),
+        )
+        assert len(gens) == len(remaining)
+        assert all(int(r["session_auth_generation"]) == gen_final for r in gens)
+        sessions = store.query(
+            f"SELECT COUNT(*) AS c FROM {PLAN_RESUME_SESSION_TABLE}"
+        )
+        assert int(sessions[0]["c"]) == 1
+    finally:
+        eng_a.close()
+        eng_b.close()
+
+
+def test_header_backlog_cross_process_exact(store: Store, rpc: RpcFixture) -> None:
+    """Exact backlog is durable: second engine sees first engine's candidate/header."""
+    from cryptofactors.acquisition.uniswap_v2_pair_events_v2_engine import (
+        HEADER_BACKLOG_METRIC_TABLE,
+        HEADER_BACKLOG_TABLE,
+    )
+
+    pools = [RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH)]
+    _install_batch_header_handler(rpc, mode="ok")
+    eng_a = _engine(store, rpc)
+    try:
+        plan = _init_logs_first(eng_a, pools)
+        eng_a.authenticate_chain()
+        rpc.set_empty_logs()
+        assert eng_a.process_one() == "candidate"
+        backlog_a = eng_a.coordinator.header_backlog_count(plan_id=plan.plan_id)
+        assert backlog_a >= 1
+        metric_rows = store.query(
+            f"SELECT missing_count FROM {HEADER_BACKLOG_METRIC_TABLE} "
+            "WHERE plan_id = ?",
+            (plan.plan_id,),
+        )
+        assert metric_rows and int(metric_rows[0]["missing_count"]) == backlog_a
+        eng_b = PairEventV2Engine(
+            EngineConfig(
+                receipt_db_path=store.db,
+                raw_root=store.raw_root,
+                spool_dir=store.spool_dir,
+                primary_rpc_url="https://primary.example/v3/KEY",
+                secondary_rpc_url="https://secondary.example/v1/KEY",
+                worker_id="worker-b",
+                max_nodes_in_flight=1,
+                max_spool_files=8,
+                requests_per_second=1000.0,
+            ),
+            primary_client=rpc.primary_client(),
+            secondary_client=rpc.secondary_client(),
+        )
+        try:
+            eng_b._plan_id = plan.plan_id
+            eng_b._phase = EnginePhase.CHAIN_AUTHENTICATED
+            assert eng_b.coordinator.header_backlog_count(plan_id=plan.plan_id) == backlog_a
+            missing = eng_a.coordinator.list_missing_candidate_blocks(
+                plan_id=plan.plan_id
+            )
+            for bn in missing:
+                rpc.headers[int(bn)] = _header_result(block_number=int(bn))
+            eng_a.acquire_header_batch(plan_id=plan.plan_id, block_numbers=missing)
+            assert eng_a.coordinator.header_backlog_count(plan_id=plan.plan_id) == 0
+            assert eng_b.coordinator.header_backlog_count(plan_id=plan.plan_id) == 0
+            assert (
+                store.query(
+                    f"SELECT COUNT(*) AS c FROM {HEADER_BACKLOG_TABLE} "
+                    "WHERE plan_id = ?",
+                    (plan.plan_id,),
+                )[0]["c"]
+                == 0
+            )
+        finally:
+            eng_b.close()
+    finally:
+        eng_a.close()
+
+
+def test_node_refill_before_header_work(store: Store, rpc: RpcFixture) -> None:
+    """After one node completes, the open slot is refilled before header-batch work."""
+    # Two pools → multiple roots so a second claim exists after the first completes.
+    pools = [
+        RegistryPoolBirth(pool_address=POOL, creation_block=LATE_BIRTH),
+        RegistryPoolBirth(pool_address=POOL_B, creation_block=LATE_BIRTH - 50_000),
+    ]
+    events: list[str] = []
+    original = rpc._handle
+
+    def handler(request: httpx.Request, *, org: str) -> httpx.Response:
+        try:
+            payload = json.loads(request.content.decode())
+        except Exception:
+            return original(request, org=org)
+        if isinstance(payload, list):
+            events.append("header_batch")
+            out = []
+            for item in payload:
+                params = item.get("params") or []
+                block = int(params[0], 16) if params else 0
+                hdr = rpc.headers.get(block) or _header_result(block_number=block)
+                out.append({"jsonrpc": "2.0", "id": item.get("id"), "result": hdr})
+            return httpx.Response(200, content=json.dumps(out).encode())
+        method = str(payload.get("method", ""))
+        if method == "eth_getLogs":
+            events.append("logs")
+        elif method == "eth_getBlockByNumber":
+            events.append("header_scalar")
+        return original(request, org=org)
+
+    rpc._handle = handler  # type: ignore[method-assign]
+    # max_nodes_in_flight=1: second logs call after first completion is a refill,
+    # not initial capacity fill.
+    engine = _engine(store, rpc, max_nodes_in_flight=1)
+    try:
+        plan = _init_logs_first(engine, pools)
+        engine.authenticate_chain()
+        rpc.set_empty_logs()
+        for row in store.query(
+            f"SELECT end_block, start_block FROM {NODE_TABLE} WHERE plan_id = ?",
+            (plan.plan_id,),
+        ):
+            for bn in (int(row["start_block"]), int(row["end_block"])):
+                rpc.headers[bn] = _header_result(block_number=bn)
+        events.clear()
+        engine.run_until_idle(max_steps=2)
+        assert "header_batch" in events, events
+        first_header = events.index("header_batch")
+        logs_before = events[:first_header].count("logs")
+        # Initial fill = 1 (max_nodes_in_flight). A second logs before headers is refill.
+        assert logs_before >= 2, events
+        assert engine.metrics.claims >= 2
+        assert engine.metrics.nodes_in_flight_high_water == 1
     finally:
         engine.close()

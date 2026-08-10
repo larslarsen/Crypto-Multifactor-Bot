@@ -49,10 +49,29 @@ from cryptofactors.acquisition.uniswap_v2_pair_events import (
 
 PINNED_FINALITY_CUTOFF_BLOCK: Final[int] = 25_600_000
 ROOT_BLOCK_SIZE: Final[int] = 5_000
+# Generic PlanConfig default remains non-authoritative for production.
+# ADR-0015 §9.10 production path requires cohort 8 (authenticated matrix selection).
 DEFAULT_INITIAL_COHORT_SIZE: Final[int] = 64
-# Live provider matrix candidates (ADR-0015 §9.8). Production freezes 64 only after
-# the matrix gate; plan identity still includes the chosen size.
+PRODUCTION_INITIAL_COHORT_SIZE: Final[int] = 8
+# Live provider matrix candidates (ADR-0015 §9.8). Production execution freezes the
+# authenticated matrix selection (cohort 8); plan identity still includes the size.
 CANDIDATE_COHORT_SIZES: Final[frozenset[int]] = frozenset({1, 8, 32, 64, 128})
+
+# ADR-0015 §9.10 full production plan anchors (accepted registry, cohort 8).
+PRODUCTION_PLAN_ID: Final[str] = (
+    "plan_2b96356463410b9d0a3f4f7313a06260360853207ed1bf1e42eec9eb4d756584"
+)
+PRODUCTION_ROOT_COUNT: Final[int] = 1_858_348
+PRODUCTION_POOL_TOPIC_BLOCKS: Final[int] = 148_506_716_734
+PRODUCTION_ROOT_DOMAIN_SET_SHA256: Final[str] = (
+    "081a12f780d065a7596ba073ba80819d173e8d74b3b16235672da673942ea907"
+)
+PRODUCTION_REGISTRY_PARQUET_SHA256: Final[str] = (
+    "8e41a9fb1e1b05f126345ca0a7a9eb04792cd0e92d45406a9b5c031105d83256"
+)
+PRODUCTION_REGISTRY_PARQUET_BYTES: Final[int] = 1_606_417
+CLAIM_ORDER_VERSION_DOMAIN_HASH_V1: Final[str] = "domain_hash_v1"
+CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1: Final[str] = "chronological_v1"
 
 # Ordered Swap then Sync — plan identity and topic-position-0 OR filter order.
 ORDERED_EVENT_TOPICS: Final[tuple[str, str]] = (SWAP_TOPIC, SYNC_TOPIC)
@@ -1967,6 +1986,316 @@ def coverage_product_record(report: PoolTopicCoverage) -> CoverageProductRecord:
 
 
 # ---------------------------------------------------------------------------
+# ADR-0015 §9.10 production foundation (offline pure)
+# ---------------------------------------------------------------------------
+
+
+def production_plan_config() -> PlanConfig:
+    """Authoritative production PlanConfig: cohort 8, pinned registry, dual event orgs."""
+    return PlanConfig(initial_cohort_size=PRODUCTION_INITIAL_COHORT_SIZE)
+
+
+def root_pool_topic_blocks(
+    *,
+    addresses: Sequence[str],
+    root_start: int,
+    root_end: int,
+    births: Mapping[str, int],
+    cutoff_block: int = PINNED_FINALITY_CUTOFF_BLOCK,
+) -> int:
+    """Birth-clamped pool×topic×block count for one root domain (integer PTB)."""
+    total = 0
+    for address in addresses:
+        creation = births[normalize_address(address)]
+        for _topic in ORDERED_EVENT_TOPICS:
+            clamped = birth_clamped_interval(
+                creation_block=creation,
+                domain_start=root_start,
+                domain_end=root_end,
+                cutoff_block=cutoff_block,
+            )
+            if clamped is not None:
+                total += clamped[1] - clamped[0] + 1
+    return total
+
+
+def iter_production_root_filters(
+    pools: Sequence[RegistryPoolBirth],
+    *,
+    config: PlanConfig | None = None,
+    batch_size: int = 256,
+):
+    """Yield production root filters in construction order without materializing all.
+
+    Caller may process one root at a time. Does not allocate the full root list.
+    ``batch_size`` is reserved for future batching hints and must be positive.
+    """
+    if batch_size <= 0:
+        raise PairEventV2Error("batch_size must be positive")
+    cfg = config if config is not None else production_plan_config()
+    if cfg.initial_cohort_size != PRODUCTION_INITIAL_COHORT_SIZE:
+        raise PairEventV2Error(
+            "production root iterator requires initial_cohort_size=8"
+        )
+    if cfg.plan_id() != PRODUCTION_PLAN_ID:
+        raise PairEventV2Error(
+            "production root iterator requires the pinned production plan identity"
+        )
+    ordered = sort_pool_births(pools, cutoff_block=cfg.cutoff_block)
+    if not ordered:
+        raise PairEventV2Error("registry slice is empty")
+    plan_id = cfg.plan_id()
+    for root_start, root_end in iter_root_windows(
+        deployment_block=cfg.deployment_block,
+        cutoff_block=cfg.cutoff_block,
+        root_block_size=cfg.root_block_size,
+    ):
+        addresses = tuple(
+            pool.pool_address for pool in ordered if pool.creation_block <= root_end
+        )
+        if not addresses:
+            continue
+        cohorts = partition_address_cohorts(
+            addresses, cohort_size=cfg.initial_cohort_size
+        )
+        for cohort_index, cohort in enumerate(cohorts):
+            domain = QueryDomain(
+                start_block=root_start,
+                end_block=root_end,
+                addresses=cohort,
+                topics=cfg.topics,
+            )
+            yield RootFilterPlan(
+                plan_id=plan_id,
+                root_start=root_start,
+                root_end=root_end,
+                cohort_index=cohort_index,
+                domain=domain,
+            )
+
+
+def _external_sort_hash_domain_ids(domain_id_path: str, *, chunk_size: int = 50_000) -> str:
+    """SHA-256 over lexicographically sorted domain_id lines (each + LF).
+
+    Uses chunked on-disk sort so peak memory stays O(chunk_size), not O(root_count).
+    """
+    import heapq
+    import os
+    import tempfile
+
+    chunk_paths: list[str] = []
+    buf: list[str] = []
+    try:
+        with open(domain_id_path, encoding="ascii") as source:
+            for line in source:
+                domain_id = line.rstrip("\n")
+                if not domain_id:
+                    continue
+                buf.append(domain_id)
+                if len(buf) >= chunk_size:
+                    buf.sort()
+                    fd, path = tempfile.mkstemp(prefix="cmb_dom_")
+                    with os.fdopen(fd, "w", encoding="ascii") as out:
+                        out.write("\n".join(buf))
+                        out.write("\n")
+                    chunk_paths.append(path)
+                    buf.clear()
+        if buf:
+            buf.sort()
+            fd, path = tempfile.mkstemp(prefix="cmb_dom_")
+            with os.fdopen(fd, "w", encoding="ascii") as out:
+                out.write("\n".join(buf))
+                out.write("\n")
+            chunk_paths.append(path)
+            buf.clear()
+        hasher = hashlib.sha256()
+        if not chunk_paths:
+            return hasher.hexdigest()
+        files = [open(path, encoding="ascii") for path in chunk_paths]
+        try:
+            for domain_id in heapq.merge(*(f for f in files)):
+                domain_id = domain_id.rstrip("\n")
+                if not domain_id:
+                    continue
+                hasher.update(domain_id.encode("ascii"))
+                hasher.update(b"\n")
+        finally:
+            for f in files:
+                f.close()
+        return hasher.hexdigest()
+    finally:
+        for path in chunk_paths:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+
+def compute_production_root_anchors(
+    pools: Sequence[RegistryPoolBirth],
+    *,
+    config: PlanConfig | None = None,
+    domain_id_chunk_size: int = 50_000,
+) -> dict[str, Any]:
+    """Stream roots once; return count, PTB total, and domain-set SHA-256.
+
+    Domain-set digest = SHA-256 over lexicographically ordered domain_id ASCII
+    values each followed by a single LF (ADR-0015 §9.10). Domain IDs are spilled
+    to a temp file and externally sorted so peak memory is O(chunk), not O(roots).
+    """
+    import os
+    import tempfile
+
+    cfg = config if config is not None else production_plan_config()
+    ordered = sort_pool_births(pools, cutoff_block=cfg.cutoff_block)
+    births = {p.pool_address: p.creation_block for p in ordered}
+    root_count = 0
+    pool_topic_blocks = 0
+    fd, domain_path = tempfile.mkstemp(prefix="cmb_prod_dom_")
+    try:
+        with os.fdopen(fd, "w", encoding="ascii") as domain_file:
+            for root in iter_production_root_filters(ordered, config=cfg):
+                root_count += 1
+                domain_file.write(root.domain_id)
+                domain_file.write("\n")
+                pool_topic_blocks += root_pool_topic_blocks(
+                    addresses=root.domain.addresses,
+                    root_start=root.root_start,
+                    root_end=root.root_end,
+                    births=births,
+                    cutoff_block=cfg.cutoff_block,
+                )
+        digest = _external_sort_hash_domain_ids(
+            domain_path, chunk_size=domain_id_chunk_size
+        )
+    finally:
+        try:
+            os.unlink(domain_path)
+        except OSError:
+            pass
+    return {
+        "plan_id": cfg.plan_id(),
+        "root_count": root_count,
+        "pool_topic_blocks": pool_topic_blocks,
+        "root_domain_set_sha256": digest,
+    }
+
+
+def verify_production_root_anchors(anchors: Mapping[str, Any]) -> None:
+    """Fail closed unless anchors match the pinned ADR-0015 §9.10 values."""
+    if str(anchors.get("plan_id")) != PRODUCTION_PLAN_ID:
+        raise PairEventV2Error("production plan_id anchor mismatch")
+    if int(anchors.get("root_count", -1)) != PRODUCTION_ROOT_COUNT:
+        raise PairEventV2Error("production root_count anchor mismatch")
+    if int(anchors.get("pool_topic_blocks", -1)) != PRODUCTION_POOL_TOPIC_BLOCKS:
+        raise PairEventV2Error("production pool_topic_blocks anchor mismatch")
+    if str(anchors.get("root_domain_set_sha256")) != PRODUCTION_ROOT_DOMAIN_SET_SHA256:
+        raise PairEventV2Error("production root_domain_set_sha256 anchor mismatch")
+
+
+def required_blocks_from_identities(
+    identities: Sequence[LogIdentityV2],
+    *,
+    domain: QueryDomain,
+) -> tuple[tuple[int, str | None, bool], ...]:
+    """Normalized required blocks for a reconciled log set.
+
+    Returns (block_number, expected_hash|None, is_boundary). Event blocks carry
+    expected hash from the log; the domain end boundary is always required and is
+    boundary-only when no log occupies that block (expected hash then nullable).
+    """
+    by_block: dict[int, str] = {}
+    for identity in identities:
+        existing = by_block.get(identity.block_number)
+        if existing is not None and existing != identity.block_hash:
+            raise PairEventV2Error("conflicting log block hashes in identity set")
+        by_block[identity.block_number] = identity.block_hash
+    rows: list[tuple[int, str | None, bool]] = []
+    for block_number in sorted(set(by_block) | {domain.end_block}):
+        expected = by_block.get(block_number)
+        is_boundary = block_number == domain.end_block and expected is None
+        if block_number == domain.end_block and expected is not None:
+            is_boundary = True  # end block also present as event block
+        if expected is None and block_number != domain.end_block:
+            raise PairEventV2Error("non-boundary required block missing expected hash")
+        # Boundary-only: is_boundary True, expected None.
+        # End block with events: is_boundary True, expected set.
+        # Interior event blocks: is_boundary False, expected set.
+        if block_number != domain.end_block:
+            is_boundary = False
+        rows.append((block_number, expected, is_boundary or block_number == domain.end_block))
+    # Re-normalize is_boundary: True iff block_number == domain.end_block
+    normalized = tuple(
+        (bn, exp, bn == domain.end_block) for bn, exp, _ in rows
+    )
+    return normalized
+
+
+def compute_log_candidate_id(
+    *,
+    plan_id: str,
+    domain_id: str,
+    attempt: int,
+    log_identity_sha256: str,
+    primary_logs_raw_object_id: str,
+    secondary_logs_raw_object_id: str,
+    primary_logs_acquisition_id: str,
+    secondary_logs_acquisition_id: str,
+) -> str:
+    """Deterministic candidate id bound to dual log raw authority."""
+    payload = {
+        "attempt": int(attempt),
+        "domain_id": _require_domain_id(domain_id),
+        "log_identity_sha256": _require_sha256_hex(
+            log_identity_sha256, label="log_identity_sha256"
+        ),
+        "plan_id": _require_plan_id(plan_id),
+        "primary_logs_acquisition_id": primary_logs_acquisition_id,
+        "primary_logs_raw_object_id": _require_raw_object_id(
+            primary_logs_raw_object_id, label="primary_logs_raw_object_id"
+        ),
+        "secondary_logs_acquisition_id": secondary_logs_acquisition_id,
+        "secondary_logs_raw_object_id": _require_raw_object_id(
+            secondary_logs_raw_object_id, label="secondary_logs_raw_object_id"
+        ),
+    }
+    return "lcand_" + _canonical_digest(payload)
+
+
+@dataclass(frozen=True, slots=True)
+class RootManifestRecord:
+    """Durable production root-manifest authority (migration 0020)."""
+
+    plan_id: str
+    registry_dataset_id: str
+    registry_parquet_sha256: str
+    registry_parquet_bytes: int
+    root_count: int
+    root_domain_set_sha256: str
+    pool_topic_blocks: int
+    status: Literal["INITIALIZING", "READY"]
+    created_at: str = ""
+    updated_at: str = ""
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "plan_id", _require_plan_id(self.plan_id))
+        if self.registry_dataset_id != ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID:
+            raise PairEventV2Error("root manifest registry_dataset_id is not accepted")
+        if not _SHA256_RE.fullmatch(self.registry_parquet_sha256):
+            raise PairEventV2Error("registry_parquet_sha256 must be 64 hex")
+        if self.registry_parquet_bytes <= 0:
+            raise PairEventV2Error("registry_parquet_bytes must be positive")
+        if self.root_count <= 0:
+            raise PairEventV2Error("root_count must be positive")
+        if not _SHA256_RE.fullmatch(self.root_domain_set_sha256):
+            raise PairEventV2Error("root_domain_set_sha256 must be 64 hex")
+        if self.pool_topic_blocks <= 0:
+            raise PairEventV2Error("pool_topic_blocks must be positive")
+        if self.status not in ("INITIALIZING", "READY"):
+            raise PairEventV2Error("root manifest status must be INITIALIZING or READY")
+
+
+# ---------------------------------------------------------------------------
 # Public surface
 # ---------------------------------------------------------------------------
 
@@ -1975,6 +2304,8 @@ __all__ = [
     "ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID",
     "AcquisitionPlanV2",
     "CANDIDATE_COHORT_SIZES",
+    "CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1",
+    "CLAIM_ORDER_VERSION_DOMAIN_HASH_V1",
     "COVERAGE_SCHEMA_VERSION",
     "CanonicalHeaderReceiptRecord",
     "CoverageProductRecord",
@@ -1987,6 +2318,13 @@ __all__ = [
     "ORDERED_EVENT_TOPICS",
     "PINNED_FINALITY_CUTOFF_BLOCK",
     "PLAN_SCHEMA_VERSION",
+    "PRODUCTION_INITIAL_COHORT_SIZE",
+    "PRODUCTION_PLAN_ID",
+    "PRODUCTION_POOL_TOPIC_BLOCKS",
+    "PRODUCTION_REGISTRY_PARQUET_BYTES",
+    "PRODUCTION_REGISTRY_PARQUET_SHA256",
+    "PRODUCTION_ROOT_COUNT",
+    "PRODUCTION_ROOT_DOMAIN_SET_SHA256",
     "PersistenceRecordKind",
     "PairEventV2Error",
     "PlanConfig",
@@ -2001,6 +2339,7 @@ __all__ = [
     "ROOT_BLOCK_SIZE",
     "RegistryPoolBirth",
     "RootFilterPlan",
+    "RootManifestRecord",
     "SPLIT_POLICY_VERSION",
     "SplitReason",
     "birth_clamped_interval",
@@ -2009,10 +2348,13 @@ __all__ = [
     "combined_pair_logs_request",
     "compute_canonical_header_receipt_id",
     "compute_leaf_receipt_id",
+    "compute_log_candidate_id",
+    "compute_production_root_anchors",
     "coverage_product_record",
     "eligible_pools_for_root",
     "expected_pool_topic_domain",
     "extract_log_identity_v2",
+    "iter_production_root_filters",
     "iter_root_windows",
     "log_identity_v2_digest",
     "make_leaf_receipt_record",
@@ -2022,11 +2364,14 @@ __all__ = [
     "partition_address_cohorts",
     "plan_config_from_identity_payload",
     "plan_record_from_config",
+    "production_plan_config",
     "prove_full_registry_coverage",
     "prove_pool_topic_coverage",
     "query_node_record_from_node",
     "reconcile_log_sets_v2",
     "request_for_domain",
+    "required_blocks_from_identities",
+    "root_pool_topic_blocks",
     "sort_pool_births",
     "split_domain_by_address",
     "split_domain_by_block",
@@ -2035,5 +2380,6 @@ __all__ = [
     "validate_event_shape",
     "validate_log_against_domain",
     "verify_leaf_header_dependencies",
+    "verify_production_root_anchors",
     "EMPTY_SUPPORTING_RECEIPTS_ROOT",
 ]

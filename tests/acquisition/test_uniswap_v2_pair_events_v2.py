@@ -676,3 +676,166 @@ class TestPlanBuild:
         plan = build_acquisition_plan_v2([_pool(POOL_A), _pool(POOL_B, BLOCK + 5000)])
         assert plan.root_filter_count > 0
         assert plan.plan_id == PlanConfig().plan_id()
+
+
+# ---------------------------------------------------------------------------
+# ADR-0015 §9.10 production foundation (offline)
+# ---------------------------------------------------------------------------
+
+
+class TestProductionFoundation:
+    def test_production_plan_id_and_cohort_comment(self) -> None:
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            DEFAULT_INITIAL_COHORT_SIZE,
+            PRODUCTION_INITIAL_COHORT_SIZE,
+            PRODUCTION_PLAN_ID,
+            production_plan_config,
+        )
+
+        assert DEFAULT_INITIAL_COHORT_SIZE == 64  # generic non-authoritative default
+        assert PRODUCTION_INITIAL_COHORT_SIZE == 8
+        cfg = production_plan_config()
+        assert cfg.initial_cohort_size == 8
+        assert cfg.plan_id() == PRODUCTION_PLAN_ID
+
+    def test_iter_production_roots_rejects_wrong_cohort(self) -> None:
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            iter_production_root_filters,
+        )
+
+        with pytest.raises(PairEventV2Error, match="initial_cohort_size=8"):
+            list(
+                iter_production_root_filters(
+                    [_pool(POOL_A)],
+                    config=PlanConfig(initial_cohort_size=64),
+                )
+            )
+
+    def test_iter_production_roots_bounded_streaming(self) -> None:
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            PRODUCTION_PLAN_ID,
+            iter_production_root_filters,
+            production_plan_config,
+        )
+
+        cfg = production_plan_config()
+        # Two pools born far apart → multiple windows without materializing full lattice.
+        pools = [
+            _pool(POOL_A, BLOCK),
+            _pool(POOL_B, BLOCK + 50_000),
+        ]
+        count = 0
+        for root in iter_production_root_filters(pools, config=cfg):
+            assert root.plan_id == PRODUCTION_PLAN_ID
+            assert root.domain_id.startswith("qd_")
+            count += 1
+            if count >= 3:
+                break
+        assert count == 3
+
+    def test_verify_production_anchors_fail_closed(self) -> None:
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            PRODUCTION_PLAN_ID,
+            verify_production_root_anchors,
+        )
+
+        with pytest.raises(PairEventV2Error, match="plan_id"):
+            verify_production_root_anchors(
+                {
+                    "plan_id": "plan_" + "0" * 64,
+                    "root_count": 1,
+                    "pool_topic_blocks": 1,
+                    "root_domain_set_sha256": "a" * 64,
+                }
+            )
+        with pytest.raises(PairEventV2Error, match="root_count"):
+            verify_production_root_anchors(
+                {
+                    "plan_id": PRODUCTION_PLAN_ID,
+                    "root_count": 1,
+                    "pool_topic_blocks": 148_506_716_734,
+                    "root_domain_set_sha256": (
+                        "081a12f780d065a7596ba073ba80819d173e8d74b3b16235672da673942ea907"
+                    ),
+                }
+            )
+
+    def test_required_blocks_boundary_nullable_hash(self) -> None:
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            extract_log_identity_v2,
+            required_blocks_from_identities,
+        )
+
+        domain = _domain(POOL_A)
+        # Empty identities → only boundary end block, expected hash None.
+        blocks = required_blocks_from_identities((), domain=domain)
+        assert len(blocks) == 1
+        assert blocks[0][0] == domain.end_block
+        assert blocks[0][1] is None
+        assert blocks[0][2] is True
+
+        log = _swap_log(address=POOL_A, block_number=domain.start_block)
+        identity = extract_log_identity_v2(log)
+        blocks2 = required_blocks_from_identities((identity,), domain=domain)
+        numbers = {b[0] for b in blocks2}
+        assert domain.start_block in numbers
+        assert domain.end_block in numbers
+
+    def test_compute_log_candidate_id_deterministic(self) -> None:
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            compute_log_candidate_id,
+        )
+
+        kwargs = dict(
+            plan_id="plan_" + "a" * 64,
+            domain_id="qd_" + "b" * 64,
+            attempt=0,
+            log_identity_sha256="c" * 64,
+            primary_logs_raw_object_id="raw_" + "1" * 64,
+            secondary_logs_raw_object_id="raw_" + "2" * 64,
+            primary_logs_acquisition_id="acq_" + "3" * 32,
+            secondary_logs_acquisition_id="acq_" + "4" * 32,
+        )
+        a = compute_log_candidate_id(**kwargs)
+        b = compute_log_candidate_id(**kwargs)
+        assert a == b
+        assert a.startswith("lcand_")
+
+    def test_accepted_registry_full_plan_anchors_readonly(self) -> None:
+        """One read-only accepted-registry anchor test (no materialize of all roots in assert)."""
+        from pathlib import Path
+
+        from cryptofactors.acquisition.uniswap_v2_pair_event_orchestrator import (
+            load_registry_pool_refs,
+        )
+        from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+            PRODUCTION_PLAN_ID,
+            PRODUCTION_POOL_TOPIC_BLOCKS,
+            PRODUCTION_ROOT_COUNT,
+            PRODUCTION_ROOT_DOMAIN_SET_SHA256,
+            RegistryPoolBirth,
+            compute_production_root_anchors,
+            production_plan_config,
+            verify_production_root_anchors,
+        )
+
+        ds = "ds_42ce2515e226258557a06a374498547393bbc984db791c56fa19d81d7ef16d15"
+        pools_path = Path(
+            f"data/dex003_full/store/datasets/sha256/42/ce/{ds}/"
+            "dex/dex_pool_registry/pools.parquet"
+        )
+        if not pools_path.is_file():
+            pytest.skip("accepted registry parquet not present in workspace")
+        refs = load_registry_pool_refs(pools_path)
+        births = [
+            RegistryPoolBirth(
+                pool_address=p.pool_address, creation_block=int(p.creation_block)
+            )
+            for p in refs
+        ]
+        anchors = compute_production_root_anchors(births, config=production_plan_config())
+        assert anchors["plan_id"] == PRODUCTION_PLAN_ID
+        assert anchors["root_count"] == PRODUCTION_ROOT_COUNT
+        assert anchors["pool_topic_blocks"] == PRODUCTION_POOL_TOPIC_BLOCKS
+        assert anchors["root_domain_set_sha256"] == PRODUCTION_ROOT_DOMAIN_SET_SHA256
+        verify_production_root_anchors(anchors)

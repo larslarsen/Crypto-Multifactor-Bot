@@ -54,13 +54,25 @@ from cryptofactors.acquisition.uniswap_v2 import (
     _hex_bytes,
     _hex_quantity,
     _require,
+    block_header_batch_request,
     block_header_request,
     chain_id_request,
+    find_batch_response_by_id,
 )
 from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
+    CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+    CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
     DEFAULT_EVENT_PROVIDER_ORGS,
     LOG_IDENTITY_VERSION,
+    PRODUCTION_INITIAL_COHORT_SIZE,
+    PRODUCTION_PLAN_ID,
+    PRODUCTION_POOL_TOPIC_BLOCKS,
+    PRODUCTION_REGISTRY_PARQUET_BYTES,
+    PRODUCTION_REGISTRY_PARQUET_SHA256,
+    PRODUCTION_ROOT_COUNT,
+    PRODUCTION_ROOT_DOMAIN_SET_SHA256,
     RECEIPT_SCHEMA_VERSION,
+    ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID,
     AcquisitionPlanV2,
     CanonicalHeaderReceiptRecord,
     LeafReceiptRecord,
@@ -71,17 +83,25 @@ from cryptofactors.acquisition.uniswap_v2_pair_events_v2 import (
     QueryNode,
     QueryNodeRecord,
     RegistryPoolBirth,
+    RootFilterPlan,
+    RootManifestRecord,
     SplitReason,
     build_acquisition_plan_v2,
     compute_canonical_header_receipt_id,
+    compute_log_candidate_id,
+    compute_production_root_anchors,
+    iter_production_root_filters,
     make_leaf_receipt_record,
     normalize_and_index_logs,
     normalize_provider_org,
     plan_record_from_config,
+    production_plan_config,
     reconcile_log_sets_v2,
     request_for_domain,
+    required_blocks_from_identities,
     split_node,
     validate_children_partition,
+    verify_production_root_anchors,
 )
 from cryptofactors.ingest.raw.catalog import (
     SqliteRawObjectCatalog,
@@ -106,6 +126,20 @@ LEASE_TABLE: Final[str] = "uniswap_v2_pair_event_v2_query_lease"
 HEADER_TABLE: Final[str] = "uniswap_v2_pair_event_v2_canonical_header_receipt"
 LEAF_TABLE: Final[str] = "uniswap_v2_pair_event_v2_leaf_receipt"
 DEP_TABLE: Final[str] = "uniswap_v2_pair_event_v2_leaf_header_dependency"
+# Migration 0020 additive tables (ADR-0015 §9.10).
+ROOT_MANIFEST_TABLE: Final[str] = "uniswap_v2_pair_event_v2_root_manifest"
+LOG_CANDIDATE_TABLE: Final[str] = "uniswap_v2_pair_event_v2_log_candidate"
+LOG_CANDIDATE_BLOCK_TABLE: Final[str] = "uniswap_v2_pair_event_v2_log_candidate_block"
+HEADER_BACKLOG_TABLE: Final[str] = "uniswap_v2_pair_event_v2_header_backlog"
+HEADER_BACKLOG_METRIC_TABLE: Final[str] = "uniswap_v2_pair_event_v2_header_backlog_metric"
+PLAN_RESUME_SESSION_TABLE: Final[str] = "uniswap_v2_pair_event_v2_plan_resume_session"
+CREDENTIAL_REDACTED_DETAIL: Final[str] = "redacted_credential_or_endpoint"
+
+# Bounded production work pages (ADR-0015 §9.10). One page per turn so node
+# refill is never starved by an unbounded header/finalization drain.
+HEADER_WORK_PAGE_SIZE: Final[int] = 32
+FINALIZE_WORK_PAGE_SIZE: Final[int] = 32
+CLAIM_SCAN_PAGE_SIZE: Final[int] = 32
 
 # ---------------------------------------------------------------------------
 # Forward migration 0018 — unambiguous persistence contracts (Jr implements)
@@ -582,17 +616,18 @@ def _write_durable_json_under(root: Path, name: str, payload: Mapping[str, Any])
     return root / name
 
 
-def _load_authenticated_json(
+def _load_authenticated_json_value(
     evidence: AuthenticatedEvidence,
     *,
     max_bytes: int,
     raw_root: Path,
     pulse: Callable[[], None] | None = None,
-) -> Mapping[str, Any]:
+) -> Any:
     """Parse authenticated bytes via trusted raw-root traversal (one open identity).
 
     Always re-opens through configured ``raw_root`` + digest-canonical storage_uri.
-    Never trusts ``storage_path.parent`` as a second root.
+    Never trusts ``storage_path.parent`` as a second root. Returns any JSON value
+    (object or batch array) after sha256/size re-authentication.
     """
     if evidence.byte_size > max_bytes:
         raise PairEventV2Error("authenticated body exceeds engine byte bound")
@@ -625,6 +660,20 @@ def _load_authenticated_json(
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise PairEventV2Error("authenticated body is not JSON") from exc
+    return payload
+
+
+def _load_authenticated_json(
+    evidence: AuthenticatedEvidence,
+    *,
+    max_bytes: int,
+    raw_root: Path,
+    pulse: Callable[[], None] | None = None,
+) -> Mapping[str, Any]:
+    """Load authenticated evidence and require a JSON object body."""
+    payload = _load_authenticated_json_value(
+        evidence, max_bytes=max_bytes, raw_root=raw_root, pulse=pulse
+    )
     if not isinstance(payload, Mapping):
         raise PairEventV2Error("authenticated body must be a JSON object")
     return payload
@@ -646,6 +695,79 @@ def _load_authenticated_rpc(
     if payload.get("id") != request.get("id"):
         raise _JsonRpcBoundaryError("JSON-RPC correlation id mismatch")
     return payload
+
+
+def _canonical_request_json(request: Any) -> str:
+    """Canonical JSON for a scalar JSON-RPC object or batch array request."""
+    if isinstance(request, Mapping):
+        return _canonical_json(dict(request))
+    if isinstance(request, list):
+        return _canonical_json(list(request))
+    raise PairEventV2Error("request must be a JSON-RPC object or batch array")
+
+
+def _extract_header_result_from_evidence(
+    evidence: AuthenticatedEvidence,
+    *,
+    block_number: int,
+    max_bytes: int,
+    raw_root: Path,
+) -> dict[str, Any]:
+    """Extract one block header from scalar or batch-backed authenticated raw."""
+    body = _load_authenticated_json_value(
+        evidence, max_bytes=max_bytes, raw_root=raw_root
+    )
+    try:
+        stored_request = json.loads(evidence.request_json)
+    except json.JSONDecodeError as exc:
+        raise PairEventV2Error("header evidence request_json is not JSON") from exc
+    if isinstance(stored_request, list):
+        req_id = None
+        for item in stored_request:
+            if not isinstance(item, Mapping):
+                continue
+            params = item.get("params")
+            if isinstance(params, list) and params and isinstance(params[0], str):
+                try:
+                    if int(params[0], 16) == block_number:
+                        req_id = item.get("id")
+                        break
+                except ValueError:
+                    continue
+        if req_id is None:
+            raise PairEventV2Error(f"batch request missing block {block_number}")
+        if not isinstance(body, list):
+            raise PairEventV2Error("batch header raw body is not a list")
+        member = find_batch_response_by_id(body, req_id)
+        if "error" in member and member["error"] is not None:
+            raise PairEventV2Error(
+                f"batch header member error for block {block_number}"
+            )
+        result = member.get("result")
+    elif isinstance(stored_request, Mapping):
+        if not isinstance(body, Mapping):
+            raise PairEventV2Error("scalar header raw body is not an object")
+        if "error" in body and body["error"] is not None:
+            raise PairEventV2Error("scalar header body has error")
+        result = body.get("result")
+    else:
+        raise PairEventV2Error("header evidence request is neither object nor batch")
+    if not isinstance(result, Mapping):
+        raise PairEventV2Error("header result is not an object")
+    try:
+        number = _hex_quantity(
+            _require(result, "number", label="header number"), label="header number"
+        )
+        block_hash = _hex_bytes(
+            _require(result, "hash", label="header hash"), 32, label="header hash"
+        )
+        timestamp = _hex_quantity(
+            _require(result, "timestamp", label="header timestamp"),
+            label="header timestamp",
+        )
+    except UniswapV2IngestionError as exc:
+        raise PairEventV2Error("canonical header fields are malformed") from exc
+    return {"number": number, "hash": block_hash, "timestamp": timestamp}
 
 
 # ---------------------------------------------------------------------------
@@ -719,15 +841,40 @@ class SpoolDescriptor:
             request = json.loads(self.request_json)
         except json.JSONDecodeError as exc:
             raise PairEventV2Error("spool request is not JSON") from exc
-        if (
-            not isinstance(request, Mapping)
-            or request.get("jsonrpc") != "2.0"
-            or not isinstance(request.get("method"), str)
-            or not isinstance(request.get("params"), list)
-            or _contains_sensitive_key(request)
-            or self.request_json != _canonical_json(dict(request))
-        ):
-            raise PairEventV2Error("spool request is not a canonical JSON-RPC payload")
+        if isinstance(request, Mapping):
+            if (
+                request.get("jsonrpc") != "2.0"
+                or not isinstance(request.get("method"), str)
+                or not isinstance(request.get("params"), list)
+                or _contains_sensitive_key(request)
+                or self.request_json != _canonical_json(dict(request))
+            ):
+                raise PairEventV2Error(
+                    "spool request is not a canonical JSON-RPC object payload"
+                )
+        elif isinstance(request, list):
+            if not request:
+                raise PairEventV2Error("spool batch request must be non-empty")
+            for item in request:
+                if (
+                    not isinstance(item, Mapping)
+                    or item.get("jsonrpc") != "2.0"
+                    or not isinstance(item.get("method"), str)
+                    or not isinstance(item.get("params"), list)
+                    or "id" not in item
+                    or _contains_sensitive_key(item)
+                ):
+                    raise PairEventV2Error(
+                        "spool batch member is not a canonical JSON-RPC request"
+                    )
+            if self.request_json != _canonical_json(list(request)):
+                raise PairEventV2Error(
+                    "spool batch request is not canonical JSON"
+                )
+        else:
+            raise PairEventV2Error(
+                "spool request must be a JSON-RPC object or batch array"
+            )
         if self.acquired_at.tzinfo is None:
             raise PairEventV2Error("spool acquired_at must be timezone-aware")
         if self.reservation_id is not None and self.journal_path is None:
@@ -1031,10 +1178,154 @@ class EngineMetrics:
     writer_latency_seconds: float = 0.0
     writer_latency_max_seconds: float = 0.0
     persistence_queue_high_water: int = 0
+    # ADR-0015 §9.10 additive production metrics (never authority).
+    provider_attempts_primary: int = 0
+    provider_attempts_secondary: int = 0
+    provider_attempts_total: int = 0
+    in_flight_high_water_primary: int = 0
+    in_flight_high_water_secondary: int = 0
+    nodes_in_flight_high_water: int = 0
+    spool_files_high_water: int = 0
+    candidates_committed: int = 0
+    header_batches: int = 0
+    header_batch_members: int = 0
+    header_backlog: int = 0
+    finalizations: int = 0
+    credential_detections: int = 0
+    provider_latency_ms_total: float = 0.0
     last_error: str | None = None
 
     def snapshot(self) -> EngineMetrics:
         return replace(self)
+
+
+@dataclass(frozen=True, slots=True)
+class CredentialScanner:
+    """Matrix-style rolling endpoint/secret scanner (ADR-0015 §9.10).
+
+    Exact runtime URLs and extracted secrets are never serialized. Form-based
+    bearer and secret-query checks always apply. A hit must prevent any spool
+    write of secret-bearing candidate bytes.
+    """
+
+    forbidden_substrings: tuple[str, ...] = ()
+
+    @classmethod
+    def from_rpc_urls(
+        cls, *urls: str | None, extra_secrets: Sequence[str] = ()
+    ) -> CredentialScanner:
+        from urllib.parse import parse_qs, unquote, urlparse
+
+        forbidden: list[str] = []
+        for raw in urls:
+            if not raw:
+                continue
+            u = str(raw).strip()
+            if not u:
+                continue
+            forbidden.append(u)
+            try:
+                parsed = urlparse(u)
+            except Exception:
+                continue
+            if parsed.password:
+                forbidden.append(unquote(parsed.password))
+            if parsed.username:
+                forbidden.append(unquote(parsed.username))
+            if parsed.username or parsed.password:
+                if parsed.netloc:
+                    forbidden.append(parsed.netloc)
+            if parsed.query:
+                qs = parse_qs(parsed.query, keep_blank_values=False)
+                for key, values in qs.items():
+                    kl = key.lower()
+                    if kl in {
+                        "api_key",
+                        "apikey",
+                        "key",
+                        "token",
+                        "password",
+                        "secret",
+                        "access_token",
+                        "authorization",
+                        "bearer",
+                    }:
+                        for v in values:
+                            if v:
+                                forbidden.append(v)
+            host = (parsed.hostname or "").lower()
+            parts = [p for p in (parsed.path or "").split("/") if p]
+            if host == "infura.io" or host.endswith(".infura.io"):
+                for index, part in enumerate(parts[:-1]):
+                    if part.lower() == "v3" and len(parts[index + 1]) >= 16:
+                        forbidden.append(parts[index + 1])
+            if host == "blockpi.network" or host.endswith(".blockpi.network"):
+                for index in range(len(parts) - 2):
+                    if (
+                        parts[index].lower() == "v1"
+                        and parts[index + 1].lower() == "rpc"
+                        and len(parts[index + 2]) >= 16
+                    ):
+                        forbidden.append(parts[index + 2])
+        for s in extra_secrets:
+            if s:
+                forbidden.append(str(s))
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in forbidden:
+            if not item or item in seen:
+                continue
+            if item in {"http:", "https:", "http://", "https://"}:
+                continue
+            seen.add(item)
+            cleaned.append(item)
+        return cls(forbidden_substrings=tuple(cleaned))
+
+    @property
+    def max_needle_bytes(self) -> int:
+        if not self.forbidden_substrings:
+            return 512
+        return max(
+            512,
+            max(len(s.encode("utf-8", errors="replace")) for s in self.forbidden_substrings)
+            + 64,
+        )
+
+    def contains_credential(self, text: str) -> bool:
+        if not text:
+            return False
+        import re as _re
+
+        if _re.search(r"://[^/\s]*:[^@/\s]+@", text):
+            return True
+        bearer = _re.search(r"(?i)\bbearer\s+([A-Za-z0-9._\-+/=]{8,})", text)
+        if bearer and bearer.group(1).lower() not in {"null", "undefined", "redacted"}:
+            return True
+        secret_q = _re.search(
+            r"(?i)(?:api[_-]?key|apikey|key|token|password|secret|access_token)"
+            r"\s*=\s*([^&\s]{6,})",
+            text,
+        )
+        if secret_q and secret_q.group(1).lower() not in {
+            "null",
+            "undefined",
+            "redacted",
+        }:
+            return True
+        lower = text.lower()
+        for needle in self.forbidden_substrings:
+            if needle in text or needle.lower() in lower:
+                return True
+        return False
+
+    def scan_bytes(self, data: bytes) -> bool:
+        if not data:
+            return False
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = data.decode("utf-8", errors="replace")
+        return self.contains_credential(text)
 
 
 @dataclass
@@ -1147,6 +1438,7 @@ class _AdaptiveLimiter:
         self._maximum = maximum
         self._limit = maximum
         self._active = 0
+        self._high_water = 0
         self._successes = 0
         self._condition = threading.Condition()
 
@@ -1155,10 +1447,22 @@ class _AdaptiveLimiter:
         with self._condition:
             return self._limit
 
+    @property
+    def active(self) -> int:
+        with self._condition:
+            return self._active
+
+    @property
+    def high_water(self) -> int:
+        with self._condition:
+            return self._high_water
+
     def acquire(self) -> None:
         with self._condition:
             self._condition.wait_for(lambda: self._active < self._limit)
             self._active += 1
+            if self._active > self._high_water:
+                self._high_water = self._active
 
     def release(self) -> None:
         with self._condition:
@@ -1186,7 +1490,11 @@ class _AdaptiveLimiter:
 
 
 class NetworkWorker:
-    """Streams one JSON-RPC response to a durable spool. No SQLite."""
+    """Streams one JSON-RPC response to a durable spool. No SQLite.
+
+    Every response byte is scanned with a rolling holdback before spool write
+    (ADR-0015 §9.10). Credential hits drain remaining bytes without persistence.
+    """
 
     def __init__(
         self,
@@ -1201,6 +1509,7 @@ class NetworkWorker:
         max_body_bytes: int,
         chunk_bytes: int,
         response_drain_deadline_seconds: float,
+        credential_scanner: CredentialScanner | None = None,
     ) -> None:
         self._client = client
         self._url = rpc_url
@@ -1212,9 +1521,14 @@ class NetworkWorker:
         self._max_body_bytes = max_body_bytes
         self._chunk_bytes = chunk_bytes
         self._response_drain_deadline_seconds = response_drain_deadline_seconds
+        self._scanner = credential_scanner or CredentialScanner()
 
-    def fetch(self, request: Mapping[str, Any]) -> SpoolDescriptor:
-        request_json = _canonical_json(dict(request))
+    def fetch(self, request: Mapping[str, Any] | Sequence[Any]) -> SpoolDescriptor:
+        if isinstance(request, Mapping):
+            request_obj: Any = dict(request)
+        else:
+            request_obj = list(request)
+        request_json = _canonical_json(request_obj)
         acquired_at = datetime.now(UTC)
         acquisition_id = f"acq_{uuid.uuid4().hex}"
         reservation_id = uuid.uuid4().hex
@@ -1338,7 +1652,48 @@ class NetworkWorker:
                         # Always drain the full HTTP body. After the deadline we stop
                         # retaining bytes but continue reading so the response is not
                         # abandoned mid-stream (ADR-0015 started-response rule).
+                        # Credential holdback: only write bytes proven free of secrets.
                         past_deadline = False
+                        scanner_only = False
+                        pending = bytearray()
+                        holdback = max(1, self._scanner.max_needle_bytes - 1)
+
+                        def _close_handle_for_stop() -> None:
+                            nonlocal handle, error_kind, error_detail
+                            if handle is not None:
+                                try:
+                                    handle.flush()
+                                    os.fsync(handle.fileno())
+                                    handle.close()
+                                except OSError as exc:
+                                    error_kind = "spool_io"
+                                    error_detail = type(exc).__name__
+                                handle = None
+
+                        def _write_safe(piece: bytes) -> None:
+                            nonlocal retained_bytes, truncated, handle
+                            nonlocal error_kind, error_detail
+                            if scanner_only or handle is None or not piece:
+                                return
+                            remaining = self._max_body_bytes - retained_bytes
+                            if remaining <= 0:
+                                truncated = True
+                                return
+                            out = piece[:remaining]
+                            try:
+                                handle.write(out)
+                                retained_bytes += len(out)
+                            except OSError as exc:
+                                error_kind = "spool_io"
+                                error_detail = type(exc).__name__
+                                try:
+                                    handle.close()
+                                except OSError:
+                                    pass
+                                handle = None
+                            if len(piece) > remaining:
+                                truncated = True
+
                         for chunk in response.iter_bytes(chunk_size=self._chunk_bytes):
                             response_bytes += len(chunk)
                             if (
@@ -1349,34 +1704,52 @@ class NetworkWorker:
                                 past_deadline = True
                                 error_kind = "transport"
                                 error_detail = "response_drain_deadline"
-                                # Close the retain handle; keep reading to drain.
+                                _close_handle_for_stop()
+                            # Scan every byte including over-cap / post-deadline drain.
+                            pending.extend(chunk)
+                            if self._scanner.scan_bytes(bytes(pending)):
+                                scanner_only = True
+                                error_kind = "credential_detection"
+                                error_detail = CREDENTIAL_REDACTED_DETAIL
+                                pending.clear()
+                                # Delete any already-written spool prefix (no secret authority).
                                 if handle is not None:
-                                    try:
-                                        handle.flush()
-                                        os.fsync(handle.fileno())
-                                        handle.close()
-                                    except OSError as exc:
-                                        error_kind = "spool_io"
-                                        error_detail = type(exc).__name__
-                                    handle = None
-                            if past_deadline:
-                                continue
-                            remaining = self._max_body_bytes - retained_bytes
-                            if remaining > 0 and handle is not None:
-                                piece = chunk[:remaining]
-                                try:
-                                    handle.write(piece)
-                                    retained_bytes += len(piece)
-                                except OSError as exc:
-                                    error_kind = "spool_io"
-                                    error_detail = type(exc).__name__
                                     try:
                                         handle.close()
                                     except OSError:
                                         pass
                                     handle = None
-                            if len(chunk) > max(remaining, 0):
-                                truncated = True
+                                if spool_path is not None:
+                                    spool_path.unlink(missing_ok=True)
+                                retained_bytes = 0
+                                continue
+                            if past_deadline or scanner_only:
+                                # Keep only holdback for rolling scan; write nothing.
+                                if len(pending) > holdback:
+                                    del pending[:-holdback]
+                                continue
+                            releasable = len(pending) - holdback
+                            if releasable > 0:
+                                _write_safe(bytes(pending[:releasable]))
+                                del pending[:releasable]
+                        # EOF: scan remaining pending; write only if clean.
+                        if pending and not scanner_only:
+                            if self._scanner.scan_bytes(bytes(pending)):
+                                scanner_only = True
+                                error_kind = "credential_detection"
+                                error_detail = CREDENTIAL_REDACTED_DETAIL
+                                if handle is not None:
+                                    try:
+                                        handle.close()
+                                    except OSError:
+                                        pass
+                                    handle = None
+                                if spool_path is not None:
+                                    spool_path.unlink(missing_ok=True)
+                                retained_bytes = 0
+                            elif not past_deadline:
+                                _write_safe(bytes(pending))
+                        pending.clear()
                     except httpx.HTTPError as exc:
                         error_kind = "transport"
                         error_detail = type(exc).__name__
@@ -1489,6 +1862,9 @@ class PersistenceCoordinator:
         self._writer_latency = 0.0
         self._writer_latency_max = 0.0
         self._high_water_lock = threading.Lock()
+        # O(plans) force keyset cursors only. Session generation + per-candidate
+        # session_auth_generation live in SQLite (shared multi-process).
+        self._resume_force_through: dict[str, str | None] = {}
         self._thread = threading.Thread(
             target=self._run,
             name="pair-event-v2-persistence",
@@ -1557,6 +1933,180 @@ class PersistenceCoordinator:
         return self._call(
             "initialize_plan", plan=plan, execution_policy=dict(execution_policy)
         )
+
+    def ensure_production_plan_shell(
+        self, *, config: PlanConfig, execution_policy: Mapping[str, Any]
+    ) -> str:
+        """Insert production plan + policy if absent; never requires full root set."""
+        return self._call(
+            "ensure_production_plan_shell",
+            config=config,
+            execution_policy=dict(execution_policy),
+        )
+
+    def authenticate_ready_root_manifest(
+        self,
+        *,
+        plan_id: str,
+        registry_parquet_sha256: str,
+        registry_parquet_bytes: int,
+    ) -> RootManifestRecord:
+        """Re-authenticate pinned READY manifest fields + complete root set (streamed)."""
+        return self._call(
+            "authenticate_ready_root_manifest",
+            plan_id=plan_id,
+            registry_parquet_sha256=registry_parquet_sha256,
+            registry_parquet_bytes=int(registry_parquet_bytes),
+        )
+
+    def initialize_production_roots_batch(
+        self,
+        *,
+        plan_id: str,
+        roots: Sequence[RootFilterPlan],
+        registry_parquet_sha256: str,
+        registry_parquet_bytes: int,
+        expected_root_count: int,
+        expected_root_domain_set_sha256: str,
+        expected_pool_topic_blocks: int,
+        finalize: bool = False,
+    ) -> dict[str, Any]:
+        """Additive production root insert; READY only when finalize authenticates anchors."""
+        return self._call(
+            "initialize_production_roots_batch",
+            plan_id=plan_id,
+            roots=tuple(roots),
+            registry_parquet_sha256=registry_parquet_sha256,
+            registry_parquet_bytes=int(registry_parquet_bytes),
+            expected_root_count=int(expected_root_count),
+            expected_root_domain_set_sha256=expected_root_domain_set_sha256,
+            expected_pool_topic_blocks=int(expected_pool_topic_blocks),
+            finalize=bool(finalize),
+        )
+
+    def load_root_manifest(self, *, plan_id: str) -> RootManifestRecord | None:
+        return self._call("load_root_manifest", plan_id=plan_id)
+
+    def commit_log_candidate(
+        self,
+        claim: Claim,
+        *,
+        candidate_kwargs: Mapping[str, Any],
+        blocks: Sequence[tuple[int, str | None, bool]],
+    ) -> str:
+        """Persist immutable log candidate + blocks; return node to PENDING; release lease."""
+        return self._call(
+            "commit_log_candidate",
+            claim=claim,
+            candidate_kwargs=dict(candidate_kwargs),
+            blocks=tuple(blocks),
+        )
+
+    def load_log_candidate(
+        self, *, plan_id: str, domain_id: str
+    ) -> dict[str, Any] | None:
+        return self._call(
+            "load_log_candidate", plan_id=plan_id, domain_id=domain_id
+        )
+
+    def finalize_log_candidate(
+        self,
+        *,
+        plan_id: str,
+        domain_id: str,
+        header_receipt_ids: Sequence[str],
+    ) -> str:
+        """Atomic leaf insert + AGREED for a candidate with complete headers."""
+        return self._call(
+            "finalize_log_candidate",
+            plan_id=plan_id,
+            domain_id=domain_id,
+            header_receipt_ids=tuple(header_receipt_ids),
+        )
+
+    def list_missing_candidate_blocks(
+        self,
+        *,
+        plan_id: str,
+        limit: int = HEADER_WORK_PAGE_SIZE,
+        after_block_number: int | None = None,
+    ) -> list[int]:
+        """Distinct candidate-required blocks lacking a header (bounded keyset page)."""
+        return self._call(
+            "list_missing_candidate_blocks",
+            plan_id=plan_id,
+            limit=limit,
+            after_block_number=after_block_number,
+        )
+
+    def list_finalizable_candidates(
+        self,
+        *,
+        plan_id: str,
+        limit: int = FINALIZE_WORK_PAGE_SIZE,
+        after_domain_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Bounded candidate scan page; ready subset + keyset cursor.
+
+        Examines at most ``limit`` PENDING candidate rows (not the full table).
+        Returns ``ready_domain_ids``, ``scan_through_domain_id``, and ``exhausted``.
+        """
+        return self._call(
+            "list_finalizable_candidates",
+            plan_id=plan_id,
+            limit=limit,
+            after_domain_id=after_domain_id,
+        )
+
+    def begin_plan_resume_session(self, *, plan_id: str) -> dict[str, Any]:
+        """Bump shared plan resume generation (invalidates prior session auth marks)."""
+        return self._call("begin_plan_resume_session", plan_id=plan_id)
+
+    def authenticate_plan_attach(
+        self,
+        *,
+        plan_id: str,
+        plan_config: PlanConfig,
+        execution_policy: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Authenticate persisted plan row + immutable execution-policy identity."""
+        return self._call(
+            "authenticate_plan_attach",
+            plan_id=plan_id,
+            plan_config=plan_config,
+            execution_policy=dict(execution_policy),
+        )
+
+    def authenticate_resumed_candidates(
+        self,
+        *,
+        plan_id: str,
+        force: bool = False,
+        limit: int = CLAIM_SCAN_PAGE_SIZE,
+    ) -> dict[str, Any]:
+        """One bounded page of resume re-validation for the active generation.
+
+        Normal mode authenticates candidates not yet stamped for the active
+        generation. ``force=True`` revalidates the next page of all candidates
+        (still one page; caller continues until ``complete``).
+        """
+        return self._call(
+            "authenticate_resumed_candidates",
+            plan_id=plan_id,
+            force=force,
+            limit=limit,
+        )
+
+    def reauthenticate_root_domain_set(self, *, plan_id: str) -> dict[str, Any]:
+        """Stream-recompute every root domain_id from semantic fields; return count+digest."""
+        return self._call("reauthenticate_root_domain_set", plan_id=plan_id)
+
+    def header_backlog_count(self, *, plan_id: str) -> int:
+        """Exact distinct missing candidate-header block count (no full scan per call)."""
+        return self._call("header_backlog_count", plan_id=plan_id)
+
+    def claim_order_version(self, *, plan_id: str) -> str:
+        return self._call("claim_order_version", plan_id=plan_id)
 
     def claim_pending(
         self, *, plan_id: str, worker_id: str, lease_ttl_seconds: float
@@ -1754,6 +2304,21 @@ class PersistenceCoordinator:
         handlers: dict[str, Callable[..., Any]] = {
             "persist_envelope": self._op_persist_envelope,
             "initialize_plan": self._op_initialize_plan,
+            "ensure_production_plan_shell": self._op_ensure_production_plan_shell,
+            "initialize_production_roots_batch": self._op_initialize_production_roots_batch,
+            "authenticate_ready_root_manifest": self._op_authenticate_ready_root_manifest,
+            "load_root_manifest": self._op_load_root_manifest,
+            "commit_log_candidate": self._op_commit_log_candidate,
+            "load_log_candidate": self._op_load_log_candidate,
+            "finalize_log_candidate": self._op_finalize_log_candidate,
+            "list_missing_candidate_blocks": self._op_list_missing_candidate_blocks,
+            "list_finalizable_candidates": self._op_list_finalizable_candidates,
+            "authenticate_resumed_candidates": self._op_authenticate_resumed_candidates,
+            "authenticate_plan_attach": self._op_authenticate_plan_attach,
+            "begin_plan_resume_session": self._op_begin_plan_resume_session,
+            "reauthenticate_root_domain_set": self._op_reauthenticate_root_domain_set,
+            "header_backlog_count": self._op_header_backlog_count,
+            "claim_order_version": self._op_claim_order_version,
             "claim_pending": self._op_claim_pending,
             "renew_lease": self._op_renew_lease,
             "record_events": self._op_record_events,
@@ -1857,7 +2422,9 @@ class PersistenceCoordinator:
                 complete = bool(payload.get("complete"))
                 response_started = bool(payload.get("response_started"))
                 request = payload.get("request")
-                if not isinstance(request, Mapping):
+                try:
+                    recovered_request_json = _canonical_request_json(request)
+                except PairEventV2Error:
                     continue
                 if not complete and not response_started:
                     # Pre-start reservation with no response — safe to free both.
@@ -1894,7 +2461,7 @@ class PersistenceCoordinator:
                 if complete and spool_ok:
                     descriptor = SpoolDescriptor(
                         provider_org=str(payload["provider_org"]),
-                        request_json=_canonical_json(dict(request)),
+                        request_json=recovered_request_json,
                         acquired_at=datetime.fromisoformat(
                             str(payload["acquired_at"])
                         ),
@@ -1941,7 +2508,7 @@ class PersistenceCoordinator:
                     )
                     descriptor = SpoolDescriptor(
                         provider_org=str(payload.get("provider_org") or "unknown"),
-                        request_json=_canonical_json(dict(request)),
+                        request_json=recovered_request_json,
                         acquired_at=datetime.fromisoformat(
                             str(payload["acquired_at"])
                         ),
@@ -1989,7 +2556,7 @@ class PersistenceCoordinator:
                     )
                 descriptor = SpoolDescriptor(
                     provider_org=str(payload["provider_org"]),
-                    request_json=_canonical_json(dict(request)),
+                    request_json=recovered_request_json,
                     acquired_at=datetime.fromisoformat(str(payload["acquired_at"])),
                     status_code=(
                         int(payload["status_code"])
@@ -2083,10 +2650,20 @@ class PersistenceCoordinator:
         started = time.monotonic()
         try:
             request = json.loads(descriptor.request_json)
+            if isinstance(request, Mapping):
+                meta_request: Mapping[str, Any] | list[Any] = dict(request)
+                method_label = str(request.get("method") or "rpc")
+            elif isinstance(request, list):
+                meta_request = list(request)
+                method_label = "batch"
+            else:
+                raise PairEventV2Error(
+                    "persisted spool request must be a JSON-RPC object or batch array"
+                )
             metadata = AcquisitionMetadata(
                 source_id=SOURCE_ID,
                 acquisition_id=descriptor.acquisition_id,
-                request=dict(request),
+                request=meta_request,
                 response_metadata={
                     "provider_org": descriptor.provider_org,
                     "status_code": descriptor.status_code,
@@ -2097,7 +2674,7 @@ class PersistenceCoordinator:
                     "error_detail": descriptor.error_detail,
                 },
                 original_name=(
-                    f"{descriptor.provider_org}_{request.get('method', 'rpc')}_"
+                    f"{descriptor.provider_org}_{method_label}_"
                     f"{descriptor.acquired_at.strftime('%Y%m%dT%H%M%S%f')}.json"
                 ),
                 acquired_at=descriptor.acquired_at,
@@ -2185,8 +2762,9 @@ class PersistenceCoordinator:
         raw_object_id: str,
         acquisition_id: str,
         provider_org: str,
-        request: Mapping[str, Any],
+        request: Mapping[str, Any] | Sequence[Any] | None,
         require_successful_body: bool = True,
+        require_request_match: bool = True,
     ) -> AuthenticatedEvidence:
         """Bind raw evidence to source, provider, request, object, acquisition.
 
@@ -2211,10 +2789,23 @@ class PersistenceCoordinator:
             raise PairEventV2Error("raw acquisition source_id is not the v2 engine source")
         if require_successful_body and row["status"] != "SUCCEEDED":
             raise PairEventV2Error("raw acquisition is not SUCCEEDED")
-        stored_request = json.loads(row["request_json"] or "{}")
-        expected = _canonical_json(dict(request))
-        if _canonical_json(stored_request) != expected:
-            raise PairEventV2Error("raw acquisition request does not match expected")
+        try:
+            stored_request = json.loads(row["request_json"] or "null")
+        except json.JSONDecodeError as exc:
+            raise PairEventV2Error("raw acquisition request_json is not JSON") from exc
+        # Canonical stored request JSON for AuthenticatedEvidence.request_json.
+        expected = _canonical_json(stored_request)
+        if require_request_match:
+            if request is None:
+                raise PairEventV2Error("request match required but request is None")
+            if isinstance(request, Mapping):
+                wanted = _canonical_json(dict(request))
+            else:
+                wanted = _canonical_json(list(request))
+            if expected != wanted:
+                raise PairEventV2Error(
+                    "raw acquisition request does not match expected"
+                )
         if _contains_sensitive_key(stored_request):
             raise PairEventV2Error("stored acquisition request is sensitive")
         try:
@@ -2362,6 +2953,17 @@ class PersistenceCoordinator:
                         _now(),
                     ),
                 )
+                # Coherent zero backlog + resume generation at plan birth.
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {HEADER_BACKLOG_METRIC_TABLE} "
+                    "(plan_id, missing_count) VALUES (?, 0)",
+                    (plan.plan_id,),
+                )
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {PLAN_RESUME_SESSION_TABLE} "
+                    "(plan_id, active_generation, updated_at) VALUES (?,?,?)",
+                    (plan.plan_id, 1, _now()),
+                )
             else:
                 actual = PlanRecord(
                     plan_id=row["plan_id"],
@@ -2380,6 +2982,16 @@ class PersistenceCoordinator:
                     expected_record, created_at=""
                 ):
                     raise PairEventV2Error("persisted plan row is not the requested plan")
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {HEADER_BACKLOG_METRIC_TABLE} "
+                    "(plan_id, missing_count) VALUES (?, 0)",
+                    (plan.plan_id,),
+                )
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {PLAN_RESUME_SESSION_TABLE} "
+                    "(plan_id, active_generation, updated_at) VALUES (?,?,?)",
+                    (plan.plan_id, 1, _now()),
+                )
                 root_rows = conn.execute(
                     f"SELECT * FROM {NODE_TABLE} WHERE plan_id = ? "
                     "AND parent_domain_id IS NULL",
@@ -2433,6 +3045,915 @@ class PersistenceCoordinator:
             conn.execute("ROLLBACK")
             raise
         return plan.plan_id
+
+    def _op_ensure_production_plan_shell(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        config: PlanConfig,
+        execution_policy: Mapping[str, Any],
+    ) -> str:
+        del writer
+        if config.plan_id() != PRODUCTION_PLAN_ID:
+            raise PairEventV2Error("production shell requires pinned plan_id")
+        if config.initial_cohort_size != PRODUCTION_INITIAL_COHORT_SIZE:
+            raise PairEventV2Error("production shell requires cohort size 8")
+        if _contains_sensitive_key(execution_policy):
+            raise PairEventV2Error("execution policy contains sensitive keys")
+        if str(execution_policy.get("plan_id", "")) != config.plan_id():
+            raise PairEventV2Error("execution policy plan_id must bind the plan")
+        if (
+            str(execution_policy.get("claim_order_version"))
+            != CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+        ):
+            raise PairEventV2Error(
+                "production execution policy must use domain_hash_v1 claim order"
+            )
+        policy_json = _canonical_json(dict(execution_policy))
+        policy_id = _identity("pol_", json.loads(policy_json))
+        expected_record = plan_record_from_config(config, created_at=_now())
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = conn.execute(
+                f"SELECT * FROM {PLAN_TABLE} WHERE plan_id = ?",
+                (config.plan_id(),),
+            ).fetchone()
+            if row is None:
+                conn.execute(
+                    f"INSERT INTO {PLAN_TABLE} (plan_id, registry_dataset_id, "
+                    "identity_payload_json, event_provider_orgs_json, "
+                    "metadata_provider_orgs_json, root_block_size, initial_cohort_size, "
+                    "deployment_block, cutoff_block, plan_schema_version, created_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        expected_record.plan_id,
+                        expected_record.registry_dataset_id,
+                        expected_record.identity_payload_json,
+                        expected_record.event_provider_orgs_json,
+                        expected_record.metadata_provider_orgs_json,
+                        expected_record.root_block_size,
+                        expected_record.initial_cohort_size,
+                        expected_record.deployment_block,
+                        expected_record.cutoff_block,
+                        expected_record.plan_schema_version,
+                        expected_record.created_at,
+                    ),
+                )
+                conn.execute(
+                    f"INSERT INTO {EXECUTION_POLICY_TABLE} ("
+                    + ",".join(EXECUTION_POLICY_RECORD_COLUMNS)
+                    + ") VALUES (?,?,?,?,?)",
+                    (
+                        policy_id,
+                        config.plan_id(),
+                        policy_json,
+                        EXECUTION_POLICY_SCHEMA_VERSION,
+                        _now(),
+                    ),
+                )
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {HEADER_BACKLOG_METRIC_TABLE} "
+                    "(plan_id, missing_count) VALUES (?, 0)",
+                    (config.plan_id(),),
+                )
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {PLAN_RESUME_SESSION_TABLE} "
+                    "(plan_id, active_generation, updated_at) VALUES (?,?,?)",
+                    (config.plan_id(), 1, _now()),
+                )
+            else:
+                actual = PlanRecord(
+                    plan_id=row["plan_id"],
+                    registry_dataset_id=row["registry_dataset_id"],
+                    identity_payload_json=row["identity_payload_json"],
+                    event_provider_orgs_json=row["event_provider_orgs_json"],
+                    metadata_provider_orgs_json=row["metadata_provider_orgs_json"],
+                    root_block_size=row["root_block_size"],
+                    initial_cohort_size=row["initial_cohort_size"],
+                    deployment_block=row["deployment_block"],
+                    cutoff_block=row["cutoff_block"],
+                    plan_schema_version=row["plan_schema_version"],
+                    created_at=row["created_at"],
+                )
+                if replace(actual, created_at="") != replace(
+                    expected_record, created_at=""
+                ):
+                    raise PairEventV2Error(
+                        "persisted production plan row is not the requested plan"
+                    )
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {HEADER_BACKLOG_METRIC_TABLE} "
+                    "(plan_id, missing_count) VALUES (?, 0)",
+                    (config.plan_id(),),
+                )
+                conn.execute(
+                    f"INSERT OR IGNORE INTO {PLAN_RESUME_SESSION_TABLE} "
+                    "(plan_id, active_generation, updated_at) VALUES (?,?,?)",
+                    (config.plan_id(), 1, _now()),
+                )
+                policy_row = conn.execute(
+                    f"SELECT * FROM {EXECUTION_POLICY_TABLE} WHERE plan_id = ?",
+                    (config.plan_id(),),
+                ).fetchone()
+                if policy_row is None:
+                    raise PairEventV2Error("production plan missing execution policy")
+                if (
+                    str(policy_row["identity_payload_json"]) != policy_json
+                    or str(policy_row["policy_id"]) != policy_id
+                ):
+                    raise PairEventV2Error(
+                        "production execution policy mismatch on resume"
+                    )
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        return config.plan_id()
+
+    def _op_initialize_production_roots_batch(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        roots: Sequence[RootFilterPlan],
+        registry_parquet_sha256: str,
+        registry_parquet_bytes: int,
+        expected_root_count: int,
+        expected_root_domain_set_sha256: str,
+        expected_pool_topic_blocks: int,
+        finalize: bool,
+    ) -> dict[str, Any]:
+        """Insert a batch of production roots; optionally finalize READY gate."""
+        del writer
+        plan_id = str(plan_id)
+        if plan_id != PRODUCTION_PLAN_ID:
+            raise PairEventV2Error("production initializer requires pinned plan_id")
+        if registry_parquet_sha256 != PRODUCTION_REGISTRY_PARQUET_SHA256:
+            raise PairEventV2Error("registry_parquet_sha256 is not the accepted pin")
+        if int(registry_parquet_bytes) != PRODUCTION_REGISTRY_PARQUET_BYTES:
+            raise PairEventV2Error("registry_parquet_bytes is not the accepted pin")
+        if int(expected_root_count) != PRODUCTION_ROOT_COUNT:
+            raise PairEventV2Error("expected_root_count is not the accepted pin")
+        if expected_root_domain_set_sha256 != PRODUCTION_ROOT_DOMAIN_SET_SHA256:
+            raise PairEventV2Error("root_domain_set_sha256 is not the accepted pin")
+        if int(expected_pool_topic_blocks) != PRODUCTION_POOL_TOPIC_BLOCKS:
+            raise PairEventV2Error("pool_topic_blocks is not the accepted pin")
+        now = _now()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            plan_row = conn.execute(
+                f"SELECT plan_id, initial_cohort_size FROM {PLAN_TABLE} "
+                "WHERE plan_id = ?",
+                (plan_id,),
+            ).fetchone()
+            if plan_row is None:
+                raise PairEventV2Error("production plan row missing — create plan first")
+            if int(plan_row["initial_cohort_size"]) != PRODUCTION_INITIAL_COHORT_SIZE:
+                raise PairEventV2Error("production plan must use cohort size 8")
+            manifest = conn.execute(
+                f"SELECT * FROM {ROOT_MANIFEST_TABLE} WHERE plan_id = ?",
+                (plan_id,),
+            ).fetchone()
+            if manifest is None:
+                conn.execute(
+                    f"INSERT INTO {ROOT_MANIFEST_TABLE} ("
+                    "plan_id, registry_dataset_id, registry_parquet_sha256, "
+                    "registry_parquet_bytes, root_count, root_domain_set_sha256, "
+                    "pool_topic_blocks, status, created_at, updated_at"
+                    ") VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        plan_id,
+                        ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID,
+                        registry_parquet_sha256,
+                        int(registry_parquet_bytes),
+                        int(expected_root_count),
+                        expected_root_domain_set_sha256,
+                        int(expected_pool_topic_blocks),
+                        "INITIALIZING",
+                        now,
+                        now,
+                    ),
+                )
+            else:
+                if str(manifest["status"]) == "READY":
+                    # Idempotent: READY manifest rejects further mutation.
+                    if roots:
+                        raise PairEventV2Error(
+                            "production root manifest is READY; refuse additional roots"
+                        )
+                    if finalize:
+                        conn.execute("COMMIT")
+                        return {
+                            "status": "READY",
+                            "inserted": 0,
+                            "root_count": int(manifest["root_count"]),
+                        }
+                    conn.execute("COMMIT")
+                    return {
+                        "status": "READY",
+                        "inserted": 0,
+                        "root_count": int(manifest["root_count"]),
+                    }
+            inserted = 0
+            for root in roots:
+                if root.plan_id != plan_id:
+                    raise PairEventV2Error("root plan_id mismatch")
+                node = QueryNode(plan_id=plan_id, domain=root.domain)
+                existing = conn.execute(
+                    f"SELECT domain_id, start_block, end_block, addresses_json, "
+                    f"topics_json FROM {NODE_TABLE} "
+                    "WHERE plan_id = ? AND domain_id = ?",
+                    (plan_id, node.domain_id),
+                ).fetchone()
+                if existing is None:
+                    self._insert_node(conn, node, attempt=0, updated_at=now)
+                    inserted += 1
+                else:
+                    # Resume idempotency: existing root must match exactly.
+                    if (
+                        int(existing["start_block"]) != root.domain.start_block
+                        or int(existing["end_block"]) != root.domain.end_block
+                        or str(existing["addresses_json"])
+                        != _canonical_json(list(root.domain.addresses))
+                        or str(existing["topics_json"])
+                        != _canonical_json(list(root.domain.topics))
+                    ):
+                        raise PairEventV2Error(
+                            "existing production root does not match expected domain"
+                        )
+            status = "INITIALIZING"
+            if finalize:
+                count, digest = self._stream_root_domain_digest(conn, plan_id)
+                if count != PRODUCTION_ROOT_COUNT:
+                    raise PairEventV2Error(
+                        "production root count mismatch at finalize",
+                    )
+                if digest != PRODUCTION_ROOT_DOMAIN_SET_SHA256:
+                    raise PairEventV2Error(
+                        "production root domain-set digest mismatch at finalize"
+                    )
+                conn.execute(
+                    f"UPDATE {ROOT_MANIFEST_TABLE} SET status = 'READY', "
+                    "updated_at = ? WHERE plan_id = ?",
+                    (now, plan_id),
+                )
+                status = "READY"
+            else:
+                conn.execute(
+                    f"UPDATE {ROOT_MANIFEST_TABLE} SET updated_at = ? "
+                    "WHERE plan_id = ?",
+                    (now, plan_id),
+                )
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        count_row = conn.execute(
+            f"SELECT COUNT(*) AS c FROM {NODE_TABLE} "
+            "WHERE plan_id = ? AND parent_domain_id IS NULL",
+            (plan_id,),
+        ).fetchone()
+        return {
+            "status": status,
+            "inserted": inserted,
+            "root_count": int(count_row["c"]) if count_row else 0,
+        }
+
+    def _stream_root_domain_digest(
+        self, conn: sqlite3.Connection, plan_id: str
+    ) -> tuple[int, str]:
+        """Recompute every root domain_id from fields; hash ordered set without fetchall().
+
+        READY authority requires that each root row's domain_id recompute from
+        start_block/end_block/addresses/topics (not merely re-hashing stored ids).
+        """
+        hasher = hashlib.sha256()
+        count = 0
+        cursor = conn.execute(
+            f"SELECT domain_id, start_block, end_block, addresses_json, topics_json "
+            f"FROM {NODE_TABLE} "
+            "WHERE plan_id = ? AND parent_domain_id IS NULL "
+            "ORDER BY domain_id",
+            (plan_id,),
+        )
+        while True:
+            rows = cursor.fetchmany(2048)
+            if not rows:
+                break
+            for row in rows:
+                domain_id = str(row["domain_id"])
+                try:
+                    addresses = tuple(json.loads(str(row["addresses_json"])))
+                    topics = tuple(json.loads(str(row["topics_json"])))
+                except (json.JSONDecodeError, TypeError) as exc:
+                    raise PairEventV2Error(
+                        "root addresses/topics JSON is malformed during READY re-auth"
+                    ) from exc
+                if not isinstance(addresses, tuple) or not isinstance(topics, tuple):
+                    raise PairEventV2Error(
+                        "root addresses/topics must decode to sequences"
+                    )
+                domain = QueryDomain(
+                    start_block=int(row["start_block"]),
+                    end_block=int(row["end_block"]),
+                    addresses=addresses,
+                    topics=topics,
+                )
+                recomputed = domain.domain_id(plan_id)
+                if recomputed != domain_id:
+                    raise PairEventV2Error(
+                        "READY root domain_id does not recompute from "
+                        "start/end/addresses/topics fields"
+                    )
+                hasher.update(domain_id.encode("ascii"))
+                hasher.update(b"\n")
+                count += 1
+        return count, hasher.hexdigest()
+
+    def _op_authenticate_ready_root_manifest(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        registry_parquet_sha256: str,
+        registry_parquet_bytes: int,
+    ) -> RootManifestRecord:
+        del writer
+        row = conn.execute(
+            f"SELECT * FROM {ROOT_MANIFEST_TABLE} WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            raise PairEventV2Error("root manifest missing")
+        if str(row["status"]) != "READY":
+            raise PairEventV2Error("root manifest is not READY")
+        if str(row["registry_dataset_id"]) != ACCEPTED_DEX_POOL_REGISTRY_DATASET_ID:
+            raise PairEventV2Error("READY manifest registry_dataset_id drift")
+        if str(row["registry_parquet_sha256"]) != registry_parquet_sha256:
+            raise PairEventV2Error("READY manifest parquet sha256 drift")
+        if int(row["registry_parquet_bytes"]) != int(registry_parquet_bytes):
+            raise PairEventV2Error("READY manifest parquet bytes drift")
+        # Semantic re-auth first: every root domain_id from start/end/addresses/topics.
+        # Field tamper fails here before production pin checks.
+        count, digest = self._stream_root_domain_digest(conn, plan_id)
+        if count != int(row["root_count"]) or digest != str(row["root_domain_set_sha256"]):
+            raise PairEventV2Error(
+                "READY manifest stored count/digest disagree with recomputed root set"
+            )
+        if str(row["registry_parquet_sha256"]) != PRODUCTION_REGISTRY_PARQUET_SHA256:
+            raise PairEventV2Error("READY manifest parquet sha256 not production pin")
+        if int(row["registry_parquet_bytes"]) != PRODUCTION_REGISTRY_PARQUET_BYTES:
+            raise PairEventV2Error("READY manifest parquet bytes not production pin")
+        if int(row["root_count"]) != PRODUCTION_ROOT_COUNT:
+            raise PairEventV2Error("READY manifest root_count not production pin")
+        if int(row["pool_topic_blocks"]) != PRODUCTION_POOL_TOPIC_BLOCKS:
+            raise PairEventV2Error("READY manifest pool_topic_blocks not production pin")
+        if str(row["root_domain_set_sha256"]) != PRODUCTION_ROOT_DOMAIN_SET_SHA256:
+            raise PairEventV2Error("READY manifest root digest not production pin")
+        if count != PRODUCTION_ROOT_COUNT or digest != PRODUCTION_ROOT_DOMAIN_SET_SHA256:
+            raise PairEventV2Error(
+                "READY manifest root rows do not recompute pinned domain-set digest"
+            )
+        return RootManifestRecord(
+            plan_id=str(row["plan_id"]),
+            registry_dataset_id=str(row["registry_dataset_id"]),
+            registry_parquet_sha256=str(row["registry_parquet_sha256"]),
+            registry_parquet_bytes=int(row["registry_parquet_bytes"]),
+            root_count=int(row["root_count"]),
+            root_domain_set_sha256=str(row["root_domain_set_sha256"]),
+            pool_topic_blocks=int(row["pool_topic_blocks"]),
+            status="READY",
+            created_at=str(row["created_at"]),
+            updated_at=str(row["updated_at"]),
+        )
+
+    def _op_load_root_manifest(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+    ) -> RootManifestRecord | None:
+        del writer
+        row = conn.execute(
+            f"SELECT * FROM {ROOT_MANIFEST_TABLE} WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return RootManifestRecord(
+            plan_id=str(row["plan_id"]),
+            registry_dataset_id=str(row["registry_dataset_id"]),
+            registry_parquet_sha256=str(row["registry_parquet_sha256"]),
+            registry_parquet_bytes=int(row["registry_parquet_bytes"]),
+            root_count=int(row["root_count"]),
+            root_domain_set_sha256=str(row["root_domain_set_sha256"]),
+            pool_topic_blocks=int(row["pool_topic_blocks"]),
+            status=str(row["status"]),  # type: ignore[arg-type]
+            created_at=str(row["created_at"]),
+            updated_at=str(row["updated_at"]),
+        )
+
+    def _op_commit_log_candidate(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        claim: Claim,
+        candidate_kwargs: Mapping[str, Any],
+        blocks: Sequence[tuple[int, str | None, bool]],
+    ) -> str:
+        """Commit immutable candidate; return node to PENDING; delete lease.
+
+        Attempt is unchanged. No AGREED coverage. Candidate grants zero PTB.
+        """
+        del writer
+        now = _now()
+        plan_id = claim.plan_id
+        domain_id = claim.domain_id
+        attempt = int(claim.attempt)
+        candidate_id = compute_log_candidate_id(
+            plan_id=plan_id,
+            domain_id=domain_id,
+            attempt=attempt,
+            log_identity_sha256=str(candidate_kwargs["log_identity_sha256"]),
+            primary_logs_raw_object_id=str(
+                candidate_kwargs["primary_logs_raw_object_id"]
+            ),
+            secondary_logs_raw_object_id=str(
+                candidate_kwargs["secondary_logs_raw_object_id"]
+            ),
+            primary_logs_acquisition_id=str(
+                candidate_kwargs["primary_logs_acquisition_id"]
+            ),
+            secondary_logs_acquisition_id=str(
+                candidate_kwargs["secondary_logs_acquisition_id"]
+            ),
+        )
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            lease = conn.execute(
+                f"SELECT lease_token FROM {LEASE_TABLE} "
+                "WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            ).fetchone()
+            if lease is None or str(lease["lease_token"]) != claim.lease_token:
+                raise _LeaseLostError("claim lease missing or mismatched")
+            existing = conn.execute(
+                f"SELECT candidate_id FROM {LOG_CANDIDATE_TABLE} "
+                "WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            ).fetchone()
+            if existing is not None:
+                if str(existing["candidate_id"]) != candidate_id:
+                    raise PairEventV2Error(
+                        "domain already has a different log candidate"
+                    )
+            else:
+                # Commit-time auth stamps the active generation so this process's
+                # concurrent claims may exclude immediately; other generations must
+                # re-replay after begin_plan_resume_session.
+                gen = self._active_resume_generation(conn, plan_id)
+                conn.execute(
+                    f"INSERT INTO {LOG_CANDIDATE_TABLE} ("
+                    "candidate_id, plan_id, domain_id, attempt, log_identity_sha256, "
+                    "log_count, primary_provider_org, secondary_provider_org, "
+                    "primary_logs_raw_object_id, secondary_logs_raw_object_id, "
+                    "primary_logs_acquisition_id, secondary_logs_acquisition_id, "
+                    "request_json, created_at, session_auth_generation"
+                    ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        candidate_id,
+                        plan_id,
+                        domain_id,
+                        attempt,
+                        str(candidate_kwargs["log_identity_sha256"]),
+                        int(candidate_kwargs["log_count"]),
+                        normalize_provider_org(
+                            str(candidate_kwargs["primary_provider_org"])
+                        ),
+                        normalize_provider_org(
+                            str(candidate_kwargs["secondary_provider_org"])
+                        ),
+                        str(candidate_kwargs["primary_logs_raw_object_id"]),
+                        str(candidate_kwargs["secondary_logs_raw_object_id"]),
+                        str(candidate_kwargs["primary_logs_acquisition_id"]),
+                        str(candidate_kwargs["secondary_logs_acquisition_id"]),
+                        str(candidate_kwargs["request_json"]),
+                        now,
+                        gen,
+                    ),
+                )
+                for block_number, expected_hash, is_boundary in blocks:
+                    conn.execute(
+                        f"INSERT INTO {LOG_CANDIDATE_BLOCK_TABLE} ("
+                        "plan_id, domain_id, block_number, expected_block_hash, "
+                        "is_boundary) VALUES (?,?,?,?,?)",
+                        (
+                            plan_id,
+                            domain_id,
+                            int(block_number),
+                            expected_hash,
+                            1 if is_boundary else 0,
+                        ),
+                    )
+            # Return to PENDING at unchanged attempt; release lease. No coverage.
+            conn.execute(
+                f"UPDATE {NODE_TABLE} SET status = 'PENDING', updated_at = ? "
+                "WHERE plan_id = ? AND domain_id = ? AND status = 'IN_FLIGHT'",
+                (now, plan_id, domain_id),
+            )
+            if conn.execute("SELECT changes()").fetchone()[0] != 1:
+                raise PairEventV2Error("candidate commit requires IN_FLIGHT node")
+            conn.execute(
+                f"DELETE FROM {LEASE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            )
+            # Commit-time raw re-auth before durable candidate is trusted.
+            # Session resume re-replays again on coordinator restart (watermark).
+            if existing is None:
+                self._authenticate_candidate_row(
+                    conn, plan_id=plan_id, domain_id=domain_id
+                )
+                self._note_missing_blocks(conn, plan_id, blocks)
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        return candidate_id
+
+    def _op_load_log_candidate(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        domain_id: str,
+    ) -> dict[str, Any] | None:
+        del writer
+        row = conn.execute(
+            f"SELECT * FROM {LOG_CANDIDATE_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan_id, domain_id),
+        ).fetchone()
+        if row is None:
+            return None
+        blocks = conn.execute(
+            f"SELECT block_number, expected_block_hash, is_boundary "
+            f"FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ? ORDER BY block_number",
+            (plan_id, domain_id),
+        ).fetchall()
+        return {
+            "candidate_id": str(row["candidate_id"]),
+            "plan_id": str(row["plan_id"]),
+            "domain_id": str(row["domain_id"]),
+            "attempt": int(row["attempt"]),
+            "log_identity_sha256": str(row["log_identity_sha256"]),
+            "log_count": int(row["log_count"]),
+            "primary_provider_org": str(row["primary_provider_org"]),
+            "secondary_provider_org": str(row["secondary_provider_org"]),
+            "primary_logs_raw_object_id": str(row["primary_logs_raw_object_id"]),
+            "secondary_logs_raw_object_id": str(row["secondary_logs_raw_object_id"]),
+            "primary_logs_acquisition_id": str(row["primary_logs_acquisition_id"]),
+            "secondary_logs_acquisition_id": str(row["secondary_logs_acquisition_id"]),
+            "request_json": str(row["request_json"]),
+            "blocks": [
+                (
+                    int(b["block_number"]),
+                    None
+                    if b["expected_block_hash"] is None
+                    else str(b["expected_block_hash"]),
+                    bool(int(b["is_boundary"])),
+                )
+                for b in blocks
+            ],
+        }
+
+    def _op_finalize_log_candidate(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        domain_id: str,
+        header_receipt_ids: Sequence[str],
+    ) -> str:
+        """Atomic AGREED transition after full candidate + header raw replay."""
+        del writer
+        now = _now()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            cand = conn.execute(
+                f"SELECT * FROM {LOG_CANDIDATE_TABLE} "
+                "WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            ).fetchone()
+            if cand is None:
+                raise PairEventV2Error("log candidate missing at finalize")
+            node_row = conn.execute(
+                f"SELECT * FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            ).fetchone()
+            if node_row is None:
+                raise PairEventV2Error("query node missing at finalize")
+            if str(node_row["status"]) == "AGREED":
+                leaf = conn.execute(
+                    f"SELECT leaf_receipt_id FROM {LEAF_TABLE} "
+                    "WHERE plan_id = ? AND domain_id = ?",
+                    (plan_id, domain_id),
+                ).fetchone()
+                if leaf is None:
+                    raise PairEventV2Error("AGREED node missing leaf")
+                conn.execute("COMMIT")
+                return str(leaf["leaf_receipt_id"])
+            if str(node_row["status"]) != "PENDING":
+                raise PairEventV2Error(
+                    "finalize requires PENDING node with log candidate"
+                )
+            domain = QueryDomain(
+                start_block=int(node_row["start_block"]),
+                end_block=int(node_row["end_block"]),
+                addresses=tuple(json.loads(str(node_row["addresses_json"]))),
+                topics=tuple(json.loads(str(node_row["topics_json"]))),
+            )
+            if domain.domain_id(plan_id) != domain_id:
+                raise PairEventV2Error("node domain_id does not match domain fields")
+            # Authenticate dual log raw bodies + request + provider orgs.
+            try:
+                request = json.loads(str(cand["request_json"]))
+            except json.JSONDecodeError as exc:
+                raise PairEventV2Error("candidate request_json is not JSON") from exc
+            if not isinstance(request, Mapping):
+                raise PairEventV2Error("candidate request_json must be an object")
+            expected_request = request_for_domain(domain)
+            if _canonical_json(dict(request)) != _canonical_json(expected_request):
+                raise PairEventV2Error(
+                    "candidate request does not match domain canonical request"
+                )
+            p_ev = self._authenticate_raw_pair(
+                conn,
+                acquisition_id=str(cand["primary_logs_acquisition_id"]),
+                raw_object_id=str(cand["primary_logs_raw_object_id"]),
+                provider_org=str(cand["primary_provider_org"]),
+                request=request,
+            )
+            s_ev = self._authenticate_raw_pair(
+                conn,
+                acquisition_id=str(cand["secondary_logs_acquisition_id"]),
+                raw_object_id=str(cand["secondary_logs_raw_object_id"]),
+                provider_org=str(cand["secondary_provider_org"]),
+                request=request,
+            )
+            p_payload = _load_authenticated_rpc(
+                p_ev, request, max_bytes=self._max_body_bytes, raw_root=self._raw_root
+            )
+            s_payload = _load_authenticated_rpc(
+                s_ev, request, max_bytes=self._max_body_bytes, raw_root=self._raw_root
+            )
+            p_logs = p_payload.get("result")
+            s_logs = s_payload.get("result")
+            if not isinstance(p_logs, list) or not isinstance(s_logs, list):
+                raise PairEventV2Error("candidate log bodies missing result lists")
+            identities, digest = reconcile_log_sets_v2(p_logs, s_logs, domain)
+            if digest != str(cand["log_identity_sha256"]):
+                raise PairEventV2Error("candidate log_identity_sha256 replay mismatch")
+            if len(identities) != int(cand["log_count"]):
+                raise PairEventV2Error("candidate log_count replay mismatch")
+            recomputed_id = compute_log_candidate_id(
+                plan_id=plan_id,
+                domain_id=domain_id,
+                attempt=int(cand["attempt"]),
+                log_identity_sha256=digest,
+                primary_logs_raw_object_id=str(cand["primary_logs_raw_object_id"]),
+                secondary_logs_raw_object_id=str(cand["secondary_logs_raw_object_id"]),
+                primary_logs_acquisition_id=str(cand["primary_logs_acquisition_id"]),
+                secondary_logs_acquisition_id=str(
+                    cand["secondary_logs_acquisition_id"]
+                ),
+            )
+            if recomputed_id != str(cand["candidate_id"]):
+                raise PairEventV2Error("candidate_id does not match recomputed identity")
+            expected_blocks = required_blocks_from_identities(
+                identities, domain=domain
+            )
+            stored_blocks = conn.execute(
+                f"SELECT block_number, expected_block_hash, is_boundary "
+                f"FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+                "WHERE plan_id = ? AND domain_id = ? ORDER BY block_number",
+                (plan_id, domain_id),
+            ).fetchall()
+            stored_norm = [
+                (
+                    int(b["block_number"]),
+                    None
+                    if b["expected_block_hash"] is None
+                    else str(b["expected_block_hash"]),
+                    bool(int(b["is_boundary"])),
+                )
+                for b in stored_blocks
+            ]
+            if tuple(stored_norm) != expected_blocks:
+                raise PairEventV2Error(
+                    "candidate required blocks do not match replay derivation"
+                )
+            # Replay each header receipt body (scalar or batch-backed).
+            verified_header_ids: list[str] = []
+            for block_number, expected_hash, _is_boundary in expected_blocks:
+                hrow = conn.execute(
+                    f"SELECT * FROM {HEADER_TABLE} "
+                    "WHERE plan_id = ? AND block_number = ?",
+                    (plan_id, int(block_number)),
+                ).fetchone()
+                if hrow is None:
+                    raise PairEventV2Error(
+                        f"canonical header missing for block {block_number}"
+                    )
+                header_id = str(hrow["header_receipt_id"])
+                if header_id not in set(header_receipt_ids):
+                    raise PairEventV2Error(
+                        f"header {header_id} not in finalize header set"
+                    )
+                # Authenticate header raw pairs and re-check fields.
+                hp = self._authenticate_raw_pair(
+                    conn,
+                    acquisition_id=str(hrow["primary_acquisition_id"]),
+                    raw_object_id=str(hrow["primary_raw_object_id"]),
+                    provider_org=str(hrow["primary_provider_org"]),
+                    request=None,  # allow batch or scalar
+                    require_request_match=False,
+                )
+                hs = self._authenticate_raw_pair(
+                    conn,
+                    acquisition_id=str(hrow["secondary_acquisition_id"]),
+                    raw_object_id=str(hrow["secondary_raw_object_id"]),
+                    provider_org=str(hrow["secondary_provider_org"]),
+                    request=None,
+                    require_request_match=False,
+                )
+                p_hdr = self._header_result_from_evidence(
+                    hp, block_number=int(block_number)
+                )
+                s_hdr = self._header_result_from_evidence(
+                    hs, block_number=int(block_number)
+                )
+                if (
+                    p_hdr["hash"] != s_hdr["hash"]
+                    or p_hdr["timestamp"] != s_hdr["timestamp"]
+                    or p_hdr["number"] != int(block_number)
+                    or s_hdr["number"] != int(block_number)
+                ):
+                    raise PairEventV2Error(
+                        f"header replay disagreement at block {block_number}"
+                    )
+                if expected_hash is not None and p_hdr["hash"] != expected_hash:
+                    raise PairEventV2Error(
+                        f"header hash disagrees with candidate at block {block_number}"
+                    )
+                if str(hrow["block_hash"]) != p_hdr["hash"]:
+                    raise PairEventV2Error(
+                        f"stored header hash drift at block {block_number}"
+                    )
+                verified_header_ids.append(header_id)
+            if sorted(verified_header_ids) != sorted(header_receipt_ids):
+                raise PairEventV2Error(
+                    "finalize header set does not match verified headers"
+                )
+            leaf_kwargs = {
+                "plan_id": plan_id,
+                "domain": domain,
+                "log_identity_sha256": digest,
+                "primary_provider_org": str(cand["primary_provider_org"]),
+                "secondary_provider_org": str(cand["secondary_provider_org"]),
+                "primary_logs_raw_object_id": str(cand["primary_logs_raw_object_id"]),
+                "secondary_logs_raw_object_id": str(
+                    cand["secondary_logs_raw_object_id"]
+                ),
+                "primary_logs_acquisition_id": str(
+                    cand["primary_logs_acquisition_id"]
+                ),
+                "secondary_logs_acquisition_id": str(
+                    cand["secondary_logs_acquisition_id"]
+                ),
+                "log_count": len(identities),
+                "canonical_header_receipt_ids": verified_header_ids,
+            }
+            leaf = make_leaf_receipt_record(**leaf_kwargs, completed_at=now)
+            conn.execute(
+                f"INSERT INTO {LEAF_TABLE} (leaf_receipt_id, plan_id, domain_id, "
+                "start_block, end_block, addresses_json, topics_json, "
+                "primary_provider_org, secondary_provider_org, "
+                "primary_logs_raw_object_id, secondary_logs_raw_object_id, "
+                "primary_logs_acquisition_id, secondary_logs_acquisition_id, "
+                "log_count, log_identity_sha256, canonical_header_receipt_ids_json, "
+                "log_identity_version, receipt_schema_version, "
+                "reconciliation_status, completed_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    leaf.leaf_receipt_id,
+                    leaf.plan_id,
+                    leaf.domain_id,
+                    leaf.start_block,
+                    leaf.end_block,
+                    leaf.addresses_json,
+                    leaf.topics_json,
+                    leaf.primary_provider_org,
+                    leaf.secondary_provider_org,
+                    leaf.primary_logs_raw_object_id,
+                    leaf.secondary_logs_raw_object_id,
+                    leaf.primary_logs_acquisition_id,
+                    leaf.secondary_logs_acquisition_id,
+                    leaf.log_count,
+                    leaf.log_identity_sha256,
+                    leaf.canonical_header_receipt_ids_json,
+                    LOG_IDENTITY_VERSION,
+                    RECEIPT_SCHEMA_VERSION,
+                    "AGREED",
+                    leaf.completed_at,
+                ),
+            )
+            for header_id in leaf.canonical_header_receipt_ids:
+                conn.execute(
+                    f"INSERT INTO {DEP_TABLE} "
+                    "(plan_id, leaf_receipt_id, header_receipt_id) VALUES (?,?,?)",
+                    (plan_id, leaf.leaf_receipt_id, header_id),
+                )
+            # Post-write integrity (still in TX): prove leaf/deps landed and node
+            # remains PENDING before AGREED. Failures here roll back all writes.
+            leaf_present = conn.execute(
+                f"SELECT leaf_receipt_id FROM {LEAF_TABLE} "
+                "WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            ).fetchone()
+            if leaf_present is None or str(leaf_present["leaf_receipt_id"]) != (
+                leaf.leaf_receipt_id
+            ):
+                raise PairEventV2Error("finalize leaf write missing before AGREED")
+            dep_count = conn.execute(
+                f"SELECT COUNT(*) AS c FROM {DEP_TABLE} "
+                "WHERE plan_id = ? AND leaf_receipt_id = ?",
+                (plan_id, leaf.leaf_receipt_id),
+            ).fetchone()
+            if int(dep_count["c"] if dep_count else 0) != len(
+                leaf.canonical_header_receipt_ids
+            ):
+                raise PairEventV2Error("finalize dependency write incomplete")
+            status_row = conn.execute(
+                f"SELECT status FROM {NODE_TABLE} "
+                "WHERE plan_id = ? AND domain_id = ?",
+                (plan_id, domain_id),
+            ).fetchone()
+            if status_row is None or str(status_row["status"]) != "PENDING":
+                raise PairEventV2Error(
+                    "node status changed during finalize after leaf write"
+                )
+            conn.execute(
+                f"UPDATE {NODE_TABLE} SET status = 'AGREED', updated_at = ? "
+                "WHERE plan_id = ? AND domain_id = ? AND status = 'PENDING'",
+                (now, plan_id, domain_id),
+            )
+            if conn.execute("SELECT changes()").fetchone()[0] != 1:
+                raise PairEventV2Error("finalize could not mark node AGREED")
+            conn.execute("COMMIT")
+            return leaf.leaf_receipt_id
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+
+    def _authenticate_raw_pair(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        acquisition_id: str,
+        raw_object_id: str,
+        provider_org: str,
+        request: Mapping[str, Any] | Sequence[Any] | None,
+        require_request_match: bool = True,
+    ) -> AuthenticatedEvidence:
+        """Re-open raw bytes and verify catalog pairing for finalize/header replay."""
+        return self._authenticate_evidence(
+            conn,
+            acquisition_id=acquisition_id,
+            raw_object_id=raw_object_id,
+            provider_org=provider_org,
+            request=request,
+            require_request_match=require_request_match,
+            require_successful_body=True,
+        )
+
+    def _header_result_from_evidence(
+        self, evidence: AuthenticatedEvidence, *, block_number: int
+    ) -> dict[str, Any]:
+        """Extract one block header from scalar or batch-backed authenticated raw."""
+        return _extract_header_result_from_evidence(
+            evidence,
+            block_number=block_number,
+            max_bytes=self._max_body_bytes,
+            raw_root=self._raw_root,
+        )
 
     def _insert_node(
         self,
@@ -2616,6 +4137,628 @@ class PersistenceCoordinator:
                 self._lease_expiries += expired
         return expired
 
+    def _claim_order_version(self, conn: sqlite3.Connection, plan_id: str) -> str:
+        """Read authenticated execution-policy claim order (default chronological)."""
+        row = conn.execute(
+            f"SELECT identity_payload_json FROM {EXECUTION_POLICY_TABLE} "
+            "WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            return CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1
+        try:
+            payload = json.loads(str(row["identity_payload_json"]))
+        except json.JSONDecodeError as exc:
+            raise PairEventV2Error("execution policy JSON is malformed") from exc
+        order = str(
+            payload.get("claim_order_version") or CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1
+        )
+        if order not in {
+            CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+            CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
+        }:
+            raise PairEventV2Error(f"unknown claim_order_version: {order}")
+        return order
+
+    def _op_claim_order_version(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+    ) -> str:
+        del writer
+        return self._claim_order_version(conn, plan_id)
+
+    def _op_list_missing_candidate_blocks(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        limit: int = HEADER_WORK_PAGE_SIZE,
+        after_block_number: int | None = None,
+    ) -> list[int]:
+        del writer
+        page = int(limit)
+        if page <= 0:
+            raise PairEventV2Error("list_missing_candidate_blocks limit must be positive")
+        if page > 64:
+            raise PairEventV2Error("list_missing_candidate_blocks limit exceeds hard bound 64")
+        if after_block_number is None:
+            rows = conn.execute(
+                f"SELECT DISTINCT b.block_number "
+                f"FROM {LOG_CANDIDATE_BLOCK_TABLE} b "
+                f"WHERE b.plan_id = ? "
+                f"AND NOT EXISTS ("
+                f"  SELECT 1 FROM {HEADER_TABLE} h "
+                f"  WHERE h.plan_id = b.plan_id AND h.block_number = b.block_number"
+                f") "
+                f"ORDER BY b.block_number "
+                f"LIMIT ?",
+                (plan_id, page),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                f"SELECT DISTINCT b.block_number "
+                f"FROM {LOG_CANDIDATE_BLOCK_TABLE} b "
+                f"WHERE b.plan_id = ? AND b.block_number > ? "
+                f"AND NOT EXISTS ("
+                f"  SELECT 1 FROM {HEADER_TABLE} h "
+                f"  WHERE h.plan_id = b.plan_id AND h.block_number = b.block_number"
+                f") "
+                f"ORDER BY b.block_number "
+                f"LIMIT ?",
+                (plan_id, int(after_block_number), page),
+            ).fetchall()
+        return [
+            int(r[0] if not isinstance(r, sqlite3.Row) else r["block_number"])
+            for r in rows
+        ]
+
+    def _op_list_finalizable_candidates(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        limit: int = FINALIZE_WORK_PAGE_SIZE,
+        after_domain_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Examine at most ``limit`` PENDING candidates; return ready subset + cursor.
+
+        Bounds database work per call: never scans the full candidate population
+        looking for ready rows. Callers advance ``after_domain_id`` across turns.
+        """
+        del writer
+        page = int(limit)
+        if page <= 0:
+            raise PairEventV2Error("list_finalizable_candidates limit must be positive")
+        if page > 64:
+            raise PairEventV2Error(
+                "list_finalizable_candidates limit exceeds hard bound 64"
+            )
+        if after_domain_id is None:
+            examined = conn.execute(
+                f"SELECT c.domain_id FROM {LOG_CANDIDATE_TABLE} c "
+                f"JOIN {NODE_TABLE} n "
+                f"ON n.plan_id = c.plan_id AND n.domain_id = c.domain_id "
+                f"WHERE c.plan_id = ? AND n.status = 'PENDING' "
+                f"ORDER BY c.domain_id "
+                f"LIMIT ?",
+                (plan_id, page),
+            ).fetchall()
+        else:
+            examined = conn.execute(
+                f"SELECT c.domain_id FROM {LOG_CANDIDATE_TABLE} c "
+                f"JOIN {NODE_TABLE} n "
+                f"ON n.plan_id = c.plan_id AND n.domain_id = c.domain_id "
+                f"WHERE c.plan_id = ? AND n.status = 'PENDING' "
+                f"AND c.domain_id > ? "
+                f"ORDER BY c.domain_id "
+                f"LIMIT ?",
+                (plan_id, str(after_domain_id), page),
+            ).fetchall()
+        ready: list[str] = []
+        last_domain: str | None = None
+        for row in examined:
+            domain_id = str(row["domain_id"])
+            last_domain = domain_id
+            incomplete = conn.execute(
+                f"SELECT 1 FROM {LOG_CANDIDATE_BLOCK_TABLE} b "
+                f"WHERE b.plan_id = ? AND b.domain_id = ? "
+                f"AND NOT EXISTS ("
+                f"  SELECT 1 FROM {HEADER_TABLE} h "
+                f"  WHERE h.plan_id = b.plan_id AND h.block_number = b.block_number"
+                f") "
+                f"LIMIT 1",
+                (plan_id, domain_id),
+            ).fetchone()
+            if incomplete is None:
+                # All required blocks have headers (or candidate has zero blocks —
+                # still finalizable only if block table has the boundary row).
+                has_blocks = conn.execute(
+                    f"SELECT 1 FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+                    f"WHERE plan_id = ? AND domain_id = ? LIMIT 1",
+                    (plan_id, domain_id),
+                ).fetchone()
+                if has_blocks is not None:
+                    ready.append(domain_id)
+        return {
+            "ready_domain_ids": ready,
+            "scan_through_domain_id": last_domain,
+            "exhausted": len(examined) < page,
+            "examined": len(examined),
+        }
+
+    def _op_authenticate_plan_attach(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        plan_config: PlanConfig,
+        execution_policy: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Verify persisted plan + execution policy before attach mutates lifecycle."""
+        del writer
+        if _contains_sensitive_key(execution_policy):
+            raise PairEventV2Error("execution policy contains sensitive keys")
+        if str(execution_policy.get("plan_id", "")) != plan_id:
+            raise PairEventV2Error("execution policy plan_id must bind the plan")
+        expected_record = plan_record_from_config(plan_config, created_at="")
+        if expected_record.plan_id != plan_id:
+            raise PairEventV2Error(
+                "attach plan_id does not match engine plan_config identity"
+            )
+        policy_json = _canonical_json(dict(execution_policy))
+        policy_id = _identity("pol_", json.loads(policy_json))
+        row = conn.execute(
+            f"SELECT * FROM {PLAN_TABLE} WHERE plan_id = ?", (plan_id,)
+        ).fetchone()
+        if row is None:
+            raise PairEventV2Error("attach plan is missing")
+        actual = PlanRecord(
+            plan_id=row["plan_id"],
+            registry_dataset_id=row["registry_dataset_id"],
+            identity_payload_json=row["identity_payload_json"],
+            event_provider_orgs_json=row["event_provider_orgs_json"],
+            metadata_provider_orgs_json=row["metadata_provider_orgs_json"],
+            root_block_size=row["root_block_size"],
+            initial_cohort_size=row["initial_cohort_size"],
+            deployment_block=row["deployment_block"],
+            cutoff_block=row["cutoff_block"],
+            plan_schema_version=row["plan_schema_version"],
+            created_at=row["created_at"],
+        )
+        if replace(actual, created_at="") != replace(expected_record, created_at=""):
+            raise PairEventV2Error("persisted plan row is not the requested plan")
+        policy_row = conn.execute(
+            f"SELECT * FROM {EXECUTION_POLICY_TABLE} WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if policy_row is None:
+            raise PairEventV2Error(
+                "plan resume missing immutable execution policy record"
+            )
+        if (
+            str(policy_row["identity_payload_json"]) != policy_json
+            or str(policy_row["policy_id"]) != policy_id
+            or str(policy_row["schema_version"]) != EXECUTION_POLICY_SCHEMA_VERSION
+        ):
+            raise PairEventV2Error(
+                "execution policy mismatch on plan resume — authority settings changed"
+            )
+        return {
+            "plan_id": plan_id,
+            "policy_id": policy_id,
+            "schema_version": EXECUTION_POLICY_SCHEMA_VERSION,
+        }
+
+    def _op_begin_plan_resume_session(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+    ) -> dict[str, Any]:
+        """Bump shared plan resume generation (invalidates prior session auth marks)."""
+        del writer
+        plan_ok = conn.execute(
+            f"SELECT 1 FROM {PLAN_TABLE} WHERE plan_id = ?", (plan_id,)
+        ).fetchone()
+        if plan_ok is None:
+            raise PairEventV2Error("resume session plan is missing")
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = conn.execute(
+                f"SELECT active_generation FROM {PLAN_RESUME_SESSION_TABLE} "
+                "WHERE plan_id = ?",
+                (plan_id,),
+            ).fetchone()
+            if row is None:
+                generation = 1
+                conn.execute(
+                    f"INSERT INTO {PLAN_RESUME_SESSION_TABLE} "
+                    "(plan_id, active_generation, updated_at) VALUES (?,?,?)",
+                    (plan_id, generation, _now()),
+                )
+            else:
+                generation = int(row["active_generation"]) + 1
+                conn.execute(
+                    f"UPDATE {PLAN_RESUME_SESSION_TABLE} "
+                    "SET active_generation = ?, updated_at = ? WHERE plan_id = ?",
+                    (generation, _now(), plan_id),
+                )
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        self._resume_force_through.pop(plan_id, None)
+        return {"plan_id": plan_id, "active_generation": generation}
+
+    def _active_resume_generation(
+        self, conn: sqlite3.Connection, plan_id: str
+    ) -> int:
+        """Read active generation; safe inside or outside an open transaction."""
+        row = conn.execute(
+            f"SELECT active_generation FROM {PLAN_RESUME_SESSION_TABLE} "
+            "WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if row is not None:
+            return int(row["active_generation"])
+        # Insert generation 1 without nested BEGIN (caller may hold a TX).
+        plan_ok = conn.execute(
+            f"SELECT 1 FROM {PLAN_TABLE} WHERE plan_id = ?", (plan_id,)
+        ).fetchone()
+        if plan_ok is None:
+            raise PairEventV2Error("resume session plan is missing")
+        conn.execute(
+            f"INSERT OR IGNORE INTO {PLAN_RESUME_SESSION_TABLE} "
+            "(plan_id, active_generation, updated_at) VALUES (?,?,?)",
+            (plan_id, 1, _now()),
+        )
+        row = conn.execute(
+            f"SELECT active_generation FROM {PLAN_RESUME_SESSION_TABLE} "
+            "WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            raise PairEventV2Error("resume session could not be initialized")
+        return int(row["active_generation"])
+
+    def _op_authenticate_resumed_candidates(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+        force: bool = False,
+        limit: int = CLAIM_SCAN_PAGE_SIZE,
+    ) -> dict[str, Any]:
+        """One bounded page of resume re-validation for the active generation.
+
+        Normal mode selects only candidates not yet marked for the active
+        generation (race-safe for inserts behind any prior cursor). ``force=True``
+        revalidates the next page of all candidates (still one page per call).
+
+        Generation-atomic: a concurrent attach that bumps the active generation
+        mid-page aborts stamping for the captured generation, returns
+        ``generation_restart=True``, and never advertises ``complete=True`` for a
+        generation that is no longer active.
+        """
+        del writer
+        page = int(limit)
+        if page <= 0:
+            raise PairEventV2Error("authenticate_resumed_candidates limit must be positive")
+        if page > 64:
+            raise PairEventV2Error(
+                "authenticate_resumed_candidates limit exceeds hard bound 64"
+            )
+        generation = self._active_resume_generation(conn, plan_id)
+
+        def _restart_result(
+            *,
+            authenticated: int,
+            through: str | None,
+            examined: int,
+            live_generation: int,
+        ) -> dict[str, Any]:
+            return {
+                "authenticated": authenticated,
+                "complete": False,
+                "through_domain_id": through,
+                "examined": examined,
+                "active_generation": live_generation,
+                "generation_restart": True,
+            }
+
+        def _drop_bad_candidate(domain_id: str) -> None:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                block_rows = conn.execute(
+                    f"SELECT block_number FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+                    "WHERE plan_id = ? AND domain_id = ?",
+                    (plan_id, domain_id),
+                ).fetchall()
+                conn.execute(
+                    f"DELETE FROM {LOG_CANDIDATE_TABLE} "
+                    "WHERE plan_id = ? AND domain_id = ?",
+                    (plan_id, domain_id),
+                )
+                for brow in block_rows:
+                    bn = int(brow["block_number"])
+                    still = conn.execute(
+                        f"SELECT 1 FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+                        "WHERE plan_id = ? AND block_number = ? LIMIT 1",
+                        (plan_id, bn),
+                    ).fetchone()
+                    if still is None:
+                        self._backlog_remove_block(conn, plan_id, bn)
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
+        if force:
+            after = self._resume_force_through.get(plan_id)
+            if after is None:
+                rows = conn.execute(
+                    f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} "
+                    "WHERE plan_id = ? ORDER BY domain_id LIMIT ?",
+                    (plan_id, page),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} "
+                    "WHERE plan_id = ? AND domain_id > ? "
+                    "ORDER BY domain_id LIMIT ?",
+                    (plan_id, after, page),
+                ).fetchall()
+        else:
+            # Unauthenticated for active generation only — includes inserts that
+            # sort behind a prior watermark (generation mark still NULL/stale).
+            rows = conn.execute(
+                f"SELECT domain_id FROM {LOG_CANDIDATE_TABLE} "
+                "WHERE plan_id = ? "
+                "AND (session_auth_generation IS NULL "
+                "     OR session_auth_generation != ?) "
+                "ORDER BY domain_id LIMIT ?",
+                (plan_id, generation, page),
+            ).fetchall()
+
+        authenticated = 0
+        through: str | None = None
+        examined = 0
+        for row in rows:
+            domain_id = str(row["domain_id"])
+            through = domain_id
+            examined += 1
+            try:
+                self._authenticate_candidate_row(
+                    conn, plan_id=plan_id, domain_id=domain_id
+                )
+            except PairEventV2Error:
+                live_before_drop = self._active_resume_generation(conn, plan_id)
+                if live_before_drop != generation:
+                    return _restart_result(
+                        authenticated=authenticated,
+                        through=through,
+                        examined=examined,
+                        live_generation=live_before_drop,
+                    )
+                _drop_bad_candidate(domain_id)
+                if force:
+                    self._resume_force_through[plan_id] = through
+                    raise
+                continue
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                live_gen = self._active_resume_generation(conn, plan_id)
+                if live_gen != generation:
+                    conn.execute("COMMIT")
+                    return _restart_result(
+                        authenticated=authenticated,
+                        through=through,
+                        examined=examined,
+                        live_generation=live_gen,
+                    )
+                # Re-check row still present; stamp only the still-active generation.
+                still = conn.execute(
+                    f"SELECT 1 FROM {LOG_CANDIDATE_TABLE} "
+                    "WHERE plan_id = ? AND domain_id = ?",
+                    (plan_id, domain_id),
+                ).fetchone()
+                if still is not None:
+                    conn.execute(
+                        f"UPDATE {LOG_CANDIDATE_TABLE} "
+                        "SET session_auth_generation = ? "
+                        "WHERE plan_id = ? AND domain_id = ?",
+                        (live_gen, plan_id, domain_id),
+                    )
+                    authenticated += 1
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
+        live_gen = self._active_resume_generation(conn, plan_id)
+        if live_gen != generation:
+            return _restart_result(
+                authenticated=authenticated,
+                through=through,
+                examined=examined,
+                live_generation=live_gen,
+            )
+
+        exhausted = len(rows) < page
+        if force:
+            self._resume_force_through[plan_id] = None if exhausted else through
+        complete = exhausted
+        if complete and not force:
+            # Confirm no unauth remain (race-safe LIMIT 1 probe, not full scan).
+            more = conn.execute(
+                f"SELECT 1 FROM {LOG_CANDIDATE_TABLE} "
+                "WHERE plan_id = ? "
+                "AND (session_auth_generation IS NULL OR session_auth_generation != ?) "
+                "LIMIT 1",
+                (plan_id, generation),
+            ).fetchone()
+            complete = more is None
+            live_gen = self._active_resume_generation(conn, plan_id)
+            if live_gen != generation:
+                return _restart_result(
+                    authenticated=authenticated,
+                    through=through,
+                    examined=examined,
+                    live_generation=live_gen,
+                )
+        return {
+            "authenticated": authenticated,
+            "complete": complete,
+            "through_domain_id": through,
+            "examined": examined,
+            "active_generation": generation,
+            "generation_restart": False,
+        }
+
+    def _backlog_add_block(
+        self, conn: sqlite3.Connection, plan_id: str, block_number: int
+    ) -> None:
+        """Add one missing block to durable backlog inside caller's TX."""
+        bn = int(block_number)
+        present = conn.execute(
+            f"SELECT 1 FROM {HEADER_TABLE} "
+            "WHERE plan_id = ? AND block_number = ? LIMIT 1",
+            (plan_id, bn),
+        ).fetchone()
+        if present is not None:
+            return
+        conn.execute(
+            f"INSERT OR IGNORE INTO {HEADER_BACKLOG_TABLE} "
+            "(plan_id, block_number) VALUES (?,?)",
+            (plan_id, bn),
+        )
+        if conn.execute("SELECT changes()").fetchone()[0] != 1:
+            return
+        conn.execute(
+            f"INSERT INTO {HEADER_BACKLOG_METRIC_TABLE} (plan_id, missing_count) "
+            "VALUES (?, 1) "
+            "ON CONFLICT(plan_id) DO UPDATE SET "
+            "missing_count = missing_count + 1",
+            (plan_id,),
+        )
+
+    def _backlog_remove_block(
+        self, conn: sqlite3.Connection, plan_id: str, block_number: int
+    ) -> None:
+        """Remove one block from durable backlog inside caller's TX."""
+        bn = int(block_number)
+        conn.execute(
+            f"DELETE FROM {HEADER_BACKLOG_TABLE} "
+            "WHERE plan_id = ? AND block_number = ?",
+            (plan_id, bn),
+        )
+        if conn.execute("SELECT changes()").fetchone()[0] != 1:
+            return
+        conn.execute(
+            f"UPDATE {HEADER_BACKLOG_METRIC_TABLE} "
+            "SET missing_count = missing_count - 1 "
+            "WHERE plan_id = ? AND missing_count > 0",
+            (plan_id,),
+        )
+
+    def _note_missing_blocks(
+        self,
+        conn: sqlite3.Connection,
+        plan_id: str,
+        blocks: Sequence[tuple[int, str | None, bool]],
+    ) -> None:
+        """Transactionally record missing required blocks (caller's open TX)."""
+        for block_number, _hash, _boundary in blocks:
+            self._backlog_add_block(conn, plan_id, int(block_number))
+
+    def _note_header_stored(
+        self, conn: sqlite3.Connection, plan_id: str, block_number: int
+    ) -> None:
+        """Transactionally clear a block from backlog (must run inside store TX)."""
+        self._backlog_remove_block(conn, plan_id, int(block_number))
+
+    def _op_header_backlog_count(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+    ) -> int:
+        """Exact multi-process backlog from durable metric row (O(1) read).
+
+        No full-population bootstrap. Plan init inserts missing_count=0; commit
+        and header store maintain the counter transactionally. Missing metric
+        fails closed with a bounded zero-row insert only when the plan row exists
+        and no backlog/candidate-block state is present.
+        """
+        del writer
+        row = conn.execute(
+            f"SELECT missing_count FROM {HEADER_BACKLOG_METRIC_TABLE} "
+            "WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+        if row is not None:
+            return int(row["missing_count"])
+        # Coherent zero init only — never SELECT DISTINCT over candidate blocks.
+        plan_ok = conn.execute(
+            f"SELECT 1 FROM {PLAN_TABLE} WHERE plan_id = ?", (plan_id,)
+        ).fetchone()
+        if plan_ok is None:
+            raise PairEventV2Error("header backlog plan is missing")
+        any_block = conn.execute(
+            f"SELECT 1 FROM {LOG_CANDIDATE_BLOCK_TABLE} WHERE plan_id = ? LIMIT 1",
+            (plan_id,),
+        ).fetchone()
+        any_backlog = conn.execute(
+            f"SELECT 1 FROM {HEADER_BACKLOG_TABLE} WHERE plan_id = ? LIMIT 1",
+            (plan_id,),
+        ).fetchone()
+        if any_block is not None or any_backlog is not None:
+            raise PairEventV2Error(
+                "header backlog metric missing while candidate/backlog state exists; "
+                "refusing unbounded rebuild"
+            )
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            again = conn.execute(
+                f"SELECT missing_count FROM {HEADER_BACKLOG_METRIC_TABLE} "
+                "WHERE plan_id = ?",
+                (plan_id,),
+            ).fetchone()
+            if again is not None:
+                conn.execute("COMMIT")
+                return int(again["missing_count"])
+            conn.execute(
+                f"INSERT INTO {HEADER_BACKLOG_METRIC_TABLE} "
+                "(plan_id, missing_count) VALUES (?, 0)",
+                (plan_id,),
+            )
+            conn.execute("COMMIT")
+            return 0
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+
+    def _op_reauthenticate_root_domain_set(
+        self,
+        conn: sqlite3.Connection,
+        writer: RawObjectWriter,
+        *,
+        plan_id: str,
+    ) -> dict[str, Any]:
+        """Public semantic root re-auth (field recompute + ordered domain-set digest)."""
+        del writer
+        count, digest = self._stream_root_domain_digest(conn, plan_id)
+        return {"root_count": count, "root_domain_set_sha256": digest}
+
     def _op_claim_pending(
         self,
         conn: sqlite3.Connection,
@@ -2625,35 +4768,75 @@ class PersistenceCoordinator:
         worker_id: str,
         lease_ttl_seconds: float,
     ) -> Claim | None:
-        del writer
-        conn.execute("BEGIN IMMEDIATE")
+        # Advance at most one resume-auth page OUTSIDE the write transaction.
+        # No population COUNT; complete plans skip auth entirely.
+        # Resume-auth is outside the write TX (no ROLLBACK coupling).
+        # Advance one resume-validation page (never deletes valid candidates).
+        self._op_authenticate_resumed_candidates(
+            conn,
+            writer,
+            plan_id=plan_id,
+            force=False,
+            limit=CLAIM_SCAN_PAGE_SIZE,
+        )
+        generation = self._active_resume_generation(conn, plan_id)
+        in_tx = False
         try:
+            conn.execute("BEGIN IMMEDIATE")
+            in_tx = True
             self._expire_leases(conn, plan_id)
+            claim_order = self._claim_order_version(conn, plan_id)
+            # Production domain_hash_v1 uses covering index (plan_id, status, domain_id).
+            if claim_order == CLAIM_ORDER_VERSION_DOMAIN_HASH_V1:
+                order_sql = "ORDER BY n.domain_id"
+            else:
+                order_sql = "ORDER BY n.start_block, n.domain_id"
+            # Exclusion authority: only candidates stamped with the active
+            # generation. Unvalidated candidates defer claim (do not suppress via
+            # bare existence, do not get deleted for reclaim). Valid candidates
+            # after session re-auth exclude reacquisition.
             row = conn.execute(
-                f"SELECT * FROM {NODE_TABLE} WHERE plan_id = ? AND status = 'PENDING' "
-                "AND attempt < ? ORDER BY start_block, domain_id LIMIT 1",
-                (plan_id, self._max_attempts),
+                f"SELECT n.* FROM {NODE_TABLE} n "
+                f"WHERE n.plan_id = ? AND n.status = 'PENDING' "
+                f"AND n.attempt < ? "
+                f"AND NOT EXISTS ("
+                f"  SELECT 1 FROM {LOG_CANDIDATE_TABLE} c "
+                f"  WHERE c.plan_id = n.plan_id AND c.domain_id = n.domain_id "
+                f"  AND c.session_auth_generation = ?"
+                f") "
+                f"AND NOT EXISTS ("
+                f"  SELECT 1 FROM {LOG_CANDIDATE_TABLE} c "
+                f"  WHERE c.plan_id = n.plan_id AND c.domain_id = n.domain_id "
+                f"  AND (c.session_auth_generation IS NULL "
+                f"       OR c.session_auth_generation != ?)"
+                f") "
+                f"{order_sql} "
+                f"LIMIT 1",
+                (plan_id, self._max_attempts, generation, generation),
             ).fetchone()
             if row is None:
                 conn.execute("COMMIT")
+                in_tx = False
                 return None
+            domain_id = str(row["domain_id"])
             now = datetime.now(UTC)
             token = uuid.uuid4().hex
             conn.execute(
                 f"UPDATE {NODE_TABLE} SET status = 'IN_FLIGHT', updated_at = ? "
                 "WHERE plan_id = ? AND domain_id = ? AND status = 'PENDING' "
                 "AND attempt < ?",
-                (now.isoformat(), plan_id, row["domain_id"], self._max_attempts),
+                (now.isoformat(), plan_id, domain_id, self._max_attempts),
             )
             if conn.execute("SELECT changes()").fetchone()[0] != 1:
                 conn.execute("COMMIT")
+                in_tx = False
                 return None
             conn.execute(
                 f"INSERT INTO {LEASE_TABLE} (plan_id, domain_id, worker_id, "
                 "lease_token, leased_at, expires_at) VALUES (?,?,?,?,?,?)",
                 (
                     plan_id,
-                    row["domain_id"],
+                    domain_id,
                     worker_id,
                     token,
                     now.isoformat(),
@@ -2661,18 +4844,124 @@ class PersistenceCoordinator:
                 ),
             )
             conn.execute("COMMIT")
+            in_tx = False
             node = self._node_from_row(row, status="IN_FLIGHT")
             return Claim(
                 plan_id=plan_id,
-                domain_id=str(row["domain_id"]),
+                domain_id=domain_id,
                 worker_id=worker_id,
                 lease_token=token,
                 attempt=int(row["attempt"]),
                 node=node,
             )
         except Exception:
-            conn.execute("ROLLBACK")
+            if in_tx:
+                conn.execute("ROLLBACK")
             raise
+
+    def _authenticate_candidate_row(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        plan_id: str,
+        domain_id: str,
+    ) -> None:
+        """Fail closed if a stored candidate does not fully re-authenticate."""
+        cand = conn.execute(
+            f"SELECT * FROM {LOG_CANDIDATE_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ?",
+            (plan_id, domain_id),
+        ).fetchone()
+        if cand is None:
+            raise PairEventV2Error("candidate missing during authentication")
+        node_row = conn.execute(
+            f"SELECT * FROM {NODE_TABLE} WHERE plan_id = ? AND domain_id = ?",
+            (plan_id, domain_id),
+        ).fetchone()
+        if node_row is None:
+            raise PairEventV2Error("candidate node missing during authentication")
+        domain = QueryDomain(
+            start_block=int(node_row["start_block"]),
+            end_block=int(node_row["end_block"]),
+            addresses=tuple(json.loads(str(node_row["addresses_json"]))),
+            topics=tuple(json.loads(str(node_row["topics_json"]))),
+        )
+        if domain.domain_id(plan_id) != domain_id:
+            raise PairEventV2Error("candidate domain_id mismatch during auth")
+        try:
+            request = json.loads(str(cand["request_json"]))
+        except json.JSONDecodeError as exc:
+            raise PairEventV2Error("candidate request_json is not JSON") from exc
+        if not isinstance(request, Mapping):
+            raise PairEventV2Error("candidate request_json must be an object")
+        if _canonical_json(dict(request)) != _canonical_json(
+            request_for_domain(domain)
+        ):
+            raise PairEventV2Error("candidate request does not match domain")
+        p_ev = self._authenticate_evidence(
+            conn,
+            acquisition_id=str(cand["primary_logs_acquisition_id"]),
+            raw_object_id=str(cand["primary_logs_raw_object_id"]),
+            provider_org=str(cand["primary_provider_org"]),
+            request=request,
+            require_request_match=True,
+            require_successful_body=True,
+        )
+        s_ev = self._authenticate_evidence(
+            conn,
+            acquisition_id=str(cand["secondary_logs_acquisition_id"]),
+            raw_object_id=str(cand["secondary_logs_raw_object_id"]),
+            provider_org=str(cand["secondary_provider_org"]),
+            request=request,
+            require_request_match=True,
+            require_successful_body=True,
+        )
+        p_payload = _load_authenticated_rpc(
+            p_ev, request, max_bytes=self._max_body_bytes, raw_root=self._raw_root
+        )
+        s_payload = _load_authenticated_rpc(
+            s_ev, request, max_bytes=self._max_body_bytes, raw_root=self._raw_root
+        )
+        p_logs = p_payload.get("result")
+        s_logs = s_payload.get("result")
+        if not isinstance(p_logs, list) or not isinstance(s_logs, list):
+            raise PairEventV2Error("candidate log bodies missing result lists")
+        identities, digest = reconcile_log_sets_v2(p_logs, s_logs, domain)
+        if digest != str(cand["log_identity_sha256"]):
+            raise PairEventV2Error("candidate log digest authentication failed")
+        if len(identities) != int(cand["log_count"]):
+            raise PairEventV2Error("candidate log_count authentication failed")
+        recomputed = compute_log_candidate_id(
+            plan_id=plan_id,
+            domain_id=domain_id,
+            attempt=int(cand["attempt"]),
+            log_identity_sha256=digest,
+            primary_logs_raw_object_id=str(cand["primary_logs_raw_object_id"]),
+            secondary_logs_raw_object_id=str(cand["secondary_logs_raw_object_id"]),
+            primary_logs_acquisition_id=str(cand["primary_logs_acquisition_id"]),
+            secondary_logs_acquisition_id=str(cand["secondary_logs_acquisition_id"]),
+        )
+        if recomputed != str(cand["candidate_id"]):
+            raise PairEventV2Error("candidate_id authentication failed")
+        expected_blocks = required_blocks_from_identities(identities, domain=domain)
+        stored_blocks = conn.execute(
+            f"SELECT block_number, expected_block_hash, is_boundary "
+            f"FROM {LOG_CANDIDATE_BLOCK_TABLE} "
+            "WHERE plan_id = ? AND domain_id = ? ORDER BY block_number",
+            (plan_id, domain_id),
+        ).fetchall()
+        stored_norm = tuple(
+            (
+                int(b["block_number"]),
+                None
+                if b["expected_block_hash"] is None
+                else str(b["expected_block_hash"]),
+                bool(int(b["is_boundary"])),
+            )
+            for b in stored_blocks
+        )
+        if stored_norm != expected_blocks:
+            raise PairEventV2Error("candidate required-block authentication failed")
 
     def _op_renew_lease(
         self,
@@ -3021,68 +5310,123 @@ class PersistenceCoordinator:
     ) -> tuple[
         CanonicalHeaderReceiptRecord, AuthenticatedEvidence, AuthenticatedEvidence
     ]:
-        def pulse() -> None:
-            self._service_control_commands(conn, writer)
+        """Fully authenticate a canonical header backed by scalar or batch raw pairs.
 
-        request = block_header_request(record.block_number)
+        Authority accepts either a single-block JSON-RPC object or a batch array
+        raw pair that contains the recorded block. Both providers must re-open,
+        re-hash, and re-derive the same number/hash/timestamp as the receipt.
+        """
+        del writer  # control pulses happen inside evidence open helpers if needed
         primary = self._authenticate_evidence(
             conn,
             raw_object_id=record.primary_raw_object_id,
             acquisition_id=record.primary_acquisition_id,
             provider_org=record.primary_provider_org,
-            request=request,
+            request=None,
+            require_request_match=False,
+            require_successful_body=True,
         )
         secondary = self._authenticate_evidence(
             conn,
             raw_object_id=record.secondary_raw_object_id,
             acquisition_id=record.secondary_acquisition_id,
             provider_org=record.secondary_provider_org,
-            request=request,
+            request=None,
+            require_request_match=False,
+            require_successful_body=True,
         )
-        payloads = (
-            _load_authenticated_rpc(
-                primary,
-                request,
-                max_bytes=self._max_body_bytes,
-                raw_root=self._raw_root,
-                pulse=pulse,
-            ),
-            _load_authenticated_rpc(
-                secondary,
-                request,
-                max_bytes=self._max_body_bytes,
-                raw_root=self._raw_root,
-                pulse=pulse,
-            ),
+        # Stored request must be a scalar eth_getBlockByNumber for this block, or
+        # a batch that includes it; reject unrelated acquisitions.
+        for evidence in (primary, secondary):
+            self._assert_header_evidence_covers_block(
+                evidence, block_number=record.block_number
+            )
+        p_hdr = self._header_result_from_evidence(
+            primary, block_number=record.block_number
         )
-        parsed: list[tuple[int, str, int]] = []
-        for payload in payloads:
-            if payload.get("error") is not None or not isinstance(
-                payload.get("result"), Mapping
-            ):
-                raise PairEventV2Error("canonical header evidence is not successful")
-            header = payload["result"]
-            try:
-                parsed.append(
-                    (
-                        _hex_quantity(
-                            _require(header, "number", label="header"), label="number"
-                        ),
-                        _hex_bytes(
-                            _require(header, "hash", label="header"), 32, label="hash"
-                        ),
-                        _hex_quantity(
-                            _require(header, "timestamp", label="header"),
-                            label="timestamp",
-                        ),
-                    )
-                )
-            except UniswapV2IngestionError as exc:
-                raise PairEventV2Error("canonical header fields are malformed") from exc
-        expected = (record.block_number, record.block_hash, record.block_timestamp)
-        if parsed != [expected, expected]:
+        s_hdr = self._header_result_from_evidence(
+            secondary, block_number=record.block_number
+        )
+        expected = {
+            "number": record.block_number,
+            "hash": record.block_hash,
+            "timestamp": record.block_timestamp,
+        }
+        if p_hdr != expected or s_hdr != expected:
             raise PairEventV2Error("canonical header raw replay disagrees with receipt")
+        recomputed = compute_canonical_header_receipt_id(
+            plan_id=record.plan_id,
+            block_number=record.block_number,
+            block_hash=record.block_hash,
+            block_timestamp=record.block_timestamp,
+            primary_provider_org=record.primary_provider_org,
+            secondary_provider_org=record.secondary_provider_org,
+            primary_raw_object_id=primary.raw_object_id,
+            secondary_raw_object_id=secondary.raw_object_id,
+            primary_acquisition_id=primary.acquisition_id,
+            secondary_acquisition_id=secondary.acquisition_id,
+        )
+        if recomputed != record.header_receipt_id:
+            raise PairEventV2Error(
+                "canonical header receipt identity failed recomputation on replay"
+            )
         return record, primary, secondary
+
+    def _assert_header_evidence_covers_block(
+        self, evidence: AuthenticatedEvidence, *, block_number: int
+    ) -> None:
+        """Fail closed if stored request is neither scalar nor batch for block."""
+        try:
+            stored = json.loads(evidence.request_json)
+        except json.JSONDecodeError as exc:
+            raise PairEventV2Error("header evidence request is not JSON") from exc
+        if isinstance(stored, Mapping):
+            if stored.get("method") != "eth_getBlockByNumber":
+                raise PairEventV2Error(
+                    "scalar header evidence method is not eth_getBlockByNumber"
+                )
+            params = stored.get("params")
+            if (
+                not isinstance(params, list)
+                or not params
+                or not isinstance(params[0], str)
+            ):
+                raise PairEventV2Error("scalar header evidence params malformed")
+            try:
+                req_block = int(params[0], 16)
+            except ValueError as exc:
+                raise PairEventV2Error(
+                    "scalar header evidence block param is not hex"
+                ) from exc
+            if req_block != block_number:
+                raise PairEventV2Error(
+                    f"scalar header evidence is for block {req_block}, "
+                    f"not {block_number}"
+                )
+            return
+        if isinstance(stored, list):
+            for item in stored:
+                if not isinstance(item, Mapping):
+                    continue
+                if item.get("method") != "eth_getBlockByNumber":
+                    continue
+                params = item.get("params")
+                if (
+                    isinstance(params, list)
+                    and params
+                    and isinstance(params[0], str)
+                ):
+                    try:
+                        if int(params[0], 16) == block_number:
+                            return
+                    except ValueError:
+                        continue
+            raise PairEventV2Error(
+                f"batch header evidence does not cover block {block_number}"
+            )
+        raise PairEventV2Error(
+            "header evidence request is neither scalar object nor batch array"
+        )
 
     def _op_load_header(
         self,
@@ -3131,6 +5475,8 @@ class PersistenceCoordinator:
                         "multiple canonical headers exist for plan block"
                     )
                 winner_row = rows[0]
+                # Existing winner still covers the block for backlog purposes.
+                self._note_header_stored(conn, record.plan_id, record.block_number)
                 conn.execute("COMMIT")
             else:
                 conn.execute(
@@ -3156,6 +5502,7 @@ class PersistenceCoordinator:
                         record.completed_at or _now(),
                     ),
                 )
+                self._note_header_stored(conn, record.plan_id, record.block_number)
                 conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
@@ -3818,6 +6165,9 @@ class PairEventV2Engine:
         self._primary_limiter = _AdaptiveLimiter(config.max_in_flight_per_provider)
         self._secondary_limiter = _AdaptiveLimiter(config.max_in_flight_per_provider)
         self._spool_capacity = threading.BoundedSemaphore(config.max_spool_files)
+        self._credential_scanner = CredentialScanner.from_rpc_urls(
+            config.primary_rpc_url, config.secondary_rpc_url
+        )
         self._primary_worker = NetworkWorker(
             client=self._primary_client,
             rpc_url=config.primary_rpc_url,
@@ -3832,6 +6182,7 @@ class PairEventV2Engine:
             max_body_bytes=config.max_body_bytes,
             chunk_bytes=config.spool_chunk_bytes,
             response_drain_deadline_seconds=config.response_drain_deadline_seconds,
+            credential_scanner=self._credential_scanner,
         )
         self._secondary_worker = NetworkWorker(
             client=self._secondary_client,
@@ -3847,6 +6198,7 @@ class PairEventV2Engine:
             max_body_bytes=config.max_body_bytes,
             chunk_bytes=config.spool_chunk_bytes,
             response_drain_deadline_seconds=config.response_drain_deadline_seconds,
+            credential_scanner=self._credential_scanner,
         )
         self.coordinator = PersistenceCoordinator(
             db_path=config.receipt_db_path,
@@ -3901,6 +6253,12 @@ class PairEventV2Engine:
             snapshot.writer_latency_seconds,
             snapshot.writer_latency_max_seconds,
         ) = self.coordinator.writer_metrics
+        snapshot.in_flight_high_water_primary = max(
+            snapshot.in_flight_high_water_primary, self._primary_limiter.high_water
+        )
+        snapshot.in_flight_high_water_secondary = max(
+            snapshot.in_flight_high_water_secondary, self._secondary_limiter.high_water
+        )
         return snapshot
 
     def _add_metrics(self, **values: int | float) -> None:
@@ -3958,17 +6316,29 @@ class PairEventV2Engine:
             )
         if self._plan_id is None:
             raise PairEventV2Error("plan is not initialized")
+        self._require_production_ready_if_applicable()
 
-    def execution_policy_identity(self, plan_id: str) -> dict[str, Any]:
+    def execution_policy_identity(
+        self,
+        plan_id: str,
+        *,
+        claim_order_version: str = CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+    ) -> dict[str, Any]:
         """Immutable authority-affecting settings (no URLs, keys, or worker IDs).
 
         ``plan_id`` is part of the identity so identical settings cannot collide
-        across distinct plans.
+        across distinct plans. Production uses ``domain_hash_v1`` claim order.
         """
+        if claim_order_version not in {
+            CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+            CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
+        }:
+            raise PairEventV2Error(f"unknown claim_order_version: {claim_order_version}")
         cfg = self.config
         return {
             "backoff_base_seconds": cfg.backoff_base_seconds,
             "backoff_max_seconds": cfg.backoff_max_seconds,
+            "claim_order_version": claim_order_version,
             "event_provider_orgs": list(cfg.plan_config.event_provider_orgs),
             "lease_ttl_seconds": cfg.lease_ttl_seconds,
             "max_attempts": cfg.max_attempts,
@@ -3989,20 +6359,169 @@ class PairEventV2Engine:
             "spool_chunk_bytes": cfg.spool_chunk_bytes,
         }
 
-    def initialize(self, pools: Sequence[RegistryPoolBirth]) -> AcquisitionPlanV2:
-        """Insert plan + roots + execution policy. Does not claim work."""
+    def initialize(
+        self,
+        pools: Sequence[RegistryPoolBirth],
+        *,
+        claim_order_version: str = CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+    ) -> AcquisitionPlanV2:
+        """Insert plan + roots + execution policy. Does not claim work.
+
+        ``claim_order_version`` selects chronological vs production domain_hash_v1
+        logs-first policy via the public execution-policy identity (no internal
+        monkeypatch required).
+        """
         plan = build_acquisition_plan_v2(pools, self.config.plan_config)
         self.coordinator.initialize_plan(
-            plan, execution_policy=self.execution_policy_identity(plan.plan_id)
+            plan,
+            execution_policy=self.execution_policy_identity(
+                plan.plan_id, claim_order_version=claim_order_version
+            ),
         )
         self._plan_id = plan.plan_id
         self._phase = EnginePhase.PLAN_INITIALIZED
         return plan
 
+    def initialize_production(
+        self,
+        pools: Sequence[RegistryPoolBirth],
+        *,
+        registry_parquet_sha256: str,
+        registry_parquet_bytes: int,
+        batch_size: int = 512,
+    ) -> dict[str, Any]:
+        """Bounded-memory production plan init to READY (no network).
+
+        Rejects caller-substituted cohort/config/anchors. Streams roots in batches.
+        """
+        if batch_size <= 0:
+            raise PairEventV2Error("batch_size must be positive")
+        if registry_parquet_sha256 != PRODUCTION_REGISTRY_PARQUET_SHA256:
+            raise PairEventV2Error("caller registry_parquet_sha256 is not accepted")
+        if int(registry_parquet_bytes) != PRODUCTION_REGISTRY_PARQUET_BYTES:
+            raise PairEventV2Error("caller registry_parquet_bytes is not accepted")
+        cfg = production_plan_config()
+        if self.config.plan_config.initial_cohort_size != PRODUCTION_INITIAL_COHORT_SIZE:
+            raise PairEventV2Error(
+                "production initializer requires plan_config cohort size 8"
+            )
+        if self.config.plan_config.plan_id() != PRODUCTION_PLAN_ID:
+            raise PairEventV2Error(
+                "production initializer requires pinned production plan identity"
+            )
+        cfg = self.config.plan_config
+        ordered = tuple(pools)
+        anchors = compute_production_root_anchors(ordered, config=cfg)
+        verify_production_root_anchors(anchors)
+        policy = self.execution_policy_identity(
+            cfg.plan_id(),
+            claim_order_version=CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
+        )
+        self.coordinator.ensure_production_plan_shell(
+            config=cfg, execution_policy=policy
+        )
+        # Do NOT mark PLAN_INITIALIZED until READY — network must not start early.
+        self._plan_id = None
+        self._phase = EnginePhase.CONSTRUCTED
+        existing = self.coordinator.load_root_manifest(plan_id=cfg.plan_id())
+        if existing is not None and existing.status == "READY":
+            self.coordinator.authenticate_ready_root_manifest(
+                plan_id=cfg.plan_id(),
+                registry_parquet_sha256=registry_parquet_sha256,
+                registry_parquet_bytes=registry_parquet_bytes,
+            )
+            self._plan_id = cfg.plan_id()
+            self._phase = EnginePhase.PLAN_INITIALIZED
+            return {
+                "plan_id": cfg.plan_id(),
+                "status": "READY",
+                "inserted": 0,
+                "root_count": existing.root_count,
+                "anchors": anchors,
+            }
+        batch: list[RootFilterPlan] = []
+        total_inserted = 0
+        for root in iter_production_root_filters(
+            ordered, config=cfg, batch_size=batch_size
+        ):
+            batch.append(root)
+            if len(batch) >= batch_size:
+                result = self.coordinator.initialize_production_roots_batch(
+                    plan_id=cfg.plan_id(),
+                    roots=batch,
+                    registry_parquet_sha256=registry_parquet_sha256,
+                    registry_parquet_bytes=registry_parquet_bytes,
+                    expected_root_count=PRODUCTION_ROOT_COUNT,
+                    expected_root_domain_set_sha256=PRODUCTION_ROOT_DOMAIN_SET_SHA256,
+                    expected_pool_topic_blocks=PRODUCTION_POOL_TOPIC_BLOCKS,
+                    finalize=False,
+                )
+                total_inserted += int(result["inserted"])
+                batch.clear()
+        if batch:
+            result = self.coordinator.initialize_production_roots_batch(
+                plan_id=cfg.plan_id(),
+                roots=batch,
+                registry_parquet_sha256=registry_parquet_sha256,
+                registry_parquet_bytes=registry_parquet_bytes,
+                expected_root_count=PRODUCTION_ROOT_COUNT,
+                expected_root_domain_set_sha256=PRODUCTION_ROOT_DOMAIN_SET_SHA256,
+                expected_pool_topic_blocks=PRODUCTION_POOL_TOPIC_BLOCKS,
+                finalize=False,
+            )
+            total_inserted += int(result["inserted"])
+        final = self.coordinator.initialize_production_roots_batch(
+            plan_id=cfg.plan_id(),
+            roots=(),
+            registry_parquet_sha256=registry_parquet_sha256,
+            registry_parquet_bytes=registry_parquet_bytes,
+            expected_root_count=PRODUCTION_ROOT_COUNT,
+            expected_root_domain_set_sha256=PRODUCTION_ROOT_DOMAIN_SET_SHA256,
+            expected_pool_topic_blocks=PRODUCTION_POOL_TOPIC_BLOCKS,
+            finalize=True,
+        )
+        if final.get("status") != "READY":
+            raise PairEventV2Error("production root manifest did not become READY")
+        self.coordinator.authenticate_ready_root_manifest(
+            plan_id=cfg.plan_id(),
+            registry_parquet_sha256=registry_parquet_sha256,
+            registry_parquet_bytes=registry_parquet_bytes,
+        )
+        self._plan_id = cfg.plan_id()
+        self._phase = EnginePhase.PLAN_INITIALIZED
+        return {
+            "plan_id": cfg.plan_id(),
+            "status": "READY",
+            "inserted": total_inserted,
+            "root_count": final["root_count"],
+            "anchors": anchors,
+        }
+
+    def _require_production_ready_if_applicable(self) -> None:
+        """Fail closed if this is the production plan without READY manifest."""
+        if self._plan_id is None:
+            return
+        if self._plan_id != PRODUCTION_PLAN_ID:
+            return
+        manifest = self.coordinator.load_root_manifest(plan_id=self._plan_id)
+        if manifest is None or manifest.status != "READY":
+            raise PairEventV2Error(
+                "production network work requires READY root manifest"
+            )
+        self.coordinator.authenticate_ready_root_manifest(
+            plan_id=self._plan_id,
+            registry_parquet_sha256=PRODUCTION_REGISTRY_PARQUET_SHA256,
+            registry_parquet_bytes=PRODUCTION_REGISTRY_PARQUET_BYTES,
+        )
+
     def authenticate_chain(self) -> ChainIdentityReceipt:
-        """Prerequisite: dual mainnet chain identity for the plan (cached once)."""
+        """Prerequisite: dual mainnet chain identity for the plan (cached once).
+
+        Production plans must have READY root manifest before any network work.
+        """
         if self._phase == EnginePhase.CONSTRUCTED or self._plan_id is None:
             raise PairEventV2Error("initialize() is required before chain authentication")
+        self._require_production_ready_if_applicable()
         if self._phase == EnginePhase.CHAIN_AUTHENTICATED:
             cached = self.coordinator.load_chain_identity(
                 plan_id=self._plan_id,
@@ -4141,14 +6660,19 @@ class PairEventV2Engine:
         )
 
     def _dual_fetch(
-        self, request: Mapping[str, Any]
+        self, request: Mapping[str, Any] | Sequence[Any]
     ) -> tuple[PersistedEnvelope, PersistedEnvelope]:
+        t0 = time.monotonic()
         primary_future = self._network_executor.submit(
             self._primary_worker.fetch, request
         )
         secondary_future = self._network_executor.submit(
             self._secondary_worker.fetch, request
         )
+        with self._metrics_lock:
+            self._metrics.provider_attempts_primary += 1
+            self._metrics.provider_attempts_secondary += 1
+            self._metrics.provider_attempts_total += 2
         descriptors: list[SpoolDescriptor] = []
         offer_facts: list[_FailureFact] = []
         for org, future in (
@@ -4162,12 +6686,38 @@ class PairEventV2Engine:
                 offer_facts.append(
                     _FailureFact(FailureClass.TRANSPORT, org, {"stage": "network_worker"})
                 )
+        # Sample limiter high-water after workers have acquired/released.
+        with self._metrics_lock:
+            self._metrics.in_flight_high_water_primary = max(
+                self._metrics.in_flight_high_water_primary,
+                self._primary_limiter.high_water,
+            )
+            self._metrics.in_flight_high_water_secondary = max(
+                self._metrics.in_flight_high_water_secondary,
+                self._secondary_limiter.high_water,
+            )
+        elapsed_ms = (time.monotonic() - t0) * 1000.0
+        self._add_metrics(provider_latency_ms_total=elapsed_ms)
         for descriptor in descriptors:
+            if descriptor.error_kind == "credential_detection":
+                self._add_metrics(credential_detections=1)
             self._add_metrics(
                 response_bytes=descriptor.response_bytes,
                 retained_spool_bytes=descriptor.retained_bytes,
                 truncated_responses=int(descriptor.truncated),
             )
+            if descriptor.spool_path is not None:
+                with self._metrics_lock:
+                    # Approximate spool high-water from live directory size when possible.
+                    try:
+                        n_spool = sum(
+                            1 for _ in self.config.spool_dir.glob("*.spool")
+                        )
+                    except OSError:
+                        n_spool = 0
+                    self._metrics.spool_files_high_water = max(
+                        self._metrics.spool_files_high_water, n_spool
+                    )
         persistence_futures: list[Future[PersistedEnvelope]] = []
         for descriptor in descriptors:
             try:
@@ -4859,6 +7409,62 @@ class PairEventV2Engine:
                 allow_split=True,
             )
 
+        primary_evidence = pair[0].evidence
+        secondary_evidence = pair[1].evidence
+        if primary_evidence is None or secondary_evidence is None:
+            raise _PairFailure(
+                [_FailureFact(FailureClass.PERSISTENCE, None, {"stage": "logs"})]
+            )
+
+        # Production path (domain_hash_v1): logs-first candidate, headers later.
+        # Generic chronological path keeps inline headers for backward compatibility.
+        use_logs_first = self._production_logs_first_enabled()
+        if use_logs_first:
+            try:
+                blocks = required_blocks_from_identities(identities, domain=domain)
+            except PairEventV2Error:
+                return self._route_failure(
+                    claim,
+                    _PairFailure(
+                        [
+                            _FailureFact(
+                                FailureClass.MALFORMED_JSON,
+                                None,
+                                {
+                                    "stage": "required_blocks",
+                                    **self._pair_evidence_ids(pair),
+                                },
+                            )
+                        ]
+                    ),
+                    request,
+                    allow_split=False,
+                )
+            candidate_kwargs = {
+                "log_identity_sha256": digest,
+                "log_count": len(identities),
+                "primary_provider_org": self.config.primary_org,
+                "secondary_provider_org": self.config.secondary_org,
+                "primary_logs_raw_object_id": primary_evidence.raw_object_id,
+                "secondary_logs_raw_object_id": secondary_evidence.raw_object_id,
+                "primary_logs_acquisition_id": primary_evidence.acquisition_id,
+                "secondary_logs_acquisition_id": secondary_evidence.acquisition_id,
+                "request_json": _canonical_json(request),
+            }
+            if self._lease_lost(claim):
+                return self.coordinator.resolve_winner(claim)
+            try:
+                self.coordinator.commit_log_candidate(
+                    claim, candidate_kwargs=candidate_kwargs, blocks=blocks
+                )
+            except _LeaseLostError:
+                return self.coordinator.resolve_winner(claim)
+            self._primary_limiter.on_success()
+            self._secondary_limiter.on_success()
+            self._add_metrics(candidates_committed=1)
+            return "candidate"
+
+        # --- generic chronological path: dual logs + per-node headers → AGREED ---
         needed_blocks = {domain.end_block}
         needed_blocks.update(identity.block_number for identity in identities)
         header_ids: list[str] = []
@@ -4900,12 +7506,6 @@ class PairEventV2Engine:
                     allow_split=True,
                 )
 
-        primary_evidence = pair[0].evidence
-        secondary_evidence = pair[1].evidence
-        if primary_evidence is None or secondary_evidence is None:
-            raise _PairFailure(
-                [_FailureFact(FailureClass.PERSISTENCE, None, {"stage": "leaf"})]
-            )
         leaf_kwargs = {
             "plan_id": claim.plan_id,
             "domain": domain,
@@ -4929,6 +7529,16 @@ class PairEventV2Engine:
         self._secondary_limiter.on_success()
         self._add_metrics(agreed=1)
         return "agreed"
+
+    def _production_logs_first_enabled(self) -> bool:
+        """True when authenticated execution policy selects production claim order."""
+        if self._plan_id is None:
+            return False
+        try:
+            order = self.coordinator.claim_order_version(plan_id=self._plan_id)
+        except Exception:
+            return False
+        return order == CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
 
     def _get_header(
         self, claim: Claim, block_number: int
@@ -5122,6 +7732,50 @@ class PairEventV2Engine:
             self._add_metrics(headers_fetched=1)
             return record
 
+    def _verify_header_evidence_any(
+        self,
+        record: CanonicalHeaderReceiptRecord,
+        primary_evidence: AuthenticatedEvidence,
+        secondary_evidence: AuthenticatedEvidence,
+        *,
+        block_number: int,
+    ) -> None:
+        """Replay scalar or batch-backed header evidence for one block."""
+        try:
+            stored = json.loads(primary_evidence.request_json)
+        except json.JSONDecodeError as exc:
+            raise PairEventV2Error("header evidence request is not JSON") from exc
+        if isinstance(stored, list):
+            p_hdr = _extract_header_result_from_evidence(
+                primary_evidence,
+                block_number=block_number,
+                max_bytes=self.config.max_body_bytes,
+                raw_root=self.config.raw_root,
+            )
+            s_hdr = _extract_header_result_from_evidence(
+                secondary_evidence,
+                block_number=block_number,
+                max_bytes=self.config.max_body_bytes,
+                raw_root=self.config.raw_root,
+            )
+            if (
+                p_hdr["hash"] != s_hdr["hash"]
+                or p_hdr["timestamp"] != s_hdr["timestamp"]
+                or p_hdr["number"] != block_number
+                or s_hdr["number"] != block_number
+            ):
+                raise PairEventV2Error(
+                    f"batch header replay disagreement at block {block_number}"
+                )
+            if record.block_hash != p_hdr["hash"]:
+                raise PairEventV2Error(
+                    f"stored header hash drift at block {block_number}"
+                )
+            return
+        self._verify_cached_header(
+            record, primary_evidence, secondary_evidence, block_number
+        )
+
     def _verify_cached_header(
         self,
         record: CanonicalHeaderReceiptRecord,
@@ -5178,30 +7832,480 @@ class PairEventV2Engine:
         if recomputed != record.header_receipt_id:
             raise PairEventV2Error("cached header receipt identity failed recomputation")
 
+    def attach_existing_plan(
+        self,
+        plan_id: str,
+        *,
+        claim_order_version: str = CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+    ) -> dict[str, Any]:
+        """Public resume lifecycle: bind to an existing plan and start a resume generation.
+
+        Authenticates the persisted plan row against ``config.plan_config`` and the
+        immutable execution-policy identity (payload, policy_id, schema, claim order)
+        against this engine's authority settings **before** any generation bump or
+        lifecycle assignment. Expected claim order is independent of the stored
+        policy record (caller/default); the pinned production plan always uses
+        ``domain_hash_v1``. Requires durable chain identity. Bumps shared
+        ``active_generation`` so prior session auth marks are invalid and all
+        pre-existing candidates must be re-replayed in bounded pages.
+        """
+        if not plan_id or not str(plan_id).startswith("plan_"):
+            raise PairEventV2Error("attach_existing_plan requires a plan_ id")
+        # Independent expected claim order — never read from the record under test.
+        expected_claim_order = str(claim_order_version)
+        if expected_claim_order not in {
+            CLAIM_ORDER_VERSION_CHRONOLOGICAL_V1,
+            CLAIM_ORDER_VERSION_DOMAIN_HASH_V1,
+        }:
+            raise PairEventV2Error(
+                f"unknown claim_order_version: {expected_claim_order}"
+            )
+        if (
+            plan_id == PRODUCTION_PLAN_ID
+            or self.config.plan_config.plan_id() == PRODUCTION_PLAN_ID
+        ):
+            # Pinned production identity always requires logs-first domain_hash_v1.
+            expected_claim_order = CLAIM_ORDER_VERSION_DOMAIN_HASH_V1
+        expected_policy = self.execution_policy_identity(
+            plan_id, claim_order_version=expected_claim_order
+        )
+        self.coordinator.authenticate_plan_attach(
+            plan_id=plan_id,
+            plan_config=self.config.plan_config,
+            execution_policy=expected_policy,
+        )
+        # Load chain identity for this plan (fail closed if missing).
+        loaded = self.coordinator.load_chain_identity(
+            plan_id=plan_id,
+            primary_org=self.config.primary_org,
+            secondary_org=self.config.secondary_org,
+        )
+        if loaded is None:
+            raise PairEventV2Error(
+                "attach_existing_plan requires durable chain identity for the plan"
+            )
+        session = self.coordinator.begin_plan_resume_session(plan_id=plan_id)
+        self._plan_id = plan_id
+        self._phase = EnginePhase.CHAIN_AUTHENTICATED
+        return {
+            "plan_id": plan_id,
+            "active_generation": int(session["active_generation"]),
+            "phase": str(self._phase),
+            "claim_order_version": expected_claim_order,
+        }
+
     def run_until_idle(self, *, max_steps: int | None = None) -> EngineMetrics:
-        """Run bounded concurrent waves. Requires chain authentication."""
+        """Rolling node replenishment + production header/finalization + resume auth.
+
+        Query-node claims fill up to ``max_nodes_in_flight``. Completed node slots
+        are refilled **before** any header/finalization turn. Production plans also
+        advance bounded candidate resume authentication every turn until the active
+        generation has no unauthenticated candidates remaining — even when no
+        candidate-free nodes or header work exist.
+
+        Safe-boundary completion is generation-bound: every turn re-probes the
+        active generation. A concurrent attach that bumps the generation invalidates
+        local completion and drives bounded revalidation rather than idle exit on
+        a stale generation.
+        """
         self._require_chain_ready()
         completed_steps = 0
+        pending: set[Future[str | None]] = set()
+        idle_rounds = 0
+        finalize_after: str | None = None
+        missing_after: int | None = None
+        suppress_node_submit = False
+        # Bound completion to the generation that last reported complete=True.
+        resume_auth_bound_generation: int | None = None
+
+        def _try_submit_node() -> bool:
+            if self._stop.is_set() or suppress_node_submit:
+                return False
+            if max_steps is not None and completed_steps + len(pending) >= max_steps:
+                return False
+            if len(pending) >= self.config.max_nodes_in_flight:
+                return False
+            pending.add(self._node_executor.submit(self.process_one))
+            with self._metrics_lock:
+                self._metrics.nodes_in_flight_high_water = max(
+                    self._metrics.nodes_in_flight_high_water, len(pending)
+                )
+            return True
+
         while not self._stop.is_set():
             if max_steps is not None and completed_steps >= max_steps:
                 break
-            width = self.config.max_nodes_in_flight
-            if max_steps is not None:
-                width = min(width, max_steps - completed_steps)
-            futures = [
-                self._node_executor.submit(self.process_one) for _ in range(width)
-            ]
-            pending = set(futures)
-            outcomes: list[str | None] = []
-            while pending:
+            progressed = False
+            while _try_submit_node():
+                pass
+            if pending:
                 done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                batch_had_work = False
                 for future in done:
-                    outcomes.append(future.result())
-            made_progress = sum(outcome is not None for outcome in outcomes)
-            completed_steps += made_progress
-            if made_progress == 0:
-                break
+                    with self._metrics_lock:
+                        self._metrics.in_flight_high_water_primary = max(
+                            self._metrics.in_flight_high_water_primary,
+                            self._primary_limiter.high_water,
+                        )
+                        self._metrics.in_flight_high_water_secondary = max(
+                            self._metrics.in_flight_high_water_secondary,
+                            self._secondary_limiter.high_water,
+                        )
+                    outcome = future.result()
+                    if outcome is not None:
+                        completed_steps += 1
+                        progressed = True
+                        batch_had_work = True
+                if batch_had_work:
+                    suppress_node_submit = False
+                    while _try_submit_node():
+                        pass
+                elif not pending:
+                    suppress_node_submit = True
+            if self._plan_id is not None and self._production_logs_first_enabled():
+                # Every turn re-probes generation-bound resume auth (never latch
+                # an unversioned complete Boolean across generation bumps).
+                auth_page = self.coordinator.authenticate_resumed_candidates(
+                    plan_id=self._plan_id,
+                    force=False,
+                    limit=CLAIM_SCAN_PAGE_SIZE,
+                )
+                page_gen = int(auth_page.get("active_generation", 0))
+                restarted = bool(auth_page.get("generation_restart"))
+                page_complete = bool(auth_page.get("complete"))
+                if restarted or (
+                    resume_auth_bound_generation is not None
+                    and page_gen != resume_auth_bound_generation
+                    and not page_complete
+                ):
+                    # Concurrent generation bump — reopen safe-boundary work.
+                    resume_auth_bound_generation = page_gen
+                    progressed = True
+                    suppress_node_submit = False
+                elif page_complete:
+                    resume_auth_bound_generation = page_gen
+                    # complete with examined>0 still counts as progress this turn
+                    if int(auth_page.get("examined", 0)) > 0:
+                        progressed = True
+                else:
+                    resume_auth_bound_generation = None
+                    progressed = True
+                    suppress_node_submit = False
+                header_work, finalize_after, missing_after = (
+                    self._run_production_header_finalization_once(
+                        finalize_after_domain_id=finalize_after,
+                        missing_after_block=missing_after,
+                    )
+                )
+                if header_work:
+                    progressed = True
+                    suppress_node_submit = False
+            if not progressed and not pending:
+                idle_rounds += 1
+                if idle_rounds >= 2:
+                    break
+            else:
+                idle_rounds = 0
+        if pending:
+            wait(pending)
+            for future in pending:
+                future.result()
         return self.metrics
+
+    def _run_production_header_finalization_once(
+        self,
+        *,
+        finalize_after_domain_id: str | None = None,
+        missing_after_block: int | None = None,
+    ) -> tuple[bool, str | None, int | None]:
+        """One bounded header keyset page + one bounded finalization scan page.
+
+        Returns ``(did_work, next_finalize_cursor, next_missing_cursor)``.
+        Advances ``after_block_number`` so missing discovery never restarts
+        through already-covered history. ``header_backlog`` is the exact
+        coordinator-maintained distinct missing-block count.
+        """
+        assert self._plan_id is not None
+        plan_id = self._plan_id
+        did_work = False
+        next_missing = missing_after_block
+        if self._stop.is_set():
+            return False, finalize_after_domain_id, next_missing
+        # Exact backlog from incremental set (no per-turn full-table COUNT).
+        with self._metrics_lock:
+            self._metrics.header_backlog = self.coordinator.header_backlog_count(
+                plan_id=plan_id
+            )
+        # One keyset page of missing blocks, continuing past prior cursor.
+        missing_blocks = self.coordinator.list_missing_candidate_blocks(
+            plan_id=plan_id,
+            limit=HEADER_WORK_PAGE_SIZE,
+            after_block_number=missing_after_block,
+        )
+        if missing_blocks:
+            self.acquire_header_batch(plan_id=plan_id, block_numbers=missing_blocks)
+            did_work = True
+            next_missing = int(missing_blocks[-1])
+            with self._metrics_lock:
+                self._metrics.header_backlog = self.coordinator.header_backlog_count(
+                    plan_id=plan_id
+                )
+        else:
+            # End of keyset: wrap cursor so newly inserted lower blocks are seen
+            # on a later turn; exact backlog remains authoritative.
+            next_missing = None
+        if self._stop.is_set():
+            return did_work, finalize_after_domain_id, next_missing
+        page = self.coordinator.list_finalizable_candidates(
+            plan_id=plan_id,
+            limit=FINALIZE_WORK_PAGE_SIZE,
+            after_domain_id=finalize_after_domain_id,
+        )
+        ready = list(page.get("ready_domain_ids") or [])
+        scan_through = page.get("scan_through_domain_id")
+        exhausted = bool(page.get("exhausted"))
+        for domain_id in ready:
+            if self._stop.is_set():
+                break
+            self.finalize_candidate(plan_id=plan_id, domain_id=str(domain_id))
+            did_work = True
+        next_finalize: str | None
+        if exhausted or scan_through is None:
+            next_finalize = None
+        else:
+            next_finalize = str(scan_through)
+        return did_work, next_finalize, next_missing
+
+    def acquire_header_batch(
+        self, *, plan_id: str, block_numbers: Sequence[int]
+    ) -> list[CanonicalHeaderReceiptRecord]:
+        """Dual-provider JSON-RPC batch for distinct blocks; shared batch raw pair.
+
+        Validates response IDs, rejects missing/extra/duplicate members, block/hash/
+        timestamp disagreement, truncation, and unauthenticated evidence. Multiple
+        header receipts reference the same batch raw acquisition pair.
+        """
+        self._require_chain_ready()
+        if self._plan_id != plan_id:
+            raise PairEventV2Error("header batch plan_id does not match engine plan")
+        unique_blocks = sorted({int(b) for b in block_numbers})
+        if not unique_blocks:
+            return []
+        if len(unique_blocks) > 64:
+            raise PairEventV2Error("header batch exceeds hard bound of 64 blocks")
+        # Skip blocks already cached/stored.
+        missing: list[int] = []
+        records: list[CanonicalHeaderReceiptRecord] = []
+        for block_number in unique_blocks:
+            cached = self.coordinator.load_header(
+                plan_id=plan_id,
+                block_number=block_number,
+                primary_org=self.config.primary_org,
+                secondary_org=self.config.secondary_org,
+            )
+            if cached is not None:
+                record, p_ev, s_ev = cached
+                try:
+                    # Batch-aware: scalar request objects use _verify_cached_header;
+                    # batch array evidence uses member extraction.
+                    self._verify_header_evidence_any(
+                        record, p_ev, s_ev, block_number=block_number
+                    )
+                except Exception as exc:
+                    raise PairEventV2Error(
+                        f"cached header auth failed for {block_number}"
+                    ) from exc
+                records.append(record)
+                self._add_metrics(headers_cached=1)
+            else:
+                missing.append(block_number)
+        if not missing:
+            return records
+        batch_request = block_header_batch_request(missing)
+        pair = self._dual_fetch(batch_request)
+        # Persist batch as dual envelopes; inspect as batch JSON-RPC array.
+        primary_body = self._parse_json_rpc_batch(pair[0], batch_request)
+        secondary_body = self._parse_json_rpc_batch(pair[1], batch_request)
+        p_ev = pair[0].evidence
+        s_ev = pair[1].evidence
+        if p_ev is None or s_ev is None:
+            raise PairEventV2Error("header batch missing raw evidence")
+        # Validate members by id.
+        self._validate_header_batch_members(
+            primary_body, batch_request, label="primary"
+        )
+        self._validate_header_batch_members(
+            secondary_body, batch_request, label="secondary"
+        )
+        for index, block_number in enumerate(missing):
+            p_member = find_batch_response_by_id(primary_body, index)
+            s_member = find_batch_response_by_id(secondary_body, index)
+            p_result = p_member.get("result")
+            s_result = s_member.get("result")
+            if not isinstance(p_result, Mapping) or not isinstance(s_result, Mapping):
+                raise PairEventV2Error(
+                    f"header batch member result missing for block {block_number}"
+                )
+            p_number = _hex_quantity(
+                _require(p_result, "number", label="primary header"),
+                label="primary header number",
+            )
+            s_number = _hex_quantity(
+                _require(s_result, "number", label="secondary header"),
+                label="secondary header number",
+            )
+            p_hash = _hex_bytes(
+                _require(p_result, "hash", label="primary header"),
+                32,
+                label="primary header hash",
+            )
+            s_hash = _hex_bytes(
+                _require(s_result, "hash", label="secondary header"),
+                32,
+                label="secondary header hash",
+            )
+            p_ts = _hex_quantity(
+                _require(p_result, "timestamp", label="primary header"),
+                label="primary header timestamp",
+            )
+            s_ts = _hex_quantity(
+                _require(s_result, "timestamp", label="secondary header"),
+                label="secondary header timestamp",
+            )
+            if p_number != block_number or s_number != block_number:
+                raise PairEventV2Error(
+                    f"header batch boundary mismatch for block {block_number}"
+                )
+            if p_hash != s_hash or p_ts != s_ts:
+                raise PairEventV2Error(
+                    f"header batch provider disagreement for block {block_number}"
+                )
+            header_id = compute_canonical_header_receipt_id(
+                plan_id=plan_id,
+                block_number=block_number,
+                block_hash=p_hash,
+                block_timestamp=p_ts,
+                primary_provider_org=self.config.primary_org,
+                secondary_provider_org=self.config.secondary_org,
+                primary_raw_object_id=p_ev.raw_object_id,
+                secondary_raw_object_id=s_ev.raw_object_id,
+                primary_acquisition_id=p_ev.acquisition_id,
+                secondary_acquisition_id=s_ev.acquisition_id,
+            )
+            record = CanonicalHeaderReceiptRecord(
+                header_receipt_id=header_id,
+                plan_id=plan_id,
+                block_number=block_number,
+                block_hash=p_hash,
+                block_timestamp=p_ts,
+                primary_provider_org=self.config.primary_org,
+                secondary_provider_org=self.config.secondary_org,
+                primary_raw_object_id=p_ev.raw_object_id,
+                secondary_raw_object_id=s_ev.raw_object_id,
+                primary_acquisition_id=p_ev.acquisition_id,
+                secondary_acquisition_id=s_ev.acquisition_id,
+                completed_at=_now(),
+            )
+            record = self.coordinator.store_header(record)
+            records.append(record)
+            self._add_metrics(headers_fetched=1, header_batch_members=1)
+        self._add_metrics(header_batches=1)
+        with self._metrics_lock:
+            # Backlog proxy: missing blocks remaining after this batch (0 here).
+            self._metrics.header_backlog = max(0, self._metrics.header_backlog)
+        return records
+
+    def _parse_json_rpc_batch(
+        self,
+        persisted: PersistedEnvelope,
+        batch_request: Sequence[Mapping[str, Any]],
+    ) -> list[Any]:
+        if persisted.evidence is None:
+            raise PairEventV2Error("batch response has no authenticated raw evidence")
+        if persisted.descriptor.truncated:
+            raise PairEventV2Error("header batch response was truncated")
+        body = _load_authenticated_json_value(
+            persisted.evidence,
+            max_bytes=self.config.max_body_bytes,
+            raw_root=self.config.raw_root,
+        )
+        # Re-check request binding against batch.
+        if _canonical_json(json.loads(persisted.evidence.request_json)) != _canonical_json(
+            list(batch_request)
+        ):
+            raise PairEventV2Error("batch request identity mismatch on evidence")
+        if not isinstance(body, list):
+            raise PairEventV2Error("header batch body is not a JSON array")
+        return body
+
+    def _validate_header_batch_members(
+        self,
+        body: Sequence[Any],
+        batch_request: Sequence[Mapping[str, Any]],
+        *,
+        label: str,
+    ) -> None:
+        ids = [item.get("id") for item in batch_request if isinstance(item, Mapping)]
+        seen: set[Any] = set()
+        for item in body:
+            if not isinstance(item, Mapping):
+                raise PairEventV2Error(f"{label} batch member is not an object")
+            rid = item.get("id")
+            if rid in seen:
+                raise PairEventV2Error(f"{label} batch has duplicate response id")
+            seen.add(rid)
+            if rid not in ids:
+                raise PairEventV2Error(f"{label} batch has extra response id")
+            if "error" in item and item["error"] is not None:
+                raise PairEventV2Error(f"{label} batch member has JSON-RPC error")
+        missing = [i for i in ids if i not in seen]
+        if missing:
+            raise PairEventV2Error(f"{label} batch missing response ids: {missing!r}")
+
+    def finalize_candidate(
+        self, *, plan_id: str, domain_id: str
+    ) -> str:
+        """Atomically finalize a log candidate once all required headers exist.
+
+        Replays candidate + headers; inserts leaf/dependencies; sets AGREED.
+        Candidate alone always has zero coverage credit.
+        """
+        self._require_chain_ready()
+        if self._plan_id != plan_id:
+            raise PairEventV2Error("finalize plan_id does not match engine plan")
+        candidate = self.coordinator.load_log_candidate(
+            plan_id=plan_id, domain_id=domain_id
+        )
+        if candidate is None:
+            raise PairEventV2Error("log candidate missing for finalization")
+        # Ensure every required block has a canonical header.
+        header_ids: list[str] = []
+        for block_number, expected_hash, _is_boundary in candidate["blocks"]:
+            loaded = self.coordinator.load_header(
+                plan_id=plan_id,
+                block_number=int(block_number),
+                primary_org=self.config.primary_org,
+                secondary_org=self.config.secondary_org,
+            )
+            if loaded is None:
+                raise PairEventV2Error(
+                    f"canonical header missing for block {block_number}"
+                )
+            header = loaded[0]
+            if expected_hash is not None and header.block_hash != expected_hash:
+                raise PairEventV2Error(
+                    f"header hash disagrees with candidate expected hash at {block_number}"
+                )
+            header_ids.append(header.header_receipt_id)
+        # Reconstruct domain from node row via a claim-less agreed path.
+        # Use internal finalize op that does not require a live lease.
+        result = self.coordinator.finalize_log_candidate(
+            plan_id=plan_id,
+            domain_id=domain_id,
+            header_receipt_ids=header_ids,
+        )
+        self._add_metrics(finalizations=1, agreed=1)
+        return result
 
 
 __all__ = [
@@ -5210,8 +8314,10 @@ __all__ = [
     "CHAIN_IDENTITY_SCHEMA_VERSION",
     "CHAIN_IDENTITY_TABLE",
     "CHAIN_IDENTITY_UNIQUENESS",
+    "CREDENTIAL_REDACTED_DETAIL",
     "Claim",
     "ChainIdentityReceipt",
+    "CredentialScanner",
     "DEFAULT_BACKOFF_BASE_SECONDS",
     "DEFAULT_BACKOFF_MAX_SECONDS",
     "DEFAULT_HEADER_CACHE_SIZE",
@@ -5241,12 +8347,17 @@ __all__ = [
     "EngineMetrics",
     "EnginePhase",
     "FailureClass",
+    "HEADER_BACKLOG_METRIC_TABLE",
+    "HEADER_BACKLOG_TABLE",
     "HEADER_UNIQUENESS",
     "LEAF_UNIQUENESS",
+    "LOG_CANDIDATE_BLOCK_TABLE",
+    "LOG_CANDIDATE_TABLE",
     "NetworkWorker",
     "PairEventV2Engine",
     "PersistedEnvelope",
     "PersistenceCoordinator",
+    "ROOT_MANIFEST_TABLE",
     "SOURCE_ID",
     "SPOOL_DESCRIPTOR_SCHEMA_VERSION",
     "SpoolDescriptor",
