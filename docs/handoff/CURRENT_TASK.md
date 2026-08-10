@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate accepted test correction and rerun offline acceptance
+Next required actor: Jr Dev - Hermes - publish Sol production-foundation integration acceptance
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -152,6 +152,12 @@ v2 targets pass 155 focused tests, targeted ruff passes, and repository control 
 accepts the complete engine integration at test-only follow-up commit `ad30bf9`; the heartbeat
 path also passes five repeated runs. Accepted source and migrations 0018/0019 are unchanged.
 
+The production-foundation integration is accepted at pushed commit `179233a`. The six accepted
+source/test hashes are unchanged, the focused suite passes 128/128, migration 0020 is durably
+recorded at its accepted checksum, every pre-0020 v2/raw count is preserved, all six additive
+tables are empty, and `PRAGMA foreign_key_check` is empty. This completes only the offline
+production-foundation source/integration prerequisite in ADR-0015 section 9.10.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -159,13 +165,11 @@ path also passes five repeated runs. Accepted source and migrations 0018/0019 ar
 
 ## Acceptance
 
-The bounded v2 engine integration, migrations 0018/0019, applied database state, and focused
-offline evidence are accepted at `ad30bf9`. No further engine source, migration, or integration
-test work is authorized.
-
-No live matrix, endurance pilot, acquisition, dataset publication, metadata/downstream
-transforms, factor design, PAPER, or LIVE work is authorized by this acceptance. The
-source-only harness phase authorized below does not authorize RPC execution. Next ticket
+The offline production-foundation source/integration, migration 0020, applied database state,
+and focused evidence are accepted at pushed commit `179233a`. No production controller or CLI,
+live readiness preflight, RPC, staged production start, coverage credit, publication,
+metadata/downstream transform, factor design, PAPER, or LIVE work is authorized by this
+acceptance. A further engineering phase requires a separate explicit Sol decision. Next ticket
 remains `NONE`.
 
 ## Authorized next phase - source only
@@ -3355,3 +3359,30 @@ targeted ruff, repository control, and `git diff --check`, and applied migration
 
 Jr committed and pushed only the six accepted files plus these two governance records, excluding
 `opencode.json` and both untracked research files. Stopped for Sol integration review.
+
+## Sol integration review - production foundation accepted (2026-08-09)
+
+Sol accepts the offline production-foundation integration at pushed commit
+`179233a484b251a10d18d1b2da360dc194a4f5ca`. `HEAD` and `origin/main` both resolve to that
+commit, whose eight-file scope is exactly the six accepted source/test files plus
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`. All six accepted SHA-256 values remain
+byte-identical to the source-reviewed drop.
+
+Jr's focused evidence is accepted: 128 passed, 0 failed, exit 0 in 109.91 seconds; targeted ruff
+passed; repository control passed; and `git diff --check` was clean. Sol did not rerun pytest or
+apply a migration. Sol directly audited the offline database read-only: migration history contains
+20 rows and records `0020_uniswap_v2_pair_event_v2_production_foundation.sql` at checksum
+`f41175e3b23b24e8e5b5ba512a4fd10514201b1d156115664ff88f0442cb93bb` and timestamp
+`2026-08-10T02:01:47.498495+00:00`; `raw_acquisition` remains 548,721 rows and `raw_object`
+509,711 rows; all six new tables are present and empty; and `PRAGMA foreign_key_check` returns
+no rows. The pre/post evidence logs also prove all eleven pre-0020 v2 tables remained empty and
+unchanged. Repository control passes after this review, and the unrelated modified
+`opencode.json` and two untracked research files remain outside the accepted commit.
+
+This acceptance completes only the offline production-foundation source/integration prerequisite
+in ADR-0015 section 9.10. It does not authorize a production controller or CLI, live readiness
+preflight, RPC, staged production start or continuation, coverage credit, publication,
+metadata/downstream work, factor work, PAPER, LIVE, or a next ticket. Jr Dev - Hermes must commit
+and push only this Sol decision in the two governance records, excluding all unrelated working-tree
+files, then stop. Any further engineering phase requires a separate explicit Sol authorization.
+Next ticket remains `NONE`.
