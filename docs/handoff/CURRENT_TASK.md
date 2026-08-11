@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol eleventh-correction rejection and twelfth correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol twelfth-correction rejection and thirteenth correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -250,6 +250,14 @@ authorizing the new stage and acquiring its lease; rejection therefore leaks aut
 prior seal can resume. First-start reconstruction also trusts the globally earliest START without plan scoping or
 event-chain authentication, and ARMED remeasurement substitutes recorded database bytes for the live database.
 
+Sr's twelfth correction is rejected before Jr integration. Its live content digest now detects added tables and
+rows, RESUME authenticates the prior directory before transition, first-start recovery is plan-scoped, and ARMED
+uses a live post-prepare byte baseline. The digest still omits schema SQL, indexes, views, and triggers. The claimed
+atomic RESUME grant remains three separately committed mutations with dangerous compensating cleanup that can
+delete a legitimate foreign lease. ARMED bytes remain file-only mutable authority rather than matching the immutable
+schema row/policy, START recovery never recomputes event hashes, and two newly retained decisive tests are statically
+incompatible with the implementation and cannot reach their assertions.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -259,7 +267,7 @@ event-chain authentication, and ARMED remeasurement substitutes recorded databas
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first eleven corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first twelve corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -4660,6 +4668,88 @@ files. After publication, Sr Dev - Grok Build may correct only the same seven au
   deterministic post-prepare baseline/digest; do not replace live database bytes with the recorded pre-insert size.
 - Preserve the corrected production heartbeat, short atomic catalog boundary, crash terminal creation, fail-closed
   NON_ARMED, readiness deltas, lineage/idempotence, and migration/query-plan work. Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - twelfth controller correction rejected (2026-08-10)
+
+Jr published the eleventh-correction rejection and twelfth-correction authorization at pushed commit
+`30af75e`; `HEAD == origin/main`. Sr delivered a twelfth correction in all seven authorized files.
+Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `a87b977edec6aa4008a61bc4f1d352798b76163d6d45b3d701207f173a9beee4`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `fbdde716de88047d46117b8872c3185c96669c3898a96c9d5c1010b03c71b526`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `d1d1a7d6fcef48bfc051f7d8835eac979daa7db3896c0fe1f9d8fe58513b69dc`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `d83448cb53b1c0016f3de08f48cc6d27ef84a50bbb00598a1e7c00763f1ab5e9`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `14c66b0d454abaec92deb084b867666ecef0ef9f716664aed66f456acb83c328`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `9c05d37ba077349bc30513c9d841f21ee7d2e04a080dd2b27f333adfecacfc5b`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `32cd126aae39be31fe47b2c254220e902179c035549cceec470fda2127733ef4`.
+
+The correction is rejected. It improves the prior drop: a recomputable digest now catches added database tables
+and rows; RESUME authenticates the prior stage directory before normal authorization; first-start recovery filters
+the fixed production plan and reconciles stage/policy/permit rows; and preparation writes a post-insert live byte
+baseline. The following defects remain blocking:
+
+1. `compute_database_content_digest` is a table-name-and-row digest, not the authorized schema-and-row digest. It
+   reads only `sqlite_master` table names, ignores every table definition, index, trigger, and view, and orders rows
+   by implicit rowid. Dropping a required query-plan index or immutability trigger, changing an empty table's schema,
+   or adding/removing a view does not change the digest. Production authentication therefore cannot establish the
+   exact migration/query-plan authority it claims to seal. Hash canonical `sqlite_schema` definitions for all
+   governed objects, with an explicit self-reference exclusion, plus deterministic table content by declared key.
+2. The RESUME grant is not atomic. `transition_stage`, `acquire_controller_lease`, and
+   `append_controller_event(RESUME)` each commit separately. A process failure between them leaves torn authority.
+   The exception handler is compensating best effort, not a transaction; worse, if lease acquisition fails because
+   another controller legitimately holds the plan lease, its unconditional `DELETE ... WHERE plan_id = ?` removes
+   that foreign lease. The authorized contract requires one owner transaction and cleanup only of authority created
+   by that transaction.
+3. ARMED byte authority remains forgeable and internally split. Migration 0021 stores immutable pre-file byte
+   values, while the public ARMED JSON alone carries different post-prepare values; authentication deliberately no
+   longer compares the schema byte columns and the stored runtime-policy identity does not bind the final baseline.
+   A database/tree mutation plus rewrite of `PREPARE_OUTCOME.json` can select a new accepted baseline. The live
+   measurement is useful, but its final digest/bytes must be bound to immutable schema or policy authority rather
+   than a mutable file alone.
+4. First-start recovery validates payload hashes and hash links but never recomputes each controller `event_hash`
+   from its identity fields. It therefore does not implement the fully authenticated event-chain authority requested
+   in the twelfth scope. Reuse the same exact event-hash recomputation performed by stage authentication.
+5. The decisive tests are not executable as written. The successful public prepare/stage test calls the stricter
+   `authenticate_armed_prepare` with a policy payload that omits the now-mandatory `database_path`, so it raises
+   before its claimed public path. The torn-seal test directly deletes an immutable seal row without catching the
+   trigger's `sqlite3.IntegrityError`; execution stops before it removes MANIFEST or tests RESUME. No test covers a
+   foreign lease acquisition failure, crash boundaries between the three RESUME commits, schema/index/trigger
+   digest tampering, or coordinated ARMED-file/tree rewrite.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized thirteenth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Extend the live database authority to canonical governed schema objects plus deterministic keyed row content;
+  prove that table-definition, required-index, immutability-trigger, view, and ordinary row mutations all fail while
+  excluding only the seal's unavoidable self-reference.
+- Implement authorization/lease/RESUME as one real transaction after all prior-terminal and permit checks. A crash
+  at any boundary must leave PREPARED/no lease/no RESUME, and a foreign lease failure must preserve the foreign row
+  byte-for-byte. Do not use unconditional compensating deletion.
+- Bind the final post-prepare database/tree baseline in immutable schema or runtime-policy authority and require the
+  JSON to match it; test coordinated file/database/tree rewrite. Recompute exact controller event hashes during
+  first-start recovery, not only payload hashes and links.
+- Repair the two internally contradictory tests and add the missing schema tamper, foreign lease, atomic crash,
+  ARMED coordinated tamper, and invalid-event-hash cases. Preserve every corrected heartbeat, short catalog
+  transaction, crash terminal, prior-seal authentication, NON_ARMED, readiness, lineage, and migration path.
+  Targeted ruff must remain clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
