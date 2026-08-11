@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol ninth-correction rejection and tenth correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol tenth-correction rejection and eleventh correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -233,6 +233,14 @@ are not exact, and the new seal hashes the database before inserting its own ter
 self-rejects. Readiness bytes remain proportional, ARMED remains file-not-policy authority, RESUME accepts no prior
 terminal, and four authorized files—including all production/migration tests—are unchanged.
 
+Sr's tenth correction is rejected before Jr integration. It adds independently measured readiness-group deltas,
+schema rows for prepare outcomes and acquisition lineage, idempotent attempt replay, stronger permit/terminal
+binding, and a generated seal whose current database hash self-authenticates. Its production persistence transaction
+now spans the blocked raw stream, so heartbeat renewals acknowledged on that same connection are not durable or
+visible until persistence completes. A START-row/file crash can reset the global wall, the real crash path cannot
+produce the terminal that RESUME requires, and the post-terminal database/full-manifest hash remains forgeable
+because it is stored only in editable files outside the durable core.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -242,7 +250,7 @@ terminal, and four authorized files—including all production/migration tests�
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first nine corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first ten corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -4479,6 +4487,89 @@ files. After publication, Sr Dev - Grok Build may correct only the same seven au
   transaction-conflict, failure-lineage, historical-raw, byte-delta, arming, START/RESUME, database/tree tamper,
   populated rollback/immutability, and exact query-index tests. Do not weaken exceptions to generic alternatives.
   Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - tenth controller correction rejected (2026-08-10)
+
+Jr published the ninth-correction rejection and tenth-correction authorization at pushed commit
+`0d7076370f970307d5b48d238e9de1fcdc52d4b1`; `HEAD == origin/main`. Sr delivered a tenth
+correction in all seven authorized files. Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `d8e2bb4e8b11ae8d9f97055587e99a2db8029e4002e7f94f71c5a75e617627f0`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `58625b9f5061768f6edaf9c65c2969d94239a6ce6618ae12e3d18f71bae6d385`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `79c38c70570731a5832858edd491e6fa5659548adc10a2585eda7f0154b4d698`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `cd73e5be9253a7961d5440426b1d14584ac70373c535ed5869b970e5a5963f2f`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `7d273456c6e548291351d2fcabf2ba0caee3ce7d9fd4fe23f7786caa75af4955`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `9cf3cbd447e435c7ff66774506635fe6b478a8432096a7c57c1d0fc7b40a17bb`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `6f6fec460759d2da3e415cb8d5d35facded248442266d4565f5d7ed190c7cf1b`.
+
+The correction is rejected. It makes substantial progress: readiness groups now use separate databases and
+independently measured raw/SQLite deltas; migration 0021 adds immutable prepare-outcome and stage-acquisition-
+lineage rows; deterministic attempt replay authenticates an existing row; permit rows can bind a prior terminal;
+and a freshly generated terminal authenticates the current post-terminal database hash. The following defects
+remain blocking:
+
+1. Production-bound persistence begins `BEGIN IMMEDIATE` before `writer.write_stream` and owns that transaction
+   across the potentially blocked multi-chunk filesystem stream. `pulse()` services lease renewals on the same
+   connection, and `_op_renew_lease` returns success without committing; the renewal is therefore neither durable
+   nor visible to another connection until the entire persistence operation commits. The accepted heartbeat
+   contract requires `expires_at` to advance before the persistence future completes. The existing blocked-stream
+   heartbeat test uses a non-production descriptor, while the new production atomicity tests do not block the
+   stream or observe the lease from another connection, so this regression is untested. Holding SQLite's writer
+   lock for the whole physical stream also blocks independent durable controller work.
+2. The asserted first-start crash recovery is incomplete. `start_stage` durably appends START and only then writes
+   `FIRST_START_WALL.json`, but a crash between those operations leaves no reconstruction path from the earliest
+   START row. Recovery marks that stage CRASH/PAUSED_REVIEW; a later controller with no file chooses its current
+   wall as a new first start, resetting the global fourteen-day bound instead of restoring the durable original.
+3. The real crash and RESUME paths do not compose. `run_stage_session` converts a residual RUNNING stage to CRASH
+   plus PAUSED_REVIEW and returns without storing a terminal. `authorize_stage` then refuses the new stage whenever
+   that crashed prior stage has no terminal. The RESUME test manufactures the missing terminal by explicitly calling
+   normal `drain_and_close` after its manually inserted CRASH; it does not execute the public crash-recovery path.
+4. The post-terminal database seal remains forgeable. The durable terminal row binds only `core_hash`, which
+   deliberately excludes database identity. The post-terminal database SHA and full MANIFEST hash exist only in
+   editable MANIFEST/TERMINAL files. A coordinated database mutation plus recomputation of those two files leaves
+   the durable core and terminal row unchanged and passes the implemented comparison. The negative test mutates
+   only the database and does not exercise this coordinated rewrite; this is not a non-forgeable durable binding.
+5. Prepare-outcome failure is not reliably schema-bound. The NON_ARMED path catches every database insertion error
+   and continues with the comment that the file is primary, contrary to the required transactional schema authority.
+   ARMED authentication compares recorded initialized-tree bytes but does not remeasure the current initialized
+   raw/spool/controller tree before allowing network work. The new immutability test calls the row helper directly
+   and therefore does not prove the public preparation failure path or tree binding.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized eleventh correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Preserve raw/acquisition/attempt/lineage atomicity without holding the SQLite owner transaction across physical
+  streaming. Heartbeats and controller commands acknowledged during a blocked production stream must commit
+  durably and be visible from an independent connection before persistence completes. Add the exact production-
+  bound blocked-stream test; retain conflict rollback and commit-before-cleanup replay coverage.
+- Reconstruct the exclusive first-start file from the earliest authenticated durable START after the row-before-file
+  crash boundary, without resetting the global wall. Make the actual public RUNNING-crash path produce or otherwise
+  authenticate the terminal required by the new-permit RESUME path; test the real end-to-end crash sequence rather
+  than manually sealing it through the normal drain path.
+- Give the post-terminal database SHA and full-manifest identity a non-forgeable durable authority without
+  self-reference, and add coordinated database/MANIFEST/TERMINAL tamper coverage. Make public NON_ARMED insertion
+  fail closed and schema-bound, and remeasure/authenticate the full initialized tree and READY anchors before any
+  network capability is granted.
+- Preserve the corrected exact readiness deltas, lineage/idempotence, permit constraints, generated self-auth, and
+  exact migration/query-plan coverage. Targeted ruff must remain clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
