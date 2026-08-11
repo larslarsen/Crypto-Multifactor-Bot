@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol twelfth-correction rejection and thirteenth correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol thirteenth-correction rejection and fourteenth correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -258,6 +258,13 @@ delete a legitimate foreign lease. ARMED bytes remain file-only mutable authorit
 schema row/policy, START recovery never recomputes event hashes, and two newly retained decisive tests are statically
 incompatible with the implementation and cannot reach their assertions.
 
+Sr's thirteenth correction is rejected before Jr integration. It adds schema definitions and keyed rows to the live
+digest, moves stage/lease/RESUME grant into one SQLite transaction, recomputes START event hashes, binds ARMED JSON
+to a new immutable baseline row, and repairs the two contradictory tests. The authority digest nevertheless excludes
+both seal/baseline tables and all indexes/triggers attached to them, allowing their immutability controls to be
+dropped and their excluded rows rewritten without changing the digest. Its substring-based schema exclusion can
+also hide newly added schema objects, and the required atomic crash-boundary test remains absent.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -267,7 +274,7 @@ incompatible with the implementation and cannot reach their assertions.
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first twelve corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first thirteen corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -4750,6 +4757,74 @@ files. After publication, Sr Dev - Grok Build may correct only the same seven au
   ARMED coordinated tamper, and invalid-event-hash cases. Preserve every corrected heartbeat, short catalog
   transaction, crash terminal, prior-seal authentication, NON_ARMED, readiness, lineage, and migration path.
   Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - thirteenth controller correction rejected (2026-08-10)
+
+Jr published the twelfth-correction rejection and thirteenth-correction authorization at pushed commit
+`e4646ba`; `HEAD == origin/main`. Sr delivered a thirteenth correction in all seven authorized files.
+Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `1395bfd5629c60cf60bb6d04a36beb3c8e616d48bfe3705c97dee074d3db5073`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `904c10011981b1a3fbe3c98e4e7ba0f4e7f6b1164b7d50462b24b65ed2c31abd`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `1346cdc94cd4bbc45d6d9384a5f01af5ecf1cb861171636dc32d8f45817c8fdc`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `9ee9bc9e2c9a118c2e8077045cb3ee923db3466508cf056bc4d0aae943feac54`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `1b8bfd3345815466cdf9698bc1d624726191c1ae07c655ff5d955cb00bcc44c0`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `c190802e87544754a12b3c2c414ed4a99bc4bd78bb37270344459d7a49f5b725`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `e09b59bf1306b0266627f3db115f59adcf726ad74a1c81d539da46f83ee9c62b`.
+
+The correction is rejected. It closes most of the twelfth review: canonical schema SQL and deterministic keyed
+rows enter the live digest; stage transition, controller lease, and RESUME insertion share one real transaction;
+foreign-lease failure rolls back without deletion; START recovery recomputes exact event hashes; a new immutable
+prepare-baseline row cross-binds ARMED file bytes/digest; and the previously contradictory ARMED and torn-seal tests
+are repaired. One authority defect and its missing decisive coverage remain:
+
+1. The self-reference exclusion is much broader than necessary and defeats the authority it is intended to protect.
+   `_DB_AUTHORITY_EXCLUDED_TABLES` removes both terminal-seal and prepare-baseline table definitions and row content;
+   the schema loop additionally removes every index/trigger whose `tbl_name` is either table. An attacker can drop
+   `trg_*_stage_terminal_seal_no_update/no_delete` or `trg_*_prepare_baseline_no_update/no_delete`, rewrite the
+   excluded authority row to match a modified database/files/tree, and leave the recomputed digest unchanged. Schema
+   definitions, indexes, and immutability triggers are static and do not create hash self-reference; only the mutable
+   self-seal row fields require exclusion.
+2. The further condition `if s and any(ex in s for ex in _DB_AUTHORITY_EXCLUDED_TABLES): continue` permits a new
+   trigger/view/index on an unrelated table to evade the digest merely by including an excluded table name in its SQL
+   text (including a comment or reference). Exclusions must be exact object/table rules, never substring matching.
+3. Tests prove a normal governed index drop but do not drop either authority table's immutability trigger, rewrite
+   the excluded seal/baseline row, add a substring-evasive view/trigger, or prove rollback under an injected failure
+   between stage update, lease write, and RESUME insert. The thirteenth authorization explicitly required the atomic
+   crash-boundary and immutability-trigger cases; they remain absent.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized fourteenth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Hash the exact schema definitions, indexes, and triggers for the terminal-seal and prepare-baseline authority
+  tables. Exclude only the self-referential row values needed to store the digest; never exclude schema objects by
+  SQL substring. Prove that dropping either authority immutability trigger and rewriting its row cannot forge stage
+  or ARMED authentication, and that an added view/trigger mentioning an authority table is detected.
+- Add deterministic failure injection inside the single grant transaction after stage update and after lease write
+  (including the RESUME insertion boundary), proving rollback leaves PREPARED, no created lease, no RESUME, and any
+  pre-existing foreign lease byte-identical.
+- Preserve the corrected schema/key digest, atomic grant implementation, foreign-lease behavior, START event-hash
+  authentication, immutable ARMED baseline, repaired public tests, heartbeat, persistence, crash terminal,
+  prior-seal authentication, NON_ARMED, readiness, lineage, and migration/query-plan work. Targeted ruff must remain
+  clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
