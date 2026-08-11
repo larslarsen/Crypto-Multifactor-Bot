@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol tenth-correction rejection and eleventh correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol eleventh-correction rejection and twelfth correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -241,6 +241,15 @@ visible until persistence completes. A START-row/file crash can reset the global
 produce the terminal that RESUME requires, and the post-terminal database/full-manifest hash remains forgeable
 because it is stored only in editable files outside the durable core.
 
+Sr's eleventh correction is rejected before Jr integration. It correctly moves physical streaming before the
+catalog transaction and proves production-bound heartbeat visibility, reconstructs a missing first-start file,
+seals the public crash-residue path, adds a durable terminal-seal row, and makes NON_ARMED failures fail closed.
+However, stage authentication intentionally does not hash or otherwise digest the live database after the seal row,
+so unrelated post-seal database mutation is invisible. RESUME checks only terminal-row existence after already
+authorizing the new stage and acquiring its lease; rejection therefore leaks authority and a torn/unauthenticated
+prior seal can resume. First-start reconstruction also trusts the globally earliest START without plan scoping or
+event-chain authentication, and ARMED remeasurement substitutes recorded database bytes for the live database.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -250,7 +259,7 @@ because it is stored only in editable files outside the durable core.
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first ten corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first eleven corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -4570,6 +4579,87 @@ files. After publication, Sr Dev - Grok Build may correct only the same seven au
   network capability is granted.
 - Preserve the corrected exact readiness deltas, lineage/idempotence, permit constraints, generated self-auth, and
   exact migration/query-plan coverage. Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - eleventh controller correction rejected (2026-08-10)
+
+Jr published the tenth-correction rejection and eleventh-correction authorization at pushed commit
+`af3c178`; `HEAD == origin/main`. Sr delivered an eleventh correction in all seven authorized files.
+Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `7ad42edc8da2716a78092a11e19e80a148619b951f78f5bef127a8d8b5d7363e`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `cfe5a88b014fc61b333b42d7fa22a7370c4ecb68e38162f38e7b13490c11895c`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `0f29a7683561852b40420417b512826030f196a820fdebb7fc056e1b2f6a0ae8`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `ca3f0f5ab8c7e90ff9b7a832fc566c6cdbcd113d004203ddec73694d8a43afa4`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `20e3a1f7d9488aa166e6eb4d1153a1cb1ff18cdfec87f56ae06f3efafbe24f76`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `2f544ea4ec45d60413331c70b62e265a7f6962ddeb208416a0c15d669974e24f`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `6591d69a62f5edb7888bbfd73aefbe716b9393a64618355834a76f5b5ce8e50a`.
+
+The correction is rejected. It closes several real gaps: production-bound raw bytes now stream before the short
+catalog/attempt/lineage transaction; lease renewal owns and commits its short transaction; a decisive test observes
+the renewal from an independent connection while persistence remains blocked; the public RUNNING-crash path now
+creates a terminal; missing first-start files are reconstructed; terminal files are cross-bound to a new immutable
+schema row; and public NON_ARMED insertion fails closed. These defects remain blocking:
+
+1. The new terminal-seal row does not authenticate the live database. It records the database hash measured before
+   inserting that row, which necessarily changes the database, and authentication explicitly declines to recompute
+   or compare any live database digest afterward. Consequently an unrelated post-seal mutation such as creating and
+   populating `tamper_x` changes none of the queried semantic rows and passes authentication. The retained
+   `test_database_tamper_after_seal_fails_auth` still expects that exact mutation to raise, but the implementation has
+   no path that can detect it. The coordinated-rewrite test proves only that editable files cannot disagree with the
+   pre-existing seal row; it does not prove database immutability or post-seal identity.
+2. RESUME validates too late and does not authenticate the prior terminal. `authorize_stage` first transitions the
+   new stage to AUTHORIZED and acquires a live controller lease, then checks the preceding CRASH, terminal row, and
+   permit binding. A missing/wrong `prior_terminal_id` raises while leaving the new stage and lease authorized; the
+   next correct controller is refused by that leaked unexpired foreign lease. Both RESUME tests use this bad-then-
+   good sequence and therefore cannot reach their claimed success path. The code also checks only that a terminal
+   row exists, not that the prior stage directory, event/checkpoint chain, MANIFEST, TERMINAL, and terminal-seal row
+   authenticate; a crash after inserting the terminal row but before completing the seal can authorize RESUME.
+3. First-start recovery is not the requested authenticated plan authority. Its query has no plan predicate and
+   selects the globally earliest START from the entire controller-event table. It parses required payload strings
+   but does not recompute the event hash chain, reconcile row plan/stage identity, or authenticate the referenced
+   policy and permit. A different-plan or torn/forged earliest row can create the exclusive file and brick or
+   mis-anchor the fixed production plan. The new test merely deletes the file beside one valid START row.
+4. ARMED tree remeasurement still excludes live database changes. It verifies only that the current database size
+   has not shrunk, then initializes `measured_tree` with the old recorded `init_db` value rather than the current
+   database bytes/digest. Arbitrary database growth before the network gate is therefore omitted from the supposedly
+   full initialized-tree remeasurement. The prepare-outcome insertion must be handled by a deterministic post-insert
+   baseline or canonical live digest, not by substituting the pre-insert byte count.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized twelfth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Replace the pre-seal file hash comparison with a recomputable live post-seal database authority that detects the
+  existing unrelated-table mutation test while avoiding self-reference. A canonical schema-and-row digest that
+  excludes only its own seal fields, or a separately anchored final database seal, is acceptable if authentication
+  recomputes it and coordinated DB/MANIFEST/TERMINAL mutation fails.
+- Authenticate the complete prior crash terminal before any new-stage transition or lease acquisition. Validate the
+  new permit and RESUME prerequisites first, then atomically grant authority and append RESUME; every rejection must
+  leave the stage PREPARED, no capability, and no lease. Add torn-seal and bad-then-good public tests that inspect
+  state/lease residue.
+- Reconstruct first-start only from the fixed plan's earliest fully authenticated START event and exact stage,
+  policy, permit, controller, row-payload, and event-chain authority. Add another-plan/invalid-earliest adversarial
+  coverage. Remeasure the actual current database plus raw/spool/controller trees before network authority using a
+  deterministic post-prepare baseline/digest; do not replace live database bytes with the recorded pre-insert size.
+- Preserve the corrected production heartbeat, short atomic catalog boundary, crash terminal creation, fail-closed
+  NON_ARMED, readiness deltas, lineage/idempotence, and migration/query-plan work. Targeted ruff must remain clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
