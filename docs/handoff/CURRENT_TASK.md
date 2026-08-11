@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol eighth-correction rejection and ninth correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol ninth-correction rejection and tenth correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -225,6 +225,14 @@ allocates database bytes by a raw-byte-share proxy; ARMED and initialized/READY 
 is absent; first-start and stage seals retain forge/crash gaps; and the attempted raw reconciliation is both
 incomplete and incompatible with the production database's pre-existing raw history.
 
+Sr's ninth correction is rejected before Jr integration. It replaces the direct SQLite-method assignment with a
+catalog connection proxy, writes and partially authenticates stage-scoped raw lineage, strengthens first-start
+payloads, emits a provisional RESUME, checks ARMED byte fields, and moves database identity into the manifest core.
+The proxy can still split its outer transaction, commit-before-cleanup recovery is non-idempotent, lineage checks
+are not exact, and the new seal hashes the database before inserting its own terminal row so every generated seal
+self-rejects. Readiness bytes remain proportional, ARMED remains file-not-policy authority, RESUME accepts no prior
+terminal, and four authorized files—including all production/migration tests—are unchanged.
+
 ## Governing documents
 
 - tickets/DEX-003.md
@@ -234,7 +242,7 @@ incomplete and incompatible with the production database's pre-existing raw hist
 
 The offline production-foundation source/integration, migration 0020, applied database state,
 and focused evidence remain accepted at pushed commit `179233a`. The first ADR-0015 section 9.11
-controller source/test drop and its first eight corrections are rejected; no part is accepted for Jr
+controller source/test drop and its first nine corrections are rejected; no part is accepted for Jr
 integration. The bounded same-seven-file correction below does not authorize live readiness, RPC,
 production initialization, a staged production start, coverage credit, publication, metadata/
 downstream transform, factor design, PAPER, or LIVE work. Next ticket remains `NONE`.
@@ -4382,6 +4390,95 @@ files. After publication, Sr Dev - Grok Build may correct only the same seven au
 - Replace dict-only and negative placeholders with successful public matrix/readiness preview/prepare/stage/seal/auth
   execution plus exact transaction/crash, historical-raw scoping, byte-delta, ARMED/NON_ARMED, first-start/RESUME,
   database/tree tamper, and exact query-index tests. Targeted ruff must remain clean.
+
+Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
+data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
+and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
+and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - ninth controller correction rejected (2026-08-10)
+
+Jr published the eighth-correction rejection and ninth-correction authorization at pushed commit
+`aae629f3f50c71202ff70ef87506ffb36fa86762`; `HEAD == origin/main`. Sr delivered a ninth
+correction in the engine, production-controller, and engine-test files. Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `648335545cdbe5d762211c5c85610602e08951591ad9a363e966118e4bec0687`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `f131893f6cfde806e6b87ce73f03e110ab58abdf0226bc1fdca2c23b64c43773`;
+- unchanged `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `52dc373ade2b02396aff79f42bc18f8b85f2714d730bbe2c93de9f7f64f69abb`;
+- unchanged `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `5577ca080172d3ed63329f230a7fc91b917f23a195ab2e32363ae509a25d19ed`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `44a08197bef42d396501bb723ab37e94cdda01926a41a1d82f4a86df1031236d`;
+- unchanged `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `61e0faf075d972d7718840ce713df88ea07b94e5f87be6032d5efc50f4fbff46`; and
+- unchanged `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `4fc2262f56f1922d24e25cbccd069f36f1d746f1be7bca91af44b5a2678def38`.
+
+The correction is rejected for these blocking defects:
+
+1. The new transaction mechanism mutates private `writer._catalog._conn` for each envelope and substitutes a
+   duck-typed proxy. It defers `commit` but forwards `rollback` to the real connection, while catalog conflict
+   recovery legitimately calls rollback internally; that can tear down the supposed outer transaction and let
+   subsequent acquisition/attempt writes proceed in a different implicit transaction. `BEGIN IMMEDIATE` also
+   catches every `sqlite3.Error` and silently continues rather than proving an existing valid owner transaction.
+   This is not the required explicit supported transaction boundary.
+2. Crash recovery is not idempotent after commit. Attempt IDs are deterministic, but `_maybe_insert_stage_attempt`
+   still executes a plain `INSERT`. If raw acquisition plus attempt commits and the process crashes before journal/
+   spool cleanup, startup replays the exact journal: raw registration recognizes the existing acquisition, then the
+   duplicate attempt insert raises and production recovery re-raises forever. No test covers this commit-before-
+   cleanup crash window or authenticates an exact existing attempt before cleanup.
+3. The controller now scopes raw rows by metadata lineage, but authentication is still not exact. Attempt lineage is
+   checked only for stage ID; plan/logical-call/attempt/provider/request/outcome identities are not cross-reconciled.
+   Failed acquisition links live only in free-form JSON, duplicates are collapsed into a set instead of requiring
+   exactly one attempt, and the explicit `pass` permits attempts with no lineage-tagged acquisition. Migration 0021
+   is unchanged, so neither success nor failure lineage receives new schema-enforced composite authority.
+4. The revised stage seal is self-inconsistent. It transitions the stage, releases the lease, checkpoints SQLite,
+   hashes the database into `core_manifest`, and only then calls `store_terminal`, which inserts the durable terminal
+   row and changes the database. The generated MANIFEST therefore records the pre-terminal database SHA/size while
+   authentication reads the post-terminal database; a generated stage must reject its own database identity. This
+   also does not solve the DB/self-reference problem with one non-forgeable post-mutation seal chain.
+5. First-start/RESUME remain unsafe. A new first-start file is still fsynced before its START row, preserving the
+   unrecoverable crash window. Candidate matching checks controller and optionally stage but does not reconcile the
+   file's policy/permit against START. RESUME is emitted after authorizing the new stage whenever the prior ordinal
+   merely has PAUSED_REVIEW plus any CRASH; it accepts a missing terminal, never authenticates the new permit's
+   `prior_terminal_id`, and does not recompute the prior event/terminal chain before granting the new capability.
+6. ARMED remains mutable file authority rather than final policy/schema authority. Initialized database/tree bytes
+   are still absent from the immutable runtime-policy identity. Authentication requires the file fields and checks
+   current DB size, but does not bind/re-measure the full initialized tree or READY anchors; changing the JSON can
+   still change asserted tree authority. NON_ARMED still cannot atomically undo READY/policy mutations.
+7. Readiness still executes all groups together and assigns the SQLite file by proportional raw-byte share, not
+   exact observed row/index deltas. The CLI, migration, production tests, and migration tests are byte-for-byte
+   unchanged, preserving the missing exact leaf-credit index and successful public preview/prepare/stage paths.
+8. The rollback test was widened to `pytest.raises(Exception)` and string alternatives. It proves only one invalid-
+   provider path and does not cover successful atomic commit, catalog-conflict rollback, commit-before-cleanup replay,
+   exact lineage authentication, the new START/RESUME/ARMED/seal code, or unrelated historical acquisitions.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, production-data mutation, or Git action.
+
+### Authorized tenth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Sr Dev - Grok Build may correct only the same seven authorized files:
+
+- Use an explicit real-connection transaction mode owned for the full persistence operation; catalog-internal
+  conflict handling must not roll back or split the outer raw/attempt transaction. Make exact replay after a commit-
+  before-cleanup crash idempotently authenticate the existing raw acquisition and attempt, then clean the journal.
+- Add schema-enforced stage lineage for both successful and failed/no-response acquisitions, or an equivalently
+  exact composite authority. The stage authenticator must cross-reconcile every lineage field, require exactly one
+  matching attempt for every production acquisition, and ignore unrelated pre-controller/prior-stage raw history.
+- Complete every remaining ninth-authorization item: exact independently measured group raw/receipt/SQLite deltas;
+  schema-bound transactional ARMED/NON_ARMED with initialized bytes and READY anchors; crash-safe START plus an
+  authenticated mandatory prior-terminal/new-permit RESUME; a non-forgeable post-terminal-mutation DB/full-manifest
+  scheme that authenticates its own generated output; policy-bound recursive trees; and complete semantics.
+- Deliver successful public matrix/readiness preview/prepare/stage/seal/auth paths and exact crash-window,
+  transaction-conflict, failure-lineage, historical-raw, byte-delta, arming, START/RESUME, database/tree tamper,
+  populated rollback/immutability, and exact query-index tests. Do not weaken exceptions to generic alternatives.
+  Targeted ruff must remain clean.
 
 Sr does not run tests or migrations, edit other files/records, use RPC/network, touch production or evidence
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
