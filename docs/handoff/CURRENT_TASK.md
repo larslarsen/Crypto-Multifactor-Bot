@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol fourteenth-correction rejection and fifteenth correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol fifteenth-correction acceptance and Jr integration authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -4903,6 +4903,47 @@ Sr does not run tests or migrations, edit other files/records, use RPC/network, 
 data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr integration/testing
 and all live readiness, production initialization/RPC/stages, coverage, publication, downstream, PAPER, LIVE,
 and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source acceptance - fifteenth controller correction accepted (2026-08-10)
+
+Jr published the fourteenth-correction rejection and fifteenth-correction authorization at pushed commit
+`c3290d5`; `HEAD == origin/main`. Sr delivered the fifteenth correction in all seven authorized files.
+Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `0b9c69868d3839f9df857de2da04379f7191a47020d7bd6dfb3a62e0e7b00a49`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `5c4f2d916d084baaca0aa094bb7c904a966e39b4a31f4d05ffbbf0fd12429451`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `d2d838048c3daba57c1fa3be63e195047c52abcb74b269a8a1b248ff7a4a08e6`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `38a613fd7764aba3b1fa4eac1077f9dc397a5da3f4b9de80f3dfa82cd0e55cf9`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `732611a0f575f259b3ab1464c7fb20560e7c9c5255fa16bfe0ca34c2bc7b615c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `0fe20515625d73df2c5556fba63b5bf77925252f0fd14be0d0b21aaaa90d2580`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `604f23d9daf7773a04d798fa542c7c390bfdae41de0b9747b55788f4356e7723`.
+
+The correction is accepted for Jr integration and offline testing. The source-pinned authority-schema identity is
+now checked before trusting terminal-seal or prepare-baseline rows, so a rewritten authority row can no longer
+bless removal or alteration of its own protection. The full coordinated adversarial cases are covered: dropping
+the terminal-seal trigger, computing the new live digest, rewriting every omitted seal/file field consistently,
+and requiring stage auth failure; repeating for prepare-baseline plus ARMED JSON/tree; and authority-row
+deletion/reinsertion where constraints allow. No deliberately incorrect placeholder digest is used as the
+failure mechanism.
+
+Targeted ruff passes, repository control passes, and `git diff --check` is clean. Sol ran no pytest,
+migration, RPC, or production mutation; those remain Jr integration duties.
+
+Jr Dev - Hermes must first commit and push only this acceptance in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted controller drop, `opencode.json`, and both untracked research
+files. After publication, Jr verifies the seven hashes byte-identical, integrates the unchanged drop, executes
+the focused test targets and acceptance commands, applies migration 0021 to the offline database, records exact
+evidence, and commits and pushes only the accepted files plus the aligned governance records.
+
+Live readiness, production preparation/RPC/stages, coverage, publication, downstream work, PAPER, LIVE, and
+the next ticket remain unauthorized. Next ticket remains `NONE`.
 
 ## Sol source review - first controller correction rejected (2026-08-09)
 
