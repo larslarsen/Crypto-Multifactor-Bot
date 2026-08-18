@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Claude Build — patch only the review-64 residual CEX-002 Gate 1 defects
+Next required actor: Jr Dev — Hermes — integrate accepted Claude source, execute tests, and run real Gate 1 qualification/resume
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -15,6 +15,7 @@ Governing documents:
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
 - research/sprint_004/63_CEX002_GROK_SOURCE_REVIEW.md
 - research/sprint_004/64_CEX002_GROK_SECOND_SOURCE_REVIEW.md
+- research/sprint_004/65_CEX002_CLAUDE_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -165,10 +166,30 @@ source/test drops and unrelated dirty paths, pushes, and establishes
 Opus 5 is automatically authorized for the surgical correction in review 64; no ephemeral
 prompt, owner-supplied source hashes, or further handoff edit is required.
 
+## Claude corrective source acceptance
+
+Review 65 accepts Claude's source-only correction at exact hashes. Full-universe missing
+family prefixes now become typed blocking evidence; Coinalyze provenance now identifies
+and rehashes retained raw response bytes; and the focused mismatch test contract is
+correct. This is the first accepted Claude Build source review and is positive
+project-specific routing evidence, pending Hermes integration.
+
+Jr Dev — Hermes is authorized to perform only the integration, command sequence, two real
+Gate 1 qualification/resume runs, evidence record, commit, and push specified verbatim in
+review 65. The key must be loaded only from `.env` into `COINALYZE_API_KEY`, never printed
+or placed in command arguments. Exit 2 is preserved as honest blocked-matrix evidence, not
+reported as success. Exit 1 stops the run. Interrupted work resumes the same store and
+progress file. The execution record path is
+`research/sprint_004/66_CEX002_GATE1_EXECUTION.md`.
+
+The full suite may not be weakened with `-k` or test deselection. If preserved dirty drops
+outside the integration cause the in-place full suite to fail, Hermes records that failure
+and follows review 65's clean candidate-tree procedure. Only a passing unchanged full
+suite against the exact candidate commit authorizes the real network qualification.
+
 ## Stop condition
 
-Claude stops after delivering the bounded source/test-source patch and exact SHA-256
-hashes for every changed path. Claude performs no test execution, network run,
-integration, record edit, Git operation, commit, push, purchase, catalog mutation, or
-publication. Jr integration remains unauthorized. CEX-002 remains `IN_PROGRESS`; next
-ticket remains `NONE`.
+Hermes stops after publishing the exact integrated source, tests, fixtures, final real
+Gate 1 report, and execution record with `HEAD == origin/main`. CEX-002 remains
+`IN_PROGRESS`; Gate 2 and every other ticket remain unauthorized; next ticket remains
+`NONE`.

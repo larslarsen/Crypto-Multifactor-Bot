@@ -1,0 +1,34 @@
+{
+  "timezone": "UTC",
+  "serverTime": 1577836800000,
+  "symbols": [
+    {
+      "symbol": "BTCUSDT",
+      "pair": "BTCUSDT",
+      "contractType": "PERPETUAL",
+      "status": "TRADING",
+      "marginAsset": "USDT"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "pair": "ETHUSDT",
+      "contractType": "PERPETUAL",
+      "status": "TRADING",
+      "marginAsset": "USDT"
+    },
+    {
+      "symbol": "AAVEUSDT",
+      "pair": "AAVEUSDT",
+      "contractType": "PERPETUAL",
+      "status": "TRADING",
+      "marginAsset": "USDT"
+    },
+    {
+      "symbol": "BTCUSDT_240329",
+      "pair": "BTCUSDT",
+      "contractType": "CURRENT_QUARTER",
+      "status": "TRADING",
+      "marginAsset": "USDT"
+    }
+  ]
+}
