@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol fifteenth-correction acceptance and Jr integration authorization
+Next required actor: Jr Dev - Hermes - publish Sol integration rejection and sixteenth-correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -22,6 +22,13 @@ identity is `a1aba05a7e8c6d6fcdd67bda8bc2aa0a8d747cde`; the provenance-bad prede
 The registry parquet has 21 columns and its rows/catalog lineage reconcile. DEX-003
 gates 3-6 remain unexecuted; `dex_pool_events`, `dex_pool_daily`, and
 `dex_universe_daily` are not published, so the full ticket is not awaiting final review.
+
+The fifteenth controller source acceptance is withdrawn after Jr's first focused integration
+run reached 100% with 146 passing and 31 failing tests. Migration 0021 was not applied and the
+offline production database remains at migration 0020 with all v2 tables empty. The exact
+integration rejection, retained evidence, and bounded sixteenth-correction authorization are
+in the section titled `Sol integration review - fifteenth controller acceptance withdrawn`. No live readiness, preparation, RPC, stage, coverage,
+publication, downstream, PAPER, LIVE, harmonic-model, or next-ticket work is authorized.
 
 Grok's production-orchestration source is accepted for Jr integration. It now provides
 mandatory accepted-registry manifest/hash verification, fail-closed guards against
@@ -3682,6 +3689,122 @@ evidence data, or perform Git actions. Sr stops for a fresh Sol source review wi
 integration/testing and all live readiness, production initialization/RPC/stages, coverage, publication,
 downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
 
+## Control-plane state pointer (2026-08-17)
+
+The authoritative current decision is the detailed section titled
+`Sol integration review - fifteenth controller acceptance withdrawn (2026-08-17)` above. The fifteenth
+source acceptance is withdrawn; migration 0021 was not applied. Jr Dev - Hermes is the next actor only to
+publish that aligned two-record review. The bounded sixteenth correction becomes available to Sr Dev - Grok
+Build at the recorded Grok 4.6 Max escalation tier only after that publication and must stop for fresh Sol
+source review. Jr reintegration/testing, live readiness, production preparation/RPC/stages, coverage,
+publication, downstream, PAPER, LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket
+remains `NONE`.
+
+## Sol integration review - fifteenth controller acceptance withdrawn (2026-08-17)
+
+Jr published the source acceptance at pushed record-only commit `c51e00b`; `HEAD == origin/main` before
+integration. Jr then placed the accepted seven-file drop in the working tree and ran the authorized focused
+suite. All seven SHA-256 values remain byte-identical to the accepted drop:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `0b9c69868d3839f9df857de2da04379f7191a47020d7bd6dfb3a62e0e7b00a49`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `5c4f2d916d084baaca0aa094bb7c904a966e39b4a31f4d05ffbbf0fd12429451`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `d2d838048c3daba57c1fa3be63e195047c52abcb74b269a8a1b248ff7a4a08e6`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `38a613fd7764aba3b1fa4eac1077f9dc397a5da3f4b9de80f3dfa82cd0e55cf9`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `732611a0f575f259b3ab1464c7fb20560e7c9c5255fa16bfe0ca34c2bc7b615c`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `0fe20515625d73df2c5556fba63b5bf77925252f0fd14be0d0b21aaaa90d2580`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `604f23d9daf7773a04d798fa542c7c390bfdae41de0b9747b55788f4356e7723`.
+
+The focused run reached 100%; its progress and short summary establish 146 passing and 31 failing tests across
+the three authorized targets. The retained log is `logs/dex003/controller_suite_run.log`, 27,643 bytes,
+SHA-256 `8ab76a72ea86c9d9d7e9919da7dd24017f7bffb4ac068e1e340ebf33bda1b9cf`. It contains no final duration/footer,
+so no duration is inferred. Pre-migration evidence is retained at
+`logs/dex003/migration_0021_pre_evidence.log`, 976 bytes, SHA-256
+`e5aad8a49d541843849c8164e88ae553c73eb3c23cf9f20c164aa42cac45c1f4`: 20 migration rows through accepted
+0020, all 17 pre-0021 v2 tables empty, 548,721 `raw_acquisition`, 509,711 `raw_object`, and empty
+`PRAGMA foreign_key_check`. Independent read-only review confirms migration 0021 and its control tables are
+absent. Jr correctly stopped before migration, database mutation, integration commit, or push.
+
+The fifteenth source acceptance is withdrawn. The failures expose both production defects and senior-authored
+tests that do not execute their stated contracts:
+
+1. Production-bound successful persistence is broken. Physical publication generates an acquisition ID, but the
+   deferred catalog-registration call receives the original metadata with no acquisition ID and generates a
+   different one. Stage-attempt insertion then references the writer-generated acquisition/raw pair, which does
+   not exist in `raw_acquisition`; SQLite correctly rejects the FK. This breaks atomic success, the production-bound
+   blocked-stream path, and journal recovery. Commit-before-cleanup replay is also not idempotent: replay creates a
+   second failed acquisition for the same deterministic attempt while schema lineage permits exactly one
+   acquisition per attempt.
+2. The public stage controller never authenticates chain identity after attaching the production plan and before
+   `run_until_idle`, so real stage work fails the engine phase prerequisite. Its stop path then calls
+   `run_until_idle` again as “drain,” which can re-enter acquisition rather than wait only for already-started
+   network/persistence work and fails the same prerequisite, preventing a failed stage from sealing cleanly.
+3. Generated terminal and ARMED authorities do not authenticate immediately through the required immutable reader.
+   Terminal-seal and prepare-baseline rows are inserted after the last WAL checkpoint; `mode=ro&immutable=1` ignores
+   their WAL state and reports the seal/baseline or even prepare-outcome row missing. Ten stage-authentication tests
+   and three ARMED-authentication tests consequently fail before their intended tamper assertions. The corrected
+   design must make all post-terminal/post-prepare authority durable in the main database before publishing files,
+   while recomputing exact final DB/tree bytes and digest without circular or forgeable authority.
+4. Two fail-closed boundaries are defective: readiness authentication leaks `JSONDecodeError` for malformed sealed
+   JSON instead of the controller domain error, and CLI tree measurement resolves a path before testing
+   `is_symlink`, thereby accepting a symlinked root.
+5. Migration/query-plan evidence does not meet its own exact contract. SQLite naturally selects UNIQUE autoindexes
+   instead of the redundant named controller-event and terminal-seal indexes. The schema, real query shapes, and
+   tests must agree on useful covering indexes that the optimizer actually selects; forcing a test with
+   `INDEXED BY` or weakening it to any-index evidence is not acceptance.
+6. Several tests are invalid or placeholders and must not drive production weakening. One constructs
+   `_AdaptiveLimiter` with a nonexistent keyword and only conditionally checks whether a journal exists. The journal
+   recovery test says recovery “may or may not” occur, substitutes direct persistence, contains a `pass`, and catches
+   the replay error it promises to reject. Other fixtures stop at an earlier guard: a production shell lacks its
+   execution-policy row; crash recovery has no durable START; another performs illegal `RUNNING -> RUNNING`; a
+   “foreign” plan is the production plan and never gets the promised foreign START graph; resume creates two
+   immutable permits/stages for the same ordinal; rollback supplies a fabricated prior terminal rejected by schema;
+   and the readiness-identity assertion expects 64 characters although the governed `rdy_` plus digest identity is
+   68. Every repaired test must build a valid public authority graph and reach the named operation.
+
+### Authorized sixteenth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this integration review in `docs/handoff/CURRENT_TASK.md` and
+`tickets/DEX-003.md`, excluding the uncommitted seven-file drop, `opencode.json`, both untracked research files,
+logs, database files, and every unrelated path. After that publication, Sr Dev - Grok Build may correct only the
+same seven files listed above. Sol routes this correction to the Grok 4.6 Max escalation tier: repeated source
+iterations followed by this integration failure justify the higher-usage senior tier under
+`docs/engineering/DEVELOPMENT_ROLES.md`.
+
+- Preserve the independently pinned authority-schema identity and coordinated forgery coverage. Repair stable
+  acquisition identity, supported one-connection atomic raw/attempt/lineage registration, and exact idempotent
+  success/failure journal replay. Recovery must execute through the real public startup path, authenticate the
+  pre-existing acquisition/attempt/lineage byte-for-byte, clean the journal only after success, and never fall back,
+  catch the promised failure, or permit silent partial success.
+- Make the public stage lifecycle attach the accepted READY plan, authenticate chain under the live durable
+  capability, then run work. Stop/drain must stop new claims and join only already-started network, spool, and
+  persistence work; it must not invoke a fresh acquisition loop. A work failure must still produce the exact
+  fail-closed terminal when safe closure succeeds.
+- Rework terminal-seal and prepare-baseline durability so a freshly generated output authenticates immediately via
+  a clean immutable/read-only connection with no WAL/SHM dependency. Bind exact final database and recursive-tree
+  bytes/digests without self-reference or editable-file authority, and retain trigger-drop/recomputed-row/file and
+  row-delete/reinsert rejection.
+- Normalize malformed readiness artifacts to `ProductionControlError`; reject root and nested symlinks before
+  resolution and during measurement/authentication. Align nonredundant covering indexes and actual production
+  queries so ordinary `EXPLAIN QUERY PLAN` proves their natural use.
+- Replace every invalid/conditional/fallback fixture named above with a decisive public-path test. Tests must prove
+  journal creation before a response can survive, real startup recovery, exact one-attempt/one-lineage replay,
+  valid START/crash/new-permit RESUME, genuinely foreign-plan isolation, valid injected rollback, immediate
+  generated seal/ARMED authentication, and natural query plans. No `if present`, `hasattr`/`pass`, direct-persist
+  substitute, broad swallowed exception, fabricated authority, or earlier-guard success is acceptable.
+
+Sr does not run tests or migrations, edit repository records or unrelated files, use RPC/network, touch the offline
+production database or evidence, or perform Git actions. Sr stops for a fresh Sol source review with new hashes.
+Jr reintegration/testing and migration 0021 remain unauthorized until that review. All live readiness, production
+prepare/RPC/stages, coverage, publication, downstream, PAPER, LIVE, harmonic-model, and next-ticket work remain
+unauthorized. Next ticket remains `NONE`.
+
 ## Sol source review - second controller correction rejected (2026-08-10)
 
 Jr published the first-correction rejection at pushed commit
@@ -5067,3 +5190,13 @@ Sr does not run tests or migrations, edit other files/records, use RPC/network, 
 evidence data, or perform Git actions. Sr stops for a fresh Sol source review with new hashes. Jr
 integration/testing and all live readiness, production initialization/RPC/stages, coverage, publication,
 downstream, PAPER, LIVE, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Latest control-plane state (2026-08-17)
+
+The authoritative current decision is the detailed section titled
+`Sol integration review - fifteenth controller acceptance withdrawn (2026-08-17)`. The fifteenth source
+acceptance is withdrawn and migration 0021 was not applied. Jr Dev - Hermes is the next actor only to publish
+the aligned two-record review. The bounded sixteenth correction becomes available to Sr Dev - Grok Build at
+the recorded Grok 4.6 Max escalation tier only after publication and must stop for fresh Sol source review.
+Jr reintegration/testing, live readiness, production preparation/RPC/stages, coverage, publication,
+downstream, PAPER, LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
