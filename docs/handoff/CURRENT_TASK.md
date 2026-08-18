@@ -1,102 +1,85 @@
 # CURRENT_TASK
 
-Ticket: CEX-001
+Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev — Hermes — publish the CEX strategic pivot and first-source-drop authorization
+Next required actor: Jr Dev — Hermes — publish the reviewer data-destination correction only
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
 Governing documents:
 
-- tickets/CEX-001.md
-- docs/adr/0016-cex-first-full-derivatives-research-spine.md
-- research/sprint_004/54_CEX_SPINE_GAP_AUDIT.md
+- tickets/CEX-002.md
+- docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md
+- research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
+- research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
 
-DEX-003 is `SUPERSEDED`, not accepted. Its remaining acquisition/publication gates are
-unfinished and the previously authorized twenty-fourth Grok correction is withdrawn.
-Preserve all DEX source drops, databases, raw evidence, reports, and published artifacts;
-perform no further DEX edits, integration, migrations, tests, RPC work, publication, or
-model work.
+The destination is the complete real data needed by the original Harmonic Trader
+geometry-plus-derivatives thesis before model development. CEX-002 replaces the overbuilt
+CEX-001 contract and the rejected reduced price-only proof. It acquires every historically
+observed Binance USD-M perpetual and publishes real trades/bars, OI, funding, basis,
+observed liquidation flow, cost evidence, typed gaps, provenance, reconciliation,
+resumability, a pinned bundle, and a clean NautilusTrader catalog-load check.
 
-DATA-009 is also `SUPERSEDED`, not accepted. Its 45-symbol `bitmex_funding_full`
-publication is the largest of the five all-zero/empty-interval artifacts and remains
-preserved only as rejection evidence pending CEX-001 quarantine.
+No fixed-N/current-listing universe, synthetic acceptance artifact, zero-filled missing
+data, silent partial success, paid data purchase, historical-full-L2 prerequisite, DEX
+work, harmonic-model development, payoff analysis, PAPER, or LIVE work is authorized.
 
-CEX-001 is the sole active ticket. It delivers a full Binance USD-M linear-perpetual
-research spine across every historically listed contract in the declared coverage—not a
-fixed 20/50/100-name panel. Required aligned products are contract versions, trades,
-one-minute bars, BBO/fixed depth, OI, realized funding, liquidations, mark/index/basis,
-effective fee schedules, typed gaps, a pinned bundle descriptor, and a clean consumer
-harness. No individual parser, sample, report, or subset completes the ticket.
+## Why this reaches the target without Tardis
 
-No harmonic-model development, payoff analysis, holdout inspection, PAPER promotion, or
-LIVE work is authorized.
+Official Binance archives/APIs supply the full-family trade/bar, five-minute OI/metrics,
+realized funding, and mark/index/premium/basis inputs for free. Coinalyze's free API retains
+daily long/short liquidation history indefinitely. Because Binance itself publishes at
+most the latest liquidation per symbol per second, this field is explicitly an observed,
+censored liquidation aggregate; no implementation may claim event completeness.
 
-## Evidence establishing the pivot
+The original model needs terminal-leg OI change, funding state, and liquidation imbalance,
+not full incremental historical L2. All available free Binance book/depth evidence is
+still acquired for cost calibration, and live BBO/depth/liquidation/OI collection begins
+prospectively under this ticket.
 
-- DATA-011 is an accepted but limited 23-instrument Binance spot daily-bar panel.
-- The Bybit implementation is a local public-trade-archive normalizer; it is not a
-  production historical microstructure bundle.
-- No production CEX OI, liquidation, order-book/BBO, basis, or aligned-bundle pipeline is
-  present.
-- All five retained BitMEX funding parquet artifacts are invalid: 307,738 total rows,
-  zero nonzero funding rates, and 307,738 empty funding intervals, while cataloged
-  `PASS / REGISTERED`.
-- The source converts missing funding rates to `0.0`, accepts empty intervals, and the
-  backfill publisher unconditionally assigns `PASS` to any non-empty merged table.
+## Superseded work
 
-The exact dataset IDs, counts, catalog states, and source findings are recorded in
-`research/sprint_004/54_CEX_SPINE_GAP_AUDIT.md`.
+- DEX-003 remains `SUPERSEDED`; preserve all its source drops, data, and evidence.
+- CEX-001 is `SUPERSEDED`; preserve its rejected source drop without integration.
+- The five invalid BitMEX funding artifacts remain preserved and must be quarantined under
+  CEX-002 Gate 0 before any research consumer can resolve them.
 
-## Jr publication boundary
+## Jr governance-publication boundary
 
-Jr Dev — Hermes must commit and push only the reviewer-owned control-plane pivot:
+Jr Dev — Hermes must commit and push only:
 
-- `docs/adr/0016-cex-first-full-derivatives-research-spine.md`;
+- `AGENTS.md`;
+- `docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md`;
+- `docs/engineering/DEVELOPMENT_ROLES.md`;
 - `docs/engineering/IMPLEMENTATION_BACKLOG.csv`;
 - `docs/handoff/CURRENT_TASK.md`;
-- `research/sprint_004/54_CEX_SPINE_GAP_AUDIT.md`;
-- `tickets/CEX-001.md`;
-- `tickets/DATA-009.md`; and
-- `tickets/DEX-003.md`.
+- `research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md`;
+- `research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md`;
+- `tickets/CEX-001.md`; and
+- `tickets/CEX-002.md`.
 
-Exclude `opencode.json`, every DEX production/test/migration/script source drop, the two
-untracked DEX research drafts, databases, logs, generated data, and every unrelated path.
-Run `python3 scripts/check_repo_control.py` and `git diff --check` for this governance-only
-publication. Jr owns Git, commit, and push, then reports the pushed commit and exact
-`HEAD == origin/main` state. Jr performs no source integration, test suite, network call,
-catalog mutation, data purchase, or data publication in this step.
+Exclude every production/test source drop, `opencode.json`, DEX path, database sidecar,
+generated artifact, and unrelated path. Run only `python3 scripts/check_repo_control.py`
+and `git diff --check` for this governance publication. Jr owns Git, commit, and push and
+must report the pushed commit plus exact `HEAD == origin/main`. Jr performs no source
+integration, test suite, network call, catalog mutation, purchase, or data publication.
 
-## First Sr source authorization after publication
+## First implementation authorization after publication
 
-Only after the governance commit is pushed and `HEAD == origin/main`, Sr Dev — Grok Build
-may author Gate 0 and Gate 1 production/test source exactly as specified in CEX-001:
+Only after Jr publishes the governance correction and proves `HEAD == origin/main`,
+Implementation Dev — Codex Spark may author the bounded CEX-002 Gate 1 inventory,
+Coinalyze-client, secret-redaction, schema-sampling, storage-accounting, report plumbing,
+and corresponding test source specified under CEX-002's authorized first drop.
 
-1. atomic/idempotent quarantine machinery for the five exact invalid BitMEX dataset IDs,
-   preserving parquet/manifests and proving resolver exclusion/rollback;
-2. fail-closed BitMEX normalizer/backfill corrections for missing, invalid, empty,
-   all-zero, drifted, errored, or incomplete funding evidence; and
-3. a resumable content-addressed real-source qualification runner for the complete
-   historical Binance USD-M perpetual family and every required CEX product, producing
-   the source/procurement/storage matrix without purchase or fixed-N scope.
-
-Sr authors production and test source only. Sr runs no tests or network, edits no records,
-performs no integration/catalog mutation/Git/commit/push, and stops for fresh reviewer
-source inspection with exact hashes. No Jr integration is pre-authorized.
-
-## Source and cost policy
-
-Official Binance archives/APIs are preferred where complete and checksummed. Historical
-microstructure products may require a licensed capture source. Real samples must establish
-schema, full-family coverage, incidents/revisions, availability semantics, licensing,
-storage, acquisition method, and official-source overlap before an external purchase.
-The owner must approve the recorded price. If the complete source cannot be obtained, the
-ticket becomes honestly blocked; it does not shrink the universe or manufacture data.
+Codex Spark performs no network run, integration, repository-record edit, Git operation,
+commit, push, purchase, or publication and stops for fresh reviewer source inspection with
+exact hashes. Jr integration and test execution are not pre-authorized. Senior semantic,
+authority, atomicity, and corrective source work is not yet authorized.
 
 ## Stop condition
 
-The immediate stop is after Jr publishes these seven records. CEX-001 remains
+The immediate stop is after Jr publishes these nine control-plane records. CEX-002 remains
 `IN_PROGRESS`; next ticket remains `NONE`.

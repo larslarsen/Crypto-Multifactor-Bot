@@ -30,13 +30,20 @@ This file governs how AI agents (and humans acting as agents) work in this repos
   authorized. Acceptance and next-ticket authorization are exclusive to the reviewer;
   the owner is the prompt relay only and is not an acceptance authority.
 - The repository has three governance actors (reviewer, senior coder, relay owner)
-  plus the Jr Dev integration role:
+  plus the implementation and Jr Dev integration roles:
   - **Lead Quantitative Finance Researcher/Engineer (reviewer):** inspects commits, makes
     engineering decisions, accepts or rejects work, selects the minimum-usage capable
     developer, and authorizes the next ticket.
-  - **Sr Dev — Grok Build:** agentic, using Grok 4.5. Sole formal senior production-code
-    role: owns senior code reasoning, production-source edits, and test-source creation.
-    Does not execute tests or own integration, repository records, Git, commits, or pushes.
+  - **Implementation Dev — Codex Spark:** agentic, using GPT-5.3-Codex-Spark High.
+    Authors reviewer-bounded low/medium-risk boilerplate, scaffolding, mechanical adapters,
+    and their test source. It does not make architecture, financial-semantics, source-
+    authority, concurrency, or transaction-design decisions. It does not execute tests or
+    own integration, repository records, Git, commits, or pushes.
+  - **Sr Dev — Grok Build:** agentic, using Grok 4.6 High. Sole formal senior
+    production-code role: owns senior code reasoning and architecture-sensitive,
+    financial-semantic, source-authority, concurrency, transaction, or corrective source
+    and test-source creation. Does not execute tests or own integration, repository
+    records, Git, commits, or pushes.
   - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
     available. Owns production/test source-drop integration, test and acceptance-command
     execution, repository records, Git, commits, and pushes. Does not design or author tests.
