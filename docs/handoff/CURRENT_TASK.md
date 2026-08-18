@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol source rejection and nineteenth-correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol source rejection and twentieth-correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -23,11 +23,11 @@ The registry parquet has 21 columns and its rows/catalog lineage reconcile. DEX-
 gates 3-6 remain unexecuted; `dex_pool_events`, `dex_pool_daily`, and
 `dex_universe_daily` are not published, so the full ticket is not awaiting final review.
 
-The eighteenth controller correction has completed fresh Sol source review and is rejected before
+The nineteenth controller correction has completed fresh Sol source review and is rejected before
 Jr reintegration. Migration 0021 remains unapplied and the offline production database remains at
-migration 0020 with all v2 tables empty. The exact source rejection and bounded nineteenth-
+migration 0020 with all v2 tables empty. The exact source rejection and bounded twentieth-
 correction authorization are in the final section titled
-`Sol source review - eighteenth controller correction rejected`. No live readiness, preparation,
+`Sol source review - nineteenth controller correction rejected`. No live readiness, preparation,
 RPC, stage, coverage, publication, downstream, PAPER, LIVE, harmonic-model, or next-ticket work is
 authorized.
 
@@ -5525,6 +5525,105 @@ unauthorized. Next ticket remains `NONE`.
 The authoritative current decision is the immediately preceding section,
 `Sol source review - eighteenth controller correction rejected (2026-08-17)`. Jr Dev - Hermes is the next actor
 only to publish this aligned two-record review. The nineteenth correction becomes available to Sr Dev - Grok
+Build at Grok 4.6 Max only after publication and must stop for fresh Sol source review. Jr reintegration/testing,
+migration 0021, live readiness, production preparation/RPC/stages, coverage, publication, downstream, PAPER,
+LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - nineteenth controller correction rejected (2026-08-17)
+
+Jr published the eighteenth-correction rejection and nineteenth-correction authorization at pushed commit
+`880c509`; `HEAD == origin/main`. Sr delivered the nineteenth correction inside the same seven authorized files.
+Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `d19afce7f7cdad15e07bc966d2813f3b96af550134c2919933d592c5deb9327c`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `f0d04d0ca2572a88757fdb9ef02c2f50915561e054e12563443d730faa70e15b`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `4a9aeb260bf085fb55d15f18432ab3c196ecce9aba6407a636b4cbc898fae06c`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `be950e9700a95c828c0c5a2aee8e391581316a0aa7eff427c6c31f5c921fd13f`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `129da81c4e9191f36850e5a0e6bab1db666a0461a5595ec3e67b74f490b75726`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `63931f0c42210c0b2f462284276a425a407c6e451eed204b143e7fa689106b01`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `66d9a86ce409601380b29cf9c936fe3013ed4f07a2a80261bdc325a15bf5a308`.
+
+The correction materially closes the prior findings. Snapshot-before-COMMIT success and failure now replay the
+frozen catalog, attempt, and lineage cells directly and the live-row divergence matrix names all 46 declared
+columns. Impossible physical SHA/byte/manifest fields and the misleading final flag are removed from immutable
+seal/baseline rows; live physical identity remains in remeasured MANIFEST/TERMINAL or PREPARE_OUTCOME files.
+Terminal publication has a durable PUBLICATION intent and recovery path, ARMED baseline recovery is public, root
+and nested symlink refusal remains present, and public tests inject multiple publication/prepare boundaries.
+These improvements are retained. Acceptance is still blocked:
+
+1. Missing-transaction recovery promotes an unauthenticated snapshot. `_commit_frozen_replay_record` checks only
+   snapshot version, map shape, and column presence, then inserts all three rows. It does not first bind catalog
+   acquisition identity, attempt plan/stage/provider/role/logical call/number/start, lineage identities, or
+   cross-row acquisition/raw/status relationships to the journal's `production_authority`. It also does not
+   recompute attempt/lineage IDs before mutation. A divergent but schema-valid frozen snapshot can therefore
+   become durable authority and immediately proceed to cleanup instead of being retained and refused.
+2. Successful frozen replay can register unauthenticated raw evidence. When the referenced `raw_object` row is
+   absent, `_insert_frozen_replay_rows` derives a SHA from the claimed `raw_object_id`, stats the expected path,
+   and inserts the row without hashing the file, comparing its bytes to the attempt/catalog authority, or running
+   publication-receipt verification. When a row already exists, it checks only presence, not any raw-object
+   field. Corrupt or divergent retained bytes/metadata can thus be cataloged as a successful production attempt;
+   the journal and spool are then deleted. This violates provenance and no-silent-partial-success requirements.
+3. The new tests establish exact replay only for an unmodified snapshot and exact divergence only after committed
+   database rows exist. They do not corrupt each frozen snapshot map in the all-rows-absent path, break internal
+   cross-row/deterministic identities, corrupt the retained raw file, or preseed a divergent `raw_object` row and
+   prove journal retention with zero inserted authority. The nominal 46-field matrix cannot cover this distinct
+   recovery branch.
+4. Several claimed COMMIT/checkpoint injections occur too late. `after_terminal_row` is invoked only after
+   `store_terminal` has committed and completed `flush_to_main`; `after_seal_row` follows seal COMMIT and flush;
+   `after_baseline_row` likewise follows baseline COMMIT and flush. `after_flush` is after an ordinary PRAGMA in
+   the caller or after the already-flushed seal. No test injects the real row-COMMIT-before-checkpoint/flush
+   window, and checkpoint errors are still swallowed at several drain boundaries. The explicit durability tear
+   requirement is therefore not implemented or proven.
+5. Recovery mutates before authenticating its intent. `recover_stage_terminal_publication` accepts
+   `PUBLICATION.json` without first binding its plan/stage/final state/checkpoint/event root/report/outcome and
+   next-authority fields to durable rows, transitions the stage, and directly deletes any plan lease while
+   swallowing SQLite errors. A divergent intent can poison terminal state or delete a newer/foreign lease before
+   later authentication fails; the accepted capability-bound/foreign-lease behavior is not preserved in this
+   recovery path.
+
+Syntax compilation, targeted ruff, repository control, and `git diff --check` pass. The seven-file source
+boundary is exact. Sol ran no pytest, migration, RPC, production-data mutation, or Git action.
+
+### Authorized twentieth correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this aligned review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted seven-file drop,
+`opencode.json`, both untracked research files, logs, databases, and every unrelated path. After publication,
+Sr Dev - Grok Build remains at Grok 4.6 Max and may correct only the same seven files:
+
+- Before inserting an all-rows-absent frozen replay, authenticate every snapshot field and cross-row relationship
+  against the durable journal authority and deterministic IDs. Absence, truncation, internal inconsistency, or
+  divergence must leave journal/spool evidence intact and insert no catalog/attempt/lineage authority.
+- Authenticate the exact retained raw object before successful replay: regular no-follow path, expected content
+  address, live SHA-256, byte size, storage identity, and every existing/new `raw_object` field. A corrupt file or
+  divergent preexisting row must fail startup without cleanup or partial database mutation.
+- Add decisive all-rows-absent tests for snapshot-map/identity/cross-row divergence, raw-byte corruption, and a
+  divergent existing raw-object row, alongside the retained complete live-row matrix. Assert zero partial rows
+  and retained evidence for every refusal.
+- Place failure injection at the actual COMMIT-before-`flush_to_main`/checkpoint boundary for terminal, seal, and
+  baseline writes, and prove recovery after a genuinely failed checkpoint as well as visible fail-closed states.
+  Authenticate PUBLICATION intent fully before any stage/lease mutation; preserve capability/lease ownership and
+  never swallow a lease mutation error. Preserve the corrected honest schema, external live-file measurements,
+  idempotent file recovery, cleanup state machine, symlink refusal, public lifecycle, and source-pinned authority.
+
+Sr does not run tests or migrations, edit repository records or unrelated files, use RPC/network, touch the
+offline production database or evidence, or perform Git actions. Sr stops for fresh Sol source review with new
+hashes. Jr reintegration/testing and migration 0021 remain unauthorized. All live readiness, production prepare/
+RPC/stages, coverage, publication, downstream, PAPER, LIVE, harmonic-model, and next-ticket work remain
+unauthorized. Next ticket remains `NONE`.
+
+## Latest control-plane state (2026-08-17)
+
+The authoritative current decision is the immediately preceding section,
+`Sol source review - nineteenth controller correction rejected (2026-08-17)`. Jr Dev - Hermes is the next actor
+only to publish this aligned two-record review. The twentieth correction becomes available to Sr Dev - Grok
 Build at Grok 4.6 Max only after publication and must stop for fresh Sol source review. Jr reintegration/testing,
 migration 0021, live readiness, production preparation/RPC/stages, coverage, publication, downstream, PAPER,
 LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
