@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Claude Build — close review 69 retained-sidecar defect
+Next required actor: Jr Dev — Hermes — integrate accepted source and execute bounded Gate 1 resume
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -20,6 +20,7 @@ Governing documents:
 - research/sprint_004/67_CEX002_GATE1_EXECUTION_REVIEW.md
 - research/sprint_004/68_CEX002_CLAUDE_OPERATIONAL_SOURCE_REVIEW.md
 - research/sprint_004/69_CEX002_CLAUDE_CHECKPOINT_SOURCE_REVIEW.md
+- research/sprint_004/70_CEX002_CLAUDE_FINAL_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -209,10 +210,10 @@ surgical correction in review 68. No ephemeral developer prompt is required.
 
 ## Stop condition
 
-Claude's second operational correction closes the review-68 probes but is rejected for the
-single residual retained-sidecar authority defect recorded in review 69. Claude stops
-after the surgical source/test correction authorized there and supplies exact hashes for
-fresh reviewer inspection. The current qualifier remains prohibited from real-source
-execution, and all of `data/cex002_qualify` must remain intact. CEX-002 remains
+Review 70 accepts the final Claude source correction at exact hashes. Hermes is authorized
+only for the focused integration, source commit, bounded two-run real qualification/resume,
+execution record 71, and publication specified there. The existing 691 MiB store must be
+preserved and reused. No monorepo full-suite rerun is required at this intermediate gate.
+Hermes stops after publication with the next actor set to the reviewer. CEX-002 remains
 `IN_PROGRESS`; Gate 2, every other ticket, and model work remain unauthorized; next ticket
 remains `NONE`.
