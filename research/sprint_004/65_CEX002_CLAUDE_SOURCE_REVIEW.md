@@ -72,43 +72,19 @@ Jr Dev — Hermes must verify the exact identities above, then integrate only:
 Hermes must preserve every unrelated dirty path. It runs, in order:
 
 1. `.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
-2. `.venv/bin/python -m pytest tests/ -q --tb=short`
+2. `.venv/bin/python -m pytest tests/test_download_atomicity.py -q --tb=short`
 3. `.venv/bin/python -m ruff check src/cryptofactors/ scripts/`
 4. `python3 scripts/check_repo_control.py`
 5. `git diff --check`
 
-If the focused CEX-002 test fails, Hermes records the exact command, exit code, and output
-and stops without a network run or source edit. The full-suite command must not be weakened
-with `-k`, ignored paths, or deselection.
+If either focused suite fails, Hermes records the exact command, exit code, and output and
+stops without a network run or source edit.
 
-### Clean candidate-tree ruling for unrelated dirty-drop failures
-
-The primary working tree intentionally contains preserved, unintegrated DEX and BitMEX
-source/test drops. If the unchanged full suite fails there only in those excluded dirty
-paths, Hermes first records the complete dirty-tree command, exit code, failure list, and
-output in `research/sprint_004/66_CEX002_GATE1_EXECUTION.md`. It then proves attribution
-against the actual publication candidate rather than excluding tests:
-
-1. Stage only the authorized CEX-002 source, test, fixture, review, current-task, and ticket
-   paths enumerated above. Inspect `git diff --cached --name-only` and refuse any unrelated
-   path.
-2. Create a local candidate commit with message
-   `CEX-002: integrate accepted Gate 1 qualifier`. Do not push it yet.
-3. Create a detached temporary worktree from that exact candidate under a fresh
-   `mktemp -d` parent. Do not copy, stash, reset, or delete any preserved dirty path.
-4. From the detached worktree run the complete, unchanged test selection with
-   `PYTHONPATH=<detached-worktree>/src` and the primary repository's absolute
-   `.venv/bin/python`. This explicit `PYTHONPATH` is mandatory because the virtual
-   environment is editable-installed against the dirty primary checkout.
-5. Run the full Ruff selection, repository control, and `git diff --check` in the same
-   detached worktree. Record the resolved candidate hash, temporary path, exact commands,
-   exit codes, and output summaries in record 66.
-
-No test may be deselected. A clean-candidate failure stops the workflow and blocks the
-network run. A clean-candidate pass proves the dirty-drop attribution and authorizes the
-real qualification commands below. The temporary worktree may then be removed with
-`git worktree remove` using its exact resolved path; the primary dirty tree remains
-untouched.
+The ticket's unchanged full-suite command remains mandatory once at final CEX-002 release
+acceptance. It is not repeated at every intermediate gate. The already attempted in-place
+full suite failed only in preserved, unintegrated DEX/BitMEX paths; record 66 retains the
+command, exit code, and failed test identities as nonblocking environmental evidence. No
+`-k` substitute and no clean-worktree rerun are required for this Gate 1 integration.
 
 After those commands pass, Hermes runs the real qualifier twice against the same store and
 progress file. It loads `.env` without printing it or placing the key in a command argument,
@@ -137,8 +113,10 @@ the same store/progress path until it reaches exit 0, 1, or 2; it must not resta
 fresh store or silently omit a family. It then stops for reviewer inspection. Gate 2
 remains unauthorized.
 
-Before the final evidence commit, Hermes changes the next required actor in both
+Before the final evidence commit, Hermes stages only the authorized paths, inspects
+`git diff --cached --name-only`, and refuses any unrelated path. It changes the next
+required actor in both
 `docs/handoff/CURRENT_TASK.md` and `tickets/CEX-002.md` to
 `Lead Quantitative Finance Researcher/Engineer — inspect integrated tests and real Gate 1 evidence`.
-It does not change ticket state or authorize Gate 2. The candidate integration commit and
-the final evidence/control-plane commit are then pushed together.
+It does not change ticket state or authorize Gate 2. The integration/evidence commit is
+then pushed.

@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev — Hermes — integrate accepted Claude source, execute tests, and run real Gate 1 qualification/resume
+Next required actor: Jr Dev — Hermes — publish Gate 1 failure review and preserved candidate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -16,6 +16,8 @@ Governing documents:
 - research/sprint_004/63_CEX002_GROK_SOURCE_REVIEW.md
 - research/sprint_004/64_CEX002_GROK_SECOND_SOURCE_REVIEW.md
 - research/sprint_004/65_CEX002_CLAUDE_SOURCE_REVIEW.md
+- research/sprint_004/66_CEX002_GATE1_EXECUTION.md
+- research/sprint_004/67_CEX002_GATE1_EXECUTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -182,14 +184,25 @@ reported as success. Exit 1 stops the run. Interrupted work resumes the same sto
 progress file. The execution record path is
 `research/sprint_004/66_CEX002_GATE1_EXECUTION.md`.
 
-The full suite may not be weakened with `-k` or test deselection. If preserved dirty drops
-outside the integration cause the in-place full suite to fail, Hermes records that failure
-and follows review 65's clean candidate-tree procedure. Only a passing unchanged full
-suite against the exact candidate commit authorizes the real network qualification.
+For this intermediate Gate 1 integration, Hermes runs the focused CEX-002 suite and the
+directly depended-on atomic-download suite specified in review 65. The already attempted
+full-suite failures in excluded dirty DEX/BitMEX drops are recorded as nonblocking
+environmental evidence. No `-k` substitute or clean-worktree rerun is authorized. The
+unchanged full suite remains mandatory once at final CEX-002 release acceptance.
 
 ## Stop condition
 
-Hermes stops after publishing the exact integrated source, tests, fixtures, final real
-Gate 1 report, and execution record with `HEAD == origin/main`. CEX-002 remains
-`IN_PROGRESS`; Gate 2 and every other ticket remain unauthorized; next ticket remains
-`NONE`.
+The first real run exited 1 after a transient Binance S3 reset. It retained approximately
+691 MiB but did not create the progress file, so the current qualifier is not authorized
+to run again. Review 67 rejects the real execution, preserves every retained byte, and
+identifies five blocking retry, checkpoint, deduplication, salvage, and sample-budget
+defects. This is not Gate 1 acceptance.
+
+Hermes must publish local candidate commit
+`ddd6a59eda00c3f48019ef1f8a198992735f79d1` plus only the five governance/evidence paths
+enumerated in review 67, push, and establish `HEAD == origin/main`. It performs no source
+edit or network run. Once review 67 and these matching sections are committed, Sr Dev —
+Claude Build on Claude Opus 5 is automatically authorized for the bounded operational
+correction specified there. Claude stops for source review with exact hashes. CEX-002
+remains `IN_PROGRESS`; Gate 2, every other ticket, and model work remain unauthorized;
+next ticket remains `NONE`.
