@@ -39,11 +39,14 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     and their test source. It does not make architecture, financial-semantics, source-
     authority, concurrency, or transaction-design decisions. It does not execute tests or
     own integration, repository records, Git, commits, or pushes.
-  - **Sr Dev — Grok Build:** agentic, using Grok 4.6 High. Sole formal senior
-    production-code role: owns senior code reasoning and architecture-sensitive,
-    financial-semantic, source-authority, concurrency, transaction, or corrective source
-    and test-source creation. Does not execute tests or own integration, repository
-    records, Git, commits, or pushes.
+  - **Sr Dev — Grok Build:** agentic, using Grok 4.6 High. A formal senior production-code
+    actor for architecture-sensitive, financial-semantic, source-authority, concurrency,
+    transaction, or corrective source and test-source creation. Does not execute tests or
+    own integration, repository records, Git, commits, or pushes.
+  - **Sr Dev — Claude Build:** agentic, using Claude Opus 5. An alternate formal senior
+    production-code actor with the same source/test-source scope and prohibitions as Grok
+    Build. The reviewer authorizes exactly one senior actor for a bounded drop based on
+    accepted-result evidence, remaining usage, and task fit; the roles are not concurrent.
   - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
     available. Owns production/test source-drop integration, test and acceptance-command
     execution, repository records, Git, commits, and pushes. Does not design or author tests.

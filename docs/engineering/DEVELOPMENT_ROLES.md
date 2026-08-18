@@ -15,11 +15,15 @@ no code, migrations, tickets, or acceptance state.
   financial-semantics, source-authority, concurrency, or transaction-design decisions.
   It does not execute tests or own integration, repository records, Git, commits, or
   pushes.
-- **Sr Dev — Grok Build:** agentic, using Grok 4.6 High. The sole formal senior
-  production-code role. Owns senior code reasoning and architecture-sensitive,
+- **Sr Dev — Grok Build:** agentic, using Grok 4.6 High. A formal senior production-code
+  actor. Owns senior code reasoning and architecture-sensitive,
   financial-semantic, source-authority, concurrency, transaction, or corrective source
   and test-source creation. Does not execute tests or own integration, repository
   records, Git, commits, or pushes.
+- **Sr Dev — Claude Build:** agentic, using Claude Opus 5. An alternate formal senior
+  production-code actor with the same senior source/test-source ownership and the same
+  prohibition on test execution, integration, records, and Git. Only one senior actor is
+  authorized for each bounded drop.
 - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
   available. Owns production/test source-drop integration, test and acceptance-command
   execution, repository records, Git, commits, and pushes. Does not design or author tests.
@@ -31,10 +35,11 @@ no code, migrations, tickets, or acceptance state.
 1. **Jr Dev — Hermes** for integration, test execution, records, and Git duties.
 2. **Implementation Dev — Codex Spark** for bounded boilerplate and mechanical source
    work where the reviewer has already fixed the design and semantics.
-3. **Sr Dev — Grok Build** for senior design-sensitive work, correction after semantic or
-   authority failure, and review-hard source where accepted-result risk dominates usage.
-4. **Sr Dev — Grok Build escalation tiers** (or an alternate capable senior agent) only
-   when the difficulty or prior failure justifies higher usage.
+3. **Sr Dev — Grok Build or Sr Dev — Claude Build**, selected explicitly by the reviewer,
+   for senior design-sensitive work, correction after semantic or authority failure, and
+   review-hard source where accepted-result risk dominates usage.
+4. A higher reasoning tier or alternate senior is used only when task difficulty, repeated
+   rejection, availability, or remaining usage justifies it.
 
 ## Routing principle
 
@@ -45,10 +50,18 @@ integration usage than it saves. Do not hard-code a specific promotional Nous mo
 free availability may rotate. Ordinary Grok chat is an external reasoning surface, not a
 formal development role in this policy.
 
+Grok and Claude are not routed by a permanent brand preference or by exhausting one quota
+before using the other. The reviewer uses repository-specific evidence: first-pass source
+acceptance, number and severity of review corrections, control-plane adherence, total
+usage through accepted integration, remaining quota, and fit to the bounded task. When a
+senior actor repeats a semantic miss, the next bounded correction should normally rotate
+to the other senior so the project gains comparative evidence instead of paying for the
+same failure mode again. CEX-002 review 64 is the first such Claude Build authorization.
+
 ## Removed roles
 
 **Sr Dev — Hermes** and **Sr Dev — Sandbox** are no longer formal roles in this
 repository's governance. Their prior source/test-authoring responsibilities are routed
-between **Implementation Dev — Codex Spark** and **Sr Dev — Grok Build** under the risk
-boundary above. References to Sr Dev — Hermes or Sr Dev — Sandbox in other documents are
-superseded by this policy.
+between **Implementation Dev — Codex Spark** and the reviewer-selected formal senior
+actor under the risk boundary above. References to Sr Dev — Hermes or Sr Dev — Sandbox in
+other documents are superseded by this policy.

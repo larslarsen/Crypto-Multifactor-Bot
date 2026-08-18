@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Grok Build — patch only the three residual CEX-002 Gate 1 source defects
+Next required actor: Sr Dev — Claude Build — patch only the review-64 residual CEX-002 Gate 1 defects
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -14,6 +14,7 @@ Governing documents:
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
 - research/sprint_004/63_CEX002_GROK_SOURCE_REVIEW.md
+- research/sprint_004/64_CEX002_GROK_SECOND_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -135,8 +136,39 @@ no test execution, network run, integration, record edit, Git operation, commit,
 purchase, catalog mutation, or publication. It stops for source review with exact hashes.
 Jr integration remains unauthorized.
 
+## Second Grok corrective source review
+
+The second Grok patch closes metrics schema identity, Coinalyze requested/returned symbol
+checking, actual unit reporting, and empty listed-prefix detection. Review 64 rejects two
+remaining semantic defects and one test-source defect: a universe symbol absent from a
+product family is still omitted and can be silently promoted; reported Coinalyze
+provenance hashes reconstructed JSON rather than retained raw responses; and the new
+mismatch test expects a different error from the correct implemented failure.
+
+Grok 4.6 High has now required two rejected corrective reviews on this source-authority
+task. The next bounded correction is routed to Sr Dev — Claude Build using Claude Opus 5.
+
+## Claude review-publication transition
+
+If committed `HEAD` does not yet contain review 64, the Claude senior-role addition, this
+section, and the matching ticket section, Jr Dev — Hermes must first publish only:
+
+- `AGENTS.md`;
+- `docs/engineering/DEVELOPMENT_ROLES.md`;
+- `docs/handoff/CURRENT_TASK.md`;
+- `research/sprint_004/64_CEX002_GROK_SECOND_SOURCE_REVIEW.md`; and
+- `tickets/CEX-002.md`.
+
+Jr runs only `python3 scripts/check_repo_control.py` and `git diff --check`, excludes all
+source/test drops and unrelated dirty paths, pushes, and establishes
+`HEAD == origin/main`. Once that committed state exists, Sr Dev — Claude Build on Claude
+Opus 5 is automatically authorized for the surgical correction in review 64; no ephemeral
+prompt, owner-supplied source hashes, or further handoff edit is required.
+
 ## Stop condition
 
-Grok stops after delivering the bounded second corrective source/test-source patch and exact
-SHA-256 hashes for every changed path. CEX-002 remains `IN_PROGRESS`; next ticket remains
-`NONE`.
+Claude stops after delivering the bounded source/test-source patch and exact SHA-256
+hashes for every changed path. Claude performs no test execution, network run,
+integration, record edit, Git operation, commit, push, purchase, catalog mutation, or
+publication. Jr integration remains unauthorized. CEX-002 remains `IN_PROGRESS`; next
+ticket remains `NONE`.
