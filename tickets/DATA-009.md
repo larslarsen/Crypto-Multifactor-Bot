@@ -1,8 +1,8 @@
 # DATA-009 — BitMEX Full Backfill: All Perps + 2016 History
 
 **Priority:** P1  
-**Status:** AWAITING_REVIEW  
-**Next:** Sol 5.6 High
+**Status:** SUPERSEDED
+**Next:** NONE — rejected and subsumed by CEX-001
 **Dependencies:** DATA-006 (ACCEPTED), DATA-007 (ACCEPTED), FUND-005 (ACCEPTED)  
 **Layer:** acquisition / funding  
 **Architecture:** extend existing `backfill_bitmex_funding.py`; publish new canonical dataset. **No LIVE.**
@@ -42,3 +42,16 @@ Backfill BitMEX perpetual funding rates for **all available perp symbols** from 
 ## Stop Condition
 
 After Sr: AWAITING_REVIEW, Next NONE.
+
+## Reviewer disposition — rejected and superseded (2026-08-17)
+
+DATA-009 is not accepted. Its reported dataset
+`ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8`
+contains 189,570 rows across 45 symbols, but direct inspection found zero nonzero
+`funding_rate` values and an empty `funding_interval` in all 189,570 rows. The catalog and
+report incorrectly label it `PASS`.
+
+The artifact and report are preserved as rejection evidence. CEX-001 Gate 0 owns atomic
+catalog quarantine of this dataset and the four related BitMEX predecessors; CEX-001 owns
+all replacement CEX source qualification and data work. DATA-009 authorizes no further
+source edit, execution, publication, experiment, PAPER, or LIVE action.

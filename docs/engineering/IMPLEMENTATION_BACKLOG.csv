@@ -1,4 +1,5 @@
 ticket_id,priority,layer,title,dependencies,gate_role,status
+CEX-001,P0,acquisition / reference / canonical market data / research consumer,Full Binance USD-M Derivatives and Microstructure Research Spine,RAW-001/002;MAN-001;REF-001;BAR-001;ASOF-001;DATA-011;UNIVERSE-006;ADR-0016,BLOCKING_FOR_CEX_RESEARCH,IN_PROGRESS
 CAT-001,P0,catalog,Initialize SQLite control catalog and migrations,NONE,BLOCKING,SUPERSEDED BY CAT-001A (ACCEPTED)
 RAW-001,P0,ingest/catalog,Content-addressed immutable raw object writer,CAT-001,BLOCKING,ACCEPTED
 MAN-001,P0,catalog,Immutable dataset manifest publisher,CAT-001;RAW-001,BLOCKING,ACCEPTED
