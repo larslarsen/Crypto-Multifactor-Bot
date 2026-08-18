@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev — Codex Spark — author the bounded CEX-002 Gate 1 source drop
+Next required actor: Sr Dev — Grok Build — author the bounded CEX-002 Gate 1 corrective source drop
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -12,6 +12,7 @@ Governing documents:
 - docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
+- research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -47,49 +48,59 @@ prospectively under this ticket.
 - The five invalid BitMEX funding artifacts remain preserved and must be quarantined under
   CEX-002 Gate 0 before any research consumer can resolve them.
 
-## Published governance boundary
+## Spark source review
 
-Jr Dev — Hermes published the nine-record data-destination correction at
-`a0beb8687a03d09ea8479d98ccde5bf6b7cb9564`. Reviewer verification establishes:
+Spark delivered a final four-path drop at the exact hashes recorded in review 61. Source
+inspection rejects it before Jr integration. Direct probes prove headerless numeric data
+is still accepted as a schema and tampered content-addressed bytes are trusted on resume.
+The Coinalyze client is fabricated receipt plumbing over nonexistent endpoints rather than
+a real source client, S3 pagination remains invalid, an unproved 64 MiB cap remains, and
+the matrix can both silently promote partial sources and remain permanently blocked by
+derived outputs. Exact findings are in review 61.
 
-- `HEAD == origin/main == a0beb8687a03d09ea8479d98ccde5bf6b7cb9564`;
-- the CEX-002 governance publication precondition is satisfied; and
-- the preserved dirty source drops and artifacts remain outside the published commit.
+The earlier transient write under the preserved CEX-001 paths is a provenance breach. The
+final reviewed drop is now in the authorized non-colliding paths, but the original rejected
+CEX-001 source bytes recorded in review 59 are no longer present at those old paths. Do not
+claim they were preserved or restored.
 
-## Active first implementation authorization
+## Review-publication transition
 
-### Publication transition rule
+If committed `HEAD` does not yet contain review 61 plus the Grok designation in both this
+file and `tickets/CEX-002.md`, Jr Dev — Hermes must publish only:
 
-If the committed `HEAD` does not yet contain this section and the Spark designation in
-both `docs/handoff/CURRENT_TASK.md` and `tickets/CEX-002.md`, Jr Dev — Hermes must publish
-only those two reviewer-prepared paths, run `python3 scripts/check_repo_control.py` and
-`git diff --check`, push, and establish `HEAD == origin/main`. It must exclude every
-production/test source drop and unrelated dirty path. Once the committed branch contains
-both designations, the authorization below becomes active automatically and no further
-handoff edit, owner-supplied hash, or reviewer chat instruction is required.
+- `docs/handoff/CURRENT_TASK.md`;
+- `research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md`; and
+- `tickets/CEX-002.md`.
 
-Implementation Dev — Codex Spark is now authorized against base commit
-`a0beb8687a03d09ea8479d98ccde5bf6b7cb9564` to author the bounded CEX-002 Gate 1 inventory,
-Coinalyze-client, secret-redaction, schema-sampling, storage-accounting, report plumbing,
-and corresponding test source specified under CEX-002's authorized first drop.
+Jr runs only `python3 scripts/check_repo_control.py` and `git diff --check`, excludes every
+source/test drop and unrelated dirty path, pushes, and establishes `HEAD == origin/main`.
+Once the committed branch contains all three records, the Grok authorization below becomes
+active automatically; no further handoff edit or owner-supplied source hash is required.
 
-The rejected CEX-001 files already present in the dirty working tree are preservation
-evidence and must not be edited, deleted, renamed, imported, or treated as a starting
-implementation. Spark's drop uses these non-colliding CEX-002 paths only:
+## Grok corrective source authorization
 
-- `src/cryptofactors/acquisition/binance_usdm_harmonic_qualification.py`;
-- `scripts/research/qualify_binance_usdm_harmonic_sources.py`;
-- `tests/acquisition/test_binance_usdm_harmonic_qualification.py`;
-- `tests/acquisition/fixtures/binance_usdm_harmonic_qualification/` for bounded test
-  fixtures only; and
-- any minimal package export file strictly required to expose that new module.
+Sr Dev — Grok Build, using Grok 4.6 High, may replace only the final reviewed CEX-002
+source/test paths and fixture directory recorded in review 61. The correction must close
+all fifteen findings in that record, including:
 
-Codex Spark performs no network run, integration, repository-record edit, Git operation,
-commit, push, purchase, or publication and stops for fresh reviewer source inspection with
-exact hashes. Jr integration and test execution are not pre-authorized. Senior semantic,
-authority, atomicity, and corrective source work is not yet authorized.
+- real Coinalyze history endpoints, query contract, response parsing, source samples,
+  retention/unit evidence, overlap-reconciliation inputs, and environment-only secret use;
+- correct S3 ListObjectsV2 pagination and exact one-minute interval selection;
+- known per-family header/headerless schemas backed by real-shaped fixtures;
+- checksum-required, rehashed resume with no unproved object-size cap;
+- complete-family/symbol/incident-aware authority with no quote-label promotion;
+- source-gate treatment that does not block on derived outputs;
+- available `bookDepth` plus `bookTicker` cost inventory;
+- authenticated current-contract comparison and explicit historical-perpetual rule; and
+- nonzero default exit for incomplete required source coverage.
+
+Grok authors source and test source only. It performs no network run, test execution,
+integration, repository-record edit, Git operation, commit, push, purchase, catalog
+mutation, or publication and stops for fresh reviewer source inspection with exact hashes.
+Jr integration remains unauthorized.
 
 ## Stop condition
 
-Spark stops after delivering the bounded source/test-source drop and exact SHA-256 hashes
-for every changed path. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+Grok stops after delivering the bounded corrective source/test-source drop and exact
+SHA-256 hashes for every changed path. CEX-002 remains `IN_PROGRESS`; next ticket remains
+`NONE`.
