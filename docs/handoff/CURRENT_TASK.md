@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev — Hermes — integrate accepted source and execute bounded Gate 1 resume
+Next required actor: Sr Dev — Claude Build — correct the abort/resume test contract only
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -21,6 +21,8 @@ Governing documents:
 - research/sprint_004/68_CEX002_CLAUDE_OPERATIONAL_SOURCE_REVIEW.md
 - research/sprint_004/69_CEX002_CLAUDE_CHECKPOINT_SOURCE_REVIEW.md
 - research/sprint_004/70_CEX002_CLAUDE_FINAL_SOURCE_REVIEW.md
+- research/sprint_004/71_CEX002_GATE1_RESUMABLE_EXECUTION.md
+- research/sprint_004/72_CEX002_GATE1_RESUMABLE_EXECUTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -210,10 +212,18 @@ surgical correction in review 68. No ephemeral developer prompt is required.
 
 ## Stop condition
 
-Review 70 accepts the final Claude source correction at exact hashes. Hermes is authorized
-only for the focused integration, source commit, bounded two-run real qualification/resume,
-execution record 71, and publication specified there. The existing 691 MiB store must be
-preserved and reused. No monorepo full-suite rerun is required at this intermediate gate.
-Hermes stops after publication with the next actor set to the reviewer. CEX-002 remains
-`IN_PROGRESS`; Gate 2, every other ticket, and model work remain unauthorized; next ticket
-remains `NONE`.
+Hermes completed review 70's failure path and published execution record 71 after the
+focused suite failed 77 passed / 1 failed. Review 72 finds that the failure is in the test
+contract, not the accepted production resume logic: every synthetic remote archive has
+identical bytes, so a retained checksum sidecar can legitimately prove a supposedly
+uncompleted key against a content-addressed raw blob retained for another key. The test
+incorrectly requires that key's raw URL to be fetched anyway.
+
+The review-70 production module and CLI remain accepted at their recorded hashes. Sr Dev —
+Claude Build using Claude Opus 5 may edit only
+`tests/acquisition/test_binance_usdm_harmonic_qualification.py` to correct the bounded
+abort/resume proof specified in review 72. Claude performs no test execution, network run,
+production edit, integration, record edit, Git operation, commit, push, data mutation,
+Gate 2 work, or model work and stops for reviewer inspection with the exact test-path hash.
+Jr integration and real execution remain unauthorized. CEX-002 remains `IN_PROGRESS`;
+next ticket remains `NONE`.
