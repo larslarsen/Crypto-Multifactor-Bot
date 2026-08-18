@@ -8,7 +8,10 @@ no code, migrations, tickets, or acceptance state.
 
 - **Lead Quantitative Finance Researcher/Engineer (reviewer):** inspects commits, makes
   engineering decisions, accepts or rejects work, selects the minimum-usage capable
-  developer, and authorizes the next ticket.
+  developer, and authorizes the next ticket. May directly stage, commit, and push a small
+  reviewer-authored governance/review publication whose exact paths are enumerated in the
+  active review. This exception excludes developer source/test integration, test or
+  acceptance-command execution, implementation evidence, and data mutation.
 - **Implementation Dev — Codex Spark:** agentic, using GPT-5.3-Codex-Spark High.
   Authors reviewer-bounded low/medium-risk boilerplate, scaffolding, mechanical adapters,
   schema plumbing, CLI wiring, and their test source. It does not make architecture,
@@ -26,13 +29,17 @@ no code, migrations, tickets, or acceptance state.
   authorized for each bounded drop.
 - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
   available. Owns production/test source-drop integration, test and acceptance-command
-  execution, repository records, Git, commits, and pushes. Does not design or author tests.
+  execution, implementation/evidence records, and the corresponding Git, commits, and
+  pushes. Does not design or author tests. The reviewer may publish only the narrow
+  governance/review exception above.
 - **Owner:** relays one-way prompts and supplies repository hashes, ZIPs, URLs, and
   source drops.
 
 ## Routing order
 
-1. **Jr Dev — Hermes** for integration, test execution, records, and Git duties.
+1. **Reviewer** for small exact-path reviewer-authored governance/review publications;
+   **Jr Dev — Hermes** for integration, test execution, implementation/evidence records,
+   and their Git duties.
 2. **Implementation Dev — Codex Spark** for bounded boilerplate and mechanical source
    work where the reviewer has already fixed the design and semantics.
 3. **Sr Dev — Grok Build or Sr Dev — Claude Build**, selected explicitly by the reviewer,

@@ -33,7 +33,11 @@ This file governs how AI agents (and humans acting as agents) work in this repos
   plus the implementation and Jr Dev integration roles:
   - **Lead Quantitative Finance Researcher/Engineer (reviewer):** inspects commits, makes
     engineering decisions, accepts or rejects work, selects the minimum-usage capable
-    developer, and authorizes the next ticket.
+    developer, and authorizes the next ticket. To avoid a separate integration handoff,
+    the reviewer may directly stage, commit, and push a small reviewer-authored
+    governance/review publication when its exact paths are enumerated in the active
+    review. This exception never includes developer source/test integration, test or
+    acceptance-command execution, or data mutation.
   - **Implementation Dev — Codex Spark:** agentic, using GPT-5.3-Codex-Spark High.
     Authors reviewer-bounded low/medium-risk boilerplate, scaffolding, mechanical adapters,
     and their test source. It does not make architecture, financial-semantics, source-
@@ -49,7 +53,10 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     accepted-result evidence, remaining usage, and task fit; the roles are not concurrent.
   - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
     available. Owns production/test source-drop integration, test and acceptance-command
-    execution, repository records, Git, commits, and pushes. Does not design or author tests.
+    execution, implementation/evidence records, and the corresponding Git, commits, and
+    pushes. Does not design or author tests. Small reviewer-authored governance/review
+    publications may instead be published directly by the reviewer under the exception
+    above.
   - **Owner:** relays one-way prompts and supplies repository URLs, hashes, ZIPs, and
     source drops.
 - Routing is based on end-to-end accepted-result quality, engineering risk, and
@@ -59,8 +66,9 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 - **Reviewer acceptance is exclusive.** Only the Senior Quantitative Finance
   Researcher/Engineer accepts or rejects engineering work and authorizes the next
   ticket. The owner is the prompt relay only and is not an alternate acceptance
-  authority. Publication (commit + push) is Hermes's duty, not a gated owner-only
-  action.
+  authority. Implementation/evidence publication remains Hermes's duty; narrowly scoped
+  reviewer-authored governance/review publication may be performed by the reviewer and is
+  never a gated owner-only action.
 
 ## Archive
 
