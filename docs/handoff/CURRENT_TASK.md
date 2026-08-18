@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol source rejection and twentieth-correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol source rejection and twenty-first-correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -23,11 +23,11 @@ The registry parquet has 21 columns and its rows/catalog lineage reconcile. DEX-
 gates 3-6 remain unexecuted; `dex_pool_events`, `dex_pool_daily`, and
 `dex_universe_daily` are not published, so the full ticket is not awaiting final review.
 
-The nineteenth controller correction has completed fresh Sol source review and is rejected before
+The twentieth controller correction has completed fresh Sol source review and is rejected before
 Jr reintegration. Migration 0021 remains unapplied and the offline production database remains at
-migration 0020 with all v2 tables empty. The exact source rejection and bounded twentieth-
+migration 0020 with all v2 tables empty. The exact source rejection and bounded twenty-first-
 correction authorization are in the final section titled
-`Sol source review - nineteenth controller correction rejected`. No live readiness, preparation,
+`Sol source review - twentieth controller correction rejected`. No live readiness, preparation,
 RPC, stage, coverage, publication, downstream, PAPER, LIVE, harmonic-model, or next-ticket work is
 authorized.
 
@@ -5624,6 +5624,108 @@ unauthorized. Next ticket remains `NONE`.
 The authoritative current decision is the immediately preceding section,
 `Sol source review - nineteenth controller correction rejected (2026-08-17)`. Jr Dev - Hermes is the next actor
 only to publish this aligned two-record review. The twentieth correction becomes available to Sr Dev - Grok
+Build at Grok 4.6 Max only after publication and must stop for fresh Sol source review. Jr reintegration/testing,
+migration 0021, live readiness, production preparation/RPC/stages, coverage, publication, downstream, PAPER,
+LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - twentieth controller correction rejected (2026-08-17)
+
+Jr published the nineteenth-correction rejection and twentieth-correction authorization at pushed commit
+`25adcfb`; `HEAD == origin/main`. Sr delivered the twentieth correction inside the same seven authorized files.
+Reviewed SHA-256 values are:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`:
+  `6b3b49b33268a319215ac56822f3416b0525d258025cfa1edbfa129559259ece`;
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py`:
+  `4c95aa8bf6896cc8fbadc05699f36552ccd0694f9da658352e3f3cc2f3c979a9`;
+- `scripts/research/run_uniswap_v2_pair_events_v2_production.py`:
+  `4a9aeb260bf085fb55d15f18432ab3c196ecce9aba6407a636b4cbc898fae06c`;
+- `sql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql`:
+  `be950e9700a95c828c0c5a2aee8e391581316a0aa7eff427c6c31f5c921fd13f`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`:
+  `5057613967cfc0f5eedda0a5a01c88cf907c348e44839d59ddc8e799c2103aee`;
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_production.py`:
+  `a0ebeaf1cbbe8446f27cf928790fb0dc86fefd0bf0756d01d9fd9e2e6f5e0abf`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py`:
+  `66d9a86ce409601380b29cf9c936fe3013ed4f07a2a80261bdc325a15bf5a308`.
+
+The correction closes most prior findings. Absent-row recovery now validates journal-bound attempt and lineage
+identities before mutation, hashes retained raw bytes through a no-follow content-addressed path, verifies the
+publication receipt, and compares every field of a preexisting raw-object row to its constructed expectation.
+Tests cover representative absent-row identity/cross-row divergence, raw corruption, and a divergent existing
+raw row with retained evidence and no three-row authority. Terminal, seal, and baseline now expose real
+post-COMMIT/pre-flush hooks. PUBLICATION is checked against stage, checkpoint, END-event/report/core authority
+before mutation, and a foreign-stage lease is retained. These improvements are retained. Acceptance remains
+blocked:
+
+1. Successful frozen cross-row validation still permits a detached attempt. The condition accepts an empty/NULL
+   `attempt.acquisition_id`, and `attempt.raw_object_id` is checked only when non-NULL. Thus catalog and lineage
+   may both be `SUCCEEDED` with the correct raw object while the attempt carries the schema-valid `(NULL, NULL)`
+   pair. `_insert_frozen_replay_rows` commits that inconsistent success and cleanup removes the evidence. The new
+   cross-row test changes lineage acquisition identity, not this accepted NULL-pair branch.
+2. Frozen replay does not preserve the raw-object row that the normal catalog transaction would produce. It is
+   absent from `committed_snapshot` and is synthesized from acquisition fields. In particular, the reconstructed
+   raw row sets `status` from `raw_acquisition.status` (`SUCCEEDED`), whereas normal
+   `AcquisitionMetadata.content_status` defaults to `ACQUIRED` and `RawCatalog.register_publication` stores that
+   content status. Recovered and uninterrupted execution therefore produce different durable raw authority, and
+   no test compares every recovered raw-object field with the uninterrupted public path.
+3. The same synthesis rejects legitimate content-address reuse. `raw_object` is content identity shared by many
+   acquisitions; normal registration reuses an existing row after matching canonical ID, bytes, and URI while
+   retaining the first content row's acquisition-specific metadata. Recovery instead requires the existing row's
+   original name, request/response metadata, checksum, acquired/event times, and status to equal the current
+   acquisition. Identical response bytes from another request/provider can therefore make a valid
+   snapshot-before-COMMIT recovery fail permanently. No valid preexisting-content reuse test exists.
+4. Snapshot authentication is not the authorized every-field/cross-field matrix. It binds core IDs but does not
+   compare catalog request/acquired/response metadata and attempt request bytes/status/outcome to the journal
+   fields from which they are deterministically derived. The absent-row tests mutate only catalog acquisition ID,
+   attempt ID, lineage ID, and lineage acquisition ID. Schema-valid corruption of other journal-derivable cells
+   can still be promoted.
+5. The test named `failed_checkpoint_flush` does not execute its failing `flush_to_main` replacement: the
+   `after_terminal_commit_before_flush` hook raises first, so it proves a crash at that boundary, not a genuine
+   checkpoint failure. Checkpoint exceptions remain swallowed in drain code. Publication intent also carries no
+   exact lease generation/controller/capability identity; validation accepts any lease for the same stage and
+   recovery deletes by plan/stage, so a newer same-stage owner can still be removed. The foreign-stage-only test
+   does not cover this ownership case.
+
+Syntax compilation, targeted ruff, repository control, and `git diff --check` pass. The seven-file source
+boundary is exact. Sol ran no pytest, migration, RPC, production-data mutation, or Git action.
+
+### Authorized twenty-first correction - same seven files only
+
+Jr Dev - Hermes must first commit and push only this aligned review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding the uncommitted seven-file drop,
+`opencode.json`, both untracked research files, logs, databases, and every unrelated path. After publication,
+Sr Dev - Grok Build remains at Grok 4.6 Max and may correct only the same seven files:
+
+- Extend the pre-COMMIT replay record to contain the exact raw-object authority observed/created inside the
+  original transaction, or an equally complete typed receipt that deterministically distinguishes new content
+  from legitimate existing-content reuse. Recovery must reproduce uninterrupted raw rows exactly, including
+  content status, while authenticating live bytes and every claimed field. Do not derive content-row provenance
+  from acquisition status or require current acquisition metadata to overwrite/match an older reused content row.
+- Require a successful attempt to bind the exact acquisition/raw pair held by successful catalog and lineage;
+  require failed attempts to retain the exact NULL pair and failed acquisition linkage. Authenticate every
+  journal-derivable catalog/attempt/lineage/raw field and deterministic cross-row relationship before mutation.
+- Add public injected tests comparing every recovered row—including `raw_object`—to uninterrupted success and
+  failure, a successful snapshot with NULL attempt pair, full absent-row field divergence, legitimate existing
+  content reuse with different acquisition metadata, corrupted bytes, and divergent existing content. Every
+  refusal must retain evidence and leave all attempted authority rows unchanged.
+- Exercise an actual `flush_to_main`/checkpoint failure without an earlier hook masking it, remove swallowed
+  checkpoint success paths, and prove deterministic recovery or visible failure. Bind PUBLICATION to the exact
+  lease generation/controller/capability present when the intent is written; delete only that exact lease and
+  refuse a newer same-stage owner. Preserve all corrected honest seal/baseline schema, live file facts, recovery,
+  cleanup, symlink, public lifecycle, and source-pin behavior.
+
+Sr does not run tests or migrations, edit repository records or unrelated files, use RPC/network, touch the
+offline production database or evidence, or perform Git actions. Sr stops for fresh Sol source review with new
+hashes. Jr reintegration/testing and migration 0021 remain unauthorized. All live readiness, production prepare/
+RPC/stages, coverage, publication, downstream, PAPER, LIVE, harmonic-model, and next-ticket work remain
+unauthorized. Next ticket remains `NONE`.
+
+## Latest control-plane state (2026-08-17)
+
+The authoritative current decision is the immediately preceding section,
+`Sol source review - twentieth controller correction rejected (2026-08-17)`. Jr Dev - Hermes is the next actor
+only to publish this aligned two-record review. The twenty-first correction becomes available to Sr Dev - Grok
 Build at Grok 4.6 Max only after publication and must stop for fresh Sol source review. Jr reintegration/testing,
 migration 0021, live readiness, production preparation/RPC/stages, coverage, publication, downstream, PAPER,
 LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
