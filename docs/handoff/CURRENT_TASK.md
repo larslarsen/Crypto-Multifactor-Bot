@@ -2,7 +2,7 @@
 
 Ticket: DEX-003
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish Sol source rejection and twenty-second-correction authorization
+Next required actor: Jr Dev - Hermes - publish Sol source rejection and twenty-third-correction authorization
 Final reviewer: Sol 5.6 High
 Next ticket authorized: NONE
 
@@ -23,11 +23,11 @@ The registry parquet has 21 columns and its rows/catalog lineage reconcile. DEX-
 gates 3-6 remain unexecuted; `dex_pool_events`, `dex_pool_daily`, and
 `dex_universe_daily` are not published, so the full ticket is not awaiting final review.
 
-The twenty-first controller correction has completed fresh Sol source review and is rejected before
+The twenty-second controller correction has completed fresh Sol source review and is rejected before
 Jr reintegration. Migration 0021 remains unapplied and the offline production database remains at
-migration 0020 with all v2 tables empty. The exact source rejection and bounded twenty-second-
+migration 0020 with all v2 tables empty. The exact source rejection and bounded twenty-third-
 correction authorization are in the final section titled
-`Sol source review - twenty-first controller correction rejected`. No live readiness, preparation,
+`Sol source review - twenty-second controller correction rejected`. No live readiness, preparation,
 RPC, stage, coverage, publication, downstream, PAPER, LIVE, harmonic-model, or next-ticket work is
 authorized.
 
@@ -5830,3 +5830,74 @@ actor only to publish this aligned two-record review. The twenty-second correcti
 Grok Build at Grok 4.6 Max only after publication and must stop for fresh Sol source review. Jr reintegration/
 testing, migration 0021, live readiness, production preparation/RPC/stages, coverage, publication, downstream,
 PAPER, LIVE, harmonic-model, and next-ticket work remain unauthorized. Next ticket remains `NONE`.
+
+## Sol source review - twenty-second controller correction rejected (2026-08-17)
+
+Jr published the prior decision at pushed commit `14d8cc6`; `HEAD == origin/main`. Sr stayed inside the seven-file
+authorization. Reviewed SHA-256 values are:
+
+- engine: `219a5dc658e647edbee64e9bc5bd0b289087ba5ac55fde622cb1dde7857046b8`;
+- production controller: `80a0e0f7b15101b643de65f3a896d5f71b8c837969b82c69c084446848742eff`;
+- CLI: `4a9aeb260bf085fb55d15f18432ab3c196ecce9aba6407a636b4cbc898fae06c`;
+- migration 0021: `be950e9700a95c828c0c5a2aee8e391581316a0aa7eff427c6c31f5c921fd13f`;
+- engine tests: `a1b241d84ef4e5a20855fef45a2b864061bba97206513806e078e43a06aeed06`;
+- production tests: `301cb2fd864b0307e1a164cc566a472cc8823ea4204b7940a216ab8c6c784026`; and
+- migration tests: `66d9a86ce409601380b29cf9c936fe3013ed4f07a2a80261bdc325a15bf5a308`.
+
+The versioned created/reused receipt, real two-acquisition reuse test, exact first-writer comparison, created-row
+derivation, expanded journal-field matrix, durable END-bound publication identity, sidecar-tamper refusal, and
+atomic stage/lease recovery are accepted and must remain unchanged. The production controller and production
+tests are accepted for this source-review phase. Acceptance is blocked only by remaining engine terminal
+semantics:
+
+1. `_authenticate_frozen_raw_object` requires live retained bytes to equal `attempt.response_bytes`. The write
+   path records total wire bytes in the attempt but stores only retained bytes in the raw object. A legitimate
+   truncated or drain-deadline response therefore has `raw.byte_size == journal.retained_bytes <
+   attempt.response_bytes == journal.response_bytes` and is permanently rejected after a snapshot-before-COMMIT
+   crash. Live raw size must authenticate against retained bytes, while attempt response size authenticates
+   against total response bytes.
+2. Successful catalog replay rejects every non-NULL journal `error_kind`, although the uninterrupted write path
+   registers retained raw content successfully even when the attempt is `truncated` or `failed` because of a
+   post-start size/deadline/transport condition. Conversely, attempt terminal status is checked only against an
+   allowed set and its equally mutable outcome status; it is not derived with the write path's precedence from
+   credential detection, truncation, error kind, and response state. Coordinated status/outcome mutation can pass.
+   FAILED versus REJECTED catalog state is likewise not derived from the actual failed-registration path.
+3. Frozen success does not require the journal lifecycle that produced it (`complete`, `response_started`, and
+   retained-byte relationships). A schema-valid snapshot paired with an incomplete/non-started journal can be
+   promoted. Existing tests mutate snapshot cells but do not cover these top-level lifecycle contradictions or
+   a real retained-less-than-response recovery.
+
+Syntax compilation, targeted ruff, repository control, and `git diff --check` pass. The source boundary is exact.
+Sol ran no pytest, migration, RPC, production-data mutation, or Git action.
+
+### Authorized twenty-third correction - two files only
+
+Jr Dev - Hermes must first commit and push only this aligned review in
+`docs/handoff/CURRENT_TASK.md` and `tickets/DEX-003.md`, excluding all source and unrelated paths. After
+publication, Sr Dev - Grok Build at Grok 4.6 Max may change only:
+
+- `src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py`; and
+- `tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py`.
+
+Use one deterministic terminal-semantics function for both write and recovery. It must derive catalog, attempt,
+outcome, and lineage status from the complete journal/descriptor lifecycle with the same precedence as the public
+write path. Authenticate `response_bytes` as total wire bytes and `retained_bytes` as the live raw byte size;
+support legitimate retained evidence with truncation or post-start error without weakening provenance. Require a
+frozen committed record to have the exact complete/started lifecycle and refuse every coordinated status or
+lifecycle contradiction before mutation. Add public injected pre-COMMIT recovery tests for truncated and
+error-bearing retained evidence with `retained_bytes < response_bytes`, plus complete/non-started and coordinated
+catalog/attempt/outcome status tamper; compare every recovered row to uninterrupted execution and retain evidence
+with globally zero partial rows on refusal.
+
+Do not change the accepted production controller/tests, CLI, migration, or migration tests. Preserve all accepted
+raw disposition, publication, checkpoint, seal/baseline, live-file, recovery, cleanup, symlink, lifecycle, and
+source-pin behavior. Sr performs no tests, migrations, records, Git, RPC/network, or production-evidence work and
+stops for fresh Sol review with two new hashes. Jr integration remains unauthorized. All live, downstream,
+harmonic-model, and next-ticket work remains unauthorized. Next ticket remains `NONE`.
+
+## Latest control-plane state (2026-08-17)
+
+The immediately preceding twenty-second-correction rejection is authoritative. Jr Dev - Hermes is next only to
+publish the two reviewer records. The bounded two-file twenty-third correction becomes available afterward and
+must stop for fresh Sol review. No integration, migration, live, harmonic-model, or next-ticket work is
+authorized. Next ticket remains `NONE`.
