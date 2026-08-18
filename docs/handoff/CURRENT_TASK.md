@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Grok Build — author the bounded CEX-002 Gate 1 corrective source drop
+Next required actor: Sr Dev — Grok Build — patch only the three residual CEX-002 Gate 1 source defects
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -13,6 +13,7 @@ Governing documents:
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
+- research/sprint_004/63_CEX002_GROK_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -99,8 +100,43 @@ integration, repository-record edit, Git operation, commit, push, purchase, cata
 mutation, or publication and stops for fresh reviewer source inspection with exact hashes.
 Jr integration remains unauthorized.
 
+## First Grok corrective source review
+
+Grok's rewrite closes most review-61 defects, but source inspection rejects three residual
+source-authority failures at the exact hashes in review 63. The supplied headerless metrics
+fixture is still classified as field names; aggregate family counts still promote a product
+to official completeness when a discovered symbol has zero objects; and Coinalyze can
+qualify BTC responses for an ETH-only request while reporting a schema path instead of the
+actual liquidation/OI unit. The bounded real Coinalyze responses also need redacted content
+hash/retrieval provenance in the qualification evidence.
+
+Grok executed tests despite the explicit role prohibition. Those results are disregarded;
+Hermes remains the only integration and command-execution actor.
+
+## Second Grok correction authorization
+
+If committed `HEAD` does not yet contain review 63 plus this section and the matching
+ticket section, Jr Dev — Hermes must first publish only:
+
+- `docs/handoff/CURRENT_TASK.md`;
+- `research/sprint_004/63_CEX002_GROK_SOURCE_REVIEW.md`; and
+- `tickets/CEX-002.md`.
+
+Jr runs only `python3 scripts/check_repo_control.py` and `git diff --check`, excludes all
+source/test drops and unrelated dirty paths, pushes, and establishes
+`HEAD == origin/main`. Once that committed branch state exists, Sr Dev — Grok Build on
+Grok 4.6 High is automatically authorized for the surgical correction in review 63; no
+ephemeral prompt, owner-supplied source hashes, or further handoff edit is required.
+
+The correction is confined to the three reviewed Python paths and existing fixture
+directory. It must preserve the accepted rewrite, add failing-then-passing focused tests
+for the three direct probes, and add redacted Coinalyze response provenance. Grok performs
+no test execution, network run, integration, record edit, Git operation, commit, push,
+purchase, catalog mutation, or publication. It stops for source review with exact hashes.
+Jr integration remains unauthorized.
+
 ## Stop condition
 
-Grok stops after delivering the bounded corrective source/test-source drop and exact
+Grok stops after delivering the bounded second corrective source/test-source patch and exact
 SHA-256 hashes for every changed path. CEX-002 remains `IN_PROGRESS`; next ticket remains
 `NONE`.
