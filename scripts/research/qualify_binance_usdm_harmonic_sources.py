@@ -3,6 +3,11 @@
 
 The Coinalyze key is read only from COINALYZE_API_KEY. Incomplete required
 source coverage exits non-zero by default.
+
+Listing pages and verified samples are checkpointed durably, retained evidence is
+bootstrapped and reused instead of redownloaded, transient transport failures are
+retried under a bounded policy, and new sample downloads are bounded by an explicit
+Gate 1 execution budget.
 """
 
 from __future__ import annotations
@@ -13,8 +18,15 @@ import sys
 from pathlib import Path
 
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
+    GATE1_MAX_NEW_OBJECT_BYTES,
+    GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    VISION_S3_ENDPOINT,
     FapiCurrentContractSource,
     HttpxCoinalyzeTransport,
+    ListingCheckpointStore,
+    RetryJournal,
+    RetryPolicy,
+    RetryRunner,
     SourceQualificationError,
     TransportObjectIndex,
     accept_qualification,
@@ -34,7 +46,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--store-root", type=str, default="data/cex002_qualify")
     parser.add_argument("--progress-path", type=str, default=None)
     parser.add_argument("--report-path", type=str, default=str(DEFAULT_REPORT))
+    parser.add_argument(
+        "--listing-checkpoint-path",
+        type=str,
+        default=None,
+        help="request-keyed listing checkpoint (default: <store-root>/cex002_listing_checkpoint.json)",
+    )
+    parser.add_argument(
+        "--sample-budget-bytes",
+        type=int,
+        default=GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+        help="total NEW sample download budget; may only lower the Gate 1 default",
+    )
+    parser.add_argument(
+        "--max-sample-object-bytes",
+        type=int,
+        default=GATE1_MAX_NEW_OBJECT_BYTES,
+        help="per-object NEW download cap; may only lower the Gate 1 default",
+    )
+    parser.add_argument("--retry-max-attempts", type=int, default=5)
     args = parser.parse_args(argv)
+
+    # The Gate 1 execution budget may be tightened but never raised.
+    sample_budget = min(int(args.sample_budget_bytes), GATE1_NEW_DOWNLOAD_BUDGET_BYTES)
+    max_object_bytes = min(int(args.max_sample_object_bytes), GATE1_MAX_NEW_OBJECT_BYTES)
 
     store_root = Path(args.store_root)
     store_root.mkdir(parents=True, exist_ok=True)
@@ -44,10 +79,31 @@ def main(argv: list[str] | None = None) -> int:
 
     transport = HttpxTransport()
     timeout = TimeoutConfig()
+    list_cache_dir = store_root / "list_cache"
+    checkpoint_path = (
+        Path(args.listing_checkpoint_path)
+        if args.listing_checkpoint_path
+        else store_root / "cex002_listing_checkpoint.json"
+    )
+    listing_checkpoint = ListingCheckpointStore.load(checkpoint_path, list_cache_dir)
+    bootstrapped = listing_checkpoint.bootstrap(endpoint=VISION_S3_ENDPOINT)
+    print(
+        "listing checkpoint bootstrap: "
+        f"claimed={bootstrapped['claimed']} "
+        f"checksum_blobs={bootstrapped['checksum_blobs']} "
+        f"unclaimed={bootstrapped['unclaimed']}",
+        file=sys.stderr,
+    )
+    retry = RetryRunner(
+        policy=RetryPolicy(max_attempts=int(args.retry_max_attempts)),
+        journal=RetryJournal.load(store_root / "cex002_retry_journal.json"),
+    )
     index = TransportObjectIndex(
         transport,
         timeout=timeout,
-        list_cache_dir=store_root / "list_cache",
+        list_cache_dir=list_cache_dir,
+        checkpoint=listing_checkpoint,
+        retry=retry,
     )
     current = FapiCurrentContractSource(
         transport,
@@ -70,6 +126,10 @@ def main(argv: list[str] | None = None) -> int:
             current_contracts=current,
             coinalyze_transport=coinalyze,
             coinalyze_api_key=api_key,
+            retry=retry,
+            listing_checkpoint=listing_checkpoint,
+            sample_budget_bytes=sample_budget,
+            max_sample_object_bytes=max_object_bytes,
         )
     except SourceQualificationError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -82,6 +142,20 @@ def main(argv: list[str] | None = None) -> int:
         f"gate_status={report.gate_status} accepted={report.accepted} "
         f"symbols={len(report.discovered_symbols)} "
         f"blocked={list(report.blocked_products)}",
+        file=sys.stderr,
+    )
+    plan = report.sample_plan
+    print(
+        f"sample_plan: planned_new_bytes={plan['new_download_bytes']} "
+        f"budget={plan['budget_bytes']} retained_bytes={plan['retained_bytes']} "
+        f"budget_blocked={len(plan['blocked'])}",
+        file=sys.stderr,
+    )
+    print(
+        f"listing_checkpoint: reused={report.listing_checkpoint.get('reused_requests')} "
+        f"fetched={report.listing_checkpoint.get('fetched_requests')} "
+        f"unclaimed={report.listing_checkpoint.get('unclaimed_evidence')} | "
+        f"retries={report.retry.get('retries')}",
         file=sys.stderr,
     )
     code = qualification_exit_code(report)

@@ -8,38 +8,55 @@ import inspect
 import io
 import json
 import zipfile
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 import pytest
 
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     DERIVED_PRODUCTS,
+    GATE1_MAX_NEW_OBJECT_BYTES,
+    GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    MEMBERSHIP_FAMILY_PREFIXES,
     REQUIRED_PRODUCTS,
     SOURCE_PRODUCTS,
+    VISION_S3_ENDPOINT,
     CoinalyzeClient,
     CoinalyzeResponse,
+    ListingCheckpointStore,
     ListingObject,
     MemoryCoinalyzeTransport,
     MemoryCurrentContractSource,
     MemoryObjectIndex,
+    ResumeIntegrityError,
+    RetainedChecksumIndex,
+    RetryJournal,
+    RetryPolicy,
+    RetryRunner,
+    SampleCheckpointStore,
     SourceQualificationError,
     TransportObjectIndex,
     accept_qualification,
     identity_bytes,
     infer_schema_fields,
+    is_retryable_failure,
+    listing_request_identity,
+    listing_request_key,
     parse_current_perpetuals,
     parse_provider_checksum,
     parse_s3_list_bucket,
     qualification_exit_code,
     refuse_restricted_scope,
     run_source_qualification,
+    verify_provider_sidecar,
     vision_object_url,
     vision_prefix,
     write_s3_list_bucket,
 )
 from source_audit.download import StreamResponse, TimeoutConfig
+from source_audit.errors import ChecksumMismatchError, DownloadError, SizeLimitError
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "binance_usdm_harmonic_qualification"
 
@@ -55,6 +72,45 @@ def _checksum_text(payload: bytes, filename: str) -> bytes:
     return f"{hashlib.sha256(payload).hexdigest()}  {filename}\n".encode()
 
 
+_FIXED_ARCHIVE_TIME = (2020, 1, 1, 0, 0, 0)
+
+
+def _stable_zip_bytes(name: str, payload: bytes) -> bytes:
+    """Archive bytes that depend only on the inputs.
+
+    ``ZipFile.writestr`` stamps the current local time into the member header, so two
+    calls straddling a two-second boundary produce different bytes. A fixed member
+    timestamp is required whenever the same synthetic object must be rebuilt across
+    separate index constructions and still hash to the same content address.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, mode="w") as handle:
+        info = zipfile.ZipInfo(name, date_time=_FIXED_ARCHIVE_TIME)
+        info.compress_type = zipfile.ZIP_STORED
+        handle.writestr(info, payload)
+    return buf.getvalue()
+
+
+def _distinct_object_payload(key: str) -> bytes:
+    """Valid headerless trades archive bytes unique to one remote object key.
+
+    Real remote objects never share bytes. Deriving the trade rows from the object key
+    gives every synthetic object its own content address, so an object that was never
+    downloaded is genuinely absent from the content-addressed store.
+    """
+    seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+    rows = []
+    for offset in range(2):
+        price = float(7000 + seed % 5000 + offset)
+        qty = 0.5 + offset / 4
+        rows.append(
+            f"{seed + offset},{price},{qty},{round(price * qty, 4)},"
+            f"{1577836800000 + seed % 1000000 + offset},"
+            f"{'true' if offset % 2 == 0 else 'false'}"
+        )
+    return _stable_zip_bytes("trades.csv", ("\n".join(rows) + "\n").encode("utf-8"))
+
+
 def _load_json(name: str) -> object:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
@@ -65,6 +121,7 @@ def _index_with_family(
     families: list[tuple[str, str]],
     interval_map: dict[str, list[str]] | None = None,
     payload_by_stem: dict[str, bytes] | None = None,
+    payload_for_key: Callable[[str], bytes] | None = None,
 ) -> MemoryObjectIndex:
     prefixes: dict[str, list[str]] = {}
     objects: dict[str, list[ListingObject]] = {}
@@ -97,7 +154,10 @@ def _index_with_family(
                     key = f"{symbol_prefix}{symbol}-{stem}-{month}.zip"
                     targets.append((key, symbol_prefix))
             for key, object_prefix in targets:
-                payload = payloads.get(stem, default_payload)
+                if payload_for_key is not None:
+                    payload = payload_for_key(key)
+                else:
+                    payload = payloads.get(stem, default_payload)
                 listing = ListingObject(key=key, size=len(payload))
                 objects.setdefault(object_prefix, []).append(listing)
                 url = vision_object_url(key)
@@ -688,3 +748,1049 @@ def test_required_source_products_are_complete_set() -> None:
 def test_parse_provider_checksum() -> None:
     digest = "a" * 64
     assert parse_provider_checksum(f"{digest}  file.zip\n") == digest
+
+
+# --- review-67 operational correction ------------------------------------------------
+
+
+def _real_shaped_page(
+    *,
+    prefix: str,
+    prefixes: list[str] | None = None,
+    objects: list[ListingObject] | None = None,
+    truncated: bool = False,
+    continuation: str | None = None,
+    continuation_token: str | None = None,
+) -> bytes:
+    return write_s3_list_bucket(
+        prefixes=prefixes or [],
+        objects=objects or [],
+        truncated=truncated,
+        continuation=continuation,
+        prefix=prefix,
+        delimiter="/",
+        continuation_token=continuation_token,
+    ).encode()
+
+
+class _ScriptedTransport:
+    """Serves scripted listing pages and can fail a chosen request exactly once."""
+
+    def __init__(
+        self,
+        pages: dict[tuple[str, str | None], bytes],
+        *,
+        fail_on: tuple[str, str | None] | None = None,
+        failures: int = 1,
+        status: int | None = None,
+    ) -> None:
+        self.pages = pages
+        self.fail_on = fail_on
+        self.remaining_failures = failures
+        self.status = status
+        self.requests: list[tuple[str, str | None]] = []
+
+    def stream_get(self, url: str, *, headers, timeout: TimeoutConfig) -> StreamResponse:
+        query = parse_qs(urlparse(url).query)
+        prefix = query.get("prefix", [""])[0]
+        token = query.get("continuation-token", [None])[0]
+        key = (prefix, token)
+        self.requests.append(key)
+        if self.fail_on == key and self.remaining_failures > 0:
+            self.remaining_failures -= 1
+            if self.status is not None:
+                def _empty():
+                    yield b""
+
+                return StreamResponse(
+                    status_code=self.status, headers={}, iter_bytes=_empty(), close=lambda: None
+                )
+            raise httpx.ConnectError("Connection reset by peer")
+        body = self.pages[key]
+
+        def _iter():
+            yield body
+
+        return StreamResponse(
+            status_code=200, headers={}, iter_bytes=_iter(), close=lambda: None
+        )
+
+
+def _trades_pages() -> dict[tuple[str, str | None], bytes]:
+    root = vision_prefix("monthly", "trades")
+    btc = f"{root}BTCUSDT/"
+    return {
+        (root, None): _real_shaped_page(
+            prefix=root, prefixes=[btc], truncated=True, continuation="tok-2"
+        ),
+        (root, "tok-2"): _real_shaped_page(
+            prefix=root,
+            prefixes=[f"{root}ETHUSDT/"],
+            continuation_token="tok-2",
+        ),
+    }
+
+
+def test_listing_checkpoint_reuses_completed_pages_after_a_reset(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    checkpoint_path = tmp_path / "listing.json"
+    cache = tmp_path / "list_cache"
+
+    failing = _ScriptedTransport(pages, fail_on=(root, "tok-2"), failures=99)
+    store = ListingCheckpointStore.load(checkpoint_path, cache)
+    index = TransportObjectIndex(
+        failing,
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(
+            policy=RetryPolicy(max_attempts=2), sleeper=lambda _d: None, jitter=lambda d: d
+        ),
+    )
+    with pytest.raises(SourceQualificationError, match="bounded attempt limit"):
+        index.list_common_prefixes(root)
+    # The first page completed and is durably checkpointed even though the run aborted.
+    assert len(store.entries) == 1
+    assert (root, None) in failing.requests
+
+    healthy = _ScriptedTransport(pages)
+    resumed_store = ListingCheckpointStore.load(checkpoint_path, cache)
+    assert len(resumed_store.entries) == 1
+    resumed = TransportObjectIndex(
+        healthy,
+        list_cache_dir=cache,
+        checkpoint=resumed_store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    prefixes = resumed.list_common_prefixes(root)
+    assert prefixes == [f"{root}BTCUSDT/", f"{root}ETHUSDT/"]
+    # Only the uncompleted continuation request was fetched again.
+    assert healthy.requests == [(root, "tok-2")]
+    assert resumed_store.reused == 1
+    assert resumed_store.fetched == 1
+
+
+def test_listing_checkpoint_rehashes_and_fails_closed_on_tampered_bytes(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    cache = tmp_path / "list_cache"
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    index = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    index.list_common_prefixes(root)
+    entry = next(iter(store.entries.values()))
+    Path(entry["content_path"]).write_bytes(b"tampered listing")
+    reloaded = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    with pytest.raises(ResumeIntegrityError, match="listing checkpoint hash mismatch"):
+        TransportObjectIndex(
+            _ScriptedTransport(pages),
+            list_cache_dir=cache,
+            checkpoint=reloaded,
+            retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+        ).list_common_prefixes(root)
+
+
+def test_listing_checkpoint_bootstraps_only_provable_request_identity(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    cache.mkdir(parents=True)
+    root = vision_prefix("monthly", "trades")
+    page = _real_shaped_page(prefix=root, prefixes=[f"{root}BTCUSDT/"])
+    (cache / hashlib.sha256(page).hexdigest()).write_bytes(page)
+    checksum_body = b"%s  BTCUSDT-trades-2020-01.zip\n" % (b"a" * 64)
+    (cache / hashlib.sha256(checksum_body).hexdigest()).write_bytes(checksum_body)
+    opaque = b"<?xml version=\"1.0\"?><Other/>"
+    (cache / hashlib.sha256(opaque).hexdigest()).write_bytes(opaque)
+
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    counts = store.bootstrap(endpoint=VISION_S3_ENDPOINT)
+    assert counts["claimed"] == 1
+    assert counts["checksum_blobs"] == 1
+    assert counts["unclaimed"] == 1
+    key = listing_request_key(
+        listing_request_identity(
+            endpoint=VISION_S3_ENDPOINT, prefix=root, delimiter="/", continuation_token=None
+        )
+    )
+    assert key in store.entries
+    assert store.entries[key]["bootstrapped"] is True
+    # A bootstrapped page is reused instead of refetched.
+    transport = _ScriptedTransport({})
+    index = TransportObjectIndex(
+        transport,
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    assert index.list_common_prefixes(root) == [f"{root}BTCUSDT/"]
+    assert transport.requests == []
+
+
+def test_retry_is_bounded_and_only_for_transient_failures() -> None:
+    delays: list[float] = []
+    runner = RetryRunner(
+        policy=RetryPolicy(max_attempts=4, base_delay_s=1.0, max_delay_s=8.0),
+        sleeper=delays.append,
+        jitter=lambda d: d,
+    )
+    attempts = {"n": 0}
+
+    def _flaky():
+        attempts["n"] += 1
+        if attempts["n"] < 3:
+            raise DownloadError("reset", context={"url": "x"})
+        return "ok"
+
+    assert runner.run("flaky", _flaky) == "ok"
+    assert delays == [1.0, 2.0]
+    assert runner.retries == 2
+
+    terminal = RetryRunner(sleeper=delays.append, jitter=lambda d: d)
+    with pytest.raises(ChecksumMismatchError):
+        terminal.run("checksum", lambda: (_ for _ in ()).throw(ChecksumMismatchError("bad")))
+    assert terminal.retries == 0
+
+    forbidden = RetryRunner(sleeper=delays.append, jitter=lambda d: d)
+    with pytest.raises(DownloadError):
+        forbidden.run(
+            "auth",
+            lambda: (_ for _ in ()).throw(
+                DownloadError("HTTP status 403", context={"status_code": 403})
+            ),
+        )
+    assert forbidden.retries == 0
+
+
+def test_retryable_classification_covers_429_5xx_and_transport() -> None:
+    assert is_retryable_failure(DownloadError("reset", context={})) is True
+    assert is_retryable_failure(DownloadError("429", context={"status_code": 429})) is True
+    assert is_retryable_failure(DownloadError("503", context={"status_code": 503})) is True
+    assert is_retryable_failure(DownloadError("404", context={"status_code": 404})) is False
+    assert is_retryable_failure(DownloadError("401", context={"status_code": 401})) is False
+    assert is_retryable_failure(ChecksumMismatchError("bad")) is False
+    assert is_retryable_failure(SizeLimitError("too big")) is False
+    assert is_retryable_failure(SourceQualificationError("schema")) is False
+
+
+def test_retry_recovers_a_transient_listing_reset(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    transport = _ScriptedTransport(pages, fail_on=(root, None), failures=1)
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", tmp_path / "cache")
+    retry = RetryRunner(
+        policy=RetryPolicy(max_attempts=3), sleeper=lambda _d: None, jitter=lambda d: d
+    )
+    index = TransportObjectIndex(
+        transport, list_cache_dir=tmp_path / "cache", checkpoint=store, retry=retry
+    )
+    assert index.list_common_prefixes(root) == [f"{root}BTCUSDT/", f"{root}ETHUSDT/"]
+    assert retry.retries == 1
+    assert retry.incidents[0]["label"] == f"list:{root}"
+
+
+def test_physical_family_is_inventoried_once_for_all_products(tmp_path: Path) -> None:
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/trades", "trades")],
+    )
+    calls: list[str] = []
+    original = index.list_common_prefixes
+
+    def _counted(prefix: str) -> list[str]:
+        calls.append(prefix)
+        return original(prefix)
+
+    index.list_common_prefixes = _counted  # type: ignore[method-assign]
+    report = run_source_qualification(store_root=tmp_path, index=index)
+    trades_prefix = vision_prefix("monthly", "trades")
+    # monthly/trades belongs to both the membership and trade products but is listed once.
+    assert calls.count(trades_prefix) == 1
+    assert report.resume["physical_families_inventoried"] == len(MEMBERSHIP_FAMILY_PREFIXES)
+
+
+def test_sample_checkpoint_is_written_per_object_not_at_end(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    progress = tmp_path / "progress.json"
+    seen_counts: list[int] = []
+    real_fetch = index.fetch_bytes
+
+    def _observing(url: str) -> bytes:
+        if progress.is_file():
+            data = json.loads(progress.read_text())
+            seen_counts.append(len(data.get("objects", {})))
+        return real_fetch(url)
+
+    index.fetch_bytes = _observing  # type: ignore[method-assign]
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, progress_path=progress
+    )
+    assert report.samples
+    # The checkpoint file grew while the run was still fetching, not only at the end.
+    assert seen_counts and max(seen_counts) > 0
+    saved = json.loads(progress.read_text())
+    assert len(saved["objects"]) == len({item.key for item in report.samples})
+
+
+def test_retained_samples_are_recovered_without_redownload(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    first = run_source_qualification(store_root=tmp_path, index=index)
+    assert first.samples
+    sample = first.samples[0]
+
+    # Drop the sample checkpoint but keep the retained bytes and the provider checksum
+    # sidecar, exactly like the interrupted real run.
+    progress = tmp_path / "cex002_qualification_progress.json"
+    progress.unlink()
+    cache = tmp_path / "list_cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    body = f"{sample.provider_checksum}  {sample.key.rsplit('/', 1)[-1]}\n".encode()
+    (cache / hashlib.sha256(body).hexdigest()).write_bytes(body)
+
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    second = run_source_qualification(store_root=tmp_path, index=index)
+    assert second.resume["recovered_samples"] >= 1
+    assert sample.url not in fetched
+    recovered = next(item for item in second.samples if item.key == sample.key)
+    assert recovered.sha256 == sample.sha256
+    assert recovered.reused_existing is True
+
+
+def test_recovery_fails_closed_on_tampered_retained_bytes(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    first = run_source_qualification(store_root=tmp_path, index=index)
+    sample = first.samples[0]
+    (tmp_path / "cex002_qualification_progress.json").unlink()
+    cache = tmp_path / "list_cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    body = f"{sample.provider_checksum}  {sample.key.rsplit('/', 1)[-1]}\n".encode()
+    (cache / hashlib.sha256(body).hexdigest()).write_bytes(body)
+    Path(sample.content_path).write_bytes(b"tampered")
+    with pytest.raises(ResumeIntegrityError, match="do not match the retained provider checksum"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_report_identity_matches_an_uninterrupted_run(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT", "ETHUSDT"], families=[("monthly/trades", "trades")])
+    clean = run_source_qualification(store_root=tmp_path / "clean", index=index)
+    resumed_root = tmp_path / "resumed"
+    first = run_source_qualification(store_root=resumed_root, index=index)
+    second = run_source_qualification(store_root=resumed_root, index=index)
+    assert second.resume["reused_samples"] > 0
+    assert identity_bytes(first) == identity_bytes(second)
+    # Execution-plane differences must not change the semantic identity of the result.
+    assert identity_bytes(clean) == identity_bytes(second)
+
+
+def test_sample_plan_is_persisted_before_download_and_prefers_smallest(tmp_path: Path) -> None:
+    small = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    objs = list(index.objects[prefix])
+    # Make the middle-regime bucket offer a large and a small candidate.
+    big_key = f"{prefix}BTCUSDT-trades-2022-07.zip"
+    index.objects[prefix] = [*objs, ListingObject(key=big_key, size=50_000_000)]
+    index.bodies[vision_object_url(big_key)] = small
+    index.bodies[vision_object_url(f"{big_key}.CHECKSUM")] = _checksum_text(
+        small, big_key.rsplit("/", 1)[-1]
+    )
+    report = run_source_qualification(store_root=tmp_path, index=index)
+    plan_path = Path(report.storage["sample_plan_path"])
+    assert plan_path.is_file()
+    plan = json.loads(plan_path.read_text())
+    assert plan["budget_bytes"] == GATE1_NEW_DOWNLOAD_BUDGET_BYTES
+    assert plan["max_object_bytes"] == GATE1_MAX_NEW_OBJECT_BYTES
+    assert big_key not in {entry["key"] for entry in plan["entries"]}
+    assert plan["new_download_bytes"] < 50_000_000
+
+
+def test_oversized_object_emits_typed_sample_budget_block(tmp_path: Path) -> None:
+    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    huge = []
+    for month in ("2019-09", "2022-06", "2026-01"):
+        key = f"{prefix}BTCUSDT-trades-{month}.zip"
+        huge.append(ListingObject(key=key, size=600_000_000))
+        index.bodies[vision_object_url(key)] = payload
+    index.objects[prefix] = huge
+
+    report = run_source_qualification(store_root=tmp_path, index=index)
+    trade = next(row for row in report.product_matrix if row.product == "binance_usdm_trade")
+    assert trade.sample_budget_blocked
+    blocked = trade.sample_budget_blocked[0]
+    assert blocked["kind"] == "sample_budget_exceeded"
+    assert blocked["required_bytes"] == 600_000_000
+    assert blocked["required_key"].startswith(prefix)
+    # The source is reachable and fully inventoried; only the sample budget is unmet.
+    assert trade.authority != "inaccessible"
+    assert trade.listed_object_count == 3
+    assert "sample_budget_exceeded" in trade.reason
+    assert report.sample_plan["blocked"]
+    assert any(
+        item["kind"] == "sample_budget_exceeded" for item in report.incidents
+    )
+
+
+def test_sample_budget_does_not_cap_reported_source_size(tmp_path: Path) -> None:
+    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    index.objects[prefix] = [
+        ListingObject(key=f"{prefix}BTCUSDT-trades-{month}.zip", size=600_000_000)
+        for month in ("2019-09", "2022-06", "2026-01")
+    ]
+    for obj in index.objects[prefix]:
+        index.bodies[vision_object_url(obj.key)] = payload
+    report = run_source_qualification(store_root=tmp_path, index=index)
+    trade = next(row for row in report.product_matrix if row.product == "binance_usdm_trade")
+    # Full listed byte inventory is preserved, never truncated to the execution budget.
+    assert trade.listed_bytes == 1_800_000_000
+    assert report.storage["byte_count_exact"]["binance_usdm_trade"] == 1_800_000_000
+
+
+# --- review-68 surgical correction ---------------------------------------------------
+
+
+class _InjectedAbort(RuntimeError):
+    """A hard interruption that is not a qualification error."""
+
+
+class _AlwaysFailingTransport:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def stream_get(self, url: str, *, headers, timeout: TimeoutConfig) -> StreamResponse:
+        self.calls += 1
+        raise httpx.ConnectError("Connection reset by peer")
+
+
+def _listing_store_with_two_prefixes(tmp_path: Path) -> tuple[ListingCheckpointStore, Path, dict]:
+    cache = tmp_path / "list_cache"
+    trades = vision_prefix("monthly", "trades")
+    metrics = vision_prefix("daily", "metrics")
+    pages = {
+        (trades, None): _real_shaped_page(prefix=trades, prefixes=[f"{trades}BTCUSDT/"]),
+        (metrics, None): _real_shaped_page(prefix=metrics, prefixes=[f"{metrics}ETHUSDT/"]),
+    }
+    path = tmp_path / "listing.json"
+    store = ListingCheckpointStore.load(path, cache)
+    index = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    index.list_common_prefixes(trades)
+    index.list_common_prefixes(metrics)
+    return store, path, {"trades": trades, "metrics": metrics, "cache": cache, "pages": pages}
+
+
+def test_cross_request_page_substitution_fails_closed(tmp_path: Path) -> None:
+    store, path, ctx = _listing_store_with_two_prefixes(tmp_path)
+    trades_key = listing_request_key(
+        listing_request_identity(
+            endpoint=VISION_S3_ENDPOINT,
+            prefix=ctx["trades"],
+            delimiter="/",
+            continuation_token=None,
+        )
+    )
+    metrics_key = listing_request_key(
+        listing_request_identity(
+            endpoint=VISION_S3_ENDPOINT,
+            prefix=ctx["metrics"],
+            delimiter="/",
+            continuation_token=None,
+        )
+    )
+    document = json.loads(path.read_text())
+    metrics_entry = document["entries"][metrics_key]
+    # Point the trades request at a different but internally valid retained page.
+    document["entries"][trades_key]["response_sha256"] = metrics_entry["response_sha256"]
+    document["entries"][trades_key]["content_path"] = metrics_entry["content_path"]
+    path.write_text(json.dumps(document))
+
+    reloaded = ListingCheckpointStore.load(path, ctx["cache"])
+    index = TransportObjectIndex(
+        _ScriptedTransport(ctx["pages"]),
+        list_cache_dir=ctx["cache"],
+        checkpoint=reloaded,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    with pytest.raises(ResumeIntegrityError, match="does not echo the resumed request identity"):
+        index.list_common_prefixes(ctx["trades"])
+
+
+def test_listing_checkpoint_key_must_be_the_canonical_request_hash(tmp_path: Path) -> None:
+    store, path, ctx = _listing_store_with_two_prefixes(tmp_path)
+    document = json.loads(path.read_text())
+    key = next(iter(document["entries"]))
+    document["entries"]["not-the-canonical-hash"] = document["entries"].pop(key)
+    path.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="not the canonical hash"):
+        ListingCheckpointStore.load(path, ctx["cache"])
+
+
+def test_listing_checkpoint_content_path_must_be_cache_local(tmp_path: Path) -> None:
+    store, path, ctx = _listing_store_with_two_prefixes(tmp_path)
+    document = json.loads(path.read_text())
+    key = next(iter(document["entries"]))
+    document["entries"][key]["content_path"] = "/elsewhere/deadbeef"
+    path.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="cache-local content address"):
+        ListingCheckpointStore.load(path, ctx["cache"])
+
+
+def test_listing_checkpoint_pagination_metadata_must_match(tmp_path: Path) -> None:
+    store, path, ctx = _listing_store_with_two_prefixes(tmp_path)
+    document = json.loads(path.read_text())
+    key = listing_request_key(
+        listing_request_identity(
+            endpoint=VISION_S3_ENDPOINT,
+            prefix=ctx["trades"],
+            delimiter="/",
+            continuation_token=None,
+        )
+    )
+    document["entries"][key]["next_continuation_token"] = "forged-token"
+    path.write_text(json.dumps(document))
+    reloaded = ListingCheckpointStore.load(path, ctx["cache"])
+    index = TransportObjectIndex(
+        _ScriptedTransport(ctx["pages"]),
+        list_cache_dir=ctx["cache"],
+        checkpoint=reloaded,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    with pytest.raises(ResumeIntegrityError, match="pagination metadata"):
+        index.list_common_prefixes(ctx["trades"])
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "{not json",
+        json.dumps({"ticket": "CEX-002", "kind": "listing_checkpoint"}),
+        json.dumps({"ticket": "OTHER", "kind": "listing_checkpoint", "version": 1}),
+        json.dumps({"ticket": "CEX-002", "kind": "sample_checkpoint", "version": 1}),
+        json.dumps({"ticket": "CEX-002", "kind": "listing_checkpoint", "version": 99}),
+        json.dumps([1, 2, 3]),
+    ],
+)
+def test_malformed_listing_checkpoint_document_fails_closed(tmp_path: Path, body: str) -> None:
+    path = tmp_path / "listing.json"
+    path.write_text(body)
+    with pytest.raises(ResumeIntegrityError):
+        ListingCheckpointStore.load(path, tmp_path / "cache")
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "{not json",
+        json.dumps({"ticket": "CEX-002", "kind": "sample_checkpoint"}),
+        json.dumps({"ticket": "CEX-002", "kind": "sample_checkpoint", "version": 1, "objects": []}),
+    ],
+)
+def test_malformed_sample_checkpoint_document_fails_closed(tmp_path: Path, body: str) -> None:
+    path = tmp_path / "progress.json"
+    path.write_text(body)
+    with pytest.raises(ResumeIntegrityError):
+        SampleCheckpointStore.load(path)
+
+
+def test_absent_checkpoint_documents_initialize_empty(tmp_path: Path) -> None:
+    listing = ListingCheckpointStore.load(tmp_path / "missing.json", tmp_path / "cache")
+    assert listing.entries == {}
+    samples = SampleCheckpointStore.load(tmp_path / "missing-progress.json")
+    assert samples.objects == {}
+    journal = RetryJournal.load(tmp_path / "missing-journal.json")
+    assert journal.incidents == []
+
+
+def test_corrupt_sample_checkpoint_aborts_the_qualifier(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    run_source_qualification(store_root=tmp_path, index=index)
+    progress = tmp_path / "cex002_qualification_progress.json"
+    progress.write_text("{corrupted")
+    with pytest.raises(ResumeIntegrityError):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_substituted_provider_checksum_in_checkpoint_fails_closed(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    run_source_qualification(store_root=tmp_path, index=index)
+    progress = tmp_path / "cex002_qualification_progress.json"
+    document = json.loads(progress.read_text())
+    key = next(iter(document["objects"]))
+    document["objects"][key]["provider_checksum"] = "b" * 64
+    progress.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="provider checksum disagrees"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_sample_checkpoint_url_must_match_the_object_key(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    run_source_qualification(store_root=tmp_path, index=index)
+    progress = tmp_path / "cex002_qualification_progress.json"
+    document = json.loads(progress.read_text())
+    key = next(iter(document["objects"]))
+    document["objects"][key]["url"] = "https://data.binance.vision/data/other.zip"
+    progress.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="url does not match"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_tampered_retained_sidecar_is_not_provider_authority(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    cache.mkdir(parents=True)
+    digest = "c" * 64
+    body = f"{digest}  BTCUSDT-trades-2020-01.zip\n".encode()
+    blob = cache / hashlib.sha256(body).hexdigest()
+    blob.write_bytes(body)
+    checksums = RetainedChecksumIndex.from_cache(cache)
+    key = "data/futures/um/monthly/trades/BTCUSDT/BTCUSDT-trades-2020-01.zip"
+    assert checksums.lookup(key) is not None
+    # Modify the sidecar after indexing: it no longer matches its content address.
+    blob.write_bytes(f"{'d' * 64}  BTCUSDT-trades-2020-01.zip\n".encode())
+    with pytest.raises(ResumeIntegrityError, match="no longer matches its content address"):
+        checksums.lookup(key)
+
+
+def test_sidecar_not_at_its_content_address_is_never_authority(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    cache.mkdir(parents=True)
+    body = f"{'e' * 64}  BTCUSDT-trades-2020-01.zip\n".encode()
+    (cache / ("f" * 64)).write_bytes(body)
+    checksums = RetainedChecksumIndex.from_cache(cache)
+    assert checksums.by_basename == {}
+
+
+def test_unique_remote_object_is_charged_once(tmp_path: Path) -> None:
+    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    only_key = f"{prefix}BTCUSDT-trades-2020-01.zip"
+    index.objects[prefix] = [ListingObject(key=only_key, size=10)]
+    index.bodies[vision_object_url(only_key)] = payload
+    index.bodies[vision_object_url(f"{only_key}.CHECKSUM")] = _checksum_text(
+        payload, only_key.rsplit("/", 1)[-1]
+    )
+    report = run_source_qualification(store_root=tmp_path, index=index)
+    plan = report.sample_plan
+    # One physical object aliased to three regimes is charged and fetched exactly once.
+    assert plan["new_download_bytes"] == 10
+    assert plan["unique_new_objects"] == 1
+    actions = [entry["action"] for entry in plan["entries"] if entry["key"] == only_key]
+    assert sorted(actions) == ["alias", "alias", "download"]
+    assert len({item.key for item in report.samples}) == 1
+    assert {item.regime for item in report.samples} == {"early", "middle", "recent"}
+
+
+def test_retained_object_is_reported_once(tmp_path: Path) -> None:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    only = index.objects[prefix][0]
+    index.objects[prefix] = [only]
+    run_source_qualification(store_root=tmp_path, index=index)
+    second = run_source_qualification(store_root=tmp_path, index=index)
+    plan = second.sample_plan
+    assert plan["unique_retained_objects"] == 1
+    assert plan["retained_bytes"] == only.size
+    assert plan["new_download_bytes"] == 0
+
+
+def test_retry_attempt_bound_is_not_multiplied_per_request(tmp_path: Path) -> None:
+    transport = _AlwaysFailingTransport()
+    retry = RetryRunner(
+        policy=RetryPolicy(max_attempts=3), sleeper=lambda _d: None, jitter=lambda d: d
+    )
+    index = TransportObjectIndex(transport, list_cache_dir=tmp_path, retry=retry)
+    with pytest.raises(SourceQualificationError, match="bounded attempt limit"):
+        index.fetch_bytes(vision_object_url("data/futures/um/monthly/trades/x.zip"))
+    # Exactly one bounded policy owns the request: three attempts, not three squared.
+    assert transport.calls == 3
+    assert retry.retries == 2
+
+
+def test_retry_incidents_survive_an_aborted_run(tmp_path: Path) -> None:
+    journal_path = tmp_path / "journal.json"
+    retry = RetryRunner(
+        policy=RetryPolicy(max_attempts=2),
+        sleeper=lambda _d: None,
+        jitter=lambda d: d,
+        journal=RetryJournal.load(journal_path),
+    )
+    index = TransportObjectIndex(
+        _AlwaysFailingTransport(), list_cache_dir=tmp_path, retry=retry
+    )
+    with pytest.raises(SourceQualificationError):
+        index.fetch_bytes(vision_object_url("data/futures/um/monthly/trades/x.zip"))
+    # The journal is durable on disk even though no report was ever returned.
+    reloaded = RetryJournal.load(journal_path)
+    assert len(reloaded.incidents) == 2
+    assert all("?" not in item["label"] for item in reloaded.incidents)
+
+
+def _distinct_bytes_index() -> MemoryObjectIndex:
+    """Two symbols whose every remote object carries its own bytes and sidecar."""
+    return _index_with_family(
+        symbols=["BTCUSDT", "ETHUSDT"],
+        families=[("monthly/trades", "trades")],
+        payload_for_key=_distinct_object_payload,
+    )
+
+
+def test_abort_after_completed_sample_resumes_missing_objects_only(tmp_path: Path) -> None:
+    clean_index = _distinct_bytes_index()
+    clean = run_source_qualification(store_root=tmp_path / "clean", index=clean_index)
+
+    store_root = tmp_path / "resumed"
+    aborting = _distinct_bytes_index()
+    real_fetch = aborting.fetch_bytes
+    completed = {"n": 0}
+
+    def _abort_after_two(url: str) -> bytes:
+        if not url.endswith(".CHECKSUM"):
+            if completed["n"] >= 2:
+                raise _InjectedAbort(url)
+            completed["n"] += 1
+        return real_fetch(url)
+
+    aborting.fetch_bytes = _abort_after_two  # type: ignore[method-assign]
+    with pytest.raises(_InjectedAbort):
+        run_source_qualification(store_root=store_root, index=aborting)
+
+    progress = json.loads((store_root / "cex002_qualification_progress.json").read_text())
+    done_keys = set(progress["objects"])
+    assert len(done_keys) == 2
+
+    resumed_index = _distinct_bytes_index()
+    # Every object outside the pre-abort checkpoint is genuinely absent from the
+    # content-addressed store, including the one whose provider sidecar was already
+    # retained when the abort fired. Nothing else can stand in for its bytes.
+    sample_store = store_root / "raw" / "sha256"
+    assert {path.name for path in sample_store.iterdir() if len(path.name) == 64} == {
+        hashlib.sha256(resumed_index.bodies[vision_object_url(key)]).hexdigest()
+        for key in done_keys
+    }
+
+    fetched: list[str] = []
+    resume_fetch = resumed_index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return resume_fetch(url)
+
+    resumed_index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    resumed = run_source_qualification(store_root=store_root, index=resumed_index)
+
+    # Objects proven before the abort are never fetched again.
+    for key in done_keys:
+        assert vision_object_url(key) not in fetched
+    remaining = {item.key for item in resumed.samples} - done_keys
+    assert remaining
+    for key in remaining:
+        assert vision_object_url(key) in fetched
+    # The interrupted-then-resumed result is semantically identical to a clean run.
+    assert identity_bytes(resumed) == identity_bytes(clean)
+
+
+def _aborted_same_digest_state(store_root: Path) -> tuple[MemoryObjectIndex, str, str]:
+    """Abort a run whose synthetic objects all share one payload, after one object.
+
+    Returns the index, the key proven before the abort, and the key whose provider
+    sidecar was already retained when the abort fired but whose raw bytes were never
+    fetched under its own key.
+    """
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    real_fetch = index.fetch_bytes
+    completed = {"n": 0}
+
+    def _abort_after_one(url: str) -> bytes:
+        if not url.endswith(".CHECKSUM"):
+            if completed["n"] >= 1:
+                raise _InjectedAbort(url)
+            completed["n"] += 1
+        return real_fetch(url)
+
+    index.fetch_bytes = _abort_after_one  # type: ignore[method-assign]
+    with pytest.raises(_InjectedAbort) as aborted:
+        run_source_qualification(store_root=store_root, index=index)
+    index.fetch_bytes = real_fetch  # type: ignore[method-assign]
+
+    aborted_url = str(aborted.value.args[0])
+    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    pending_key = next(
+        obj.key for obj in index.objects[prefix] if vision_object_url(obj.key) == aborted_url
+    )
+    document = json.loads((store_root / "cex002_qualification_progress.json").read_text())
+    proven_key = next(iter(document["objects"]))
+    assert proven_key != pending_key
+    return index, proven_key, pending_key
+
+
+def test_same_digest_cross_key_recovery_skips_the_redundant_raw_fetch(tmp_path: Path) -> None:
+    store_root = tmp_path / "store"
+    index, proven_key, pending_key = _aborted_same_digest_state(store_root)
+    evidence = RetainedChecksumIndex.from_cache(store_root / "list_cache").lookup(pending_key)
+    assert evidence is not None
+    digest = str(evidence["provider_checksum"])
+    # These synthetic objects legitimately share bytes, so the blob retained under the
+    # proven key already sits at the pending object's content address.
+    assert (store_root / "raw" / "sha256" / digest).is_file()
+
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    resumed = run_source_qualification(store_root=store_root, index=index)
+
+    # Exact sidecar filename, sidecar content address, provider checksum and rehashed raw
+    # bytes all agree, so the pending object is adopted with no redundant raw retrieval.
+    assert resumed.resume["recovered_samples"] == 1
+    assert vision_object_url(pending_key) not in fetched
+    assert vision_object_url(proven_key) not in fetched
+    recovered = next(item for item in resumed.samples if item.key == pending_key)
+    assert recovered.sha256 == digest
+    assert recovered.reused_existing is True
+
+
+@pytest.mark.parametrize(
+    "broken_leg", ["sidecar_filename", "sidecar_content_address", "provider_checksum"]
+)
+def test_same_digest_cross_key_recovery_requires_every_leg(
+    tmp_path: Path, broken_leg: str
+) -> None:
+    store_root = tmp_path / "store"
+    index, _proven_key, pending_key = _aborted_same_digest_state(store_root)
+    cache = store_root / "list_cache"
+    evidence = RetainedChecksumIndex.from_cache(cache).lookup(pending_key)
+    assert evidence is not None
+    digest = str(evidence["provider_checksum"])
+    basename = pending_key.rsplit("/", 1)[-1]
+    Path(str(evidence["content_path"])).unlink()
+
+    if broken_leg == "sidecar_filename":
+        # Retained digest and content address are intact, but it names another object.
+        body = f"{digest}  BTCUSDT-trades-1999-01.zip\n".encode()
+        (cache / hashlib.sha256(body).hexdigest()).write_bytes(body)
+    elif broken_leg == "sidecar_content_address":
+        # Correct digest and filename, but not stored at its own content address.
+        body = f"{digest}  {basename}\n".encode()
+        (cache / ("a" * 64)).write_bytes(body)
+    else:
+        # Correctly addressed and named, but it claims a digest that is not retained.
+        body = f"{'b' * 64}  {basename}\n".encode()
+        (cache / hashlib.sha256(body).hexdigest()).write_bytes(body)
+
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    resumed = run_source_qualification(store_root=store_root, index=index)
+
+    # One broken leg withdraws provider authority: the object is retrieved over the
+    # network, never silently adopted from another key's identical bytes.
+    assert resumed.resume["recovered_samples"] == 0
+    assert vision_object_url(pending_key) in fetched
+
+
+def test_same_digest_cross_key_recovery_fails_closed_on_tampered_bytes(tmp_path: Path) -> None:
+    store_root = tmp_path / "store"
+    index, _proven_key, pending_key = _aborted_same_digest_state(store_root)
+    evidence = RetainedChecksumIndex.from_cache(store_root / "list_cache").lookup(pending_key)
+    assert evidence is not None
+    (store_root / "raw" / "sha256" / str(evidence["provider_checksum"])).write_bytes(b"tampered")
+    with pytest.raises(ResumeIntegrityError, match="do not match the retained provider checksum"):
+        run_source_qualification(store_root=store_root, index=index)
+
+
+# --- review-69 retained-sidecar authority --------------------------------------------
+
+
+def _first_sample_run(tmp_path: Path) -> tuple[MemoryObjectIndex, object, Path]:
+    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    report = run_source_qualification(store_root=tmp_path, index=index)
+    return index, report, tmp_path / "cex002_qualification_progress.json"
+
+
+def test_every_sample_checkpoint_records_a_retained_sidecar(tmp_path: Path) -> None:
+    index, report, progress = _first_sample_run(tmp_path)
+    document = json.loads(progress.read_text())
+    assert document["objects"]
+    for key, entry in document["objects"].items():
+        sidecar = Path(entry["provider_checksum_path"])
+        # Even an in-memory index must leave the sidecar retained content-addressably.
+        assert sidecar.is_file()
+        assert sidecar.parent == tmp_path / "list_cache"
+        assert sidecar.name == entry["provider_checksum_sha256"]
+        assert hashlib.sha256(sidecar.read_bytes()).hexdigest() == sidecar.name
+        tokens = sidecar.read_text().strip().split()
+        assert tokens[0] == entry["provider_checksum"] == entry["sha256"]
+        assert tokens[1] == key.rsplit("/", 1)[-1]
+
+
+def test_intact_sidecar_resumes_without_any_network_fetch(tmp_path: Path) -> None:
+    index, first, _progress = _first_sample_run(tmp_path)
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    second = run_source_qualification(store_root=tmp_path, index=index)
+    assert second.resume["reused_samples"] > 0
+    # Neither the sample nor its sidecar is refetched on a proven resume.
+    for sample in second.samples:
+        assert sample.url not in fetched
+        assert f"{sample.url}.CHECKSUM" not in fetched
+    assert identity_bytes(first) == identity_bytes(second)
+
+
+def test_resume_fails_closed_when_the_sidecar_is_deleted(tmp_path: Path) -> None:
+    index, _first, progress = _first_sample_run(tmp_path)
+    document = json.loads(progress.read_text())
+    entry = next(iter(document["objects"].values()))
+    Path(entry["provider_checksum_path"]).unlink()
+    with pytest.raises(ResumeIntegrityError, match="sidecar is missing from the retained store"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_resume_fails_closed_when_the_sidecar_bytes_are_tampered(tmp_path: Path) -> None:
+    index, _first, progress = _first_sample_run(tmp_path)
+    document = json.loads(progress.read_text())
+    entry = next(iter(document["objects"].values()))
+    Path(entry["provider_checksum_path"]).write_bytes(b"tampered sidecar\n")
+    with pytest.raises(ResumeIntegrityError, match="do not match the recorded blob digest"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_resume_fails_closed_when_the_sidecar_is_relocated(tmp_path: Path) -> None:
+    index, _first, progress = _first_sample_run(tmp_path)
+    document = json.loads(progress.read_text())
+    key = next(iter(document["objects"]))
+    entry = document["objects"][key]
+    moved = tmp_path / "elsewhere" / entry["provider_checksum_sha256"]
+    moved.parent.mkdir(parents=True, exist_ok=True)
+    moved.write_bytes(Path(entry["provider_checksum_path"]).read_bytes())
+    entry["provider_checksum_path"] = str(moved)
+    progress.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="not its cache-local content address"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_resume_fails_closed_on_a_substituted_sidecar_digest(tmp_path: Path) -> None:
+    index, _first, progress = _first_sample_run(tmp_path)
+    document = json.loads(progress.read_text())
+    entries = list(document["objects"].values())
+    assert len(entries) >= 2
+    # Point one object's checkpoint at another object's genuine, intact sidecar.
+    entries[0]["provider_checksum_path"] = entries[1]["provider_checksum_path"]
+    entries[0]["provider_checksum_sha256"] = entries[1]["provider_checksum_sha256"]
+    progress.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="names a different object"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+def test_sample_checkpoint_without_sidecar_identity_fails_closed(tmp_path: Path) -> None:
+    index, _first, progress = _first_sample_run(tmp_path)
+    document = json.loads(progress.read_text())
+    for entry in document["objects"].values():
+        entry.pop("provider_checksum_path", None)
+        entry.pop("provider_checksum_sha256", None)
+    progress.write_text(json.dumps(document))
+    with pytest.raises(ResumeIntegrityError, match="sidecar digest is not a 64-character"):
+        run_source_qualification(store_root=tmp_path, index=index)
+
+
+KEY_UNDER_TEST = "data/futures/um/monthly/trades/BTCUSDT/BTCUSDT-trades-2020-01.zip"
+
+
+def _write_sidecar(cache: Path, body: bytes) -> Path:
+    cache.mkdir(parents=True, exist_ok=True)
+    blob = cache / hashlib.sha256(body).hexdigest()
+    blob.write_bytes(body)
+    return blob
+
+
+def test_verify_provider_sidecar_rejects_a_foreign_filename(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    digest = "a" * 64
+    blob = _write_sidecar(cache, f"{digest}  SOME-OTHER-OBJECT.zip\n".encode())
+    with pytest.raises(ResumeIntegrityError, match="names a different object"):
+        verify_provider_sidecar(
+            key=KEY_UNDER_TEST,
+            object_sha256=digest,
+            sidecar_path=blob,
+            sidecar_sha256=blob.name,
+            sidecar_dir=cache,
+        )
+
+
+def test_verify_provider_sidecar_rejects_a_disagreeing_checksum(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    blob = _write_sidecar(
+        cache, f"{'a' * 64}  BTCUSDT-trades-2020-01.zip\n".encode()
+    )
+    with pytest.raises(ResumeIntegrityError, match="disagrees with the retained object digest"):
+        verify_provider_sidecar(
+            key=KEY_UNDER_TEST,
+            object_sha256="b" * 64,
+            sidecar_path=blob,
+            sidecar_sha256=blob.name,
+            sidecar_dir=cache,
+        )
+
+
+def test_verify_provider_sidecar_rejects_more_than_one_record(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    digest = "a" * 64
+    body = (
+        f"{digest}  BTCUSDT-trades-2020-01.zip\n"
+        f"{digest}  BTCUSDT-trades-2020-02.zip\n"
+    ).encode()
+    blob = _write_sidecar(cache, body)
+    with pytest.raises(ResumeIntegrityError, match="exactly one checksum and filename"):
+        verify_provider_sidecar(
+            key=KEY_UNDER_TEST,
+            object_sha256=digest,
+            sidecar_path=blob,
+            sidecar_sha256=blob.name,
+            sidecar_dir=cache,
+        )
+
+
+def test_verify_provider_sidecar_accepts_intact_evidence(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    digest = "a" * 64
+    blob = _write_sidecar(cache, f"{digest}  BTCUSDT-trades-2020-01.zip\n".encode())
+    assert (
+        verify_provider_sidecar(
+            key=KEY_UNDER_TEST,
+            object_sha256=digest,
+            sidecar_path=blob,
+            sidecar_sha256=blob.name,
+            sidecar_dir=cache,
+        )
+        == digest
+    )

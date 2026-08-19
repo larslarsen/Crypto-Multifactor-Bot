@@ -16,10 +16,12 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import random
 import re
+import time
 import zipfile
-from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -33,6 +35,7 @@ from source_audit.download import (
     atomic_download,
     content_addressed_path,
 )
+from source_audit.errors import ChecksumMismatchError, DownloadError, SizeLimitError
 from source_audit.hashing import compute_sha256
 
 TICKET_ID: str = "CEX-002"
@@ -378,6 +381,19 @@ OVERLAP_RECONCILIATION: dict[str, Any] = {
     },
 }
 
+# Gate 1 is bounded source qualification, not acquisition. These are execution budgets
+# for NEW downloads only; they never truncate, reject, or miscount larger source objects,
+# which Gate 2 acquires in full.
+GATE1_NEW_DOWNLOAD_BUDGET_BYTES: int = 268_435_456
+GATE1_MAX_NEW_OBJECT_BYTES: int = 67_108_864
+SAMPLE_BUDGET_BLOCK: str = "sample_budget_exceeded"
+CHECKPOINT_VERSION: int = 1
+
+# Transient transport/service failures are retried; integrity and authentication
+# failures are terminal and must never be retried.
+RETRYABLE_STATUS_CODES: frozenset[int] = frozenset({408, 425, 429, 500, 502, 503, 504, 509})
+TERMINAL_STATUS_CODES: frozenset[int] = frozenset({400, 401, 403, 404, 405, 410})
+
 HISTORICAL_PERPETUAL_RULE: str = (
     "Archive directory names are the historical observation set, not a contract-type "
     "proof. Authenticated current PERPETUAL membership comes only from FAPI "
@@ -401,6 +417,14 @@ _IDENTITY_DROP_KEYS = frozenset(
         "reused_samples",
         "reused_existing",
         "retrieved_at",
+        # Execution-plane volatility: how the run was executed must never change the
+        # semantic identity of what was qualified.
+        "sample_plan",
+        "sample_plan_path",
+        "retry",
+        "retry_journal_path",
+        "listing_checkpoint",
+        "recovered_samples",
     }
 )
 
@@ -446,6 +470,135 @@ class SchemaIdentity:
     kind: str
     fields: tuple[str, ...]
     family_hint: str
+
+
+@dataclass(frozen=True, slots=True)
+class RetryPolicy:
+    """Bounded exponential backoff with jitter for transient transport failures."""
+
+    max_attempts: int = 5
+    base_delay_s: float = 0.5
+    max_delay_s: float = 30.0
+    jitter_ratio: float = 0.25
+
+    def __post_init__(self) -> None:
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+        if self.base_delay_s <= 0 or self.max_delay_s <= 0:
+            raise ValueError("retry delays must be positive")
+        if not 0.0 <= self.jitter_ratio < 1.0:
+            raise ValueError("jitter_ratio must be in [0, 1)")
+
+    def backoff_delay(self, attempt: int) -> float:
+        """Un-jittered delay before retry ``attempt`` (1-based)."""
+        return min(self.base_delay_s * (2 ** (attempt - 1)), self.max_delay_s)
+
+
+def failure_status_code(exc: BaseException) -> int | None:
+    context = getattr(exc, "context", None)
+    if isinstance(context, Mapping):
+        status = context.get("status_code")
+        if isinstance(status, int):
+            return status
+    return None
+
+
+def is_retryable_failure(exc: BaseException) -> bool:
+    """True only for transient transport/service failures.
+
+    Integrity failures (checksum, size limit, schema) and authentication or
+    not-found responses are terminal and fail immediately.
+    """
+    if isinstance(exc, (ChecksumMismatchError, SizeLimitError, ResumeIntegrityError)):
+        return False
+    if isinstance(exc, SourceQualificationError):
+        return False
+    if not isinstance(exc, DownloadError):
+        return False
+    status = failure_status_code(exc)
+    if status is None:
+        # Connect reset/timeout and other transport failures carry no HTTP status.
+        return True
+    if status in RETRYABLE_STATUS_CODES:
+        return True
+    if status in TERMINAL_STATUS_CODES:
+        return False
+    return 500 <= status < 600
+
+
+def redact_retry_label(label: str) -> str:
+    """Retry labels are journalled, so drop any query string before persisting."""
+    return label.split("?", 1)[0]
+
+
+@dataclass
+class RetryRunner:
+    """Runs a callable under a bounded retry policy and records incident counts.
+
+    Exactly one runner owns the attempt budget for a given remote request; runners are
+    never nested, so the nominal per-request bound cannot multiply. ``sleeper`` and
+    ``jitter`` are injectable so tests are deterministic and never actually sleep.
+    """
+
+    policy: RetryPolicy = field(default_factory=RetryPolicy)
+    sleeper: Callable[[float], None] = time.sleep
+    jitter: Callable[[float], float] | None = None
+    journal: RetryJournal | None = None
+    attempts: int = 0
+    retries: int = 0
+    incidents: list[dict[str, Any]] = field(default_factory=list)
+
+    def _jittered(self, delay: float) -> float:
+        if self.jitter is not None:
+            return self.jitter(delay)
+        span = delay * self.policy.jitter_ratio
+        return max(0.0, random.uniform(delay - span, delay + span))
+
+    def run(self, label: str, call: Callable[[], Any]) -> Any:
+        last: BaseException | None = None
+        for attempt in range(1, self.policy.max_attempts + 1):
+            self.attempts += 1
+            try:
+                return call()
+            except BaseException as exc:  # noqa: BLE001 - re-raised below
+                if not is_retryable_failure(exc):
+                    raise
+                last = exc
+                incident = {
+                    "label": redact_retry_label(label),
+                    "attempt": attempt,
+                    "status_code": failure_status_code(exc),
+                    "error": type(exc).__name__,
+                    "retryable": True,
+                }
+                self.incidents.append(incident)
+                # Persist as it happens: an aborted run must not erase retry evidence.
+                if self.journal is not None:
+                    self.journal.append(incident)
+                if attempt >= self.policy.max_attempts:
+                    break
+                self.retries += 1
+                self.sleeper(self._jittered(self.policy.backoff_delay(attempt)))
+        raise SourceQualificationError(
+            "retryable request failed after the bounded attempt limit",
+            context={
+                "label": label,
+                "attempts": self.policy.max_attempts,
+                "last_error": str(last),
+            },
+        ) from last
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "max_attempts": self.policy.max_attempts,
+            "base_delay_s": self.policy.base_delay_s,
+            "max_delay_s": self.policy.max_delay_s,
+            "jitter_ratio": self.policy.jitter_ratio,
+            "attempts": self.attempts,
+            "retries": self.retries,
+            "incidents": list(self.incidents),
+            "journal_path": None if self.journal is None else str(self.journal.path),
+        }
 
 
 class ObjectIndex(Protocol):
@@ -583,6 +736,7 @@ class MemoryCoinalyzeTransport:
 @dataclass(frozen=True, slots=True)
 class SampleRecord:
     product: str
+    products: tuple[str, ...]
     family: str
     symbol: str
     regime: str
@@ -617,6 +771,7 @@ class ProductMatrixRow:
     uncovered_listed_symbols: tuple[str, ...]
     uncovered_universe_symbols: tuple[str, ...]
     universe_coverage_gaps: tuple[Mapping[str, Any], ...]
+    sample_budget_blocked: tuple[Mapping[str, Any], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -639,6 +794,9 @@ class QualificationReport:
     licensing: Mapping[str, Any]
     incidents: tuple[Mapping[str, Any], ...]
     resume: Mapping[str, Any]
+    sample_plan: Mapping[str, Any]
+    retry: Mapping[str, Any]
+    listing_checkpoint: Mapping[str, Any]
     coinalyze: Mapping[str, Any]
     accepted: bool
 
@@ -744,12 +902,26 @@ def write_s3_list_bucket(
     truncated: bool = False,
     continuation: str | None = None,
     next_marker: str | None = None,
+    prefix: str | None = None,
+    delimiter: str | None = None,
+    continuation_token: str | None = None,
 ) -> str:
+    """Render a ListObjectsV2 response.
+
+    ``prefix``/``delimiter``/``continuation_token`` echo the originating request the way
+    S3 does, which is what makes a retained response self-identifying.
+    """
     parts = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
-        f"<IsTruncated>{'true' if truncated else 'false'}</IsTruncated>",
     ]
+    if prefix is not None:
+        parts.append(f"<Prefix>{prefix}</Prefix>")
+    if delimiter is not None:
+        parts.append(f"<Delimiter>{delimiter}</Delimiter>")
+    if continuation_token is not None:
+        parts.append(f"<ContinuationToken>{continuation_token}</ContinuationToken>")
+    parts.append(f"<IsTruncated>{'true' if truncated else 'false'}</IsTruncated>")
     if continuation is not None:
         parts.append(f"<NextContinuationToken>{continuation}</NextContinuationToken>")
     if next_marker is not None:
@@ -917,7 +1089,106 @@ def symbols_from_prefixes(prefixes: Sequence[str]) -> list[str]:
     return symbols
 
 
-def select_regime_objects(objects: Sequence[ListingObject]) -> dict[str, ListingObject]:
+@dataclass(frozen=True, slots=True)
+class FamilyInventory:
+    """Complete listing of one physical archive family, traversed exactly once."""
+
+    family: str
+    prefix: str
+    listed: bool
+    symbols: tuple[str, ...]
+    objects: Mapping[str, tuple[ListingObject, ...]]
+    incidents: tuple[Mapping[str, Any], ...]
+
+    def object_count(self, symbol: str) -> int:
+        return len(self.objects.get(symbol, ()))
+
+
+def build_family_inventory(
+    index: ObjectIndex,
+    *,
+    families: Sequence[str] = MEMBERSHIP_FAMILY_PREFIXES,
+) -> dict[str, FamilyInventory]:
+    """Inventory every unique physical family once.
+
+    Logical product rows are derived from this shared inventory, so the same physical
+    prefix is never traversed again for a second product.
+    """
+    inventory: dict[str, FamilyInventory] = {}
+    for family in families:
+        prefix = vision_prefix(*family.split("/"))
+        incidents: list[dict[str, Any]] = []
+        try:
+            prefix_list = index.list_common_prefixes(prefix)
+        except SourceQualificationError as exc:
+            inventory[family] = FamilyInventory(
+                family=family,
+                prefix=prefix,
+                listed=False,
+                symbols=(),
+                objects={},
+                incidents=(
+                    {"family": family, "kind": "listing_error", "note": str(exc)},
+                ),
+            )
+            continue
+        symbols = symbols_from_prefixes(prefix_list)
+        objects: dict[str, tuple[ListingObject, ...]] = {}
+        for symbol in symbols:
+            try:
+                objs = [
+                    obj
+                    for obj in _list_objects_for_symbol(index, family, prefix, symbol)
+                    if not obj.key.endswith(".CHECKSUM")
+                ]
+            except SourceQualificationError as exc:
+                incidents.append(
+                    {
+                        "family": family,
+                        "symbol": symbol,
+                        "kind": "listing_error",
+                        "note": str(exc),
+                    }
+                )
+                continue
+            objects[symbol] = tuple(objs)
+        inventory[family] = FamilyInventory(
+            family=family,
+            prefix=prefix,
+            listed=True,
+            symbols=tuple(symbols),
+            objects=objects,
+            incidents=tuple(incidents),
+        )
+    return inventory
+
+
+def inventory_symbols(inventory: Mapping[str, FamilyInventory]) -> list[str]:
+    """Discovered universe as the union of every inventoried family listing."""
+    union: set[str] = set()
+    for entry in inventory.values():
+        union.update(entry.symbols)
+    if not union:
+        incidents = [
+            f"{entry.family}:{item.get('note')}"
+            for entry in inventory.values()
+            for item in entry.incidents
+        ]
+        raise SourceQualificationError(
+            "official archive family union produced an empty historical family",
+            context={"incidents": incidents},
+        )
+    return sorted(union)
+
+
+def select_regime_candidates(
+    objects: Sequence[ListingObject],
+) -> dict[str, tuple[ListingObject, ...]]:
+    """Regime buckets with candidates ordered smallest-first.
+
+    Regime evidence (early/middle/recent) is preserved; within a regime the planner is
+    free to choose the smallest adequate object.
+    """
     usable = [
         obj
         for obj in sorted(objects, key=lambda item: item.key)
@@ -925,11 +1196,199 @@ def select_regime_objects(objects: Sequence[ListingObject]) -> dict[str, Listing
     ]
     if not usable:
         return {}
-    return {
-        "early": usable[0],
-        "middle": usable[len(usable) // 2],
-        "recent": usable[-1],
-    }
+    count = len(usable)
+    if count < 3:
+        buckets = {
+            "early": [usable[0]],
+            "middle": [usable[count // 2]],
+            "recent": [usable[-1]],
+        }
+    else:
+        third = count // 3
+        buckets = {
+            "early": usable[:third],
+            "middle": usable[third : 2 * third] or [usable[count // 2]],
+            "recent": usable[2 * third :],
+        }
+    ordered: dict[str, tuple[ListingObject, ...]] = {}
+    for regime, items in buckets.items():
+        ordered[regime] = tuple(
+            sorted(
+                items,
+                key=lambda obj: (
+                    obj.size if obj.size is not None else 1 << 62,
+                    obj.key,
+                ),
+            )
+        )
+    return ordered
+
+
+@dataclass(frozen=True, slots=True)
+class SamplePlanEntry:
+    family: str
+    symbol: str
+    regime: str
+    products: tuple[str, ...]
+    key: str
+    url: str
+    byte_size: int
+    action: str
+    block_reason: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class SamplePlan:
+    """Deterministic preflight plan produced before any new sample byte is fetched."""
+
+    entries: tuple[SamplePlanEntry, ...]
+    blocked: tuple[Mapping[str, Any], ...]
+    new_download_bytes: int
+    retained_bytes: int
+    budget_bytes: int
+    max_object_bytes: int
+    unique_new_objects: int = 0
+    unique_retained_objects: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "entries": [asdict(entry) for entry in self.entries],
+            "blocked": [dict(item) for item in self.blocked],
+            "new_download_bytes": self.new_download_bytes,
+            "retained_bytes": self.retained_bytes,
+            "budget_bytes": self.budget_bytes,
+            "max_object_bytes": self.max_object_bytes,
+            "unique_new_objects": self.unique_new_objects,
+            "unique_retained_objects": self.unique_retained_objects,
+            "note": (
+                "Gate 1 execution budget for new downloads only; it never truncates, "
+                "rejects, or miscounts larger source objects"
+            ),
+        }
+
+
+def build_sample_plan(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    family_products: Mapping[str, tuple[str, ...]],
+    sample_symbols: Sequence[str],
+    delisted: Sequence[str],
+    retained_keys: Mapping[str, int],
+    budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    max_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
+) -> SamplePlan:
+    """Plan every sample before downloading, choosing the smallest adequate objects.
+
+    Already retained, verified objects never consume the new-download budget. When no
+    candidate can fit, the regime is emitted as a typed ``sample_budget_exceeded`` block
+    carrying the required object identity and size instead of being silently dropped.
+    """
+    entries: list[SamplePlanEntry] = []
+    blocked: list[dict[str, Any]] = []
+    delisted_set = set(delisted)
+    sample_set = set(sample_symbols)
+    spent = 0
+    retained_total = 0
+    # Budget and acquisition are accounted per unique remote object. Regime and product
+    # aliases of an object already planned are free and are never fetched twice.
+    emitted: set[str] = set()
+    retained_seen: set[str] = set()
+    for family in sorted(inventory):
+        products = family_products.get(family, ())
+        if not products:
+            continue
+        entry = inventory[family]
+        for symbol in entry.symbols:
+            if symbol not in sample_set:
+                continue
+            candidates = select_regime_candidates(entry.objects.get(symbol, ()))
+            if not candidates:
+                continue
+            regimes = dict(candidates)
+            if symbol in delisted_set:
+                regimes["delisted"] = candidates.get("recent") or next(iter(candidates.values()))
+            for regime in sorted(regimes):
+                options = regimes[regime]
+                if not options:
+                    continue
+
+                def _entry(obj: ListingObject, action: str) -> SamplePlanEntry:
+                    return SamplePlanEntry(
+                        family=family,
+                        symbol=symbol,
+                        regime=regime,
+                        products=products,
+                        key=obj.key,
+                        url=vision_object_url(obj.key),
+                        byte_size=int(obj.size) if obj.size is not None else 0,
+                        action=action,
+                    )
+
+                chosen: SamplePlanEntry | None = None
+                for obj in options:
+                    if obj.key in emitted:
+                        chosen = _entry(obj, "alias")
+                        break
+                for obj in options if chosen is None else ():
+                    if obj.key in retained_keys:
+                        if obj.key not in retained_seen:
+                            retained_seen.add(obj.key)
+                            retained_total += retained_keys[obj.key]
+                        emitted.add(obj.key)
+                        chosen = _entry(obj, "reuse_retained")
+                        break
+                for obj in options if chosen is None else ():
+                    size = int(obj.size) if obj.size is not None else 0
+                    if size <= 0 or size > max_object_bytes:
+                        continue
+                    if spent + size > budget_bytes:
+                        continue
+                    spent += size
+                    emitted.add(obj.key)
+                    chosen = _entry(obj, "download")
+                    break
+                if chosen is None:
+                    smallest = options[0]
+                    required = int(smallest.size) if smallest.size is not None else 0
+                    blocked.append(
+                        {
+                            "kind": SAMPLE_BUDGET_BLOCK,
+                            "family": family,
+                            "symbol": symbol,
+                            "regime": regime,
+                            "products": list(products),
+                            "required_key": smallest.key,
+                            "required_bytes": required,
+                            "max_object_bytes": max_object_bytes,
+                            "budget_bytes": budget_bytes,
+                            "budget_remaining_bytes": max(budget_bytes - spent, 0),
+                        }
+                    )
+                    entries.append(
+                        SamplePlanEntry(
+                            family=family,
+                            symbol=symbol,
+                            regime=regime,
+                            products=products,
+                            key=smallest.key,
+                            url=vision_object_url(smallest.key),
+                            byte_size=required,
+                            action="blocked",
+                            block_reason=SAMPLE_BUDGET_BLOCK,
+                        )
+                    )
+                    continue
+                entries.append(chosen)
+    return SamplePlan(
+        entries=tuple(entries),
+        blocked=tuple(blocked),
+        new_download_bytes=spent,
+        retained_bytes=retained_total,
+        budget_bytes=budget_bytes,
+        max_object_bytes=max_object_bytes,
+        unique_new_objects=len(emitted) - len(retained_seen),
+        unique_retained_objects=len(retained_seen),
+    )
 
 
 def _uncovered_listed_symbols(
@@ -1067,21 +1526,8 @@ def _list_objects_for_symbol(
 
 
 def discover_historical_symbols(index: ObjectIndex) -> list[str]:
-    prefixes: list[str] = []
-    incidents: list[str] = []
-    for family in MEMBERSHIP_FAMILY_PREFIXES:
-        prefix = vision_prefix(*family.split("/"))
-        try:
-            prefixes.extend(index.list_common_prefixes(prefix))
-        except SourceQualificationError as exc:
-            incidents.append(f"{family}:{exc}")
-    symbols = symbols_from_prefixes(prefixes)
-    if not symbols:
-        raise SourceQualificationError(
-            "official archive family union produced an empty historical family",
-            context={"incidents": incidents},
-        )
-    return symbols
+    """Discovered universe via the shared single-traversal family inventory."""
+    return inventory_symbols(build_family_inventory(index))
 
 
 def parse_current_perpetuals(payload: Mapping[str, Any]) -> list[str]:
@@ -1110,25 +1556,708 @@ def parse_current_perpetuals(payload: Mapping[str, Any]) -> list[str]:
     return sorted(set(current))
 
 
-def _load_progress(path: Path) -> dict[str, Any]:
+def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8"
+    )
+    tmp.replace(path)
+
+
+def _checkpoint_document(kind: str, body: Mapping[str, Any]) -> dict[str, Any]:
+    return {"ticket": TICKET_ID, "kind": kind, "version": CHECKPOINT_VERSION, **dict(body)}
+
+
+def read_checkpoint_document(path: Path, *, kind: str) -> dict[str, Any] | None:
+    """Load a durable checkpoint document, or ``None`` when it is genuinely absent.
+
+    A present but malformed, foreign, or wrong-version document is a resume-integrity
+    failure. Silently degrading it to an empty store would erase durable resume authority
+    and repeat remote work.
+    """
     if not path.exists():
-        return {"objects": {}}
+        return None
+    if not path.is_file():
+        raise ResumeIntegrityError(
+            "checkpoint path exists but is not a file", context={"path": str(path)}
+        )
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {"objects": {}}
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ResumeIntegrityError(
+            "checkpoint document is unreadable", context={"path": str(path)}
+        ) from exc
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ResumeIntegrityError(
+            "checkpoint document is not valid JSON", context={"path": str(path)}
+        ) from exc
     if not isinstance(data, dict):
-        return {"objects": {}}
-    if not isinstance(data.get("objects"), dict):
-        data["objects"] = {}
+        raise ResumeIntegrityError(
+            "checkpoint document is not an object", context={"path": str(path)}
+        )
+    if data.get("ticket") != TICKET_ID:
+        raise ResumeIntegrityError(
+            "checkpoint document belongs to another ticket",
+            context={"path": str(path), "ticket": data.get("ticket")},
+        )
+    if data.get("kind") != kind:
+        raise ResumeIntegrityError(
+            "checkpoint document kind mismatch",
+            context={"path": str(path), "expected": kind, "found": data.get("kind")},
+        )
+    if data.get("version") != CHECKPOINT_VERSION:
+        raise ResumeIntegrityError(
+            "unsupported checkpoint document version",
+            context={"path": str(path), "version": data.get("version")},
+        )
     return data
 
 
-def _save_progress(path: Path, progress: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(progress, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+def _require_hex_digest(value: Any, *, label: str, context: Mapping[str, Any]) -> str:
+    digest = str(value or "").lower().strip()
+    if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+        raise ResumeIntegrityError(
+            f"{label} is not a 64-character hex digest", context=dict(context)
+        )
+    return digest
+
+
+def listing_request_identity(
+    *,
+    endpoint: str,
+    prefix: str,
+    delimiter: str,
+    continuation_token: str | None,
+) -> dict[str, Any]:
+    """Durable, redacted identity of one ListObjectsV2 request."""
+    return {
+        "endpoint": endpoint,
+        "list_type": "2",
+        "prefix": prefix,
+        "delimiter": delimiter,
+        "continuation_token": continuation_token,
+    }
+
+
+def listing_request_key(identity: Mapping[str, Any]) -> str:
+    blob = json.dumps(dict(identity), sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _normalized_identity(request: Mapping[str, Any]) -> dict[str, Any]:
+    token = request.get("continuation_token")
+    return listing_request_identity(
+        endpoint=str(request.get("endpoint") or ""),
+        prefix=str(request.get("prefix") or ""),
+        delimiter=str(request.get("delimiter") or ""),
+        continuation_token=None if token is None else str(token),
+    )
+
+
+@dataclass
+class RetryJournal:
+    """Atomically durable, redacted retry-incident journal.
+
+    Incidents are persisted as they occur so an aborted run cannot erase the evidence
+    that remote work was retried.
+    """
+
+    path: Path | None = None
+    incidents: list[dict[str, Any]] = field(default_factory=list)
+
+    @classmethod
+    def load(cls, path: Path) -> RetryJournal:
+        document = read_checkpoint_document(path, kind="retry_journal")
+        if document is None:
+            return cls(path=path)
+        recorded = document.get("incidents")
+        if not isinstance(recorded, list):
+            raise ResumeIntegrityError(
+                "retry journal incidents are not a list", context={"path": str(path)}
+            )
+        return cls(path=path, incidents=[dict(item) for item in recorded])
+
+    def append(self, incident: Mapping[str, Any]) -> None:
+        self.incidents.append(dict(incident))
+        if self.path is not None:
+            _atomic_write_json(
+                self.path, _checkpoint_document("retry_journal", {"incidents": self.incidents})
+            )
+
+
+@dataclass
+class ListingCheckpointStore:
+    """Request-keyed listing checkpoint binding a request identity to retained bytes.
+
+    Reuse requires that the checkpoint key, the stored request, the response's own echoed
+    prefix/delimiter/continuation token, the parsed page metadata, the digest, and the
+    cache-local content-addressed path all agree. Anything else fails closed.
+    """
+
+    path: Path
+    cache_dir: Path
+    entries: dict[str, dict[str, Any]] = field(default_factory=dict)
+    unclaimed: list[dict[str, Any]] = field(default_factory=list)
+    reused: int = 0
+    fetched: int = 0
+
+    @classmethod
+    def load(cls, path: Path, cache_dir: Path) -> ListingCheckpointStore:
+        document = read_checkpoint_document(path, kind="listing_checkpoint")
+        if document is None:
+            return cls(path=path, cache_dir=cache_dir)
+        entries = document.get("entries")
+        unclaimed = document.get("unclaimed", [])
+        if not isinstance(entries, dict) or not isinstance(unclaimed, list):
+            raise ResumeIntegrityError(
+                "listing checkpoint document has an invalid shape",
+                context={"path": str(path)},
+            )
+        store = cls(
+            path=path,
+            cache_dir=cache_dir,
+            entries={},
+            unclaimed=[dict(item) for item in unclaimed],
+        )
+        for key, entry in entries.items():
+            store.entries[str(key)] = store._validated_entry(str(key), entry)
+        return store
+
+    def _validated_entry(self, key: str, entry: Any) -> dict[str, Any]:
+        context = {"path": str(self.path), "request_key": key}
+        if not isinstance(entry, dict):
+            raise ResumeIntegrityError("listing checkpoint entry is not an object", context=context)
+        request = entry.get("request")
+        if not isinstance(request, dict):
+            raise ResumeIntegrityError(
+                "listing checkpoint entry has no request identity", context=context
+            )
+        identity = _normalized_identity(request)
+        if dict(request) != identity:
+            raise ResumeIntegrityError(
+                "listing checkpoint request identity is malformed", context=context
+            )
+        if listing_request_key(identity) != key:
+            raise ResumeIntegrityError(
+                "listing checkpoint key is not the canonical hash of its request",
+                context=context,
+            )
+        digest = _require_hex_digest(
+            entry.get("response_sha256"), label="listing response digest", context=context
+        )
+        expected_path = content_addressed_path(self.cache_dir, digest)
+        if Path(str(entry.get("content_path") or "")) != expected_path:
+            raise ResumeIntegrityError(
+                "listing checkpoint content path is not the cache-local content address",
+                context={**context, "expected": str(expected_path)},
+            )
+        if not isinstance(entry.get("is_truncated"), bool):
+            raise ResumeIntegrityError(
+                "listing checkpoint truncation flag is not a bool", context=context
+            )
+        token = entry.get("next_continuation_token")
+        if token is not None and not isinstance(token, str):
+            raise ResumeIntegrityError(
+                "listing checkpoint next token is not a string", context=context
+            )
+        if not isinstance(entry.get("byte_size"), int) or int(entry["byte_size"]) < 0:
+            raise ResumeIntegrityError(
+                "listing checkpoint byte size is invalid", context=context
+            )
+        validated = dict(entry)
+        validated["request"] = identity
+        validated["response_sha256"] = digest
+        validated["content_path"] = str(expected_path)
+        return validated
+
+    def _flush(self) -> None:
+        _atomic_write_json(
+            self.path,
+            _checkpoint_document(
+                "listing_checkpoint", {"entries": self.entries, "unclaimed": self.unclaimed}
+            ),
+        )
+
+    def record(self, identity: Mapping[str, Any], entry: Mapping[str, Any]) -> None:
+        key = listing_request_key(_normalized_identity(identity))
+        self.entries[key] = self._validated_entry(key, entry)
+        self._flush()
+
+    def retained_bytes(self, identity: Mapping[str, Any]) -> bytes | None:
+        """Retained response for this exact request, or ``None`` when not checkpointed.
+
+        Every reuse re-proves the full chain: key, stored request, retained digest,
+        cache-local content address, the response's own echoed request identity, and the
+        parsed truncation/next-token metadata.
+        """
+        wanted = _normalized_identity(identity)
+        key = listing_request_key(wanted)
+        entry = self.entries.get(key)
+        if not entry:
+            return None
+        entry = self._validated_entry(key, entry)
+        context = {"request_key": key, "prefix": wanted["prefix"]}
+        if entry["request"] != wanted:
+            raise ResumeIntegrityError(
+                "listing checkpoint request does not match the resumed request",
+                context=context,
+            )
+        raw_path = Path(entry["content_path"])
+        if not raw_path.is_file():
+            raise ResumeIntegrityError(
+                "listing checkpoint points at a missing retained response",
+                context={**context, "content_path": str(raw_path)},
+            )
+        actual = compute_sha256(raw_path)
+        if actual != entry["response_sha256"]:
+            raise ResumeIntegrityError(
+                "listing checkpoint hash mismatch; refusing tampered retained response",
+                context={**context, "expected": entry["response_sha256"], "actual": actual},
+            )
+        payload = raw_path.read_bytes()
+        echoed = parse_listing_identity(payload, endpoint=wanted["endpoint"])
+        if echoed != wanted:
+            raise ResumeIntegrityError(
+                "retained response does not echo the resumed request identity",
+                context={**context, "echoed": echoed},
+            )
+        _prefixes, _objects, truncated, next_token = parse_s3_list_bucket(
+            payload.decode("utf-8")
+        )
+        if truncated != entry["is_truncated"] or next_token != entry.get(
+            "next_continuation_token"
+        ):
+            raise ResumeIntegrityError(
+                "retained response pagination metadata does not match the checkpoint",
+                context={
+                    **context,
+                    "parsed_truncated": truncated,
+                    "parsed_next_token": next_token,
+                },
+            )
+        self.reused += 1
+        return payload
+
+    def bootstrap(self, *, endpoint: str) -> dict[str, int]:
+        """Claim retained content-addressed blobs whose request identity is provable.
+
+        A ListBucketResult echoes its own prefix, delimiter and continuation token, so the
+        originating request is recoverable from the bytes. Anything unprovable is retained
+        as unclaimed evidence: never redownloaded over, never misattributed, never deleted.
+        """
+        claimed = 0
+        checksum_blobs = 0
+        unclaimed = 0
+        if not self.cache_dir.is_dir():
+            return {"claimed": 0, "checksum_blobs": 0, "unclaimed": 0}
+        known_unclaimed = {str(item.get("content_path")) for item in self.unclaimed}
+
+        def _mark_unclaimed(blob: Path, reason: str, note: str | None = None) -> int:
+            if str(blob) in known_unclaimed:
+                return 0
+            record: dict[str, Any] = {"content_path": str(blob), "reason": reason}
+            if note is not None:
+                record["note"] = note
+            self.unclaimed.append(record)
+            known_unclaimed.add(str(blob))
+            return 1
+
+        for blob in sorted(self.cache_dir.iterdir()):
+            if not blob.is_file() or len(blob.name) != 64:
+                continue
+            digest = compute_sha256(blob)
+            if digest != blob.name:
+                unclaimed += _mark_unclaimed(blob, "content_address_mismatch")
+                continue
+            payload = blob.read_bytes()
+            identity = parse_listing_identity(payload, endpoint=endpoint)
+            if identity is None:
+                if parse_provider_checksum(payload.decode("utf-8", errors="replace")) is not None:
+                    checksum_blobs += 1
+                    continue
+                unclaimed += _mark_unclaimed(blob, "unprovable_request_identity")
+                continue
+            key = listing_request_key(identity)
+            if key in self.entries:
+                continue
+            try:
+                _prefixes, _objects, truncated, next_token = parse_s3_list_bucket(
+                    payload.decode("utf-8")
+                )
+            except SourceQualificationError as exc:
+                unclaimed += _mark_unclaimed(blob, "unparsable_listing_page", str(exc))
+                continue
+            self.entries[key] = self._validated_entry(
+                key,
+                {
+                    "request": identity,
+                    "response_sha256": digest,
+                    "content_path": str(content_addressed_path(self.cache_dir, digest)),
+                    "byte_size": len(payload),
+                    "retrieved_at": None,
+                    "bootstrapped": True,
+                    "is_truncated": truncated,
+                    "next_continuation_token": next_token,
+                },
+            )
+            claimed += 1
+        self._flush()
+        return {"claimed": claimed, "checksum_blobs": checksum_blobs, "unclaimed": unclaimed}
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "path": str(self.path),
+            "entries": len(self.entries),
+            "reused_requests": self.reused,
+            "fetched_requests": self.fetched,
+            "unclaimed_evidence": len(self.unclaimed),
+        }
+
+
+def parse_listing_identity(payload: bytes, *, endpoint: str) -> dict[str, Any] | None:
+    """Recover the originating ListObjectsV2 request identity from a response body."""
+    try:
+        root = ElementTree.fromstring(payload.decode("utf-8"))
+    except (ElementTree.ParseError, UnicodeDecodeError):
+        return None
+    if _local_tag(root.tag) != "ListBucketResult":
+        return None
+    prefix_node = _first_child(root, "Prefix")
+    delimiter_node = _first_child(root, "Delimiter")
+    token_node = _first_child(root, "ContinuationToken")
+    if prefix_node is None or delimiter_node is None:
+        return None
+    return listing_request_identity(
+        endpoint=endpoint,
+        prefix=prefix_node.text or "",
+        delimiter=delimiter_node.text or "",
+        continuation_token=None if token_node is None else (token_node.text or ""),
+    )
+
+
+@dataclass
+class RetainedChecksumIndex:
+    """Provider checksum sidecars already retained on disk, keyed by object basename.
+
+    A sidecar only carries provider authority while its bytes still hash to its own
+    content-addressed filename, so every lookup re-proves that before returning it.
+    """
+
+    cache_dir: Path | None = None
+    by_basename: dict[str, dict[str, Any]] = field(default_factory=dict)
+    ambiguous: set[str] = field(default_factory=set)
+
+    @classmethod
+    def from_cache(cls, cache_dir: Path) -> RetainedChecksumIndex:
+        index = cls(cache_dir=cache_dir)
+        if not cache_dir.is_dir():
+            return index
+        for blob in sorted(cache_dir.iterdir()):
+            if not blob.is_file() or len(blob.name) != 64:
+                continue
+            body = blob.read_bytes()
+            if body[:5] == b"<?xml":
+                continue
+            if compute_sha256(blob) != blob.name:
+                # Not content-addressed: never provider authority.
+                continue
+            text_body = body.decode("utf-8", errors="replace")
+            digest = parse_provider_checksum(text_body)
+            if digest is None:
+                continue
+            tokens = text_body.strip().split()
+            if len(tokens) < 2:
+                continue
+            basename = tokens[1].strip()
+            if basename in index.by_basename:
+                if index.by_basename[basename]["provider_checksum"] != digest:
+                    index.ambiguous.add(basename)
+                continue
+            index.by_basename[basename] = {
+                "provider_checksum": digest,
+                "content_path": str(blob),
+                "blob_sha256": blob.name,
+            }
+        return index
+
+    def lookup(self, key: str) -> dict[str, Any] | None:
+        basename = key.rsplit("/", 1)[-1]
+        if basename in self.ambiguous:
+            return None
+        evidence = self.by_basename.get(basename)
+        if evidence is None:
+            return None
+        blob = Path(str(evidence["content_path"]))
+        if not blob.is_file():
+            return None
+        actual = compute_sha256(blob)
+        if actual != str(evidence["blob_sha256"]) or actual != blob.name:
+            raise ResumeIntegrityError(
+                "retained provider checksum sidecar no longer matches its content address",
+                context={"key": key, "content_path": str(blob), "actual": actual},
+            )
+        parsed = parse_provider_checksum(blob.read_bytes().decode("utf-8", errors="replace"))
+        if parsed != str(evidence["provider_checksum"]):
+            raise ResumeIntegrityError(
+                "retained provider checksum sidecar bytes changed",
+                context={"key": key, "content_path": str(blob)},
+            )
+        return dict(evidence)
+
+
+@dataclass
+class SampleCheckpointStore:
+    """Per-object sample checkpoint written atomically as each object is verified."""
+
+    path: Path
+    sidecar_dir: Path | None = None
+    objects: dict[str, dict[str, Any]] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
+    recovered: int = 0
+
+    @classmethod
+    def load(cls, path: Path, sidecar_dir: Path | None = None) -> SampleCheckpointStore:
+        document = read_checkpoint_document(path, kind="sample_checkpoint")
+        if document is None:
+            return cls(path=path)
+        objects = document.get("objects")
+        if not isinstance(objects, dict):
+            raise ResumeIntegrityError(
+                "sample checkpoint objects are not an object", context={"path": str(path)}
+            )
+        store = cls(
+            path=path,
+            sidecar_dir=sidecar_dir,
+            extra={
+                key: value
+                for key, value in document.items()
+                if key not in {"objects", "ticket", "kind", "version"}
+            },
+        )
+        for key, entry in objects.items():
+            store.objects[str(key)] = store._validated_entry(str(key), entry)
+        return store
+
+    def _validated_entry(self, key: str, entry: Any) -> dict[str, Any]:
+        context = {"path": str(self.path), "key": key}
+        if not isinstance(entry, dict):
+            raise ResumeIntegrityError("sample checkpoint entry is not an object", context=context)
+        if entry.get("status") != "complete":
+            raise ResumeIntegrityError(
+                "sample checkpoint entry is not a completed object", context=context
+            )
+        digest = _require_hex_digest(entry.get("sha256"), label="sample digest", context=context)
+        provider = _require_hex_digest(
+            entry.get("provider_checksum"), label="provider checksum", context=context
+        )
+        if provider != digest:
+            raise ResumeIntegrityError(
+                "sample checkpoint provider checksum disagrees with the object digest",
+                context={**context, "sha256": digest, "provider_checksum": provider},
+            )
+        if entry.get("checksum_match") is not True:
+            raise ResumeIntegrityError(
+                "sample checkpoint entry is not checksum-verified", context=context
+            )
+        if str(entry.get("url") or "") != vision_object_url(key):
+            raise ResumeIntegrityError(
+                "sample checkpoint url does not match the object key", context=context
+            )
+        size = entry.get("byte_size")
+        if not isinstance(size, int) or size <= 0:
+            raise ResumeIntegrityError("sample checkpoint byte size is invalid", context=context)
+        fields = entry.get("schema_fields")
+        if not isinstance(fields, list) or not fields:
+            raise ResumeIntegrityError(
+                "sample checkpoint schema fields are missing", context=context
+            )
+        if not str(entry.get("schema_kind") or ""):
+            raise ResumeIntegrityError(
+                "sample checkpoint schema kind is missing", context=context
+            )
+        sidecar_path = str(entry.get("provider_checksum_path") or "")
+        sidecar_digest = _require_hex_digest(
+            entry.get("provider_checksum_sha256"),
+            label="sample checkpoint sidecar digest",
+            context=context,
+        )
+        if not sidecar_path:
+            raise ResumeIntegrityError(
+                "sample checkpoint has no provider sidecar path", context=context
+            )
+        if self.sidecar_dir is not None:
+            expected = content_addressed_path(self.sidecar_dir, sidecar_digest)
+            if Path(sidecar_path) != expected:
+                raise ResumeIntegrityError(
+                    "sample checkpoint sidecar path is not its cache-local content address",
+                    context={**context, "expected": str(expected)},
+                )
+        validated = dict(entry)
+        validated["sha256"] = digest
+        validated["provider_checksum"] = provider
+        return validated
+
+    def get(self, key: str) -> dict[str, Any] | None:
+        entry = self.objects.get(key)
+        return None if entry is None else self._validated_entry(key, entry)
+
+    def record(self, key: str, entry: Mapping[str, Any]) -> None:
+        """Checkpoint one verified object immediately, not at end of run."""
+        self.objects[key] = self._validated_entry(key, dict(entry))
+        self.flush()
+
+    def flush(self, **updates: Any) -> None:
+        self.extra.update(updates)
+        body = dict(self.extra)
+        body["objects"] = self.objects
+        _atomic_write_json(self.path, _checkpoint_document("sample_checkpoint", body))
+
+
+def persist_provider_sidecar(body: bytes, *, sidecar_dir: Path) -> tuple[Path, str]:
+    """Publish a provider checksum sidecar content-addressably before it is relied on.
+
+    Every sidecar, however it was obtained, becomes a retained content-addressed object so
+    a later resume can re-prove provider authority instead of trusting a checkpoint.
+    """
+    digest = _object_sha256(body)
+    dest = content_addressed_path(sidecar_dir, digest)
+    if dest.exists():
+        existing = compute_sha256(dest)
+        if existing != digest:
+            raise ResumeIntegrityError(
+                "retained sidecar path holds different content than its content address",
+                context={"path": str(dest), "expected": digest, "actual": existing},
+            )
+        return dest, digest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(f".partial-{digest}.part")
+    tmp.write_bytes(body)
+    tmp.replace(dest)
+    return dest, digest
+
+
+def verify_provider_sidecar(
+    *,
+    key: str,
+    object_sha256: str,
+    sidecar_path: Path,
+    sidecar_sha256: str,
+    sidecar_dir: Path,
+) -> str:
+    """Re-prove provider authority from the retained sidecar bytes themselves.
+
+    A sample checkpoint alone is never provider authority: the sidecar must still exist at
+    its cache-local content address, rehash to the recorded blob digest, parse to exactly
+    one provider checksum and filename, name this object, and carry the object's digest.
+    """
+    context = {"key": key, "sidecar_path": str(sidecar_path)}
+    blob_digest = _require_hex_digest(
+        sidecar_sha256, label="sidecar blob digest", context=context
+    )
+    expected_path = content_addressed_path(sidecar_dir, blob_digest)
+    if Path(sidecar_path) != expected_path:
+        raise ResumeIntegrityError(
+            "provider sidecar path is not its cache-local content address",
+            context={**context, "expected": str(expected_path)},
+        )
+    if not expected_path.is_file():
+        raise ResumeIntegrityError(
+            "provider sidecar is missing from the retained store", context=context
+        )
+    actual = compute_sha256(expected_path)
+    if actual != blob_digest:
+        raise ResumeIntegrityError(
+            "provider sidecar bytes do not match the recorded blob digest",
+            context={**context, "expected": blob_digest, "actual": actual},
+        )
+    tokens = expected_path.read_bytes().decode("utf-8", errors="replace").strip().split()
+    if len(tokens) != 2:
+        raise ResumeIntegrityError(
+            "provider sidecar does not hold exactly one checksum and filename",
+            context={**context, "fields": len(tokens)},
+        )
+    provider = parse_provider_checksum(tokens[0])
+    if provider is None:
+        raise ResumeIntegrityError(
+            "provider sidecar checksum is malformed", context=context
+        )
+    if tokens[1] != key.rsplit("/", 1)[-1]:
+        raise ResumeIntegrityError(
+            "provider sidecar names a different object",
+            context={**context, "sidecar_filename": tokens[1]},
+        )
+    if provider != object_sha256:
+        raise ResumeIntegrityError(
+            "provider sidecar checksum disagrees with the retained object digest",
+            context={**context, "sidecar_checksum": provider, "object": object_sha256},
+        )
+    return provider
+
+
+def recover_retained_samples(
+    *,
+    sample_dir: Path,
+    sidecar_dir: Path,
+    checksums: RetainedChecksumIndex,
+    checkpoint: SampleCheckpointStore,
+    keys: Sequence[str],
+) -> int:
+    """Re-adopt already downloaded, checksum-proven sample bytes without redownloading.
+
+    A retained object is recovered only when its provider checksum sidecar still hashes to
+    its own content address, the content-addressed object exists at the digest the sidecar
+    claims, and the retained raw bytes rehash to that same digest.
+    """
+    recovered = 0
+    for key in keys:
+        if checkpoint.get(key) is not None:
+            continue
+        evidence = checksums.lookup(key)
+        if evidence is None:
+            continue
+        digest = str(evidence["provider_checksum"])
+        dest = content_addressed_path(sample_dir, digest)
+        if not dest.is_file():
+            continue
+        actual = compute_sha256(dest)
+        if actual != digest or dest.name != digest:
+            raise ResumeIntegrityError(
+                "retained sample bytes do not match the retained provider checksum",
+                context={"key": key, "expected": digest, "actual": actual, "path": str(dest)},
+            )
+        sidecar_path = Path(str(evidence["content_path"]))
+        verify_provider_sidecar(
+            key=key,
+            object_sha256=actual,
+            sidecar_path=sidecar_path,
+            sidecar_sha256=str(evidence["blob_sha256"]),
+            sidecar_dir=sidecar_dir,
+        )
+        payload = dest.read_bytes()
+        schema = infer_schema_fields(payload, name=key)
+        checkpoint.record(
+            key,
+            {
+                "status": "complete",
+                "sha256": digest,
+                "byte_size": len(payload),
+                "url": vision_object_url(key),
+                "provider_checksum": digest,
+                "checksum_match": True,
+                "schema_kind": schema.kind,
+                "schema_fields": list(schema.fields),
+                "retrieval_time": "",
+                "recovered_from_retained_bytes": True,
+                "provider_checksum_path": str(sidecar_path),
+                "provider_checksum_sha256": str(evidence["blob_sha256"]),
+            },
+        )
+        recovered += 1
+    checkpoint.recovered += recovered
+    return recovered
 
 
 def _object_sha256(payload: bytes) -> str:
@@ -1191,11 +2320,15 @@ class TransportObjectIndex:
         timeout: TimeoutConfig | None = None,
         s3_endpoint: str = VISION_S3_ENDPOINT,
         list_cache_dir: Path | None = None,
+        checkpoint: ListingCheckpointStore | None = None,
+        retry: RetryRunner | None = None,
     ) -> None:
         self._transport = transport
         self._timeout = timeout or TimeoutConfig()
         self._s3_endpoint = s3_endpoint
         self._list_cache_dir = list_cache_dir
+        self._checkpoint = checkpoint
+        self._retry = retry or RetryRunner()
 
     def list_common_prefixes(self, prefix: str) -> list[str]:
         prefixes, _objects = self._list_pages(prefix)
@@ -1213,12 +2346,15 @@ class TransportObjectIndex:
                 context={"url": url},
             )
         listed = None
-        result = atomic_download(
-            url,
-            dest,
-            transport=self._transport,
-            timeout=self._timeout,
-            max_bytes=max(listed or 8_388_608, 8_388_608),
+        result = self._retry.run(
+            f"fetch_bytes:{url}",
+            lambda: atomic_download(
+                url,
+                dest,
+                transport=self._transport,
+                timeout=self._timeout,
+                max_bytes=max(listed or 8_388_608, 8_388_608),
+            ),
         )
         return result.dest_path.read_bytes()
 
@@ -1262,14 +2398,53 @@ class TransportObjectIndex:
             params["continuation-token"] = token
         parsed = urlparse(self._s3_endpoint)
         url = urlunparse(parsed._replace(query=urlencode(params)))
-        result = atomic_download(
-            url,
-            self._list_cache_dir,
-            transport=self._transport,
-            timeout=self._timeout,
-            max_bytes=8_388_608,
+        identity = listing_request_identity(
+            endpoint=self._s3_endpoint,
+            prefix=prefix,
+            delimiter="/",
+            continuation_token=token,
         )
-        return parse_s3_list_bucket(result.dest_path.read_bytes().decode("utf-8"))
+        if self._checkpoint is not None:
+            retained = self._checkpoint.retained_bytes(identity)
+            if retained is not None:
+                return parse_s3_list_bucket(retained.decode("utf-8"))
+        result = self._retry.run(
+            f"list:{prefix}",
+            lambda: atomic_download(
+                url,
+                self._list_cache_dir,
+                transport=self._transport,
+                timeout=self._timeout,
+                max_bytes=8_388_608,
+            ),
+        )
+        payload = result.dest_path.read_bytes()
+        parsed_page = parse_s3_list_bucket(payload.decode("utf-8"))
+        echoed = parse_listing_identity(payload, endpoint=self._s3_endpoint)
+        if echoed is not None and echoed != identity:
+            # A self-identifying response must describe the request we actually made.
+            raise ResumeIntegrityError(
+                "fetched listing response does not echo the requested identity",
+                context={"prefix": prefix, "echoed": echoed},
+            )
+        if self._checkpoint is not None:
+            self._checkpoint.fetched += 1
+            # The recorded path is the published one; the checkpoint contract re-proves
+            # that it is the cache-local content address.
+            self._checkpoint.record(
+                identity,
+                {
+                    "request": dict(identity),
+                    "response_sha256": result.sha256,
+                    "content_path": str(result.dest_path),
+                    "byte_size": len(payload),
+                    "retrieved_at": result.retrieval_utc.astimezone(UTC).isoformat(),
+                    "bootstrapped": False,
+                    "is_truncated": parsed_page[2],
+                    "next_continuation_token": parsed_page[3],
+                },
+            )
+        return parsed_page
 
 
 class HttpxCoinalyzeTransport:
@@ -1409,9 +2584,11 @@ class CoinalyzeClient:
         transport: CoinalyzeTransport,
         *,
         api_key: str | None,
+        retry: RetryRunner | None = None,
     ) -> None:
         self._transport = transport
         self._api_key = api_key
+        self._retry = retry or RetryRunner()
 
     def _headers(self) -> dict[str, str]:
         if not self._api_key:
@@ -1436,7 +2613,10 @@ class CoinalyzeClient:
                 "Coinalyze API key must not appear in query parameters",
                 context={"path": path},
             )
-        response = self._transport.fetch(path, params=params, headers=headers)
+        response = self._retry.run(
+            f"coinalyze:{path}",
+            lambda: self._transport.fetch(path, params=params, headers=headers),
+        )
         if response.path != path:
             raise SourceQualificationError(
                 "Coinalyze transport returned a different path than requested",
@@ -1576,37 +2756,37 @@ class CoinalyzeClient:
 
 
 def _acquire_sample(
-    obj: ListingObject,
     *,
-    product: str,
+    key: str,
+    listed_size: int,
+    products: tuple[str, ...],
     family: str,
     symbol: str,
     regime: str,
     sample_dir: Path,
+    sidecar_dir: Path,
     index: ObjectIndex,
     transport: HttpTransport | None,
-    objects_progress: dict[str, Any],
+    checkpoint: SampleCheckpointStore,
+    checksums: RetainedChecksumIndex | None,
+    retry: RetryRunner,
 ) -> SampleRecord:
-    url = vision_object_url(obj.key)
-    if obj.size is None or obj.size <= 0:
-        raise SourceQualificationError(
-            "cannot sample an object with unknown or zero listing size",
-            context={"key": obj.key},
-        )
-    prior = objects_progress.get(obj.key)
+    url = vision_object_url(key)
+    primary = products[0] if products else ""
+    prior = checkpoint.get(key)
     if isinstance(prior, dict) and prior.get("status") == "complete" and prior.get("sha256"):
         expected = str(prior["sha256"])
         dest = content_addressed_path(sample_dir, expected)
         if not dest.is_file():
             raise ResumeIntegrityError(
                 "resume progress points at a missing content-addressed object",
-                context={"key": obj.key, "sha256": expected},
+                context={"key": key, "sha256": expected},
             )
         actual = compute_sha256(dest)
         if actual != expected:
             raise ResumeIntegrityError(
                 "resume hash mismatch; refusing tampered content-addressed object",
-                context={"key": obj.key, "expected": expected, "actual": actual},
+                context={"key": key, "expected": expected, "actual": actual},
             )
         if dest.name != actual:
             raise ResumeIntegrityError(
@@ -1614,19 +2794,29 @@ def _acquire_sample(
                 context={"path": str(dest), "sha256": actual},
             )
         checksum = str(prior.get("provider_checksum") or "")
-        if len(checksum) != 64:
-            raise SourceQualificationError(
-                "resume row is missing the required provider checksum",
-                context={"key": obj.key},
+        if checksum != actual:
+            raise ResumeIntegrityError(
+                "resume provider checksum disagrees with the retained object digest",
+                context={"key": key, "provider_checksum": checksum, "sha256": actual},
             )
+        # A checkpoint alone is never provider authority: re-prove it from the retained
+        # sidecar bytes on every resume.
+        verify_provider_sidecar(
+            key=key,
+            object_sha256=actual,
+            sidecar_path=Path(str(prior.get("provider_checksum_path") or "")),
+            sidecar_sha256=str(prior.get("provider_checksum_sha256") or ""),
+            sidecar_dir=sidecar_dir,
+        )
         schema = tuple(str(item) for item in (prior.get("schema_fields") or ()))
         return SampleRecord(
-            product=product,
+            product=primary,
+            products=products,
             family=family,
             symbol=symbol,
             regime=regime,
             url=url,
-            key=obj.key,
+            key=key,
             sha256=actual,
             byte_size=int(dest.stat().st_size),
             reused_existing=True,
@@ -1639,31 +2829,64 @@ def _acquire_sample(
             content_path=str(dest),
         )
 
-    checksum_url = vision_object_url(f"{obj.key}.CHECKSUM")
-    try:
-        checksum_body = index.fetch_bytes(checksum_url)
-    except SourceQualificationError as exc:
+    if listed_size <= 0:
         raise SourceQualificationError(
-            "provider checksum is required",
-            context={"key": obj.key},
-        ) from exc
-    provider_checksum = parse_provider_checksum(
-        checksum_body.decode("utf-8", errors="replace")
-    )
+            "cannot sample an object with unknown or zero listing size",
+            context={"key": key},
+        )
+
+    provider_checksum: str | None = None
+    checksum_source = "network"
+    sidecar_path: Path | None = None
+    sidecar_sha256: str | None = None
+    if checksums is not None:
+        evidence = checksums.lookup(key)
+        if evidence is not None:
+            provider_checksum = str(evidence["provider_checksum"])
+            sidecar_path = Path(str(evidence["content_path"]))
+            sidecar_sha256 = str(evidence["blob_sha256"])
+            checksum_source = "retained_evidence"
     if provider_checksum is None:
+        checksum_url = vision_object_url(f"{key}.CHECKSUM")
+        try:
+            # index.fetch_bytes owns its own bounded retry; wrapping it again here would
+            # multiply the nominal per-request attempt bound.
+            checksum_body = index.fetch_bytes(checksum_url)
+        except SourceQualificationError as exc:
+            raise SourceQualificationError(
+                "provider checksum is required",
+                context={"key": key},
+            ) from exc
+        provider_checksum = parse_provider_checksum(
+            checksum_body.decode("utf-8", errors="replace")
+        )
+        if provider_checksum is None:
+            raise SourceQualificationError(
+                "provider checksum sidecar is missing or malformed",
+                context={"key": key},
+            )
+        # Retain the sidecar content-addressably, including for in-memory indexes, so the
+        # sample checkpoint can never outlive its provider evidence.
+        sidecar_path, sidecar_sha256 = persist_provider_sidecar(
+            checksum_body, sidecar_dir=sidecar_dir
+        )
+    if provider_checksum is None or sidecar_path is None or sidecar_sha256 is None:
         raise SourceQualificationError(
             "provider checksum sidecar is missing or malformed",
-            context={"key": obj.key},
+            context={"key": key},
         )
 
     retrieval_time = datetime.now(UTC).isoformat()
     if transport is not None:
-        result = atomic_download(
-            url,
-            sample_dir,
-            transport=transport,
-            expected_sha256=provider_checksum,
-            max_bytes=int(obj.size) + 1024,
+        result = retry.run(
+            f"sample:{key}",
+            lambda: atomic_download(
+                url,
+                sample_dir,
+                transport=transport,
+                expected_sha256=provider_checksum,
+                max_bytes=listed_size + 1024,
+            ),
         )
         sha256 = result.sha256
         dest_path = result.dest_path
@@ -1697,27 +2920,44 @@ def _acquire_sample(
     if compute_sha256(dest_path) != sha256:
         raise SourceQualificationError(
             "published sample failed post-write rehash",
-            context={"key": obj.key},
+            context={"key": key},
         )
-    schema = infer_schema_fields(payload, name=obj.key)
-    objects_progress[obj.key] = {
-        "status": "complete",
-        "sha256": sha256,
-        "byte_size": len(payload),
-        "url": url,
-        "provider_checksum": provider_checksum,
-        "checksum_match": True,
-        "schema_kind": schema.kind,
-        "schema_fields": list(schema.fields),
-        "retrieval_time": retrieval_time,
-    }
+    schema = infer_schema_fields(payload, name=key)
+    # The sidecar must prove this exact object before the checkpoint can be written.
+    verify_provider_sidecar(
+        key=key,
+        object_sha256=sha256,
+        sidecar_path=sidecar_path,
+        sidecar_sha256=sidecar_sha256,
+        sidecar_dir=sidecar_dir,
+    )
+    # Checkpoint immediately: an interruption after this point must never lose the
+    # object-to-digest, checksum, schema, and provenance evidence already proven.
+    checkpoint.record(
+        key,
+        {
+            "status": "complete",
+            "sha256": sha256,
+            "byte_size": len(payload),
+            "url": url,
+            "provider_checksum": provider_checksum,
+            "checksum_match": True,
+            "schema_kind": schema.kind,
+            "schema_fields": list(schema.fields),
+            "retrieval_time": retrieval_time,
+            "provider_checksum_source": checksum_source,
+            "provider_checksum_path": str(sidecar_path),
+            "provider_checksum_sha256": sidecar_sha256,
+        },
+    )
     return SampleRecord(
-        product=product,
+        product=primary,
+        products=products,
         family=family,
         symbol=symbol,
         regime=regime,
         url=url,
-        key=obj.key,
+        key=key,
         sha256=sha256,
         byte_size=len(payload),
         reused_existing=reused,
@@ -1729,6 +2969,17 @@ def _acquire_sample(
         retrieval_time=retrieval_time,
         content_path=str(dest_path),
     )
+
+
+def family_product_map(
+    archive_families: Mapping[str, tuple[str, ...]] = OFFICIAL_ARCHIVE_FAMILIES,
+) -> dict[str, tuple[str, ...]]:
+    """Physical family -> every logical product that derives rows from it."""
+    mapping: dict[str, list[str]] = {}
+    for product in sorted(archive_families):
+        for family in archive_families[product]:
+            mapping.setdefault(family, []).append(product)
+    return {family: tuple(sorted(products)) for family, products in mapping.items()}
 
 
 def run_source_qualification(
@@ -1746,6 +2997,10 @@ def run_source_qualification(
     now: datetime | None = None,
     coinalyze_from_ts: int = 1_577_836_800,
     coinalyze_to_ts: int = 1_609_459_200,
+    retry: RetryRunner | None = None,
+    listing_checkpoint: ListingCheckpointStore | None = None,
+    sample_budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    max_sample_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
 ) -> QualificationReport:
     refuse_restricted_scope(
         max_symbols=max_symbols,
@@ -1756,14 +3011,32 @@ def run_source_qualification(
     store = Path(store_root)
     sample_dir = store / "raw" / "sha256"
     sample_dir.mkdir(parents=True, exist_ok=True)
+    list_cache_dir = store / "list_cache"
     progress_file = progress_path or (store / "cex002_qualification_progress.json")
-    objects_progress: dict[str, Any] = dict(_load_progress(progress_file).get("objects") or {})
+    plan_path = store / "cex002_sample_plan.json"
+    retry_journal_path = store / "cex002_retry_journal.json"
+    retry_runner = retry or RetryRunner()
+    if retry_runner.journal is None:
+        retry_runner.journal = RetryJournal.load(retry_journal_path)
+    checkpoint = SampleCheckpointStore.load(progress_file, sidecar_dir=list_cache_dir)
+    checksums = RetainedChecksumIndex.from_cache(list_cache_dir)
 
-    discovered = discover_historical_symbols(index)
+    # 1. Inventory every unique physical family exactly once.
+    inventory = build_family_inventory(index)
+    discovered = inventory_symbols(inventory)
+    family_products = family_product_map()
+    family_object_counts: dict[str, int] = {
+        family: sum(len(objs) for objs in entry.objects.values())
+        for family, entry in inventory.items()
+    }
+
     current_authenticated = False
     current: tuple[str, ...] = ()
     if current_contracts is not None:
-        current = tuple(parse_current_perpetuals(current_contracts.fetch_exchange_info()))
+        payload = retry_runner.run(
+            "fapi:exchangeInfo", current_contracts.fetch_exchange_info
+        )
+        current = tuple(parse_current_perpetuals(payload))
         current_authenticated = True
     current_set = set(current)
     delisted = tuple(sym for sym in discovered if current_set and sym not in current_set)
@@ -1771,11 +3044,122 @@ def run_source_qualification(
 
     sample_symbols = _sample_symbol_set(discovered, delisted)
     sample_symbol_set = set(sample_symbols)
-    samples: list[SampleRecord] = []
-    incidents: list[dict[str, Any]] = []
-    matrix_rows: list[ProductMatrixRow] = []
 
-    family_object_counts: dict[str, int] = {}
+    incidents: list[dict[str, Any]] = []
+    product_incident_counts: dict[str, int] = {product: 0 for product in REQUIRED_PRODUCTS}
+    for family in sorted(inventory):
+        for item in inventory[family].incidents:
+            for product in family_products.get(family, ()):
+                incidents.append({"product": product, **dict(item)})
+                product_incident_counts[product] = product_incident_counts.get(product, 0) + 1
+
+    # 2. Recover already retained, checksum-proven sample bytes before planning so they
+    #    never consume the new-download budget and are never fetched again.
+    candidate_keys: list[str] = []
+    for family, entry in sorted(inventory.items()):
+        if not family_products.get(family):
+            continue
+        for symbol in entry.symbols:
+            if symbol not in sample_symbol_set:
+                continue
+            candidate_keys.extend(obj.key for obj in entry.objects.get(symbol, ()))
+    recover_retained_samples(
+        sample_dir=sample_dir,
+        sidecar_dir=list_cache_dir,
+        checksums=checksums,
+        checkpoint=checkpoint,
+        keys=candidate_keys,
+    )
+    retained_keys: dict[str, int] = {}
+    for key in candidate_keys:
+        entry_row = checkpoint.get(key)
+        if entry_row and entry_row.get("status") == "complete":
+            retained_keys[key] = int(entry_row.get("byte_size") or 0)
+
+    # 3. Produce and persist the deterministic sample plan before any new download.
+    plan = build_sample_plan(
+        inventory=inventory,
+        family_products=family_products,
+        sample_symbols=sample_symbols,
+        delisted=delisted,
+        retained_keys=retained_keys,
+        budget_bytes=sample_budget_bytes,
+        max_object_bytes=max_sample_object_bytes,
+    )
+    _atomic_write_json(plan_path, plan.to_dict())
+
+    # 4. Acquire only planned samples. Each physical object is fetched at most once and
+    #    attributed to every logical product that declares its family.
+    samples: list[SampleRecord] = []
+    acquired: dict[str, SampleRecord] = {}
+    for planned in plan.entries:
+        if planned.action == "blocked":
+            continue
+        already = acquired.get(planned.key)
+        if already is not None:
+            # Regime/product alias of an object already proven in this run.
+            samples.append(
+                replace(
+                    already,
+                    regime=planned.regime,
+                    products=planned.products,
+                    product=planned.products[0] if planned.products else already.product,
+                )
+            )
+            continue
+        try:
+            record = _acquire_sample(
+                key=planned.key,
+                listed_size=planned.byte_size,
+                products=planned.products,
+                family=planned.family,
+                symbol=planned.symbol,
+                regime=planned.regime,
+                sample_dir=sample_dir,
+                sidecar_dir=list_cache_dir,
+                index=index,
+                transport=transport,
+                checkpoint=checkpoint,
+                checksums=checksums,
+                retry=retry_runner,
+            )
+        except ResumeIntegrityError:
+            raise
+        except SourceQualificationError as exc:
+            for product in planned.products:
+                incidents.append(
+                    {
+                        "product": product,
+                        "family": planned.family,
+                        "symbol": planned.symbol,
+                        "regime": planned.regime,
+                        "kind": "sample_error",
+                        "note": str(exc),
+                    }
+                )
+                product_incident_counts[product] = product_incident_counts.get(product, 0) + 1
+            continue
+        acquired[planned.key] = record
+        samples.append(record)
+
+    for item in plan.blocked:
+        for product in item.get("products", ()):
+            incidents.append(
+                {
+                    "product": product,
+                    "family": item.get("family"),
+                    "symbol": item.get("symbol"),
+                    "regime": item.get("regime"),
+                    "kind": SAMPLE_BUDGET_BLOCK,
+                    "note": (
+                        f"required object {item.get('required_key')} of "
+                        f"{item.get('required_bytes')} bytes exceeds the Gate 1 new-download budget"
+                    ),
+                }
+            )
+
+    # 5. Derive every logical product row from the shared inventory.
+    matrix_rows: list[ProductMatrixRow] = []
     symbol_coverage: dict[str, dict[str, int]] = {}
 
     for product in REQUIRED_PRODUCTS:
@@ -1784,96 +3168,31 @@ def run_source_qualification(
         listed_objects = 0
         listed_bytes = 0
         unknown_sizes = False
-        product_samples = 0
-        product_incidents = 0
+        product_incidents = product_incident_counts.get(product, 0)
         family_listed: dict[str, int] = {}
         family_symbol_lists: dict[str, set[str]] = {}
         family_symbol_objects: dict[tuple[str, str], int] = {}
 
         for family in families:
-            prefix = vision_prefix(*family.split("/"))
-            try:
-                prefix_list = index.list_common_prefixes(prefix)
-            except SourceQualificationError as exc:
-                incidents.append(
-                    {
-                        "product": product,
-                        "family": family,
-                        "kind": "listing_error",
-                        "note": str(exc),
-                    }
-                )
-                product_incidents += 1
+            entry = inventory.get(family)
+            if entry is None or not entry.listed:
                 continue
             family_listed.setdefault(family, 0)
-            symbols = symbols_from_prefixes(prefix_list)
-            family_symbols.update(symbols)
-            family_symbol_lists[family] = set(symbols)
-            for symbol in symbols:
-                family_symbol_objects[(family, symbol)] = 0
-                try:
-                    objs = [
-                        obj
-                        for obj in _list_objects_for_symbol(index, family, prefix, symbol)
-                        if not obj.key.endswith(".CHECKSUM")
-                    ]
-                except SourceQualificationError as exc:
-                    incidents.append(
-                        {
-                            "product": product,
-                            "family": family,
-                            "symbol": symbol,
-                            "kind": "listing_error",
-                            "note": str(exc),
-                        }
-                    )
-                    product_incidents += 1
+            family_symbols.update(entry.symbols)
+            family_symbol_lists[family] = set(entry.symbols)
+            for symbol in entry.symbols:
+                objs = entry.objects.get(symbol)
+                if objs is None:
+                    family_symbol_objects[(family, symbol)] = 0
                     continue
+                family_symbol_objects[(family, symbol)] = len(objs)
                 listed_objects += len(objs)
                 family_listed[family] = family_listed.get(family, 0) + len(objs)
-                family_object_counts[family] = family_object_counts.get(family, 0) + len(objs)
-                family_symbol_objects[(family, symbol)] = len(objs)
                 for obj in objs:
                     if obj.size is None:
                         unknown_sizes = True
                     else:
                         listed_bytes += int(obj.size)
-                if symbol not in sample_symbol_set:
-                    continue
-                chosen = select_regime_objects(objs)
-                if symbol in delisted and chosen:
-                    chosen = dict(chosen)
-                    chosen["delisted"] = chosen.get("recent") or next(iter(chosen.values()))
-                for regime, obj in chosen.items():
-                    try:
-                        record = _acquire_sample(
-                            obj,
-                            product=product,
-                            family=family,
-                            symbol=symbol,
-                            regime=regime,
-                            sample_dir=sample_dir,
-                            index=index,
-                            transport=transport,
-                            objects_progress=objects_progress,
-                        )
-                    except ResumeIntegrityError:
-                        raise
-                    except SourceQualificationError as exc:
-                        incidents.append(
-                            {
-                                "product": product,
-                                "family": family,
-                                "symbol": symbol,
-                                "regime": regime,
-                                "kind": "sample_error",
-                                "note": str(exc),
-                            }
-                        )
-                        product_incidents += 1
-                        continue
-                    samples.append(record)
-                    product_samples += 1
 
         if product == "binance_usdm_perpetual_membership":
             family_symbols = set(discovered)
@@ -1899,7 +3218,11 @@ def run_source_qualification(
             f"{family}/{symbol}": count
             for (family, symbol), count in sorted(family_symbol_objects.items())
         }
-        product_sample_rows = [item for item in samples if item.product == product]
+        product_sample_rows = [item for item in samples if product in item.products]
+        product_samples = len(product_sample_rows)
+        budget_blocked = tuple(
+            dict(item) for item in plan.blocked if product in tuple(item.get("products", ()))
+        )
         checksum_ok = bool(product_sample_rows) and all(
             item.checksum_match and item.provider_checksum for item in product_sample_rows
         )
@@ -1951,6 +3274,8 @@ def run_source_qualification(
             cost_notes = _coverage_gap_notes(uncovered, uncovered_universe)
             if not complete and cost_notes:
                 reason = f"{reason}; {cost_notes}"
+            if not complete and budget_blocked:
+                reason = f"{reason}; {SAMPLE_BUDGET_BLOCK}"
         else:
             complete = (
                 listed_objects > 0
@@ -1974,6 +3299,13 @@ def run_source_qualification(
                 gap_notes = _coverage_gap_notes(uncovered, uncovered_universe)
                 if gap_notes:
                     reason = gap_notes
+                if budget_blocked:
+                    # Inventory is complete and the source is reachable; only the bounded
+                    # Gate 1 sample budget is unmet.
+                    reason = (
+                        f"{SAMPLE_BUDGET_BLOCK}: bounded Gate 1 sample budget cannot "
+                        f"cover required regime evidence; inventory is complete"
+                    )
             else:
                 authority = SourceAuthority.OFFICIAL
                 reason = "official Vision archive listing, checksums, and retained samples"
@@ -1995,6 +3327,7 @@ def run_source_qualification(
                 uncovered_listed_symbols=uncovered if source_gate else (),
                 uncovered_universe_symbols=uncovered_universe if source_gate else (),
                 universe_coverage_gaps=universe_gaps if source_gate else (),
+                sample_budget_blocked=budget_blocked if source_gate else (),
             )
         )
 
@@ -2005,7 +3338,9 @@ def run_source_qualification(
     }
     if coinalyze_transport is not None and coinalyze_api_key:
         try:
-            client = CoinalyzeClient(coinalyze_transport, api_key=coinalyze_api_key)
+            client = CoinalyzeClient(
+                coinalyze_transport, api_key=coinalyze_api_key, retry=retry_runner
+            )
             coinalyze_block = client.qualify_binance_daily(
                 native_symbols=sample_symbols[:2] or discovered[:1],
                 from_ts=coinalyze_from_ts,
@@ -2058,6 +3393,7 @@ def run_source_qualification(
                     uncovered_listed_symbols=row.uncovered_listed_symbols,
                     uncovered_universe_symbols=row.uncovered_universe_symbols,
                     universe_coverage_gaps=row.universe_coverage_gaps,
+                    sample_budget_blocked=row.sample_budget_blocked,
                 )
             )
         matrix_rows = rebuilt
@@ -2089,13 +3425,9 @@ def run_source_qualification(
         row.product for row in matrix_rows if row.source_gate and not row.official_complete
     )
     accepted = len(blocked) == 0
-    _save_progress(
-        progress_file,
-        {
-            "objects": objects_progress,
-            "updated_at": generated_at,
-            "discovered_symbol_count": len(discovered),
-        },
+    checkpoint.flush(
+        updated_at=generated_at,
+        discovered_symbol_count=len(discovered),
     )
     return QualificationReport(
         ticket=TICKET_ID,
@@ -2115,9 +3447,12 @@ def run_source_qualification(
         storage={
             "sample_store": str(sample_dir),
             "progress_path": str(progress_file),
+            "sample_plan_path": str(plan_path),
+            "retry_journal_path": str(retry_journal_path),
             "discovered_symbol_count": len(discovered),
             "object_count_exact": {row.product: row.listed_object_count for row in matrix_rows},
             "byte_count_exact": {row.product: row.listed_bytes for row in matrix_rows},
+            "physical_family_object_counts": dict(sorted(family_object_counts.items())),
             "symbol_coverage": symbol_coverage,
             "universe_coverage_gaps": {
                 row.product: [dict(item) for item in row.universe_coverage_gaps]
@@ -2135,10 +3470,17 @@ def run_source_qualification(
         },
         incidents=incidents_sorted,
         resume={
-            "progress_objects": len(objects_progress),
+            "progress_objects": len(checkpoint.objects),
             "reused_samples": sum(1 for item in samples if item.reused_existing),
+            "recovered_samples": checkpoint.recovered,
             "rehash_required": True,
+            "physical_families_inventoried": len(inventory),
         },
+        sample_plan=plan.to_dict(),
+        retry=retry_runner.to_dict(),
+        listing_checkpoint=(
+            listing_checkpoint.to_dict() if listing_checkpoint is not None else {}
+        ),
         coinalyze=coinalyze_block,
         accepted=accepted,
     )
