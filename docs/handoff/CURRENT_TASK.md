@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev — Codex Spark — correct five stale focused tests
+Next required actor: Implementation Dev — Codex Spark — finish two stale focused tests
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -33,6 +33,7 @@ Governing documents:
 - research/sprint_004/80_CEX002_GROK_TRANSITION_SOURCE_REVIEW.md
 - research/sprint_004/81_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
 - research/sprint_004/82_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
+- research/sprint_004/83_CEX002_SPARK_TEST_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -316,9 +317,20 @@ review 82. It performs no tests, production/fixture edit, integration, records, 
 network/data run, Gate 2, Nautilus, or Harmonic Trader work and stops for source review
 with the exact test hash. Hermes remains unauthorized.
 
+## First Spark test-source review
+
+Review 83 accepts three corrections but rejects two residual test defects. The oversized
+fixture still lacks affirmative current-perpetual membership, and the immutable-plan test
+retains the same rewritten retained/new byte expectations that originally failed.
+
+Spark is authorized only for the two exact one-file test corrections in review 83. It
+performs no tests, production/fixture edit, integration, records, Git, network/data run,
+Gate 2, Nautilus, or Harmonic Trader work and stops for review with the exact test hash.
+Hermes remains unauthorized.
+
 ## Stop condition
 
-The only active authorization is Spark's test-only correction in review 82. The existing
-store, legacy plan, checkpoints, reports, and over-budget retained evidence must be
-preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every real rerun, every other ticket,
+The only active authorization is Spark's final test-only correction in review 83. The
+existing store, legacy plan, checkpoints, reports, and over-budget retained evidence must
+be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every real rerun, every other ticket,
 Nautilus integration, and model work remain unauthorized; next ticket remains `NONE`.
