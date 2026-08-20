@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
+State: BLOCKED
+Next required actor: Owner - provide storage and official historical authority
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -47,6 +47,7 @@ Governing documents:
 - research/sprint_004/94_CEX002_PLAN_ROUNDTRIP_REVIEW.md
 - research/sprint_004/95_CEX002_GROK_PLAN_ROUNDTRIP_SOURCE_REVIEW.md
 - research/sprint_004/96_CEX002_GATE1_PLAN2_EXECUTION.md
+- research/sprint_004/97_CEX002_GATE1_PLAN2_EXECUTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -451,3 +452,17 @@ review 95. Hermes then runs the focused commands, exact assertion-bound plan-2 m
 and preserved-store two-run sequence in review 95, publishes record 96, commits the exact
 authorized report/record paths, pushes, and stops for review. Gate 2, Nautilus, other
 tickets, and Harmonic Trader work remain unauthorized.
+
+## Gate 1 plan-2 execution review
+
+Review 97 accepts the reproducible execution evidence but does not pass Gate 1. Both real
+runs captured exit 2, Coinalyze qualified, the plan migration preserved immutable history,
+and semantic resume identity passed. No further developer correction is authorized.
+
+CEX-002 is blocked by 63 archive-only names without affirmative official historical
+membership authority and by 8,661,196,012,122 projected new raw bytes against only
+185,976,057,856 available local bytes; normalized/catalog storage is additionally unknown.
+The Owner may supply storage and exact official source artifacts but is not an acceptance
+authority. No reduced universe, omitted derivatives fields, discarded required raw
+provenance, price-only substitute, Gate 2, Nautilus, other ticket, or Harmonic Trader work
+is authorized. Next ticket remains `NONE`.
