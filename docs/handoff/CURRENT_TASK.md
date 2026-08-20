@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Claude Build — finish Gate 1 authority closure
+Next required actor: Sr Dev — Claude Build — stabilize authority identity and ledger
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -28,6 +28,7 @@ Governing documents:
 - research/sprint_004/75_CEX002_GATE1_RESUMABLE_EXECUTION_REVIEW.md
 - research/sprint_004/76_CEX002_CLAUDE_AUTHORITY_PLAN_SOURCE_REVIEW.md
 - research/sprint_004/77_CEX002_CLAUDE_DURABLE_AUTHORITY_SOURCE_REVIEW.md
+- research/sprint_004/78_CEX002_CLAUDE_STABLE_AUTHORITY_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -261,10 +262,22 @@ integration, fixtures, records, Git, purchase, deletion, catalog mutation, Gate 
 Nautilus, or Harmonic Trader work and stops for source review with exact hashes. Hermes
 remains unauthorized.
 
+## Claude review-77 source review
+
+Review 78 accepts inseparable raw exchangeInfo parsing, re-proved listing/retained plan
+inputs, and full Coinalyze native identity. The source still cannot resume live because
+volatile response SHA/server time are plan inputs; unknown nonempty contract semantics can
+qualify; and reduced positive or zero persisted ledger amounts restore allowance.
+
+Sr Dev — Claude Build using Claude Opus 5 is authorized only for the two-path correction
+in review 78. It performs no tests, network/data run, integration, fixtures, records, Git,
+purchase, deletion, catalog mutation, Gate 2, Nautilus, or Harmonic Trader work and stops
+for source review with exact hashes. Hermes remains unauthorized.
+
 ## Stop condition
 
 The review-73 run authorization is consumed. The only active authorization is Claude's
-two-path final correction in review 77. The existing store, legacy plan, checkpoints,
-reports, and over-budget retained evidence must be preserved. CEX-002 remains
+two-path correction in review 78. The existing store, legacy plan, checkpoints, reports,
+and over-budget retained evidence must be preserved. CEX-002 remains
 `IN_PROGRESS`; Gate 2, Hermes integration, every real rerun, every other ticket, Nautilus
 integration, and model work remain unauthorized; next ticket remains `NONE`.
