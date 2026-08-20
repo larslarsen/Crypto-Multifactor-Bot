@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
+Next required actor: Sr Dev - Grok Build - correct review 89
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -38,6 +38,8 @@ Governing documents:
 - research/sprint_004/85_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
 - research/sprint_004/86_CEX002_TRUNCATED_TEST_SUITE_REVIEW.md
 - research/sprint_004/87_CEX002_GROK_RESTORED_TEST_SOURCE_REVIEW.md
+- research/sprint_004/88_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
+- research/sprint_004/89_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -375,3 +377,19 @@ nine-path drop with review 87. Hermes then runs only the focused commands and
 preserved-store execution. Failures are corrected forward; no restore, reset, checkout,
 stash, clean, or discard is authorized. Gate 2, Nautilus, and model work remain
 unauthorized.
+
+## Gate 1 stable-authority execution review
+
+Review 89 accepts Hermes's integration and stop discipline but rejects Gate 1 evidence.
+The required semantic identity assertion failed because a volatile local-storage
+shortfall was duplicated into an identity-bearing incident note. The real Coinalyze
+market map also exposed an unsupported native naming form: `AAVEUSD_PERP` correctly maps
+to `AAVEUSD_PERP.A`, not `AAVEUSD_PERP_PERP.A`.
+
+Sr Dev - Grok Build using Grok 4.6 High is authorized only for the two production/test
+paths and exact corrections in review 89. It performs no tests, network/data run,
+integration, records, Git, purchase, deletion, catalog mutation, Gate 2, Nautilus, or
+Harmonic Trader work and stops for reviewer inspection with exact hashes. The 63
+unresolved historical candidates and approximately 8.47 TB local shortfall remain honest
+blockers; no reduced universe, omitted derivatives data, or price-only substitute is
+authorized. Hermes remains unauthorized.
