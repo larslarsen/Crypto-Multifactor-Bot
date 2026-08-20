@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 95
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -46,6 +46,7 @@ Governing documents:
 - research/sprint_004/93_CEX002_GATE1_PLAN2_EXECUTION.md
 - research/sprint_004/94_CEX002_PLAN_ROUNDTRIP_REVIEW.md
 - research/sprint_004/95_CEX002_GROK_PLAN_ROUNDTRIP_SOURCE_REVIEW.md
+- research/sprint_004/96_CEX002_GATE1_PLAN2_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
