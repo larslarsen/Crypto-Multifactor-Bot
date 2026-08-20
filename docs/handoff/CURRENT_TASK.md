@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build (review-100 surgical source/test correction only)
+Next required actor: Sr Dev - Claude Build (review-101 final preflight/lineage correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -51,6 +51,7 @@ Governing documents:
 - research/sprint_004/98_CEX002_RESOLUTION_AND_STORAGE_ARCHITECTURE_REVIEW.md
 - research/sprint_004/99_CEX002_GROK_RESOLUTION_SOURCE_REVIEW.md
 - research/sprint_004/100_CEX002_CLAUDE_CANDIDATE_SOURCE_REVIEW.md
+- research/sprint_004/101_CEX002_CLAUDE_LINEAGE_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -538,3 +539,26 @@ repository records, Git, acquisition, catalog work, Nautilus work, or Harmonic T
 and stops for reviewer inspection with exact hashes and the test-function count. Hermes
 remains unauthorized. Gate 1 remains `IN_PROGRESS`; Gate 2 and every next ticket remain
 unauthorized; next ticket is `NONE`.
+
+## Claude review-100 source outcome - rejected
+
+Review 101 accepts the read-only legacy ledger branch, retained-schema taker-flow evidence,
+round-trippable plan-content digest, separate candidate-envelope digest, honest manifest
+validation states, and preservation of the 166-function accumulated suite. Integration
+remains unauthorized because exact prior authority is checked only after inventory/cache
+work and a durable holdout write, so an invalid version or history can mutate candidate
+state before rejection. The history parser also coerces a missing version to version 0,
+accepts reversed version-1/version-0 order, and does not parse or structurally validate the
+preserved version-0 plan. Its empty recorded digest is discarded instead of deriving a
+comparable content identity.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 101's final
+production/test correction. Claude moves exact read-only authority preflight ahead of every
+candidate write or remote/cache operation, requires ordered and strictly typed history
+versions `[0, 1]`, parses and structurally validates both historical plan documents under
+their version-appropriate contracts, and includes a deterministic derived version-0 plan
+content identity in reuse comparison without rewriting the lock. Claude performs no tests,
+network/data run, migration, integration, repository records, Git, acquisition, catalog
+work, Nautilus work, or Harmonic Trader work and stops for reviewer inspection with exact
+hashes and the test-function count. Hermes remains unauthorized. Gate 1 remains
+`IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket is `NONE`.
