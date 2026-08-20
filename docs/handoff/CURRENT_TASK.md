@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev — Codex Spark — finish two stale focused tests
+Next required actor: Jr Dev — Hermes — integrate and execute review 84
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -34,6 +34,7 @@ Governing documents:
 - research/sprint_004/81_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
 - research/sprint_004/82_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/83_CEX002_SPARK_TEST_SOURCE_REVIEW.md
+- research/sprint_004/84_CEX002_SPARK_FINAL_TEST_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -328,9 +329,20 @@ performs no tests, production/fixture edit, integration, records, Git, network/d
 Gate 2, Nautilus, or Harmonic Trader work and stops for review with the exact test hash.
 Hermes remains unauthorized.
 
+## Final Spark test-source review
+
+Review 84 accepts Spark's one-file correction. All five stale focused tests now express
+the accepted current-unarchived, typed-coverage, complete-fixture, immutable-plan, and
+authenticated-envelope contracts, and the intermediate unused assignment is removed.
+
+Hermes is authorized only for the nine-path integration, full focused command sequence,
+preserved-store two-run qualification/resume, evidence record 85, commit, and push
+specified in review 84. Exit 2 remains honest blocked evidence; exit 1 stops network work.
+Gate 2, Nautilus, and model work remain unauthorized.
+
 ## Stop condition
 
-The only active authorization is Spark's final test-only correction in review 83. The
-existing store, legacy plan, checkpoints, reports, and over-budget retained evidence must
-be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every real rerun, every other ticket,
-Nautilus integration, and model work remain unauthorized; next ticket remains `NONE`.
+The only active authorization is Hermes's bounded integration and execution in review 84.
+The existing store, legacy plan, checkpoints, reports, and over-budget retained evidence
+must be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every other ticket, Nautilus
+integration, and model work remain unauthorized; next ticket remains `NONE`.
