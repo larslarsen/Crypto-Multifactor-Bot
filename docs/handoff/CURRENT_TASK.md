@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Grok Build — restore truncated CEX-002 test suite
+Next required actor: Jr Dev — Hermes — execute review 87
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -37,6 +37,7 @@ Governing documents:
 - research/sprint_004/84_CEX002_SPARK_FINAL_TEST_SOURCE_REVIEW.md
 - research/sprint_004/85_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
 - research/sprint_004/86_CEX002_TRUNCATED_TEST_SUITE_REVIEW.md
+- research/sprint_004/87_CEX002_GROK_RESTORED_TEST_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -357,8 +358,20 @@ review with the exact hash and test-function count. Hermes remains unauthorized.
 
 ## Stop condition
 
-The only active authorization is Grok's one-path test-suite restoration in review 86. The
-existing store, legacy plan, checkpoints, reports, and over-budget retained evidence must
-be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, Hermes integration, every real rerun,
-every other ticket, Nautilus integration, and model work remain unauthorized; next ticket
-remains `NONE`.
+The only active authorization is Hermes's command and real execution in review 87. The
+accepted nine-path drop is committed. The existing store, legacy plan, checkpoints,
+reports, and over-budget retained
+evidence must be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every other ticket,
+Nautilus integration, and model work remain unauthorized; next ticket remains `NONE`.
+
+## Grok restored test-source review
+
+Review 87 accepts the restored 3,669-line, 135-function test source. Every deleted
+review-75 through review-79 section is present, Spark's five corrections remain, and no
+duplicate test names were found. Production acceptance is unchanged.
+
+At the owner's explicit direction, the reviewer commits and pushes the exact accepted
+nine-path drop with review 87. Hermes then runs only the focused commands and
+preserved-store execution. Failures are corrected forward; no restore, reset, checkout,
+stash, clean, or discard is authorized. Gate 2, Nautilus, and model work remain
+unauthorized.

@@ -6,9 +6,17 @@ selection, checksum-required completeness, no quote-label authority, source-gate
 treatment of derived outputs, bookDepth+bookTicker cost inventory, authenticated
 current-contract comparison, and a non-zero default exit on incomplete coverage.
 
-Closes the review-64 residuals: coverage is accounted against the full discovered
+Closes the review-64 residuals: coverage is accounted against the full evaluated
 universe including symbols with no family prefix, and Coinalyze provenance is taken
 from retained raw response bytes rather than a re-serialised parse.
+
+Closes the review-75 findings: accepted perpetual membership requires affirmative
+official evidence rather than an archive-name union; the sample plan is locked once and
+replayed immutably against a cumulative, ledgered download budget; Gate 2 storage
+feasibility is published as an exact deduplicated physical requirement against real
+local capacity; source qualification is reported separately from universe/temporal
+coverage; and Coinalyze qualifies on declared stable anchors with a separate
+full-universe support map.
 """
 
 from __future__ import annotations
@@ -18,6 +26,7 @@ import io
 import json
 import random
 import re
+import shutil
 import time
 import zipfile
 from collections.abc import Callable, Mapping, Sequence
@@ -395,12 +404,95 @@ RETRYABLE_STATUS_CODES: frozenset[int] = frozenset({408, 425, 429, 500, 502, 503
 TERMINAL_STATUS_CODES: frozenset[int] = frozenset({400, 401, 403, 404, 405, 410})
 
 HISTORICAL_PERPETUAL_RULE: str = (
-    "Archive directory names are the historical observation set, not a contract-type "
-    "proof. Authenticated current PERPETUAL membership comes only from FAPI "
-    "exchangeInfo.contractType=PERPETUAL. Archive names absent from that set are "
-    "historical_or_delisted_candidates. Current PERPETUAL names absent from archives "
-    "are current_unarchived. No archive name is asserted PERPETUAL from spelling."
+    "Archive directory names are the historical observation set, never a contract-type "
+    "proof. Accepted membership requires affirmative official evidence: an authenticated "
+    "current exchangeInfo row with contractType=PERPETUAL, a retained official historical "
+    "contract-metadata row with that exact type, or an official realized-funding "
+    "observation, which only a perpetual contract produces. Delivery contracts, "
+    "TRADIFI_PERPETUAL contracts, settlement artifacts, and unresolved archive-only "
+    "candidates are reported separately and excluded; unresolved candidates block "
+    "membership. Current PERPETUAL names absent from archives are current_unarchived. "
+    "No archive name is promoted or excluded from spelling alone."
 )
+
+# --- review-75 membership authority --------------------------------------------------
+
+PERPETUAL_CONTRACT_TYPE: str = "PERPETUAL"
+TRADIFI_CONTRACT_TYPES: frozenset[str] = frozenset({"TRADIFI_PERPETUAL"})
+TRADIFI_UNDERLYING_TYPES: frozenset[str] = frozenset({"TRADIFI"})
+# Official USD-M delivery enums. A row carrying one of these is affirmative evidence that
+# the contract is NOT a perpetual, which resolves the candidate instead of blocking it.
+DELIVERY_CONTRACT_TYPES: frozenset[str] = frozenset(
+    {
+        "CURRENT_MONTH",
+        "NEXT_MONTH",
+        "CURRENT_QUARTER",
+        "NEXT_QUARTER",
+        "CURRENT_QUARTER_DELIVERING",
+        "NEXT_QUARTER_DELIVERING",
+        "PERPETUAL_DELIVERING",
+    }
+)
+# Only a perpetual contract realizes funding, so an official fundingRate archive object is
+# affirmative perpetual evidence for the symbol that owns it.
+FUNDING_EVIDENCE_FAMILIES: tuple[str, ...] = ("monthly/fundingRate", "daily/fundingRate")
+
+MEMBERSHIP_CONFIRMED: str = "confirmed_perpetual"
+MEMBERSHIP_DELIVERY: str = "delivery_non_perpetual"
+MEMBERSHIP_TRADIFI: str = "tradifi_perpetual"
+MEMBERSHIP_SETTLEMENT_ARTIFACT: str = "settlement_artifact_candidate"
+MEMBERSHIP_DATED_DELIVERY: str = "dated_delivery_candidate"
+MEMBERSHIP_UNRESOLVED: str = "unresolved_archive_candidate"
+MEMBERSHIP_UNSUPPORTED_SEMANTICS: str = "unsupported_contract_semantics"
+# Unresolved classes block membership; they are never silently dropped from the report.
+MEMBERSHIP_BLOCKING_CLASSES: frozenset[str] = frozenset(
+    {
+        MEMBERSHIP_SETTLEMENT_ARTIFACT,
+        MEMBERSHIP_DATED_DELIVERY,
+        MEMBERSHIP_UNRESOLVED,
+        MEMBERSHIP_UNSUPPORTED_SEMANTICS,
+    }
+)
+
+# Name shapes are audit hints only. They never promote a name into membership and never
+# exclude one from the report; an unresolved candidate blocks whatever its spelling is.
+_DATED_DELIVERY_NAME_RE = re.compile(r"^[A-Z0-9]+_\d{6}$")
+_SETTLEMENT_NAME_RE = re.compile(r"SETTLED")
+
+# --- review-75 immutable planning, cumulative budget, storage feasibility -------------
+
+PLAN_CONTRACT_VERSION: int = 1
+SAMPLE_PLAN_LOCK_FILENAME: str = "cex002_sample_plan_lock.json"
+BUDGET_LEDGER_FILENAME: str = "cex002_budget_ledger.json"
+CONTRACT_METADATA_FILENAME: str = "cex002_official_contract_metadata.json"
+CONTRACT_SNAPSHOT_DIRNAME: str = "fapi_snapshots"
+LEGACY_BUDGET_UNRESOLVED: str = "legacy_budget_accounting_unresolved"
+PLAN_INPUTS_CHANGED: str = "plan_inputs_changed"
+GATE2_STORAGE_BLOCK: str = "gate2_storage_insufficient"
+
+# Coinalyze qualification anchors are declared, not derived from an alphabetical edge of
+# the discovered universe. Both must be confirmed Binance perpetuals first.
+COINALYZE_ANCHOR_SYMBOLS: tuple[str, ...] = ("BTCUSDT", "ETHUSDT")
+
+# --- review-75 separated source and coverage states -----------------------------------
+
+SOURCE_STATE_OFFICIAL: str = "official_qualified"
+SOURCE_STATE_TYPED_GAPS: str = "qualified_with_typed_gaps"
+SOURCE_STATE_SECONDARY: str = "secondary_qualified"
+SOURCE_STATE_INACCESSIBLE: str = "inaccessible"
+SOURCE_STATE_INTEGRITY: str = "schema_integrity_failure"
+SOURCE_STATE_MEMBERSHIP: str = "membership_unresolved"
+SOURCE_STATE_SAMPLE_PENDING: str = "sample_evidence_pending"
+SOURCE_STATE_DERIVED: str = "derived_excluded"
+QUALIFIED_SOURCE_STATES: frozenset[str] = frozenset(
+    {SOURCE_STATE_OFFICIAL, SOURCE_STATE_TYPED_GAPS, SOURCE_STATE_SECONDARY}
+)
+
+COVERAGE_COMPLETE: str = "complete"
+COVERAGE_TYPED_GAPS: str = "typed_gaps"
+COVERAGE_BLOCKING_GAPS: str = "blocking_gaps"
+COVERAGE_UNRESOLVED_MEMBERSHIP: str = "unresolved_membership"
+COVERAGE_NOT_APPLICABLE: str = "not_applicable"
 
 _SYMBOL_DIR_RE = re.compile(r"^[A-Z0-9_]+$")
 _BOOL_TOKENS = frozenset({"true", "false"})
@@ -425,6 +517,20 @@ _IDENTITY_DROP_KEYS = frozenset(
         "retry_journal_path",
         "listing_checkpoint",
         "recovered_samples",
+        "progress_objects",
+        "observed_at",
+        "retained_contract_metadata_rows",
+        "retained_contract_snapshots",
+        "response_content_path",
+        "response_sha256",
+        "response_byte_size",
+        "server_time_ms",
+        "unverified_retained_sample_keys",
+        # Environment and execution plane: local free space, retained credit, and the
+        # plan/budget bookkeeping are not part of what was qualified.
+        "gate2_feasibility",
+        "plan_lock",
+        "budget",
     }
 )
 
@@ -435,6 +541,22 @@ class SourceAuthority(str, Enum):
     SAMPLE_ONLY = "sample_only"
     INACCESSIBLE = "inaccessible"
     UNSUPPORTED = "unsupported"
+    MEMBERSHIP_UNRESOLVED = "membership_unresolved"
+    SAMPLE_PENDING = "sample_evidence_pending"
+
+
+# An official source keeps official authority while it carries typed coverage gaps; only
+# an integrity or access failure withdraws it.
+SOURCE_STATE_AUTHORITY: dict[str, SourceAuthority] = {
+    SOURCE_STATE_OFFICIAL: SourceAuthority.OFFICIAL,
+    SOURCE_STATE_TYPED_GAPS: SourceAuthority.OFFICIAL,
+    SOURCE_STATE_SECONDARY: SourceAuthority.SECONDARY,
+    SOURCE_STATE_INACCESSIBLE: SourceAuthority.INACCESSIBLE,
+    SOURCE_STATE_INTEGRITY: SourceAuthority.SAMPLE_ONLY,
+    SOURCE_STATE_MEMBERSHIP: SourceAuthority.MEMBERSHIP_UNRESOLVED,
+    SOURCE_STATE_SAMPLE_PENDING: SourceAuthority.SAMPLE_PENDING,
+    SOURCE_STATE_DERIVED: SourceAuthority.UNSUPPORTED,
+}
 
 
 class GateStatus(str, Enum):
@@ -609,8 +731,26 @@ class ObjectIndex(Protocol):
     def fetch_bytes(self, url: str) -> bytes: ...
 
 
+@dataclass(frozen=True, slots=True)
+class ExchangeInfoResponse:
+    """One authenticated exchangeInfo fetch with its retained raw bytes and identity.
+
+    A parsed mapping alone can never be re-proved later. Retaining the raw response
+    content-addressably lets every reuse rehash and reparse the exact bytes the rows came
+    from instead of trusting a copied field.
+    """
+
+    endpoint: str
+    payload: Mapping[str, Any]
+    raw_bytes: bytes
+    sha256: str
+    byte_size: int
+    retrieval_time: str
+    content_path: str
+
+
 class CurrentContractSource(Protocol):
-    def fetch_exchange_info(self) -> Mapping[str, Any]: ...
+    def fetch_exchange_info(self) -> ExchangeInfoResponse: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -675,10 +815,25 @@ class MemoryObjectIndex:
 
 @dataclass
 class MemoryCurrentContractSource:
-    payload: Mapping[str, Any]
+    """Fixture contract source that retains real raw response bytes, not a parse."""
 
-    def fetch_exchange_info(self) -> Mapping[str, Any]:
-        return dict(self.payload)
+    payload: Mapping[str, Any]
+    endpoint: str = OFFICIAL_INCREMENTAL_ENDPOINTS["exchangeInfo"]
+    retrieved_at: str = "1970-01-01T00:00:00+00:00"
+
+    def fetch_exchange_info(self) -> ExchangeInfoResponse:
+        raw = json.dumps(dict(self.payload), sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        return ExchangeInfoResponse(
+            endpoint=self.endpoint,
+            payload=json.loads(raw.decode("utf-8")),
+            raw_bytes=raw,
+            sha256=_object_sha256(raw),
+            byte_size=len(raw),
+            retrieval_time=self.retrieved_at,
+            content_path="",
+        )
 
 
 @dataclass
@@ -772,6 +927,17 @@ class ProductMatrixRow:
     uncovered_universe_symbols: tuple[str, ...]
     universe_coverage_gaps: tuple[Mapping[str, Any], ...]
     sample_budget_blocked: tuple[Mapping[str, Any], ...] = ()
+    # ``listed_*`` count the full archive union, including excluded and unresolved names.
+    # The accepted-universe totals below are the scope the coverage state evaluates.
+    accepted_universe_object_count: int = 0
+    accepted_universe_listed_bytes: int | None = None
+    # Source authenticity/schema/checksum/access is judged separately from how much of
+    # the universe and timeline the source happens to cover.
+    source_qualification_state: str = ""
+    coverage_state: str = ""
+    release_blocked: bool = True
+    typed_gap_symbols: tuple[str, ...] = ()
+    coverage_gap_kinds: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -799,6 +965,10 @@ class QualificationReport:
     listing_checkpoint: Mapping[str, Any]
     coinalyze: Mapping[str, Any]
     accepted: bool
+    membership: Mapping[str, Any] = field(default_factory=dict)
+    accepted_universe: tuple[str, ...] = ()
+    plan_lock: Mapping[str, Any] = field(default_factory=dict)
+    budget: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -1249,6 +1419,8 @@ class SamplePlan:
     max_object_bytes: int
     unique_new_objects: int = 0
     unique_retained_objects: int = 0
+    cumulative_spent_before_bytes: int = 0
+    allowance_bytes: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1260,11 +1432,60 @@ class SamplePlan:
             "max_object_bytes": self.max_object_bytes,
             "unique_new_objects": self.unique_new_objects,
             "unique_retained_objects": self.unique_retained_objects,
+            "cumulative_spent_before_bytes": self.cumulative_spent_before_bytes,
+            "allowance_bytes": self.allowance_bytes,
             "note": (
                 "Gate 1 execution budget for new downloads only; it never truncates, "
-                "rejects, or miscounts larger source objects"
+                "rejects, or miscounts larger source objects. The budget is cumulative "
+                "across every invocation, not per invocation"
             ),
         }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> SamplePlan:
+        """Rebuild a locked plan exactly; a resume never re-selects its keys."""
+        entries = payload.get("entries")
+        blocked = payload.get("blocked")
+        if not isinstance(entries, list) or not isinstance(blocked, list):
+            raise ResumeIntegrityError(
+                "locked sample plan is missing entries or blocked records"
+            )
+        rebuilt: list[SamplePlanEntry] = []
+        for item in entries:
+            if not isinstance(item, dict):
+                raise ResumeIntegrityError("locked sample plan entry is not an object")
+            try:
+                rebuilt.append(
+                    SamplePlanEntry(
+                        family=str(item["family"]),
+                        symbol=str(item["symbol"]),
+                        regime=str(item["regime"]),
+                        products=tuple(str(name) for name in item["products"]),
+                        key=str(item["key"]),
+                        url=str(item["url"]),
+                        byte_size=int(item["byte_size"]),
+                        action=str(item["action"]),
+                        block_reason=str(item.get("block_reason") or ""),
+                    )
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ResumeIntegrityError(
+                    "locked sample plan entry is malformed", context={"entry": str(item)[:200]}
+                ) from exc
+        return cls(
+            entries=tuple(rebuilt),
+            blocked=tuple(dict(item) for item in blocked),
+            new_download_bytes=int(payload.get("new_download_bytes") or 0),
+            retained_bytes=int(payload.get("retained_bytes") or 0),
+            budget_bytes=int(payload.get("budget_bytes") or 0),
+            max_object_bytes=int(payload.get("max_object_bytes") or 0),
+            unique_new_objects=int(payload.get("unique_new_objects") or 0),
+            unique_retained_objects=int(payload.get("unique_retained_objects") or 0),
+            cumulative_spent_before_bytes=int(
+                payload.get("cumulative_spent_before_bytes") or 0
+            ),
+            allowance_bytes=int(payload.get("allowance_bytes") or 0),
+        )
 
 
 def build_sample_plan(
@@ -1276,13 +1497,18 @@ def build_sample_plan(
     retained_keys: Mapping[str, int],
     budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
     max_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
+    cumulative_spent_bytes: int = 0,
 ) -> SamplePlan:
     """Plan every sample before downloading, choosing the smallest adequate objects.
 
-    Already retained, verified objects never consume the new-download budget. When no
-    candidate can fit, the regime is emitted as a typed ``sample_budget_exceeded`` block
-    carrying the required object identity and size instead of being silently dropped.
+    Already retained, verified objects never consume the new-download budget. The budget
+    is cumulative: bytes already spent by earlier invocations reduce this plan's
+    allowance, so no new byte can be planned once the total allowance is exhausted. When
+    no candidate can fit, the regime is emitted as a typed ``sample_budget_exceeded``
+    block carrying the required object identity and size instead of being silently
+    dropped.
     """
+    allowance = max(int(budget_bytes) - int(cumulative_spent_bytes), 0)
     entries: list[SamplePlanEntry] = []
     blocked: list[dict[str, Any]] = []
     delisted_set = set(delisted)
@@ -1341,7 +1567,7 @@ def build_sample_plan(
                     size = int(obj.size) if obj.size is not None else 0
                     if size <= 0 or size > max_object_bytes:
                         continue
-                    if spent + size > budget_bytes:
+                    if spent + size > allowance:
                         continue
                     spent += size
                     emitted.add(obj.key)
@@ -1361,7 +1587,9 @@ def build_sample_plan(
                             "required_bytes": required,
                             "max_object_bytes": max_object_bytes,
                             "budget_bytes": budget_bytes,
-                            "budget_remaining_bytes": max(budget_bytes - spent, 0),
+                            "cumulative_spent_before_bytes": int(cumulative_spent_bytes),
+                            "allowance_bytes": allowance,
+                            "budget_remaining_bytes": max(allowance - spent, 0),
                         }
                     )
                     entries.append(
@@ -1388,7 +1616,950 @@ def build_sample_plan(
         max_object_bytes=max_object_bytes,
         unique_new_objects=len(emitted) - len(retained_seen),
         unique_retained_objects=len(retained_seen),
+        cumulative_spent_before_bytes=int(cumulative_spent_bytes),
+        allowance_bytes=allowance,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class PlanInputs:
+    """Every input that may change which objects a Gate 1 plan selects."""
+
+    inventory_digest: str
+    listing_digest: str
+    membership_digest: str
+    code_config_digest: str
+    budget_digest: str
+    retained_digest: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "inventory_digest": self.inventory_digest,
+            "listing_digest": self.listing_digest,
+            "membership_digest": self.membership_digest,
+            "code_config_digest": self.code_config_digest,
+            "budget_digest": self.budget_digest,
+            "retained_digest": self.retained_digest,
+        }
+
+    def digest(self) -> str:
+        blob = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+    def differences(self, other: Mapping[str, Any]) -> tuple[str, ...]:
+        return tuple(
+            name
+            for name, value in sorted(self.to_dict().items())
+            if str(other.get(name) or "") != value
+        )
+
+
+def _digest_of(payload: Any) -> str:
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def inventory_digest(inventory: Mapping[str, FamilyInventory]) -> str:
+    """Digest of the complete listing evidence: family, listed state, key, size, etag."""
+    payload = {
+        family: {
+            "listed": entry.listed,
+            "symbols": list(entry.symbols),
+            "objects": {
+                symbol: [[obj.key, obj.size, obj.etag] for obj in objects]
+                for symbol, objects in sorted(entry.objects.items())
+            },
+        }
+        for family, entry in sorted(inventory.items())
+    }
+    return _digest_of(payload)
+
+
+# Fields that describe what a contract is, as opposed to when or from which fetch it was
+# observed. Only these bind the immutable plan and the semantic report identity.
+_STABLE_EVIDENCE_FIELDS: frozenset[str] = frozenset(
+    {
+        "kind",
+        "endpoint",
+        "symbol",
+        "pair",
+        "contract_type",
+        "status",
+        "underlying_type",
+        "base_asset",
+        "quote_asset",
+        "margin_asset",
+        "onboard_ms",
+        "delivery_ms",
+        "closed_observed_ms",
+        "semantics_state",
+        "families",
+        "example_key",
+        "semantics",
+    }
+)
+
+
+def membership_evidence_digest(classifications: Sequence[MembershipClassification]) -> str:
+    """Digest of every classification together with the evidence identity behind it."""
+    payload = [
+        {
+            "symbol": item.symbol,
+            "class": item.membership_class,
+            "in_archive": item.in_archive,
+            "in_current_exchange": item.in_current_exchange,
+            "name_pattern_hint": item.name_pattern_hint,
+            # Stable canonical semantics only. Every material identity, class, enum and
+            # lifecycle change moves this digest and blocks the locked plan, while a new
+            # response time or raw-response digest over identical rows does not.
+            "evidence": [
+                {
+                    key: value
+                    for key, value in sorted(record.items())
+                    if key in _STABLE_EVIDENCE_FIELDS
+                }
+                for record in item.evidence
+            ],
+        }
+        for item in classifications
+    ]
+    return _digest_of(payload)
+
+
+def listing_authority_manifest(
+    checkpoint: ListingCheckpointStore | None,
+) -> list[dict[str, Any]]:
+    """Stable manifest of every re-proved listing request and its raw response digest."""
+    if checkpoint is None:
+        return []
+    manifest: list[dict[str, Any]] = []
+    for key, entry in sorted(checkpoint.entries.items()):
+        request = entry.get("request")
+        manifest.append(
+            {
+                "request_key": key,
+                "request": dict(request) if isinstance(request, Mapping) else {},
+                "response_sha256": str(entry.get("response_sha256") or ""),
+                "byte_size": int(entry.get("byte_size") or 0),
+            }
+        )
+    return manifest
+
+
+def listing_authority_digest(checkpoint: ListingCheckpointStore | None) -> str:
+    return _digest_of(listing_authority_manifest(checkpoint))
+
+
+def executed_code_identity() -> dict[str, str]:
+    """Identity of the source actually executing this plan, not a hand-kept version."""
+    try:
+        module_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    except OSError:
+        module_sha256 = ""
+    return {"module": Path(__file__).name, "module_sha256": module_sha256}
+
+
+def plan_code_config_digest(*, budget_bytes: int, max_object_bytes: int) -> str:
+    """Digest of the executed planning code plus its configuration."""
+    return _digest_of(
+        {
+            "plan_contract_version": PLAN_CONTRACT_VERSION,
+            "code": executed_code_identity(),
+            "required_products": list(REQUIRED_PRODUCTS),
+            "official_archive_families": {
+                product: list(families)
+                for product, families in sorted(OFFICIAL_ARCHIVE_FAMILIES.items())
+            },
+            "interval_required_families": dict(sorted(INTERVAL_REQUIRED_FAMILIES.items())),
+            "regime_selector": "smallest_adequate_per_regime_v1",
+            "budget_bytes": int(budget_bytes),
+            "max_object_bytes": int(max_object_bytes),
+        }
+    )
+
+
+def retained_evidence_snapshot(
+    keys: Sequence[str],
+    retained_objects: Mapping[str, Mapping[str, Any]],
+    *,
+    sample_dir: Path,
+    sidecar_dir: Path,
+    cache: dict[tuple[str, str], int | None] | None = None,
+) -> dict[str, list[Any]]:
+    """Re-proved raw digest, sidecar digest and verified size for each retained key.
+
+    A checkpoint claim is not evidence: every key is rehashed and its provider sidecar is
+    re-proved here, so a missing or tampered object can never be frozen into the plan as
+    authoritative. Unprovable keys are recorded with an empty identity and a zero size.
+    """
+    snapshot: dict[str, list[Any]] = {}
+    for key in sorted(set(keys)):
+        entry = retained_objects.get(key)
+        size = (
+            None
+            if entry is None
+            else verify_retained_object(
+                key, entry, sample_dir=sample_dir, sidecar_dir=sidecar_dir, cache=cache
+            )
+        )
+        if entry is None or size is None:
+            snapshot[key] = ["", "", 0]
+            continue
+        snapshot[key] = [
+            str(entry.get("sha256") or ""),
+            str(entry.get("provider_checksum_sha256") or ""),
+            int(size),
+        ]
+    return snapshot
+
+
+def retained_evidence_digest(snapshot: Mapping[str, Sequence[Any]]) -> str:
+    return _digest_of({str(key): list(value) for key, value in sorted(snapshot.items())})
+
+
+def plan_content_digest(plan: SamplePlan) -> str:
+    payload = {key: value for key, value in plan.to_dict().items() if key != "note"}
+    return _digest_of(payload)
+
+
+_ALLOWED_PLAN_ACTIONS: frozenset[str] = frozenset(
+    {"download", "alias", "reuse_retained", "blocked"}
+)
+
+
+def validate_sample_plan(plan: SamplePlan) -> None:
+    """Refuse a plan whose actions, identities, or totals do not hold together.
+
+    A locked plan is replayed without re-selection, so a valid-JSON edit of an action or
+    a key/URL relationship would otherwise steer acquisition past the budget guard.
+    """
+    emitted: set[str] = set()
+    downloads: dict[str, int] = {}
+    retained: dict[str, int] = {}
+    for entry in plan.entries:
+        context = {"key": entry.key, "action": entry.action}
+        if entry.action not in _ALLOWED_PLAN_ACTIONS:
+            raise ResumeIntegrityError("locked plan entry has an unknown action", context=context)
+        if entry.url != vision_object_url(entry.key):
+            raise ResumeIntegrityError("locked plan URL does not address its key", context=context)
+        family_prefix = vision_prefix(*entry.family.split("/"))
+        if not entry.key.startswith(family_prefix):
+            raise ResumeIntegrityError(
+                "locked plan key is outside its declared family", context=context
+            )
+        if f"/{entry.symbol}/" not in entry.key:
+            raise ResumeIntegrityError(
+                "locked plan key does not belong to its declared symbol", context=context
+            )
+        if entry.byte_size < 0:
+            raise ResumeIntegrityError("locked plan entry has a negative size", context=context)
+        if entry.action == "blocked":
+            if not entry.block_reason:
+                raise ResumeIntegrityError(
+                    "locked plan blocked entry has no reason", context=context
+                )
+            continue
+        if entry.action == "alias":
+            if entry.key not in emitted:
+                raise ResumeIntegrityError(
+                    "locked plan alias references an unplanned object", context=context
+                )
+            continue
+        if entry.key in emitted:
+            raise ResumeIntegrityError(
+                "locked plan acquires the same object twice", context=context
+            )
+        emitted.add(entry.key)
+        if entry.action == "download":
+            downloads[entry.key] = entry.byte_size
+        else:
+            retained[entry.key] = entry.byte_size
+    if sum(downloads.values()) != plan.new_download_bytes:
+        raise ResumeIntegrityError(
+            "locked plan download bytes disagree with its planned total",
+            context={
+                "entries": sum(downloads.values()),
+                "declared": plan.new_download_bytes,
+            },
+        )
+    if len(downloads) != plan.unique_new_objects:
+        raise ResumeIntegrityError(
+            "locked plan unique new object count disagrees with its entries",
+            context={"entries": len(downloads), "declared": plan.unique_new_objects},
+        )
+    if len(retained) != plan.unique_retained_objects:
+        raise ResumeIntegrityError(
+            "locked plan retained object count disagrees with its entries",
+            context={"entries": len(retained), "declared": plan.unique_retained_objects},
+        )
+    if plan.new_download_bytes > plan.allowance_bytes:
+        raise ResumeIntegrityError(
+            "locked plan spends more than the allowance it was locked with",
+            context={
+                "planned": plan.new_download_bytes,
+                "allowance": plan.allowance_bytes,
+            },
+        )
+
+
+LEGACY_PLAN_BACKUP_FILENAME: str = "cex002_sample_plan_legacy.json"
+
+
+def read_pre_lock_plan(path: Path) -> dict[str, Any] | None:
+    """Load a pre-lock greedy plan document so it can be preserved, never overwritten."""
+    if not path.is_file():
+        return None
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(document, dict) or "entries" not in document:
+        return None
+    return document
+
+
+@dataclass
+class SamplePlanLock:
+    """One immutable, versioned Gate 1 plan bound to the identities that produced it.
+
+    After the first lock a resume replays the plan and may change execution state only.
+    Selected keys, blocked keys, sample identity, and the cumulative budget are fixed, the
+    plan document carries its own content digest, and a superseded plan is preserved in
+    ``history`` rather than overwritten. There is no in-band switch to re-select: a new
+    plan version requires a fresh reviewer authorization.
+    """
+
+    path: Path
+    plan_version: int = 0
+    locked_at: str = ""
+    inputs: dict[str, Any] = field(default_factory=dict)
+    plan: dict[str, Any] = field(default_factory=dict)
+    plan_digest: str = ""
+    retained_snapshot: dict[str, list[Any]] = field(default_factory=dict)
+    budget_snapshot: dict[str, Any] = field(default_factory=dict)
+    history: list[dict[str, Any]] = field(default_factory=list)
+
+    @classmethod
+    def load(cls, path: Path) -> SamplePlanLock | None:
+        document = read_checkpoint_document(path, kind="sample_plan_lock")
+        if document is None:
+            return None
+        plan = document.get("plan")
+        inputs = document.get("inputs")
+        if not isinstance(plan, dict) or not isinstance(inputs, dict):
+            raise ResumeIntegrityError(
+                "sample plan lock is missing its plan or inputs", context={"path": str(path)}
+            )
+        version = document.get("plan_version")
+        if not isinstance(version, int) or version < 1:
+            raise ResumeIntegrityError(
+                "sample plan lock has no positive plan version", context={"path": str(path)}
+            )
+        snapshot = document.get("retained_snapshot")
+        budget_snapshot = document.get("budget_snapshot")
+        history = document.get("history")
+        lock = cls(
+            path=path,
+            plan_version=version,
+            locked_at=str(document.get("locked_at") or ""),
+            inputs=dict(inputs),
+            plan=dict(plan),
+            plan_digest=str(document.get("plan_digest") or ""),
+            retained_snapshot=(
+                {str(key): list(value) for key, value in snapshot.items()}
+                if isinstance(snapshot, dict)
+                else {}
+            ),
+            budget_snapshot=dict(budget_snapshot) if isinstance(budget_snapshot, dict) else {},
+            history=[dict(item) for item in history] if isinstance(history, list) else [],
+        )
+        # The plan document is replayed verbatim, so it is re-proved before use: first
+        # that nothing edited it, then that it is internally consistent.
+        rebuilt = SamplePlan.from_dict(lock.plan)
+        digest = plan_content_digest(rebuilt)
+        if lock.plan_digest != digest:
+            raise ResumeIntegrityError(
+                "locked plan content does not match its recorded digest",
+                context={"path": str(path), "recorded": lock.plan_digest, "actual": digest},
+            )
+        validate_sample_plan(rebuilt)
+        return lock
+
+    def lock_plan(
+        self,
+        *,
+        plan: SamplePlan,
+        inputs: PlanInputs,
+        locked_at: str,
+        retained_snapshot: Mapping[str, Sequence[Any]],
+        budget_snapshot: Mapping[str, Any],
+    ) -> None:
+        """Install a plan version, preserving any prior plan and its inputs."""
+        if self.plan:
+            self.history.append(
+                {
+                    "plan_version": self.plan_version,
+                    "locked_at": self.locked_at,
+                    "inputs": dict(self.inputs),
+                    "plan": dict(self.plan),
+                    "plan_digest": self.plan_digest,
+                }
+            )
+        validate_sample_plan(plan)
+        self.plan_version += 1
+        self.locked_at = locked_at
+        self.inputs = inputs.to_dict()
+        self.plan = plan.to_dict()
+        self.plan_digest = plan_content_digest(plan)
+        self.retained_snapshot = {str(k): list(v) for k, v in retained_snapshot.items()}
+        self.budget_snapshot = dict(budget_snapshot)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "plan_version": self.plan_version,
+            "locked_at": self.locked_at,
+            "inputs": dict(self.inputs),
+            "plan": dict(self.plan),
+            "plan_digest": self.plan_digest,
+            "retained_snapshot": {k: list(v) for k, v in sorted(self.retained_snapshot.items())},
+            "budget_snapshot": dict(self.budget_snapshot),
+            "history": [dict(item) for item in self.history],
+        }
+
+    def flush(self) -> None:
+        _atomic_write_json(self.path, _checkpoint_document("sample_plan_lock", self.to_dict()))
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "legacy_plan_preserved": any(
+                int(item.get("plan_version") or 0) == 0 for item in self.history
+            ),
+            "plan_version": self.plan_version,
+            "locked_at": self.locked_at,
+            "inputs": dict(self.inputs),
+            "plan_digest": self.plan_digest,
+            "budget_snapshot": dict(self.budget_snapshot),
+            "retained_snapshot_objects": len(self.retained_snapshot),
+            "immutable": True,
+            "superseded_plan_versions": [
+                int(item.get("plan_version") or 0) for item in self.history
+            ],
+            "state": "locked",
+            "note": (
+                "resumes replay this plan and change execution state only; a new plan "
+                "version requires a fresh reviewer authorization, not an in-band switch"
+            ),
+        }
+
+
+def verify_retained_object(
+    key: str,
+    entry: Mapping[str, Any],
+    *,
+    sample_dir: Path,
+    sidecar_dir: Path,
+    cache: dict[tuple[str, str], int | None] | None = None,
+) -> int | None:
+    """Rehash a retained sample and re-prove its provider sidecar.
+
+    Returns the verified byte size, or ``None`` when the evidence is missing, tampered,
+    or incomplete. A checkpoint row is never accepted as proof on its own. ``cache`` may
+    memoise the result for one run so the same object is not rehashed several times; it
+    is keyed by object and claimed digest, so a substitution is still caught next run.
+    """
+    if str(entry.get("status") or "") != "complete":
+        return None
+    digest = str(entry.get("sha256") or "")
+    if cache is not None and (key, digest) in cache:
+        return cache[(key, digest)]
+    verified = _verify_retained_object(
+        key, entry, digest=digest, sample_dir=sample_dir, sidecar_dir=sidecar_dir
+    )
+    if cache is not None:
+        cache[(key, digest)] = verified
+    return verified
+
+
+def _verify_retained_object(
+    key: str,
+    entry: Mapping[str, Any],
+    *,
+    digest: str,
+    sample_dir: Path,
+    sidecar_dir: Path,
+) -> int | None:
+    provider = str(entry.get("provider_checksum") or "")
+    if len(digest) != 64 or provider != digest:
+        return None
+    dest = content_addressed_path(sample_dir, digest)
+    if not dest.is_file() or dest.name != digest:
+        return None
+    if compute_sha256(dest) != digest:
+        return None
+    try:
+        verify_provider_sidecar(
+            key=key,
+            object_sha256=digest,
+            sidecar_path=Path(str(entry.get("provider_checksum_path") or "")),
+            sidecar_sha256=str(entry.get("provider_checksum_sha256") or ""),
+            sidecar_dir=sidecar_dir,
+        )
+    except SourceQualificationError:
+        return None
+    return int(dest.stat().st_size)
+
+
+LEDGER_TRANSFERRED: str = "transferred"
+LEDGER_NO_TRANSFER: str = "no_transfer_content_address_reuse"
+_LEDGER_DISPOSITIONS: frozenset[str] = frozenset({LEDGER_TRANSFERRED, LEDGER_NO_TRANSFER})
+
+
+@dataclass
+class BudgetLedger:
+    """Write-ahead cumulative accounting of every new Gate 1 sample byte.
+
+    A planned object is reserved at its positive planned size before any network work and
+    settled afterwards with an explicit disposition: either bytes were transferred, or the
+    object was adopted from an existing content address and nothing moved. A settled
+    charge keeps its planned size as a monotonic floor, its transferred amount is
+    reconciled against rehashed retained evidence, and the document carries independent
+    counts, totals, and a state digest so a partial valid-JSON edit fails closed before
+    any download.
+
+    Retained bytes that predate this ledger cannot be attributed per invocation, and
+    review 67 made some retained samples budget-free, so their cost is an honest range
+    from zero to the verified retained total.
+    """
+
+    path: Path
+    budget_bytes: int
+    charges: dict[str, dict[str, Any]] = field(default_factory=dict)
+    reservations: dict[str, dict[str, Any]] = field(default_factory=dict)
+    legacy_max_bytes: int = 0
+    legacy_state: str = "resolved"
+    legacy_note: str = ""
+
+    # --- validation -------------------------------------------------------------------
+
+    def _check_amount(self, value: Any, *, label: str, key: str, positive: bool) -> int:
+        context = {"path": str(self.path), "label": label, "key": key}
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ResumeIntegrityError(
+                "budget ledger amount is not an integer", context=context
+            )
+        if value < 0 or (positive and value <= 0):
+            raise ResumeIntegrityError(
+                "budget ledger amount is not a valid size",
+                context={**context, "value": value},
+            )
+        if value > self.budget_bytes:
+            raise ResumeIntegrityError(
+                "budget ledger amount exceeds the Gate 1 budget",
+                context={**context, "value": value, "budget_bytes": self.budget_bytes},
+            )
+        return value
+
+    def validate(self) -> None:
+        """Re-prove the whole ledger; no edit may reduce durable spend."""
+        context = {"path": str(self.path)}
+        if self.budget_bytes <= 0:
+            raise ResumeIntegrityError("budget ledger has no positive budget", context=context)
+        overlap = sorted(set(self.charges) & set(self.reservations))
+        if overlap:
+            raise ResumeIntegrityError(
+                "budget ledger charges and reservations are not disjoint",
+                context={**context, "keys": overlap[:8]},
+            )
+        for key, record in self.reservations.items():
+            if not isinstance(record, dict):
+                raise ResumeIntegrityError(
+                    "budget ledger reservation is not a record", context={**context, "key": key}
+                )
+            # A reservation always retains its original positive planned size.
+            self._check_amount(
+                record.get("planned_bytes"), label="reservation", key=key, positive=True
+            )
+        for key, record in self.charges.items():
+            if not isinstance(record, dict):
+                raise ResumeIntegrityError(
+                    "budget ledger charge is not a record", context={**context, "key": key}
+                )
+            planned = self._check_amount(
+                record.get("planned_bytes"), label="charge_planned", key=key, positive=True
+            )
+            transferred = self._check_amount(
+                record.get("transferred_bytes"), label="charge_transferred", key=key,
+                positive=False,
+            )
+            if transferred > planned:
+                raise ResumeIntegrityError(
+                    "budget ledger charge exceeds its planned floor",
+                    context={**context, "key": key},
+                )
+            disposition = str(record.get("disposition") or "")
+            if disposition not in _LEDGER_DISPOSITIONS:
+                raise ResumeIntegrityError(
+                    "budget ledger charge has no known disposition",
+                    context={**context, "key": key, "disposition": disposition},
+                )
+            if transferred == 0 and disposition != LEDGER_NO_TRANSFER:
+                # A naked zero charge is indistinguishable from an allowance-restoring
+                # edit; a genuine zero-cost reuse must say so explicitly.
+                raise ResumeIntegrityError(
+                    "budget ledger zero charge has no no-transfer disposition",
+                    context={**context, "key": key},
+                )
+            if transferred > 0 and disposition != LEDGER_TRANSFERRED:
+                raise ResumeIntegrityError(
+                    "budget ledger transferred charge is mislabelled",
+                    context={**context, "key": key},
+                )
+            _require_hex_digest(
+                record.get("sha256"),
+                label="charge object digest",
+                context={**context, "key": key},
+            )
+        if self.legacy_max_bytes < 0:
+            raise ResumeIntegrityError(
+                "budget ledger legacy maximum is negative", context=context
+            )
+
+    def integrity_summary(self) -> dict[str, Any]:
+        """Independent counts, totals and a state digest over the whole ledger."""
+        planned_total = sum(
+            int(record["planned_bytes"]) for record in self.charges.values()
+        ) + sum(int(record["planned_bytes"]) for record in self.reservations.values())
+        transferred_total = sum(
+            int(record["transferred_bytes"]) for record in self.charges.values()
+        )
+        state = _digest_of(
+            {
+                "budget_bytes": self.budget_bytes,
+                "charges": {
+                    key: [
+                        int(record["planned_bytes"]),
+                        int(record["transferred_bytes"]),
+                        str(record["disposition"]),
+                        str(record["sha256"]),
+                    ]
+                    for key, record in sorted(self.charges.items())
+                },
+                "reservations": {
+                    key: int(record["planned_bytes"])
+                    for key, record in sorted(self.reservations.items())
+                },
+                "legacy_max_bytes": self.legacy_max_bytes,
+                "legacy_state": self.legacy_state,
+            }
+        )
+        return {
+            "charge_count": len(self.charges),
+            "reservation_count": len(self.reservations),
+            "planned_total_bytes": planned_total,
+            "transferred_total_bytes": transferred_total,
+            "charged_bytes": self.charged_bytes,
+            "state_sha256": state,
+        }
+
+    # --- durable io -------------------------------------------------------------------
+
+    @classmethod
+    def load(cls, path: Path, *, budget_bytes: int) -> BudgetLedger | None:
+        document = read_checkpoint_document(path, kind="budget_ledger")
+        if document is None:
+            return None
+        stored_budget = document.get("budget_bytes")
+        if not isinstance(stored_budget, int) or isinstance(stored_budget, bool):
+            raise ResumeIntegrityError(
+                "budget ledger has no integer budget", context={"path": str(path)}
+            )
+        if stored_budget != int(budget_bytes):
+            # A different allowance is a different accounting contract, never a resume.
+            raise ResumeIntegrityError(
+                "budget ledger was written for a different Gate 1 budget",
+                context={
+                    "path": str(path),
+                    "stored": stored_budget,
+                    "requested": int(budget_bytes),
+                },
+            )
+        charges = document.get("charges")
+        reservations = document.get("reservations")
+        if not isinstance(charges, dict) or not isinstance(reservations, dict):
+            raise ResumeIntegrityError(
+                "budget ledger charges or reservations are malformed",
+                context={"path": str(path)},
+            )
+        legacy_max = document.get("legacy_max_bytes", 0)
+        if isinstance(legacy_max, bool) or not isinstance(legacy_max, int) or legacy_max < 0:
+            raise ResumeIntegrityError(
+                "budget ledger legacy maximum is invalid", context={"path": str(path)}
+            )
+        ledger = cls(
+            path=path,
+            budget_bytes=int(budget_bytes),
+            charges={
+                str(key): dict(value) if isinstance(value, dict) else value
+                for key, value in charges.items()
+            },
+            reservations={
+                str(key): dict(value) if isinstance(value, dict) else value
+                for key, value in reservations.items()
+            },
+            legacy_max_bytes=legacy_max,
+            legacy_state=str(document.get("legacy_state") or "resolved"),
+            legacy_note=str(document.get("legacy_note") or ""),
+        )
+        ledger.validate()
+        recorded = document.get("integrity")
+        if not isinstance(recorded, dict):
+            raise ResumeIntegrityError(
+                "budget ledger has no integrity summary", context={"path": str(path)}
+            )
+        actual = ledger.integrity_summary()
+        differences = sorted(
+            name for name, value in actual.items() if recorded.get(name) != value
+        )
+        if differences:
+            # A partial valid-JSON edit cannot agree with the independent totals.
+            raise ResumeIntegrityError(
+                "budget ledger integrity summary disagrees with its entries",
+                context={"path": str(path), "fields": differences},
+            )
+        return ledger
+
+    @classmethod
+    def bootstrap(
+        cls,
+        path: Path,
+        *,
+        budget_bytes: int,
+        retained_objects: Mapping[str, Mapping[str, Any]],
+        sample_dir: Path,
+        sidecar_dir: Path,
+        cache: dict[tuple[str, str], int | None] | None = None,
+    ) -> BudgetLedger:
+        existing = cls.load(path, budget_bytes=budget_bytes)
+        if existing is not None:
+            return existing
+        verified: dict[str, int] = {}
+        for key, entry in retained_objects.items():
+            size = verify_retained_object(
+                key, entry, sample_dir=sample_dir, sidecar_dir=sidecar_dir, cache=cache
+            )
+            if size is None:
+                continue
+            digest = str(entry.get("sha256") or "")
+            verified.setdefault(digest, size)
+        upper = sum(verified.values())
+        if upper <= 0:
+            return cls(path=path, budget_bytes=int(budget_bytes))
+        return cls(
+            path=path,
+            budget_bytes=int(budget_bytes),
+            legacy_max_bytes=upper,
+            legacy_state=LEGACY_BUDGET_UNRESOLVED,
+            legacy_note=(
+                "retained sample bytes predate this ledger and include review-67 "
+                "budget-free samples; the chargeable amount is a range from zero to the "
+                "verified retained total, never a lower bound. The prior per-invocation "
+                "breach stays established by execution record 74 and is not recomputed here"
+            ),
+        )
+
+    def flush(self) -> None:
+        self.validate()
+        _atomic_write_json(
+            self.path,
+            _checkpoint_document(
+                "budget_ledger",
+                {
+                    "budget_bytes": self.budget_bytes,
+                    "charges": {
+                        key: dict(record) for key, record in sorted(self.charges.items())
+                    },
+                    "reservations": {
+                        key: dict(record) for key, record in sorted(self.reservations.items())
+                    },
+                    "legacy_max_bytes": self.legacy_max_bytes,
+                    "legacy_state": self.legacy_state,
+                    "legacy_note": self.legacy_note,
+                    "integrity": self.integrity_summary(),
+                },
+            ),
+        )
+
+    # --- accounting -------------------------------------------------------------------
+
+    @property
+    def charged_bytes(self) -> int:
+        """Definitely chargeable: settled transfers plus unsettled reservations."""
+        return sum(
+            int(record["transferred_bytes"]) for record in self.charges.values()
+        ) + sum(int(record["planned_bytes"]) for record in self.reservations.values())
+
+    @property
+    def spent_min_bytes(self) -> int:
+        return self.charged_bytes
+
+    @property
+    def spent_max_bytes(self) -> int:
+        return self.charged_bytes + self.legacy_max_bytes
+
+    @property
+    def remaining_bytes(self) -> int:
+        """Conservative allowance: zero while the legacy range could exhaust it."""
+        return max(self.budget_bytes - self.spent_max_bytes, 0)
+
+    @property
+    def exhausted(self) -> bool:
+        return self.remaining_bytes <= 0
+
+    @property
+    def breach_state(self) -> str:
+        if self.spent_min_bytes > self.budget_bytes:
+            return "confirmed"
+        if self.spent_max_bytes > self.budget_bytes:
+            return "unresolved"
+        return "none"
+
+    def reserve(self, key: str, byte_size: int) -> None:
+        """Charge a positive planned size durably before the acquisition that may lose it."""
+        if key in self.charges or key in self.reservations:
+            return
+        self.reservations[key] = {"planned_bytes": max(int(byte_size), 1)}
+        self.flush()
+
+    def settle(
+        self,
+        key: str,
+        transferred_bytes: int,
+        *,
+        sha256: str,
+        no_transfer: bool = False,
+    ) -> None:
+        """Close a reservation with an explicit disposition and a proved object digest."""
+        reservation = self.reservations.get(key) or self.charges.get(key)
+        transferred = 0 if no_transfer else int(transferred_bytes)
+        # The planned size is a monotonic floor: settlement records the proved transfer
+        # and never lowers what was already durably reserved.
+        planned = max(int((reservation or {}).get("planned_bytes") or 0), transferred, 1)
+        self.charges[key] = {
+            "planned_bytes": planned,
+            "transferred_bytes": transferred,
+            "disposition": LEDGER_NO_TRANSFER if no_transfer else LEDGER_TRANSFERRED,
+            "sha256": str(sha256),
+        }
+        self.reservations.pop(key, None)
+        self.flush()
+
+    def reconcile(
+        self,
+        retained_objects: Mapping[str, Mapping[str, Any]],
+        *,
+        sample_dir: Path,
+        sidecar_dir: Path,
+    ) -> dict[str, int]:
+        """Settle proved reservations and re-prove every settled charge.
+
+        A reservation is only settled against rehashed retained evidence; anything
+        unproved stays charged. A settled charge whose retained object disagrees with its
+        recorded transition is an integrity failure, not spend.
+        """
+        settled = 0
+        unresolved = 0
+        for key in sorted(self.reservations):
+            entry = retained_objects.get(key)
+            size = (
+                None
+                if entry is None
+                else verify_retained_object(
+                    key, entry, sample_dir=sample_dir, sidecar_dir=sidecar_dir
+                )
+            )
+            if size is None:
+                # The bytes may have been fetched and lost; never restore the allowance.
+                unresolved += 1
+                continue
+            self.settle(key, size, sha256=str(entry.get("sha256") or "") if entry else "")
+            settled += 1
+        reproved = 0
+        unreconciled = 0
+        for key in sorted(self.charges):
+            record = self.charges[key]
+            entry = retained_objects.get(key)
+            size = (
+                None
+                if entry is None
+                else verify_retained_object(
+                    key, entry, sample_dir=sample_dir, sidecar_dir=sidecar_dir
+                )
+            )
+            if size is None:
+                unreconciled += 1
+                continue
+            digest = str(entry.get("sha256") or "") if entry else ""
+            if str(record.get("sha256") or "") != digest:
+                raise ResumeIntegrityError(
+                    "settled charge does not identify the retained object it charged",
+                    context={"key": key, "recorded": record.get("sha256"), "retained": digest},
+                )
+            if record.get("disposition") == LEDGER_TRANSFERRED and int(
+                record.get("transferred_bytes") or 0
+            ) != int(size):
+                raise ResumeIntegrityError(
+                    "settled charge disagrees with the rehashed retained object size",
+                    context={
+                        "key": key,
+                        "recorded": record.get("transferred_bytes"),
+                        "verified": size,
+                    },
+                )
+            reproved += 1
+        if settled:
+            self.flush()
+        return {
+            "settled": settled,
+            "unresolved": unresolved,
+            "reproved": reproved,
+            "unreconciled": unreconciled,
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "budget_bytes": self.budget_bytes,
+            "charged_bytes": self.charged_bytes,
+            "settled_object_count": len(self.charges),
+            "settled_bytes": sum(
+                int(record["transferred_bytes"]) for record in self.charges.values()
+            ),
+            "no_transfer_object_count": sum(
+                1
+                for record in self.charges.values()
+                if record.get("disposition") == LEDGER_NO_TRANSFER
+            ),
+            "reserved_object_count": len(self.reservations),
+            "reserved_bytes": sum(
+                int(record["planned_bytes"]) for record in self.reservations.values()
+            ),
+            "legacy_chargeable_min_bytes": 0,
+            "legacy_chargeable_max_bytes": self.legacy_max_bytes,
+            "legacy_state": self.legacy_state,
+            "legacy_note": self.legacy_note,
+            "cumulative_spent_min_bytes": self.spent_min_bytes,
+            "cumulative_spent_max_bytes": self.spent_max_bytes,
+            "cumulative_remaining_bytes": self.remaining_bytes,
+            "exhausted": self.exhausted,
+            "breach_state": self.breach_state,
+            "integrity": self.integrity_summary(),
+            "external_breach_record": "research/sprint_004/74_CEX002_GATE1_RESUMABLE_EXECUTION.md",
+            "accounting": (
+                "write-ahead: a positive planned size is reserved before acquisition and "
+                "settled with an explicit transferred or no-transfer disposition, so an "
+                "interruption or an edit never restores allowance"
+            ),
+            "scope": "cumulative across every invocation, never per invocation",
+        }
 
 
 def _uncovered_listed_symbols(
@@ -1409,27 +2580,225 @@ def _family_group(family: str) -> str:
     return family.split("/", 1)[-1]
 
 
-def _universe_coverage_gaps(
+_OBJECT_PERIOD_RE = re.compile(r"(\d{4})-(\d{2})(?:-\d{2})?\.(?:zip|csv)$")
+
+
+def object_period(key: str) -> str | None:
+    """Calendar month an official archive object covers, from its own filename."""
+    match = _OBJECT_PERIOD_RE.search(key)
+    if match is None:
+        return None
+    return f"{match.group(1)}-{match.group(2)}"
+
+
+def _month_range(first: str, last: str) -> list[str]:
+    start_year, start_month = (int(part) for part in first.split("-"))
+    end_year, end_month = (int(part) for part in last.split("-"))
+    months: list[str] = []
+    year, month = start_year, start_month
+    while (year, month) <= (end_year, end_month):
+        months.append(f"{year:04d}-{month:02d}")
+        month += 1
+        if month > 12:
+            year, month = year + 1, 1
+    return months
+
+
+def temporal_group_gaps(
+    *,
+    symbol: str,
+    family_group: str,
+    families: Sequence[str],
+    periods: Sequence[str],
+    group_first: str | None,
+    group_last: str | None,
+    onboard_period: str | None,
+    close_period: str | None,
+    currently_listed: bool,
+) -> list[dict[str, Any]]:
+    """Typed temporal gaps for one symbol in one logical family group.
+
+    Expected windows come from authenticated contract lifecycle evidence and the family's
+    own global launch/latest cutoff, never from the symbol's own observations. Only an
+    affirmatively explained pre-listing, family-launch, or post-close interval is
+    nonblocking; an unexplained head, an unknown boundary, and a missing recent tail for a
+    currently listed contract all stay blocking evidence.
+    """
+    observed = sorted(set(periods))
+    if not observed:
+        return []
+    gaps: list[dict[str, Any]] = []
+    base = {
+        "symbol": symbol,
+        "family_group": family_group,
+        "families": list(families),
+        "observed_months": len(observed),
+        "first_observed": observed[0],
+        "last_observed": observed[-1],
+        "family_first_observed": group_first,
+        "family_last_observed": group_last,
+        "onboard_period": onboard_period,
+        "close_period": close_period,
+    }
+    seen = set(observed)
+    missing = [
+        month for month in _month_range(observed[0], observed[-1]) if month not in seen
+    ]
+    if missing:
+        gaps.append(
+            {
+                **base,
+                "status": "interior_month_gap",
+                "kind": "interior_month_gap",
+                "blocking": True,
+                "missing_months": missing[:24],
+                "missing_month_count": len(missing),
+            }
+        )
+    if group_first is not None:
+        if observed[0] > group_first:
+            if onboard_period is not None and observed[0] <= onboard_period:
+                gaps.append(
+                    {
+                        **base,
+                        "status": "head_gap_pre_listing",
+                        "kind": "head_gap_pre_listing",
+                        "blocking": False,
+                        "explained_by": "authenticated_onboard_date",
+                    }
+                )
+            elif onboard_period is None:
+                gaps.append(
+                    {
+                        **base,
+                        "status": "head_gap_unknown_onboard",
+                        "kind": "head_gap_unknown_onboard",
+                        "blocking": True,
+                        "explained_by": "",
+                    }
+                )
+            else:
+                gaps.append(
+                    {
+                        **base,
+                        "status": "head_gap_unexplained",
+                        "kind": "head_gap_unexplained",
+                        "blocking": True,
+                        "explained_by": "",
+                    }
+                )
+        elif onboard_period is not None and onboard_period < observed[0]:
+            gaps.append(
+                {
+                    **base,
+                    "status": "head_gap_family_launch",
+                    "kind": "head_gap_family_launch",
+                    "blocking": False,
+                    "explained_by": "source_family_launch",
+                }
+            )
+    if group_last is not None and observed[-1] < group_last:
+        if close_period is not None and observed[-1] >= close_period:
+            gaps.append(
+                {
+                    **base,
+                    "status": "tail_gap_post_close",
+                    "kind": "tail_gap_post_close",
+                    "blocking": False,
+                    "explained_by": "authenticated_close_or_delivery",
+                }
+            )
+        elif close_period is not None:
+            gaps.append(
+                {
+                    **base,
+                    "status": "tail_gap_unexplained",
+                    "kind": "tail_gap_unexplained",
+                    "blocking": True,
+                    "explained_by": "",
+                }
+            )
+        elif currently_listed:
+            gaps.append(
+                {
+                    **base,
+                    "status": "tail_gap_missing_recent",
+                    "kind": "tail_gap_missing_recent",
+                    "blocking": True,
+                    "explained_by": "",
+                }
+            )
+        else:
+            gaps.append(
+                {
+                    **base,
+                    "status": "tail_gap_unknown_close",
+                    "kind": "tail_gap_unknown_close",
+                    "blocking": True,
+                    "explained_by": "",
+                }
+            )
+    return gaps
+
+
+def contract_lifecycle_windows(
+    lifecycle_rows: Mapping[str, Mapping[str, Any]],
+) -> dict[str, dict[str, str | None]]:
+    """Authenticated onboard and close months per symbol, or ``None`` when unproved."""
+    windows: dict[str, dict[str, str | None]] = {}
+    for symbol, row in lifecycle_rows.items():
+        windows[symbol] = {
+            "onboard_period": ms_to_period(_optional_int(row.get("onboard_ms"))),
+            "close_period": ms_to_period(contract_close_ms(row)),
+        }
+    return windows
+
+
+def universe_coverage_gaps(
+    *,
     universe: Sequence[str],
     families: Sequence[str],
     family_symbol_lists: Mapping[str, set[str]],
     family_symbol_objects: Mapping[tuple[str, str], int],
-    *,
+    family_symbol_periods: Mapping[tuple[str, str], tuple[str, ...]],
+    currently_listed: Sequence[str],
+    lifecycle_windows: Mapping[str, Mapping[str, str | None]],
     require_every_group: bool,
-) -> tuple[tuple[dict[str, Any], ...], tuple[str, ...]]:
-    """Coverage of the full discovered universe, not only symbols already listed.
+) -> tuple[tuple[dict[str, Any], ...], tuple[str, ...], tuple[str, ...]]:
+    """Coverage of the accepted universe, separated into blocking and typed gaps.
 
-    A universe member with no prefix under a logical family is a coverage gap with
-    explicit unavailability evidence, never a silent omission. ``require_every_group``
-    demands every logical family for every symbol; the union-membership product only
-    demands that a symbol be evidenced somewhere.
+    ``require_every_group`` demands every logical family group for every symbol; the
+    union-membership product only demands that a symbol be evidenced somewhere. The
+    return is (gaps, blocking symbols, symbols whose only gaps are explained facts).
     """
     groups: dict[str, list[str]] = {}
     for family in families:
         groups.setdefault(_family_group(family), []).append(family)
+    listed_now = set(currently_listed)
+    family_first: dict[str, str] = {}
+    family_last: dict[str, str] = {}
+    for (family, _symbol), periods in family_symbol_periods.items():
+        if not periods:
+            continue
+        earliest, latest = min(periods), max(periods)
+        if family not in family_first or earliest < family_first[family]:
+            family_first[family] = earliest
+        if family not in family_last or latest > family_last[family]:
+            family_last[family] = latest
+    group_first_seen: dict[str, str] = {}
+    group_last_seen: dict[str, str] = {}
+    for group, group_families in groups.items():
+        firsts = [family_first[family] for family in group_families if family in family_first]
+        lasts = [family_last[family] for family in group_families if family in family_last]
+        if firsts:
+            group_first_seen[group] = min(firsts)
+        if lasts:
+            group_last_seen[group] = max(lasts)
     gaps: list[dict[str, Any]] = []
-    uncovered: set[str] = set()
+    blocking: set[str] = set()
+    typed: set[str] = set()
     for symbol in sorted(set(universe)):
+        window = lifecycle_windows.get(symbol, {})
         symbol_gaps: list[dict[str, Any]] = []
         covered_groups = 0
         for group in sorted(groups):
@@ -1437,26 +2806,182 @@ def _universe_coverage_gaps(
             objects = sum(
                 family_symbol_objects.get((family, symbol), 0) for family in group_families
             )
-            if objects > 0:
-                covered_groups += 1
+            if objects <= 0:
+                listed = any(
+                    symbol in family_symbol_lists.get(family, set()) for family in group_families
+                )
+                if symbol in listed_now and not listed:
+                    status = "current_unarchived"
+                else:
+                    status = "listed_prefix_empty" if listed else "absent_family_prefix"
+                symbol_gaps.append(
+                    {
+                        "symbol": symbol,
+                        "family_group": group,
+                        "families": list(group_families),
+                        "status": status,
+                        "kind": status,
+                        "blocking": True,
+                        "objects": 0,
+                    }
+                )
                 continue
-            listed = any(
-                symbol in family_symbol_lists.get(family, set()) for family in group_families
+            covered_groups += 1
+            symbol_gaps.extend(
+                temporal_group_gaps(
+                    symbol=symbol,
+                    family_group=group,
+                    families=group_families,
+                    periods=[
+                        period
+                        for family in group_families
+                        for period in family_symbol_periods.get((family, symbol), ())
+                    ],
+                    group_first=group_first_seen.get(group),
+                    group_last=group_last_seen.get(group),
+                    onboard_period=window.get("onboard_period"),
+                    close_period=window.get("close_period"),
+                    currently_listed=symbol in listed_now,
+                )
             )
-            symbol_gaps.append(
-                {
-                    "symbol": symbol,
-                    "family_group": group,
-                    "families": list(group_families),
-                    "status": "listed_prefix_empty" if listed else "absent_family_prefix",
-                    "objects": 0,
-                }
-            )
-        blocked = bool(symbol_gaps) if require_every_group else covered_groups == 0
-        if blocked:
-            uncovered.add(symbol)
-            gaps.extend(symbol_gaps)
-    return tuple(gaps), tuple(sorted(uncovered))
+        if not require_every_group:
+            # Union membership only needs a symbol evidenced somewhere, so a single
+            # group's absence is not itself a membership gap.
+            absent = {"absent_family_prefix", "listed_prefix_empty", "current_unarchived"}
+            symbol_gaps = [item for item in symbol_gaps if item["status"] not in absent]
+            if covered_groups == 0:
+                status = "current_unarchived" if symbol in listed_now else "no_family_evidence"
+                symbol_gaps.append(
+                    {
+                        "symbol": symbol,
+                        "family_group": "any",
+                        "families": list(families),
+                        "status": status,
+                        "kind": status,
+                        "blocking": True,
+                        "objects": 0,
+                    }
+                )
+        if not symbol_gaps:
+            continue
+        gaps.extend(symbol_gaps)
+        if any(item["blocking"] for item in symbol_gaps):
+            blocking.add(symbol)
+        else:
+            typed.add(symbol)
+    return tuple(gaps), tuple(sorted(blocking)), tuple(sorted(typed))
+
+
+@dataclass(frozen=True, slots=True)
+class PhysicalRequirement:
+    """Deduplicated physical source objects behind the accepted universe."""
+
+    object_count: int
+    byte_total: int
+    unknown_size_objects: int
+    keys: frozenset[str]
+
+
+def physical_source_requirement(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    family_products: Mapping[str, tuple[str, ...]],
+    universe: Sequence[str],
+) -> PhysicalRequirement:
+    """Count each physical object once, however many logical products claim it.
+
+    Per-product logical totals overlap heavily (one trades object serves membership and
+    trades), so they can never be summed into a storage requirement.
+    """
+    members = set(universe)
+    sizes: dict[str, int] = {}
+    unknown = 0
+    for family, entry in sorted(inventory.items()):
+        if not family_products.get(family):
+            continue
+        for symbol, objects in entry.objects.items():
+            if symbol not in members:
+                continue
+            for obj in objects:
+                if obj.key in sizes:
+                    continue
+                if obj.size is None:
+                    unknown += 1
+                    sizes[obj.key] = 0
+                    continue
+                sizes[obj.key] = int(obj.size)
+    return PhysicalRequirement(
+        object_count=len(sizes),
+        byte_total=sum(sizes.values()),
+        unknown_size_objects=unknown,
+        keys=frozenset(sizes),
+    )
+
+
+def available_bytes(path: Path) -> int | None:
+    try:
+        return int(shutil.disk_usage(path).free)
+    except OSError:
+        return None
+
+
+def storage_feasibility(
+    *,
+    requirement: PhysicalRequirement,
+    retained_credit_bytes: int,
+    retained_credit_objects: int,
+    local_available_bytes: int | None,
+    unverified_credit_objects: int = 0,
+) -> dict[str, Any]:
+    """Exact physical Gate 2 requirement against real local capacity.
+
+    Normalized/catalog storage is an additional, unmeasured bound; it is reported as
+    unknown and never treated as zero. Insufficiency blocks Gate 2 and never relabels a
+    qualified source as inaccessible.
+    """
+    projected_new = max(requirement.byte_total - int(retained_credit_bytes), 0)
+    shortfall = (
+        None
+        if local_available_bytes is None
+        else max(projected_new - int(local_available_bytes), 0)
+    )
+    sufficient = (
+        None
+        if shortfall is None
+        else bool(shortfall == 0 and requirement.unknown_size_objects == 0)
+    )
+    return {
+        "physical_object_count": requirement.object_count,
+        "physical_compressed_raw_bytes": requirement.byte_total,
+        "unknown_size_objects": requirement.unknown_size_objects,
+        "retained_verified_credit_objects": int(retained_credit_objects),
+        "retained_verified_credit_bytes": int(retained_credit_bytes),
+        "unverified_retained_objects": int(unverified_credit_objects),
+        "credit_rule": (
+            "credit requires a rehashed content-addressed object and a re-proved provider "
+            "sidecar; unverified rows are excluded, never assumed present"
+        ),
+        "projected_new_compressed_raw_bytes": projected_new,
+        "local_available_bytes": local_available_bytes,
+        "shortfall_bytes": shortfall,
+        "raw_storage_sufficient": sufficient,
+        "normalized_catalog_bytes": {
+            "state": "unknown",
+            "treated_as_zero": False,
+            "note": (
+                "normalized/Nautilus catalog storage is an additional bound on top of "
+                "compressed raw and must be measured before Gate 2, never assumed zero"
+            ),
+        },
+        "gate2_storage_state": (
+            "unknown" if sufficient is None else ("sufficient" if sufficient else "insufficient")
+        ),
+        "deduplication": "each physical object counted once across every logical product",
+        "note": (
+            "per-product logical byte totals overlap and are reported separately; they "
+            "are never summed into this requirement"
+        ),
+    }
 
 
 def _symbol_note(symbols: Sequence[str], limit: int) -> str:
@@ -1530,30 +3055,783 @@ def discover_historical_symbols(index: ObjectIndex) -> list[str]:
     return inventory_symbols(build_family_inventory(index))
 
 
-def parse_current_perpetuals(payload: Mapping[str, Any]) -> list[str]:
+# Native identity, contract class, status, and lifecycle boundaries are all required.
+# A row missing any of them cannot support classification or a temporal window, so it
+# fails closed instead of silently qualifying on a partial record.
+REQUIRED_EXCHANGE_ROW_FIELDS: tuple[str, ...] = (
+    "symbol",
+    "pair",
+    "contractType",
+    "status",
+    "underlyingType",
+    "baseAsset",
+    "quoteAsset",
+    "marginAsset",
+    "onboardDate",
+    "deliveryDate",
+)
+_OPTIONAL_EXCHANGE_ROW_FIELDS: tuple[str, ...] = ("contractStatus", "underlyingSubType")
+# Binance stamps a year-2100 sentinel delivery date on contracts that never deliver.
+PERPETUAL_DELIVERY_SENTINEL_MS: int = 4_102_444_800_000
+CLOSED_CONTRACT_STATUSES: frozenset[str] = frozenset(
+    {"SETTLING", "CLOSE", "CLOSED", "DELISTED", "END_OF_DAY"}
+)
+# Official USD-M contract status enum. An unknown value is unproved semantics, never a
+# tradable crypto perpetual by default.
+SUPPORTED_CONTRACT_STATUSES: frozenset[str] = frozenset(
+    {
+        "PENDING_TRADING",
+        "TRADING",
+        "PRE_DELIVERING",
+        "DELIVERING",
+        "DELIVERED",
+        "PRE_SETTLE",
+        "SETTLING",
+        "CLOSE",
+    }
+)
+# Official USD-M underlying types for crypto contracts. TradFi is reported separately and
+# anything else is unproved, so crypto authority is never inferred from "not TradFi".
+SUPPORTED_CRYPTO_UNDERLYING_TYPES: frozenset[str] = frozenset({"COIN", "INDEX"})
+
+SEMANTICS_SUPPORTED: str = "supported"
+SEMANTICS_UNKNOWN_UNDERLYING: str = "unsupported_underlying_type"
+SEMANTICS_UNKNOWN_STATUS: str = "unsupported_contract_status"
+SEMANTICS_INCOHERENT_IDENTITY: str = "incoherent_contract_identity"
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _require_identity_text(value: Any, *, field: str, symbol: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise SourceQualificationError(
+            "exchangeInfo row has an empty contract identity field",
+            context={"symbol": symbol, "field": field},
+        )
+    return text
+
+
+def _require_lifecycle_ms(value: Any, *, field: str, symbol: str) -> int:
+    parsed = _optional_int(value)
+    if parsed is None or parsed < 0:
+        raise SourceQualificationError(
+            "exchangeInfo row has an invalid contract lifecycle boundary",
+            context={"symbol": symbol, "field": field, "value": str(value)},
+        )
+    return parsed
+
+
+def exchange_info_server_time_ms(payload: Mapping[str, Any]) -> int:
+    """Authenticated response time, from the payload itself rather than a local field."""
+    server_time = _optional_int(payload.get("serverTime"))
+    if server_time is None or server_time <= 0:
+        raise SourceQualificationError(
+            "exchangeInfo payload has no authenticated serverTime",
+            context={"server_time": str(payload.get("serverTime"))},
+        )
+    return server_time
+
+
+def parse_exchange_info_rows(payload: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Complete authenticated current contract rows, keyed by native symbol.
+
+    Every field needed to prove native identity, contract type, status, underlying type,
+    and lifecycle boundaries is required; nothing is reduced to a name list, and a partial
+    row is rejected rather than accepted with unknown identity.
+    """
     symbols = payload.get("symbols")
     if not isinstance(symbols, list) or not symbols:
         raise SourceQualificationError(
             "exchangeInfo payload is missing symbols[]",
             context={"keys": sorted(payload.keys())},
         )
-    current: list[str] = []
+    server_time = exchange_info_server_time_ms(payload)
+    rows: dict[str, dict[str, Any]] = {}
     for item in symbols:
         if not isinstance(item, dict):
             raise SourceQualificationError("exchangeInfo symbol row is not an object")
-        if "contractType" not in item or "symbol" not in item:
+        missing = [field for field in REQUIRED_EXCHANGE_ROW_FIELDS if field not in item]
+        if missing:
             raise SourceQualificationError(
-                "exchangeInfo row missing symbol or contractType",
-                context={"row_keys": sorted(item.keys())},
+                "exchangeInfo row is missing required contract identity fields",
+                context={"symbol": str(item.get("symbol") or ""), "missing": missing},
             )
-        if str(item["contractType"]).strip().upper() != "PERPETUAL":
-            continue
         name = str(item["symbol"]).strip().upper()
-        if name:
-            current.append(name)
+        if not name:
+            raise SourceQualificationError("exchangeInfo row has an empty symbol")
+        if name in rows:
+            raise SourceQualificationError(
+                "exchangeInfo contains duplicate native contract symbols",
+                context={"symbol": name},
+            )
+        row: dict[str, Any] = {
+            field: item.get(field)
+            for field in (*REQUIRED_EXCHANGE_ROW_FIELDS, *_OPTIONAL_EXCHANGE_ROW_FIELDS)
+            if field in item
+        }
+        row["symbol"] = name
+        # Present-but-empty identity is the same fail-open hole as a missing key.
+        row["pair"] = _require_identity_text(item.get("pair"), field="pair", symbol=name)
+        row["contract_type"] = _require_identity_text(
+            item.get("contractType"), field="contractType", symbol=name
+        ).upper()
+        row["underlying_type"] = _require_identity_text(
+            item.get("underlyingType"), field="underlyingType", symbol=name
+        ).upper()
+        row["status"] = _require_identity_text(
+            item.get("status"), field="status", symbol=name
+        ).upper()
+        row["base_asset"] = _require_identity_text(
+            item.get("baseAsset"), field="baseAsset", symbol=name
+        ).upper()
+        row["quote_asset"] = _require_identity_text(
+            item.get("quoteAsset"), field="quoteAsset", symbol=name
+        ).upper()
+        row["margin_asset"] = _require_identity_text(
+            item.get("marginAsset"), field="marginAsset", symbol=name
+        ).upper()
+        row["onboard_ms"] = _require_lifecycle_ms(
+            item.get("onboardDate"), field="onboardDate", symbol=name
+        )
+        row["delivery_ms"] = _require_lifecycle_ms(
+            item.get("deliveryDate"), field="deliveryDate", symbol=name
+        )
+        row["server_time_ms"] = server_time
+        rows[name] = row
+    if not rows:
+        raise SourceQualificationError("exchangeInfo contains no contract rows")
+    return rows
+
+
+def canonical_contract_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Stable canonical semantics of one contract row.
+
+    Response-wide volatility - the fetch's ``serverTime`` and raw digest - is deliberately
+    excluded. Binance stamps a new ``serverTime`` on every live fetch, so hashing it would
+    make an ordinary resume look like an authority change. The lifecycle boundary is the
+    persisted first authenticated closed observation, not the current response time.
+    """
+    return {
+        "symbol": str(row.get("symbol") or ""),
+        "pair": str(row.get("pair") or ""),
+        "contract_type": str(row.get("contract_type") or ""),
+        "status": str(row.get("status") or ""),
+        "underlying_type": str(row.get("underlying_type") or ""),
+        "base_asset": str(row.get("base_asset") or ""),
+        "quote_asset": str(row.get("quote_asset") or ""),
+        "margin_asset": str(row.get("margin_asset") or ""),
+        "onboard_ms": _optional_int(row.get("onboard_ms")),
+        "delivery_ms": _optional_int(row.get("delivery_ms")),
+        "closed_observed_ms": _optional_int(row.get("closed_observed_ms")),
+        "semantics_state": contract_semantics_state(row),
+    }
+
+
+def contract_provenance(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Volatile provenance of the response a row was proved from.
+
+    It is retained and validated on every run, but never hashed into the immutable plan
+    comparison or the semantic report identity.
+    """
+    return {
+        "server_time_ms": _optional_int(row.get("server_time_ms")),
+        "response_sha256": str(row.get("response_sha256") or ""),
+        "response_byte_size": _optional_int(row.get("response_byte_size")),
+        "observed_at": str(row.get("observed_at") or ""),
+    }
+
+
+def contract_close_ms(row: Mapping[str, Any]) -> int | None:
+    """Authenticated close/delivery instant, or ``None`` when the row proves none."""
+    delivery = _optional_int(row.get("delivery_ms") or row.get("deliveryDate"))
+    if delivery is not None and 0 < delivery < PERPETUAL_DELIVERY_SENTINEL_MS:
+        return delivery
+    status = str(row.get("status") or row.get("contractStatus") or "").strip().upper()
+    if status in CLOSED_CONTRACT_STATUSES:
+        # The boundary is the persisted first authenticated closed observation, so it
+        # never moves when a later fetch reports a new response time.
+        observed = _optional_int(row.get("closed_observed_ms"))
+        if observed is not None and observed > 0:
+            return observed
+    return None
+
+
+def ms_to_period(value: int | None) -> str | None:
+    if value is None or value <= 0:
+        return None
+    moment = datetime.fromtimestamp(int(value) / 1000, tz=UTC)
+    return f"{moment.year:04d}-{moment.month:02d}"
+
+
+def is_tradifi_row(row: Mapping[str, Any]) -> bool:
+    contract = str(row.get("contract_type") or row.get("contractType") or "").strip().upper()
+    underlying = str(row.get("underlying_type") or row.get("underlyingType") or "").strip().upper()
+    return contract in TRADIFI_CONTRACT_TYPES or underlying in TRADIFI_UNDERLYING_TYPES
+
+
+def contract_semantics_state(row: Mapping[str, Any]) -> str:
+    """Whether a row's official enums and identity relationships are positively supported.
+
+    Crypto authority is only ever granted on official semantics that are recognised here.
+    An unknown underlying type, an unknown status, or a contract whose native identity is
+    internally incoherent is typed blocking evidence rather than a default acceptance.
+    """
+    underlying = str(row.get("underlying_type") or row.get("underlyingType") or "").strip().upper()
+    if underlying not in SUPPORTED_CRYPTO_UNDERLYING_TYPES:
+        return SEMANTICS_UNKNOWN_UNDERLYING
+    status = str(row.get("status") or row.get("contractStatus") or "").strip().upper()
+    if status not in SUPPORTED_CONTRACT_STATUSES:
+        return SEMANTICS_UNKNOWN_STATUS
+    symbol = str(row.get("symbol") or "").strip().upper()
+    pair = str(row.get("pair") or "").strip().upper()
+    base = str(row.get("base_asset") or "").strip().upper()
+    quote = str(row.get("quote_asset") or "").strip().upper()
+    margin = str(row.get("margin_asset") or "").strip().upper()
+    contract = str(row.get("contract_type") or row.get("contractType") or "").strip().upper()
+    if pair != f"{base}{quote}":
+        return SEMANTICS_INCOHERENT_IDENTITY
+    if margin != quote:
+        # USD-M contracts settle in their quote asset.
+        return SEMANTICS_INCOHERENT_IDENTITY
+    if contract == PERPETUAL_CONTRACT_TYPE and symbol != pair:
+        # A perpetual's native symbol is its pair; a dated contract's is not.
+        return SEMANTICS_INCOHERENT_IDENTITY
+    return SEMANTICS_SUPPORTED
+
+
+def is_confirmed_perpetual_row(row: Mapping[str, Any]) -> bool:
+    """Exactly ``PERPETUAL`` with positively supported official crypto semantics.
+
+    ADR-0017 scope is the crypto USD-M perpetual venue. Any other contract class, an
+    unknown enum, or an incoherent identity stays reported and excluded until official
+    evidence or a future ADR supports it.
+    """
+    contract = str(row.get("contract_type") or row.get("contractType") or "").strip().upper()
+    if contract != PERPETUAL_CONTRACT_TYPE:
+        return False
+    if is_tradifi_row(row):
+        return False
+    return contract_semantics_state(row) == SEMANTICS_SUPPORTED
+
+
+def parse_current_perpetuals(payload: Mapping[str, Any]) -> list[str]:
+    rows = parse_exchange_info_rows(payload)
+    current = sorted(name for name, row in rows.items() if is_confirmed_perpetual_row(row))
     if not current:
         raise SourceQualificationError("exchangeInfo contains no PERPETUAL contracts")
-    return sorted(set(current))
+    return current
+
+
+def _name_pattern_hint(symbol: str) -> str:
+    if _SETTLEMENT_NAME_RE.search(symbol):
+        return "settlement_suffix"
+    if _DATED_DELIVERY_NAME_RE.match(symbol):
+        return "dated_delivery_suffix"
+    return "none"
+
+
+def _class_from_row(row: Mapping[str, Any], record: Mapping[str, Any]) -> str:
+    """Membership class implied by one official contract row, evidence-first."""
+    if is_confirmed_perpetual_row(row):
+        return MEMBERSHIP_CONFIRMED
+    if is_tradifi_row(row):
+        return MEMBERSHIP_TRADIFI
+    if str(record.get("contract_type") or "") in DELIVERY_CONTRACT_TYPES:
+        return MEMBERSHIP_DELIVERY
+    if str(record.get("semantics_state") or "") != SEMANTICS_SUPPORTED:
+        # Official evidence exists but its semantics are unproved; it blocks rather than
+        # being promoted or silently excluded.
+        return MEMBERSHIP_UNSUPPORTED_SEMANTICS
+    return MEMBERSHIP_UNRESOLVED
+
+
+@dataclass(frozen=True, slots=True)
+class MembershipClassification:
+    """One archive or exchange name with its affirmative official evidence, if any."""
+
+    symbol: str
+    membership_class: str
+    evidence: tuple[Mapping[str, Any], ...]
+    name_pattern_hint: str
+    in_archive: bool
+    in_current_exchange: bool
+
+    @property
+    def accepted(self) -> bool:
+        return self.membership_class == MEMBERSHIP_CONFIRMED
+
+    @property
+    def blocking(self) -> bool:
+        return self.membership_class in MEMBERSHIP_BLOCKING_CLASSES
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "symbol": self.symbol,
+            "membership_class": self.membership_class,
+            "evidence": [dict(item) for item in self.evidence],
+            "name_pattern_hint": self.name_pattern_hint,
+            "in_archive": self.in_archive,
+            "in_current_exchange": self.in_current_exchange,
+            "accepted": self.accepted,
+            "blocking": self.blocking,
+        }
+
+
+def funding_membership_evidence(
+    inventory: Mapping[str, FamilyInventory],
+) -> dict[str, dict[str, Any]]:
+    """Symbols with at least one official realized-funding archive object.
+
+    Delivery contracts never realize funding, so this is affirmative perpetual evidence
+    drawn from the official archive itself rather than from a directory name.
+    """
+    evidence: dict[str, dict[str, Any]] = {}
+    for family in FUNDING_EVIDENCE_FAMILIES:
+        entry = inventory.get(family)
+        if entry is None or not entry.listed:
+            continue
+        for symbol, objects in entry.objects.items():
+            if not objects:
+                continue
+            found = evidence.setdefault(
+                symbol, {"families": [], "object_count": 0, "example_key": objects[0].key}
+            )
+            found["families"].append(family)
+            found["object_count"] += len(objects)
+    return evidence
+
+
+def classify_membership(
+    *,
+    discovered: Sequence[str],
+    current_rows: Mapping[str, Mapping[str, Any]],
+    historical_rows: Mapping[str, Mapping[str, Any]],
+    funding_evidence: Mapping[str, Mapping[str, Any]],
+    current_response_sha256: str = "",
+) -> tuple[MembershipClassification, ...]:
+    """Classify every observed name from affirmative official evidence only.
+
+    Precedence is evidence-first: an authenticated current row, then a retained official
+    historical contract-metadata row, then an official realized-funding observation. A
+    name with no official evidence stays unresolved and blocks membership; its spelling is
+    recorded as an audit hint and never decides the class.
+    """
+    archive = set(discovered)
+    names = sorted(archive | set(current_rows))
+    out: list[MembershipClassification] = []
+    for symbol in names:
+        evidence: list[Mapping[str, Any]] = []
+        membership_class = MEMBERSHIP_UNRESOLVED
+        current = current_rows.get(symbol)
+        historical = historical_rows.get(symbol)
+        funding = funding_evidence.get(symbol)
+        if current is not None:
+            record = {
+                "kind": "authenticated_current_exchange_info",
+                "endpoint": OFFICIAL_INCREMENTAL_ENDPOINTS["exchangeInfo"],
+                **canonical_contract_row(current),
+                **contract_provenance(
+                    {"response_sha256": current_response_sha256, **current}
+                ),
+            }
+            evidence.append(record)
+            membership_class = _class_from_row(current, record)
+        if membership_class == MEMBERSHIP_UNRESOLVED and historical is not None:
+            record = {
+                "kind": "retained_official_contract_metadata",
+                "source": str(historical.get("source") or ""),
+                "response_content_path": str(historical.get("response_content_path") or ""),
+                **canonical_contract_row(historical),
+                **contract_provenance(historical),
+            }
+            evidence.append(record)
+            membership_class = _class_from_row(historical, record)
+        if membership_class == MEMBERSHIP_UNRESOLVED and funding is not None:
+            evidence.append(
+                {
+                    "kind": "official_realized_funding_observation",
+                    "families": list(funding.get("families", ())),
+                    "object_count": int(funding.get("object_count") or 0),
+                    "example_key": str(funding.get("example_key") or ""),
+                    "semantics": "only a perpetual contract realizes funding",
+                }
+            )
+            membership_class = MEMBERSHIP_CONFIRMED
+        hint = _name_pattern_hint(symbol)
+        if membership_class == MEMBERSHIP_UNRESOLVED:
+            if hint == "settlement_suffix":
+                membership_class = MEMBERSHIP_SETTLEMENT_ARTIFACT
+            elif hint == "dated_delivery_suffix":
+                membership_class = MEMBERSHIP_DATED_DELIVERY
+        out.append(
+            MembershipClassification(
+                symbol=symbol,
+                membership_class=membership_class,
+                evidence=tuple(evidence),
+                name_pattern_hint=hint,
+                in_archive=symbol in archive,
+                in_current_exchange=symbol in current_rows,
+            )
+        )
+    return tuple(out)
+
+
+def validate_exchange_info_response(response: ExchangeInfoResponse) -> Mapping[str, Any]:
+    """Prove a contract response before anything is derived from it.
+
+    The endpoint, byte count, digest, retrieval time, and retained content path must all
+    agree with the raw bytes, and the parsed payload must be exactly what those bytes
+    decode to. A source can therefore never retain one universe and classify another.
+    """
+    endpoint = OFFICIAL_INCREMENTAL_ENDPOINTS["exchangeInfo"]
+    if response.endpoint != endpoint:
+        raise SourceQualificationError(
+            "contract response is not the official exchangeInfo endpoint",
+            context={"endpoint": response.endpoint, "expected": endpoint},
+        )
+    raw = response.raw_bytes
+    if not isinstance(raw, bytes) or not raw:
+        raise SourceQualificationError(
+            "contract response retained no raw bytes", context={"endpoint": endpoint}
+        )
+    if int(response.byte_size) != len(raw):
+        raise ResumeIntegrityError(
+            "contract response byte count disagrees with its retained bytes",
+            context={"reported": response.byte_size, "actual": len(raw)},
+        )
+    digest = _object_sha256(raw)
+    if response.sha256 != digest:
+        raise ResumeIntegrityError(
+            "contract response digest disagrees with its retained bytes",
+            context={"reported": response.sha256, "actual": digest},
+        )
+    if _iso_to_ms(response.retrieval_time) is None:
+        raise SourceQualificationError(
+            "contract response has no parseable retrieval time",
+            context={"retrieval_time": response.retrieval_time},
+        )
+    if response.content_path:
+        blob = Path(response.content_path)
+        if not blob.is_file() or blob.name != digest or compute_sha256(blob) != digest:
+            raise ResumeIntegrityError(
+                "contract response content path is not its retained content address",
+                context={"content_path": response.content_path, "sha256": digest},
+            )
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SourceQualificationError(
+            "contract response bytes are not readable JSON", context={"sha256": digest}
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise SourceQualificationError(
+            "contract response is not an object", context={"sha256": digest}
+        )
+    if response.payload != parsed:
+        raise ResumeIntegrityError(
+            "contract response payload is not what its retained bytes decode to",
+            context={"sha256": digest},
+        )
+    # Everything downstream reads the proved bytes, not the supplied mapping.
+    return parsed
+
+
+def persist_exchange_info_snapshot(body: bytes, *, snapshot_dir: Path) -> tuple[Path, str]:
+    """Retain an exchangeInfo response content-addressably before it is relied on."""
+    digest = _object_sha256(body)
+    dest = content_addressed_path(snapshot_dir, digest)
+    if dest.exists():
+        existing = compute_sha256(dest)
+        if existing != digest:
+            raise ResumeIntegrityError(
+                "retained exchangeInfo path holds different content than its address",
+                context={"path": str(dest), "expected": digest, "actual": existing},
+            )
+        return dest, digest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(f".partial-{digest}.part")
+    tmp.write_bytes(body)
+    tmp.replace(dest)
+    return dest, digest
+
+
+@dataclass(frozen=True, slots=True)
+class StagedContractObservation:
+    """Live exchangeInfo semantics that have not yet been committed to the store.
+
+    Classification and plan-input comparison read this view. The durable metadata
+    index and content-addressed snapshot set stay unchanged until the locked plan
+    accepts the inputs, or until the first plan is established.
+    """
+
+    response: ExchangeInfoResponse
+    enriched_rows: dict[str, dict[str, Any]]
+    observed_at: str
+
+
+@dataclass
+class OfficialContractMetadataStore:
+    """Retained official contract responses, so today's proof survives a delisting.
+
+    The store never trusts a copied field. It records which content-addressed
+    exchangeInfo response first evidenced each symbol; every reuse rehashes those exact
+    bytes, reparses them, and re-proves that the row is present.
+    """
+
+    path: Path
+    snapshot_dir: Path
+    snapshots: dict[str, dict[str, Any]] = field(default_factory=dict)
+    symbol_snapshot: dict[str, str] = field(default_factory=dict)
+    # First authenticated closed observation per symbol. A lifecycle bound must not move
+    # every time a later fetch reports a new response time.
+    closed_observations: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, path: Path, *, snapshot_dir: Path) -> OfficialContractMetadataStore:
+        document = read_checkpoint_document(path, kind="official_contract_metadata")
+        if document is None:
+            return cls(path=path, snapshot_dir=snapshot_dir)
+        snapshots = document.get("snapshots")
+        symbols = document.get("symbol_snapshot")
+        if not isinstance(snapshots, dict) or not isinstance(symbols, dict):
+            raise ResumeIntegrityError(
+                "official contract metadata document is malformed",
+                context={"path": str(path)},
+            )
+        store = cls(path=path, snapshot_dir=snapshot_dir)
+        for digest, snapshot in snapshots.items():
+            if not isinstance(snapshot, dict):
+                raise ResumeIntegrityError(
+                    "retained exchangeInfo snapshot is not an object",
+                    context={"path": str(path), "sha256": str(digest)},
+                )
+            store.snapshots[
+                _require_hex_digest(
+                    digest, label="snapshot digest", context={"path": str(path)}
+                )
+            ] = dict(snapshot)
+        for symbol, digest in symbols.items():
+            store.symbol_snapshot[str(symbol)] = _require_hex_digest(
+                digest, label="snapshot digest", context={"path": str(path), "symbol": symbol}
+            )
+        closed = document.get("closed_observations", {})
+        if not isinstance(closed, dict):
+            raise ResumeIntegrityError(
+                "retained closed observations are malformed", context={"path": str(path)}
+            )
+        for symbol, record in closed.items():
+            if not isinstance(record, dict):
+                raise ResumeIntegrityError(
+                    "retained closed observation is not an object",
+                    context={"path": str(path), "symbol": str(symbol)},
+                )
+            observed = _optional_int(record.get("server_time_ms"))
+            if observed is None or observed <= 0:
+                raise ResumeIntegrityError(
+                    "retained closed observation has no authenticated response time",
+                    context={"path": str(path), "symbol": str(symbol)},
+                )
+            _require_hex_digest(
+                record.get("response_sha256"),
+                label="closed observation response digest",
+                context={"path": str(path), "symbol": str(symbol)},
+            )
+            store.closed_observations[str(symbol)] = dict(record)
+        return store
+
+    def enrich(self, rows: Mapping[str, Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Attach the persisted first closed observation to each row that has one."""
+        enriched: dict[str, dict[str, Any]] = {}
+        for symbol, row in rows.items():
+            record = self.closed_observations.get(symbol)
+            merged = dict(row)
+            if record is not None:
+                merged["closed_observed_ms"] = _optional_int(record.get("server_time_ms"))
+                merged["closed_observed_status"] = str(record.get("status") or "")
+            enriched[symbol] = merged
+        return enriched
+
+    def _first_closed_record(
+        self, symbol: str, row: Mapping[str, Any], digest: str
+    ) -> dict[str, Any] | None:
+        """Candidate first closed observation, or ``None`` when one is already durable."""
+        if symbol in self.closed_observations:
+            return None
+        status = str(row.get("status") or "").strip().upper()
+        server_time = _optional_int(row.get("server_time_ms"))
+        if status not in CLOSED_CONTRACT_STATUSES:
+            return None
+        if server_time is None or server_time <= 0:
+            return None
+        return {
+            "server_time_ms": server_time,
+            "status": status,
+            "response_sha256": digest,
+        }
+
+    def stage(
+        self,
+        response: ExchangeInfoResponse,
+        rows: Mapping[str, Mapping[str, Any]],
+        *,
+        observed_at: str,
+    ) -> StagedContractObservation:
+        """Return live semantics without writing snapshots or the metadata checkpoint.
+
+        A rejected authority change must leave both durable artifacts byte-for-byte
+        unchanged so a later original response can resume the original plan.
+        """
+        digest = response.sha256
+        actual = _object_sha256(response.raw_bytes)
+        if actual != digest:
+            raise ResumeIntegrityError(
+                "staged exchangeInfo digest disagrees with the retained response bytes",
+                context={"reported": digest, "actual": actual},
+            )
+        enriched = self.enrich(rows)
+        for symbol, row in rows.items():
+            record = self._first_closed_record(symbol, row, digest)
+            if record is None:
+                continue
+            merged = dict(enriched[symbol])
+            merged["closed_observed_ms"] = int(record["server_time_ms"])
+            merged["closed_observed_status"] = str(record["status"])
+            enriched[symbol] = merged
+        return StagedContractObservation(
+            response=response,
+            enriched_rows=enriched,
+            observed_at=observed_at,
+        )
+
+    def commit(self, staged: StagedContractObservation, *, updated_at: str) -> int:
+        """Persist a staged observation after the immutable plan has accepted it."""
+        added = self.observe(
+            staged.response, staged.enriched_rows, observed_at=staged.observed_at
+        )
+        self.flush(updated_at=updated_at)
+        return added
+
+    def observe(
+        self,
+        response: ExchangeInfoResponse,
+        rows: Mapping[str, Mapping[str, Any]],
+        *,
+        observed_at: str,
+    ) -> int:
+        """Retain the raw response, then bind newly evidenced symbols to it."""
+        dest, digest = persist_exchange_info_snapshot(
+            response.raw_bytes, snapshot_dir=self.snapshot_dir
+        )
+        if digest != response.sha256:
+            raise ResumeIntegrityError(
+                "retained exchangeInfo digest disagrees with the reported response",
+                context={"reported": response.sha256, "retained": digest},
+            )
+        self.snapshots.setdefault(
+            digest,
+            {
+                "content_path": str(dest),
+                "endpoint": response.endpoint,
+                "byte_size": int(response.byte_size),
+                "observed_at": observed_at,
+                "retrieval_time": response.retrieval_time,
+            },
+        )
+        added = 0
+        for symbol, row in rows.items():
+            record = self._first_closed_record(symbol, row, digest)
+            if record is not None:
+                self.closed_observations[symbol] = record
+            if symbol in self.symbol_snapshot:
+                continue
+            self.symbol_snapshot[symbol] = digest
+            added += 1
+        return added
+
+    def _snapshot_rows(self, digest: str) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+        snapshot = self.snapshots.get(digest)
+        if snapshot is None:
+            raise ResumeIntegrityError(
+                "retained contract metadata references an unknown snapshot",
+                context={"sha256": digest},
+            )
+        blob = Path(str(snapshot.get("content_path") or ""))
+        if not blob.is_file():
+            raise ResumeIntegrityError(
+                "retained exchangeInfo response is missing from the store",
+                context={"sha256": digest, "path": str(blob)},
+            )
+        actual = compute_sha256(blob)
+        if actual != digest or blob.name != digest:
+            raise ResumeIntegrityError(
+                "retained exchangeInfo bytes are not at their content address",
+                context={"sha256": digest, "actual": actual, "path": str(blob)},
+            )
+        try:
+            payload = json.loads(blob.read_bytes().decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ResumeIntegrityError(
+                "retained exchangeInfo response is unreadable", context={"sha256": digest}
+            ) from exc
+        if not isinstance(payload, dict):
+            raise ResumeIntegrityError(
+                "retained exchangeInfo response is not an object", context={"sha256": digest}
+            )
+        return parse_exchange_info_rows(payload), snapshot
+
+    def historical_rows(self) -> dict[str, dict[str, Any]]:
+        """Rows re-proved from the retained response bytes they were observed in."""
+        resolved: dict[str, dict[str, Any]] = {}
+        cache: dict[str, dict[str, dict[str, Any]]] = {}
+        for symbol, digest in sorted(self.symbol_snapshot.items()):
+            if digest not in cache:
+                rows, snapshot = self._snapshot_rows(digest)
+                cache[digest] = rows
+                self.snapshots[digest] = {**self.snapshots[digest], **snapshot}
+            rows = cache[digest]
+            if symbol not in rows:
+                raise ResumeIntegrityError(
+                    "retained contract metadata claims a symbol its response does not contain",
+                    context={"symbol": symbol, "sha256": digest},
+                )
+            snapshot = self.snapshots[digest]
+            row = dict(rows[symbol])
+            row["source"] = str(snapshot.get("endpoint") or "")
+            row["observed_at"] = str(snapshot.get("observed_at") or "")
+            # ``server_time_ms`` already came from the reparsed response, so a mutable
+            # local observation field can never move a lifecycle boundary.
+            row["response_sha256"] = digest
+            row["response_byte_size"] = _optional_int(snapshot.get("byte_size"))
+            row["response_content_path"] = str(snapshot.get("content_path") or "")
+            resolved[symbol] = row
+        return self.enrich(resolved)
+
+    def flush(self, *, updated_at: str) -> None:
+        _atomic_write_json(
+            self.path,
+            _checkpoint_document(
+                "official_contract_metadata",
+                {
+                    "updated_at": updated_at,
+                    "snapshots": dict(sorted(self.snapshots.items())),
+                    "symbol_snapshot": dict(sorted(self.symbol_snapshot.items())),
+                    "closed_observations": dict(sorted(self.closed_observations.items())),
+                },
+            ),
+        )
+
+
+def _iso_to_ms(value: str) -> int | None:
+    try:
+        return int(datetime.fromisoformat(value).timestamp() * 1000)
+    except (TypeError, ValueError):
+        return None
 
 
 def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
@@ -2516,18 +4794,34 @@ class FapiCurrentContractSource:
         self._cache_dir = cache_dir
         self._timeout = timeout or TimeoutConfig()
 
-    def fetch_exchange_info(self) -> Mapping[str, Any]:
+    def fetch_exchange_info(self) -> ExchangeInfoResponse:
+        endpoint = OFFICIAL_INCREMENTAL_ENDPOINTS["exchangeInfo"]
         result = atomic_download(
-            OFFICIAL_INCREMENTAL_ENDPOINTS["exchangeInfo"],
+            endpoint,
             self._cache_dir,
             transport=self._transport,
             timeout=self._timeout,
             max_bytes=8_388_608,
         )
-        payload = json.loads(result.dest_path.read_bytes().decode("utf-8"))
+        raw = result.dest_path.read_bytes()
+        digest = _object_sha256(raw)
+        if digest != result.sha256:
+            raise ResumeIntegrityError(
+                "retained exchangeInfo bytes do not match the download digest",
+                context={"path": str(result.dest_path), "expected": result.sha256},
+            )
+        payload = json.loads(raw.decode("utf-8"))
         if not isinstance(payload, dict):
             raise SourceQualificationError("exchangeInfo response is not an object")
-        return payload
+        return ExchangeInfoResponse(
+            endpoint=endpoint,
+            payload=payload,
+            raw_bytes=raw,
+            sha256=digest,
+            byte_size=len(raw),
+            retrieval_time=result.retrieval_utc.astimezone(UTC).isoformat(),
+            content_path=str(result.dest_path),
+        )
 
 
 def parse_coinalyze_history(
@@ -2654,12 +4948,24 @@ class CoinalyzeClient:
     def qualify_binance_daily(
         self,
         *,
-        native_symbols: Sequence[str],
+        anchor_symbols: Sequence[str],
+        universe_symbols: Sequence[str] = (),
         from_ts: int,
         to_ts: int,
     ) -> dict[str, Any]:
+        """Qualify Coinalyze on declared stable anchors, then map the whole universe.
+
+        Anchors are fixed, liquid, confirmed Binance perpetuals rather than whichever
+        symbols happen to sort first, so a qualification result is reproducible. Anchor
+        success is never full coverage: the confirmed universe support/gap map is
+        reported separately.
+        """
         self._require_key()
-        mapped = [coinalyze_perp_symbol(symbol) for symbol in native_symbols]
+        if not anchor_symbols:
+            raise SourceQualificationError(
+                "Coinalyze qualification requires declared anchor symbols"
+            )
+        mapped = [coinalyze_perp_symbol(symbol) for symbol in anchor_symbols]
         requested = set(mapped)
         params = {
             "symbols": ",".join(mapped),
@@ -2675,14 +4981,55 @@ class CoinalyzeClient:
         )
         if not isinstance(markets, list) or not markets:
             raise SourceQualificationError("Coinalyze future-markets response is empty")
-        matched_markets = [
-            row
-            for row in markets
-            if isinstance(row, dict)
-            and str(row.get("exchange")) == COINALYZE_EXCHANGE_CODE
-            and bool(row.get("is_perpetual"))
-            and str(row.get("symbol")) in requested
-        ]
+        # Markets are keyed by the venue's own native identity, never by a symbol this
+        # client constructed; a provider label that disagrees with it is refused.
+        # Every Binance perpetual market the support map may use is identity-checked,
+        # not only the two anchors, and a duplicate native identity is ambiguous evidence.
+        markets_by_native: dict[str, Mapping[str, Any]] = {}
+        for row in markets:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("exchange")) != COINALYZE_EXCHANGE_CODE:
+                continue
+            if not bool(row.get("is_perpetual")):
+                continue
+            native = str(row.get("symbol_on_exchange") or "").strip().upper()
+            if not native:
+                raise SourceQualificationError(
+                    "Coinalyze Binance perpetual market has no symbol_on_exchange",
+                    context={"symbol": str(row.get("symbol") or "")},
+                )
+            provider = str(row.get("symbol") or "")
+            if provider != coinalyze_perp_symbol(native):
+                raise SourceQualificationError(
+                    "Coinalyze market symbol disagrees with its native identity",
+                    context={
+                        "native": native,
+                        "provider_symbol": provider,
+                        "expected": coinalyze_perp_symbol(native),
+                    },
+                )
+            if native in markets_by_native:
+                raise SourceQualificationError(
+                    "Coinalyze returned duplicate Binance perpetual native identities",
+                    context={"native": native, "provider_symbol": provider},
+                )
+            markets_by_native[native] = row
+        matched_markets: list[Mapping[str, Any]] = []
+        anchor_identity: list[dict[str, str]] = []
+        for symbol in anchor_symbols:
+            native = symbol.strip().upper()
+            row = markets_by_native.get(native)
+            if row is None:
+                continue
+            matched_markets.append(row)
+            anchor_identity.append(
+                {
+                    "native_symbol": native,
+                    "symbol_on_exchange": str(row.get("symbol_on_exchange") or ""),
+                    "provider_symbol": str(row.get("symbol") or ""),
+                }
+            )
         matched_symbols = {str(row["symbol"]) for row in matched_markets}
         missing_markets = sorted(requested - matched_symbols)
         if missing_markets:
@@ -2700,6 +5047,13 @@ class CoinalyzeClient:
             )
         unique_units = sorted({str(value) for value in units_by_symbol.values()})
         denominated_in = unique_units[0] if len(unique_units) == 1 else units_by_symbol
+        supported: list[str] = []
+        unmapped: list[str] = []
+        for symbol in sorted(set(universe_symbols)):
+            if symbol.strip().upper() in markets_by_native:
+                supported.append(symbol)
+            else:
+                unmapped.append(symbol)
         history_specs = (
             ("liquidation", COINALYZE_HISTORY_ENDPOINTS["liquidation"], ("t", "l", "s")),
             (
@@ -2736,9 +5090,25 @@ class CoinalyzeClient:
             "interval": COINALYZE_INTERVAL_DAILY,
             "from": int(from_ts),
             "to": int(to_ts),
+            "anchor_symbols": list(anchor_symbols),
+            "anchor_identity": anchor_identity,
             "requested_symbols": list(mapped),
             "matched_markets": sorted(matched_symbols),
-            "binance_perpetual_market_count": len(matched_markets),
+            "binance_perpetual_market_count": len(markets_by_native),
+            "matched_anchor_market_count": len(matched_markets),
+            "native_identity_source": "future-markets.symbol_on_exchange",
+            "native_identity_validated_markets": len(markets_by_native),
+            "universe_support": {
+                "universe_size": len(set(universe_symbols)),
+                "supported_symbols": supported,
+                "unmapped_symbols": unmapped,
+                "supported_count": len(supported),
+                "unmapped_count": len(unmapped),
+                "note": (
+                    "anchor qualification proves the source contract, not coverage of "
+                    "every confirmed perpetual"
+                ),
+            },
             "units": {
                 "liquidation_l": "long liquidated volume",
                 "liquidation_s": "short liquidated volume",
@@ -2894,27 +5264,46 @@ def _acquire_sample(
         payload = dest_path.read_bytes()
         retrieval_time = result.retrieval_utc.astimezone(UTC).isoformat()
     else:
-        payload = index.fetch_bytes(url)
-        sha256 = _object_sha256(payload)
-        if sha256 != provider_checksum:
-            raise SourceQualificationError(
-                "provider checksum mismatch",
-                context={"url": url, "expected": provider_checksum, "actual": sha256},
-            )
-        dest_path = content_addressed_path(sample_dir, sha256)
-        if dest_path.exists():
+        # The sidecar has proved the expected digest. Rehash any content-addressed
+        # destination *before* fetching: a valid dest is no-transfer reuse, and a
+        # fetch is a transfer even when the payload digest matches earlier bytes.
+        dest_path = content_addressed_path(sample_dir, provider_checksum)
+        if dest_path.is_file():
             existing = compute_sha256(dest_path)
-            if existing != sha256:
-                raise SourceQualificationError(
-                    "existing content-addressed object does not match new digest",
-                    context={"path": str(dest_path)},
+            if existing != provider_checksum or dest_path.name != existing:
+                raise ResumeIntegrityError(
+                    "existing content-addressed object does not match the provider checksum",
+                    context={
+                        "key": key,
+                        "path": str(dest_path),
+                        "expected": provider_checksum,
+                        "actual": existing,
+                    },
                 )
+            payload = dest_path.read_bytes()
+            sha256 = provider_checksum
             reused = True
         else:
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = dest_path.with_name(f".partial-{sha256}.part")
-            tmp.write_bytes(payload)
-            tmp.replace(dest_path)
+            payload = index.fetch_bytes(url)
+            sha256 = _object_sha256(payload)
+            if sha256 != provider_checksum:
+                raise SourceQualificationError(
+                    "provider checksum mismatch",
+                    context={"url": url, "expected": provider_checksum, "actual": sha256},
+                )
+            dest_path = content_addressed_path(sample_dir, sha256)
+            if dest_path.exists():
+                existing = compute_sha256(dest_path)
+                if existing != sha256:
+                    raise SourceQualificationError(
+                        "existing content-addressed object does not match new digest",
+                        context={"path": str(dest_path)},
+                    )
+            else:
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = dest_path.with_name(f".partial-{sha256}.part")
+                tmp.write_bytes(payload)
+                tmp.replace(dest_path)
             reused = False
 
     if compute_sha256(dest_path) != sha256:
@@ -2971,6 +5360,57 @@ def _acquire_sample(
     )
 
 
+def _state_reason(
+    *,
+    product: str,
+    source_state: str,
+    coverage_state: str,
+    uncovered: Sequence[str],
+    uncovered_universe: Sequence[str],
+    typed_kinds: Sequence[str],
+    budget_blocked: bool,
+    unresolved_membership: Sequence[str],
+    universe_basis: str,
+    limit: int = 25,
+) -> str:
+    """State-first reason: what the source is, then what the coverage still lacks."""
+    heads = {
+        SOURCE_STATE_OFFICIAL: "official Vision archive listing, checksums, and retained samples",
+        SOURCE_STATE_TYPED_GAPS: (
+            "official source qualified; remaining differences are typed coverage facts"
+        ),
+        SOURCE_STATE_INACCESSIBLE: (
+            "official Vision listing is empty or a declared family is absent"
+        ),
+        SOURCE_STATE_INTEGRITY: (
+            "source integrity is unproved: missing checksum, unknown size, or listing/sample error"
+        ),
+        SOURCE_STATE_MEMBERSHIP: HISTORICAL_PERPETUAL_RULE,
+        SOURCE_STATE_SAMPLE_PENDING: (
+            "official listing is complete and reachable; no verified sample evidence yet"
+        ),
+    }
+    parts = [heads.get(source_state, source_state)]
+    if product == "binance_usdm_cost_calibration":
+        parts.append("cost calibration requires official bookTicker and bookDepth inventory")
+    if coverage_state == COVERAGE_UNRESOLVED_MEMBERSHIP:
+        parts.append(
+            f"membership unresolved for {_symbol_note(list(unresolved_membership), limit)}; "
+            f"coverage evaluated over {universe_basis}"
+        )
+    notes = _coverage_gap_notes(uncovered, uncovered_universe)
+    if notes:
+        parts.append(notes)
+    if typed_kinds:
+        parts.append("typed coverage facts: " + ",".join(sorted(set(typed_kinds))))
+    if budget_blocked:
+        parts.append(
+            f"{SAMPLE_BUDGET_BLOCK}: bounded cumulative Gate 1 sample budget cannot cover "
+            "required regime evidence; inventory is complete"
+        )
+    return "; ".join(part for part in parts if part)
+
+
 def family_product_map(
     archive_families: Mapping[str, tuple[str, ...]] = OFFICIAL_ARCHIVE_FAMILIES,
 ) -> dict[str, tuple[str, ...]]:
@@ -3001,6 +5441,7 @@ def run_source_qualification(
     listing_checkpoint: ListingCheckpointStore | None = None,
     sample_budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
     max_sample_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
+    budget_ledger: BudgetLedger | None = None,
 ) -> QualificationReport:
     refuse_restricted_scope(
         max_symbols=max_symbols,
@@ -3014,6 +5455,10 @@ def run_source_qualification(
     list_cache_dir = store / "list_cache"
     progress_file = progress_path or (store / "cex002_qualification_progress.json")
     plan_path = store / "cex002_sample_plan.json"
+    plan_lock_path = store / SAMPLE_PLAN_LOCK_FILENAME
+    budget_ledger_path = store / BUDGET_LEDGER_FILENAME
+    contract_metadata_path = store / CONTRACT_METADATA_FILENAME
+    contract_snapshot_dir = store / CONTRACT_SNAPSHOT_DIRNAME
     retry_journal_path = store / "cex002_retry_journal.json"
     retry_runner = retry or RetryRunner()
     if retry_runner.journal is None:
@@ -3032,17 +5477,76 @@ def run_source_qualification(
 
     current_authenticated = False
     current: tuple[str, ...] = ()
+    current_rows: dict[str, dict[str, Any]] = {}
+    exchange_response: ExchangeInfoResponse | None = None
+    staged_observation: StagedContractObservation | None = None
+    metadata_store = OfficialContractMetadataStore.load(
+        contract_metadata_path, snapshot_dir=contract_snapshot_dir
+    )
     if current_contracts is not None:
-        payload = retry_runner.run(
+        exchange_response = retry_runner.run(
             "fapi:exchangeInfo", current_contracts.fetch_exchange_info
         )
-        current = tuple(parse_current_perpetuals(payload))
+        # Classification reads only the proved raw bytes of the live response. The
+        # durable store is not mutated until the locked plan accepts this authority.
+        proved_payload = validate_exchange_info_response(exchange_response)
+        current_rows = parse_exchange_info_rows(proved_payload)
+        for row in current_rows.values():
+            row["response_sha256"] = exchange_response.sha256
+            row["response_byte_size"] = int(exchange_response.byte_size)
+            row["observed_at"] = generated_at
+        current = tuple(
+            sorted(name for name, row in current_rows.items() if is_confirmed_perpetual_row(row))
+        )
+        if not current:
+            raise SourceQualificationError("exchangeInfo contains no PERPETUAL contracts")
         current_authenticated = True
+        staged_observation = metadata_store.stage(
+            exchange_response, current_rows, observed_at=generated_at
+        )
+        current_rows = staged_observation.enriched_rows
     current_set = set(current)
-    delisted = tuple(sym for sym in discovered if current_set and sym not in current_set)
+
+    # 1b. Accepted membership is evidence-based; archive names never promote themselves.
+    historical_rows = metadata_store.historical_rows()
+    lifecycle_rows: dict[str, dict[str, Any]] = {**historical_rows, **current_rows}
+    funding_evidence = funding_membership_evidence(inventory)
+    classifications = classify_membership(
+        discovered=discovered,
+        current_rows=current_rows,
+        historical_rows=historical_rows,
+        funding_evidence=funding_evidence,
+        current_response_sha256=(
+            exchange_response.sha256 if exchange_response is not None else ""
+        ),
+    )
+    by_class: dict[str, list[str]] = {}
+    for item in classifications:
+        by_class.setdefault(item.membership_class, []).append(item.symbol)
+    confirmed_universe = tuple(sorted(by_class.get(MEMBERSHIP_CONFIRMED, ())))
+    unresolved_symbols = tuple(
+        sorted(item.symbol for item in classifications if item.blocking)
+    )
+    membership_resolved = bool(confirmed_universe) and not unresolved_symbols
+    # Coverage is still reported when membership is unresolved, but over the archive
+    # union it was observed on, explicitly labelled as an unaccepted basis.
+    evaluation_universe = confirmed_universe if confirmed_universe else tuple(discovered)
+    universe_basis = (
+        "confirmed_perpetual_membership"
+        if confirmed_universe
+        else "unresolved_archive_union"
+    )
+    # Archive names outside the authenticated current perpetual set stay candidates; the
+    # sampling set follows the evaluated universe instead.
+    archive_candidates = tuple(
+        sym for sym in discovered if current_set and sym not in current_set
+    )
+    delisted = tuple(
+        sym for sym in evaluation_universe if current_set and sym not in current_set
+    )
     unarchived = tuple(sym for sym in current if sym not in set(discovered))
 
-    sample_symbols = _sample_symbol_set(discovered, delisted)
+    sample_symbols = _sample_symbol_set(evaluation_universe, delisted)
     sample_symbol_set = set(sample_symbols)
 
     incidents: list[dict[str, Any]] = []
@@ -3070,22 +5574,144 @@ def run_source_qualification(
         checkpoint=checkpoint,
         keys=candidate_keys,
     )
+    # Reuse is planned only from re-proved bytes: a checkpoint claim whose object or
+    # sidecar cannot be re-proved right now never becomes an authoritative plan input.
     retained_keys: dict[str, int] = {}
+    unverified_retained_keys: list[str] = []
+    # One re-proof per object per run: the same rehash serves planning, the frozen
+    # snapshot, and the Gate 2 storage credit.
+    verified_cache: dict[tuple[str, str], int | None] = {}
     for key in candidate_keys:
         entry_row = checkpoint.get(key)
-        if entry_row and entry_row.get("status") == "complete":
-            retained_keys[key] = int(entry_row.get("byte_size") or 0)
+        if not entry_row or entry_row.get("status") != "complete":
+            continue
+        verified = verify_retained_object(
+            key,
+            entry_row,
+            sample_dir=sample_dir,
+            sidecar_dir=list_cache_dir,
+            cache=verified_cache,
+        )
+        if verified is None:
+            unverified_retained_keys.append(key)
+            continue
+        retained_keys[key] = verified
 
-    # 3. Produce and persist the deterministic sample plan before any new download.
-    plan = build_sample_plan(
-        inventory=inventory,
-        family_products=family_products,
-        sample_symbols=sample_symbols,
-        delisted=delisted,
-        retained_keys=retained_keys,
+    # 3. Lock one immutable plan before any new download. A resume replays the locked
+    #    plan and may change only execution state, never selected or blocked keys.
+    ledger = budget_ledger or BudgetLedger.bootstrap(
+        budget_ledger_path,
         budget_bytes=sample_budget_bytes,
-        max_object_bytes=max_sample_object_bytes,
+        retained_objects=checkpoint.objects,
+        sample_dir=sample_dir,
+        sidecar_dir=list_cache_dir,
+        cache=verified_cache,
     )
+    # A reservation left by an interrupted run is settled only against rehashed retained
+    # evidence; anything unproved stays charged so no allowance is silently restored.
+    reconciliation = ledger.reconcile(
+        checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+    )
+
+    def _plan_inputs(snapshot: Mapping[str, Sequence[Any]]) -> PlanInputs:
+        return PlanInputs(
+            inventory_digest=inventory_digest(inventory),
+            listing_digest=listing_authority_digest(listing_checkpoint),
+            membership_digest=membership_evidence_digest(classifications),
+            code_config_digest=plan_code_config_digest(
+                budget_bytes=sample_budget_bytes, max_object_bytes=max_sample_object_bytes
+            ),
+            budget_digest=_digest_of(
+                {
+                    "budget_bytes": int(sample_budget_bytes),
+                    "max_object_bytes": int(max_sample_object_bytes),
+                }
+            ),
+            retained_digest=retained_evidence_digest(snapshot),
+        )
+
+    lock = SamplePlanLock.load(plan_lock_path)
+    if lock is None:
+        lock = SamplePlanLock(path=plan_lock_path)
+        # The retained and budget snapshots are frozen at lock time; later execution
+        # progress against this same plan is not an input change.
+        retained_snapshot = retained_evidence_snapshot(
+            sorted(retained_keys),
+            checkpoint.objects,
+            sample_dir=sample_dir,
+            sidecar_dir=list_cache_dir,
+            cache=verified_cache,
+        )
+        plan_inputs = _plan_inputs(retained_snapshot)
+        plan = build_sample_plan(
+            inventory=inventory,
+            family_products=family_products,
+            sample_symbols=sample_symbols,
+            delisted=delisted,
+            retained_keys=retained_keys,
+            budget_bytes=sample_budget_bytes,
+            max_object_bytes=max_sample_object_bytes,
+            cumulative_spent_bytes=ledger.spent_max_bytes,
+        )
+        # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
+        # is preserved in the lock history and on disk before the first lock overwrites
+        # the plan document.
+        legacy_plan = read_pre_lock_plan(plan_path)
+        if legacy_plan is not None:
+            lock.history.append(
+                {
+                    "plan_version": 0,
+                    "locked_at": "",
+                    "inputs": {"source": "pre_lock_greedy_plan", "path": str(plan_path)},
+                    "plan": legacy_plan,
+                    "plan_digest": "",
+                }
+            )
+            backup = store / LEGACY_PLAN_BACKUP_FILENAME
+            if not backup.exists():
+                _atomic_write_json(backup, legacy_plan)
+        lock.lock_plan(
+            plan=plan,
+            inputs=plan_inputs,
+            locked_at=generated_at,
+            retained_snapshot=retained_snapshot,
+            budget_snapshot={
+                "budget_bytes": int(sample_budget_bytes),
+                "max_object_bytes": int(max_sample_object_bytes),
+                "cumulative_spent_max_bytes_at_lock": ledger.spent_max_bytes,
+                "allowance_bytes_at_lock": plan.allowance_bytes,
+            },
+        )
+        lock.flush()
+    else:
+        plan = SamplePlan.from_dict(lock.plan)
+        # Only the evidence frozen into this lock is compared, so a normal resume is
+        # stable; a genuine inventory, membership, code, or evidence change fails closed
+        # before any byte is downloaded.
+        retained_snapshot = retained_evidence_snapshot(
+            sorted(lock.retained_snapshot),
+            checkpoint.objects,
+            sample_dir=sample_dir,
+            sidecar_dir=list_cache_dir,
+            cache=verified_cache,
+        )
+        plan_inputs = _plan_inputs(retained_snapshot)
+        changed_inputs = plan_inputs.differences(lock.inputs)
+        if changed_inputs:
+            raise ResumeIntegrityError(
+                "locked Gate 1 plan inputs changed; a new plan version requires a fresh "
+                "reviewer authorization",
+                context={
+                    "kind": PLAN_INPUTS_CHANGED,
+                    "path": str(plan_lock_path),
+                    "plan_version": lock.plan_version,
+                    "changed": list(changed_inputs),
+                },
+            )
+    if staged_observation is not None:
+        # Commit only after the existing plan accepts, or as part of first-plan lock.
+        metadata_store.commit(staged_observation, updated_at=generated_at)
+    ledger.flush()
     _atomic_write_json(plan_path, plan.to_dict())
 
     # 4. Acquire only planned samples. Each physical object is fetched at most once and
@@ -3107,6 +5733,33 @@ def run_source_qualification(
                 )
             )
             continue
+        planned_new = (
+            planned.action == "download"
+            and planned.key not in retained_keys
+            and (checkpoint.get(planned.key) or {}).get("status") != "complete"
+        )
+        if planned_new and (
+            planned.byte_size > ledger.remaining_bytes or ledger.exhausted
+        ):
+            for product in planned.products:
+                incidents.append(
+                    {
+                        "product": product,
+                        "family": planned.family,
+                        "symbol": planned.symbol,
+                        "regime": planned.regime,
+                        "kind": SAMPLE_BUDGET_BLOCK,
+                        "note": (
+                            "cumulative Gate 1 new-download allowance is exhausted; "
+                            f"remaining={ledger.remaining_bytes} required={planned.byte_size}"
+                        ),
+                    }
+                )
+                product_incident_counts[product] = product_incident_counts.get(product, 0) + 1
+            continue
+        if planned_new:
+            # Write-ahead: the charge is durable before any byte crosses the network.
+            ledger.reserve(planned.key, planned.byte_size)
         try:
             record = _acquire_sample(
                 key=planned.key,
@@ -3138,7 +5791,18 @@ def run_source_qualification(
                     }
                 )
                 product_incident_counts[product] = product_incident_counts.get(product, 0) + 1
+            # The acquisition failed after the reservation; the bytes may still have been
+            # transferred, so the reservation stays charged.
             continue
+        if planned_new:
+            # A content-addressed reuse transfers nothing; it settles with an explicit
+            # no-transfer disposition rather than an indistinguishable zero charge.
+            ledger.settle(
+                record.key,
+                record.byte_size,
+                sha256=record.sha256,
+                no_transfer=record.reused_existing,
+            )
         acquired[planned.key] = record
         samples.append(record)
 
@@ -3158,17 +5822,38 @@ def run_source_qualification(
                 }
             )
 
-    # 5. Derive every logical product row from the shared inventory.
+    # 5. Derive every logical product row from the shared inventory. Source authority
+    #    and universe/temporal coverage are judged separately.
     matrix_rows: list[ProductMatrixRow] = []
     symbol_coverage: dict[str, dict[str, int]] = {}
+    symbol_temporal: dict[str, dict[str, dict[str, Any]]] = {}
+    family_symbol_periods: dict[tuple[str, str], tuple[str, ...]] = {}
+    for family, entry in inventory.items():
+        for symbol, objects in entry.objects.items():
+            periods = tuple(
+                sorted({item for item in (object_period(obj.key) for obj in objects) if item})
+            )
+            if periods:
+                family_symbol_periods[(family, symbol)] = periods
+    integrity_kinds = {"listing_error", "sample_error", "coinalyze_error"}
+    universe_set = set(evaluation_universe)
+    lifecycle_windows = contract_lifecycle_windows(lifecycle_rows)
 
     for product in REQUIRED_PRODUCTS:
         families = OFFICIAL_ARCHIVE_FAMILIES.get(product, ())
         family_symbols: set[str] = set()
         listed_objects = 0
         listed_bytes = 0
+        universe_objects = 0
+        universe_bytes = 0
         unknown_sizes = False
+        universe_unknown_sizes = False
         product_incidents = product_incident_counts.get(product, 0)
+        product_integrity = sum(
+            1
+            for item in incidents
+            if item.get("product") == product and item.get("kind") in integrity_kinds
+        )
         family_listed: dict[str, int] = {}
         family_symbol_lists: dict[str, set[str]] = {}
         family_symbol_objects: dict[tuple[str, str], int] = {}
@@ -3188,36 +5873,70 @@ def run_source_qualification(
                 family_symbol_objects[(family, symbol)] = len(objs)
                 listed_objects += len(objs)
                 family_listed[family] = family_listed.get(family, 0) + len(objs)
+                in_universe = symbol in universe_set
+                if in_universe:
+                    universe_objects += len(objs)
                 for obj in objs:
                     if obj.size is None:
                         unknown_sizes = True
+                        if in_universe:
+                            universe_unknown_sizes = True
                     else:
                         listed_bytes += int(obj.size)
+                        if in_universe:
+                            universe_bytes += int(obj.size)
 
-        if product == "binance_usdm_perpetual_membership":
-            family_symbols = set(discovered)
-            listed_objects = len(discovered)
+        is_membership = product == "binance_usdm_perpetual_membership"
+        if is_membership:
+            family_symbols = set(evaluation_universe)
+            listed_objects = len(evaluation_universe)
+            universe_objects = len(evaluation_universe)
 
-        # Account the full discovered universe, not only symbols already listed under a
-        # family: a universe member with no prefix is a recorded zero, not an omission.
+        # Account the full evaluated universe, not only symbols already listed under a
+        # family: a member with no prefix is a recorded zero, not an omission.
         for family in families:
             if family not in family_symbol_lists:
                 continue
-            for symbol in discovered:
+            for symbol in evaluation_universe:
                 family_symbol_objects.setdefault((family, symbol), 0)
 
-        uncovered = _uncovered_listed_symbols(family_symbol_lists, family_symbol_objects)
-        universe_gaps, uncovered_universe = _universe_coverage_gaps(
-            discovered,
-            families,
-            family_symbol_lists,
-            family_symbol_objects,
-            require_every_group=product != "binance_usdm_perpetual_membership",
+        uncovered = tuple(
+            symbol
+            for symbol in _uncovered_listed_symbols(family_symbol_lists, family_symbol_objects)
+            if symbol in universe_set
+        )
+        universe_gaps, blocking_symbols, typed_symbols = universe_coverage_gaps(
+            universe=evaluation_universe,
+            families=families,
+            family_symbol_lists=family_symbol_lists,
+            family_symbol_objects=family_symbol_objects,
+            family_symbol_periods=family_symbol_periods,
+            currently_listed=current,
+            lifecycle_windows=lifecycle_windows,
+            require_every_group=not is_membership,
         )
         symbol_coverage[product] = {
             f"{family}/{symbol}": count
             for (family, symbol), count in sorted(family_symbol_objects.items())
         }
+        # Per-symbol temporal coverage is retained for every evaluated member, so a gap is
+        # always readable against the symbol's own observed first and last month.
+        temporal: dict[str, dict[str, Any]] = {}
+        for symbol in evaluation_universe:
+            observed_periods = sorted(
+                {
+                    period
+                    for family in families
+                    for period in family_symbol_periods.get((family, symbol), ())
+                }
+            )
+            if observed_periods:
+                temporal[symbol] = {
+                    "first": observed_periods[0],
+                    "last": observed_periods[-1],
+                    "months": len(observed_periods),
+                }
+        symbol_temporal[product] = temporal
         product_sample_rows = [item for item in samples if product in item.products]
         product_samples = len(product_sample_rows)
         budget_blocked = tuple(
@@ -3227,122 +5946,142 @@ def run_source_qualification(
             item.checksum_match and item.provider_checksum for item in product_sample_rows
         )
         source_gate = product not in DERIVED_PRODUCTS
+        blocking_kinds = tuple(
+            sorted({str(item["kind"]) for item in universe_gaps if item.get("blocking")})
+        )
+        typed_kinds = tuple(
+            sorted({str(item["kind"]) for item in universe_gaps if not item.get("blocking")})
+        )
+        gap_kinds = tuple(sorted(set(blocking_kinds) | set(typed_kinds)))
+        evidence_blocked = bool(budget_blocked) or (bool(families) and product_samples == 0)
+
         if product in DERIVED_PRODUCTS:
-            authority = SourceAuthority.UNSUPPORTED
-            complete = False
+            source_state = SOURCE_STATE_DERIVED
+            coverage_state = COVERAGE_NOT_APPLICABLE
             reason = "derived output; excluded from the source gate"
         elif product == "binance_usdm_liquidation_observed":
-            authority = SourceAuthority.INACCESSIBLE
-            complete = False
+            source_state = SOURCE_STATE_INACCESSIBLE
+            coverage_state = COVERAGE_BLOCKING_GAPS
             reason = (
                 "official Vision has no liquidation archive; Coinalyze daily history is "
                 "required as an observed/censored secondary source"
             )
-        elif product == "binance_usdm_perpetual_membership":
-            complete = (
-                bool(discovered)
-                and current_authenticated
-                and product_incidents == 0
-                and not uncovered_universe
-            )
-            authority = SourceAuthority.OFFICIAL if complete else SourceAuthority.SAMPLE_ONLY
-            reason = HISTORICAL_PERPETUAL_RULE
-            membership_notes = _coverage_gap_notes(uncovered, uncovered_universe)
-            if not complete and membership_notes:
-                reason = f"{reason} {membership_notes}"
-        elif product == "binance_usdm_cost_calibration":
-            ticker = family_object_counts.get("monthly/bookTicker", 0) + family_object_counts.get(
-                "daily/bookTicker", 0
-            )
-            depth = family_object_counts.get("monthly/bookDepth", 0) + family_object_counts.get(
-                "daily/bookDepth", 0
-            )
-            complete = (
-                ticker > 0
-                and depth > 0
-                and checksum_ok
-                and not unknown_sizes
-                and product_incidents == 0
-                and _declared_families_present(families, family_listed)
-                and not uncovered
-                and not uncovered_universe
-            )
-            authority = SourceAuthority.OFFICIAL if complete else SourceAuthority.SAMPLE_ONLY
-            reason = (
-                "cost calibration requires official bookTicker and bookDepth inventory"
-            )
-            cost_notes = _coverage_gap_notes(uncovered, uncovered_universe)
-            if not complete and cost_notes:
-                reason = f"{reason}; {cost_notes}"
-            if not complete and budget_blocked:
-                reason = f"{reason}; {SAMPLE_BUDGET_BLOCK}"
         else:
-            complete = (
-                listed_objects > 0
-                and checksum_ok
-                and not unknown_sizes
-                and product_incidents == 0
-                and _declared_families_present(families, family_listed)
-                and product_samples > 0
-                and not uncovered
-                and not uncovered_universe
-            )
-            if listed_objects == 0:
-                authority = SourceAuthority.INACCESSIBLE
-                reason = "official Vision listing is empty for this product"
-            elif not complete:
-                authority = SourceAuthority.SAMPLE_ONLY
-                reason = (
-                    "official listing is incomplete: missing checksum, size, family, "
-                    "sample evidence, or per-symbol object coverage"
-                )
-                gap_notes = _coverage_gap_notes(uncovered, uncovered_universe)
-                if gap_notes:
-                    reason = gap_notes
-                if budget_blocked:
-                    # Inventory is complete and the source is reachable; only the bounded
-                    # Gate 1 sample budget is unmet.
-                    reason = (
-                        f"{SAMPLE_BUDGET_BLOCK}: bounded Gate 1 sample budget cannot "
-                        f"cover required regime evidence; inventory is complete"
-                    )
+            if not membership_resolved:
+                coverage_state = COVERAGE_UNRESOLVED_MEMBERSHIP
+            elif blocking_kinds or uncovered:
+                coverage_state = COVERAGE_BLOCKING_GAPS
+            elif typed_kinds:
+                coverage_state = COVERAGE_TYPED_GAPS
             else:
-                authority = SourceAuthority.OFFICIAL
-                reason = "official Vision archive listing, checksums, and retained samples"
+                coverage_state = COVERAGE_COMPLETE
+
+            if is_membership and not membership_resolved:
+                source_state = SOURCE_STATE_MEMBERSHIP
+            elif is_membership:
+                source_state = (
+                    SOURCE_STATE_TYPED_GAPS
+                    if coverage_state == COVERAGE_TYPED_GAPS
+                    else SOURCE_STATE_OFFICIAL
+                )
+            elif listed_objects == 0 or not _declared_families_present(families, family_listed):
+                source_state = SOURCE_STATE_INACCESSIBLE
+            elif unknown_sizes or product_integrity or (product_sample_rows and not checksum_ok):
+                source_state = SOURCE_STATE_INTEGRITY
+            elif not product_sample_rows:
+                source_state = SOURCE_STATE_SAMPLE_PENDING
+            elif typed_kinds and not blocking_kinds:
+                source_state = SOURCE_STATE_TYPED_GAPS
+            else:
+                source_state = SOURCE_STATE_OFFICIAL
+
+            reason = _state_reason(
+                product=product,
+                source_state=source_state,
+                coverage_state=coverage_state,
+                uncovered=uncovered,
+                uncovered_universe=blocking_symbols,
+                typed_kinds=typed_kinds,
+                budget_blocked=bool(budget_blocked),
+                unresolved_membership=unresolved_symbols,
+                universe_basis=universe_basis,
+            )
+
+        authority = SOURCE_STATE_AUTHORITY[source_state]
+        release_blocked = bool(
+            source_state not in QUALIFIED_SOURCE_STATES
+            or coverage_state in {COVERAGE_BLOCKING_GAPS, COVERAGE_UNRESOLVED_MEMBERSHIP}
+            or evidence_blocked
+        )
+        complete = source_gate and not release_blocked
 
         matrix_rows.append(
             ProductMatrixRow(
                 product=product,
                 authority=authority.value,
-                official_complete=complete if source_gate else False,
+                official_complete=complete,
                 source_gate=source_gate,
                 sample_only=authority is SourceAuthority.SAMPLE_ONLY,
                 reason=reason,
                 official_families=families,
-                discovered_symbols=len(family_symbols) if family_symbols else len(discovered),
+                discovered_symbols=len(family_symbols)
+                if family_symbols
+                else len(evaluation_universe),
                 sample_count=product_samples,
                 listed_object_count=listed_objects,
                 listed_bytes=None if unknown_sizes else listed_bytes,
                 incidents=product_incidents,
                 uncovered_listed_symbols=uncovered if source_gate else (),
-                uncovered_universe_symbols=uncovered_universe if source_gate else (),
+                uncovered_universe_symbols=blocking_symbols if source_gate else (),
                 universe_coverage_gaps=universe_gaps if source_gate else (),
                 sample_budget_blocked=budget_blocked if source_gate else (),
+                accepted_universe_object_count=universe_objects,
+                accepted_universe_listed_bytes=None if universe_unknown_sizes else universe_bytes,
+                source_qualification_state=source_state,
+                coverage_state=coverage_state,
+                release_blocked=release_blocked if source_gate else False,
+                typed_gap_symbols=typed_symbols if source_gate else (),
+                coverage_gap_kinds=gap_kinds if source_gate else (),
             )
         )
 
+    # 6. Coinalyze qualifies on declared stable anchors, never on an alphabetical edge.
+    anchors = tuple(COINALYZE_ANCHOR_SYMBOLS)
+    confirmed_set = set(confirmed_universe)
+    unconfirmed_anchors = tuple(symbol for symbol in anchors if symbol not in confirmed_set)
     coinalyze_block: dict[str, Any] = {
         "qualified": False,
         "key_present": bool(coinalyze_api_key),
+        "anchor_symbols": list(anchors),
         "reason": "Coinalyze transport or COINALYZE_API_KEY absent",
     }
-    if coinalyze_transport is not None and coinalyze_api_key:
+    if coinalyze_transport is not None and coinalyze_api_key and unconfirmed_anchors:
+        reason = (
+            "declared Coinalyze anchors are not confirmed Binance perpetuals: "
+            + ",".join(unconfirmed_anchors)
+        )
+        incidents.append(
+            {
+                "product": "binance_usdm_liquidation_observed",
+                "kind": "coinalyze_anchor_unconfirmed",
+                "note": reason,
+            }
+        )
+        coinalyze_block = {
+            "qualified": False,
+            "key_present": True,
+            "anchor_symbols": list(anchors),
+            "unconfirmed_anchors": list(unconfirmed_anchors),
+            "reason": reason,
+        }
+    elif coinalyze_transport is not None and coinalyze_api_key:
         try:
             client = CoinalyzeClient(
                 coinalyze_transport, api_key=coinalyze_api_key, retry=retry_runner
             )
             coinalyze_block = client.qualify_binance_daily(
-                native_symbols=sample_symbols[:2] or discovered[:1],
+                anchor_symbols=anchors,
+                universe_symbols=confirmed_universe,
                 from_ts=coinalyze_from_ts,
                 to_ts=coinalyze_to_ts,
             )
@@ -3358,10 +6097,28 @@ def run_source_qualification(
             coinalyze_block = {
                 "qualified": False,
                 "key_present": True,
+                "anchor_symbols": list(anchors),
                 "reason": str(exc),
             }
 
     if coinalyze_block.get("qualified"):
+        support = coinalyze_block.get("universe_support") or {}
+        unmapped = tuple(str(item) for item in support.get("unmapped_symbols", ()))
+        liquidation_coverage = (
+            COVERAGE_UNRESOLVED_MEMBERSHIP
+            if not membership_resolved
+            else (COVERAGE_BLOCKING_GAPS if unmapped else COVERAGE_COMPLETE)
+        )
+        liquidation_reason = (
+            "Coinalyze daily Binance-perpetual liquidation/OI/funding/price history "
+            f"qualified on declared anchors {','.join(anchors)} as observed/censored "
+            f"secondary. {BINANCE_CENSORSHIP_NOTE}"
+        )
+        if unmapped:
+            liquidation_reason = (
+                f"{liquidation_reason}; anchor qualification is not full coverage: "
+                f"{len(unmapped)} confirmed perpetuals are unmapped in Coinalyze"
+            )
         rebuilt: list[ProductMatrixRow] = []
         for row in matrix_rows:
             if row.product != "binance_usdm_liquidation_observed":
@@ -3371,13 +6128,10 @@ def run_source_qualification(
                 ProductMatrixRow(
                     product=row.product,
                     authority=SourceAuthority.SECONDARY.value,
-                    official_complete=True,
+                    official_complete=liquidation_coverage == COVERAGE_COMPLETE,
                     source_gate=True,
                     sample_only=False,
-                    reason=(
-                        "Coinalyze daily Binance-perpetual liquidation/OI/funding/price "
-                        f"history qualified as observed/censored secondary. {BINANCE_CENSORSHIP_NOTE}"
-                    ),
+                    reason=liquidation_reason,
                     official_families=row.official_families,
                     discovered_symbols=row.discovered_symbols,
                     sample_count=row.sample_count
@@ -3391,9 +6145,27 @@ def run_source_qualification(
                     listed_bytes=row.listed_bytes,
                     incidents=row.incidents,
                     uncovered_listed_symbols=row.uncovered_listed_symbols,
-                    uncovered_universe_symbols=row.uncovered_universe_symbols,
-                    universe_coverage_gaps=row.universe_coverage_gaps,
+                    uncovered_universe_symbols=unmapped,
+                    universe_coverage_gaps=tuple(
+                        {
+                            "symbol": symbol,
+                            "family_group": "coinalyze_liquidation",
+                            "families": [],
+                            "status": "coinalyze_symbol_unmapped",
+                            "kind": "coinalyze_symbol_unmapped",
+                            "blocking": True,
+                            "objects": 0,
+                        }
+                        # Every unmapped confirmed perpetual is retained; the product gap
+                        # evidence is never truncated.
+                        for symbol in unmapped
+                    ),
                     sample_budget_blocked=row.sample_budget_blocked,
+                    source_qualification_state=SOURCE_STATE_SECONDARY,
+                    coverage_state=liquidation_coverage,
+                    release_blocked=liquidation_coverage != COVERAGE_COMPLETE,
+                    typed_gap_symbols=(),
+                    coverage_gap_kinds=("coinalyze_symbol_unmapped",) if unmapped else (),
                 )
             )
         matrix_rows = rebuilt
@@ -3425,6 +6197,64 @@ def run_source_qualification(
         row.product for row in matrix_rows if row.source_gate and not row.official_complete
     )
     accepted = len(blocked) == 0
+
+    # 7. Exact deduplicated physical requirement for the accepted universe, against real
+    #    local capacity. Storage insufficiency blocks Gate 2 and never relabels a source.
+    requirement = physical_source_requirement(
+        inventory=inventory, family_products=family_products, universe=evaluation_universe
+    )
+    # Credit is only granted to bytes re-proved right now: rehashed raw object plus a
+    # re-proved provider sidecar. An unverifiable row reduces nothing.
+    credit_digests: set[str] = set()
+    credit_bytes = 0
+    unverified_credit = 0
+    for key, entry_row in sorted(checkpoint.objects.items()):
+        if key not in requirement.keys:
+            continue
+        size = verify_retained_object(
+            key,
+            entry_row,
+            sample_dir=sample_dir,
+            sidecar_dir=list_cache_dir,
+            cache=verified_cache,
+        )
+        if size is None:
+            unverified_credit += 1
+            continue
+        digest = str(entry_row.get("sha256") or "")
+        if digest in credit_digests:
+            continue
+        credit_digests.add(digest)
+        credit_bytes += size
+    feasibility = storage_feasibility(
+        requirement=requirement,
+        retained_credit_bytes=credit_bytes,
+        retained_credit_objects=len(credit_digests),
+        local_available_bytes=available_bytes(store),
+        unverified_credit_objects=unverified_credit,
+    )
+    if feasibility["gate2_storage_state"] == "insufficient":
+        incidents.append(
+            {
+                "product": "binance_usdm_harmonic_bundle",
+                "kind": GATE2_STORAGE_BLOCK,
+                "note": (
+                    "deduplicated compressed-raw requirement exceeds local capacity by "
+                    f"{feasibility['shortfall_bytes']} bytes; Gate 2 remains blocked"
+                ),
+            }
+        )
+        incidents_sorted = tuple(
+            sorted(
+                incidents,
+                key=lambda item: (
+                    str(item.get("product", "")),
+                    str(item.get("family", "")),
+                    str(item.get("symbol", "")),
+                    str(item.get("kind", "")),
+                ),
+            )
+        )
     checkpoint.flush(
         updated_at=generated_at,
         discovered_symbol_count=len(discovered),
@@ -3434,12 +6264,14 @@ def run_source_qualification(
         gate="gate_1_source_procurement",
         gate_status=GateStatus.QUALIFIED.value if accepted else GateStatus.BLOCKED.value,
         generated_at=generated_at,
-        universe_source="official_vision_union_membership_listing",
+        universe_source=(
+            "official_vision_union_listing_with_evidence_based_perpetual_membership"
+        ),
         historical_perpetual_rule=HISTORICAL_PERPETUAL_RULE,
         discovered_symbols=tuple(discovered),
         current_perpetual_symbols=current,
         current_contracts_authenticated=current_authenticated,
-        historical_or_delisted_candidates=delisted,
+        historical_or_delisted_candidates=archive_candidates,
         current_unarchived=unarchived,
         product_matrix=tuple(matrix_rows),
         samples=samples_sorted,
@@ -3450,9 +6282,39 @@ def run_source_qualification(
             "sample_plan_path": str(plan_path),
             "retry_journal_path": str(retry_journal_path),
             "discovered_symbol_count": len(discovered),
+            "full_archive_union_totals": {
+                "scope": "every listed archive name, including excluded and unresolved",
+                "object_count_exact": {
+                    row.product: row.listed_object_count for row in matrix_rows
+                },
+                "byte_count_exact": {row.product: row.listed_bytes for row in matrix_rows},
+            },
+            "confirmed_universe_totals": {
+                "scope": universe_basis,
+                "object_count_exact": {
+                    row.product: row.accepted_universe_object_count for row in matrix_rows
+                },
+                "byte_count_exact": {
+                    row.product: row.accepted_universe_listed_bytes for row in matrix_rows
+                },
+            },
+            # Retained for continuity; identical to full_archive_union_totals.
             "object_count_exact": {row.product: row.listed_object_count for row in matrix_rows},
             "byte_count_exact": {row.product: row.listed_bytes for row in matrix_rows},
             "physical_family_object_counts": dict(sorted(family_object_counts.items())),
+            "physical_source_requirement": {
+                "universe_basis": universe_basis,
+                "universe_size": len(evaluation_universe),
+                "object_count": requirement.object_count,
+                "compressed_raw_bytes": requirement.byte_total,
+                "unknown_size_objects": requirement.unknown_size_objects,
+                "deduplication": (
+                    "each physical object counted once across every logical product"
+                ),
+            },
+            "gate2_feasibility": feasibility,
+            "logical_product_totals_overlap": True,
+            "symbol_temporal_coverage": symbol_temporal,
             "symbol_coverage": symbol_coverage,
             "universe_coverage_gaps": {
                 row.product: [dict(item) for item in row.universe_coverage_gaps]
@@ -3474,6 +6336,7 @@ def run_source_qualification(
             "reused_samples": sum(1 for item in samples if item.reused_existing),
             "recovered_samples": checkpoint.recovered,
             "rehash_required": True,
+            "unverified_retained_sample_keys": len(unverified_retained_keys),
             "physical_families_inventoried": len(inventory),
         },
         sample_plan=plan.to_dict(),
@@ -3483,6 +6346,27 @@ def run_source_qualification(
         ),
         coinalyze=coinalyze_block,
         accepted=accepted,
+        membership={
+            "rule": HISTORICAL_PERPETUAL_RULE,
+            "universe_basis": universe_basis,
+            "resolved": membership_resolved,
+            "confirmed_count": len(confirmed_universe),
+            "unresolved_count": len(unresolved_symbols),
+            "class_counts": {name: len(items) for name, items in sorted(by_class.items())},
+            "classes": {name: sorted(items) for name, items in sorted(by_class.items())},
+            "unresolved_symbols": list(unresolved_symbols),
+            "evidence_sources": [
+                "authenticated_current_exchange_info",
+                "retained_official_contract_metadata",
+                "official_realized_funding_observation",
+            ],
+            "retained_contract_metadata_rows": len(metadata_store.symbol_snapshot),
+            "retained_contract_snapshots": len(metadata_store.snapshots),
+            "classifications": [item.to_dict() for item in classifications],
+        },
+        accepted_universe=confirmed_universe,
+        plan_lock=lock.summary(),
+        budget={**ledger.to_dict(), "reconciliation": reconciliation},
     )
 
 

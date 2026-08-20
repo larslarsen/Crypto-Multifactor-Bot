@@ -7,28 +7,60 @@
       "pair": "BTCUSDT",
       "contractType": "PERPETUAL",
       "status": "TRADING",
-      "marginAsset": "USDT"
+      "marginAsset": "USDT",
+      "underlyingType": "COIN",
+      "baseAsset": "BTC",
+      "quoteAsset": "USDT",
+      "onboardDate": 1569398400000,
+      "deliveryDate": 4133404800000
     },
     {
       "symbol": "ETHUSDT",
       "pair": "ETHUSDT",
       "contractType": "PERPETUAL",
       "status": "TRADING",
-      "marginAsset": "USDT"
+      "marginAsset": "USDT",
+      "underlyingType": "COIN",
+      "baseAsset": "ETH",
+      "quoteAsset": "USDT",
+      "onboardDate": 1573603200000,
+      "deliveryDate": 4133404800000
     },
     {
       "symbol": "AAVEUSDT",
       "pair": "AAVEUSDT",
       "contractType": "PERPETUAL",
       "status": "TRADING",
-      "marginAsset": "USDT"
+      "marginAsset": "USDT",
+      "underlyingType": "COIN",
+      "baseAsset": "AAVE",
+      "quoteAsset": "USDT",
+      "onboardDate": 1602720000000,
+      "deliveryDate": 4133404800000
     },
     {
       "symbol": "BTCUSDT_240329",
       "pair": "BTCUSDT",
       "contractType": "CURRENT_QUARTER",
       "status": "TRADING",
-      "marginAsset": "USDT"
+      "marginAsset": "USDT",
+      "underlyingType": "COIN",
+      "baseAsset": "BTC",
+      "quoteAsset": "USDT",
+      "onboardDate": 1695168000000,
+      "deliveryDate": 1711670400000
+    },
+    {
+      "symbol": "AAPLUSDT",
+      "pair": "AAPLUSDT",
+      "contractType": "PERPETUAL",
+      "status": "TRADING",
+      "underlyingType": "TRADIFI",
+      "baseAsset": "AAPL",
+      "quoteAsset": "USDT",
+      "marginAsset": "USDT",
+      "onboardDate": 1717200000000,
+      "deliveryDate": 4133404800000
     }
   ]
 }

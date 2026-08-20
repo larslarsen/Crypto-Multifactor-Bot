@@ -5,9 +5,14 @@ The Coinalyze key is read only from COINALYZE_API_KEY. Incomplete required
 source coverage exits non-zero by default.
 
 Listing pages and verified samples are checkpointed durably, retained evidence is
-bootstrapped and reused instead of redownloaded, transient transport failures are
-retried under a bounded policy, and new sample downloads are bounded by an explicit
-Gate 1 execution budget.
+bootstrapped and reused instead of redownloaded, and transient transport failures are
+retried under a bounded policy.
+
+The sample plan is locked once and replayed immutably; a resume changes execution state
+only and any genuine change to the locked inputs fails closed before download. There is no
+in-band switch to re-select: a new plan version requires a fresh reviewer authorization.
+New sample downloads are reserved before acquisition and settled after verification
+against a single cumulative Gate 1 allowance that a new invocation never restores.
 """
 
 from __future__ import annotations
@@ -149,6 +154,39 @@ def main(argv: list[str] | None = None) -> int:
         f"sample_plan: planned_new_bytes={plan['new_download_bytes']} "
         f"budget={plan['budget_bytes']} retained_bytes={plan['retained_bytes']} "
         f"budget_blocked={len(plan['blocked'])}",
+        file=sys.stderr,
+    )
+    print(
+        f"plan_lock: version={report.plan_lock.get('plan_version')} "
+        f"state={report.plan_lock.get('state')} "
+        f"plan_digest={report.plan_lock.get('plan_digest')} "
+        f"superseded={report.plan_lock.get('superseded_plan_versions')}",
+        file=sys.stderr,
+    )
+    print(
+        f"budget: charged={report.budget.get('charged_bytes')} "
+        f"spent_range=[{report.budget.get('cumulative_spent_min_bytes')},"
+        f"{report.budget.get('cumulative_spent_max_bytes')}] "
+        f"remaining={report.budget.get('cumulative_remaining_bytes')} "
+        f"reserved={report.budget.get('reserved_bytes')} "
+        f"legacy_state={report.budget.get('legacy_state')} "
+        f"breach_state={report.budget.get('breach_state')}",
+        file=sys.stderr,
+    )
+    print(
+        f"membership: basis={report.membership.get('universe_basis')} "
+        f"confirmed={report.membership.get('confirmed_count')} "
+        f"unresolved={report.membership.get('unresolved_count')} "
+        f"classes={report.membership.get('class_counts')}",
+        file=sys.stderr,
+    )
+    feasibility = report.storage.get("gate2_feasibility", {})
+    print(
+        f"gate2_storage: state={feasibility.get('gate2_storage_state')} "
+        f"required_bytes={feasibility.get('physical_compressed_raw_bytes')} "
+        f"projected_new_bytes={feasibility.get('projected_new_compressed_raw_bytes')} "
+        f"available_bytes={feasibility.get('local_available_bytes')} "
+        f"shortfall_bytes={feasibility.get('shortfall_bytes')}",
         file=sys.stderr,
     )
     print(
