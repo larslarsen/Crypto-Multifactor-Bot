@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build (review-98 source/test correction only)
+Next required actor: Sr Dev - Claude Build (review-99 source/test correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -49,6 +49,7 @@ Governing documents:
 - research/sprint_004/96_CEX002_GATE1_PLAN2_EXECUTION.md
 - research/sprint_004/97_CEX002_GATE1_PLAN2_EXECUTION_REVIEW.md
 - research/sprint_004/98_CEX002_RESOLUTION_AND_STORAGE_ARCHITECTURE_REVIEW.md
+- research/sprint_004/99_CEX002_GROK_RESOLUTION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -489,3 +490,26 @@ source/test correction. It performs no tests, network/data run, plan migration, 
 records, Git, bulk acquisition, catalog mutation, Nautilus work, or Harmonic Trader work and
 stops for reviewer inspection with exact hashes. Hermes remains unauthorized. Gate 1 is
 `IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket is `NONE`.
+
+## Grok review-98 source outcome - rejected
+
+Review 99 preserves Grok's corrected one-hour product/family scope, bounded cost-sample
+direction, explicit unknown later storage fields, and nonblocking Coinalyze intersection
+gaps, but rejects the drop before integration. The existing execution path either rejects
+or replays the locked old plan, while a fresh store writes and executes a version-1 plan;
+the report then mislabels that same plan as an unmigrated version-3 candidate. The new
+allowance is not separately ledgered, selected manifest identities and intervals are not
+serialized or integrity-qualified, taker-flow availability is not connected to production
+coverage, total-unknown storage can still print Gate 2 `sufficient`, and no actual holdout
+boundary is pinned. One new collision test also cannot reach its asserted branch.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 99's bounded
+three-path source/test correction and optional focused fixtures. Claude preserves every
+accepted direction, reads the durable version-2 lock and legacy ledger without mutation,
+emits a distinct inspectable version-3 candidate under a separate amendment-ledger
+identity, performs no raw sample acquisition, and adds the exact focused test contracts in
+review 99. Claude performs no tests, network/data run, migration, integration, repository
+records, Git, catalog work, Nautilus work, or Harmonic Trader work and stops for reviewer
+inspection with exact hashes and the test-function count. Hermes remains unauthorized.
+Gate 1 remains `IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket
+is `NONE`.
