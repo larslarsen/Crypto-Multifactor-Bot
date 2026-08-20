@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
+Next required actor: Sr Dev — Grok Build — restore truncated CEX-002 test suite
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -35,6 +35,8 @@ Governing documents:
 - research/sprint_004/82_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/83_CEX002_SPARK_TEST_SOURCE_REVIEW.md
 - research/sprint_004/84_CEX002_SPARK_FINAL_TEST_SOURCE_REVIEW.md
+- research/sprint_004/85_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
+- research/sprint_004/86_CEX002_TRUNCATED_TEST_SUITE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -340,9 +342,23 @@ preserved-store two-run qualification/resume, evidence record 85, commit, and pu
 specified in review 84. Exit 2 remains honest blocked evidence; exit 1 stops network work.
 Gate 2, Nautilus, and model work remain unauthorized.
 
+## Focused lint failure review
+
+Review 86 accepts Hermes's stop but supersedes review 84's test acceptance. The 51 unused
+imports are evidence that Spark overwrote the accumulated roughly 3,600-line suite with a
+correction based on the older committed test file, deleting the review-75 through
+review-79 coverage. The passing 84-case result is therefore incomplete. Production
+acceptance remains unchanged.
+
+Grok is authorized only to restore the deleted test sections in the single test path from
+the governing reviews. It performs no tests, production/fixture edit, integration,
+records, Git, network/data run, Gate 2, Nautilus, or Harmonic Trader work and stops for
+review with the exact hash and test-function count. Hermes remains unauthorized.
+
 ## Stop condition
 
-The only active authorization is Hermes's bounded integration and execution in review 84.
-The existing store, legacy plan, checkpoints, reports, and over-budget retained evidence
-must be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every other ticket, Nautilus
-integration, and model work remain unauthorized; next ticket remains `NONE`.
+The only active authorization is Grok's one-path test-suite restoration in review 86. The
+existing store, legacy plan, checkpoints, reports, and over-budget retained evidence must
+be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, Hermes integration, every real rerun,
+every other ticket, Nautilus integration, and model work remain unauthorized; next ticket
+remains `NONE`.
