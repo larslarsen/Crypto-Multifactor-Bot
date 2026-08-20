@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build (review-99 source/test correction only)
+Next required actor: Sr Dev - Claude Build (review-100 surgical source/test correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -50,6 +50,7 @@ Governing documents:
 - research/sprint_004/97_CEX002_GATE1_PLAN2_EXECUTION_REVIEW.md
 - research/sprint_004/98_CEX002_RESOLUTION_AND_STORAGE_ARCHITECTURE_REVIEW.md
 - research/sprint_004/99_CEX002_GROK_RESOLUTION_SOURCE_REVIEW.md
+- research/sprint_004/100_CEX002_CLAUDE_CANDIDATE_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -513,3 +514,27 @@ records, Git, catalog work, Nautilus work, or Harmonic Trader work and stops for
 inspection with exact hashes and the test-function count. Hermes remains unauthorized.
 Gate 1 remains `IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket
 is `NONE`.
+
+## Claude review-99 source outcome - rejected
+
+Review 100 accepts Claude's separate candidate-mode structure, no-acquisition loop,
+inspectable interval manifest, Gate-2 unknown state, durable holdout, fixed collision test,
+and preservation of the 160-function accumulated suite. Integration remains unauthorized
+for four control defects: candidate mode can reconcile and flush the legacy ledger before
+taking its before hash; candidate-mode taker flow ignores re-proved retained schema
+evidence because its `samples` collection is intentionally empty; the reported candidate
+plan digest uses an identity domain that cannot become the future locked-plan digest; and
+the prior-authority check accepts version 3 or later instead of exact version 2 with
+versions 0 and 1 preserved. Manifest rows also conflate a listed checksum-sidecar path with
+proved consumable integrity.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 100's surgical
+three-path correction and optional bounded checksum fixture. Claude removes all legacy
+reconciliation from candidate mode, proves an outstanding reservation cannot mutate,
+derives taker flow from retained schema without download, restores a comparable round-trip
+plan digest, requires exact version-0-through-2 authority, and makes manifest validation
+states honest. Claude performs no tests, network/data run, migration, integration,
+repository records, Git, acquisition, catalog work, Nautilus work, or Harmonic Trader work
+and stops for reviewer inspection with exact hashes and the test-function count. Hermes
+remains unauthorized. Gate 1 remains `IN_PROGRESS`; Gate 2 and every next ticket remain
+unauthorized; next ticket is `NONE`.
