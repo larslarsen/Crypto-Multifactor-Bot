@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Grok Build — correct durable authority and transfer accounting
+Next required actor: Jr Dev — Hermes — integrate and execute review 80
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -30,6 +30,7 @@ Governing documents:
 - research/sprint_004/77_CEX002_CLAUDE_DURABLE_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/78_CEX002_CLAUDE_STABLE_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/79_CEX002_CLAUDE_TRANSITION_SOURCE_REVIEW.md
+- research/sprint_004/80_CEX002_GROK_TRANSITION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -289,10 +290,21 @@ tests, network/data run, integration, fixtures, records, Git, purchase, deletion
 mutation, Gate 2, Nautilus, or Harmonic Trader work and stops for source review with exact
 hashes. Hermes remains unauthorized.
 
+## Grok review-79 source review
+
+Review 80 accepts Grok's two-path correction. Live authority and first-closed evidence are
+now staged until the immutable plan accepts them, so a rejected response cannot poison
+durable metadata. Content-address reuse is proved before raw retrieval; an actual raw
+fetch is always recorded as transferred. Focused source tests cover both corrections.
+
+Hermes is authorized only for the nine-path accumulated CEX-002 integration, focused
+commands, preserved-store two-run qualification/resume, evidence record 81, commit, and
+push specified in review 80. Exit 2 remains honest blocked evidence, not success. Exit 1
+stops further network work. The full suite remains deferred to final release acceptance.
+
 ## Stop condition
 
-The review-73 run authorization is consumed. The only active authorization is Grok's
-two-path correction in review 79. The existing store, legacy plan, checkpoints, reports,
-and over-budget retained evidence must be preserved. CEX-002 remains
-`IN_PROGRESS`; Gate 2, Hermes integration, every real rerun, every other ticket, Nautilus
+The only active authorization is Hermes's bounded integration and execution in review 80.
+The existing store, legacy plan, checkpoints, reports, and over-budget retained evidence
+must be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every other ticket, Nautilus
 integration, and model work remain unauthorized; next ticket remains `NONE`.
