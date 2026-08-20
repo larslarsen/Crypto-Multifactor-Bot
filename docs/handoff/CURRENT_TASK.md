@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
+Next required actor: Implementation Dev — Codex Spark — correct five stale focused tests
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -31,6 +31,8 @@ Governing documents:
 - research/sprint_004/78_CEX002_CLAUDE_STABLE_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/79_CEX002_CLAUDE_TRANSITION_SOURCE_REVIEW.md
 - research/sprint_004/80_CEX002_GROK_TRANSITION_SOURCE_REVIEW.md
+- research/sprint_004/81_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
+- research/sprint_004/82_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -302,9 +304,21 @@ commands, preserved-store two-run qualification/resume, evidence record 81, comm
 push specified in review 80. Exit 2 remains honest blocked evidence, not success. Exit 1
 stops further network work. The full suite remains deferred to final release acceptance.
 
+## Focused integration failure review
+
+Review 82 accepts Hermes's stop and retains review 80's production acceptance. All five
+failures are stale or internally inconsistent test contracts: current-unarchived gap
+precedence, typed temporal coverage, an incomplete oversized-source fixture, immutable
+plan history, and a row-validation test missing its authenticated envelope.
+
+Codex Spark is authorized only for the one-path mechanical test-source correction in
+review 82. It performs no tests, production/fixture edit, integration, records, Git,
+network/data run, Gate 2, Nautilus, or Harmonic Trader work and stops for source review
+with the exact test hash. Hermes remains unauthorized.
+
 ## Stop condition
 
-The only active authorization is Hermes's bounded integration and execution in review 80.
-The existing store, legacy plan, checkpoints, reports, and over-budget retained evidence
-must be preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every other ticket, Nautilus
-integration, and model work remain unauthorized; next ticket remains `NONE`.
+The only active authorization is Spark's test-only correction in review 82. The existing
+store, legacy plan, checkpoints, reports, and over-budget retained evidence must be
+preserved. CEX-002 remains `IN_PROGRESS`; Gate 2, every real rerun, every other ticket,
+Nautilus integration, and model work remain unauthorized; next ticket remains `NONE`.
