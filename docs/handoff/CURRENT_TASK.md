@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev — Claude Build — stabilize authority identity and ledger
+Next required actor: Sr Dev — Grok Build — correct durable authority and transfer accounting
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -29,6 +29,7 @@ Governing documents:
 - research/sprint_004/76_CEX002_CLAUDE_AUTHORITY_PLAN_SOURCE_REVIEW.md
 - research/sprint_004/77_CEX002_CLAUDE_DURABLE_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/78_CEX002_CLAUDE_STABLE_AUTHORITY_SOURCE_REVIEW.md
+- research/sprint_004/79_CEX002_CLAUDE_TRANSITION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -274,10 +275,24 @@ in review 78. It performs no tests, network/data run, integration, fixtures, rec
 purchase, deletion, catalog mutation, Gate 2, Nautilus, or Harmonic Trader work and stops
 for source review with exact hashes. Hermes remains unauthorized.
 
+## Claude review-78 source review
+
+Review 79 accepts the stable semantic/provenance split, fail-closed contract semantics,
+and structured ledger direction, but rejects two residual transition defects. A changed
+live authority response is durably written before the immutable plan rejects it and can
+poison later valid resumes. The in-memory acquisition path fetches a raw payload before
+declaring a content-address reuse, then records the transfer as zero-byte no-transfer.
+
+At the owner's direction, Sr Dev — Grok Build using Grok 4.6 High is authorized only for
+the two-path correction in review 79 because Claude is unavailable. Grok performs no
+tests, network/data run, integration, fixtures, records, Git, purchase, deletion, catalog
+mutation, Gate 2, Nautilus, or Harmonic Trader work and stops for source review with exact
+hashes. Hermes remains unauthorized.
+
 ## Stop condition
 
-The review-73 run authorization is consumed. The only active authorization is Claude's
-two-path correction in review 78. The existing store, legacy plan, checkpoints, reports,
+The review-73 run authorization is consumed. The only active authorization is Grok's
+two-path correction in review 79. The existing store, legacy plan, checkpoints, reports,
 and over-budget retained evidence must be preserved. CEX-002 remains
 `IN_PROGRESS`; Gate 2, Hermes integration, every real rerun, every other ticket, Nautilus
 integration, and model work remain unauthorized; next ticket remains `NONE`.
