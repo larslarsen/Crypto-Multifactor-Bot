@@ -1,8 +1,8 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: BLOCKED
-Next required actor: Owner - provide storage and official historical authority
+State: IN_PROGRESS
+Next required actor: Sr Dev - Grok Build (review-98 source/test correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -48,16 +48,17 @@ Governing documents:
 - research/sprint_004/95_CEX002_GROK_PLAN_ROUNDTRIP_SOURCE_REVIEW.md
 - research/sprint_004/96_CEX002_GATE1_PLAN2_EXECUTION.md
 - research/sprint_004/97_CEX002_GATE1_PLAN2_EXECUTION_REVIEW.md
+- research/sprint_004/98_CEX002_RESOLUTION_AND_STORAGE_ARCHITECTURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
 
 The destination is the complete real data needed by the original Harmonic Trader
-geometry-plus-derivatives thesis before model development. CEX-002 replaces the overbuilt
-CEX-001 contract and the rejected reduced price-only proof. It acquires every historically
-observed Binance USD-M perpetual and publishes real trades/bars, OI, funding, basis,
-observed liquidation flow, cost evidence, typed gaps, provenance, reconciliation,
-resumability, a pinned bundle, and a clean NautilusTrader catalog-load check.
+geometry-plus-derivatives thesis before model development. CEX-002 acquires every
+historically observed Binance USD-M perpetual and publishes real hourly bars and taker
+flow, five-minute OI, funding, basis, observed liquidation flow, bounded real cost evidence,
+typed gaps, provenance, reconciliation, resumability, a pinned bundle, and a clean
+NautilusTrader catalog-load check.
 
 No fixed-N/current-listing universe, synthetic acceptance artifact, zero-filled missing
 data, silent partial success, paid data purchase, historical-full-L2 prerequisite, DEX
@@ -65,16 +66,19 @@ work, harmonic-model development, payoff analysis, PAPER, or LIVE work is author
 
 ## Why this reaches the target without Tardis
 
-Official Binance archives/APIs supply the full-family trade/bar, five-minute OI/metrics,
-realized funding, and mark/index/premium/basis inputs for free. Coinalyze's free API retains
-daily long/short liquidation history indefinitely. Because Binance itself publishes at
-most the latest liquidation per symbol per second, this field is explicitly an observed,
-censored liquidation aggregate; no implementation may claim event completeness.
+Official Binance archives/APIs supply native hourly bars with total/taker-buy volumes,
+five-minute OI/metrics, realized funding, and hourly mark/index/premium/basis inputs for
+free. Coinalyze's free API retains daily long/short liquidation history indefinitely.
+Because Binance itself publishes at most the latest liquidation per symbol per second,
+this field is explicitly an observed, censored liquidation aggregate; no implementation
+may claim event completeness.
 
 The original model needs terminal-leg OI change, funding state, and liquidation imbalance,
-not full incremental historical L2. All available free Binance book/depth evidence is
-still acquired for cost calibration, and live BBO/depth/liquidation/OI collection begins
-prospectively under this ticket.
+not individual trades or a complete historical book. Cost evidence is a frozen
+first/midpoint/last per-contract quote/depth sample. Monthly archives are canonical for
+completed months and daily objects fill only uncovered dates, so overlapping package
+copies are never acquired. Live stream collection is deferred until historical research
+establishes tradability.
 
 ## Superseded work
 
@@ -466,3 +470,22 @@ The Owner may supply storage and exact official source artifacts but is not an a
 authority. No reduced universe, omitted derivatives fields, discarded required raw
 provenance, price-only substitute, Gate 2, Nautilus, other ticket, or Harmonic Trader work
 is authorized. Next ticket remains `NONE`.
+
+## Resolution and storage architecture correction
+
+Review 98 preserves review 97's execution facts but rejects its storage disposition. The
+8.66 TB inventory came from reviewer-authored scope inflation: historical `trades` plus
+`aggTrades`, full book archives, one-minute data, and overlapping daily/monthly packages.
+Those are not requirements of the reviewed Harmonic model or data contract.
+
+ADR-0017 and CEX-002 now require native hourly bars and bar-derived taker flow, native
+five-minute OI, funding, hourly basis inputs, observed daily liquidations, and a bounded
+first/midpoint/last per-contract cost sample across available book families. The complete
+historical perpetual universe, derivatives variables, raw lineage, typed gaps, and daily
+model intersection remain mandatory. This is not a price-only or fixed-panel reduction.
+
+Sr Dev - Grok Build using Grok 4.6 High is authorized only for review 98's four-path
+source/test correction. It performs no tests, network/data run, plan migration, integration,
+records, Git, bulk acquisition, catalog mutation, Nautilus work, or Harmonic Trader work and
+stops for reviewer inspection with exact hashes. Hermes remains unauthorized. Gate 1 is
+`IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket is `NONE`.
