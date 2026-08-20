@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer — inspect Gate 1 resumable execution
+Next required actor: Sr Dev — Claude Build — correct Gate 1 authority, stable plan, and storage report
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -24,6 +24,8 @@ Governing documents:
 - research/sprint_004/71_CEX002_GATE1_RESUMABLE_EXECUTION.md
 - research/sprint_004/72_CEX002_GATE1_RESUMABLE_EXECUTION_REVIEW.md
 - research/sprint_004/73_CEX002_CLAUDE_TEST_SOURCE_REVIEW.md
+- research/sprint_004/74_CEX002_GATE1_RESUMABLE_EXECUTION.md
+- research/sprint_004/75_CEX002_GATE1_RESUMABLE_EXECUTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -211,17 +213,27 @@ the rejected source/test drop and every unrelated dirty path. Once that record i
 and pushed, Sr Dev — Claude Build on Claude Opus 5 is automatically authorized for the
 surgical correction in review 68. No ephemeral developer prompt is required.
 
+## Gate 1 real-execution review
+
+Review 75 accepts Hermes's integration discipline but rejects Gate 1 evidence. Both real
+runs honestly blocked and the store resumed, but the archive-name union was promoted into
+an unproved perpetual universe, the 256 MiB allowance reset across invocations, semantic
+sample identity changed, source qualification was conflated with temporal completeness,
+and the report exposed a multi-terabyte raw requirement without a deduplicated physical
+storage/shortfall decision.
+
+Sr Dev — Claude Build using Claude Opus 5 is authorized only for the source/test correction
+specified in review 75. It must establish affirmative official membership evidence,
+immutable cumulative planning, physical storage feasibility evidence, separated source and
+coverage states, and stable Coinalyze anchors. It performs no tests, network/data run,
+integration, records, Git, purchase, deletion, catalog mutation, Gate 2, or Harmonic Trader
+work and stops for source review with exact hashes. Hermes and every real rerun remain
+unauthorized.
+
 ## Stop condition
 
-Review 73 accepts Claude's test-only correction at the exact hash recorded there. The
-abort/resume proof now uses deterministic distinct bytes for genuinely missing objects,
-preserves completed-key no-refetch and semantic equivalence, and separately covers valid
-same-digest cross-key recovery plus broken authority legs. The review-70 production module
-and CLI remain accepted and unchanged.
-
-Jr Dev — Hermes is authorized only for the exact focused commands, three-path integration,
-bounded two-run real qualification/resume, execution record 74, and publication specified
-in review 73. Every command or real-run outcome returns the next actor to the reviewer. The
-existing 691 MiB store must be preserved and reused. No monorepo full-suite rerun is
-required at this intermediate gate. CEX-002 remains `IN_PROGRESS`; Gate 2, every other
-ticket, and model work remain unauthorized; next ticket remains `NONE`.
+The review-73 run authorization is consumed. The only active authorization is Claude's
+bounded source/test correction in review 75. The existing store, legacy plan, checkpoints,
+reports, and over-budget retained evidence must be preserved. CEX-002 remains
+`IN_PROGRESS`; Gate 2, every other ticket, Nautilus integration, and model work remain
+unauthorized; next ticket remains `NONE`.
