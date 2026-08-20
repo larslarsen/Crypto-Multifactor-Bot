@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 90
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
