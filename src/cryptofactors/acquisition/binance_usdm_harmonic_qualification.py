@@ -1437,7 +1437,9 @@ class SamplePlan:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "entries": [asdict(entry) for entry in self.entries],
+            "entries": [
+                {**asdict(entry), "products": list(entry.products)} for entry in self.entries
+            ],
             "blocked": [dict(item) for item in self.blocked],
             "new_download_bytes": self.new_download_bytes,
             "retained_bytes": self.retained_bytes,

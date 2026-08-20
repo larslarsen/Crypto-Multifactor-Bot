@@ -2309,6 +2309,65 @@ def test_plan_validation_refuses_unknown_actions_and_foreign_urls() -> None:
         )
 
 
+def test_sample_plan_to_dict_is_json_native_and_round_trippable() -> None:
+    download_key = f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip"
+    blocked_key = f"{vision_prefix('monthly', 'trades')}ETHUSDT/ETHUSDT-trades-2020-01.zip"
+    products = ("binance_usdm_perpetual_membership", "binance_usdm_trade")
+    plan = SamplePlan(
+        entries=(
+            SamplePlanEntry(
+                family="monthly/trades",
+                symbol="BTCUSDT",
+                regime="early",
+                products=products,
+                key=download_key,
+                url=vision_object_url(download_key),
+                byte_size=10,
+                action="download",
+            ),
+            SamplePlanEntry(
+                family="monthly/trades",
+                symbol="ETHUSDT",
+                regime="early",
+                products=products,
+                key=blocked_key,
+                url=vision_object_url(blocked_key),
+                byte_size=600_000_000,
+                action="blocked",
+                block_reason="sample_budget_exceeded",
+            ),
+        ),
+        blocked=(
+            {
+                "kind": "sample_budget_exceeded",
+                "family": "monthly/trades",
+                "symbol": "ETHUSDT",
+                "regime": "early",
+                "products": list(products),
+                "required_key": blocked_key,
+                "required_bytes": 600_000_000,
+            },
+        ),
+        new_download_bytes=10,
+        retained_bytes=0,
+        budget_bytes=100,
+        max_object_bytes=100,
+        unique_new_objects=1,
+        allowance_bytes=100,
+    )
+    serialized = plan.to_dict()
+    assert all(isinstance(entry["products"], list) for entry in serialized["entries"])
+    assert serialized["entries"][0]["products"] == list(products)
+    assert serialized["blocked"]
+    persisted = json.loads(json.dumps(serialized))
+    assert persisted == serialized
+    rebuilt = SamplePlan.from_dict(persisted)
+    assert isinstance(rebuilt.entries[0].products, tuple)
+    assert rebuilt.to_dict() == persisted
+    assert plan_content_digest(rebuilt) == plan_content_digest(plan)
+    validate_sample_plan(rebuilt)
+
+
 def test_no_public_switch_can_reselect_the_locked_plan() -> None:
     assert "relock_sample_plan" not in inspect.signature(run_source_qualification).parameters
     script = (

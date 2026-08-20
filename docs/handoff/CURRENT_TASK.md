@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - correct review 94
+Next required actor: Jr Dev - Hermes - execute review 95
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -45,6 +45,7 @@ Governing documents:
 - research/sprint_004/92_CEX002_PLAN_VERSION_2_AUTHORIZATION.md
 - research/sprint_004/93_CEX002_GATE1_PLAN2_EXECUTION.md
 - research/sprint_004/94_CEX002_PLAN_ROUNDTRIP_REVIEW.md
+- research/sprint_004/95_CEX002_GROK_PLAN_ROUNDTRIP_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -437,3 +438,15 @@ Grok is authorized only for review 94's two-path JSON-native plan serialization 
 focused test-source correction. Grok performs no tests, data/network run, integration,
 records, Git, migration, Gate 2, Nautilus, other-ticket work, or Harmonic Trader work and
 stops for reviewer inspection with exact hashes. Hermes remains unauthorized.
+
+## Grok review-94 source review
+
+Review 95 accepts the two-path correction. Plan entries now serialize `products` as
+JSON-native lists while retaining internal tuples, and the focused test binds exact JSON
+round-trip and unchanged plan digest. The accumulated suite remains intact.
+
+At the owner's standing direction, the reviewer integrates the accepted correction and
+review 95. Hermes then runs the focused commands, exact assertion-bound plan-2 migration,
+and preserved-store two-run sequence in review 95, publishes record 96, commits the exact
+authorized report/record paths, pushes, and stops for review. Gate 2, Nautilus, other
+tickets, and Harmonic Trader work remain unauthorized.
