@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
+Next required actor: Jr Dev - Hermes - execute review 92
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -41,6 +41,8 @@ Governing documents:
 - research/sprint_004/88_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
 - research/sprint_004/89_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION_REVIEW.md
 - research/sprint_004/90_CEX002_GROK_STABLE_IDENTITY_SOURCE_REVIEW.md
+- research/sprint_004/91_CEX002_GATE1_CORRECTED_EXECUTION.md
+- research/sprint_004/92_CEX002_PLAN_VERSION_2_AUTHORIZATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -407,3 +409,17 @@ review 90. Hermes then executes only the focused commands and preserved-store tw
 sequence in review 90, records both actual process exit statuses, publishes record 91,
 commits the exact authorized four record/report paths, pushes, and stops for review. Gate
 2, Nautilus, other tickets, and Harmonic Trader work remain unauthorized.
+
+## Plan-version gate review
+
+Review 92 accepts Hermes's 148 focused tests, 11 atomic-download tests, lint/control
+checks, captured exit 1, and required stop. The accepted code hash correctly moved the
+immutable code/config input. Review 92 corrects record 91's plan counts and authorizes one
+assertion-bound migration from plan version 1 to version 2 with the exact plan, retained
+snapshot, budget snapshot, and plan digest preserved; only the reviewed code/config digest
+changes and version 1 remains in history.
+
+Hermes executes only review 92's exact migration and two preserved-store runs, publishes
+record 93, commits the authorized record/report paths, pushes, and stops for review. No
+public relock switch, plan reselection, acquisition, Gate 2, Nautilus, other ticket, or
+Harmonic Trader work is authorized.
