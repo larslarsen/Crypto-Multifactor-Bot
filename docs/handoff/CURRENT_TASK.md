@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Gate 1 stable-authority execution
+Next required actor: Sr Dev - Grok Build - correct review 94
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -43,6 +43,8 @@ Governing documents:
 - research/sprint_004/90_CEX002_GROK_STABLE_IDENTITY_SOURCE_REVIEW.md
 - research/sprint_004/91_CEX002_GATE1_CORRECTED_EXECUTION.md
 - research/sprint_004/92_CEX002_PLAN_VERSION_2_AUTHORIZATION.md
+- research/sprint_004/93_CEX002_GATE1_PLAN2_EXECUTION.md
+- research/sprint_004/94_CEX002_PLAN_ROUNDTRIP_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -423,3 +425,15 @@ Hermes executes only review 92's exact migration and two preserved-store runs, p
 record 93, commits the authorized record/report paths, pushes, and stops for review. No
 public relock switch, plan reselection, acquisition, Gate 2, Nautilus, other ticket, or
 Harmonic Trader work is authorized.
+
+## Plan-version migration review
+
+Review 94 accepts Hermes's required stop. All pre-migration assertions passed, but the
+in-memory exact-plan assertion exposed that `SamplePlan.to_dict()` emits tuple-valued
+`products` while persisted JSON reloads lists. The durable lock was never flushed and
+remains byte-identical version 1.
+
+Grok is authorized only for review 94's two-path JSON-native plan serialization and
+focused test-source correction. Grok performs no tests, data/network run, integration,
+records, Git, migration, Gate 2, Nautilus, other-ticket work, or Harmonic Trader work and
+stops for reviewer inspection with exact hashes. Hermes remains unauthorized.
