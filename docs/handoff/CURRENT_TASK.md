@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - correct review 89
+Next required actor: Jr Dev - Hermes - execute review 90
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -40,6 +40,7 @@ Governing documents:
 - research/sprint_004/87_CEX002_GROK_RESTORED_TEST_SOURCE_REVIEW.md
 - research/sprint_004/88_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION.md
 - research/sprint_004/89_CEX002_GATE1_STABLE_AUTHORITY_EXECUTION_REVIEW.md
+- research/sprint_004/90_CEX002_GROK_STABLE_IDENTITY_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -393,3 +394,16 @@ Harmonic Trader work and stops for reviewer inspection with exact hashes. The 63
 unresolved historical candidates and approximately 8.47 TB local shortfall remain honest
 blockers; no reduced universe, omitted derivatives data, or price-only substitute is
 authorized. Hermes remains unauthorized.
+
+## Grok review-89 source review
+
+Review 90 accepts Grok's exact two-path correction. The storage incident is stable while
+exact capacity values remain reported, and already-suffixed Coinalyze native identities
+map without duplicating `_PERP`. Full-market mismatch and duplicate validation remains
+fail-closed. The accumulated test suite remains intact with four focused additions.
+
+At the owner's standing direction, the reviewer integrates this small accepted drop with
+review 90. Hermes then executes only the focused commands and preserved-store two-run
+sequence in review 90, records both actual process exit statuses, publishes record 91,
+commits the exact authorized four record/report paths, pushes, and stops for review. Gate
+2, Nautilus, other tickets, and Harmonic Trader work remain unauthorized.

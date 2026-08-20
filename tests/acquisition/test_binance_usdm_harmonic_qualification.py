@@ -28,6 +28,8 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     DERIVED_PRODUCTS,
     GATE1_MAX_NEW_OBJECT_BYTES,
     GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    GATE2_STORAGE_BLOCK,
+    GATE2_STORAGE_INCIDENT_NOTE,
     LEDGER_NO_TRANSFER,
     LEDGER_TRANSFERRED,
     LEGACY_BUDGET_UNRESOLVED,
@@ -83,6 +85,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     build_sample_plan,
     canonical_contract_row,
     classify_membership,
+    coinalyze_perp_symbol,
     contract_close_ms,
     contract_provenance,
     contract_semantics_state,
@@ -2440,7 +2443,7 @@ def test_physical_storage_requirement_is_deduplicated_and_reports_shortfall(
     assert feasibility["local_available_bytes"] is not None
     assert feasibility["normalized_catalog_bytes"]["treated_as_zero"] is False
     assert feasibility["normalized_catalog_bytes"]["state"] == "unknown"
-    assert any(item["kind"] == "gate2_storage_insufficient" for item in report.incidents)
+    assert any(item["kind"] == GATE2_STORAGE_BLOCK for item in report.incidents)
     assert report.storage["logical_product_totals_overlap"] is True
     # Storage insufficiency blocks Gate 2; it never relabels a reachable source.
     trades = _row("binance_usdm_trade", report)
@@ -3667,3 +3670,117 @@ def test_missing_destination_raw_fetch_is_recorded_as_a_transfer(
     for key, record in charges.items():
         assert vision_object_url(key) in fetched
         assert record["transferred_bytes"] == record["planned_bytes"] > 0
+
+
+# --- review-89 stable storage identity and already-suffixed Coinalyze natives ---------
+
+
+def test_storage_incident_identity_is_stable_across_local_capacity_churn(
+    tmp_path: Path,
+) -> None:
+    from cryptofactors.acquisition import binance_usdm_harmonic_qualification as module
+
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/trades", "trades"), ("monthly/aggTrades", "aggTrades")],
+        payload_by_stem={
+            "aggTrades": _zip_bytes("a.csv", b"1,7000.0,0.5,10,12,1577836800000,true\n")
+        },
+        months=CONTIGUOUS_MONTHS,
+    )
+    for prefix in list(index.objects):
+        index.objects[prefix] = [
+            ListingObject(key=obj.key, size=100_000_000_000_000)
+            for obj in index.objects[prefix]
+        ]
+    real_available = module.available_bytes
+    first_capacity = 10_000_000_000
+    second_capacity = first_capacity + 75_083_776
+    try:
+        module.available_bytes = lambda _path: first_capacity  # type: ignore[method-assign]
+        first = run_source_qualification(
+            store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+        )
+        module.available_bytes = lambda _path: second_capacity  # type: ignore[method-assign]
+        second = run_source_qualification(
+            store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+        )
+    finally:
+        module.available_bytes = real_available  # type: ignore[method-assign]
+
+    first_feas = first.storage["gate2_feasibility"]
+    second_feas = second.storage["gate2_feasibility"]
+    assert first_feas["local_available_bytes"] == first_capacity
+    assert second_feas["local_available_bytes"] == second_capacity
+    assert first_feas["shortfall_bytes"] != second_feas["shortfall_bytes"]
+    assert first_feas["gate2_storage_state"] == "insufficient"
+    assert second_feas["gate2_storage_state"] == "insufficient"
+    first_incidents = [item for item in first.incidents if item["kind"] == GATE2_STORAGE_BLOCK]
+    second_incidents = [item for item in second.incidents if item["kind"] == GATE2_STORAGE_BLOCK]
+    assert first_incidents
+    assert first_incidents == second_incidents
+    assert {item["note"] for item in first_incidents} == {GATE2_STORAGE_INCIDENT_NOTE}
+    assert str(first_feas["shortfall_bytes"]) not in GATE2_STORAGE_INCIDENT_NOTE
+    assert str(second_feas["shortfall_bytes"]) not in GATE2_STORAGE_INCIDENT_NOTE
+    assert identity_bytes(first) == identity_bytes(second)
+
+
+def test_coinalyze_perp_symbol_maps_unsuffixed_and_already_suffixed_natives() -> None:
+    assert coinalyze_perp_symbol("BTCUSDT") == "BTCUSDT_PERP.A"
+    assert coinalyze_perp_symbol("AAVEUSD_PERP") == "AAVEUSD_PERP.A"
+
+
+def test_coinalyze_accepts_already_suffixed_native_provider_identity() -> None:
+    markets = _load_json("coinalyze_future_markets.json")
+    assert isinstance(markets, list)
+    markets.append(
+        {
+            "symbol": "AAVEUSD_PERP.A",
+            "exchange": "A",
+            "symbol_on_exchange": "AAVEUSD_PERP",
+            "base_asset": "AAVE",
+            "quote_asset": "USD",
+            "is_perpetual": True,
+            "margined": "STABLE",
+            "expire_at": None,
+            "oi_lq_vol_denominated_in": "BASE_ASSET",
+        }
+    )
+    client = CoinalyzeClient(_markets_transport(markets), api_key="sekret")
+    evidence = client.qualify_binance_daily(
+        anchor_symbols=["BTCUSDT", "ETHUSDT"],
+        universe_symbols=["BTCUSDT", "ETHUSDT", "AAVEUSD_PERP"],
+        from_ts=1_577_836_800,
+        to_ts=1_609_459_200,
+    )
+    assert "AAVEUSD_PERP" in evidence["universe_support"]["supported_symbols"]
+    assert coinalyze_perp_symbol("AAVEUSD_PERP") == "AAVEUSD_PERP.A"
+
+
+def test_coinalyze_rejects_mismatched_provider_for_already_suffixed_native() -> None:
+    markets = _load_json("coinalyze_future_markets.json")
+    assert isinstance(markets, list)
+    markets.append(
+        {
+            "symbol": "AAVEUSD_PERP_PERP.A",
+            "exchange": "A",
+            "symbol_on_exchange": "AAVEUSD_PERP",
+            "base_asset": "AAVE",
+            "quote_asset": "USD",
+            "is_perpetual": True,
+            "margined": "STABLE",
+            "expire_at": None,
+            "oi_lq_vol_denominated_in": "BASE_ASSET",
+        }
+    )
+    client = CoinalyzeClient(_markets_transport(markets), api_key="sekret")
+    with pytest.raises(SourceQualificationError, match="disagrees with its native identity") as err:
+        client.qualify_binance_daily(
+            anchor_symbols=["BTCUSDT", "ETHUSDT"],
+            universe_symbols=["BTCUSDT", "ETHUSDT", "AAVEUSD_PERP"],
+            from_ts=1_577_836_800,
+            to_ts=1_609_459_200,
+        )
+    assert err.value.context["native"] == "AAVEUSD_PERP"
+    assert err.value.context["provider_symbol"] == "AAVEUSD_PERP_PERP.A"
+    assert err.value.context["expected"] == "AAVEUSD_PERP.A"

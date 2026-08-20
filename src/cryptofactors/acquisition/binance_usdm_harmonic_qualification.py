@@ -469,6 +469,10 @@ CONTRACT_SNAPSHOT_DIRNAME: str = "fapi_snapshots"
 LEGACY_BUDGET_UNRESOLVED: str = "legacy_budget_accounting_unresolved"
 PLAN_INPUTS_CHANGED: str = "plan_inputs_changed"
 GATE2_STORAGE_BLOCK: str = "gate2_storage_insufficient"
+GATE2_STORAGE_INCIDENT_NOTE: str = (
+    "local capacity is insufficient for the deduplicated compressed-raw requirement; "
+    "exact execution-plane values are in storage.gate2_feasibility"
+)
 
 # Coinalyze qualification anchors are declared, not derived from an alphabetical edge of
 # the discovered universe. Both must be confirmed Binance perpetuals first.
@@ -1010,7 +1014,16 @@ def vision_object_url(key: str) -> str:
 
 
 def coinalyze_perp_symbol(native: str) -> str:
-    return f"{native.strip().upper()}_PERP.{COINALYZE_EXCHANGE_CODE}"
+    """Canonical Coinalyze perpetual identity for a Binance native symbol.
+
+    Observed native forms are both unsuffixed (``BTCUSDT``) and already carrying
+    ``_PERP`` (``AAVEUSD_PERP``). The provider label is that perpetual stem plus the
+    exchange code; a second ``_PERP`` is never inserted.
+    """
+    stem = native.strip().upper()
+    if not stem.endswith("_PERP"):
+        stem = f"{stem}_PERP"
+    return f"{stem}.{COINALYZE_EXCHANGE_CODE}"
 
 
 def _local_tag(tag: str) -> str:
@@ -6238,10 +6251,7 @@ def run_source_qualification(
             {
                 "product": "binance_usdm_harmonic_bundle",
                 "kind": GATE2_STORAGE_BLOCK,
-                "note": (
-                    "deduplicated compressed-raw requirement exceeds local capacity by "
-                    f"{feasibility['shortfall_bytes']} bytes; Gate 2 remains blocked"
-                ),
+                "note": GATE2_STORAGE_INCIDENT_NOTE,
             }
         )
         incidents_sorted = tuple(
