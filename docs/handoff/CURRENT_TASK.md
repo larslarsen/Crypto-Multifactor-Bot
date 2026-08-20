@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev — Hermes — integrate accepted source and execute bounded Gate 1 resume
+Next required actor: Lead Quantitative Finance Researcher/Engineer — inspect Gate 1 resumable execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
