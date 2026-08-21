@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct two stale CEX tests in review 128
+Next required actor: Implementation Dev - Codex Spark - finish residual receipt assertion in review 129
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -81,6 +81,7 @@ Governing documents:
 - research/sprint_004/126_CEX002_REPORT_SPLIT_SOURCE_ACCEPTANCE.md
 - research/sprint_004/127_CEX002_REPORT_SPLIT_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/128_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
+- research/sprint_004/129_CEX002_SPARK_TEST_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1011,6 +1012,26 @@ atomic dependency, fixtures, report, and data are frozen. Spark runs no commands
 records, and performs no Git operation. It stops for reviewer source inspection with the
 test hash and 209 unique test-function count. Hermes and candidate execution remain
 unauthorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
+
+## Spark review-128 test outcome - one residual assertion rejected
+
+Review 129 accepts and freezes Spark's storage-summary correction. The compact-receipt
+test now rejects any 13-field mapping, but its claimed legitimate-overlap proof merely
+shows that some sample-plan key appears in a receipt that necessarily contains the sample
+plan. It never proves that a selected manifest key is the legitimate plan reference, and
+it does not implement review 128's exact full-row serialization comparison.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only for
+review 129's residual local assertion-block rewrite in the same CEX test path. It compares
+each complete selected row's compact canonical JSON with the compact parsed receipt, and
+proves a nonempty intersection between selected keys and serialized sample-plan keys.
+Spark runs no commands, touches no other block or path, and performs no Git operation. It
+stops with the test hash and unchanged 209-function count. Hermes remains unauthorized.
 
 No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
