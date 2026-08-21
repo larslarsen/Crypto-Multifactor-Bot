@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-104 candidate execution
+Next required actor: Sr Dev - Claude Build (review-105 focused failure correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -55,6 +55,7 @@ Governing documents:
 - research/sprint_004/102_CEX002_CLAUDE_CLI_PREFLIGHT_SOURCE_REVIEW.md
 - research/sprint_004/103_CEX002_PLAN3_CANDIDATE_SOURCE_ACCEPTANCE.md
 - research/sprint_004/104_CEX002_PLAN3_CANDIDATE_EXECUTION.md
+- research/sprint_004/105_CEX002_FOCUSED_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -605,3 +606,28 @@ download, amendment-ledger creation, Gate 2, normalization, catalog work, Nautil
 Harmonic Trader work, or other-ticket work is authorized. A command failure or real exit 1
 stops forward execution and is recorded honestly. Gate 1 remains `IN_PROGRESS`; next ticket
 remains `NONE`.
+
+## Review-104 focused execution outcome - rejected
+
+Review 105 accepts Hermes's exact three-path source integration and confirms that the real
+candidate process did not run. The focused CEX-002 suite failed 12 of 189 cases. Five
+stable-identity failures expose a real one-invocation lag in the report-facing acquisition
+manifest, and retained kline schema proves candidate taker flow while its derived row
+incorrectly remains sample-pending. Six other failures are stale or invalid tests built on
+discovery-only trade families, trade-shaped kline payloads, or a whole-file substring ban.
+Commands 2 through 5 were run after command 1 failed; they were read-only but are void as
+acceptance evidence.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 105's bounded
+production and test correction. The production module must publish final proof state from
+current-run re-proof/acquisition evidence without changing the locked plan and must qualify
+retained-schema taker flow without hiding real coverage or integrity blocks. The tests must
+use selected one-hour kline families and schema-valid distinct kline bytes while preserving
+all identity, tamper, resume, transfer, lineage, and zero-fetch guarantees. Only the
+production and CEX-002 test paths may change; the CLI and 17 fixtures are frozen.
+
+Claude performs no tests, network/data run, migration, integration, repository-record
+edit, Git, acquisition, catalog work, Nautilus work, Harmonic Trader work, or publication
+and stops for reviewer inspection with exact hashes and the unique test-function count.
+Hermes and real candidate execution remain unauthorized. Gate 1 remains `IN_PROGRESS`;
+next ticket remains `NONE`.
