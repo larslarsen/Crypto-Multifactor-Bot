@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-121 integration and candidate resume
+Next required actor: Sr Dev - Claude Build - implement ADR-0019 report split
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -73,6 +73,8 @@ Governing documents:
 - research/sprint_004/119_CEX002_LISTING_RESIDUAL_TEST_REVIEW.md
 - research/sprint_004/120_CEX002_LISTING_SOURCE_ACCEPTANCE.md
 - research/sprint_004/121_CEX002_LISTING_INTEGRATION_AND_CANDIDATE_RESUME.md
+- docs/adr/0019-scalable-qualification-evidence-publication.md
+- research/sprint_004/122_CEX002_TERMINAL_REPORT_ARCHITECTURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -875,3 +877,29 @@ No source/test/fixture edit, reset, cleanup, cache reconstruction, reduced data 
 migration, sample acquisition, Gate 2, normalization, catalog publication, Nautilus work,
 Harmonic Trader work, payoff analysis, PAPER, LIVE, or other-ticket work is authorized.
 Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Review-121 terminal candidate outcome - execution accepted, report architecture rejected
+
+Review 122 accepts the exact five-path integration and the terminal status-2 candidate
+execution. ADR-0018 reduced the complete remaining listing run to 1,963 seconds: 30,172
+requests reused, 9,640 fetched, one pooled client opened/closed, and only 39 checkpoint
+serializations. The lock, ledger, retained raw tree, and amendment-ledger absence remained
+exact. The candidate remains honestly blocked and performed no migration or sample
+download.
+
+The 1,059,297,547-byte report is not publishable. It serializes 733,203 detailed manifest
+rows twice, once at top level and once under storage. ADR-0019 requires a compact tracked
+receipt cryptographically bound to one complete, deterministic, content-addressed,
+stream-verifiable detail artifact under the ignored data root. No universe, field, row,
+lineage, or evidence is dropped; Git LFS and external storage are rejected.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 122's exact
+three-path ADR-0019 source/test implementation. The current oversized report and all data
+are frozen. Claude runs no commands, touches no records or Git, and stops for source review
+with exact hashes and the unique test-function count. Hermes and any report/candidate rerun
+remain unauthorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
