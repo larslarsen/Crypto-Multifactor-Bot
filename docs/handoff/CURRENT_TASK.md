@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 136 correction
+Next required actor: Sr Dev - Claude Build - implement ADR-0020 under review 137
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -89,6 +89,8 @@ Governing documents:
 - research/sprint_004/134_CEX002_RUFF_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/135_CEX002_TERMINAL_CANDIDATE_REVIEW.md
 - research/sprint_004/136_CEX002_RECORD_134_CORRECTION.md
+- docs/adr/0020-historical-contract-authority-and-qualification-budget.md
+- research/sprint_004/137_CEX002_MEMBERSHIP_AND_BUDGET_ARCHITECTURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1114,3 +1116,21 @@ correct manifest phase order, and the correct iterator/header arithmetic.
 Every other accepted record-134 candidate, artifact, invariant, mutation, and stop claim
 remains unchanged. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
 remains `NONE`.
+
+## Review-137 architecture and Claude source authorization
+
+Review 137 accepts record 136 and ADR-0020 resolves the historical-name authority and
+qualification-budget architecture. The review itself freezes the exact 46 delivery
+identities, all 17 alias-to-base mappings, their authority classes, the qualification
+strata formula, and candidate-version lineage.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for the three Python paths
+and optional existing fixture directory enumerated in review 137. Claude implements all
+ten numbered requirements and focused test-source coverage there, without executing tests,
+Ruff, network/data work, the candidate, Git, migration, acquisition, or any repository
+record. It stops for reviewer source inspection with exact SHA-256 values for every edited
+path and the unique CEX test-function count. Hermes remains unauthorized.
+
+No Gate-1 candidate execution, sample acquisition, plan migration, Gate 2, reduced scope,
+Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; next ticket remains `NONE`.
