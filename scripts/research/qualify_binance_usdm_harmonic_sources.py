@@ -8,6 +8,11 @@ Listing pages and verified samples are checkpointed durably, retained evidence i
 bootstrapped and reused instead of redownloaded, and transient transport failures are
 retried under a bounded policy.
 
+`--candidate-plan-only` proves the durable version-2 lock and legacy ledger before this
+process creates or touches anything, then constructs the version-3 candidate plan from that
+read-only prior authority. It migrates no plan or ledger, downloads no sample, and proves
+the durable version-2 lock and legacy budget bytes are unchanged.
+
 The sample plan is locked once and replayed immutably; a resume changes execution state
 only and any genuine change to the locked inputs fails closed before download. There is no
 in-band switch to re-select: a new plan version requires a fresh reviewer authorization.
@@ -23,18 +28,21 @@ import sys
 from pathlib import Path
 
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
-    GATE1_MAX_NEW_OBJECT_BYTES,
+    BUDGET_LEDGER_FILENAME,
     GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    SAMPLE_PLAN_LOCK_FILENAME,
     VISION_S3_ENDPOINT,
     FapiCurrentContractSource,
     HttpxCoinalyzeTransport,
     ListingCheckpointStore,
+    ResumeIntegrityError,
     RetryJournal,
     RetryPolicy,
     RetryRunner,
     SourceQualificationError,
     TransportObjectIndex,
     accept_qualification,
+    candidate_preflight,
     qualification_exit_code,
     run_source_qualification,
     write_qualification_report,
@@ -63,20 +71,40 @@ def main(argv: list[str] | None = None) -> int:
         default=GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
         help="total NEW sample download budget; may only lower the Gate 1 default",
     )
-    parser.add_argument(
-        "--max-sample-object-bytes",
-        type=int,
-        default=GATE1_MAX_NEW_OBJECT_BYTES,
-        help="per-object NEW download cap; may only lower the Gate 1 default",
-    )
     parser.add_argument("--retry-max-attempts", type=int, default=5)
+    parser.add_argument(
+        "--candidate-plan-only",
+        action="store_true",
+        help=(
+            "construct the version-3 candidate plan from read-only prior authority: no "
+            "plan or ledger migration, no sample download, and no relock"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    # The Gate 1 execution budget may be tightened but never raised.
+    # The Gate 1 execution budget may be tightened but never raised. There is no
+    # independent per-object cap: an object that cannot fit remaining allowance blocks.
     sample_budget = min(int(args.sample_budget_bytes), GATE1_NEW_DOWNLOAD_BUDGET_BYTES)
-    max_object_bytes = min(int(args.max_sample_object_bytes), GATE1_MAX_NEW_OBJECT_BYTES)
 
     store_root = Path(args.store_root)
+
+    if args.candidate_plan_only:
+        # Prove the exact prior authority before this process creates the store,
+        # constructs a transport, loads a listing cache, checkpoint, or retry journal, or
+        # reads a credential. An invalid transition must change nothing at all.
+        try:
+            candidate_preflight(
+                plan_lock_path=store_root / SAMPLE_PLAN_LOCK_FILENAME,
+                budget_ledger_path=store_root / BUDGET_LEDGER_FILENAME,
+                budget_bytes=sample_budget,
+            )
+        except (SourceQualificationError, ResumeIntegrityError) as exc:
+            # ``ResumeIntegrityError`` is a ``SourceQualificationError`` subclass; both are
+            # named for clarity. Only the message is printed, never authority content or a
+            # credential.
+            print(f"ERROR: {exc.message}", file=sys.stderr)
+            return 1
+
     store_root.mkdir(parents=True, exist_ok=True)
     api_key = os.environ.get("COINALYZE_API_KEY")
     if api_key is not None and not str(api_key).strip():
@@ -133,8 +161,8 @@ def main(argv: list[str] | None = None) -> int:
             coinalyze_api_key=api_key,
             retry=retry,
             listing_checkpoint=listing_checkpoint,
+            candidate_plan_only=bool(args.candidate_plan_only),
             sample_budget_bytes=sample_budget,
-            max_sample_object_bytes=max_object_bytes,
         )
     except SourceQualificationError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -183,10 +211,29 @@ def main(argv: list[str] | None = None) -> int:
     feasibility = report.storage.get("gate2_feasibility", {})
     print(
         f"gate2_storage: state={feasibility.get('gate2_storage_state')} "
-        f"required_bytes={feasibility.get('physical_compressed_raw_bytes')} "
+        f"selected_raw_bytes={feasibility.get('selected_compressed_raw_bytes')} "
+        f"cost_sample_bytes={feasibility.get('cost_sample_compressed_raw_bytes')} "
         f"projected_new_bytes={feasibility.get('projected_new_compressed_raw_bytes')} "
         f"available_bytes={feasibility.get('local_available_bytes')} "
-        f"shortfall_bytes={feasibility.get('shortfall_bytes')}",
+        f"total_required_bytes={feasibility.get('total_required_bytes')} "
+        f"unknown_components={feasibility.get('unknown_total_components')}",
+        file=sys.stderr,
+    )
+    candidate = report.candidate_plan
+    print(
+        f"candidate_plan: state={candidate.get('state')} "
+        f"version={candidate.get('plan_version')} "
+        f"prior_version={candidate.get('prior_plan_version')} "
+        f"plan_digest={candidate.get('plan_digest')} "
+        f"envelope_digest={candidate.get('candidate_envelope_digest')} "
+        f"migration_authorized={candidate.get('migration_authorized')} "
+        f"download_authorized={candidate.get('download_authorized')}",
+        file=sys.stderr,
+    )
+    print(
+        f"holdout: id={report.prospective_holdout.get('boundary_id')} "
+        f"boundary_utc={report.prospective_holdout.get('boundary_utc')} "
+        f"stream_collector={report.prospective_holdout.get('stream_collector_authorized')}",
         file=sys.stderr,
     )
     print(

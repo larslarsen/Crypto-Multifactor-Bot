@@ -29,7 +29,7 @@ import re
 import shutil
 import time
 import zipfile
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
@@ -84,14 +84,13 @@ COINALYZE_HISTORY_ENDPOINTS: dict[str, str] = {
 
 REQUIRED_PRODUCTS: tuple[str, ...] = (
     "binance_usdm_perpetual_membership",
-    "binance_usdm_trade",
-    "binance_usdm_bar_1m",
-    "binance_usdm_trade_flow",
+    "binance_usdm_bar_1h",
+    "binance_usdm_trade_flow_1h",
     "binance_usdm_open_interest_5m",
     "binance_usdm_funding_realized",
-    "binance_usdm_funding_indicative",
-    "binance_usdm_mark_index_basis",
-    "binance_usdm_liquidation_observed",
+    "binance_usdm_funding_indicative_1h",
+    "binance_usdm_mark_index_basis_1h",
+    "binance_usdm_liquidation_observed_daily",
     "binance_usdm_cost_calibration",
     "binance_usdm_coverage_gap",
     "binance_usdm_harmonic_bundle",
@@ -99,7 +98,7 @@ REQUIRED_PRODUCTS: tuple[str, ...] = (
 
 DERIVED_PRODUCTS: frozenset[str] = frozenset(
     {
-        "binance_usdm_trade_flow",
+        "binance_usdm_trade_flow_1h",
         "binance_usdm_coverage_gap",
         "binance_usdm_harmonic_bundle",
     }
@@ -109,71 +108,85 @@ SOURCE_PRODUCTS: tuple[str, ...] = tuple(
     product for product in REQUIRED_PRODUCTS if product not in DERIVED_PRODUCTS
 )
 
-# Explicit 1m selection for named one-minute families. Other intervals are ignored.
+# Explicit 1h selection for named kline families. Other intervals are ignored.
 INTERVAL_REQUIRED_FAMILIES: dict[str, str] = {
-    "monthly/klines": "1m",
-    "daily/klines": "1m",
-    "monthly/markPriceKlines": "1m",
-    "daily/markPriceKlines": "1m",
-    "monthly/indexPriceKlines": "1m",
-    "daily/indexPriceKlines": "1m",
-    "monthly/premiumIndexKlines": "1m",
-    "daily/premiumIndexKlines": "1m",
+    "monthly/klines": "1h",
+    "daily/klines": "1h",
+    "monthly/markPriceKlines": "1h",
+    "daily/markPriceKlines": "1h",
+    "monthly/indexPriceKlines": "1h",
+    "daily/indexPriceKlines": "1h",
+    "monthly/premiumIndexKlines": "1h",
+    "daily/premiumIndexKlines": "1h",
 }
 
+# Listing these families discovers historical names. It does not select their objects.
+DISCOVERY_ARCHIVE_FAMILIES: tuple[str, ...] = (
+    "monthly/trades",
+    "daily/trades",
+    "monthly/aggTrades",
+    "daily/aggTrades",
+    "monthly/klines",
+    "daily/klines",
+    "monthly/metrics",
+    "daily/metrics",
+    "monthly/fundingRate",
+    "daily/fundingRate",
+    "monthly/markPriceKlines",
+    "daily/markPriceKlines",
+    "monthly/indexPriceKlines",
+    "daily/indexPriceKlines",
+    "monthly/premiumIndexKlines",
+    "daily/premiumIndexKlines",
+    "monthly/bookTicker",
+    "daily/bookTicker",
+    "monthly/bookDepth",
+    "daily/bookDepth",
+)
+
+# Selected acquisition families for the Harmonic-ready release. Trades, aggregate trades,
+# and full book archives remain discovery-only except the bounded daily cost sample.
 OFFICIAL_ARCHIVE_FAMILIES: dict[str, tuple[str, ...]] = {
-    "binance_usdm_perpetual_membership": (
-        "monthly/trades",
-        "daily/trades",
-        "monthly/klines",
-        "daily/klines",
-        "monthly/metrics",
-        "daily/metrics",
-        "monthly/fundingRate",
-        "daily/fundingRate",
+    "binance_usdm_perpetual_membership": (),
+    "binance_usdm_bar_1h": ("monthly/klines", "daily/klines"),
+    "binance_usdm_trade_flow_1h": ("monthly/klines", "daily/klines"),
+    "binance_usdm_open_interest_5m": ("monthly/metrics", "daily/metrics"),
+    "binance_usdm_funding_realized": ("monthly/fundingRate", "daily/fundingRate"),
+    "binance_usdm_funding_indicative_1h": (
+        "monthly/premiumIndexKlines",
+        "daily/premiumIndexKlines",
+    ),
+    "binance_usdm_mark_index_basis_1h": (
         "monthly/markPriceKlines",
         "daily/markPriceKlines",
         "monthly/indexPriceKlines",
         "daily/indexPriceKlines",
         "monthly/premiumIndexKlines",
         "daily/premiumIndexKlines",
-        "monthly/bookTicker",
-        "daily/bookTicker",
-        "monthly/bookDepth",
-        "daily/bookDepth",
     ),
-    "binance_usdm_trade": (
+    "binance_usdm_cost_calibration": ("daily/bookTicker", "daily/bookDepth"),
+}
+
+COST_SAMPLE_FAMILIES: tuple[str, ...] = ("daily/bookTicker", "daily/bookDepth")
+KLINE_TAKER_FLOW_FIELDS: tuple[str, ...] = (
+    "volume",
+    "quote_volume",
+    "count",
+    "taker_buy_volume",
+    "taker_buy_quote_volume",
+)
+UNSELECTED_DISCOVERY_FAMILIES: frozenset[str] = frozenset(
+    {
         "monthly/trades",
         "daily/trades",
         "monthly/aggTrades",
         "daily/aggTrades",
-    ),
-    "binance_usdm_bar_1m": ("monthly/klines", "daily/klines"),
-    "binance_usdm_open_interest_5m": ("monthly/metrics", "daily/metrics"),
-    "binance_usdm_funding_realized": ("monthly/fundingRate", "daily/fundingRate"),
-    "binance_usdm_funding_indicative": (
-        "monthly/premiumIndexKlines",
-        "daily/premiumIndexKlines",
-    ),
-    "binance_usdm_mark_index_basis": (
-        "monthly/markPriceKlines",
-        "daily/markPriceKlines",
-        "monthly/indexPriceKlines",
-        "daily/indexPriceKlines",
-        "monthly/premiumIndexKlines",
-        "daily/premiumIndexKlines",
-    ),
-    "binance_usdm_cost_calibration": (
         "monthly/bookTicker",
-        "daily/bookTicker",
         "monthly/bookDepth",
-        "daily/bookDepth",
-    ),
-}
-
-MEMBERSHIP_FAMILY_PREFIXES: tuple[str, ...] = tuple(
-    sorted({family for families in OFFICIAL_ARCHIVE_FAMILIES.values() for family in families})
+    }
 )
+
+MEMBERSHIP_FAMILY_PREFIXES: tuple[str, ...] = DISCOVERY_ARCHIVE_FAMILIES
 
 KNOWN_ARCHIVE_SCHEMAS: dict[str, dict[str, tuple[str, ...]]] = {
     "trades": {
@@ -390,12 +403,40 @@ OVERLAP_RECONCILIATION: dict[str, Any] = {
     },
 }
 
-# Gate 1 is bounded source qualification, not acquisition. These are execution budgets
-# for NEW downloads only; they never truncate, reject, or miscount larger source objects,
-# which Gate 2 acquires in full.
+# Gate 1 is bounded source qualification, not acquisition. The architecture-amendment
+# ceiling is a separately ledgered total for new sample bytes; there is no independent
+# per-object cap. An object that cannot fit the remaining allowance is reported with its
+# exact size and blocks.
 GATE1_NEW_DOWNLOAD_BUDGET_BYTES: int = 268_435_456
-GATE1_MAX_NEW_OBJECT_BYTES: int = 67_108_864
+GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES: int = 268_435_456
+GATE1_MAX_NEW_OBJECT_BYTES: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES
 SAMPLE_BUDGET_BLOCK: str = "sample_budget_exceeded"
+
+# A monthly package is canonical only once its provider checksum is officially listed.
+# Anything else is quarantined provenance and its interval falls back to daily objects.
+# A listed sidecar path is selection evidence, not proof. Only a rehashed retained
+# object with a re-proved provider sidecar is checksum-proved and consumable.
+INTEGRITY_SIDECAR_LISTED: str = "sidecar_listed"
+INTEGRITY_SIDECAR_ABSENT: str = "sidecar_absent"
+INTEGRITY_CHECKSUM_PROVED: str = "checksum_proved_retained"
+INTEGRITY_QUARANTINED: str = "quarantined"
+VALIDATION_PENDING: str = "raw_validation_pending"
+VALIDATION_PROVED: str = "checksum_proved_retained"
+MANIFEST_MONTHLY_REJECTED: str = "monthly_integrity_rejected"
+MANIFEST_DAILY_FALLBACK: str = "daily_fallback_for_rejected_month"
+MANIFEST_INTEGRITY_MISSING: str = "integrity_authority_missing"
+MANIFEST_OVERLAP: str = "overlapping_selected_coverage"
+
+# Durable identities that are never migrated by a candidate-only phase.
+AMENDMENT_LEDGER_FILENAME: str = "cex002_amendment_ledger.json"
+AMENDMENT_LEDGER_ID: str = "cex002_architecture_amendment_v3"
+HOLDOUT_BOUNDARY_FILENAME: str = "cex002_holdout_boundary.json"
+HOLDOUT_REPLAY_RULE: str = (
+    "the pinned boundary is the first authenticated qualification instant; every later "
+    "run replays it unchanged, and no model outcome may move it"
+)
+CANDIDATE_PLAN_VERSION: int = 3
+REQUIRED_PRIOR_PLAN_VERSION: int = 2
 CHECKPOINT_VERSION: int = 1
 
 # Transient transport/service failures are retried; integrity and authentication
@@ -461,7 +502,7 @@ _SETTLEMENT_NAME_RE = re.compile(r"SETTLED")
 
 # --- review-75 immutable planning, cumulative budget, storage feasibility -------------
 
-PLAN_CONTRACT_VERSION: int = 1
+PLAN_CONTRACT_VERSION: int = 3
 SAMPLE_PLAN_LOCK_FILENAME: str = "cex002_sample_plan_lock.json"
 BUDGET_LEDGER_FILENAME: str = "cex002_budget_ledger.json"
 CONTRACT_METADATA_FILENAME: str = "cex002_official_contract_metadata.json"
@@ -935,6 +976,8 @@ class ProductMatrixRow:
     # The accepted-universe totals below are the scope the coverage state evaluates.
     accepted_universe_object_count: int = 0
     accepted_universe_listed_bytes: int | None = None
+    # Derived products carry the release state they inherit from their source product.
+    release_blocked_derived: bool | None = None
     # Source authenticity/schema/checksum/access is judged separately from how much of
     # the universe and timeline the source happens to cover.
     source_qualification_state: str = ""
@@ -973,6 +1016,9 @@ class QualificationReport:
     accepted_universe: tuple[str, ...] = ()
     plan_lock: Mapping[str, Any] = field(default_factory=dict)
     budget: Mapping[str, Any] = field(default_factory=dict)
+    candidate_plan: Mapping[str, Any] = field(default_factory=dict)
+    prospective_holdout: Mapping[str, Any] = field(default_factory=dict)
+    acquisition_manifest: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -1282,6 +1328,9 @@ class FamilyInventory:
     symbols: tuple[str, ...]
     objects: Mapping[str, tuple[ListingObject, ...]]
     incidents: tuple[Mapping[str, Any], ...]
+    # Object keys whose ``.CHECKSUM`` sibling is officially listed. Selection needs this
+    # to tell a canonical monthly package from unproved provenance.
+    checksum_keys: frozenset[str] = frozenset()
 
     def object_count(self, symbol: str) -> int:
         return len(self.objects.get(symbol, ()))
@@ -1317,12 +1366,17 @@ def build_family_inventory(
             continue
         symbols = symbols_from_prefixes(prefix_list)
         objects: dict[str, tuple[ListingObject, ...]] = {}
+        checksum_keys: set[str] = set()
         for symbol in symbols:
             try:
+                listed_objects = _list_objects_for_symbol(index, family, prefix, symbol)
+                checksum_keys.update(
+                    item.key[: -len(".CHECKSUM")]
+                    for item in listed_objects
+                    if item.key.endswith(".CHECKSUM")
+                )
                 objs = [
-                    obj
-                    for obj in _list_objects_for_symbol(index, family, prefix, symbol)
-                    if not obj.key.endswith(".CHECKSUM")
+                    obj for obj in listed_objects if not obj.key.endswith(".CHECKSUM")
                 ]
             except SourceQualificationError as exc:
                 incidents.append(
@@ -1336,6 +1390,7 @@ def build_family_inventory(
                 continue
             objects[symbol] = tuple(objs)
         inventory[family] = FamilyInventory(
+            checksum_keys=frozenset(checksum_keys),
             family=family,
             prefix=prefix,
             listed=True,
@@ -1513,6 +1568,7 @@ def build_sample_plan(
     budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
     max_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
     cumulative_spent_bytes: int = 0,
+    required_objects: Sequence[tuple[str, str, ListingObject, tuple[str, ...]]] = (),
 ) -> SamplePlan:
     """Plan every sample before downloading, choosing the smallest adequate objects.
 
@@ -1534,9 +1590,93 @@ def build_sample_plan(
     # aliases of an object already planned are free and are never fetched twice.
     emitted: set[str] = set()
     retained_seen: set[str] = set()
+
+    def _plan_required(obj: ListingObject, family: str, symbol: str, products: tuple[str, ...]) -> None:
+        nonlocal spent, retained_total
+        size = int(obj.size) if obj.size is not None else 0
+        if obj.key in emitted:
+            entries.append(
+                SamplePlanEntry(
+                    family=family,
+                    symbol=symbol,
+                    regime="cost_sample",
+                    products=products,
+                    key=obj.key,
+                    url=vision_object_url(obj.key),
+                    byte_size=size,
+                    action="alias",
+                )
+            )
+            return
+        if obj.key in retained_keys:
+            retained_seen.add(obj.key)
+            retained_total += retained_keys[obj.key]
+            emitted.add(obj.key)
+            entries.append(
+                SamplePlanEntry(
+                    family=family,
+                    symbol=symbol,
+                    regime="cost_sample",
+                    products=products,
+                    key=obj.key,
+                    url=vision_object_url(obj.key),
+                    byte_size=size,
+                    action="reuse_retained",
+                )
+            )
+            return
+        if size <= 0 or spent + size > allowance:
+            blocked.append(
+                {
+                    "kind": SAMPLE_BUDGET_BLOCK,
+                    "family": family,
+                    "symbol": symbol,
+                    "regime": "cost_sample",
+                    "products": list(products),
+                    "required_key": obj.key,
+                    "required_bytes": size,
+                    "max_object_bytes": None,
+                    "budget_bytes": budget_bytes,
+                    "cumulative_spent_before_bytes": int(cumulative_spent_bytes),
+                    "allowance_bytes": allowance,
+                    "budget_remaining_bytes": max(allowance - spent, 0),
+                }
+            )
+            entries.append(
+                SamplePlanEntry(
+                    family=family,
+                    symbol=symbol,
+                    regime="cost_sample",
+                    products=products,
+                    key=obj.key,
+                    url=vision_object_url(obj.key),
+                    byte_size=size,
+                    action="blocked",
+                    block_reason=SAMPLE_BUDGET_BLOCK,
+                )
+            )
+            return
+        spent += size
+        emitted.add(obj.key)
+        entries.append(
+            SamplePlanEntry(
+                family=family,
+                symbol=symbol,
+                regime="cost_sample",
+                products=products,
+                key=obj.key,
+                url=vision_object_url(obj.key),
+                byte_size=size,
+                action="download",
+            )
+        )
+
+    for family, symbol, obj, products in required_objects:
+        _plan_required(obj, family, symbol, products)
+
     for family in sorted(inventory):
         products = family_products.get(family, ())
-        if not products:
+        if not products or family in COST_SAMPLE_FAMILIES:
             continue
         entry = inventory[family]
         for symbol in entry.symbols:
@@ -1580,7 +1720,7 @@ def build_sample_plan(
                         break
                 for obj in options if chosen is None else ():
                     size = int(obj.size) if obj.size is not None else 0
-                    if size <= 0 or size > max_object_bytes:
+                    if size <= 0:
                         continue
                     if spent + size > allowance:
                         continue
@@ -1776,6 +1916,7 @@ def executed_code_identity() -> dict[str, str]:
 
 def plan_code_config_digest(*, budget_bytes: int, max_object_bytes: int) -> str:
     """Digest of the executed planning code plus its configuration."""
+    _ = max_object_bytes
     return _digest_of(
         {
             "plan_contract_version": PLAN_CONTRACT_VERSION,
@@ -1786,9 +1927,16 @@ def plan_code_config_digest(*, budget_bytes: int, max_object_bytes: int) -> str:
                 for product, families in sorted(OFFICIAL_ARCHIVE_FAMILIES.items())
             },
             "interval_required_families": dict(sorted(INTERVAL_REQUIRED_FAMILIES.items())),
+            "discovery_archive_families": list(DISCOVERY_ARCHIVE_FAMILIES),
+            "selected_acquisition_families": {
+                product: list(families)
+                for product, families in sorted(OFFICIAL_ARCHIVE_FAMILIES.items())
+            },
+            "cadence_selector": "monthly_preferred_daily_gap_tail_v1",
+            "cost_sample": "first_midpoint_last_daily_book_v1",
             "regime_selector": "smallest_adequate_per_regime_v1",
             "budget_bytes": int(budget_bytes),
-            "max_object_bytes": int(max_object_bytes),
+            "independent_object_cap_bytes": None,
         }
     )
 
@@ -2065,6 +2213,375 @@ class SamplePlanLock:
                 "version requires a fresh reviewer authorization, not an in-band switch"
             ),
         }
+
+
+def file_sha256(path: Path) -> str:
+    """Digest of a durable authority file, or an empty string when it is absent."""
+    if not path.is_file():
+        return ""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class AmendmentAllowance:
+    """The architecture-amendment allowance, ledgered under its own identity.
+
+    It never reconciles, rewrites, or charges the legacy ledger. The legacy record and
+    its unresolved breach are carried alongside as preserved historical evidence, and
+    checksum-proved retained objects stay reusable without erasing it.
+    """
+
+    ledger_id: str
+    path: str
+    allowance_bytes: int
+    reusable_object_count: int
+    reusable_bytes: int
+    planned_new_bytes: int
+    charged: bool
+    legacy_ledger_path: str
+    legacy_ledger_sha256: str
+    legacy_charged_bytes: int
+    legacy_spent_max_bytes: int
+    legacy_state: str
+    legacy_breach_state: str
+
+    @property
+    def remaining_bytes(self) -> int:
+        return max(self.allowance_bytes - self.planned_new_bytes, 0)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ledger_id": self.ledger_id,
+            "path": self.path,
+            "allowance_bytes": self.allowance_bytes,
+            "independent_object_cap_bytes": None,
+            "reusable_retained_object_count": self.reusable_object_count,
+            "reusable_retained_bytes": self.reusable_bytes,
+            "planned_new_bytes": self.planned_new_bytes,
+            "remaining_bytes": self.remaining_bytes,
+            "charged": self.charged,
+            "legacy_ledger": {
+                "path": self.legacy_ledger_path,
+                "sha256": self.legacy_ledger_sha256,
+                "charged_bytes": self.legacy_charged_bytes,
+                "spent_max_bytes": self.legacy_spent_max_bytes,
+                "state": self.legacy_state,
+                "breach_state": self.legacy_breach_state,
+                "charged_again": False,
+                "rewritten": False,
+                "reconciled": False,
+            },
+            "rule": (
+                "a separately ledgered allowance for the amended architecture; the legacy "
+                "ledger record and its unresolved breach are preserved untouched"
+            ),
+        }
+
+
+def build_amendment_allowance(
+    *,
+    path: Path,
+    legacy_ledger: BudgetLedger,
+    legacy_ledger_path: Path,
+    legacy_ledger_sha256: str,
+    retained_keys: Mapping[str, int],
+    planned_new_bytes: int,
+    allowance_bytes: int = GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+) -> AmendmentAllowance:
+    return AmendmentAllowance(
+        ledger_id=AMENDMENT_LEDGER_ID,
+        path=str(path),
+        allowance_bytes=int(allowance_bytes),
+        reusable_object_count=len(retained_keys),
+        reusable_bytes=sum(int(value) for value in retained_keys.values()),
+        planned_new_bytes=int(planned_new_bytes),
+        charged=False,
+        legacy_ledger_path=str(legacy_ledger_path),
+        legacy_ledger_sha256=legacy_ledger_sha256,
+        legacy_charged_bytes=legacy_ledger.charged_bytes,
+        legacy_spent_max_bytes=legacy_ledger.spent_max_bytes,
+        legacy_state=legacy_ledger.legacy_state,
+        legacy_breach_state=legacy_ledger.breach_state,
+    )
+
+
+def candidate_envelope_digest(
+    plan: SamplePlan, *, allowance_id: str, inputs: PlanInputs | None = None
+) -> str:
+    """Identity of the candidate envelope: its plan, allowance, and input identities.
+
+    This is deliberately not the plan digest. A future exact version-3 lock records
+    ``plan_content_digest`` of the same plan, so that value must remain the comparable
+    one; this envelope only adds allowance and input binding on top of it.
+    """
+    return _digest_of(
+        {
+            "allowance_id": allowance_id,
+            "plan_content_digest": plan_content_digest(plan),
+            "inputs": {} if inputs is None else inputs.to_dict(),
+        }
+    )
+
+
+_EXPECTED_PRIOR_HISTORY_VERSIONS: tuple[int, ...] = (0, 1)
+
+
+def _exact_version(value: Any, *, expected: int, context: Mapping[str, Any]) -> int:
+    """A plan version is a non-boolean integer that equals exactly what is expected."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise SourceQualificationError(
+            "preserved plan version is not an integer",
+            context={**dict(context), "value": repr(value)},
+        )
+    if value != expected:
+        raise SourceQualificationError(
+            "preserved plan history is not the exact expected transition",
+            context={**dict(context), "found": value, "expected": expected},
+        )
+    return value
+
+
+def validate_plan_document_entries(
+    document: Mapping[str, Any], *, context: Mapping[str, Any]
+) -> None:
+    """Structurally validate one preserved plan document's entries and identities.
+
+    This is the version-appropriate contract for a plan that predates content digests and
+    aggregate totals: every entry must still be a real object with a known action and a
+    key, URL, family, and symbol that agree.
+    """
+    entries = document.get("entries")
+    if not isinstance(entries, list) or not entries:
+        raise SourceQualificationError(
+            "preserved plan version has no plan document", context=dict(context)
+        )
+    blocked = document.get("blocked", [])
+    if not isinstance(blocked, list):
+        raise SourceQualificationError(
+            "preserved plan blocked records are malformed", context=dict(context)
+        )
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            raise SourceQualificationError(
+                "preserved plan entry is not an object", context=dict(context)
+            )
+        missing = [
+            field
+            for field in ("family", "symbol", "key", "url", "action", "byte_size")
+            if field not in entry
+        ]
+        if missing:
+            raise SourceQualificationError(
+                "preserved plan entry is missing identity fields",
+                context={**dict(context), "missing": missing},
+            )
+        key = str(entry["key"])
+        detail = {**dict(context), "key": key, "action": str(entry["action"])}
+        if str(entry["action"]) not in _ALLOWED_PLAN_ACTIONS:
+            raise SourceQualificationError(
+                "preserved plan entry has an unknown action", context=detail
+            )
+        if str(entry["url"]) != vision_object_url(key):
+            raise SourceQualificationError(
+                "preserved plan URL does not address its key", context=detail
+            )
+        if not key.startswith(vision_prefix(*str(entry["family"]).split("/"))):
+            raise SourceQualificationError(
+                "preserved plan key is outside its declared family", context=detail
+            )
+        if f"/{entry['symbol']}/" not in key:
+            raise SourceQualificationError(
+                "preserved plan key does not belong to its declared symbol", context=detail
+            )
+        size = entry["byte_size"]
+        if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+            raise SourceQualificationError(
+                "preserved plan entry has an invalid size", context=detail
+            )
+
+
+def validate_prior_plan_history(lock: SamplePlanLock) -> tuple[str, ...]:
+    """Require the exact preserved version-0 then version-1 history behind version 2.
+
+    Review 98 preserves versions 0 through 2 specifically, in that order. A missing,
+    string, boolean, duplicated, reversed, later, or structurally malformed record is not
+    the authority a version-3 candidate may be built on. Returns the plan-content
+    identities of every preserved version, deriving one for the pre-digest version-0
+    document without ever writing it back.
+    """
+    history = list(lock.history)
+    if len(history) != len(_EXPECTED_PRIOR_HISTORY_VERSIONS):
+        raise SourceQualificationError(
+            "durable plan history must preserve exactly versions 0 and 1",
+            context={
+                "path": str(lock.path),
+                "history_length": len(history),
+                "expected": list(_EXPECTED_PRIOR_HISTORY_VERSIONS),
+            },
+        )
+    digests: list[str] = []
+    for position, expected in enumerate(_EXPECTED_PRIOR_HISTORY_VERSIONS):
+        item = history[position]
+        context = {"path": str(lock.path), "position": position, "expected_version": expected}
+        if not isinstance(item, Mapping):
+            raise SourceQualificationError(
+                "preserved plan history record is not an object", context=context
+            )
+        if "plan_version" not in item:
+            raise SourceQualificationError(
+                "preserved plan history record has no version", context=context
+            )
+        version = _exact_version(item["plan_version"], expected=expected, context=context)
+        plan = item.get("plan")
+        if not isinstance(plan, Mapping):
+            raise SourceQualificationError(
+                "preserved plan version has no plan document", context=context
+            )
+        validate_plan_document_entries(plan, context={**context, "plan_version": version})
+        rebuilt = SamplePlan.from_dict(plan)
+        derived = plan_content_digest(rebuilt)
+        recorded = str(item.get("plan_digest") or "")
+        if version == 0:
+            # The pre-lock greedy plan predates content digests and aggregate totals; a
+            # recorded digest is the only known permitted absence.
+            if recorded and recorded != derived:
+                raise SourceQualificationError(
+                    "preserved plan version digest does not match its plan",
+                    context={**context, "recorded": recorded},
+                )
+        else:
+            validate_sample_plan(rebuilt)
+            if recorded != derived:
+                raise SourceQualificationError(
+                    "preserved plan version digest does not match its plan",
+                    context={**context, "recorded": recorded},
+                )
+        digests.append(derived)
+        if recorded:
+            digests.append(recorded)
+    digests.append(lock.plan_digest)
+    return tuple(sorted({item for item in digests if item}))
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateAuthority:
+    """Read-only prior authority proved before any candidate-phase work begins."""
+
+    lock: SamplePlanLock
+    ledger: BudgetLedger
+    lock_sha256: str
+    ledger_sha256: str
+    prior_plan_digests: tuple[str, ...]
+
+
+def candidate_preflight(
+    *,
+    plan_lock_path: Path,
+    budget_ledger_path: Path,
+    budget_bytes: int,
+) -> CandidateAuthority:
+    """Hash, load, and validate the exact version-2 authority before anything mutates.
+
+    Every load here is read-only, so an invalid transition fails closed with the candidate
+    store untouched: no directory, cache, checkpoint, journal, listing, holdout,
+    current-contract, or Coinalyze facility has been created or used yet.
+    """
+    lock_sha256 = file_sha256(plan_lock_path)
+    ledger_sha256 = file_sha256(budget_ledger_path)
+    lock = SamplePlanLock.load(plan_lock_path)
+    if lock is None or lock.plan_version != REQUIRED_PRIOR_PLAN_VERSION:
+        raise SourceQualificationError(
+            "candidate plan construction requires the durable version-2 plan lock",
+            context={
+                "path": str(plan_lock_path),
+                "found_version": None if lock is None else lock.plan_version,
+                "required_version": REQUIRED_PRIOR_PLAN_VERSION,
+            },
+        )
+    prior_plan_digests = validate_prior_plan_history(lock)
+    ledger = BudgetLedger.load(budget_ledger_path, budget_bytes=budget_bytes)
+    if ledger is None:
+        raise SourceQualificationError(
+            "candidate plan construction requires the durable legacy budget ledger",
+            context={"path": str(budget_ledger_path)},
+        )
+    return CandidateAuthority(
+        lock=lock,
+        ledger=ledger,
+        lock_sha256=lock_sha256,
+        ledger_sha256=ledger_sha256,
+        prior_plan_digests=prior_plan_digests,
+    )
+
+
+def build_candidate_plan_v3(
+    *,
+    lock: SamplePlanLock,
+    prior_lock_sha256: str,
+    plan: SamplePlan,
+    inputs: PlanInputs,
+    allowance: AmendmentAllowance,
+    prior_plan_digests: Sequence[str] = (),
+) -> dict[str, Any]:
+    """An independent version-3 candidate that migrates nothing and downloads nothing.
+
+    The candidate is constructed from its own allowance and inputs, not by relabelling
+    the executing plan. Its digest must differ from the currently locked plan and from
+    every historical plan digest.
+    """
+    validate_sample_plan(plan)
+    # The comparable identity is the plan-content digest an exact future lock would
+    # record. The envelope digest additionally binds the allowance and input identity but
+    # never replaces or conceals plan-content equality.
+    digest = plan_content_digest(plan)
+    envelope = candidate_envelope_digest(
+        plan, allowance_id=allowance.ledger_id, inputs=inputs
+    )
+    # Every preserved version participates, including the derived version-0 identity, so
+    # an identical historical plan cannot evade reuse detection behind a new allowance.
+    prior_digests = (
+        {lock.plan_digest}
+        | {str(item.get("plan_digest") or "") for item in lock.history}
+        | {str(item) for item in prior_plan_digests}
+    )
+    prior_digests.discard("")
+    if digest in prior_digests:
+        raise ResumeIntegrityError(
+            "candidate plan reuses a prior plan-content digest",
+            context={"plan_digest": digest, "prior_digests": sorted(prior_digests)},
+        )
+    return {
+        "plan_version": CANDIDATE_PLAN_VERSION,
+        "state": "candidate_unmigrated",
+        "migration_authorized": False,
+        "download_authorized": False,
+        "prior_plan_version": lock.plan_version,
+        "prior_plan_digest": lock.plan_digest,
+        "prior_lock_sha256": prior_lock_sha256,
+        "prior_plan_history_versions": sorted(
+            int(item.get("plan_version") or 0) for item in lock.history
+        ),
+        "prior_plan_digests": sorted(prior_digests),
+        "plan_digest": digest,
+        "plan_digest_domain": "plan_content_digest",
+        "candidate_envelope_digest": envelope,
+        "digest_reuses_prior": False,
+        "inputs": inputs.to_dict(),
+        "plan": plan.to_dict(),
+        "allowance": allowance.to_dict(),
+        "assertions": {
+            "no_migration": True,
+            "no_download": True,
+            "no_public_relock_switch": True,
+            "prior_lock_bytes_unchanged": True,
+            "legacy_ledger_bytes_unchanged": True,
+            "legacy_ledger_charged_again": False,
+        },
+        "note": (
+            "versions 0-2 remain durable; this candidate is not locked and authorizes no "
+            "sample download until a later reviewer decision"
+        ),
+    }
 
 
 def verify_retained_object(
@@ -2606,6 +3123,599 @@ def object_period(key: str) -> str | None:
     return f"{match.group(1)}-{match.group(2)}"
 
 
+_OBJECT_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})\.(?:zip|csv)$")
+
+
+def object_calendar_date(key: str) -> str | None:
+    """Whole calendar day an official daily archive object covers, if present."""
+    match = _OBJECT_DATE_RE.search(key)
+    if match is None:
+        return None
+    return f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
+
+
+def object_cadence(key: str) -> str:
+    if "/monthly/" in key:
+        return "monthly"
+    if "/daily/" in key:
+        return "daily"
+    return "unknown"
+
+
+def kline_schema_supports_taker_flow(fields: Sequence[str]) -> bool:
+    present = {str(item) for item in fields}
+    return set(KLINE_TAKER_FLOW_FIELDS).issubset(present)
+
+
+def _month_from_date(value: str) -> str:
+    return value[:7]
+
+
+def family_group_from_key(key: str) -> str:
+    """Logical family group of an official archive key: ``.../<cadence>/<family>/...``."""
+    parts = key.split("/")
+    return parts[4] if len(parts) > 5 else ""
+
+
+def object_integrity_state(
+    key: str,
+    *,
+    checksum_keys: Collection[str],
+    quarantined: Collection[str] = (),
+    proved_keys: Collection[str] = (),
+) -> str:
+    """Integrity qualification of one listed object, from official evidence only.
+
+    A listed ``.CHECKSUM`` sibling is evidence that provider authority exists; it is not
+    evidence that the sidecar was parsed, bound to the object, or that raw bytes matched
+    it. Only a re-proved retained object earns ``checksum_proved_retained``.
+    """
+    if key in quarantined:
+        return INTEGRITY_QUARANTINED
+    if key in proved_keys:
+        return INTEGRITY_CHECKSUM_PROVED
+    if key in checksum_keys:
+        return INTEGRITY_SIDECAR_LISTED
+    return INTEGRITY_SIDECAR_ABSENT
+
+
+def _selectable(state: str) -> bool:
+    """Outcome-blind selection precondition: provider authority must at least exist."""
+    return state in {INTEGRITY_SIDECAR_LISTED, INTEGRITY_CHECKSUM_PROVED}
+
+
+def select_nonoverlapping_objects(
+    objects: Sequence[ListingObject],
+    *,
+    checksum_keys: Collection[str] = (),
+    quarantined: Collection[str] = (),
+    proved_keys: Collection[str] = (),
+) -> tuple[tuple[ListingObject, ...], tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
+    """Integrity-qualified monthly canon with explicit daily fallback.
+
+    Both cadences carry the same precondition: an object without listed provider
+    authority is never selected, and its interval becomes typed missing-authority
+    evidence instead of silently usable data. A monthly package is canonical only when it
+    passes that precondition; a rejected month falls back to daily objects, and selecting
+    both cadences for one month is an economic-interval collision.
+    """
+    monthly: dict[str, ListingObject] = {}
+    daily: dict[str, ListingObject] = {}
+    collisions: list[dict[str, Any]] = []
+    rejections: list[dict[str, Any]] = []
+    rejected_months: set[str] = set()
+
+    def _state(key: str) -> str:
+        return object_integrity_state(
+            key,
+            checksum_keys=checksum_keys,
+            quarantined=quarantined,
+            proved_keys=proved_keys,
+        )
+
+    for obj in objects:
+        cadence = object_cadence(obj.key)
+        if cadence == "monthly":
+            month = object_period(obj.key)
+            if month is None:
+                continue
+            state = _state(obj.key)
+            if not _selectable(state):
+                rejected_months.add(month)
+                rejections.append(
+                    {
+                        "kind": MANIFEST_MONTHLY_REJECTED,
+                        "interval": month,
+                        "key": obj.key,
+                        "integrity_state": state,
+                        "consumable": False,
+                    }
+                )
+                continue
+            prior = monthly.get(month)
+            if prior is not None and prior.key != obj.key:
+                collisions.append(
+                    {
+                        "kind": "economic_interval_collision",
+                        "interval": month,
+                        "keys": [prior.key, obj.key],
+                    }
+                )
+                continue
+            monthly[month] = obj
+        elif cadence == "daily":
+            day = object_calendar_date(obj.key) or (
+                f"{object_period(obj.key)}-01" if object_period(obj.key) else None
+            )
+            if day is None:
+                continue
+            state = _state(obj.key)
+            if not _selectable(state):
+                rejections.append(
+                    {
+                        "kind": MANIFEST_INTEGRITY_MISSING,
+                        "interval": day,
+                        "key": obj.key,
+                        "integrity_state": state,
+                        "consumable": False,
+                        "blocking": True,
+                    }
+                )
+                continue
+            prior = daily.get(day)
+            if prior is not None and prior.key != obj.key:
+                collisions.append(
+                    {
+                        "kind": "economic_interval_collision",
+                        "interval": day,
+                        "keys": [prior.key, obj.key],
+                    }
+                )
+                continue
+            daily[day] = obj
+    selected: list[ListingObject] = []
+    covered_months = set(monthly)
+    selected.extend(monthly[month] for month in sorted(monthly))
+    for day in sorted(daily):
+        month = _month_from_date(day)
+        if month in covered_months:
+            continue
+        selected.append(daily[day])
+        if month in rejected_months:
+            rejections.append(
+                {
+                    "kind": MANIFEST_DAILY_FALLBACK,
+                    "interval": day,
+                    "key": daily[day].key,
+                    "replaces_month": month,
+                    "integrity_state": _state(daily[day].key),
+                    "consumable": _state(daily[day].key) == INTEGRITY_CHECKSUM_PROVED,
+                }
+            )
+    uncovered = sorted(
+        month
+        for month in rejected_months
+        if month not in covered_months
+        and not any(_month_from_date(day) == month for day in daily)
+    )
+    for month in uncovered:
+        rejections.append(
+            {
+                "kind": MANIFEST_INTEGRITY_MISSING,
+                "interval": month,
+                "key": "",
+                "replaces_month": month,
+                "consumable": False,
+                "blocking": True,
+                "status": "no_daily_fallback_available",
+            }
+        )
+    return tuple(selected), tuple(collisions), tuple(rejections)
+
+
+def manifest_row(
+    obj: ListingObject,
+    *,
+    family: str,
+    family_group: str,
+    symbol: str,
+    integrity_state: str,
+    sidecar_sha256: str = "",
+) -> dict[str, Any]:
+    """One immutable, inspectable selected-manifest row.
+
+    Selection is outcome-blind, so a row may be planned before its raw bytes are proved.
+    Such a row is explicitly ``raw_validation_pending`` and never ``consumable``.
+    """
+    cadence = object_cadence(obj.key)
+    if cadence == "monthly":
+        interval = object_period(obj.key) or ""
+        interval_kind = "month"
+    else:
+        interval = object_calendar_date(obj.key) or object_period(obj.key) or ""
+        interval_kind = "date"
+    proved = integrity_state == INTEGRITY_CHECKSUM_PROVED
+    return {
+        "key": obj.key,
+        "family": family,
+        "family_group": family_group,
+        "symbol": symbol,
+        "cadence": cadence,
+        "byte_size": int(obj.size) if obj.size is not None else None,
+        "integrity_state": integrity_state,
+        "validation_state": VALIDATION_PROVED if proved else VALIDATION_PENDING,
+        "consumable": proved,
+        "sidecar_key": (
+            f"{obj.key}.CHECKSUM"
+            if integrity_state in {INTEGRITY_SIDECAR_LISTED, INTEGRITY_CHECKSUM_PROVED}
+            else ""
+        ),
+        "sidecar_sha256": sidecar_sha256,
+        "economic_interval": interval,
+        "economic_interval_kind": interval_kind,
+    }
+
+
+def _assert_no_overlapping_coverage(rows: Sequence[Mapping[str, Any]]) -> None:
+    """Fail closed when the selected manifest covers one economic interval twice."""
+    months: dict[tuple[str, str], str] = {}
+    intervals: set[tuple[str, str, str]] = set()
+    for row in rows:
+        scope = (str(row["symbol"]), str(row["family_group"]))
+        interval = str(row["economic_interval"])
+        identity = (scope[0], scope[1], interval)
+        if identity in intervals:
+            raise SourceQualificationError(
+                "selected manifest covers one economic interval twice",
+                context={"kind": MANIFEST_OVERLAP, **dict(row)},
+            )
+        intervals.add(identity)
+        if row["cadence"] == "monthly":
+            months[scope] = interval
+    for row in rows:
+        if row["cadence"] != "daily":
+            continue
+        scope = (str(row["symbol"]), str(row["family_group"]))
+        month = _month_from_date(str(row["economic_interval"]))
+        if months.get(scope) == month:
+            raise SourceQualificationError(
+                "selected manifest covers a month by both cadences",
+                context={"kind": MANIFEST_OVERLAP, **dict(row)},
+            )
+
+
+def build_acquisition_manifest(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    universe: Sequence[str],
+    quarantined: Collection[str] = (),
+    proved_objects: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Immutable non-overlapping selected objects for the Harmonic-ready release."""
+    members = set(universe)
+    proved = dict(proved_objects or {})
+    proved_keys = frozenset(proved)
+    selected: dict[str, ListingObject] = {}
+    rows: list[dict[str, Any]] = []
+    collisions: list[dict[str, Any]] = []
+    rejections: list[dict[str, Any]] = []
+    by_family: dict[str, int] = {}
+    families = sorted(
+        {
+            family
+            for product, items in OFFICIAL_ARCHIVE_FAMILIES.items()
+            if product != "binance_usdm_cost_calibration"
+            for family in items
+        }
+    )
+    grouped: dict[str, list[str]] = {}
+    for family in families:
+        grouped.setdefault(_family_group(family), []).append(family)
+    for group, group_families in sorted(grouped.items()):
+        by_symbol: dict[str, list[ListingObject]] = {}
+        family_of: dict[str, str] = {}
+        checksum_keys: set[str] = set()
+        for family in group_families:
+            entry = inventory.get(family)
+            if entry is None or not entry.listed:
+                continue
+            checksum_keys.update(entry.checksum_keys)
+            for symbol, objects in entry.objects.items():
+                if symbol not in members:
+                    continue
+                by_symbol.setdefault(symbol, []).extend(objects)
+                for obj in objects:
+                    family_of[obj.key] = family
+        for symbol in sorted(by_symbol):
+            chosen, found, rejected = select_nonoverlapping_objects(
+                by_symbol[symbol],
+                checksum_keys=checksum_keys,
+                quarantined=quarantined,
+                proved_keys=proved_keys,
+            )
+            collisions.extend({"symbol": symbol, "family_group": group, **item} for item in found)
+            rejections.extend(
+                {"symbol": symbol, "family_group": group, **item} for item in rejected
+            )
+            for obj in chosen:
+                selected[obj.key] = obj
+                family = family_of.get(obj.key, group_families[0])
+                state = object_integrity_state(
+                    obj.key,
+                    checksum_keys=checksum_keys,
+                    quarantined=quarantined,
+                    proved_keys=proved_keys,
+                )
+                rows.append(
+                    manifest_row(
+                        obj,
+                        family=family,
+                        family_group=group,
+                        symbol=symbol,
+                        integrity_state=state,
+                        sidecar_sha256=str(
+                            (proved.get(obj.key) or {}).get("provider_checksum_sha256") or ""
+                        ),
+                    )
+                )
+                by_family[family] = by_family.get(family, 0) + 1
+    rows.sort(key=lambda item: (item["family_group"], item["symbol"], item["key"]))
+    _assert_no_overlapping_coverage(rows)
+    pending = tuple(row["key"] for row in rows if not row["consumable"])
+    return {
+        "object_count": len(selected),
+        "compressed_raw_bytes": sum(int(obj.size or 0) for obj in selected.values()),
+        "unknown_size_objects": sum(1 for obj in selected.values() if obj.size is None),
+        "keys": tuple(sorted(selected)),
+        "objects": selected,
+        "rows": tuple(rows),
+        "collisions": tuple(collisions),
+        "rejections": tuple(rejections),
+        "raw_validation_pending_keys": pending,
+        "consumable_object_count": len(rows) - len(pending),
+        "integrity_rule": (
+            "a listed provider sidecar is the outcome-blind selection precondition for "
+            "both cadences; only a rehashed retained object with a re-proved sidecar is "
+            "checksum-proved and consumable, and missing authority stays typed evidence"
+        ),
+        "family_object_counts": dict(sorted(by_family.items())),
+        "cadence_rule": "monthly_preferred_daily_gap_tail_v1",
+    }
+
+
+def select_cost_calibration_sample(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    universe: Sequence[str],
+) -> dict[str, Any]:
+    """Outcome-blind first/midpoint/last whole-day bookTicker and bookDepth objects."""
+    members = set(universe)
+    selected: dict[str, ListingObject] = {}
+    items: list[dict[str, Any]] = []
+    gaps: list[dict[str, Any]] = []
+    for family in COST_SAMPLE_FAMILIES:
+        entry = inventory.get(family)
+        group = _family_group(family)
+        for symbol in sorted(members):
+            objects = [] if entry is None else list(entry.objects.get(symbol, ()))
+            dated = []
+            for obj in objects:
+                day = object_calendar_date(obj.key)
+                if day is None:
+                    continue
+                dated.append((day, obj))
+            dated.sort(key=lambda item: item[0])
+            if not dated:
+                gaps.append(
+                    {
+                        "symbol": symbol,
+                        "family": family,
+                        "family_group": group,
+                        "kind": "cost_sample_unavailable",
+                        "blocking": True,
+                        "status": "cost_sample_unavailable",
+                    }
+                )
+                continue
+            picks = [dated[0], dated[len(dated) // 2], dated[-1]]
+            seen: set[str] = set()
+            for _day, obj in picks:
+                if obj.key in seen:
+                    continue
+                seen.add(obj.key)
+                selected[obj.key] = obj
+                items.append({"family": family, "symbol": symbol, "key": obj.key, "object": obj})
+    return {
+        "object_count": len(selected),
+        "compressed_raw_bytes": sum(int(obj.size or 0) for obj in selected.values()),
+        "unknown_size_objects": sum(1 for obj in selected.values() if obj.size is None),
+        "keys": tuple(sorted(selected)),
+        "objects": selected,
+        "items": tuple(items),
+        "gaps": tuple(gaps),
+        "selector": "first_midpoint_last_daily_book_v1",
+        "families": list(COST_SAMPLE_FAMILIES),
+    }
+
+
+def selected_storage_report(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    manifest: Mapping[str, Any],
+    cost_sample: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Exact selected raw/cost bytes; later Gate 2 bounds remain explicitly unknown."""
+    listing_bytes = 0
+    listing_unknown = 0
+    unselected_bytes = 0
+    for family, entry in inventory.items():
+        for objects in entry.objects.values():
+            for obj in objects:
+                if obj.size is None:
+                    listing_unknown += 1
+                    continue
+                listing_bytes += int(obj.size)
+                if (
+                    family in UNSELECTED_DISCOVERY_FAMILIES
+                    and obj.key not in cost_sample["objects"]
+                ):
+                    unselected_bytes += int(obj.size)
+    selected_objects = {**manifest["objects"], **cost_sample["objects"]}
+    sizes = [int(obj.size) for obj in selected_objects.values() if obj.size is not None]
+    return {
+        "selected_compressed_raw_bytes": int(manifest["compressed_raw_bytes"]),
+        "cost_sample_compressed_raw_bytes": int(cost_sample["compressed_raw_bytes"]),
+        "selected_plus_cost_compressed_raw_bytes": int(manifest["compressed_raw_bytes"])
+        + int(cost_sample["compressed_raw_bytes"]),
+        "largest_selected_compressed_object_bytes": max(sizes) if sizes else 0,
+        "selected_object_count": int(manifest["object_count"]),
+        "cost_sample_object_count": int(cost_sample["object_count"]),
+        "discovered_listing_bytes": listing_bytes,
+        "discovered_listing_unknown_size_objects": listing_unknown,
+        "unselected_discovery_bytes": unselected_bytes,
+        "normalized_catalog_bytes": "unknown",
+        "temporary_high_water_bytes": "unknown",
+        "operating_reserve_bytes": "unknown",
+        "total_sufficiency": "unknown",
+        "collisions": list(manifest.get("collisions") or ()),
+        "note": (
+            "selected raw and cost-sample bytes are exact; normalized, temporary "
+            "high-water, reserve, and total sufficiency remain unknown until a later "
+            "bounded measurement"
+        ),
+    }
+
+
+def holdout_boundary_id(*, boundary_utc: str, replay_rule: str) -> str:
+    return _digest_of(
+        {"ticket": TICKET_ID, "boundary_utc": boundary_utc, "replay_rule": replay_rule}
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class HoldoutBoundary:
+    """A durable prospective boundary pinned once and replayed unchanged.
+
+    The boundary is the first authenticated qualification instant. It is stored with its
+    own identity digest and the digest of the record it superseded, so a later run can
+    prove it was replayed rather than moved, and no model outcome can influence it.
+    """
+
+    path: Path
+    boundary_utc: str
+    boundary_ms: int
+    boundary_id: str
+    prior_record_sha256: str
+    pinned_at: str
+    replay_rule: str = HOLDOUT_REPLAY_RULE
+
+    @classmethod
+    def load_or_pin(cls, path: Path, *, now_iso: str) -> HoldoutBoundary:
+        document = read_checkpoint_document(path, kind="holdout_boundary")
+        if document is None:
+            boundary_utc = now_iso
+            boundary_ms = _iso_to_ms(boundary_utc)
+            if boundary_ms is None:
+                raise SourceQualificationError(
+                    "holdout boundary requires a parseable authenticated instant",
+                    context={"boundary_utc": boundary_utc},
+                )
+            record = cls(
+                path=path,
+                boundary_utc=boundary_utc,
+                boundary_ms=boundary_ms,
+                boundary_id=holdout_boundary_id(
+                    boundary_utc=boundary_utc, replay_rule=HOLDOUT_REPLAY_RULE
+                ),
+                prior_record_sha256="",
+                pinned_at=boundary_utc,
+            )
+            record.flush()
+            return record
+        boundary_utc = str(document.get("boundary_utc") or "")
+        boundary_ms = _optional_int(document.get("boundary_ms"))
+        if not boundary_utc or boundary_ms is None or boundary_ms <= 0:
+            raise ResumeIntegrityError(
+                "retained holdout boundary has no authenticated instant",
+                context={"path": str(path)},
+            )
+        replay_rule = str(document.get("replay_rule") or "")
+        expected = holdout_boundary_id(boundary_utc=boundary_utc, replay_rule=replay_rule)
+        if str(document.get("boundary_id") or "") != expected:
+            raise ResumeIntegrityError(
+                "retained holdout boundary identity does not match its own record",
+                context={"path": str(path), "expected": expected},
+            )
+        if _iso_to_ms(boundary_utc) != boundary_ms:
+            raise ResumeIntegrityError(
+                "retained holdout boundary instant disagrees with its timestamp",
+                context={"path": str(path)},
+            )
+        return cls(
+            path=path,
+            boundary_utc=boundary_utc,
+            boundary_ms=boundary_ms,
+            boundary_id=expected,
+            prior_record_sha256=str(document.get("prior_record_sha256") or ""),
+            pinned_at=str(document.get("pinned_at") or boundary_utc),
+            replay_rule=replay_rule,
+        )
+
+    def flush(self) -> None:
+        _atomic_write_json(
+            self.path,
+            _checkpoint_document(
+                "holdout_boundary",
+                {
+                    "boundary_utc": self.boundary_utc,
+                    "boundary_ms": self.boundary_ms,
+                    "boundary_id": self.boundary_id,
+                    "prior_record_sha256": self.prior_record_sha256,
+                    "pinned_at": self.pinned_at,
+                    "replay_rule": self.replay_rule,
+                },
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "boundary_state": "pinned_before_model_outcomes",
+            "boundary_utc": self.boundary_utc,
+            "boundary_ms": self.boundary_ms,
+            "boundary_id": self.boundary_id,
+            "prior_record_sha256": self.prior_record_sha256,
+            "pinned_at": self.pinned_at,
+            "replay_rule": self.replay_rule,
+            "outcome_blind": True,
+            "record_path": str(self.path),
+            "stream_collector_authorized": False,
+            "retrieval_clock": (
+                "retrieval time is the instant this qualifier fetched an object; it is "
+                "never used as the observation time of the data inside it"
+            ),
+            "source_availability_clock": (
+                "source availability is the archive's own published interval; a later "
+                "retrieval never backdates availability"
+            ),
+            "note": (
+                "CEX-002 pins a prospective holdout boundary and honest retrieval/"
+                "availability clocks; it does not acquire live trade, BBO, depth, "
+                "liquidation, or OI streams"
+            ),
+        }
+
+
+def prospective_holdout_record(boundary: HoldoutBoundary | None = None) -> dict[str, Any]:
+    if boundary is None:
+        return {
+            "boundary_state": "unpinned",
+            "stream_collector_authorized": False,
+            "outcome_blind": True,
+            "note": "no durable holdout boundary record is available in this store",
+        }
+    return boundary.to_dict()
+
+
 def _month_range(first: str, last: str) -> list[str]:
     start_year, start_month = (int(part) for part in first.split("-"))
     end_year, end_month = (int(part) for part in last.split("-"))
@@ -2947,6 +4057,9 @@ def storage_feasibility(
     retained_credit_objects: int,
     local_available_bytes: int | None,
     unverified_credit_objects: int = 0,
+    normalized_catalog_bytes: int | None = None,
+    temporary_high_water_bytes: int | None = None,
+    operating_reserve_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Exact physical Gate 2 requirement against real local capacity.
 
@@ -2960,10 +4073,34 @@ def storage_feasibility(
         if local_available_bytes is None
         else max(projected_new - int(local_available_bytes), 0)
     )
-    sufficient = (
+    raw_sufficient = (
         None
         if shortfall is None
         else bool(shortfall == 0 and requirement.unknown_size_objects == 0)
+    )
+    unknown_components = [
+        name
+        for name, value in (
+            ("normalized_catalog_bytes", normalized_catalog_bytes),
+            ("temporary_high_water_bytes", temporary_high_water_bytes),
+            ("operating_reserve_bytes", operating_reserve_bytes),
+        )
+        if value is None
+    ]
+    if raw_sufficient is False:
+        gate2_state = "insufficient"
+    elif raw_sufficient is None or unknown_components:
+        # ADR-0017: an unknown total requirement can never pass Gate 2.
+        gate2_state = "unknown"
+    else:
+        gate2_state = "sufficient"
+    total_required = (
+        None
+        if unknown_components
+        else projected_new
+        + int(normalized_catalog_bytes or 0)
+        + int(temporary_high_water_bytes or 0)
+        + int(operating_reserve_bytes or 0)
     )
     return {
         "physical_object_count": requirement.object_count,
@@ -2979,17 +4116,23 @@ def storage_feasibility(
         "projected_new_compressed_raw_bytes": projected_new,
         "local_available_bytes": local_available_bytes,
         "shortfall_bytes": shortfall,
-        "raw_storage_sufficient": sufficient,
+        "raw_storage_sufficient": raw_sufficient,
         "normalized_catalog_bytes": {
-            "state": "unknown",
+            "state": "unknown" if normalized_catalog_bytes is None else "measured",
+            "bytes": normalized_catalog_bytes,
             "treated_as_zero": False,
             "note": (
                 "normalized/Nautilus catalog storage is an additional bound on top of "
                 "compressed raw and must be measured before Gate 2, never assumed zero"
             ),
         },
-        "gate2_storage_state": (
-            "unknown" if sufficient is None else ("sufficient" if sufficient else "insufficient")
+        "unknown_total_components": unknown_components,
+        "total_required_bytes": total_required,
+        "gate2_storage_state": gate2_state,
+        "gate2_storage_rule": (
+            "Gate 2 stays unproved while normalized, temporary high-water, reserve, or "
+            "total capacity is unknown; only measured raw insufficiency may be asserted "
+            "early"
         ),
         "deduplication": "each physical object counted once across every logical product",
         "note": (
@@ -5407,7 +6550,15 @@ def _state_reason(
     }
     parts = [heads.get(source_state, source_state)]
     if product == "binance_usdm_cost_calibration":
-        parts.append("cost calibration requires official bookTicker and bookDepth inventory")
+        parts.append(
+            "cost calibration is the frozen first/midpoint/last daily bookTicker and "
+            "bookDepth sample, not a full historical book archive"
+        )
+    if product == "binance_usdm_trade_flow_1h":
+        parts.append(
+            "hourly taker flow is derived from native 1h kline total and taker-buy "
+            "volume fields; trades and aggTrades are not required"
+        )
     if coverage_state == COVERAGE_UNRESOLVED_MEMBERSHIP:
         parts.append(
             f"membership unresolved for {_symbol_note(list(unresolved_membership), limit)}; "
@@ -5457,6 +6608,7 @@ def run_source_qualification(
     sample_budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
     max_sample_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
     budget_ledger: BudgetLedger | None = None,
+    candidate_plan_only: bool = False,
 ) -> QualificationReport:
     refuse_restricted_scope(
         max_symbols=max_symbols,
@@ -5466,7 +6618,6 @@ def run_source_qualification(
     generated_at = (now or datetime.now(UTC)).astimezone(UTC).isoformat()
     store = Path(store_root)
     sample_dir = store / "raw" / "sha256"
-    sample_dir.mkdir(parents=True, exist_ok=True)
     list_cache_dir = store / "list_cache"
     progress_file = progress_path or (store / "cex002_qualification_progress.json")
     plan_path = store / "cex002_sample_plan.json"
@@ -5474,7 +6625,22 @@ def run_source_qualification(
     budget_ledger_path = store / BUDGET_LEDGER_FILENAME
     contract_metadata_path = store / CONTRACT_METADATA_FILENAME
     contract_snapshot_dir = store / CONTRACT_SNAPSHOT_DIRNAME
+    amendment_ledger_path = store / AMENDMENT_LEDGER_FILENAME
+    holdout_path = store / HOLDOUT_BOUNDARY_FILENAME
     retry_journal_path = store / "cex002_retry_journal.json"
+
+    # A candidate request proves its exact prior authority before anything else exists:
+    # no directory is created and no cache, checkpoint, journal, inventory, holdout,
+    # listing, current-contract, or Coinalyze facility is loaded or used until it passes.
+    candidate_authority: CandidateAuthority | None = None
+    if candidate_plan_only:
+        candidate_authority = candidate_preflight(
+            plan_lock_path=plan_lock_path,
+            budget_ledger_path=budget_ledger_path,
+            budget_bytes=sample_budget_bytes,
+        )
+
+    sample_dir.mkdir(parents=True, exist_ok=True)
     retry_runner = retry or RetryRunner()
     if retry_runner.journal is None:
         retry_runner.journal = RetryJournal.load(retry_journal_path)
@@ -5563,6 +6729,30 @@ def run_source_qualification(
 
     sample_symbols = _sample_symbol_set(evaluation_universe, delisted)
     sample_symbol_set = set(sample_symbols)
+    holdout_boundary = HoldoutBoundary.load_or_pin(holdout_path, now_iso=generated_at)
+    cost_sample = select_cost_calibration_sample(
+        inventory=inventory, universe=evaluation_universe
+    )
+    sampling_family_products = {
+        family: tuple(
+            product
+            for product in products
+            if product not in DERIVED_PRODUCTS and product != "binance_usdm_cost_calibration"
+        )
+        for family, products in family_products.items()
+    }
+    sampling_family_products = {
+        family: products for family, products in sampling_family_products.items() if products
+    }
+    required_cost_objects = tuple(
+        (
+            str(item["family"]),
+            str(item["symbol"]),
+            item["object"],
+            ("binance_usdm_cost_calibration",),
+        )
+        for item in cost_sample["items"]
+    )
 
     incidents: list[dict[str, Any]] = []
     product_incident_counts: dict[str, int] = {product: 0 for product in REQUIRED_PRODUCTS}
@@ -5576,12 +6766,13 @@ def run_source_qualification(
     #    never consume the new-download budget and are never fetched again.
     candidate_keys: list[str] = []
     for family, entry in sorted(inventory.items()):
-        if not family_products.get(family):
+        if not sampling_family_products.get(family):
             continue
         for symbol in entry.symbols:
             if symbol not in sample_symbol_set:
                 continue
             candidate_keys.extend(obj.key for obj in entry.objects.get(symbol, ()))
+    candidate_keys.extend(str(item["key"]) for item in cost_sample["items"])
     recover_retained_samples(
         sample_dir=sample_dir,
         sidecar_dir=list_cache_dir,
@@ -5612,21 +6803,40 @@ def run_source_qualification(
             continue
         retained_keys[key] = verified
 
+    # The selected manifest is qualified against re-proved retained evidence, so it is
+    # built only once that evidence exists.
+    proved_objects = {
+        key: dict(checkpoint.get(key) or {}) for key in sorted(retained_keys)
+    }
+    acquisition_manifest = build_acquisition_manifest(
+        inventory=inventory,
+        universe=evaluation_universe,
+        proved_objects=proved_objects,
+    )
+    selected_storage = selected_storage_report(
+        inventory=inventory, manifest=acquisition_manifest, cost_sample=cost_sample
+    )
+    # Re-proved 1h kline schema evidence, usable when no sample is acquired at all.
+    retained_kline_schema: dict[str, Any] = {}
+    for key in sorted(retained_keys):
+        if family_group_from_key(key) != "klines":
+            continue
+        row = checkpoint.get(key) or {}
+        fields = tuple(str(item) for item in (row.get("schema_fields") or ()))
+        if not fields:
+            continue
+        retained_kline_schema = {
+            "key": key,
+            "fields": fields,
+            "schema_kind": str(row.get("schema_kind") or ""),
+            "source": "reproved_retained_checkpoint",
+        }
+        break
+
     # 3. Lock one immutable plan before any new download. A resume replays the locked
     #    plan and may change only execution state, never selected or blocked keys.
-    ledger = budget_ledger or BudgetLedger.bootstrap(
-        budget_ledger_path,
-        budget_bytes=sample_budget_bytes,
-        retained_objects=checkpoint.objects,
-        sample_dir=sample_dir,
-        sidecar_dir=list_cache_dir,
-        cache=verified_cache,
-    )
-    # A reservation left by an interrupted run is settled only against rehashed retained
-    # evidence; anything unproved stays charged so no allowance is silently restored.
-    reconciliation = ledger.reconcile(
-        checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
-    )
+    #    Ledger bootstrap, reconciliation, and settlement belong exclusively to the
+    #    executing branch below: a candidate phase must never write the legacy ledger.
 
     def _plan_inputs(snapshot: Mapping[str, Sequence[Any]]) -> PlanInputs:
         return PlanInputs(
@@ -5639,17 +6849,51 @@ def run_source_qualification(
             budget_digest=_digest_of(
                 {
                     "budget_bytes": int(sample_budget_bytes),
-                    "max_object_bytes": int(max_sample_object_bytes),
+                    "independent_object_cap_bytes": None,
                 }
             ),
             retained_digest=retained_evidence_digest(snapshot),
         )
 
-    lock = SamplePlanLock.load(plan_lock_path)
-    if lock is None:
-        lock = SamplePlanLock(path=plan_lock_path)
-        # The retained and budget snapshots are frozen at lock time; later execution
-        # progress against this same plan is not an input change.
+    def _candidate_inputs(snapshot: Mapping[str, Sequence[Any]]) -> PlanInputs:
+        return PlanInputs(
+            inventory_digest=inventory_digest(inventory),
+            listing_digest=listing_authority_digest(listing_checkpoint),
+            membership_digest=membership_evidence_digest(classifications),
+            code_config_digest=plan_code_config_digest(
+                budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+                max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            ),
+            budget_digest=_digest_of(
+                {
+                    "ledger_id": AMENDMENT_LEDGER_ID,
+                    "budget_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+                    "independent_object_cap_bytes": None,
+                }
+            ),
+            retained_digest=retained_evidence_digest(snapshot),
+        )
+
+    candidate_plan_record: dict[str, Any] = {
+        "state": "not_constructed",
+        "plan_version": CANDIDATE_PLAN_VERSION,
+        "migration_authorized": False,
+        "download_authorized": False,
+        "note": (
+            "a version-3 candidate is constructed only in candidate-plan-only mode, from "
+            "read-only prior authority; the executing plan is never relabelled as one"
+        ),
+    }
+    amendment_allowance: AmendmentAllowance | None = None
+
+    if candidate_plan_only:
+        # The preflight already hashed, loaded, and validated this authority before any
+        # store or remote facility existed; those exact objects are reused here.
+        assert candidate_authority is not None
+        lock = candidate_authority.lock
+        legacy_ledger = candidate_authority.ledger
+        prior_lock_sha256 = candidate_authority.lock_sha256
+        prior_ledger_sha256 = candidate_authority.ledger_sha256
         retained_snapshot = retained_evidence_snapshot(
             sorted(retained_keys),
             checkpoint.objects,
@@ -5657,83 +6901,165 @@ def run_source_qualification(
             sidecar_dir=list_cache_dir,
             cache=verified_cache,
         )
-        plan_inputs = _plan_inputs(retained_snapshot)
+        plan_inputs = _candidate_inputs(retained_snapshot)
+        # An independent candidate: its own allowance, no legacy spend subtraction, and
+        # no per-object cap.
         plan = build_sample_plan(
             inventory=inventory,
-            family_products=family_products,
+            family_products=sampling_family_products,
             sample_symbols=sample_symbols,
             delisted=delisted,
             retained_keys=retained_keys,
-            budget_bytes=sample_budget_bytes,
-            max_object_bytes=max_sample_object_bytes,
-            cumulative_spent_bytes=ledger.spent_max_bytes,
+            budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            cumulative_spent_bytes=0,
+            required_objects=required_cost_objects,
         )
-        # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
-        # is preserved in the lock history and on disk before the first lock overwrites
-        # the plan document.
-        legacy_plan = read_pre_lock_plan(plan_path)
-        if legacy_plan is not None:
-            lock.history.append(
-                {
-                    "plan_version": 0,
-                    "locked_at": "",
-                    "inputs": {"source": "pre_lock_greedy_plan", "path": str(plan_path)},
-                    "plan": legacy_plan,
-                    "plan_digest": "",
-                }
-            )
-            backup = store / LEGACY_PLAN_BACKUP_FILENAME
-            if not backup.exists():
-                _atomic_write_json(backup, legacy_plan)
-        lock.lock_plan(
+        amendment_allowance = build_amendment_allowance(
+            path=amendment_ledger_path,
+            legacy_ledger=legacy_ledger,
+            legacy_ledger_path=budget_ledger_path,
+            legacy_ledger_sha256=prior_ledger_sha256,
+            retained_keys=retained_keys,
+            planned_new_bytes=plan.new_download_bytes,
+        )
+        candidate_plan_record = build_candidate_plan_v3(
+            lock=lock,
+            prior_lock_sha256=prior_lock_sha256,
             plan=plan,
             inputs=plan_inputs,
-            locked_at=generated_at,
-            retained_snapshot=retained_snapshot,
-            budget_snapshot={
-                "budget_bytes": int(sample_budget_bytes),
-                "max_object_bytes": int(max_sample_object_bytes),
-                "cumulative_spent_max_bytes_at_lock": ledger.spent_max_bytes,
-                "allowance_bytes_at_lock": plan.allowance_bytes,
-            },
+            allowance=amendment_allowance,
+            prior_plan_digests=candidate_authority.prior_plan_digests,
         )
-        lock.flush()
+        # Prove the prior authority bytes did not move while the candidate was built.
+        after_lock = file_sha256(plan_lock_path)
+        after_ledger = file_sha256(budget_ledger_path)
+        if after_lock != prior_lock_sha256 or after_ledger != prior_ledger_sha256:
+            raise ResumeIntegrityError(
+                "prior plan or budget authority changed during candidate construction",
+                context={
+                    "lock_before": prior_lock_sha256,
+                    "lock_after": after_lock,
+                    "ledger_before": prior_ledger_sha256,
+                    "ledger_after": after_ledger,
+                },
+            )
+        ledger = legacy_ledger
+        reconciliation = {
+            "settled": 0,
+            "unresolved": 0,
+            "reproved": 0,
+            "unreconciled": 0,
+            "state": "not_reconciled_in_candidate_phase",
+        }
     else:
-        plan = SamplePlan.from_dict(lock.plan)
-        # Only the evidence frozen into this lock is compared, so a normal resume is
-        # stable; a genuine inventory, membership, code, or evidence change fails closed
-        # before any byte is downloaded.
-        retained_snapshot = retained_evidence_snapshot(
-            sorted(lock.retained_snapshot),
-            checkpoint.objects,
+        ledger = budget_ledger or BudgetLedger.bootstrap(
+            budget_ledger_path,
+            budget_bytes=sample_budget_bytes,
+            retained_objects=checkpoint.objects,
             sample_dir=sample_dir,
             sidecar_dir=list_cache_dir,
             cache=verified_cache,
         )
-        plan_inputs = _plan_inputs(retained_snapshot)
-        changed_inputs = plan_inputs.differences(lock.inputs)
-        if changed_inputs:
-            raise ResumeIntegrityError(
-                "locked Gate 1 plan inputs changed; a new plan version requires a fresh "
-                "reviewer authorization",
-                context={
-                    "kind": PLAN_INPUTS_CHANGED,
-                    "path": str(plan_lock_path),
-                    "plan_version": lock.plan_version,
-                    "changed": list(changed_inputs),
+        # A reservation left by an interrupted run is settled only against rehashed
+        # retained evidence; anything unproved stays charged.
+        reconciliation = ledger.reconcile(
+            checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+        )
+        lock = SamplePlanLock.load(plan_lock_path)
+        if lock is None:
+            lock = SamplePlanLock(path=plan_lock_path)
+            # The retained and budget snapshots are frozen at lock time; later execution
+            # progress against this same plan is not an input change.
+            retained_snapshot = retained_evidence_snapshot(
+                sorted(retained_keys),
+                checkpoint.objects,
+                sample_dir=sample_dir,
+                sidecar_dir=list_cache_dir,
+                cache=verified_cache,
+            )
+            plan_inputs = _plan_inputs(retained_snapshot)
+            plan = build_sample_plan(
+                inventory=inventory,
+                family_products=sampling_family_products,
+                sample_symbols=sample_symbols,
+                delisted=delisted,
+                retained_keys=retained_keys,
+                budget_bytes=sample_budget_bytes,
+                max_object_bytes=max_sample_object_bytes,
+                cumulative_spent_bytes=ledger.spent_max_bytes,
+                required_objects=required_cost_objects,
+            )
+            # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
+            # is preserved in the lock history and on disk before the first lock overwrites
+            # the plan document.
+            legacy_plan = read_pre_lock_plan(plan_path)
+            if legacy_plan is not None:
+                lock.history.append(
+                    {
+                        "plan_version": 0,
+                        "locked_at": "",
+                        "inputs": {"source": "pre_lock_greedy_plan", "path": str(plan_path)},
+                        "plan": legacy_plan,
+                        "plan_digest": "",
+                    }
+                )
+                backup = store / LEGACY_PLAN_BACKUP_FILENAME
+                if not backup.exists():
+                    _atomic_write_json(backup, legacy_plan)
+            lock.lock_plan(
+                plan=plan,
+                inputs=plan_inputs,
+                locked_at=generated_at,
+                retained_snapshot=retained_snapshot,
+                budget_snapshot={
+                    "budget_bytes": int(sample_budget_bytes),
+                    "independent_object_cap_bytes": None,
+                    "cumulative_spent_max_bytes_at_lock": ledger.spent_max_bytes,
+                    "allowance_bytes_at_lock": plan.allowance_bytes,
                 },
             )
-    if staged_observation is not None:
+            lock.flush()
+        else:
+            plan = SamplePlan.from_dict(lock.plan)
+            # Only the evidence frozen into this lock is compared, so a normal resume is
+            # stable; a genuine inventory, membership, code, or evidence change fails closed
+            # before any byte is downloaded.
+            retained_snapshot = retained_evidence_snapshot(
+                sorted(lock.retained_snapshot),
+                checkpoint.objects,
+                sample_dir=sample_dir,
+                sidecar_dir=list_cache_dir,
+                cache=verified_cache,
+            )
+            plan_inputs = _plan_inputs(retained_snapshot)
+            changed_inputs = plan_inputs.differences(lock.inputs)
+            if changed_inputs:
+                raise ResumeIntegrityError(
+                    "locked Gate 1 plan inputs changed; a new plan version requires a fresh "
+                    "reviewer authorization",
+                    context={
+                        "kind": PLAN_INPUTS_CHANGED,
+                        "path": str(plan_lock_path),
+                        "plan_version": lock.plan_version,
+                        "changed": list(changed_inputs),
+                    },
+                )
+    if staged_observation is not None and not candidate_plan_only:
         # Commit only after the existing plan accepts, or as part of first-plan lock.
         metadata_store.commit(staged_observation, updated_at=generated_at)
-    ledger.flush()
-    _atomic_write_json(plan_path, plan.to_dict())
+    if not candidate_plan_only:
+        ledger.flush()
+        _atomic_write_json(plan_path, plan.to_dict())
 
     # 4. Acquire only planned samples. Each physical object is fetched at most once and
     #    attributed to every logical product that declares its family.
+    # The executing plan is always the durable locked plan. A candidate never becomes
+    # the executing plan, and a candidate phase executes nothing at all.
+    execution_plan = SamplePlan.from_dict(lock.plan) if candidate_plan_only else plan
     samples: list[SampleRecord] = []
     acquired: dict[str, SampleRecord] = {}
-    for planned in plan.entries:
+    for planned in (() if candidate_plan_only else plan.entries):
         if planned.action == "blocked":
             continue
         already = acquired.get(planned.key)
@@ -5821,7 +7147,7 @@ def run_source_qualification(
         acquired[planned.key] = record
         samples.append(record)
 
-    for item in plan.blocked:
+    for item in (() if candidate_plan_only else plan.blocked):
         for product in item.get("products", ()):
             incidents.append(
                 {
@@ -5840,6 +7166,14 @@ def run_source_qualification(
     # 5. Derive every logical product row from the shared inventory. Source authority
     #    and universe/temporal coverage are judged separately.
     matrix_rows: list[ProductMatrixRow] = []
+    taker_flow_evidence: dict[str, Any] = {
+        "product": "binance_usdm_trade_flow_1h",
+        "derived_from": "binance_usdm_bar_1h",
+        "required_fields": list(KLINE_TAKER_FLOW_FIELDS),
+        "supported": False,
+        "evidence_key": "",
+        "requires_trades_or_aggtrades": False,
+    }
     symbol_coverage: dict[str, dict[str, int]] = {}
     symbol_temporal: dict[str, dict[str, dict[str, Any]]] = {}
     family_symbol_periods: dict[tuple[str, str], tuple[str, ...]] = {}
@@ -5955,7 +7289,9 @@ def run_source_qualification(
         product_sample_rows = [item for item in samples if product in item.products]
         product_samples = len(product_sample_rows)
         budget_blocked = tuple(
-            dict(item) for item in plan.blocked if product in tuple(item.get("products", ()))
+            dict(item)
+            for item in execution_plan.blocked
+            if product in tuple(item.get("products", ()))
         )
         checksum_ok = bool(product_sample_rows) and all(
             item.checksum_match and item.provider_checksum for item in product_sample_rows
@@ -5970,11 +7306,74 @@ def run_source_qualification(
         gap_kinds = tuple(sorted(set(blocking_kinds) | set(typed_kinds)))
         evidence_blocked = bool(budget_blocked) or (bool(families) and product_samples == 0)
 
-        if product in DERIVED_PRODUCTS:
+        release_blocked_override: bool | None = None
+        if product == "binance_usdm_trade_flow_1h":
+            # Hourly taker flow is derived from the native 1h kline schema and its
+            # interval coverage. It never requires trades or aggTrades.
+            bar_row = next(
+                (row for row in matrix_rows if row.product == "binance_usdm_bar_1h"), None
+            )
+            kline_sample = next(
+                (item for item in samples if _family_group(item.family) == "klines"), None
+            )
+            if kline_sample is not None:
+                fields = tuple(kline_sample.schema_fields)
+                schema_kind = kline_sample.schema_kind
+                evidence_key = kline_sample.key
+                evidence_source = "acquired_sample"
+            else:
+                # A candidate phase acquires nothing, so the only honest evidence is the
+                # re-proved retained checkpoint schema. Absent that, it stays pending.
+                fields = tuple(retained_kline_schema.get("fields") or ())
+                schema_kind = str(retained_kline_schema.get("schema_kind") or "")
+                evidence_key = str(retained_kline_schema.get("key") or "")
+                evidence_source = str(retained_kline_schema.get("source") or "")
+            supported = bool(fields) and kline_schema_supports_taker_flow(fields)
+            missing_fields = tuple(
+                name for name in KLINE_TAKER_FLOW_FIELDS if name not in set(fields)
+            )
+            if bar_row is None:
+                source_state = SOURCE_STATE_DERIVED
+                coverage_state = COVERAGE_NOT_APPLICABLE
+                release_blocked_override = True
+            elif not fields:
+                source_state = SOURCE_STATE_SAMPLE_PENDING
+                coverage_state = bar_row.coverage_state
+                release_blocked_override = True
+            elif not supported:
+                source_state = SOURCE_STATE_INTEGRITY
+                coverage_state = bar_row.coverage_state
+                release_blocked_override = True
+            else:
+                source_state = bar_row.source_qualification_state
+                coverage_state = bar_row.coverage_state
+                release_blocked_override = bar_row.release_blocked
+            reason = (
+                "derived from the qualified native 1h kline schema and its interval "
+                "coverage; trades and aggTrades are never required"
+            )
+            if missing_fields:
+                reason = f"{reason}; missing taker-flow fields: {','.join(missing_fields)}"
+            taker_flow_evidence = {
+                "product": product,
+                "derived_from": "binance_usdm_bar_1h",
+                "required_fields": list(KLINE_TAKER_FLOW_FIELDS),
+                "observed_schema_fields": list(fields),
+                "schema_kind": schema_kind,
+                "evidence_key": evidence_key,
+                "evidence_source": evidence_source,
+                "supported": bool(supported),
+                "missing_fields": list(missing_fields),
+                "source_qualification_state": source_state,
+                "coverage_state": coverage_state,
+                "release_blocked": bool(release_blocked_override),
+                "requires_trades_or_aggtrades": False,
+            }
+        elif product in DERIVED_PRODUCTS:
             source_state = SOURCE_STATE_DERIVED
             coverage_state = COVERAGE_NOT_APPLICABLE
             reason = "derived output; excluded from the source gate"
-        elif product == "binance_usdm_liquidation_observed":
+        elif product == "binance_usdm_liquidation_observed_daily":
             source_state = SOURCE_STATE_INACCESSIBLE
             coverage_state = COVERAGE_BLOCKING_GAPS
             reason = (
@@ -6046,6 +7445,11 @@ def run_source_qualification(
                 listed_object_count=listed_objects,
                 listed_bytes=None if unknown_sizes else listed_bytes,
                 incidents=product_incidents,
+                release_blocked_derived=(
+                    bool(release_blocked_override)
+                    if release_blocked_override is not None
+                    else None
+                ),
                 uncovered_listed_symbols=uncovered if source_gate else (),
                 uncovered_universe_symbols=blocking_symbols if source_gate else (),
                 universe_coverage_gaps=universe_gaps if source_gate else (),
@@ -6077,7 +7481,7 @@ def run_source_qualification(
         )
         incidents.append(
             {
-                "product": "binance_usdm_liquidation_observed",
+                "product": "binance_usdm_liquidation_observed_daily",
                 "kind": "coinalyze_anchor_unconfirmed",
                 "note": reason,
             }
@@ -6104,7 +7508,7 @@ def run_source_qualification(
         except SourceQualificationError as exc:
             incidents.append(
                 {
-                    "product": "binance_usdm_liquidation_observed",
+                    "product": "binance_usdm_liquidation_observed_daily",
                     "kind": "coinalyze_error",
                     "note": str(exc),
                 }
@@ -6122,7 +7526,7 @@ def run_source_qualification(
         liquidation_coverage = (
             COVERAGE_UNRESOLVED_MEMBERSHIP
             if not membership_resolved
-            else (COVERAGE_BLOCKING_GAPS if unmapped else COVERAGE_COMPLETE)
+            else (COVERAGE_TYPED_GAPS if unmapped else COVERAGE_COMPLETE)
         )
         liquidation_reason = (
             "Coinalyze daily Binance-perpetual liquidation/OI/funding/price history "
@@ -6136,14 +7540,14 @@ def run_source_qualification(
             )
         rebuilt: list[ProductMatrixRow] = []
         for row in matrix_rows:
-            if row.product != "binance_usdm_liquidation_observed":
+            if row.product != "binance_usdm_liquidation_observed_daily":
                 rebuilt.append(row)
                 continue
             rebuilt.append(
                 ProductMatrixRow(
                     product=row.product,
                     authority=SourceAuthority.SECONDARY.value,
-                    official_complete=liquidation_coverage == COVERAGE_COMPLETE,
+                    official_complete=True,
                     source_gate=True,
                     sample_only=False,
                     reason=liquidation_reason,
@@ -6168,7 +7572,7 @@ def run_source_qualification(
                             "families": [],
                             "status": "coinalyze_symbol_unmapped",
                             "kind": "coinalyze_symbol_unmapped",
-                            "blocking": True,
+                            "blocking": False,
                             "objects": 0,
                         }
                         # Every unmapped confirmed perpetual is retained; the product gap
@@ -6178,8 +7582,8 @@ def run_source_qualification(
                     sample_budget_blocked=row.sample_budget_blocked,
                     source_qualification_state=SOURCE_STATE_SECONDARY,
                     coverage_state=liquidation_coverage,
-                    release_blocked=liquidation_coverage != COVERAGE_COMPLETE,
-                    typed_gap_symbols=(),
+                    release_blocked=liquidation_coverage == COVERAGE_UNRESOLVED_MEMBERSHIP,
+                    typed_gap_symbols=unmapped,
                     coverage_gap_kinds=("coinalyze_symbol_unmapped",) if unmapped else (),
                 )
             )
@@ -6213,10 +7617,14 @@ def run_source_qualification(
     )
     accepted = len(blocked) == 0
 
-    # 7. Exact deduplicated physical requirement for the accepted universe, against real
-    #    local capacity. Storage insufficiency blocks Gate 2 and never relabels a source.
-    requirement = physical_source_requirement(
-        inventory=inventory, family_products=family_products, universe=evaluation_universe
+    # 7. Exact selected-manifest requirement. Listing/unselected bytes stay audit-only.
+    selected_keys = frozenset(acquisition_manifest["keys"]) | frozenset(cost_sample["keys"])
+    requirement = PhysicalRequirement(
+        object_count=len(selected_keys),
+        byte_total=int(selected_storage["selected_plus_cost_compressed_raw_bytes"]),
+        unknown_size_objects=int(acquisition_manifest["unknown_size_objects"])
+        + int(cost_sample["unknown_size_objects"]),
+        keys=selected_keys,
     )
     # Credit is only granted to bytes re-proved right now: rehashed raw object plus a
     # re-proved provider sidecar. An unverifiable row reduces nothing.
@@ -6247,6 +7655,10 @@ def run_source_qualification(
         retained_credit_objects=len(credit_digests),
         local_available_bytes=available_bytes(store),
         unverified_credit_objects=unverified_credit,
+        # This phase measures none of these, so Gate 2 stays unproved.
+        normalized_catalog_bytes=None,
+        temporary_high_water_bytes=None,
+        operating_reserve_bytes=None,
     )
     if feasibility["gate2_storage_state"] == "insufficient":
         incidents.append(
@@ -6317,15 +7729,56 @@ def run_source_qualification(
             "physical_source_requirement": {
                 "universe_basis": universe_basis,
                 "universe_size": len(evaluation_universe),
+                "scope": "selected_nonoverlapping_manifest_plus_cost_sample",
                 "object_count": requirement.object_count,
                 "compressed_raw_bytes": requirement.byte_total,
                 "unknown_size_objects": requirement.unknown_size_objects,
                 "deduplication": (
-                    "each physical object counted once across every logical product"
+                    "each selected physical object counted once; unselected trades, "
+                    "books, and overlapping cadence packages are audit-only"
                 ),
             },
-            "gate2_feasibility": feasibility,
+            "selected_storage": selected_storage,
+            "cost_sample": {
+                "object_count": cost_sample["object_count"],
+                "compressed_raw_bytes": cost_sample["compressed_raw_bytes"],
+                "keys": list(cost_sample["keys"]),
+                "gaps": list(cost_sample["gaps"]),
+                "selector": cost_sample["selector"],
+                "families": list(cost_sample["families"]),
+            },
+            "acquisition_manifest": {
+                "object_count": acquisition_manifest["object_count"],
+                "compressed_raw_bytes": acquisition_manifest["compressed_raw_bytes"],
+                "rows": [dict(row) for row in acquisition_manifest["rows"]],
+                "collisions": list(acquisition_manifest["collisions"]),
+                "rejections": list(acquisition_manifest["rejections"]),
+                "raw_validation_pending_keys": list(
+                    acquisition_manifest["raw_validation_pending_keys"]
+                ),
+                "consumable_object_count": acquisition_manifest["consumable_object_count"],
+                "integrity_rule": acquisition_manifest["integrity_rule"],
+                "cadence_rule": acquisition_manifest["cadence_rule"],
+                "family_object_counts": dict(acquisition_manifest["family_object_counts"]),
+            },
+            "gate2_feasibility": {
+                **feasibility,
+                "selected_compressed_raw_bytes": selected_storage[
+                    "selected_compressed_raw_bytes"
+                ],
+                "cost_sample_compressed_raw_bytes": selected_storage[
+                    "cost_sample_compressed_raw_bytes"
+                ],
+                "largest_selected_compressed_object_bytes": selected_storage[
+                    "largest_selected_compressed_object_bytes"
+                ],
+                "normalized_catalog_bytes": "unknown",
+                "temporary_high_water_bytes": "unknown",
+                "operating_reserve_bytes": "unknown",
+                "total_sufficiency": "unknown",
+            },
             "logical_product_totals_overlap": True,
+            "taker_flow": taker_flow_evidence,
             "symbol_temporal_coverage": symbol_temporal,
             "symbol_coverage": symbol_coverage,
             "universe_coverage_gaps": {
@@ -6333,7 +7786,10 @@ def run_source_qualification(
                 for row in matrix_rows
                 if row.universe_coverage_gaps
             },
-            "note": "object and byte totals are full-family listings, not sample extrapolations",
+            "note": (
+                "full-family listings remain audit facts; Gate 2 storage uses the selected "
+                "non-overlapping manifest plus the declared cost sample"
+            ),
         },
         licensing={
             "official_preferred": True,
@@ -6351,7 +7807,7 @@ def run_source_qualification(
             "unverified_retained_sample_keys": len(unverified_retained_keys),
             "physical_families_inventoried": len(inventory),
         },
-        sample_plan=plan.to_dict(),
+        sample_plan=execution_plan.to_dict(),
         retry=retry_runner.to_dict(),
         listing_checkpoint=(
             listing_checkpoint.to_dict() if listing_checkpoint is not None else {}
@@ -6378,7 +7834,32 @@ def run_source_qualification(
         },
         accepted_universe=confirmed_universe,
         plan_lock=lock.summary(),
-        budget={**ledger.to_dict(), "reconciliation": reconciliation},
+        budget={
+            **ledger.to_dict(),
+            "reconciliation": reconciliation,
+            "legacy_budget_preserved": True,
+            "legacy_ledger_path": str(budget_ledger_path),
+            "architecture_amendment_allowance_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            "independent_object_cap_bytes": None,
+            "architecture_amendment": (
+                None if amendment_allowance is None else amendment_allowance.to_dict()
+            ),
+        },
+        candidate_plan=candidate_plan_record,
+        prospective_holdout=prospective_holdout_record(holdout_boundary),
+        acquisition_manifest={
+            "object_count": acquisition_manifest["object_count"],
+            "compressed_raw_bytes": acquisition_manifest["compressed_raw_bytes"],
+            "rows": [dict(row) for row in acquisition_manifest["rows"]],
+            "collisions": list(acquisition_manifest["collisions"]),
+            "rejections": list(acquisition_manifest["rejections"]),
+            "raw_validation_pending_keys": list(
+                acquisition_manifest["raw_validation_pending_keys"]
+            ),
+            "consumable_object_count": acquisition_manifest["consumable_object_count"],
+            "integrity_rule": acquisition_manifest["integrity_rule"],
+            "cadence_rule": acquisition_manifest["cadence_rule"],
+        },
     )
 
 

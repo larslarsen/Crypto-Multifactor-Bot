@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib.util
 import inspect
 import io
 import json
@@ -18,22 +19,38 @@ import httpx
 import pytest
 
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
+    AMENDMENT_LEDGER_FILENAME,
+    AMENDMENT_LEDGER_ID,
     BUDGET_LEDGER_FILENAME,
+    COINALYZE_ANCHOR_SYMBOLS,
     CONTRACT_METADATA_FILENAME,
     CONTRACT_SNAPSHOT_DIRNAME,
-    COINALYZE_ANCHOR_SYMBOLS,
     COVERAGE_BLOCKING_GAPS,
     COVERAGE_TYPED_GAPS,
     COVERAGE_UNRESOLVED_MEMBERSHIP,
     DERIVED_PRODUCTS,
+    DISCOVERY_ARCHIVE_FAMILIES,
+    GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
     GATE1_MAX_NEW_OBJECT_BYTES,
     GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
     GATE2_STORAGE_BLOCK,
     GATE2_STORAGE_INCIDENT_NOTE,
+    HOLDOUT_BOUNDARY_FILENAME,
+    INTEGRITY_CHECKSUM_PROVED,
+    INTEGRITY_QUARANTINED,
+    INTEGRITY_SIDECAR_ABSENT,
+    INTEGRITY_SIDECAR_LISTED,
+    INTERVAL_REQUIRED_FAMILIES,
+    KLINE_TAKER_FLOW_FIELDS,
+    KNOWN_ARCHIVE_SCHEMAS,
     LEDGER_NO_TRANSFER,
     LEDGER_TRANSFERRED,
     LEGACY_BUDGET_UNRESOLVED,
     LEGACY_PLAN_BACKUP_FILENAME,
+    MANIFEST_DAILY_FALLBACK,
+    MANIFEST_INTEGRITY_MISSING,
+    MANIFEST_MONTHLY_REJECTED,
+    MANIFEST_OVERLAP,
     MEMBERSHIP_CONFIRMED,
     MEMBERSHIP_DATED_DELIVERY,
     MEMBERSHIP_DELIVERY,
@@ -42,31 +59,36 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     MEMBERSHIP_TRADIFI,
     MEMBERSHIP_UNRESOLVED,
     MEMBERSHIP_UNSUPPORTED_SEMANTICS,
+    OFFICIAL_ARCHIVE_FAMILIES,
     OFFICIAL_INCREMENTAL_ENDPOINTS,
     PLAN_INPUTS_CHANGED,
     REQUIRED_PRODUCTS,
     SAMPLE_PLAN_LOCK_FILENAME,
+    SEMANTICS_INCOHERENT_IDENTITY,
+    SEMANTICS_SUPPORTED,
+    SEMANTICS_UNKNOWN_STATUS,
+    SEMANTICS_UNKNOWN_UNDERLYING,
     SOURCE_PRODUCTS,
     SOURCE_STATE_MEMBERSHIP,
     SOURCE_STATE_OFFICIAL,
     SOURCE_STATE_SAMPLE_PENDING,
     SOURCE_STATE_SECONDARY,
-    SEMANTICS_INCOHERENT_IDENTITY,
-    SEMANTICS_SUPPORTED,
-    SEMANTICS_UNKNOWN_STATUS,
-    SEMANTICS_UNKNOWN_UNDERLYING,
     SOURCE_STATE_TYPED_GAPS,
+    VALIDATION_PENDING,
+    VALIDATION_PROVED,
     VISION_S3_ENDPOINT,
     BudgetLedger,
     CoinalyzeClient,
     CoinalyzeResponse,
     ExchangeInfoResponse,
+    HoldoutBoundary,
     ListingCheckpointStore,
     ListingObject,
     MemoryCoinalyzeTransport,
     MemoryCurrentContractSource,
     MemoryObjectIndex,
     OfficialContractMetadataStore,
+    PlanInputs,
     ProductMatrixRow,
     QualificationReport,
     ResumeIntegrityError,
@@ -80,9 +102,15 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     SamplePlanLock,
     SourceQualificationError,
     TransportObjectIndex,
+    _assert_no_overlapping_coverage,
     accept_qualification,
+    build_acquisition_manifest,
+    build_amendment_allowance,
+    build_candidate_plan_v3,
     build_family_inventory,
     build_sample_plan,
+    candidate_envelope_digest,
+    candidate_preflight,
     canonical_contract_row,
     classify_membership,
     coinalyze_perp_symbol,
@@ -91,27 +119,35 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     contract_semantics_state,
     exchange_info_server_time_ms,
     family_product_map,
+    file_sha256,
+    holdout_boundary_id,
     identity_bytes,
     infer_schema_fields,
     is_confirmed_perpetual_row,
     is_retryable_failure,
-    listing_request_identity,
-    listing_request_key,
+    kline_schema_supports_taker_flow,
     listing_authority_digest,
     listing_authority_manifest,
+    listing_request_identity,
+    listing_request_key,
     membership_evidence_digest,
+    object_calendar_date,
+    object_integrity_state,
     object_period,
     parse_current_perpetuals,
-    plan_content_digest,
     parse_exchange_info_rows,
     parse_provider_checksum,
     parse_s3_list_bucket,
+    plan_content_digest,
     qualification_exit_code,
     refuse_restricted_scope,
-    run_source_qualification,
     retained_evidence_digest,
     retained_evidence_snapshot,
+    run_source_qualification,
+    select_cost_calibration_sample,
+    select_nonoverlapping_objects,
     validate_exchange_info_response,
+    validate_prior_plan_history,
     validate_sample_plan,
     verify_provider_sidecar,
     verify_retained_object,
@@ -119,6 +155,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     vision_prefix,
     write_s3_list_bucket,
 )
+
 from source_audit.download import StreamResponse, TimeoutConfig
 from source_audit.errors import ChecksumMismatchError, DownloadError, SizeLimitError
 
@@ -188,6 +225,7 @@ def _index_with_family(
     payload_for_key: Callable[[str], bytes] | None = None,
     months: Sequence[str] = ("2019-09", "2022-06", "2026-01"),
     months_by_family: Mapping[str, Sequence[str]] | None = None,
+    list_checksums: bool = True,
 ) -> MemoryObjectIndex:
     prefixes: dict[str, list[str]] = {}
     objects: dict[str, list[ListingObject]] = {}
@@ -220,6 +258,7 @@ def _index_with_family(
                 for month in family_months:
                     key = f"{symbol_prefix}{symbol}-{stem}-{month}.zip"
                     targets.append((key, symbol_prefix))
+            checksum_listings: list[tuple[str, ListingObject]] = []
             for key, object_prefix in targets:
                 if payload_for_key is not None:
                     payload = payload_for_key(key)
@@ -229,9 +268,19 @@ def _index_with_family(
                 objects.setdefault(object_prefix, []).append(listing)
                 url = vision_object_url(key)
                 bodies[url] = payload
-                bodies[vision_object_url(f"{key}.CHECKSUM")] = _checksum_text(
-                    payload, key.rsplit("/", 1)[-1]
+                checksum_body = _checksum_text(payload, key.rsplit("/", 1)[-1])
+                bodies[vision_object_url(f"{key}.CHECKSUM")] = checksum_body
+                checksum_listings.append(
+                    (
+                        object_prefix,
+                        ListingObject(key=f"{key}.CHECKSUM", size=len(checksum_body)),
+                    )
                 )
+            if list_checksums:
+                # The real archive lists the ``.CHECKSUM`` sibling next to each object;
+                # manifest integrity qualification depends on seeing it.
+                for object_prefix, listing in checksum_listings:
+                    objects.setdefault(object_prefix, []).append(listing)
     return MemoryObjectIndex(prefixes=prefixes, objects=objects, bodies=bodies)
 
 
@@ -429,6 +478,7 @@ def test_cli_source_has_no_api_key_argument() -> None:
                         flags.append(arg.value)
     assert "--coinalyze-api-key" not in flags
     assert "--licensed-quotes-json" not in flags
+    assert "--max-sample-object-bytes" not in flags
     text = script.read_text(encoding="utf-8")
     assert "COINALYZE_API_KEY" in text
     assert "os.environ.get(\"COINALYZE_API_KEY\")" in text
@@ -504,54 +554,51 @@ def test_transport_sends_list_type_2_and_continuation_token(tmp_path: Path) -> N
     ]
 
 
-def test_bar_1m_counts_only_one_minute_interval(tmp_path: Path) -> None:
+def test_bar_1h_counts_only_one_hour_interval(tmp_path: Path) -> None:
     kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/klines", "1m"), ("monthly/trades", "trades")],
-        interval_map={"monthly/klines": ["1m", "5m"]},
-        payload_by_stem={"1m": kline_zip, "trades": _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())},
+        families=[("monthly/klines", "1h"), ("monthly/trades", "trades")],
+        interval_map={"monthly/klines": ["1h", "1m"]},
+        payload_by_stem={"1h": kline_zip, "trades": _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())},
     )
     report = run_source_qualification(store_root=tmp_path, index=index)
-    bars = next(row for row in report.product_matrix if row.product == "binance_usdm_bar_1m")
+    bars = next(row for row in report.product_matrix if row.product == "binance_usdm_bar_1h")
     assert bars.listed_object_count == 3
-    assert all("/5m/" not in sample.key for sample in report.samples if sample.product == "binance_usdm_bar_1m")
-    assert any("/1m/" in sample.key for sample in report.samples if sample.product == "binance_usdm_bar_1m")
+    assert all("/1m/" not in sample.key for sample in report.samples if sample.product == "binance_usdm_bar_1h")
+    assert any("/1h/" in sample.key for sample in report.samples if sample.product == "binance_usdm_bar_1h")
 
 
 def test_empty_listed_symbol_prefix_blocks_official_complete(tmp_path: Path) -> None:
+    kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades"), ("monthly/aggTrades", "aggTrades")],
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": kline_zip},
     )
-    trade_prefix = vision_prefix("monthly", "trades")
-    agg_prefix = vision_prefix("monthly", "aggTrades")
-    index.prefixes[trade_prefix] = sorted(
-        [*index.prefixes[trade_prefix], f"{trade_prefix}ETHUSDT/"]
+    kline_prefix = vision_prefix("monthly", "klines")
+    index.prefixes[kline_prefix] = sorted(
+        [*index.prefixes[kline_prefix], f"{kline_prefix}ETHUSDT/"]
     )
-    index.prefixes[agg_prefix] = sorted(
-        [*index.prefixes[agg_prefix], f"{agg_prefix}ETHUSDT/"]
-    )
-    index.objects[f"{trade_prefix}ETHUSDT/"] = []
-    index.objects[f"{agg_prefix}ETHUSDT/"] = []
+    index.objects[f"{kline_prefix}ETHUSDT/"] = []
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT", "ETHUSDT")
     )
-    trades = _row("binance_usdm_trade", report)
-    assert trades.discovered_symbols == 2
-    assert trades.official_complete is False
-    assert trades.release_blocked is True
+    bars = _row("binance_usdm_bar_1h", report)
+    assert bars.discovered_symbols == 2
+    assert bars.official_complete is False
+    assert bars.release_blocked is True
     # A listed prefix with no objects is a coverage fact, not a loss of source authority.
-    assert trades.coverage_state == COVERAGE_BLOCKING_GAPS
-    assert "ETHUSDT" in trades.uncovered_listed_symbols
-    assert "binance_usdm_trade" in report.blocked_products
-    coverage = report.storage["symbol_coverage"]["binance_usdm_trade"]
-    assert coverage["monthly/trades/ETHUSDT"] == 0
-    assert coverage["monthly/aggTrades/ETHUSDT"] == 0
+    assert bars.coverage_state == COVERAGE_BLOCKING_GAPS
+    assert "ETHUSDT" in bars.uncovered_listed_symbols
+    assert "binance_usdm_bar_1h" in report.blocked_products
+    coverage = report.storage["symbol_coverage"]["binance_usdm_bar_1h"]
+    assert coverage["monthly/klines/ETHUSDT"] == 0
 
 
 def test_absent_family_prefix_blocks_official_complete(tmp_path: Path) -> None:
-    # ETHUSDT is in the discovered archive union but has no 1m kline prefix at all.
+    # ETHUSDT is in the discovered archive union but has no 1h kline prefix at all.
     index = _index_with_family(
         symbols=["BTCUSDT", "ETHUSDT"],
         families=[("monthly/trades", "trades")],
@@ -560,11 +607,11 @@ def test_absent_family_prefix_blocks_official_complete(tmp_path: Path) -> None:
     kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index.prefixes[kline_prefix] = [f"{kline_prefix}BTCUSDT/"]
     symbol_prefix = f"{kline_prefix}BTCUSDT/"
-    interval_prefix = f"{symbol_prefix}1m/"
+    interval_prefix = f"{symbol_prefix}1h/"
     index.prefixes[symbol_prefix] = [interval_prefix]
     index.objects[interval_prefix] = []
     for month in ("2019-09", "2022-06", "2026-01"):
-        key = f"{interval_prefix}BTCUSDT-1m-{month}.zip"
+        key = f"{interval_prefix}BTCUSDT-1h-{month}.zip"
         index.objects[interval_prefix].append(ListingObject(key=key, size=len(kline_zip)))
         index.bodies[vision_object_url(key)] = kline_zip
         index.bodies[vision_object_url(f"{key}.CHECKSUM")] = _checksum_text(
@@ -575,21 +622,21 @@ def test_absent_family_prefix_blocks_official_complete(tmp_path: Path) -> None:
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT", "ETHUSDT")
     )
     assert set(report.discovered_symbols) == {"BTCUSDT", "ETHUSDT"}
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     assert bars.official_complete is False
     assert bars.release_blocked is True
     assert bars.coverage_state == COVERAGE_BLOCKING_GAPS
     assert "ETHUSDT" in bars.uncovered_universe_symbols
     assert "ETHUSDT" not in bars.uncovered_listed_symbols
-    assert "binance_usdm_bar_1m" in report.blocked_products
+    assert "binance_usdm_bar_1h" in report.blocked_products
     gaps = [item for item in bars.universe_coverage_gaps if item["symbol"] == "ETHUSDT"]
     assert [item["status"] for item in gaps] == ["current_unarchived"]
     assert gaps[0]["blocking"] is True
     assert gaps[0]["family_group"] == "klines"
-    coverage = report.storage["symbol_coverage"]["binance_usdm_bar_1m"]
+    coverage = report.storage["symbol_coverage"]["binance_usdm_bar_1h"]
     assert coverage["monthly/klines/ETHUSDT"] == 0
     assert coverage["monthly/klines/BTCUSDT"] == 3
-    assert report.storage["universe_coverage_gaps"]["binance_usdm_bar_1m"]
+    assert report.storage["universe_coverage_gaps"]["binance_usdm_bar_1h"]
 
 
 def test_universe_coverage_gap_is_reported_in_the_blocking_reason(tmp_path: Path) -> None:
@@ -597,16 +644,16 @@ def test_universe_coverage_gap_is_reported_in_the_blocking_reason(tmp_path: Path
         symbols=["BTCUSDT", "ETHUSDT"],
         families=[("monthly/trades", "trades")],
     )
-    agg_prefix = vision_prefix("monthly", "aggTrades")
-    index.prefixes[agg_prefix] = [f"{agg_prefix}BTCUSDT/"]
-    index.objects[f"{agg_prefix}BTCUSDT/"] = []
+    kline_prefix = vision_prefix("monthly", "klines")
+    index.prefixes[kline_prefix] = [f"{kline_prefix}BTCUSDT/"]
+    index.objects[f"{kline_prefix}BTCUSDT/"] = []
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT", "ETHUSDT")
     )
-    trades = _row("binance_usdm_trade", report)
-    assert trades.official_complete is False
-    assert "ETHUSDT" in trades.uncovered_universe_symbols
-    assert "discovered universe symbols lack required family coverage" in trades.reason
+    bars = _row("binance_usdm_bar_1h", report)
+    assert bars.official_complete is False
+    assert "ETHUSDT" in bars.uncovered_universe_symbols
+    assert "discovered universe symbols lack required family coverage" in bars.reason
 
 
 def test_coinalyze_rejects_returned_symbol_mismatch() -> None:
@@ -694,18 +741,21 @@ def test_coinalyze_refuses_transport_provenance_that_is_not_raw_bytes() -> None:
 
 
 def test_missing_checksum_is_not_official_complete(tmp_path: Path) -> None:
+    kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades")],
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": kline_zip},
     )
     checksum_urls = [url for url in index.bodies if url.endswith(".CHECKSUM")]
     for url in checksum_urls:
         del index.bodies[url]
     report = run_source_qualification(store_root=tmp_path, index=index)
-    trades = next(row for row in report.product_matrix if row.product == "binance_usdm_trade")
+    trades = next(row for row in report.product_matrix if row.product == "binance_usdm_bar_1h")
     assert trades.official_complete is False
     assert trades.authority != "official"
-    assert "binance_usdm_trade" in report.blocked_products
+    assert "binance_usdm_bar_1h" in report.blocked_products
 
 
 def test_licensed_quotes_argument_removed() -> None:
@@ -718,23 +768,24 @@ def test_derived_products_do_not_block_source_gate(tmp_path: Path) -> None:
         symbols=["BTCUSDT"],
         families=[
             ("monthly/trades", "trades"),
-            ("monthly/klines", "1m"),
+            ("monthly/klines", "1h"),
             ("monthly/metrics", "metrics"),
             ("monthly/fundingRate", "fundingRate"),
             ("monthly/premiumIndexKlines", "premiumIndexKlines"),
             ("monthly/markPriceKlines", "markPriceKlines"),
             ("monthly/indexPriceKlines", "indexPriceKlines"),
-            ("monthly/bookTicker", "bookTicker"),
-            ("monthly/bookDepth", "bookDepth"),
+            ("daily/bookTicker", "bookTicker"),
+            ("daily/bookDepth", "bookDepth"),
         ],
         interval_map={
-            "monthly/klines": ["1m"],
-            "monthly/premiumIndexKlines": ["1m"],
-            "monthly/markPriceKlines": ["1m"],
-            "monthly/indexPriceKlines": ["1m"],
+            "monthly/klines": ["1h"],
+            "monthly/premiumIndexKlines": ["1h"],
+            "monthly/markPriceKlines": ["1h"],
+            "monthly/indexPriceKlines": ["1h"],
         },
+        months=("2020-01-01", "2020-01-15", "2020-01-31"),
         payload_by_stem={
-            "1m": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()),
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()),
             "premiumIndexKlines": _zip_bytes(
                 "k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()
             ),
@@ -763,9 +814,9 @@ def test_derived_products_do_not_block_source_gate(tmp_path: Path) -> None:
     )
     assert set(DERIVED_PRODUCTS).isdisjoint(report.blocked_products)
     authorities = {row.product: row.authority for row in report.product_matrix}
-    assert authorities["binance_usdm_trade_flow"] == "unsupported"
-    assert authorities["binance_usdm_liquidation_observed"] == "secondary"
-    assert "binance_usdm_liquidation_observed" not in report.blocked_products
+    assert authorities["binance_usdm_trade_flow_1h"] == "unsupported"
+    assert authorities["binance_usdm_liquidation_observed_daily"] == "secondary"
+    assert "binance_usdm_liquidation_observed_daily" not in report.blocked_products
     assert report.coinalyze["qualified"] is True
     assert report.current_contracts_authenticated is True
     assert "XMRUSDT" not in report.current_perpetual_symbols
@@ -786,7 +837,7 @@ def test_coinalyze_changes_liquidation_authority(tmp_path: Path) -> None:
     blocked = run_source_qualification(
         store_root=tmp_path / "a", index=index, current_contracts=contracts
     )
-    liq_blocked = _row("binance_usdm_liquidation_observed", blocked)
+    liq_blocked = _row("binance_usdm_liquidation_observed_daily", blocked)
     assert liq_blocked.authority == "inaccessible"
     assert liq_blocked.official_complete is False
     qualified = run_source_qualification(
@@ -796,7 +847,7 @@ def test_coinalyze_changes_liquidation_authority(tmp_path: Path) -> None:
         coinalyze_transport=_coinalyze_anchor_transport(),
         coinalyze_api_key="sekret",
     )
-    liq = _row("binance_usdm_liquidation_observed", qualified)
+    liq = _row("binance_usdm_liquidation_observed_daily", qualified)
     assert liq.authority == "secondary"
     assert liq.source_qualification_state == SOURCE_STATE_SECONDARY
     assert liq.official_complete is True
@@ -812,11 +863,12 @@ def test_cost_calibration_requires_book_depth_and_ticker(tmp_path: Path) -> None
             "d.csv", (FIXTURES / "headerless_book_depth.csv").read_bytes()
         ),
     }
+    dates = ("2020-01-01", "2020-01-15", "2020-01-31")
     ticker_only = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/bookTicker", "bookTicker")],
+        families=[("daily/bookTicker", "bookTicker")],
         payload_by_stem=book_payloads,
-        months=CONTIGUOUS_MONTHS,
+        months=dates,
     )
     report = run_source_qualification(
         store_root=tmp_path / "t", index=ticker_only, current_contracts=_contracts("BTCUSDT")
@@ -826,11 +878,11 @@ def test_cost_calibration_requires_book_depth_and_ticker(tmp_path: Path) -> None
     both = _index_with_family(
         symbols=["BTCUSDT"],
         families=[
-            ("monthly/bookTicker", "bookTicker"),
-            ("monthly/bookDepth", "bookDepth"),
+            ("daily/bookTicker", "bookTicker"),
+            ("daily/bookDepth", "bookDepth"),
         ],
         payload_by_stem=book_payloads,
-        months=CONTIGUOUS_MONTHS,
+        months=dates,
     )
     complete = run_source_qualification(
         store_root=tmp_path / "b", index=both, current_contracts=_contracts("BTCUSDT")
@@ -880,10 +932,7 @@ def test_default_exit_is_nonzero_when_blocked(tmp_path: Path) -> None:
 
 
 def test_identity_bytes_stable_across_resume(tmp_path: Path) -> None:
-    index = _index_with_family(
-        symbols=["BTCUSDT", "ETHUSDT"],
-        families=[("monthly/trades", "trades")],
-    )
+    index = _trades_index(["BTCUSDT", "ETHUSDT"])
     first = run_source_qualification(store_root=tmp_path, index=index)
     second = run_source_qualification(store_root=tmp_path, index=index)
     assert second.resume["reused_samples"] > 0
@@ -898,12 +947,12 @@ def test_empty_archive_listing_is_not_a_current_listing_universe(tmp_path: Path)
 
 
 def test_required_source_products_are_complete_set() -> None:
-    assert "binance_usdm_trade_flow" in DERIVED_PRODUCTS
-    assert "binance_usdm_liquidation_observed" in SOURCE_PRODUCTS
+    assert "binance_usdm_trade_flow_1h" in DERIVED_PRODUCTS
+    assert "binance_usdm_liquidation_observed_daily" in SOURCE_PRODUCTS
     assert list(REQUIRED_PRODUCTS)[:3] == [
         "binance_usdm_perpetual_membership",
-        "binance_usdm_trade",
-        "binance_usdm_bar_1m",
+        "binance_usdm_bar_1h",
+        "binance_usdm_trade_flow_1h",
     ]
 
 
@@ -1174,7 +1223,7 @@ def test_physical_family_is_inventoried_once_for_all_products(tmp_path: Path) ->
 
 
 def test_sample_checkpoint_is_written_per_object_not_at_end(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     progress = tmp_path / "progress.json"
     seen_counts: list[int] = []
     real_fetch = index.fetch_bytes
@@ -1197,7 +1246,7 @@ def test_sample_checkpoint_is_written_per_object_not_at_end(tmp_path: Path) -> N
 
 
 def test_retained_samples_are_recovered_without_redownload(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     first = run_source_qualification(store_root=tmp_path, index=index)
     assert first.samples
     sample = first.samples[0]
@@ -1228,7 +1277,7 @@ def test_retained_samples_are_recovered_without_redownload(tmp_path: Path) -> No
 
 
 def test_recovery_fails_closed_on_tampered_retained_bytes(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     first = run_source_qualification(store_root=tmp_path, index=index)
     sample = first.samples[0]
     (tmp_path / "cex002_qualification_progress.json").unlink()
@@ -1242,7 +1291,7 @@ def test_recovery_fails_closed_on_tampered_retained_bytes(tmp_path: Path) -> Non
 
 
 def test_report_identity_matches_an_uninterrupted_run(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT", "ETHUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT", "ETHUSDT"])
     clean = run_source_qualification(store_root=tmp_path / "clean", index=index)
     resumed_root = tmp_path / "resumed"
     first = run_source_qualification(store_root=resumed_root, index=index)
@@ -1254,12 +1303,18 @@ def test_report_identity_matches_an_uninterrupted_run(tmp_path: Path) -> None:
 
 
 def test_sample_plan_is_persisted_before_download_and_prefers_smallest(tmp_path: Path) -> None:
-    small = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    small = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": small},
+        months=CONTIGUOUS_MONTHS,
+    )
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     objs = list(index.objects[prefix])
     # Make the middle-regime bucket offer a large and a small candidate.
-    big_key = f"{prefix}BTCUSDT-trades-2022-07.zip"
+    big_key = f"{prefix}BTCUSDT-1h-2022-07.zip"
     index.objects[prefix] = [*objs, ListingObject(key=big_key, size=50_000_000)]
     index.bodies[vision_object_url(big_key)] = small
     index.bodies[vision_object_url(f"{big_key}.CHECKSUM")] = _checksum_text(
@@ -1276,10 +1331,12 @@ def test_sample_plan_is_persisted_before_download_and_prefers_smallest(tmp_path:
 
 
 def test_oversized_object_emits_typed_sample_budget_block(tmp_path: Path) -> None:
-    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades"), ("monthly/aggTrades", "aggTrades")],
+        families=[("monthly/klines", "1h"), ("daily/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"], "daily/klines": ["1h"]},
+        payload_by_stem={"1h": payload},
         months=CONTIGUOUS_MONTHS,
     )
     for prefix, objects in list(index.objects.items()):
@@ -1291,7 +1348,7 @@ def test_oversized_object_emits_typed_sample_budget_block(tmp_path: Path) -> Non
         index.objects[prefix] = [
             ListingObject(key=obj.key, size=600_000_000) for obj in objects
         ]
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/"
 
     fetched: list[str] = []
     real_fetch = index.fetch_bytes
@@ -1305,13 +1362,13 @@ def test_oversized_object_emits_typed_sample_budget_block(tmp_path: Path) -> Non
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
     )
-    trade = next(row for row in report.product_matrix if row.product == "binance_usdm_trade")
+    trade = next(row for row in report.product_matrix if row.product == "binance_usdm_bar_1h")
     assert trade.sample_budget_blocked
     blocked = trade.sample_budget_blocked[0]
     assert blocked["kind"] == "sample_budget_exceeded"
     assert blocked["required_bytes"] == 600_000_000
     assert blocked["required_key"].startswith(prefix) or blocked["required_key"].startswith(
-        f"{vision_prefix('monthly', 'aggTrades')}BTCUSDT/"
+        f"{vision_prefix('daily', 'klines')}BTCUSDT/"
     )
     # The source is reachable and fully inventoried; only the sample budget is unmet.
     assert trade.authority != "inaccessible"
@@ -1327,20 +1384,25 @@ def test_oversized_object_emits_typed_sample_budget_block(tmp_path: Path) -> Non
 
 
 def test_sample_budget_does_not_cap_reported_source_size(tmp_path: Path) -> None:
-    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": payload},
+    )
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     index.objects[prefix] = [
-        ListingObject(key=f"{prefix}BTCUSDT-trades-{month}.zip", size=600_000_000)
+        ListingObject(key=f"{prefix}BTCUSDT-1h-{month}.zip", size=600_000_000)
         for month in ("2019-09", "2022-06", "2026-01")
     ]
     for obj in index.objects[prefix]:
         index.bodies[vision_object_url(obj.key)] = payload
     report = run_source_qualification(store_root=tmp_path, index=index)
-    trade = next(row for row in report.product_matrix if row.product == "binance_usdm_trade")
+    trade = next(row for row in report.product_matrix if row.product == "binance_usdm_bar_1h")
     # Full listed byte inventory is preserved, never truncated to the execution budget.
     assert trade.listed_bytes == 1_800_000_000
-    assert report.storage["byte_count_exact"]["binance_usdm_trade"] == 1_800_000_000
+    assert report.storage["byte_count_exact"]["binance_usdm_bar_1h"] == 1_800_000_000
 
 
 # --- review-68 surgical correction ---------------------------------------------------
@@ -1503,7 +1565,7 @@ def test_absent_checkpoint_documents_initialize_empty(tmp_path: Path) -> None:
 
 
 def test_corrupt_sample_checkpoint_aborts_the_qualifier(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     run_source_qualification(store_root=tmp_path, index=index)
     progress = tmp_path / "cex002_qualification_progress.json"
     progress.write_text("{corrupted")
@@ -1512,7 +1574,7 @@ def test_corrupt_sample_checkpoint_aborts_the_qualifier(tmp_path: Path) -> None:
 
 
 def test_substituted_provider_checksum_in_checkpoint_fails_closed(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     run_source_qualification(store_root=tmp_path, index=index)
     progress = tmp_path / "cex002_qualification_progress.json"
     document = json.loads(progress.read_text())
@@ -1524,7 +1586,7 @@ def test_substituted_provider_checksum_in_checkpoint_fails_closed(tmp_path: Path
 
 
 def test_sample_checkpoint_url_must_match_the_object_key(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     run_source_qualification(store_root=tmp_path, index=index)
     progress = tmp_path / "cex002_qualification_progress.json"
     document = json.loads(progress.read_text())
@@ -1561,10 +1623,16 @@ def test_sidecar_not_at_its_content_address_is_never_authority(tmp_path: Path) -
 
 
 def test_unique_remote_object_is_charged_once(tmp_path: Path) -> None:
-    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
-    only_key = f"{prefix}BTCUSDT-trades-2020-01.zip"
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": payload},
+        months=("2020-01",),
+    )
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
+    only_key = f"{prefix}BTCUSDT-1h-2020-01.zip"
     index.objects[prefix] = [ListingObject(key=only_key, size=10)]
     index.bodies[vision_object_url(only_key)] = payload
     index.bodies[vision_object_url(f"{only_key}.CHECKSUM")] = _checksum_text(
@@ -1582,8 +1650,15 @@ def test_unique_remote_object_is_charged_once(tmp_path: Path) -> None:
 
 
 def test_retained_object_is_reported_once(tmp_path: Path) -> None:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": payload},
+        months=("2020-01",),
+    )
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     only = index.objects[prefix][0]
     index.objects[prefix] = [only]
     first = run_source_qualification(store_root=tmp_path, index=index)
@@ -1660,7 +1735,8 @@ def _distinct_bytes_index() -> MemoryObjectIndex:
     """Two symbols whose every remote object carries its own bytes and sidecar."""
     return _index_with_family(
         symbols=["BTCUSDT", "ETHUSDT"],
-        families=[("monthly/trades", "trades")],
+        families=[("monthly/trades", "trades"), ("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
         payload_for_key=_distinct_object_payload,
     )
 
@@ -1730,7 +1806,7 @@ def _aborted_same_digest_state(store_root: Path) -> tuple[MemoryObjectIndex, str
     """
     from cryptofactors.acquisition import binance_usdm_harmonic_qualification as module
 
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     real_persist = module.persist_provider_sidecar
     persisted = {"n": 0}
 
@@ -1750,7 +1826,7 @@ def _aborted_same_digest_state(store_root: Path) -> tuple[MemoryObjectIndex, str
 
     document = json.loads((store_root / "cex002_qualification_progress.json").read_text())
     proven_key = next(iter(document["objects"]))
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     checksums = RetainedChecksumIndex.from_cache(store_root / "list_cache")
     pending_key = next(
         obj.key
@@ -1856,7 +1932,7 @@ def test_same_digest_cross_key_recovery_fails_closed_on_tampered_bytes(tmp_path:
 
 
 def _first_sample_run(tmp_path: Path) -> tuple[MemoryObjectIndex, object, Path]:
-    index = _index_with_family(symbols=["BTCUSDT"], families=[("monthly/trades", "trades")])
+    index = _trades_index(["BTCUSDT"])
     report = run_source_qualification(store_root=tmp_path, index=index)
     return index, report, tmp_path / "cex002_qualification_progress.json"
 
@@ -2029,9 +2105,17 @@ def test_verify_provider_sidecar_accepts_intact_evidence(tmp_path: Path) -> None
 
 
 def _trades_index(symbols: list[str], **kwargs: Any) -> MemoryObjectIndex:
+    payloads = dict(kwargs.pop("payload_by_stem", None) or {})
+    payloads.setdefault(
+        "1h", _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    )
+    intervals = dict(kwargs.pop("interval_map", None) or {})
+    intervals.setdefault("monthly/klines", ["1h"])
     return _index_with_family(
         symbols=symbols,
-        families=[("monthly/trades", "trades")],
+        families=[("monthly/trades", "trades"), ("monthly/klines", "1h")],
+        interval_map=intervals,
+        payload_by_stem=payloads,
         months=CONTIGUOUS_MONTHS,
         **kwargs,
     )
@@ -2263,7 +2347,7 @@ def test_plan_validation_refuses_unknown_actions_and_foreign_urls() -> None:
         family="monthly/trades",
         symbol="BTCUSDT",
         regime="early",
-        products=("binance_usdm_trade",),
+        products=("binance_usdm_bar_1h",),
         key=key,
         url=vision_object_url(key),
         byte_size=10,
@@ -2312,7 +2396,7 @@ def test_plan_validation_refuses_unknown_actions_and_foreign_urls() -> None:
 def test_sample_plan_to_dict_is_json_native_and_round_trippable() -> None:
     download_key = f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip"
     blocked_key = f"{vision_prefix('monthly', 'trades')}ETHUSDT/ETHUSDT-trades-2020-01.zip"
-    products = ("binance_usdm_perpetual_membership", "binance_usdm_trade")
+    products = ("binance_usdm_perpetual_membership", "binance_usdm_bar_1h")
     plan = SamplePlan(
         entries=(
             SamplePlanEntry(
@@ -2384,7 +2468,7 @@ def test_no_public_switch_can_reselect_the_locked_plan() -> None:
 
 def test_new_download_budget_is_cumulative_across_invocations(tmp_path: Path) -> None:
     index = _trades_index(["BTCUSDT"])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     one_object = int(index.objects[prefix][0].size or 0)
     assert one_object > 0
     first = run_source_qualification(
@@ -2475,12 +2559,12 @@ def test_pre_ledger_retained_bytes_are_an_explicit_unresolved_lower_bound(
 def test_physical_storage_requirement_is_deduplicated_and_reports_shortfall(
     tmp_path: Path,
 ) -> None:
+    kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades"), ("monthly/aggTrades", "aggTrades")],
-        payload_by_stem={
-            "aggTrades": _zip_bytes("a.csv", b"1,7000.0,0.5,10,12,1577836800000,true\n")
-        },
+        families=[("monthly/klines", "1h"), ("daily/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"], "daily/klines": ["1h"]},
+        payload_by_stem={"1h": kline_zip},
         months=CONTIGUOUS_MONTHS,
     )
     for prefix in list(index.objects):
@@ -2492,20 +2576,22 @@ def test_physical_storage_requirement_is_deduplicated_and_reports_shortfall(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
     )
     requirement = report.storage["physical_source_requirement"]
-    # monthly/trades serves both the membership and trade products; it is counted once.
-    assert requirement["object_count"] == 6
-    assert requirement["compressed_raw_bytes"] == 600_000_000_000_000
+    # Daily copies of a completed month are not dual-counted once monthly objects exist.
+    assert requirement["object_count"] == 3
+    assert requirement["compressed_raw_bytes"] == 300_000_000_000_000
     assert requirement["universe_basis"] == "confirmed_perpetual_membership"
     feasibility = report.storage["gate2_feasibility"]
     assert feasibility["gate2_storage_state"] == "insufficient"
     assert feasibility["shortfall_bytes"] > 0
     assert feasibility["local_available_bytes"] is not None
-    assert feasibility["normalized_catalog_bytes"]["treated_as_zero"] is False
-    assert feasibility["normalized_catalog_bytes"]["state"] == "unknown"
+    assert feasibility["normalized_catalog_bytes"] == "unknown"
+    assert feasibility["temporary_high_water_bytes"] == "unknown"
+    assert feasibility["operating_reserve_bytes"] == "unknown"
+    assert feasibility["total_sufficiency"] == "unknown"
     assert any(item["kind"] == GATE2_STORAGE_BLOCK for item in report.incidents)
     assert report.storage["logical_product_totals_overlap"] is True
     # Storage insufficiency blocks Gate 2; it never relabels a reachable source.
-    trades = _row("binance_usdm_trade", report)
+    trades = _row("binance_usdm_bar_1h", report)
     assert trades.authority != "inaccessible"
     assert trades.source_qualification_state == SOURCE_STATE_SAMPLE_PENDING
 
@@ -2532,7 +2618,7 @@ def test_family_launch_gap_keeps_official_authority(tmp_path: Path) -> None:
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
     )
-    trades = _row("binance_usdm_trade", report)
+    trades = _row("binance_usdm_bar_1h", report)
     # aggTrades simply launched later; the official source keeps its authority.
     assert trades.authority == "official"
     assert trades.source_qualification_state == SOURCE_STATE_TYPED_GAPS
@@ -2547,7 +2633,7 @@ def test_family_launch_gap_keeps_official_authority(tmp_path: Path) -> None:
     )
     assert head["blocking"] is False
     assert head["explained_by"] == "source_family_launch"
-    temporal = report.storage["symbol_temporal_coverage"]["binance_usdm_trade"]["BTCUSDT"]
+    temporal = report.storage["symbol_temporal_coverage"]["binance_usdm_bar_1h"]["BTCUSDT"]
     assert temporal == {"first": "2020-01", "last": "2020-03", "months": 3}
 
 
@@ -2557,22 +2643,22 @@ def test_interior_month_gap_blocks_release_without_withdrawing_authority(
     kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/klines", "1m")],
-        interval_map={"monthly/klines": ["1m"]},
-        payload_by_stem={"1m": kline_zip},
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": kline_zip},
         months=("2020-01", "2020-03"),
     )
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
     )
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     # A missing interior month is a real, blocking coverage gap, not a source failure.
     assert bars.authority == "official"
     assert bars.source_qualification_state == SOURCE_STATE_OFFICIAL
     assert bars.coverage_state == COVERAGE_BLOCKING_GAPS
     assert "interior_month_gap" in bars.coverage_gap_kinds
     assert bars.release_blocked is True
-    assert "binance_usdm_bar_1m" in report.blocked_products
+    assert "binance_usdm_bar_1h" in report.blocked_products
     gap = next(
         item for item in bars.universe_coverage_gaps if item["kind"] == "interior_month_gap"
     )
@@ -2613,12 +2699,12 @@ def test_coinalyze_universe_support_gap_is_reported_separately(tmp_path: Path) -
     assert support["supported_symbols"] == ["BTCUSDT", "ETHUSDT"]
     assert support["unmapped_symbols"] == ["SOLUSDT"]
     assert support["universe_size"] == 3
-    liquidation = _row("binance_usdm_liquidation_observed", report)
+    liquidation = _row("binance_usdm_liquidation_observed_daily", report)
     assert liquidation.authority == "secondary"
     assert liquidation.source_qualification_state == SOURCE_STATE_SECONDARY
-    assert liquidation.coverage_state == COVERAGE_BLOCKING_GAPS
-    assert liquidation.official_complete is False
-    assert liquidation.release_blocked is True
+    assert liquidation.coverage_state == COVERAGE_TYPED_GAPS
+    assert liquidation.official_complete is True
+    assert liquidation.release_blocked is False
     assert "SOLUSDT" in liquidation.uncovered_universe_symbols
 
 
@@ -2650,7 +2736,7 @@ def test_pre_lock_greedy_plan_is_preserved_before_the_first_lock(tmp_path: Path)
 
 def test_interruption_between_checkpoint_and_ledger_keeps_the_charge(tmp_path: Path) -> None:
     index = _trades_index(["BTCUSDT"])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     one_object = int(index.objects[prefix][0].size or 0)
     ledger_path = tmp_path / BUDGET_LEDGER_FILENAME
     ledger = BudgetLedger.bootstrap(
@@ -2800,9 +2886,9 @@ def test_full_union_and_confirmed_universe_totals_are_separate(tmp_path: Path) -
     full = report.storage["full_archive_union_totals"]["object_count_exact"]
     confirmed = report.storage["confirmed_universe_totals"]["object_count_exact"]
     # ZZZUSDT is inventoried but unresolved, so it counts in the union and not in scope.
-    assert full["binance_usdm_trade"] == 6
-    assert confirmed["binance_usdm_trade"] == 3
-    row = _row("binance_usdm_trade", report)
+    assert full["binance_usdm_bar_1h"] == 6
+    assert confirmed["binance_usdm_bar_1h"] == 3
+    row = _row("binance_usdm_bar_1h", report)
     assert row.listed_object_count == 6
     assert row.accepted_universe_object_count == 3
     assert report.storage["confirmed_universe_totals"]["scope"] == report.membership[
@@ -2816,10 +2902,10 @@ def test_full_union_and_confirmed_universe_totals_are_separate(tmp_path: Path) -
 def _kline_index(months: Sequence[str] = CONTIGUOUS_MONTHS, **kwargs: Any) -> MemoryObjectIndex:
     return _index_with_family(
         symbols=["AAAUSDT", "BBBUSDT"],
-        families=[("monthly/klines", "1m")],
-        interval_map={"monthly/klines": ["1m"]},
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
         payload_by_stem={
-            "1m": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
         },
         months=months,
         **kwargs,
@@ -2827,8 +2913,8 @@ def _kline_index(months: Sequence[str] = CONTIGUOUS_MONTHS, **kwargs: Any) -> Me
 
 
 def _drop_object(index: MemoryObjectIndex, symbol: str, month: str) -> None:
-    prefix = f"{vision_prefix('monthly', 'klines')}{symbol}/1m/"
-    key = f"{prefix}{symbol}-1m-{month}.zip"
+    prefix = f"{vision_prefix('monthly', 'klines')}{symbol}/1h/"
+    key = f"{prefix}{symbol}-1h-{month}.zip"
     index.objects[prefix] = [obj for obj in index.objects[prefix] if obj.key != key]
     index.bodies.pop(vision_object_url(key), None)
     index.bodies.pop(vision_object_url(f"{key}.CHECKSUM"), None)
@@ -2840,7 +2926,7 @@ def test_unexplained_head_gap_blocks_release(tmp_path: Path) -> None:
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("AAAUSDT", "BBBUSDT")
     )
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     # BBBUSDT onboarded long before the family's first month, so its late start is a gap.
     assert "head_gap_unexplained" in bars.coverage_gap_kinds
     assert bars.authority == "official"
@@ -2865,7 +2951,7 @@ def test_authenticated_pre_listing_head_gap_is_not_blocking(tmp_path: Path) -> N
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=contracts
     )
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     assert "head_gap_pre_listing" in bars.coverage_gap_kinds
     assert "head_gap_unexplained" not in bars.coverage_gap_kinds
     assert bars.coverage_state == COVERAGE_TYPED_GAPS
@@ -2883,7 +2969,7 @@ def test_currently_listed_missing_recent_tail_blocks_release(tmp_path: Path) -> 
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("AAAUSDT", "BBBUSDT")
     )
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     # The family published 2020-03 for another symbol, so a listed contract is missing it.
     assert "tail_gap_missing_recent" in bars.coverage_gap_kinds
     assert "AAAUSDT" in bars.uncovered_universe_symbols
@@ -2907,7 +2993,7 @@ def test_authenticated_post_close_tail_is_not_blocking(tmp_path: Path) -> None:
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=contracts
     )
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     assert "tail_gap_post_close" in bars.coverage_gap_kinds
     assert "tail_gap_missing_recent" not in bars.coverage_gap_kinds
     tail = next(
@@ -2920,10 +3006,10 @@ def test_authenticated_post_close_tail_is_not_blocking(tmp_path: Path) -> None:
 def test_unknown_delisting_tail_stays_blocking(tmp_path: Path) -> None:
     index = _index_with_family(
         symbols=["AAAUSDT", "BBBUSDT"],
-        families=[("monthly/klines", "1m"), ("monthly/fundingRate", "fundingRate")],
-        interval_map={"monthly/klines": ["1m"]},
+        families=[("monthly/klines", "1h"), ("monthly/fundingRate", "fundingRate")],
+        interval_map={"monthly/klines": ["1h"]},
         payload_by_stem={
-            "1m": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()),
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()),
             "fundingRate": _zip_bytes("f.csv", (FIXTURES / "headed_funding.csv").read_bytes()),
         },
         months=CONTIGUOUS_MONTHS,
@@ -2933,7 +3019,7 @@ def test_unknown_delisting_tail_stays_blocking(tmp_path: Path) -> None:
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BBBUSDT")
     )
-    bars = _row("binance_usdm_bar_1m", report)
+    bars = _row("binance_usdm_bar_1h", report)
     assert "tail_gap_unknown_close" in bars.coverage_gap_kinds
     assert bars.release_blocked is True
     tail = next(
@@ -2983,11 +3069,11 @@ def test_coinalyze_unmapped_universe_gaps_are_not_truncated(tmp_path: Path) -> N
     assert report.coinalyze["qualified"] is True
     support = report.coinalyze["universe_support"]
     assert support["unmapped_count"] == 210
-    liquidation = _row("binance_usdm_liquidation_observed", report)
+    liquidation = _row("binance_usdm_liquidation_observed_daily", report)
     # Every unmapped confirmed perpetual is retained as product gap evidence.
     assert len(liquidation.universe_coverage_gaps) == 210
     assert len(liquidation.uncovered_universe_symbols) == 210
-    assert liquidation.release_blocked is True
+    assert liquidation.release_blocked is False
 
 
 # --- review-77 inseparable current-contract authority ---------------------------------
@@ -3319,7 +3405,7 @@ def test_negative_ledger_amount_fails_before_any_download(tmp_path: Path) -> Non
 
 def test_ledger_written_for_another_budget_fails_closed(tmp_path: Path) -> None:
     index = _trades_index(["BTCUSDT"])
-    prefix = f"{vision_prefix('monthly', 'trades')}BTCUSDT/"
+    prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
     one_object = int(index.objects[prefix][0].size or 0)
     run_source_qualification(
         store_root=tmp_path,
@@ -3739,12 +3825,12 @@ def test_storage_incident_identity_is_stable_across_local_capacity_churn(
 ) -> None:
     from cryptofactors.acquisition import binance_usdm_harmonic_qualification as module
 
+    kline_zip = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
     index = _index_with_family(
         symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades"), ("monthly/aggTrades", "aggTrades")],
-        payload_by_stem={
-            "aggTrades": _zip_bytes("a.csv", b"1,7000.0,0.5,10,12,1577836800000,true\n")
-        },
+        families=[("monthly/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={"1h": kline_zip},
         months=CONTIGUOUS_MONTHS,
     )
     for prefix in list(index.objects):
@@ -3843,3 +3929,1102 @@ def test_coinalyze_rejects_mismatched_provider_for_already_suffixed_native() -> 
     assert err.value.context["native"] == "AAVEUSD_PERP"
     assert err.value.context["provider_symbol"] == "AAVEUSD_PERP_PERP.A"
     assert err.value.context["expected"] == "AAVEUSD_PERP.A"
+
+
+# --- review-98 selected Harmonic release contract -------------------------------------
+
+
+def test_required_products_are_the_amended_harmonic_set() -> None:
+    assert "binance_usdm_bar_1h" in REQUIRED_PRODUCTS
+    assert "binance_usdm_trade_flow_1h" in DERIVED_PRODUCTS
+    assert "binance_usdm_trade" not in REQUIRED_PRODUCTS
+    assert INTERVAL_REQUIRED_FAMILIES["monthly/klines"] == "1h"
+    assert "monthly/trades" in DISCOVERY_ARCHIVE_FAMILIES
+    assert "monthly/trades" not in family_product_map()
+
+
+def test_taker_flow_comes_from_kline_schema_not_trades() -> None:
+    fields = KNOWN_ARCHIVE_SCHEMAS["klines"]["headerless"]
+    assert kline_schema_supports_taker_flow(fields)
+    assert set(KLINE_TAKER_FLOW_FIELDS).issubset(fields)
+    assert "monthly/trades" not in OFFICIAL_ARCHIVE_FAMILIES.get("binance_usdm_trade_flow_1h", ())
+
+
+def test_monthly_objects_are_canonical_and_daily_fill_gaps_only() -> None:
+    monthly = ListingObject(
+        key="data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.zip", size=10
+    )
+    overlapping_daily = ListingObject(
+        key="data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01-15.zip", size=4
+    )
+    gap_daily = ListingObject(
+        key="data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2020-02-01.zip", size=4
+    )
+    selected, collisions, rejections = select_nonoverlapping_objects(
+        [monthly, overlapping_daily, gap_daily],
+        checksum_keys={monthly.key, overlapping_daily.key, gap_daily.key},
+    )
+    assert [obj.key for obj in selected] == [monthly.key, gap_daily.key]
+    assert collisions == ()
+    assert rejections == ()
+
+
+def test_duplicate_selected_month_is_an_economic_collision() -> None:
+    # Both names must be real archive object names, or the case never reaches the
+    # collision branch at all.
+    first = ListingObject(
+        key="data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.zip", size=10
+    )
+    second = ListingObject(
+        key="data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.csv", size=11
+    )
+    assert object_period(first.key) == object_period(second.key) == "2020-01"
+    selected, collisions, _rejections = select_nonoverlapping_objects(
+        [first, second], checksum_keys={first.key, second.key}
+    )
+    assert collisions
+    assert collisions[0]["kind"] == "economic_interval_collision"
+    assert collisions[0]["interval"] == "2020-01"
+    assert [obj.key for obj in selected] == [first.key]
+
+
+def test_unchecksummed_monthly_is_rejected_with_explicit_daily_fallback() -> None:
+    monthly = ListingObject(
+        key="data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.zip", size=10
+    )
+    fallback = ListingObject(
+        key="data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01-15.zip", size=4
+    )
+    selected, collisions, rejections = select_nonoverlapping_objects(
+        [monthly, fallback], checksum_keys={fallback.key}
+    )
+    # An unproved monthly package is quarantined provenance, never a consumable canon.
+    assert [obj.key for obj in selected] == [fallback.key]
+    assert collisions == ()
+    rejected = next(item for item in rejections if item["kind"] == MANIFEST_MONTHLY_REJECTED)
+    assert rejected["key"] == monthly.key
+    assert rejected["integrity_state"] == INTEGRITY_SIDECAR_ABSENT
+    assert rejected["consumable"] is False
+    covered = next(item for item in rejections if item["kind"] == MANIFEST_DAILY_FALLBACK)
+    assert covered["key"] == fallback.key
+    assert covered["replaces_month"] == "2020-01"
+
+
+def test_quarantined_monthly_object_is_not_a_second_representation() -> None:
+    monthly = ListingObject(
+        key="data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.zip", size=10
+    )
+    selected, _collisions, rejections = select_nonoverlapping_objects(
+        [monthly], checksum_keys={monthly.key}, quarantined={monthly.key}
+    )
+    assert selected == ()
+    assert rejections[0]["integrity_state"] == INTEGRITY_QUARANTINED
+    assert any(
+        item["kind"] == MANIFEST_INTEGRITY_MISSING
+        and item.get("status") == "no_daily_fallback_available"
+        for item in rejections
+    )
+    assert object_integrity_state(monthly.key, checksum_keys={monthly.key}) == (
+        INTEGRITY_SIDECAR_LISTED
+    )
+    # A listed sidecar is selection evidence; only a re-proved retained object is proof.
+    assert object_integrity_state(
+        monthly.key, checksum_keys={monthly.key}, proved_keys={monthly.key}
+    ) == INTEGRITY_CHECKSUM_PROVED
+
+
+def test_daily_object_without_listed_authority_is_a_typed_gap() -> None:
+    unproved = ListingObject(
+        key="data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2020-03-02.zip", size=4
+    )
+    selected, _collisions, rejections = select_nonoverlapping_objects(
+        [unproved], checksum_keys=set()
+    )
+    # Fallback carries the same precondition: unproved data never becomes usable.
+    assert selected == ()
+    gap = next(item for item in rejections if item["kind"] == MANIFEST_INTEGRITY_MISSING)
+    assert gap["key"] == unproved.key
+    assert gap["integrity_state"] == INTEGRITY_SIDECAR_ABSENT
+    assert gap["consumable"] is False
+    assert gap["blocking"] is True
+
+
+def test_cost_sample_is_first_midpoint_last_daily_books(tmp_path: Path) -> None:
+    dates = ("2020-01-01", "2020-01-10", "2020-01-20", "2020-01-31")
+    payloads = {
+        "bookTicker": _zip_bytes("b.csv", (FIXTURES / "headerless_book_ticker.csv").read_bytes()),
+        "bookDepth": _zip_bytes("d.csv", (FIXTURES / "headerless_book_depth.csv").read_bytes()),
+    }
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("daily/bookTicker", "bookTicker"), ("daily/bookDepth", "bookDepth")],
+        payload_by_stem=payloads,
+        months=dates,
+    )
+    inventory = build_family_inventory(index)
+    direct = select_cost_calibration_sample(inventory=inventory, universe=["BTCUSDT"])
+    assert direct["object_count"] == 6
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    sample = report.storage["cost_sample"]
+    assert sample["selector"] == "first_midpoint_last_daily_book_v1"
+    assert sample["object_count"] == 6
+    keys = sample["keys"]
+    assert any("2020-01-01" in key for key in keys)
+    assert any("2020-01-31" in key for key in keys)
+    assert object_calendar_date(keys[0]) is not None
+    listed = _row("binance_usdm_cost_calibration", report).listed_object_count
+    assert listed == 8
+    assert sample["object_count"] < listed
+
+
+def test_selected_storage_keeps_later_bounds_unknown(tmp_path: Path) -> None:
+    index = _trades_index(["BTCUSDT"])
+    inventory = build_family_inventory(index)
+    manifest = build_acquisition_manifest(inventory=inventory, universe=["BTCUSDT"])
+    assert manifest["cadence_rule"] == "monthly_preferred_daily_gap_tail_v1"
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    selected = report.storage["selected_storage"]
+    feasibility = report.storage["gate2_feasibility"]
+    assert selected["selected_compressed_raw_bytes"] >= 0
+    assert selected["largest_selected_compressed_object_bytes"] >= 0
+    assert feasibility["normalized_catalog_bytes"] == "unknown"
+    assert feasibility["temporary_high_water_bytes"] == "unknown"
+    assert feasibility["operating_reserve_bytes"] == "unknown"
+    assert feasibility["total_sufficiency"] == "unknown"
+    # ADR-0017: an unknown total requirement can never be reported as sufficient.
+    assert feasibility["gate2_storage_state"] == "unknown"
+    assert feasibility["total_required_bytes"] is None
+    assert set(feasibility["unknown_total_components"]) == {
+        "normalized_catalog_bytes",
+        "temporary_high_water_bytes",
+        "operating_reserve_bytes",
+    }
+    assert "monthly/trades" in DISCOVERY_ARCHIVE_FAMILIES
+    assert report.storage["physical_source_requirement"]["scope"] == (
+        "selected_nonoverlapping_manifest_plus_cost_sample"
+    )
+
+
+def _write_lock(lock_path: Path, document: Mapping[str, Any]) -> str:
+    lock_path.write_text(
+        json.dumps(dict(document), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return file_sha256(lock_path)
+
+
+def _seed_v2_authority(tmp_path: Path, index: MemoryObjectIndex) -> tuple[str, str]:
+    """Execute once, then promote the durable lock to representative version-2 authority.
+
+    The representative history preserves versions 0 and 1 exactly as review 98 requires:
+    a pre-lock greedy plan document and the first locked plan with its content digest.
+    """
+    run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    lock_path = tmp_path / SAMPLE_PLAN_LOCK_FILENAME
+    document = json.loads(lock_path.read_text())
+    document["history"] = [
+        {
+            "plan_version": 0,
+            "locked_at": "",
+            "inputs": {"source": "pre_lock_greedy_plan"},
+            "plan": {"entries": list(document["plan"]["entries"]), "blocked": []},
+            "plan_digest": "",
+        },
+        {
+            "plan_version": 1,
+            "locked_at": document["locked_at"],
+            "inputs": dict(document["inputs"]),
+            "plan": dict(document["plan"]),
+            "plan_digest": document["plan_digest"],
+        },
+    ]
+    document["plan_version"] = 2
+    return _write_lock(lock_path, document), file_sha256(tmp_path / BUDGET_LEDGER_FILENAME)
+
+
+def test_candidate_plan_v3_is_not_a_lock_mutation(tmp_path: Path) -> None:
+    # A selected acquisition family, so the durable plan really acquires and charges.
+    index = _kline_manifest_index()
+    lock_before, ledger_before = _seed_v2_authority(tmp_path, index)
+    assert lock_before and ledger_before
+
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    candidate = report.candidate_plan
+    assert candidate["plan_version"] == 3
+    assert candidate["state"] == "candidate_unmigrated"
+    assert candidate["migration_authorized"] is False
+    assert candidate["download_authorized"] is False
+    assert candidate["prior_plan_version"] == 2
+    assert candidate["prior_lock_sha256"] == lock_before
+    assert candidate["digest_reuses_prior"] is False
+    assert candidate["plan_digest"] not in set(candidate["prior_plan_digests"])
+    assert candidate["plan"]["entries"]
+    assert candidate["allowance"]["ledger_id"] == AMENDMENT_LEDGER_ID
+    assert candidate["assertions"]["no_migration"] is True
+    assert candidate["assertions"]["no_download"] is True
+
+    # Prior authority is byte-identical, nothing was retrieved, and the executing plan
+    # is still the durable version-2 plan.
+    assert file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME) == lock_before
+    assert file_sha256(tmp_path / BUDGET_LEDGER_FILENAME) == ledger_before
+    assert fetched == []
+    assert report.samples == ()
+    assert report.plan_lock["plan_version"] == 2
+    # The comparable identity is the plan-content digest an exact version-3 lock would
+    # record, not an envelope hash that could conceal plan-content reuse.
+    assert candidate["plan_digest_domain"] == "plan_content_digest"
+    assert candidate["plan_digest"] == plan_content_digest(
+        SamplePlan.from_dict(candidate["plan"])
+    )
+    assert candidate["plan_digest"] != report.plan_lock["plan_digest"]
+    assert candidate["candidate_envelope_digest"] != candidate["plan_digest"]
+    # The candidate carries its own allowance identity, so its budget input differs even
+    # though both ceilings happen to be the same number of bytes.
+    assert candidate["inputs"]["budget_digest"] != report.plan_lock["inputs"]["budget_digest"]
+    assert "relock" not in inspect.signature(run_source_qualification).parameters
+    assert report.prospective_holdout["stream_collector_authorized"] is False
+    assert report.budget["independent_object_cap_bytes"] is None
+
+
+def test_candidate_requires_durable_prior_authority(tmp_path: Path) -> None:
+    index = _trades_index(["BTCUSDT"])
+    # A fresh store has no version-2 lock, so no candidate may be fabricated from it.
+    with pytest.raises(SourceQualificationError, match="requires the durable version-2"):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=index,
+            current_contracts=_contracts("BTCUSDT"),
+            candidate_plan_only=True,
+        )
+    _seed_v2_authority(tmp_path, index)
+    (tmp_path / BUDGET_LEDGER_FILENAME).unlink()
+    with pytest.raises(SourceQualificationError, match="requires the durable legacy budget"):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=index,
+            current_contracts=_contracts("BTCUSDT"),
+            candidate_plan_only=True,
+        )
+
+
+def test_candidate_allowance_is_separately_ledgered(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    _lock_before, ledger_before = _seed_v2_authority(tmp_path, index)
+    legacy = json.loads((tmp_path / BUDGET_LEDGER_FILENAME).read_text())
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    allowance = report.budget["architecture_amendment"]
+    assert allowance["ledger_id"] == AMENDMENT_LEDGER_ID
+    assert allowance["path"].endswith(AMENDMENT_LEDGER_FILENAME)
+    assert allowance["allowance_bytes"] == GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+    assert allowance["independent_object_cap_bytes"] is None
+    assert allowance["charged"] is False
+    # The legacy record is preserved untouched and is never charged again.
+    assert allowance["legacy_ledger"]["sha256"] == ledger_before
+    assert allowance["legacy_ledger"]["charged_again"] is False
+    assert allowance["legacy_ledger"]["reconciled"] is False
+    assert allowance["legacy_ledger"]["rewritten"] is False
+    assert json.loads((tmp_path / BUDGET_LEDGER_FILENAME).read_text()) == legacy
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+    assert report.budget["reconciliation"]["state"] == "not_reconciled_in_candidate_phase"
+    # Compatible retained evidence stays reusable without erasing the legacy record.
+    assert allowance["reusable_retained_object_count"] >= 1
+    assert allowance["reusable_retained_bytes"] > 0
+
+
+def test_architecture_plan_digest_does_not_reuse_a_prior_plan() -> None:
+    key = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/BTCUSDT-1h-2020-01.zip"
+    old = SamplePlan(
+        entries=(
+            SamplePlanEntry(
+                family="monthly/trades",
+                symbol="BTCUSDT",
+                regime="early",
+                products=("binance_usdm_trade",),
+                key=f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip",
+                url=vision_object_url(
+                    f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip"
+                ),
+                byte_size=10,
+                action="download",
+            ),
+        ),
+        blocked=(),
+        new_download_bytes=10,
+        retained_bytes=0,
+        budget_bytes=100,
+        max_object_bytes=100,
+        unique_new_objects=1,
+        allowance_bytes=100,
+    )
+    new = SamplePlan(
+        entries=(
+            SamplePlanEntry(
+                family="monthly/klines",
+                symbol="BTCUSDT",
+                regime="early",
+                products=("binance_usdm_bar_1h",),
+                key=key,
+                url=vision_object_url(key),
+                byte_size=10,
+                action="download",
+            ),
+        ),
+        blocked=(),
+        new_download_bytes=10,
+        retained_bytes=0,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        max_object_bytes=0,
+        unique_new_objects=1,
+        allowance_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert plan_content_digest(new) != plan_content_digest(old)
+
+
+# --- review-99 inspectable manifest, taker-flow lineage, holdout, Gate 2 --------------
+
+
+def _kline_manifest_index(months: Sequence[str] = CONTIGUOUS_MONTHS) -> MemoryObjectIndex:
+    return _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/klines", "1h"), ("daily/klines", "1h")],
+        interval_map={"monthly/klines": ["1h"], "daily/klines": ["1h"]},
+        payload_by_stem={
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+        },
+        months=months,
+    )
+
+
+def test_manifest_rows_bind_identity_cadence_and_interval(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    inventory = build_family_inventory(index)
+    manifest = build_acquisition_manifest(inventory=inventory, universe=["BTCUSDT"])
+    rows = manifest["rows"]
+    assert rows
+    for row in rows:
+        assert set(row) == {
+            "key",
+            "family",
+            "family_group",
+            "symbol",
+            "cadence",
+            "byte_size",
+            "integrity_state",
+            "validation_state",
+            "consumable",
+            "sidecar_key",
+            "sidecar_sha256",
+            "economic_interval",
+            "economic_interval_kind",
+        }
+        assert row["symbol"] == "BTCUSDT"
+        assert row["family_group"] == "klines"
+        # Selection is outcome-blind; nothing is consumable before its bytes are proved.
+        assert row["integrity_state"] == INTEGRITY_SIDECAR_LISTED
+        assert row["validation_state"] == VALIDATION_PENDING
+        assert row["consumable"] is False
+        assert row["sidecar_key"] == f"{row['key']}.CHECKSUM"
+        assert row["byte_size"] > 0
+    # Monthly packages are canonical, so each selected interval is a distinct month.
+    assert {row["cadence"] for row in rows} == {"monthly"}
+    assert sorted(row["economic_interval"] for row in rows) == list(CONTIGUOUS_MONTHS)
+    assert {row["economic_interval_kind"] for row in rows} == {"month"}
+    assert manifest["raw_validation_pending_keys"] == tuple(row["key"] for row in rows)
+    assert manifest["consumable_object_count"] == 0
+
+    # A re-proved retained object is the only thing that earns consumable authority.
+    proved_key = rows[0]["key"]
+    proved = build_acquisition_manifest(
+        inventory=inventory,
+        universe=["BTCUSDT"],
+        proved_objects={proved_key: {"provider_checksum_sha256": "a" * 64}},
+    )
+    proved_row = next(row for row in proved["rows"] if row["key"] == proved_key)
+    assert proved_row["integrity_state"] == INTEGRITY_CHECKSUM_PROVED
+    assert proved_row["validation_state"] == VALIDATION_PROVED
+    assert proved_row["consumable"] is True
+    assert proved_row["sidecar_sha256"] == "a" * 64
+    assert proved["consumable_object_count"] == 1
+
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    published = report.acquisition_manifest["rows"]
+    assert [row["key"] for row in published] == [row["key"] for row in rows]
+    assert report.storage["acquisition_manifest"]["rows"] == published
+    assert report.acquisition_manifest["integrity_rule"]
+
+
+def test_manifest_uses_daily_fallback_for_an_unchecksummed_month(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    monthly_prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
+    rejected = f"{monthly_prefix}BTCUSDT-1h-2020-02.zip"
+    # Withdraw only that month's listed checksum; its bytes stay listed as provenance.
+    index.objects[monthly_prefix] = [
+        obj for obj in index.objects[monthly_prefix] if obj.key != f"{rejected}.CHECKSUM"
+    ]
+    inventory = build_family_inventory(index)
+    manifest = build_acquisition_manifest(inventory=inventory, universe=["BTCUSDT"])
+    keys = [row["key"] for row in manifest["rows"]]
+    assert rejected not in keys
+    assert any("/daily/" in key and "2020-02" in key for key in keys)
+    rejection = next(
+        item for item in manifest["rejections"] if item["kind"] == MANIFEST_MONTHLY_REJECTED
+    )
+    assert rejection["key"] == rejected
+    assert rejection["integrity_state"] == INTEGRITY_SIDECAR_ABSENT
+    assert any(
+        item["kind"] == MANIFEST_DAILY_FALLBACK and item["replaces_month"] == "2020-02"
+        for item in manifest["rejections"]
+    )
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    assert rejected not in [row["key"] for row in report.acquisition_manifest["rows"]]
+    assert report.acquisition_manifest["rejections"]
+
+
+def test_overlapping_selected_coverage_fails_closed() -> None:
+    month_row = {
+        "key": "data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.zip",
+        "family": "monthly/klines",
+        "family_group": "klines",
+        "symbol": "BTCUSDT",
+        "cadence": "monthly",
+        "byte_size": 10,
+        "integrity_state": INTEGRITY_SIDECAR_LISTED,
+        "economic_interval": "2020-01",
+        "economic_interval_kind": "month",
+    }
+    day_row = {
+        **month_row,
+        "key": "data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01-05.zip",
+        "family": "daily/klines",
+        "cadence": "daily",
+        "economic_interval": "2020-01-05",
+        "economic_interval_kind": "date",
+    }
+    with pytest.raises(SourceQualificationError, match="covers a month by both cadences") as err:
+        _assert_no_overlapping_coverage([month_row, day_row])
+    assert err.value.context["kind"] == MANIFEST_OVERLAP
+    with pytest.raises(SourceQualificationError, match="covers one economic interval twice"):
+        _assert_no_overlapping_coverage([month_row, dict(month_row)])
+
+
+def test_taker_flow_state_is_derived_from_the_kline_schema(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    bars = _row("binance_usdm_bar_1h", report)
+    flow = _row("binance_usdm_trade_flow_1h", report)
+    evidence = report.storage["taker_flow"]
+    # Availability is established from the qualified 1h kline schema, never from trades.
+    assert evidence["derived_from"] == "binance_usdm_bar_1h"
+    assert evidence["supported"] is True
+    assert evidence["requires_trades_or_aggtrades"] is False
+    assert evidence["missing_fields"] == []
+    assert set(KLINE_TAKER_FLOW_FIELDS).issubset(set(evidence["observed_schema_fields"]))
+    assert evidence["evidence_key"]
+    assert flow.coverage_state == bars.coverage_state
+    assert flow.source_qualification_state == bars.source_qualification_state
+    assert flow.release_blocked_derived == bars.release_blocked
+    assert "monthly/trades" not in OFFICIAL_ARCHIVE_FAMILIES["binance_usdm_trade_flow_1h"]
+
+
+def test_holdout_boundary_is_durable_and_replayed(tmp_path: Path) -> None:
+    index = _trades_index(["BTCUSDT"])
+    first = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    boundary_path = tmp_path / HOLDOUT_BOUNDARY_FILENAME
+    assert boundary_path.is_file()
+    holdout = first.prospective_holdout
+    assert holdout["boundary_state"] == "pinned_before_model_outcomes"
+    assert holdout["outcome_blind"] is True
+    assert holdout["stream_collector_authorized"] is False
+    assert holdout["boundary_id"] == holdout_boundary_id(
+        boundary_utc=holdout["boundary_utc"], replay_rule=holdout["replay_rule"]
+    )
+    assert holdout["retrieval_clock"] and holdout["source_availability_clock"]
+
+    second = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    # A later run replays the pinned boundary; it never moves it.
+    assert second.prospective_holdout["boundary_id"] == holdout["boundary_id"]
+    assert second.prospective_holdout["boundary_utc"] == holdout["boundary_utc"]
+    assert second.prospective_holdout["boundary_ms"] == holdout["boundary_ms"]
+
+    document = json.loads(boundary_path.read_text())
+    document["boundary_utc"] = "2030-01-01T00:00:00+00:00"
+    boundary_path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ResumeIntegrityError, match="does not match its own record"):
+        HoldoutBoundary.load_or_pin(boundary_path, now_iso=holdout["boundary_utc"])
+
+
+def test_cli_reports_unknown_gate2_state_and_candidate_mode() -> None:
+    script = (
+        Path(__file__).resolve().parents[2]
+        / "scripts"
+        / "research"
+        / "qualify_binance_usdm_harmonic_sources.py"
+    )
+    source = script.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    flags: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr != "add_argument":
+                continue
+            for arg in node.args:
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    flags.append(arg.value)
+    assert "--candidate-plan-only" in flags
+    assert "--relock-sample-plan" not in flags
+    # The summary must not print a Gate-2 verdict without its unknown components.
+    assert "unknown_components=" in source
+    assert "candidate_plan: state=" in source
+
+
+def test_amendment_allowance_never_charges_the_legacy_ledger(tmp_path: Path) -> None:
+    ledger = BudgetLedger(path=tmp_path / BUDGET_LEDGER_FILENAME, budget_bytes=1_000)
+    ledger.reserve("data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2020-01.zip", 400)
+    allowance = build_amendment_allowance(
+        path=tmp_path / AMENDMENT_LEDGER_FILENAME,
+        legacy_ledger=ledger,
+        legacy_ledger_path=tmp_path / BUDGET_LEDGER_FILENAME,
+        legacy_ledger_sha256="a" * 64,
+        retained_keys={"k": 120},
+        planned_new_bytes=1_000,
+    )
+    payload = allowance.to_dict()
+    assert payload["allowance_bytes"] == GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+    assert payload["remaining_bytes"] == GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES - 1_000
+    assert payload["reusable_retained_bytes"] == 120
+    assert payload["charged"] is False
+    assert payload["legacy_ledger"]["charged_bytes"] == 400
+    assert payload["legacy_ledger"]["charged_again"] is False
+    assert ledger.charged_bytes == 400
+
+
+def test_candidate_envelope_digest_never_replaces_the_plan_digest() -> None:
+    key = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/BTCUSDT-1h-2020-01.zip"
+    plan = SamplePlan(
+        entries=(
+            SamplePlanEntry(
+                family="monthly/klines",
+                symbol="BTCUSDT",
+                regime="early",
+                products=("binance_usdm_bar_1h",),
+                key=key,
+                url=vision_object_url(key),
+                byte_size=10,
+                action="download",
+            ),
+        ),
+        blocked=(),
+        new_download_bytes=10,
+        retained_bytes=0,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        unique_new_objects=1,
+        allowance_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    envelope = candidate_envelope_digest(plan, allowance_id=AMENDMENT_LEDGER_ID)
+    # The envelope binds allowance identity on top of the plan-content digest; it is a
+    # different value, and the plan-content digest stays the comparable identity.
+    assert envelope != plan_content_digest(plan)
+    assert envelope != candidate_envelope_digest(plan, allowance_id="other")
+    assert envelope == candidate_envelope_digest(plan, allowance_id=AMENDMENT_LEDGER_ID)
+    assert plan_content_digest(plan) == plan_content_digest(
+        SamplePlan.from_dict(plan.to_dict())
+    )
+
+
+# --- review-100 read-only prior authority, lineage, and exact version transition ------
+
+
+def _metrics_index() -> MemoryObjectIndex:
+    return _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("monthly/metrics", "metrics")],
+        payload_by_stem={
+            "metrics": _zip_bytes("m.csv", (FIXTURES / "headerless_metrics.csv").read_bytes())
+        },
+        months=CONTIGUOUS_MONTHS,
+    )
+
+
+def _outstanding_reservation(tmp_path: Path) -> tuple[str, str]:
+    """Return an already-proved reservation to the legacy ledger, as a crash would leave."""
+    ledger_path = tmp_path / BUDGET_LEDGER_FILENAME
+    ledger = BudgetLedger.load(ledger_path, budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES)
+    assert ledger is not None
+    key, record = next(
+        (name, item)
+        for name, item in ledger.charges.items()
+        if item["disposition"] == LEDGER_TRANSFERRED
+    )
+    ledger.charges.pop(key)
+    ledger.reservations[key] = {"planned_bytes": int(record["planned_bytes"])}
+    ledger.flush()
+    return key, file_sha256(ledger_path)
+
+
+def test_candidate_never_settles_a_proved_legacy_reservation(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    lock_before, _ledger_before = _seed_v2_authority(tmp_path, index)
+    reserved_key, ledger_before = _outstanding_reservation(tmp_path)
+
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    # The reservation is provable, so a normal run would settle and rewrite the ledger.
+    # A candidate phase must leave the exact crash-recovery bytes alone.
+    assert file_sha256(tmp_path / BUDGET_LEDGER_FILENAME) == ledger_before
+    assert file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME) == lock_before
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+    assert fetched == []
+    assert report.samples == ()
+    reloaded = BudgetLedger.load(
+        tmp_path / BUDGET_LEDGER_FILENAME, budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES
+    )
+    assert reloaded is not None
+    assert reserved_key in reloaded.reservations
+    assert reserved_key not in reloaded.charges
+    assert report.budget["reserved_object_count"] >= 1
+    assert report.budget["reconciliation"]["state"] == "not_reconciled_in_candidate_phase"
+    assert report.budget["architecture_amendment"]["legacy_ledger"]["sha256"] == ledger_before
+
+
+def test_candidate_taker_flow_uses_reproved_retained_schema(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    evidence = report.storage["taker_flow"]
+    # No sample is acquired, yet the re-proved retained kline schema still qualifies the
+    # derived product honestly.
+    assert report.samples == ()
+    assert fetched == []
+    assert evidence["evidence_source"] == "reproved_retained_checkpoint"
+    assert evidence["supported"] is True
+    assert evidence["missing_fields"] == []
+    assert evidence["evidence_key"]
+    assert evidence["requires_trades_or_aggtrades"] is False
+    flow = _row("binance_usdm_trade_flow_1h", report)
+    assert flow.source_qualification_state != SOURCE_STATE_SAMPLE_PENDING
+
+
+def test_candidate_taker_flow_is_honestly_pending_without_kline_evidence(
+    tmp_path: Path,
+) -> None:
+    index = _metrics_index()
+    _seed_v2_authority(tmp_path, index)
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    evidence = report.storage["taker_flow"]
+    assert evidence["supported"] is False
+    assert evidence["evidence_key"] == ""
+    assert evidence["observed_schema_fields"] == []
+    flow = _row("binance_usdm_trade_flow_1h", report)
+    assert flow.source_qualification_state == SOURCE_STATE_SAMPLE_PENDING
+    assert flow.release_blocked_derived is True
+
+
+def _load_lock_document(tmp_path: Path) -> dict[str, Any]:
+    return json.loads((tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_text())
+
+
+def _store_snapshot(root: Path) -> dict[str, str]:
+    """Recursive byte-identity snapshot of an entire store, files and directories."""
+    snapshot: dict[str, str] = {}
+    for path in sorted(root.rglob("*")):
+        relative = str(path.relative_to(root))
+        snapshot[relative] = (
+            "<dir>" if path.is_dir() else hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+    return snapshot
+
+
+class _RecordingIndex:
+    """Object index that records every listing or fetch it is asked to perform."""
+
+    def __init__(self, index: MemoryObjectIndex) -> None:
+        self._index = index
+        self.calls: list[tuple[str, str]] = []
+
+    def list_common_prefixes(self, prefix: str) -> list[str]:
+        self.calls.append(("list_common_prefixes", prefix))
+        return self._index.list_common_prefixes(prefix)
+
+    def list_objects(self, prefix: str) -> list[ListingObject]:
+        self.calls.append(("list_objects", prefix))
+        return self._index.list_objects(prefix)
+
+    def fetch_bytes(self, url: str) -> bytes:
+        self.calls.append(("fetch_bytes", url))
+        return self._index.fetch_bytes(url)
+
+
+class _RecordingContracts:
+    def __init__(self, source: MemoryCurrentContractSource) -> None:
+        self._source = source
+        self.calls = 0
+
+    def fetch_exchange_info(self) -> ExchangeInfoResponse:
+        self.calls += 1
+        return self._source.fetch_exchange_info()
+
+
+def _mutate_lock(document: dict[str, Any], mutation: str) -> dict[str, Any]:
+    history = document["history"]
+    if mutation == "version_one":
+        document["plan_version"] = 1
+    elif mutation == "version_three":
+        document["plan_version"] = 3
+    elif mutation == "missing_history":
+        document["history"] = [history[1]]
+    elif mutation == "duplicate_history":
+        document["history"] = [history[0], dict(history[0])]
+    elif mutation == "reversed_history":
+        document["history"] = [history[1], history[0]]
+    elif mutation == "missing_version_field":
+        history[0].pop("plan_version")
+    elif mutation == "string_version":
+        history[0]["plan_version"] = "0"
+    elif mutation == "boolean_version":
+        history[1]["plan_version"] = True
+    elif mutation == "malformed_v0_entries":
+        history[0]["plan"] = {"entries": [{"key": "x"}], "blocked": []}
+    elif mutation == "empty_v0_plan":
+        history[0]["plan"] = {}
+    else:
+        history[1]["plan_digest"] = "d" * 64
+    return document
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("version_one", "requires the durable version-2"),
+        ("version_three", "requires the durable version-2"),
+        ("missing_history", "exactly versions 0 and 1"),
+        ("duplicate_history", "not the exact expected transition"),
+        ("reversed_history", "not the exact expected transition"),
+        ("missing_version_field", "has no version"),
+        ("string_version", "is not an integer"),
+        ("boolean_version", "is not an integer"),
+        ("malformed_v0_entries", "missing identity fields"),
+        ("empty_v0_plan", "no plan document"),
+        ("wrong_history_digest", "digest does not match its plan"),
+    ],
+)
+def test_invalid_transition_fails_before_any_candidate_mutation(
+    tmp_path: Path, mutation: str, message: str
+) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    _write_lock(
+        tmp_path / SAMPLE_PLAN_LOCK_FILENAME, _mutate_lock(_load_lock_document(tmp_path), mutation)
+    )
+
+    before = _store_snapshot(tmp_path)
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    coinalyze = _coinalyze_anchor_transport()
+    with pytest.raises(SourceQualificationError, match=message):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=recording,
+            current_contracts=contracts,
+            coinalyze_transport=coinalyze,
+            coinalyze_api_key="sekret",
+            candidate_plan_only=True,
+        )
+    # An invalid transition is rejected before a single directory, cache, checkpoint,
+    # journal, holdout record, listing, contract fetch, or Coinalyze call happens.
+    assert _store_snapshot(tmp_path) == before
+    assert recording.calls == []
+    assert contracts.calls == 0
+    assert coinalyze.last_path == ""
+
+
+def test_valid_candidate_preflight_returns_reusable_authority(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    lock_before, ledger_before = _seed_v2_authority(tmp_path, index)
+    authority = candidate_preflight(
+        plan_lock_path=tmp_path / SAMPLE_PLAN_LOCK_FILENAME,
+        budget_ledger_path=tmp_path / BUDGET_LEDGER_FILENAME,
+        budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    )
+    assert authority.lock.plan_version == 2
+    assert authority.lock_sha256 == lock_before
+    assert authority.ledger_sha256 == ledger_before
+    assert authority.prior_plan_digests
+    # The preflight is read-only.
+    assert file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME) == lock_before
+    assert file_sha256(tmp_path / BUDGET_LEDGER_FILENAME) == ledger_before
+
+
+def test_candidate_reuse_detection_includes_the_derived_version_zero_identity(
+    tmp_path: Path,
+) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+
+    key = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/BTCUSDT-1h-2019-01.zip"
+    legacy_plan = SamplePlan(
+        entries=(
+            SamplePlanEntry(
+                family="monthly/klines",
+                symbol="BTCUSDT",
+                regime="early",
+                products=("binance_usdm_bar_1h",),
+                key=key,
+                url=vision_object_url(key),
+                byte_size=10,
+                action="download",
+            ),
+        ),
+        blocked=(),
+        new_download_bytes=10,
+        retained_bytes=0,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        unique_new_objects=1,
+        allowance_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    # The preserved version-0 record predates plan digests, so its identity must be
+    # derived from the retained document rather than discarded.
+    lock.history[0] = {
+        "plan_version": 0,
+        "locked_at": "",
+        "inputs": {"source": "pre_lock_greedy_plan"},
+        "plan": legacy_plan.to_dict(),
+        "plan_digest": "",
+    }
+    digests = validate_prior_plan_history(lock)
+    derived = plan_content_digest(legacy_plan)
+    assert derived in digests
+
+    ledger = BudgetLedger(path=tmp_path / BUDGET_LEDGER_FILENAME, budget_bytes=1_000)
+    allowance = build_amendment_allowance(
+        path=tmp_path / AMENDMENT_LEDGER_FILENAME,
+        legacy_ledger=ledger,
+        legacy_ledger_path=tmp_path / BUDGET_LEDGER_FILENAME,
+        legacy_ledger_sha256="a" * 64,
+        retained_keys={},
+        planned_new_bytes=10,
+    )
+    inputs = PlanInputs(
+        inventory_digest="a" * 64,
+        listing_digest="b" * 64,
+        membership_digest="c" * 64,
+        code_config_digest="d" * 64,
+        budget_digest="e" * 64,
+        retained_digest="f" * 64,
+    )
+    # An identical historical plan cannot evade reuse detection behind the new allowance.
+    with pytest.raises(ResumeIntegrityError, match="reuses a prior plan-content digest"):
+        build_candidate_plan_v3(
+            lock=lock,
+            prior_lock_sha256="",
+            plan=legacy_plan,
+            inputs=inputs,
+            allowance=allowance,
+            prior_plan_digests=digests,
+        )
+
+
+def test_prior_history_validation_accepts_the_preserved_transition(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+    assert lock.plan_version == 2
+    digests = validate_prior_plan_history(lock)
+    assert [int(item["plan_version"]) for item in lock.history] == [0, 1]
+    # Every preserved version contributes a comparable plan-content identity.
+    assert lock.plan_digest in digests
+    assert plan_content_digest(SamplePlan.from_dict(lock.history[0]["plan"])) in digests
+    assert plan_content_digest(SamplePlan.from_dict(lock.history[1]["plan"])) in digests
+
+
+# --- review-102 executable-level candidate preflight ----------------------------------
+
+_CLI_SCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "scripts"
+    / "research"
+    / "qualify_binance_usdm_harmonic_sources.py"
+)
+
+# Everything the executable must not construct, load, or call before its preflight passes.
+_CLI_FORBIDDEN_BEFORE_PREFLIGHT: tuple[str, ...] = (
+    "HttpxTransport",
+    "ListingCheckpointStore",
+    "RetryJournal",
+    "RetryRunner",
+    "TransportObjectIndex",
+    "FapiCurrentContractSource",
+    "HttpxCoinalyzeTransport",
+    "run_source_qualification",
+    "write_qualification_report",
+)
+
+
+def _load_cli_module(name: str) -> Any:
+    spec = importlib.util.spec_from_file_location(name, _CLI_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_cli_candidate_preflight_fails_before_any_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    _write_lock(
+        tmp_path / SAMPLE_PLAN_LOCK_FILENAME,
+        _mutate_lock(_load_lock_document(tmp_path), "version_three"),
+    )
+    report_path = tmp_path.parent / f"{tmp_path.name}_candidate_report.json"
+    assert not report_path.exists()
+    before = _store_snapshot(tmp_path)
+
+    module = _load_cli_module("cex002_cli_preflight_under_test")
+    used: list[str] = []
+
+    def _forbid(name: str) -> Callable[..., Any]:
+        def _raise(*_args: Any, **_kwargs: Any) -> Any:
+            used.append(name)
+            raise AssertionError(f"{name} ran before the candidate preflight")
+
+        return _raise
+
+    monkeypatch.setenv("COINALYZE_API_KEY", "cex002-secret-sentinel")
+    for name in _CLI_FORBIDDEN_BEFORE_PREFLIGHT:
+        assert hasattr(module, name)
+        monkeypatch.setattr(module, name, _forbid(name))
+
+    code = module.main(
+        [
+            "--store-root",
+            str(tmp_path),
+            "--report-path",
+            str(report_path),
+            "--candidate-plan-only",
+        ]
+    )
+    captured = capsys.readouterr()
+    # Exit 1 through the existing redacted CLI contract, with nothing created or used.
+    assert code == 1
+    assert used == []
+    assert _store_snapshot(tmp_path) == before
+    assert not report_path.exists()
+    assert "ERROR: candidate plan construction requires the durable version-2 plan lock" in (
+        captured.err
+    )
+    assert "listing checkpoint bootstrap" not in captured.err
+    assert "cex002-secret-sentinel" not in captured.err
+    assert "cex002-secret-sentinel" not in captured.out
+
+
+def test_cli_noncandidate_initialization_is_unchanged() -> None:
+    source = _CLI_SCRIPT.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    main = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "main"
+    )
+    lines = {
+        "preflight": None,
+        "mkdir": None,
+        "api_key": None,
+        "transport": None,
+        "checkpoint": None,
+        "journal": None,
+    }
+    for node in ast.walk(main):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name) and func.id == "candidate_preflight":
+                lines["preflight"] = node.lineno
+            elif isinstance(func, ast.Name) and func.id == "HttpxTransport":
+                lines["transport"] = node.lineno
+            elif isinstance(func, ast.Attribute) and func.attr == "mkdir":
+                lines["mkdir"] = node.lineno
+            elif isinstance(func, ast.Attribute) and func.attr == "get":
+                if any(
+                    isinstance(arg, ast.Constant) and arg.value == "COINALYZE_API_KEY"
+                    for arg in node.args
+                ):
+                    lines["api_key"] = node.lineno
+            elif isinstance(func, ast.Attribute) and func.attr == "load":
+                owner = func.value
+                if isinstance(owner, ast.Name) and owner.id == "ListingCheckpointStore":
+                    lines["checkpoint"] = node.lineno
+                elif isinstance(owner, ast.Name) and owner.id == "RetryJournal":
+                    lines["journal"] = node.lineno
+    assert all(value is not None for value in lines.values()), lines
+    # The preflight strictly precedes every store, credential, transport, cache, and
+    # journal operation, and the ordinary non-candidate path still performs them.
+    for name in ("mkdir", "api_key", "transport", "checkpoint", "journal"):
+        assert lines["preflight"] < lines[name], (name, lines)
