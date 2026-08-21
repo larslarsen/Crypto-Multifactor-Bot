@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - finish residual receipt assertion in review 129
+Next required actor: Jr Dev - Hermes - integrate review 130 and publish corrected candidate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -82,6 +82,7 @@ Governing documents:
 - research/sprint_004/127_CEX002_REPORT_SPLIT_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/128_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/129_CEX002_SPARK_TEST_SOURCE_REVIEW.md
+- research/sprint_004/130_CEX002_SPARK_TEST_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1032,6 +1033,26 @@ each complete selected row's compact canonical JSON with the compact parsed rece
 proves a nonempty intersection between selected keys and serialized sample-plan keys.
 Spark runs no commands, touches no other block or path, and performs no Git operation. It
 stops with the test hash and unchanged 209-function count. Hermes remains unauthorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
+
+## Spark residual test outcome - accepted for Hermes integration
+
+Review 130 accepts Spark's single CEX test path at its exact hash and 209 unique test
+functions. The storage block is proved summary-only, complete manifest-row objects are
+absent from the compact receipt, and legitimate selected-key/sample-plan overlap is
+proved without confusing key references with row duplication. Production and CLI remain
+frozen at their integrated review-126 hashes.
+
+Jr Dev - Hermes is authorized only for review 130's exact test integration and the complete
+review-126 operational sequence: all five commands restart at command 1; only if all pass
+does Hermes atomically preserve the monolith, capture snapshots, and run the candidate once
+under the same 50-minute bound. It publishes record 131 and the valid compact report when
+produced, uses only enumerated commits, pushes, and stops for reviewer inspection. No
+reset, restore, stash, clean, or automatic second candidate invocation is authorized.
 
 No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
