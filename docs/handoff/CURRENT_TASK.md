@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 134 (candidate status 2, compact report 62 validated, 733,203 rows)
+Next required actor: Jr Dev - Hermes - publish the record-134 forward correction in review 135
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -87,6 +87,7 @@ Governing documents:
 - research/sprint_004/132_CEX002_RUFF_FAILURE_REVIEW.md
 - research/sprint_004/133_CEX002_RUFF_SOURCE_ACCEPTANCE.md
 - research/sprint_004/134_CEX002_RUFF_INTEGRATION_AND_CANDIDATE.md
+- research/sprint_004/135_CEX002_TERMINAL_CANDIDATE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
