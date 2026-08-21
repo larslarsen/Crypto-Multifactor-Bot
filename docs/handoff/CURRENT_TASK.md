@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 130 and publish corrected candidate
+Next required actor: Implementation Dev - Codex Spark - correct two Ruff findings in review 132
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -84,6 +84,7 @@ Governing documents:
 - research/sprint_004/129_CEX002_SPARK_TEST_SOURCE_REVIEW.md
 - research/sprint_004/130_CEX002_SPARK_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/131_CEX002_TEST_INTEGRATION_AND_CANDIDATE.md
+- research/sprint_004/132_CEX002_RUFF_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1054,6 +1055,26 @@ does Hermes atomically preserve the monolith, capture snapshots, and run the can
 under the same 50-minute bound. It publishes record 131 and the valid compact report when
 produced, uses only enumerated commits, pushes, and stops for reviewer inspection. No
 reset, restore, stash, clean, or automatic second candidate invocation is authorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
+
+## Record-131 focused-command outcome - two mechanical Ruff findings
+
+Review 132 accepts Hermes's test-only integration and command discipline. C1 passed all
+256 CEX items, C2 passed all 18 atomic items, and C3 stopped on F402 in the frozen
+production module plus F841 in the accepted CEX test. C4/C5, preservation, and the
+candidate correctly did not run. The report and data remain unchanged.
+
+The record-131 publication left this file's next actor stale while updating the ticket;
+review 132 repairs that control mismatch directly. Implementation Dev - Codex Spark using
+GPT-5.3-Codex-Spark High is authorized only to rename the local Coinalyze loop variable
+`fields` to `point_fields` and its one use, and delete the unused test assignment
+`rendered = receipt_path.read_bytes()`. Spark runs no commands, touches no other line or
+path, and performs no Git operation. It stops with both hashes and the unchanged 209-test
+function count. Hermes remains unauthorized.
 
 No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
