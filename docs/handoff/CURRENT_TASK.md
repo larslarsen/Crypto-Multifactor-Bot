@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review-119 residual CEX tests
+Next required actor: Jr Dev - Hermes - integrate review-120 source and run bounded evidence
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -71,6 +71,7 @@ Governing documents:
 - research/sprint_004/117_CEX002_LISTING_SOURCE_REVIEW.md
 - research/sprint_004/118_CEX002_LISTING_CORRECTION_SOURCE_REVIEW.md
 - research/sprint_004/119_CEX002_LISTING_RESIDUAL_TEST_REVIEW.md
+- research/sprint_004/120_CEX002_LISTING_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -853,3 +854,23 @@ Hermes, integration, tests, and real execution remain unauthorized. No data-scop
 cache reset, plan migration, sample acquisition, Gate 2, normalization, catalog work,
 Nautilus work, Harmonic Trader work, or other-ticket work is authorized. Gate 1 remains
 `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude review-119 test-only outcome - accepted for Hermes integration
+
+Review 120 accepts the complete five-path ADR-0018 source/test drop. Both review-119 test
+defects are closed: cleanup-body precedence is asserted against the corrected CLI, and the
+concurrent retry proof now uses retryable `DownloadError` failures with canonical redacted
+report and durable-journal evidence. All four previously frozen hashes still match; the
+CEX and atomic files contain 186 and 18 unique tests, respectively; all 17 CEX fixtures
+remain unchanged.
+
+Jr Dev - Hermes is authorized only for review 120's exact five-path integration,
+stop-on-first-failure five-command sequence, complete before/after measurements, and one
+50-minute candidate-only continuation against the existing checkpoint and caches after all
+commands pass. It publishes record 121 and stops for review on every candidate status.
+Review 120 is the complete task; no out-of-band instruction is authority.
+
+No source/test/fixture edit, reset, cleanup, cache reconstruction, reduced data scope, plan
+migration, sample acquisition, Gate 2, normalization, catalog publication, Nautilus work,
+Harmonic Trader work, payoff analysis, PAPER, LIVE, or other-ticket work is authorized.
+Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
