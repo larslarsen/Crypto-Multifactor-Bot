@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct two Ruff findings in review 132
+Next required actor: Jr Dev - Hermes - integrate review 133 and publish corrected candidate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -85,6 +85,7 @@ Governing documents:
 - research/sprint_004/130_CEX002_SPARK_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/131_CEX002_TEST_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/132_CEX002_RUFF_FAILURE_REVIEW.md
+- research/sprint_004/133_CEX002_RUFF_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1080,3 +1081,21 @@ No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
 PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
 remains `NONE`.
+
+## Spark Ruff correction outcome - accepted for Hermes integration
+
+Review 133 accepts Spark's exact two-path mechanical correction. The Coinalyze loop local
+no longer shadows `dataclasses.fields`, the obsolete receipt bytes assignment is removed,
+and the 209-test-function contract is unchanged. No behavior, assertion, or authority
+changed.
+
+Jr Dev - Hermes is authorized only to integrate the two accepted hashes, restart all five
+focused commands at command 1, and proceed after all pass with review 126's exact atomic
+monolith preservation, snapshots, one 50-minute candidate, validation, and publication
+contract. It writes record 134, commits and pushes only enumerated paths, and stops for
+reviewer inspection. No reset, restore, stash, clean, migration, sample acquisition,
+Gate 2, or automatic second candidate invocation is authorized.
+
+No reduced scope, report truncation, normalization, catalog publication, Nautilus work,
+Harmonic Trader work, payoff analysis, PAPER, LIVE, or other-ticket work is authorized.
+Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
