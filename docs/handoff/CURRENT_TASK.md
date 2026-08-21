@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - remove unbounded manifest-validator key state
+Next required actor: Jr Dev - Hermes - integrate review 126 and publish corrected candidate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -78,6 +78,7 @@ Governing documents:
 - research/sprint_004/123_CEX002_REPORT_SPLIT_SOURCE_REVIEW.md
 - research/sprint_004/124_CEX002_GROK_REPORT_SPLIT_CONTINUATION.md
 - research/sprint_004/125_CEX002_GROK_REPORT_SPLIT_RESIDUAL_REVIEW.md
+- research/sprint_004/126_CEX002_REPORT_SPLIT_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -967,3 +968,24 @@ The oversized report remains frozen. No reduced scope, report truncation, plan m
 sample acquisition, Gate 2, normalization, catalog publication, Nautilus work, Harmonic
 Trader work, payoff analysis, PAPER, LIVE, or other-ticket work is authorized. Gate 1
 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Grok residual correction outcome - accepted for Hermes integration
+
+Review 126 accepts the complete ADR-0019 three-path source/test drop. Manifest rows are
+canonicalized by physical-object key at construction, the validator now retains only the
+prior key while proving order and duplicate rejection, and the validator itself has
+focused bounded-state proof. The complete drop contains 209 unique CEX test functions;
+the CLI and the previously accepted atomic-download dependency remain exact.
+
+Jr Dev - Hermes is authorized only for review 126's exact integration, stop-on-first-
+failure five-command sequence, atomic content-addressed preservation of the current
+1,059,297,547-byte report, before/after measurements, and one 50-minute candidate-only
+execution against the completed checkpoint and caches. It publishes record 127 and the
+resulting compact report when valid, commits and pushes only the enumerated paths, and
+stops for reviewer inspection on every candidate status. No reset, restore, stash, clean,
+or automatic second candidate invocation is authorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
