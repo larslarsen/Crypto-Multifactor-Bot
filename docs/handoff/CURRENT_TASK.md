@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes (review-103 integration, focused verification, and candidate-only execution)
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-104 candidate execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -54,6 +54,7 @@ Governing documents:
 - research/sprint_004/101_CEX002_CLAUDE_LINEAGE_SOURCE_REVIEW.md
 - research/sprint_004/102_CEX002_CLAUDE_CLI_PREFLIGHT_SOURCE_REVIEW.md
 - research/sprint_004/103_CEX002_PLAN3_CANDIDATE_SOURCE_ACCEPTANCE.md
+- research/sprint_004/104_CEX002_PLAN3_CANDIDATE_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
