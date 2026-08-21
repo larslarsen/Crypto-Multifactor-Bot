@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review-118 cleanup and proof residue
+Next required actor: Sr Dev - Claude Build - correct review-119 residual CEX tests
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -70,6 +70,7 @@ Governing documents:
 - research/sprint_004/116_CEX002_LISTING_EXECUTION_ARCHITECTURE_REVIEW.md
 - research/sprint_004/117_CEX002_LISTING_SOURCE_REVIEW.md
 - research/sprint_004/118_CEX002_LISTING_CORRECTION_SOURCE_REVIEW.md
+- research/sprint_004/119_CEX002_LISTING_RESIDUAL_TEST_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -825,6 +826,28 @@ Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 118's fo
 CLI/shared-transport/test correction. The main qualification module and 17 fixtures are
 frozen. Claude runs no commands or data, touches no records or Git, and stops for source
 review with exact hashes and both unique test-function counts.
+
+Hermes, integration, tests, and real execution remain unauthorized. No data-scope change,
+cache reset, plan migration, sample acquisition, Gate 2, normalization, catalog work,
+Nautilus work, Harmonic Trader work, or other-ticket work is authorized. Gate 1 remains
+`IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude review-118 residual outcome - implementation accepted, CEX tests rejected
+
+Review 119 accepts and freezes the main qualification module, CLI, shared pooled transport,
+and atomic-download tests. Cleanup now preserves body-error precedence and first-cleanup
+failure precedence, failed client close is not counted as success, and the checkpoint
+mapping proof uses real checkpoint-enabled indexes.
+
+Only the CEX test source remains rejected. One accumulated test still expects cleanup to
+replace an active qualification failure, contrary to the corrected CLI. The concurrent
+retry test raises raw `httpx.ConnectError`, which is intentionally outside the retryable
+`DownloadError` contract, so it produces no incident journal.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 119's one-path,
+two-test correction. Every production/CLI/atomic path and all fixtures are frozen. Claude
+runs no commands or data, touches no records or Git, and stops for source review with the
+exact test hash, frozen hashes, and unique test-function count.
 
 Hermes, integration, tests, and real execution remain unauthorized. No data-scope change,
 cache reset, plan migration, sample acquisition, Gate 2, normalization, catalog work,
