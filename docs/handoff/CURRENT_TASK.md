@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review-123 report split findings
+Next required actor: Sr Dev - Grok Build - finish review-123 report split correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -76,6 +76,7 @@ Governing documents:
 - docs/adr/0019-scalable-qualification-evidence-publication.md
 - research/sprint_004/122_CEX002_TERMINAL_REPORT_ARCHITECTURE_REVIEW.md
 - research/sprint_004/123_CEX002_REPORT_SPLIT_SOURCE_REVIEW.md
+- research/sprint_004/124_CEX002_GROK_REPORT_SPLIT_CONTINUATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -920,6 +921,25 @@ three-path correction. It preserves the split architecture and all accepted sour
 semantics, runs no commands, touches no data/records/Git, and stops for source review with
 exact hashes and the unique test-function count. The preserved 1.06 GB report remains
 frozen. Hermes and report rerun remain unauthorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
+
+## Claude correction interrupted - Grok continuation authorized
+
+Claude exhausted its four-hour usage window before completing review 123. Review 124
+records exact hashes for the preserved partial production/test correction and transfers
+the same bounded three-path task to Sr Dev - Grok Build using Grok 4.6 High. The partial
+drop is an unfinished continuation base, not an accepted result.
+
+Grok must continue the current diff in place and close every review-123 validation,
+bounded-streaming, atomic-publication, and test-proof finding. It runs no commands, touches
+no data/records/Git, and stops for reviewer source inspection with exact hashes and the
+unique test-function count. The 1.06 GB report remains frozen; Hermes and report rerun
+remain unauthorized. Review 124 is the complete transfer authority and no out-of-band
+prompt is authority.
 
 No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
