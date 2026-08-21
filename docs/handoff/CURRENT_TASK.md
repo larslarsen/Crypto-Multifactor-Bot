@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-113 candidate execution
+Next required actor: Jr Dev - Hermes - execute review-114 measured candidate resume
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -64,6 +64,7 @@ Governing documents:
 - research/sprint_004/111_CEX002_HOLDOUT_RECORD_PATH_FAILURE_REVIEW.md
 - research/sprint_004/112_CEX002_RECORD_PATH_SOURCE_ACCEPTANCE.md
 - research/sprint_004/113_CEX002_PLAN3_CANDIDATE_EXECUTION.md
+- research/sprint_004/114_CEX002_CANDIDATE_TIMEOUT_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -738,3 +739,24 @@ No plan migration, sample acquisition, amendment-ledger creation, Gate 2, normal
 catalog work, Nautilus work, Harmonic Trader work, or other-ticket work is authorized. A
 nonzero focused-command exit stops immediately before all later commands and the real
 candidate process. Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Review-113 candidate timeout outcome
+
+Review 114 accepts the exact production integration and the strict passing sequence of 189
+CEX-002 tests, 11 atomic-download tests, Ruff, repository control, and committed-diff
+whitespace inspection. No implementation correction or focused-command rerun is
+authorized. The candidate execution itself is rejected as terminal evidence because
+record 113 omitted its required before snapshot and process status, and incorrectly claimed
+no mutation even though the resumable listing checkpoint and cache advanced.
+
+Jr Dev - Hermes is authorized only for review 114's one measured 50-minute resume slice
+against the preserved store. It captures the complete before snapshot, invokes the exact
+candidate command once under the specified timeout, captures status immediately, repeats
+the complete snapshot on every exit path, and publishes record 115. A status 124 records
+progress and stops; it does not authorize another invocation. Review 114 is the complete
+task and no out-of-band instruction is authority.
+
+No source/test edit, focused test rerun, store reconstruction, cache reset, plan migration,
+sample acquisition, amendment-ledger creation, Gate 2, normalization, catalog work,
+Nautilus work, Harmonic Trader work, or other-ticket work is authorized. Gate 1 remains
+`IN_PROGRESS`; next ticket remains `NONE`.
