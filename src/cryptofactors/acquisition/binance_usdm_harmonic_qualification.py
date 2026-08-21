@@ -6485,9 +6485,11 @@ class CoinalyzeClient:
         )
         samples: dict[str, list[dict[str, Any]]] = {}
         provenance = [markets_prov]
-        for name, path, fields in history_specs:
+        for name, path, point_fields in history_specs:
             payload, prov = self._fetch(path, params=params, headers=headers)
-            parsed = parse_coinalyze_history(payload, path=path, required_point_fields=fields)
+            parsed = parse_coinalyze_history(
+                payload, path=path, required_point_fields=point_fields
+            )
             returned = {row["symbol"] for row in parsed}
             if returned != requested:
                 raise SourceQualificationError(

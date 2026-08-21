@@ -6017,7 +6017,6 @@ def test_compact_receipt_never_duplicates_the_detailed_manifest(tmp_path: Path) 
     # The receipt stays comfortably below the fail-closed publication ceiling.
     assert receipt_path.stat().st_size < REPORT_PUBLICATION_CEILING_BYTES
 
-    rendered = receipt_path.read_bytes()
     rows = report.acquisition_manifest["rows"]
     assert len(rows) > 1
     surfaces = json.dumps([manifest_block, storage_block], sort_keys=True).encode("utf-8")
