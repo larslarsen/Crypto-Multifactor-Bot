@@ -192,14 +192,29 @@ def _stable_zip_bytes(name: str, payload: bytes) -> bytes:
     return buf.getvalue()
 
 
-def _distinct_object_payload(key: str) -> bytes:
-    """Valid headerless trades archive bytes unique to one remote object key.
+def _distinct_kline_rows(seed: int) -> list[str]:
+    """Deterministic, schema-valid headerless native one-hour kline rows."""
+    rows = []
+    for offset in range(2):
+        open_time = 1577836800000 + (seed % 100000) * 3_600_000 + offset * 3_600_000
+        close_time = open_time + 3_599_999
+        open_price = float(7000 + seed % 5000 + offset)
+        high = open_price + 10.0
+        low = open_price - 10.0
+        close = open_price + 1.0
+        volume = 12.5 + offset
+        quote_volume = round(close * volume, 4)
+        taker_buy = round(volume / 2, 4)
+        taker_buy_quote = round(quote_volume / 2, 4)
+        rows.append(
+            f"{open_time},{open_price},{high},{low},{close},{volume},{close_time},"
+            f"{quote_volume},{10 + offset},{taker_buy},{taker_buy_quote},0"
+        )
+    return rows
 
-    Real remote objects never share bytes. Deriving the trade rows from the object key
-    gives every synthetic object its own content address, so an object that was never
-    downloaded is genuinely absent from the content-addressed store.
-    """
-    seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+
+def _distinct_trade_rows(seed: int) -> list[str]:
+    """Deterministic, schema-valid headerless trade rows."""
     rows = []
     for offset in range(2):
         price = float(7000 + seed % 5000 + offset)
@@ -209,7 +224,25 @@ def _distinct_object_payload(key: str) -> bytes:
             f"{1577836800000 + seed % 1000000 + offset},"
             f"{'true' if offset % 2 == 0 else 'false'}"
         )
-    return _stable_zip_bytes("trades.csv", ("\n".join(rows) + "\n").encode("utf-8"))
+    return rows
+
+
+def _distinct_object_payload(key: str) -> bytes:
+    """Schema-valid archive bytes unique to one remote object key.
+
+    Real remote objects never share bytes. Deriving the rows from the object key gives
+    every synthetic object its own content address, so an object that was never downloaded
+    is genuinely absent from the content-addressed store. Selected native one-hour kline
+    keys get kline rows; discovery-only trade keys keep deterministic trade rows.
+    """
+    seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+    if "/klines/" in key:
+        return _stable_zip_bytes(
+            "klines.csv", ("\n".join(_distinct_kline_rows(seed)) + "\n").encode("utf-8")
+        )
+    return _stable_zip_bytes(
+        "trades.csv", ("\n".join(_distinct_trade_rows(seed)) + "\n").encode("utf-8")
+    )
 
 
 def _load_json(name: str) -> object:
@@ -419,13 +452,12 @@ def test_headed_funding_zip_keeps_real_header() -> None:
 
 
 def test_resume_refuses_tampered_content_addressed_bytes(tmp_path: Path) -> None:
-    index = _index_with_family(
-        symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades")],
-    )
+    # A selected, checksum-listed native one-hour kline object: trades are discovery-only
+    # and are never acquired, so they cannot carry this contract.
+    index = _trades_index(["BTCUSDT"])
     first = run_source_qualification(store_root=tmp_path, index=index)
     assert first.samples
-    sample = first.samples[0]
+    sample = next(item for item in first.samples if "/klines/" in item.key)
     Path(sample.content_path).write_bytes(b"tampered")
     with pytest.raises(SourceQualificationError, match="resume hash mismatch"):
         run_source_qualification(store_root=tmp_path, index=index)
@@ -814,7 +846,10 @@ def test_derived_products_do_not_block_source_gate(tmp_path: Path) -> None:
     )
     assert set(DERIVED_PRODUCTS).isdisjoint(report.blocked_products)
     authorities = {row.product: row.authority for row in report.product_matrix}
-    assert authorities["binance_usdm_trade_flow_1h"] == "unsupported"
+    # A valid native one-hour kline schema gives the derived product official authority
+    # while it still stays outside the source gate.
+    assert authorities["binance_usdm_trade_flow_1h"] == "official"
+    assert "binance_usdm_trade_flow_1h" in DERIVED_PRODUCTS
     assert authorities["binance_usdm_liquidation_observed_daily"] == "secondary"
     assert "binance_usdm_liquidation_observed_daily" not in report.blocked_products
     assert report.coinalyze["qualified"] is True
@@ -2461,9 +2496,21 @@ def test_no_public_switch_can_reselect_the_locked_plan() -> None:
         / "qualify_binance_usdm_harmonic_sources.py"
     )
     source = script.read_text(encoding="utf-8")
-    # A new plan version requires a fresh reviewer authorization, not a CLI flag.
+    # A new plan version requires a fresh reviewer authorization, not a CLI flag. The
+    # exact parameter and flag are the boundary; explanatory prose is not.
     assert "--relock-sample-plan" not in source
-    assert "relock" not in source
+    flags: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr != "add_argument":
+                continue
+            flags.extend(
+                arg.value
+                for arg in node.args
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+            )
+    assert flags
+    assert not any("relock" in flag for flag in flags)
 
 
 def test_new_download_budget_is_cumulative_across_invocations(tmp_path: Path) -> None:
@@ -2606,20 +2653,14 @@ def test_object_period_reads_monthly_and_daily_object_keys() -> None:
 
 
 def test_family_launch_gap_keeps_official_authority(tmp_path: Path) -> None:
-    index = _index_with_family(
-        symbols=["BTCUSDT"],
-        families=[("monthly/trades", "trades"), ("monthly/aggTrades", "aggTrades")],
-        payload_by_stem={
-            "aggTrades": _zip_bytes("a.csv", b"1,7000.0,0.5,10,12,1577836800000,true\n")
-        },
-        months=CONTIGUOUS_MONTHS,
-        months_by_family={"monthly/aggTrades": CONTIGUOUS_MONTHS[1:]},
-    )
+    # The bar product's only acquisition input is the native one-hour kline family, whose
+    # first published month is later than the contract's onboarding.
+    index = _kline_manifest_index()
     report = run_source_qualification(
         store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
     )
     trades = _row("binance_usdm_bar_1h", report)
-    # aggTrades simply launched later; the official source keeps its authority.
+    # The kline family simply launched later; the official source keeps its authority.
     assert trades.authority == "official"
     assert trades.source_qualification_state == SOURCE_STATE_TYPED_GAPS
     assert trades.coverage_state == COVERAGE_TYPED_GAPS
@@ -4661,6 +4702,10 @@ def test_candidate_taker_flow_uses_reproved_retained_schema(tmp_path: Path) -> N
     assert evidence["requires_trades_or_aggtrades"] is False
     flow = _row("binance_usdm_trade_flow_1h", report)
     assert flow.source_qualification_state != SOURCE_STATE_SAMPLE_PENDING
+    # Nonblocking typed-gap coverage with no budget block: the inherited release block was
+    # the same artificial current-invocation condition and is lifted with the state.
+    assert evidence["release_blocked"] is False
+    assert flow.release_blocked_derived is False
 
 
 def test_candidate_taker_flow_is_honestly_pending_without_kline_evidence(

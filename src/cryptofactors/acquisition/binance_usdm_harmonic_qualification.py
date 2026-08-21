@@ -7163,6 +7163,30 @@ def run_source_qualification(
                 }
             )
 
+    # 4b. The report-facing manifest is rebuilt from proof established in THIS
+    #     invocation: retained objects re-proved at startup plus objects whose content and
+    #     provider checksum were validated during execution. A checkpoint completion claim
+    #     is never promoted on its own. The locked plan, its digest, the selected and
+    #     blocked keys, the download set, the execution order, and both ledgers are
+    #     untouched; only what the final report may honestly call proved changes.
+    final_proved: dict[str, dict[str, Any]] = dict(proved_objects)
+    for record in samples:
+        if not record.checksum_match or record.provider_checksum != record.sha256:
+            continue
+        proved_row = dict(checkpoint.get(record.key) or {})
+        proved_row.setdefault("sha256", record.sha256)
+        proved_row.setdefault("provider_checksum", record.provider_checksum)
+        final_proved[record.key] = proved_row
+    if final_proved != proved_objects:
+        acquisition_manifest = build_acquisition_manifest(
+            inventory=inventory,
+            universe=evaluation_universe,
+            proved_objects=final_proved,
+        )
+        selected_storage = selected_storage_report(
+            inventory=inventory, manifest=acquisition_manifest, cost_sample=cost_sample
+        )
+
     # 5. Derive every logical product row from the shared inventory. Source authority
     #    and universe/temporal coverage are judged separately.
     matrix_rows: list[ProductMatrixRow] = []
@@ -7348,6 +7372,28 @@ def run_source_qualification(
                 source_state = bar_row.source_qualification_state
                 coverage_state = bar_row.coverage_state
                 release_blocked_override = bar_row.release_blocked
+                if (
+                    source_state == SOURCE_STATE_SAMPLE_PENDING
+                    and evidence_source == "reproved_retained_checkpoint"
+                ):
+                    # The bar row is sample-pending only because this invocation acquired
+                    # nothing. Re-proved retained schema already establishes the taker-flow
+                    # fields, so only that artificial condition is removed here; real
+                    # integrity, access, membership, and coverage states are untouched.
+                    source_state = (
+                        SOURCE_STATE_TYPED_GAPS
+                        if coverage_state == COVERAGE_TYPED_GAPS
+                        else SOURCE_STATE_OFFICIAL
+                    )
+                    # The inherited release block was the same artificial condition, so it
+                    # is lifted only for complete or nonblocking typed-gap coverage with no
+                    # sample-budget block. Blocking coverage, unresolved membership, and a
+                    # real budget block all stay blocking.
+                    if (
+                        coverage_state in {COVERAGE_COMPLETE, COVERAGE_TYPED_GAPS}
+                        and not bar_row.sample_budget_blocked
+                    ):
+                        release_blocked_override = False
             reason = (
                 "derived from the qualified native 1h kline schema and its interval "
                 "coverage; trades and aggTrades are never required"
