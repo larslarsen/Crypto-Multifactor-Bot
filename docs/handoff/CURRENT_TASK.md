@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 126 and publish corrected candidate
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-127 focused-command failure (C1: 2 failed / 254 passed, stop-on-first-failure)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -79,6 +79,7 @@ Governing documents:
 - research/sprint_004/124_CEX002_GROK_REPORT_SPLIT_CONTINUATION.md
 - research/sprint_004/125_CEX002_GROK_REPORT_SPLIT_RESIDUAL_REVIEW.md
 - research/sprint_004/126_CEX002_REPORT_SPLIT_SOURCE_ACCEPTANCE.md
+- research/sprint_004/127_CEX002_REPORT_SPLIT_INTEGRATION_AND_CANDIDATE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
