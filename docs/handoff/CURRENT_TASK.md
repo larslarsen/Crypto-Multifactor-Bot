@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement ADR-0020 under review 137
+Next required actor: Sr Dev - Claude Build - correct ADR-0020 source under review 138
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -91,6 +91,7 @@ Governing documents:
 - research/sprint_004/136_CEX002_RECORD_134_CORRECTION.md
 - docs/adr/0020-historical-contract-authority-and-qualification-budget.md
 - research/sprint_004/137_CEX002_MEMBERSHIP_AND_BUDGET_ARCHITECTURE.md
+- research/sprint_004/138_CEX002_CLAUDE_ADR0020_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1132,5 +1133,23 @@ record. It stops for reviewer source inspection with exact SHA-256 values for ev
 path and the unique CEX test-function count. Hermes remains unauthorized.
 
 No Gate-1 candidate execution, sample acquisition, plan migration, Gate 2, reduced scope,
+Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude ADR-0020 source outcome - correction required
+
+Review 138 accepts and freezes the CLI wiring but rejects the production and test source.
+The authority-table digests are recomputed from mutable tables rather than checked against
+independent review constants; cost samples receive only first-line schema inference instead
+of full parse/time/economic validation, including on retained reuse; the complete Gate-2
+cost manifest publishes no digest; delivery-price finite/provenance checks are incomplete;
+and the test import list contains duplicate names.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 138's bounded
+production/test correction. The CLI and all other paths are frozen. Claude runs no command
+or network/data work, performs no Git or repository-record operation, and stops with the
+two exact hashes and unique CEX test-function count. Hermes remains unauthorized.
+
+No candidate integration/execution, migration, acquisition, Gate 2, reduced scope,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; next ticket remains `NONE`.
