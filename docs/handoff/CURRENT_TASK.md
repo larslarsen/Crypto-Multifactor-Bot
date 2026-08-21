@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-127 focused-command failure (C1: 2 failed / 254 passed, stop-on-first-failure)
+Next required actor: Implementation Dev - Codex Spark - correct two stale CEX tests in review 128
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -80,6 +80,7 @@ Governing documents:
 - research/sprint_004/125_CEX002_GROK_REPORT_SPLIT_RESIDUAL_REVIEW.md
 - research/sprint_004/126_CEX002_REPORT_SPLIT_SOURCE_ACCEPTANCE.md
 - research/sprint_004/127_CEX002_REPORT_SPLIT_INTEGRATION_AND_CANDIDATE.md
+- research/sprint_004/128_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -985,6 +986,31 @@ execution against the completed checkpoint and caches. It publishes record 127 a
 resulting compact report when valid, commits and pushes only the enumerated paths, and
 stops for reviewer inspection on every candidate status. No reset, restore, stash, clean,
 or automatic second candidate invocation is authorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
+
+## Review-127 focused-command outcome - two stale tests rejected
+
+Review 128 accepts Hermes's exact three-path integration and stop-on-first-failure
+discipline. Command 1 collected 256 items and stopped at 2 failed / 254 passed; commands
+2-5, monolith preservation, and the candidate correctly did not run. The 1.06 GB report
+and all data remain unchanged.
+
+Both failures are reviewer-accepted test defects. ADR-0019 intentionally makes
+`storage.acquisition_manifest` a summary rather than a second detailed owner, so expecting
+`storage.acquisition_manifest.rows` is stale. The three selected keys found elsewhere in
+the receipt are legitimate bounded `sample_plan` entries; global key presence does not
+prove duplication of a complete manifest-row object.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only for
+review 128's exact two-assertion correction in the single CEX test path. Production, CLI,
+atomic dependency, fixtures, report, and data are frozen. Spark runs no commands, edits no
+records, and performs no Git operation. It stops for reviewer source inspection with the
+test hash and 209 unique test-function count. Hermes and candidate execution remain
+unauthorized.
 
 No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
