@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build (review-102 CLI preflight correction only)
+Next required actor: Jr Dev - Hermes (review-103 integration, focused verification, and candidate-only execution)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -53,6 +53,7 @@ Governing documents:
 - research/sprint_004/100_CEX002_CLAUDE_CANDIDATE_SOURCE_REVIEW.md
 - research/sprint_004/101_CEX002_CLAUDE_LINEAGE_SOURCE_REVIEW.md
 - research/sprint_004/102_CEX002_CLAUDE_CLI_PREFLIGHT_SOURCE_REVIEW.md
+- research/sprint_004/103_CEX002_PLAN3_CANDIDATE_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -584,3 +585,22 @@ network/data run, migration, integration, repository records, Git, acquisition, 
 work, Nautilus work, or Harmonic Trader work and stops for reviewer inspection with exact
 hashes and the test-function count. Hermes remains unauthorized. Gate 1 remains
 `IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket is `NONE`.
+
+## Claude review-102 source outcome - accepted for integration
+
+Review 103 accepts the accumulated three-path CEX-002 source/test drop. The real CLI now
+preflights exact candidate authority before credential access, directory creation, or any
+transport/cache/checkpoint/journal setup; production repeats the read-only validation and
+keeps the durable version-2 lock and legacy ledger byte-immutable. The focused CLI test
+invokes `main`, blocks every downstream facility, snapshots files and directories, verifies
+exit 1, and proves secret redaction. The production hash and fixtures remain unchanged and
+the accumulated suite contains 170 uniquely named test functions.
+
+Jr Dev - Hermes is authorized only for review 103's exact three-path integration, focused
+commands, and one real `--candidate-plan-only` run against the preserved store. It records
+the result in review 104, including exact before/after lock, ledger, raw-tree, amendment,
+report, plan, manifest, storage, membership, and source evidence. No plan migration, sample
+download, amendment-ledger creation, Gate 2, normalization, catalog work, Nautilus work,
+Harmonic Trader work, or other-ticket work is authorized. A command failure or real exit 1
+stops forward execution and is recorded honestly. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
