@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement review-116 listing execution correction
+Next required actor: Sr Dev - Claude Build - correct review-117 listing source findings
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -68,6 +68,7 @@ Governing documents:
 - research/sprint_004/115_CEX002_PLAN3_CANDIDATE_RESUME.md
 - docs/adr/0018-resumable-bounded-listing-execution.md
 - research/sprint_004/116_CEX002_LISTING_EXECUTION_ARCHITECTURE_REVIEW.md
+- research/sprint_004/117_CEX002_LISTING_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -783,4 +784,26 @@ source/test correction. Claude performs no tests, network/data run, candidate ex
 integration, records, ADR, Git, catalog work, Nautilus work, or Harmonic Trader work and
 stops for source inspection with exact changed-path hashes and the unique CEX test-function
 count. Hermes and further real execution remain unauthorized. Gate 1 remains
+`IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude review-116 listing source outcome - rejected
+
+Review 117 accepts the bounded transport/concurrency and amortized crash-recovery direction
+but rejects the five-path drop before integration. A fresh store raises `KeyError` on the
+new bootstrap field; at least seven accumulated tests are incompatible with the new
+durability/transport contracts; pooled-client first construction, checkpoint counters, and
+retry evidence are not fully deterministic under concurrency; and a failed checkpoint
+write clears pending state before publication succeeds. Cleanup can also skip checkpoint
+flush when client close raises, and library callers became concurrent by default.
+
+ADR-0018 now clarifies that serial-versus-bounded proof compares semantic identity,
+canonical request-to-content mappings, and incident order after normalizing only real
+retrieval timestamps. Sr Dev - Claude Build using Claude Opus 5 is authorized only for
+review 117's surgical correction in the same five paths. Claude runs no commands or data,
+touches no records or Git, and stops for source review with exact hashes and both unique
+test-function counts.
+
+Hermes, integration, tests, and real execution remain unauthorized. No data-scope change,
+cache reset, plan migration, sample acquisition, Gate 2, normalization, catalog work,
+Nautilus work, Harmonic Trader work, or other-ticket work is authorized. Gate 1 remains
 `IN_PROGRESS`; next ticket remains `NONE`.

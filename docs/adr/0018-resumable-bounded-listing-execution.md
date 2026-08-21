@@ -28,13 +28,16 @@ integrity, and report contracts of ADR-0017 while changing only transport and ch
 execution mechanics:
 
 1. One qualification invocation reuses bounded HTTP connection resources and closes them
-   deterministically on success, error, or cancellation. Secrets remain header-only and
-   redacted.
+   deterministically on success, error, or controlled Python cancellation/unwinding.
+   Abrupt process termination relies on operating-system resource reclamation and the
+   crash-recovery rule below. Secrets remain header-only and redacted.
 2. Independent listing requests may use bounded concurrency with explicit backpressure.
    The worker ceiling is finite and inspectable. Request retry limits remain per request;
    concurrency may not multiply a retry budget or create overlapping ownership.
 3. Checkpoint publication has one deterministic writer. Completion order may not change
-   semantic inventory, report identity, incident ordering, or final checkpoint identity.
+   semantic inventory, report identity, incident ordering, request-to-content bindings, or
+   canonical checkpoint key order. Raw checkpoint hashes may differ across independent
+   cold executions only where actual retrieval timestamps are retained as evidence.
 4. The full checkpoint is not rewritten for every page. Newly downloaded listing bytes
    are first published immutably by content hash. Checkpoint updates are amortized and
    explicitly flushed at normal boundaries. After interruption, uncheckpointed retained
@@ -47,14 +50,18 @@ execution mechanics:
 6. Resume uses the existing checkpoint and cache in place. No deletion, relock,
    reconstruction, authority migration, raw acquisition, or reduced listing scope is part
    of this decision.
+7. The programmatic qualification function remains serial by default for backward
+   compatibility. The production CLI supplies the bounded worker default explicitly;
+   tests and other callers opt into concurrency deliberately.
 
 ## Required proof
 
-Deterministic tests must establish connection reuse and closure, the concurrency ceiling,
-single-writer checkpoint integrity, bounded full-checkpoint serialization count, recovery
-of interruption between content publication and checkpoint flush, no refetch of recovered
-requests, tamper rejection, stable serial-versus-bounded final identity, stable retry
-semantics, and unchanged candidate authority/raw/report behavior.
+Deterministic tests must establish connection reuse and closure, thread-safe first use,
+the concurrency ceiling, single-writer checkpoint integrity, bounded full-checkpoint
+serialization count, recovery of interruption between content publication and checkpoint
+flush, no refetch of recovered requests, tamper rejection, stable serial-versus-bounded
+semantic identity and request-to-content mappings after normalizing real retrieval times,
+stable retry evidence ordering, and unchanged candidate authority/raw/report behavior.
 
 ## Consequences
 
