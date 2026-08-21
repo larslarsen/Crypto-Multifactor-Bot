@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review-117 listing source findings
+Next required actor: Sr Dev - Claude Build - correct review-118 cleanup and proof residue
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -69,6 +69,7 @@ Governing documents:
 - docs/adr/0018-resumable-bounded-listing-execution.md
 - research/sprint_004/116_CEX002_LISTING_EXECUTION_ARCHITECTURE_REVIEW.md
 - research/sprint_004/117_CEX002_LISTING_SOURCE_REVIEW.md
+- research/sprint_004/118_CEX002_LISTING_CORRECTION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -802,6 +803,28 @@ retrieval timestamps. Sr Dev - Claude Build using Claude Opus 5 is authorized on
 review 117's surgical correction in the same five paths. Claude runs no commands or data,
 touches no records or Git, and stops for source review with exact hashes and both unique
 test-function counts.
+
+Hermes, integration, tests, and real execution remain unauthorized. No data-scope change,
+cache reset, plan migration, sample acquisition, Gate 2, normalization, catalog work,
+Nautilus work, Harmonic Trader work, or other-ticket work is authorized. Gate 1 remains
+`IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude review-117 listing correction outcome - main module accepted, residue rejected
+
+Review 118 accepts and freezes the main qualification module at SHA-256
+`b6077bf833ae59b2414b441564764179fc0dcff0db6cec3457139a5a26df53e8`.
+The cold path, stale accumulated tests, pooled first-use race, checkpoint counters,
+failed-flush state, retry ordering implementation, and serial library default are closed.
+
+Integration remains unauthorized because the serial-versus-bounded test reads checkpoint
+files its memory indexes never create; combined cleanup failures do not preserve the
+declared primary error; a failed client close increments the successful-close counter; and
+the retry-order test sorts hand-built rows without executing inverted concurrent retries.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 118's four-path
+CLI/shared-transport/test correction. The main qualification module and 17 fixtures are
+frozen. Claude runs no commands or data, touches no records or Git, and stops for source
+review with exact hashes and both unique test-function counts.
 
 Hermes, integration, tests, and real execution remain unauthorized. No data-scope change,
 cache reset, plan migration, sample acquisition, Gate 2, normalization, catalog work,
