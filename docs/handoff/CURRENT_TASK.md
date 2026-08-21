@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build (review-108 residual correction only)
+Next required actor: Jr Dev - Hermes (review-109 exact integration and execution only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -59,6 +59,7 @@ Governing documents:
 - research/sprint_004/106_CEX002_FOCUSED_CORRECTION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/107_CEX002_PLAN3_CANDIDATE_EXECUTION.md
 - research/sprint_004/108_CEX002_RESIDUAL_FOCUSED_FAILURE_REVIEW.md
+- research/sprint_004/109_CEX002_RESIDUAL_CORRECTION_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -677,3 +678,23 @@ edit, Git, acquisition, catalog work, Nautilus work, Harmonic Trader work, or pu
 and stops for reviewer inspection with exact hashes and the unique test-function count.
 Hermes and real candidate execution remain unauthorized. Gate 1 remains `IN_PROGRESS`;
 next ticket remains `NONE`.
+
+## Claude review-108 source outcome - accepted for integration
+
+Review 109 accepts the exact two-path residual correction after static source review.
+Listed-sidecar eligibility now precedes proof, so proof cannot re-admit an ineligible
+monthly object or alter cadence selection. The two cross-root identity tests pin one common
+first holdout instant and still compare complete semantic identity while resume replays the
+durable boundary. The CLI and 17 fixtures remain unchanged; the suite retains 170 unique
+test functions.
+
+Jr Dev - Hermes is authorized only for review 109's exact two-path integration, strict
+stop-on-first-failure focused sequence, and one candidate-only real execution after all five
+commands pass. It publishes record 110 with complete authority, raw-tree, report,
+candidate-plan, manifest, storage, membership, and source evidence. Review 109 contains the
+complete task; no out-of-band instruction is authority.
+
+No plan migration, sample acquisition, amendment-ledger creation, Gate 2, normalization,
+catalog work, Nautilus work, Harmonic Trader work, or other-ticket work is authorized. A
+nonzero focused-command exit stops immediately before all later commands and the real
+candidate process. Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
