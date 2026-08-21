@@ -3169,14 +3169,20 @@ def object_integrity_state(
     A listed ``.CHECKSUM`` sibling is evidence that provider authority exists; it is not
     evidence that the sidecar was parsed, bound to the object, or that raw bytes matched
     it. Only a re-proved retained object earns ``checksum_proved_retained``.
+
+    Precedence is deliberate. A listed sidecar is the outcome-blind selection
+    precondition, so proof may promote validation state only inside the already eligible
+    selection domain: an object whose sidecar was absent from the pinned listing stays
+    ``sidecar_absent`` however well its retained bytes re-prove, and a sample proof can
+    therefore never displace a daily fallback or change cadence selection.
     """
     if key in quarantined:
         return INTEGRITY_QUARANTINED
+    if key not in checksum_keys:
+        return INTEGRITY_SIDECAR_ABSENT
     if key in proved_keys:
         return INTEGRITY_CHECKSUM_PROVED
-    if key in checksum_keys:
-        return INTEGRITY_SIDECAR_LISTED
-    return INTEGRITY_SIDECAR_ABSENT
+    return INTEGRITY_SIDECAR_LISTED
 
 
 def _selectable(state: str) -> bool:

@@ -11,6 +11,7 @@ import json
 import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -346,6 +347,13 @@ def _coinalyze_anchor_transport() -> MemoryCoinalyzeTransport:
     return MemoryCoinalyzeTransport.from_files(
         {path: FIXTURES / name for path, name in COINALYZE_ANCHOR_FIXTURE_FILES.items()}
     )
+
+
+# One explicit timezone-aware instant for the first qualification of every independently
+# created store being compared. Each store pins its own prospective holdout boundary at its
+# first authenticated instant, which is a real semantic difference between roots, so an
+# identity comparison across roots must fix that instant rather than drop the field.
+FIXED_QUALIFICATION_INSTANT = datetime(2026, 8, 20, 12, 0, 0, tzinfo=UTC)
 
 
 # Contiguous months: a real archive has no interior month gap, and a synthetic index that
@@ -1327,9 +1335,15 @@ def test_recovery_fails_closed_on_tampered_retained_bytes(tmp_path: Path) -> Non
 
 def test_report_identity_matches_an_uninterrupted_run(tmp_path: Path) -> None:
     index = _trades_index(["BTCUSDT", "ETHUSDT"])
-    clean = run_source_qualification(store_root=tmp_path / "clean", index=index)
+    # Both roots pin their prospective holdout boundary at the same fixed first
+    # authenticated instant; the resumed root then replays the boundary it pinned.
+    clean = run_source_qualification(
+        store_root=tmp_path / "clean", index=index, now=FIXED_QUALIFICATION_INSTANT
+    )
     resumed_root = tmp_path / "resumed"
-    first = run_source_qualification(store_root=resumed_root, index=index)
+    first = run_source_qualification(
+        store_root=resumed_root, index=index, now=FIXED_QUALIFICATION_INSTANT
+    )
     second = run_source_qualification(store_root=resumed_root, index=index)
     assert second.resume["reused_samples"] > 0
     assert identity_bytes(first) == identity_bytes(second)
@@ -1778,7 +1792,12 @@ def _distinct_bytes_index() -> MemoryObjectIndex:
 
 def test_abort_after_completed_sample_resumes_missing_objects_only(tmp_path: Path) -> None:
     clean_index = _distinct_bytes_index()
-    clean = run_source_qualification(store_root=tmp_path / "clean", index=clean_index)
+    # Both roots pin their prospective holdout boundary at the same fixed first
+    # authenticated instant, so the comparison is over semantics rather than two
+    # independently pinned boundaries.
+    clean = run_source_qualification(
+        store_root=tmp_path / "clean", index=clean_index, now=FIXED_QUALIFICATION_INSTANT
+    )
 
     store_root = tmp_path / "resumed"
     aborting = _distinct_bytes_index()
@@ -1794,7 +1813,9 @@ def test_abort_after_completed_sample_resumes_missing_objects_only(tmp_path: Pat
 
     aborting.fetch_bytes = _abort_after_two  # type: ignore[method-assign]
     with pytest.raises(_InjectedAbort):
-        run_source_qualification(store_root=store_root, index=aborting)
+        run_source_qualification(
+            store_root=store_root, index=aborting, now=FIXED_QUALIFICATION_INSTANT
+        )
 
     progress = json.loads((store_root / "cex002_qualification_progress.json").read_text())
     done_keys = set(progress["objects"])
@@ -4072,6 +4093,15 @@ def test_quarantined_monthly_object_is_not_a_second_representation() -> None:
     assert object_integrity_state(
         monthly.key, checksum_keys={monthly.key}, proved_keys={monthly.key}
     ) == INTEGRITY_CHECKSUM_PROVED
+    # Proof promotes validation state only inside the outcome-blind eligible domain: it can
+    # never override an absent listed sidecar and re-admit the object to selection.
+    assert object_integrity_state(
+        monthly.key, checksum_keys=set(), proved_keys={monthly.key}
+    ) == INTEGRITY_SIDECAR_ABSENT
+    selected_after_proof, _found, _rejected = select_nonoverlapping_objects(
+        [monthly], checksum_keys=set(), proved_keys={monthly.key}
+    )
+    assert selected_after_proof == ()
 
 
 def test_daily_object_without_listed_authority_is_a_typed_gap() -> None:
