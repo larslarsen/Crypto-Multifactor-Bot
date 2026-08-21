@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review-120 source and run bounded evidence
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-121 integration and candidate resume
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -72,6 +72,7 @@ Governing documents:
 - research/sprint_004/118_CEX002_LISTING_CORRECTION_SOURCE_REVIEW.md
 - research/sprint_004/119_CEX002_LISTING_RESIDUAL_TEST_REVIEW.md
 - research/sprint_004/120_CEX002_LISTING_SOURCE_ACCEPTANCE.md
+- research/sprint_004/121_CEX002_LISTING_INTEGRATION_AND_CANDIDATE_RESUME.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
