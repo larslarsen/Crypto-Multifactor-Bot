@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build (review-111 record-path correction only)
+Next required actor: Jr Dev - Hermes (review-112 exact integration and execution only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -62,6 +62,7 @@ Governing documents:
 - research/sprint_004/109_CEX002_RESIDUAL_CORRECTION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/110_CEX002_PLAN3_CANDIDATE_EXECUTION.md
 - research/sprint_004/111_CEX002_HOLDOUT_RECORD_PATH_FAILURE_REVIEW.md
+- research/sprint_004/112_CEX002_RECORD_PATH_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -718,3 +719,21 @@ Claude performs no tests, network/data run, migration, integration, repository-r
 edit, Git, acquisition, catalog work, Nautilus work, Harmonic Trader work, or publication
 and stops for reviewer inspection with the exact source hash. Hermes and real candidate
 execution remain unauthorized. Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude review-111 source outcome - accepted for integration
+
+Review 112 accepts the exact one-path source correction after static review. Only the
+local prospective-holdout `record_path` is excluded from semantic identity; every boundary
+time, identifier, lineage digest, replay rule, state, and outcome-blind assertion remains
+included. The test path, CLI, and 17 fixtures remain unchanged.
+
+Jr Dev - Hermes is authorized only for review 112's exact one-path integration, strict
+stop-on-first-failure focused sequence, and one candidate-only real execution after all five
+commands pass. It publishes record 113 with complete authority, raw-tree, report,
+candidate-plan, manifest, storage, membership, and source evidence. Review 112 contains the
+complete task; no out-of-band instruction is authority.
+
+No plan migration, sample acquisition, amendment-ledger creation, Gate 2, normalization,
+catalog work, Nautilus work, Harmonic Trader work, or other-ticket work is authorized. A
+nonzero focused-command exit stops immediately before all later commands and the real
+candidate process. Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
