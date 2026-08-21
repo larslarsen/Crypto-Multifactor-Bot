@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - publish the record-134 forward correction in review 135
+Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 136 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -88,6 +88,7 @@ Governing documents:
 - research/sprint_004/133_CEX002_RUFF_SOURCE_ACCEPTANCE.md
 - research/sprint_004/134_CEX002_RUFF_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/135_CEX002_TERMINAL_CANDIDATE_REVIEW.md
+- research/sprint_004/136_CEX002_RECORD_134_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1101,3 +1102,15 @@ Gate 2, or automatic second candidate invocation is authorized.
 No reduced scope, report truncation, normalization, catalog publication, Nautilus work,
 Harmonic Trader work, payoff analysis, PAPER, LIVE, or other-ticket work is authorized.
 Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Record-136 forward correction published
+
+Hermes published `research/sprint_004/136_CEX002_RECORD_134_CORRECTION.md` as the forward
+correction required by review 135. Record 134 remains preserved. The correction records
+the exact integration identities, the correct review-133 integration commit `dba025c`, the
+unavailable original C5 transcript, the corrected FAPI cache counts and byte totals, the
+correct manifest phase order, and the correct iterator/header arithmetic.
+
+Every other accepted record-134 candidate, artifact, invariant, mutation, and stop claim
+remains unchanged. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
+remains `NONE`.
