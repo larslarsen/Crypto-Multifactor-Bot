@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import gzip
 import hashlib
 import importlib.util
 import inspect
@@ -53,6 +54,10 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     LISTING_DEFAULT_WORKERS,
     LISTING_MAX_WORKERS,
     MANIFEST_DAILY_FALLBACK,
+    MANIFEST_DETAIL_FORMAT,
+    MANIFEST_DETAIL_KIND,
+    MANIFEST_DETAIL_RELATIVE_ROOT,
+    MANIFEST_DETAIL_SCHEMA_VERSION,
     MANIFEST_INTEGRITY_MISSING,
     MANIFEST_MONTHLY_REJECTED,
     MANIFEST_OVERLAP,
@@ -67,6 +72,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     OFFICIAL_ARCHIVE_FAMILIES,
     OFFICIAL_INCREMENTAL_ENDPOINTS,
     PLAN_INPUTS_CHANGED,
+    REPORT_PUBLICATION_CEILING_BYTES,
     REQUIRED_PRODUCTS,
     SAMPLE_PLAN_LOCK_FILENAME,
     SEMANTICS_INCOHERENT_IDENTITY,
@@ -132,11 +138,15 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     infer_schema_fields,
     is_confirmed_perpetual_row,
     is_retryable_failure,
+    iter_manifest_detail,
     kline_schema_supports_taker_flow,
     listing_authority_digest,
     listing_authority_manifest,
     listing_request_identity,
     listing_request_key,
+    manifest_detail_records,
+    manifest_detail_relative_path,
+    manifest_detail_summary,
     membership_evidence_digest,
     object_calendar_date,
     object_integrity_state,
@@ -146,6 +156,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     parse_provider_checksum,
     parse_s3_list_bucket,
     plan_content_digest,
+    publish_manifest_detail,
     qualification_exit_code,
     refuse_restricted_scope,
     retained_evidence_digest,
@@ -154,12 +165,14 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     select_cost_calibration_sample,
     select_nonoverlapping_objects,
     validate_exchange_info_response,
+    validate_manifest_detail,
     validate_prior_plan_history,
     validate_sample_plan,
     verify_provider_sidecar,
     verify_retained_object,
     vision_object_url,
     vision_prefix,
+    write_qualification_report,
     write_s3_list_bucket,
 )
 
@@ -5777,3 +5790,848 @@ def test_concurrent_distinct_retry_failures_are_canonically_ordered(tmp_path: Pa
         rendered = json.dumps(payload)
         assert "?" not in rendered
         assert "cex002-secret-sentinel" not in rendered
+
+
+# --- ADR-0019 split evidence publication ----------------------------------------------
+
+
+def _detail_report(tmp_path: Path, name: str) -> Any:
+    index = _kline_manifest_index()
+    return run_source_qualification(
+        store_root=tmp_path / name,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+
+
+def _canonical(record: Mapping[str, Any]) -> bytes:
+    """The exact canonical encoding the publisher writes, reproduced by the test."""
+    return (
+        json.dumps(dict(record), sort_keys=True, separators=(",", ":"), default=str) + "\n"
+    ).encode("utf-8")
+
+
+def _detail_lines(store: Path, descriptor: Mapping[str, Any]) -> list[bytes]:
+    with gzip.open(store / str(descriptor["relative_path"]), "rb") as handle:
+        return list(handle.readlines())
+
+
+def _write_detail_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as raw:
+        with gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=9, mtime=0) as handle:
+            handle.write(payload)
+
+
+def _restamp(
+    store: Path,
+    descriptor: Mapping[str, Any],
+    lines: Sequence[bytes],
+    *,
+    recompute: bool = True,
+    header_overrides: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Republish tampered records as a fully self-consistent artifact.
+
+    Both content addresses are recomputed and, unless ``recompute`` is disabled, every
+    copied header and descriptor total is recomputed from the tampered rows themselves.
+    Only a check that re-derives evidence from the record stream can still reject it.
+    """
+    records = [json.loads(line.decode("utf-8")) for line in lines]
+    header = dict(records[0]["record"])
+    updated = dict(descriptor)
+    if recompute:
+        counts = {
+            "row": 0,
+            "collision": 0,
+            "rejection": 0,
+            "raw_validation_pending_key": 0,
+        }
+        families: dict[str, int] = {}
+        raw_bytes = 0
+        consumable = 0
+        objects = 0
+        for item in records[1:]:
+            kind = str(item["record_type"])
+            counts[kind] = counts.get(kind, 0) + 1
+            if kind != "row":
+                continue
+            row = item["record"]
+            objects += 1
+            families[str(row.get("family"))] = families.get(str(row.get("family")), 0) + 1
+            raw_bytes += int(row.get("byte_size") or 0)
+            if row.get("consumable") is True:
+                consumable += 1
+        totals = {
+            "object_count": objects,
+            "compressed_raw_bytes": raw_bytes,
+            "consumable_object_count": consumable,
+            "family_object_counts": dict(sorted(families.items())),
+            "record_counts": counts,
+        }
+        header.update(totals)
+        updated.update(totals)
+        updated["record_counts"] = {**counts, "total_records": len(records)}
+    if header_overrides:
+        header.update(header_overrides)
+    # Only the header is rewritten; every other line is republished byte for byte, so a
+    # noncanonical encoding stays noncanonical in the tampered artifact.
+    payload = _canonical({"record_type": "header", "record": header}) + b"".join(lines[1:])
+    digest = hashlib.sha256(payload).hexdigest()
+    updated["uncompressed_sha256"] = digest
+    updated["uncompressed_bytes"] = len(payload)
+    updated["relative_path"] = manifest_detail_relative_path(digest)
+    path = store / str(updated["relative_path"])
+    _write_detail_bytes(path, payload)
+    updated["compressed_sha256"] = file_sha256(path)
+    updated["compressed_bytes"] = path.stat().st_size
+    return updated
+
+
+def test_manifest_detail_round_trips_every_record(tmp_path: Path) -> None:
+    report = _detail_report(tmp_path, "store")
+    manifest = report.acquisition_manifest
+    descriptor = publish_manifest_detail(manifest, store_root=tmp_path / "store")
+
+    records = list(iter_manifest_detail(tmp_path / "store", descriptor))
+    rows = [item["record"] for item in records if item["record_type"] == "row"]
+    collisions = [item["record"] for item in records if item["record_type"] == "collision"]
+    rejections = [item["record"] for item in records if item["record_type"] == "rejection"]
+    pending = [
+        item["record"]["key"]
+        for item in records
+        if item["record_type"] == "raw_validation_pending_key"
+    ]
+    # Lossless: every selected row, collision, rejection, and pending key survives, each
+    # in exactly the canonical order established when the manifest was built.
+    assert rows == [dict(row) for row in manifest["rows"]]
+    assert collisions == [dict(item) for item in manifest["collisions"]]
+    assert rejections == [dict(item) for item in manifest["rejections"]]
+    assert pending == list(manifest["raw_validation_pending_keys"])
+    keys = [row["key"] for row in rows]
+    assert keys == sorted(keys)
+    # Pending keys are the non-consumable rows in that same key-primary order.
+    assert pending == [row["key"] for row in rows if not row["consumable"]]
+    counts = descriptor["record_counts"]
+    assert counts["row"] == len(manifest["rows"])
+    assert counts["total_records"] == len(records) + 1
+    assert descriptor["object_count"] == manifest["object_count"]
+    assert descriptor["compressed_raw_bytes"] == manifest["compressed_raw_bytes"]
+    assert descriptor["family_object_counts"] == dict(manifest["family_object_counts"])
+    assert descriptor["cadence_rule"] == manifest["cadence_rule"]
+    assert descriptor["integrity_rule"] == manifest["integrity_rule"]
+    assert descriptor["schema_version"] == MANIFEST_DETAIL_SCHEMA_VERSION
+    assert descriptor["relative_path"] == (
+        f"{MANIFEST_DETAIL_RELATIVE_ROOT}/{descriptor['uncompressed_sha256']}.jsonl.gz"
+    )
+    measured = validate_manifest_detail(tmp_path / "store", descriptor)
+    assert measured["compressed_sha256"] == descriptor["compressed_sha256"]
+    assert measured["compressed_bytes"] == descriptor["compressed_bytes"]
+    # Every aggregate the reader returns is recomputed from the rows it just read.
+    assert measured["object_count"] == manifest["object_count"]
+    assert measured["compressed_raw_bytes"] == manifest["compressed_raw_bytes"]
+    assert measured["consumable_object_count"] == manifest["consumable_object_count"]
+    assert measured["family_object_counts"] == dict(manifest["family_object_counts"])
+
+
+def test_manifest_detail_is_deterministic_across_independent_roots(tmp_path: Path) -> None:
+    first = _detail_report(tmp_path, "first")
+    second = _detail_report(tmp_path, "second")
+    first_detail = publish_manifest_detail(
+        first.acquisition_manifest, store_root=tmp_path / "first"
+    )
+    second_detail = publish_manifest_detail(
+        second.acquisition_manifest, store_root=tmp_path / "second"
+    )
+    # Deterministic canonical JSONL and deterministic gzip: both layers match exactly.
+    assert first_detail["uncompressed_sha256"] == second_detail["uncompressed_sha256"]
+    assert first_detail["compressed_sha256"] == second_detail["compressed_sha256"]
+    assert first_detail["uncompressed_bytes"] == second_detail["uncompressed_bytes"]
+    assert first_detail["compressed_bytes"] == second_detail["compressed_bytes"]
+    assert first_detail["relative_path"] == second_detail["relative_path"]
+    # Semantic report identity carries that detail digest.
+    assert identity_bytes(first) == identity_bytes(second)
+    assert first.acquisition_manifest["detail"]["uncompressed_sha256"] == (
+        first_detail["uncompressed_sha256"]
+    )
+    assert first_detail["uncompressed_sha256"] in identity_bytes(first).decode("utf-8")
+
+
+def test_compact_receipt_never_duplicates_the_detailed_manifest(tmp_path: Path) -> None:
+    report = _detail_report(tmp_path, "store")
+    manifest_before = json.dumps(
+        {
+            name: [dict(item) for item in report.acquisition_manifest[name]]
+            for name in ("rows", "collisions", "rejections")
+        },
+        sort_keys=True,
+        default=str,
+    )
+    pending_before = list(report.acquisition_manifest["raw_validation_pending_keys"])
+    receipt_path = tmp_path / "62_report.json"
+    descriptor = write_qualification_report(
+        report, receipt_path, store_root=tmp_path / "store"
+    )
+    document = json.loads(receipt_path.read_text())
+    manifest_block = document["acquisition_manifest"]
+    storage_block = document["storage"]["acquisition_manifest"]
+    detailed = ("rows", "collisions", "rejections", "raw_validation_pending_keys")
+    # Neither receipt surface carries any of the four detailed collections.
+    for block in (manifest_block, storage_block):
+        for name in detailed:
+            assert name not in block
+    # The descriptor appears exactly where ADR-0019 declares it: the manifest surface
+    # carries the complete published descriptor, the storage surface its summary.
+    summary = json.loads(json.dumps(manifest_detail_summary(report.acquisition_manifest)))
+    assert manifest_block["detail"] == descriptor
+    assert storage_block["detail"] == summary
+    assert {name: descriptor[name] for name in summary} == summary
+    assert "detail" not in document
+    assert manifest_block["object_count"] == report.acquisition_manifest["object_count"]
+    assert storage_block["collision_count"] == len(report.acquisition_manifest["collisions"])
+    # The receipt stays comfortably below the fail-closed publication ceiling.
+    assert receipt_path.stat().st_size < REPORT_PUBLICATION_CEILING_BYTES
+
+    rendered = receipt_path.read_bytes()
+    rows = report.acquisition_manifest["rows"]
+    assert len(rows) > 1
+    surfaces = json.dumps([manifest_block, storage_block], sort_keys=True).encode("utf-8")
+    # Not one selected or pending key reaches either receipt surface.
+    for row in rows:
+        assert row["key"].encode("utf-8") not in surfaces
+    for key in report.acquisition_manifest["raw_validation_pending_keys"]:
+        assert key.encode("utf-8") not in surfaces
+    # At most one selected key may appear anywhere in the receipt at all, as the
+    # taker-flow schema lineage reference; a duplicated collection would put every one
+    # of them there.
+    named = [row["key"] for row in rows if row["key"].encode("utf-8") in rendered]
+    assert len(named) <= 1
+    # Publication mutates nothing: the in-memory manifest remains the full authority.
+    assert json.dumps(
+        {
+            name: [dict(item) for item in report.acquisition_manifest[name]]
+            for name in ("rows", "collisions", "rejections")
+        },
+        sort_keys=True,
+        default=str,
+    ) == manifest_before
+    assert list(report.acquisition_manifest["raw_validation_pending_keys"]) == pending_before
+
+
+def test_detail_writer_streams_without_copying_the_collections(tmp_path: Path) -> None:
+    class _Counted(Sequence):
+        """A collection that reports how much of itself the writer has consumed."""
+
+        def __init__(self, items: Sequence[Any]) -> None:
+            self._items = tuple(items)
+            self.yielded = 0
+
+        def __iter__(self) -> Any:
+            for item in self._items:
+                self.yielded += 1
+                yield item
+
+        def __len__(self) -> int:
+            return len(self._items)
+
+        def __getitem__(self, index: Any) -> Any:
+            return self._items[index]
+
+    report = _detail_report(tmp_path, "store")
+    manifest = dict(report.acquisition_manifest)
+    rows = _Counted(manifest["rows"])
+    assert len(rows) > 1
+    manifest["rows"] = rows
+
+    stream = manifest_detail_records(manifest)
+    assert next(stream)["record_type"] == "header"
+    # The header is complete before a single row has been touched.
+    assert rows.yielded == 0
+    first = next(stream)
+    assert first["record_type"] == "row"
+    # Exactly one row was consumed to produce the first row record. A `sorted` or `list`
+    # over the collection would have drained all of it before yielding anything.
+    assert rows.yielded == 1
+    assert first["record"] == dict(report.acquisition_manifest["rows"][0])
+
+    # The source itself makes no whole-collection copy on the publication path.
+    for function in (manifest_detail_records, _write_detail_stream_ref()):
+        tree = ast.parse(inspect.getsource(function))
+        called = {
+            node.func.id
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        assert not called & {"sorted", "list", "tuple", "set", "frozenset", "reversed"}
+
+
+def _write_detail_stream_ref() -> Any:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    return module._write_detail_stream
+
+
+def test_duplicate_row_key_fails_closed_when_other_fields_change(tmp_path: Path) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    lines = _detail_lines(store, descriptor)
+    records = [json.loads(line.decode("utf-8")) for line in lines]
+    first_row = next(
+        index for index, item in enumerate(records) if item["record_type"] == "row"
+    )
+    duplicate = json.loads(lines[first_row].decode("utf-8"))
+    duplicate["record"]["family_group"] = "other_group"
+    duplicate["record"]["symbol"] = "OTHERUSDT"
+    duplicate["record"]["byte_size"] = 1
+    records.insert(first_row + 1, duplicate)
+    poisoned = _restamp(store, descriptor, [_canonical(item) for item in records])
+    with pytest.raises(ResumeIntegrityError, match="duplicate row key"):
+        validate_manifest_detail(store, poisoned)
+
+
+def test_validator_retains_only_the_previous_row_key() -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    source = inspect.getsource(module.validate_manifest_detail)
+    assert "row_keys" not in source
+    assert ".add(" not in source
+    tree = ast.parse(source)
+    called = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "list" not in called
+    assert "tuple" not in called
+    assert "frozenset" not in called
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
+            continue
+        if node.func.id == "sorted":
+            # Family totals are fixed-width; sorting them is not a row-population copy.
+            assert node.args
+            arg = node.args[0]
+            assert isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute)
+            assert arg.func.attr == "items"
+            assert isinstance(arg.func.value, ast.Name) and arg.func.value.id == "families"
+            continue
+        if node.func.id != "set":
+            continue
+        # Field-set membership of one record is constant-size; a row-key set is not.
+        assert len(node.args) == 1
+        arg = node.args[0]
+        assert isinstance(arg, ast.Name) and arg.id == "body"
+
+
+def test_detail_iterator_validates_before_exposing_the_first_record(tmp_path: Path) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    lines = _detail_lines(store, descriptor)
+    # The tamper is the very last record of the artifact.
+    tampered = [
+        *lines,
+        _canonical(
+            {
+                "record_type": "raw_validation_pending_key",
+                "record": {"key": "data/futures/um/monthly/klines/NOTAROW/1h/never.zip"},
+            }
+        ),
+    ]
+    poisoned = _restamp(store, descriptor, tampered)
+
+    records = iter_manifest_detail(store, poisoned)
+    # A consumer that reads only the first row still gets nothing: validation completes
+    # before any record is exposed, so no unvalidated evidence can reach Gate 2.
+    with pytest.raises(ResumeIntegrityError, match="pending keys do not reconcile"):
+        next(records)
+
+
+@pytest.mark.parametrize(
+    ("corruption", "message"),
+    [
+        ("missing", "artifact is missing"),
+        ("truncated", "unreadable or truncated"),
+        ("malformed", "not canonical JSON"),
+        ("tampered_digest", "digest does not match its descriptor"),
+        ("count_mismatch", "record count does not match its descriptor"),
+        ("byte_mismatch", "byte count does not match"),
+        ("path_escape", "escapes the store evidence root"),
+        ("wrong_address", "not at its own content address"),
+    ],
+)
+def test_detail_evidence_fails_closed_on_every_corruption(
+    tmp_path: Path, corruption: str, message: str
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    path = store / str(descriptor["relative_path"])
+
+    if corruption == "missing":
+        path.unlink()
+    elif corruption == "truncated":
+        payload = path.read_bytes()
+        path.write_bytes(payload[: len(payload) // 2])
+        # A truncation that also restamps the compressed identity still fails closed.
+        descriptor["compressed_sha256"] = file_sha256(path)
+        descriptor["compressed_bytes"] = path.stat().st_size
+    elif corruption == "malformed":
+        body = b"{not json}\n"
+        digest = hashlib.sha256(body).hexdigest()
+        descriptor["uncompressed_sha256"] = digest
+        descriptor["uncompressed_bytes"] = len(body)
+        descriptor["relative_path"] = manifest_detail_relative_path(digest)
+        path = store / str(descriptor["relative_path"])
+        _write_detail_bytes(path, body)
+        descriptor["compressed_sha256"] = file_sha256(path)
+        descriptor["compressed_bytes"] = path.stat().st_size
+    elif corruption == "tampered_digest":
+        # Different content published at the original content address.
+        _write_detail_bytes(path, _canonical({"record_type": "header", "record": {}}))
+        descriptor["compressed_sha256"] = file_sha256(path)
+        descriptor["compressed_bytes"] = path.stat().st_size
+    elif corruption == "count_mismatch":
+        descriptor["record_counts"] = {**descriptor["record_counts"], "row": 999_999}
+    elif corruption == "byte_mismatch":
+        descriptor["uncompressed_bytes"] = int(descriptor["uncompressed_bytes"]) + 1
+    elif corruption == "path_escape":
+        descriptor["relative_path"] = "../escaped.jsonl.gz"
+    else:
+        descriptor["relative_path"] = (
+            f"{MANIFEST_DETAIL_RELATIVE_ROOT}/{'a' * 64}.jsonl.gz"
+        )
+
+    with pytest.raises(ResumeIntegrityError, match=message):
+        validate_manifest_detail(store, descriptor)
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("schema_version", "cex002_manifest_detail_v99", "schema version is not supported"),
+        ("format", "parquet", "format is not supported"),
+        ("compressed_sha256", "0" * 64, "compressed digest does not match"),
+        ("compressed_bytes", 7, "compressed size does not match"),
+        ("object_count", "many", "non-integer value"),
+        ("consumable_object_count", None, "descriptor is incomplete"),
+        ("cadence_rule", None, "descriptor is incomplete"),
+        ("record_counts", None, "descriptor is incomplete"),
+    ],
+)
+def test_detail_descriptor_identity_is_fully_proved(
+    tmp_path: Path, field_name: str, value: Any, message: str
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    if value is None:
+        descriptor.pop(field_name)
+    else:
+        descriptor[field_name] = value
+    with pytest.raises(ResumeIntegrityError, match=message):
+        validate_manifest_detail(store, descriptor)
+
+
+def test_detail_absolute_path_is_refused_even_inside_the_evidence_root(
+    tmp_path: Path,
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    absolute = (store / str(descriptor["relative_path"])).resolve()
+    assert absolute.is_file()
+    descriptor["relative_path"] = str(absolute)
+    # The bytes are the right bytes in the right place; the reference shape is still refused.
+    with pytest.raises(ResumeIntegrityError, match="escapes the store evidence root"):
+        validate_manifest_detail(store, descriptor)
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"kind": "some_other_artifact"}, "header identity is not this ticket"),
+        ({"ticket": "CEX-999"}, "header identity is not this ticket"),
+        ({"schema_version": "cex002_manifest_detail_v99"}, "header schema or format"),
+        ({"format": "parquet"}, "header schema or format"),
+        ({"cadence_rule": "monthly_only_v0"}, "cadence rule disagrees"),
+        ({"integrity_rule": "trust the listing"}, "integrity rule disagrees"),
+    ],
+)
+def test_detail_header_identity_is_fully_proved(
+    tmp_path: Path, override: Mapping[str, Any], message: str
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    assert descriptor["schema_version"] == MANIFEST_DETAIL_SCHEMA_VERSION
+    assert MANIFEST_DETAIL_KIND and MANIFEST_DETAIL_FORMAT
+    poisoned = _restamp(
+        store, descriptor, _detail_lines(store, descriptor), header_overrides=override
+    )
+    with pytest.raises(ResumeIntegrityError, match=message):
+        validate_manifest_detail(store, poisoned)
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    [
+        ("aggregate", "aggregate does not match its descriptor"),
+        ("order", "not in strict canonical order"),
+        ("duplicate", "duplicate row key"),
+        ("pending", "pending keys do not reconcile"),
+        ("encoding", "not canonically encoded"),
+        ("unknown_field", "unknown or missing fields"),
+        ("missing_field", "unknown or missing fields"),
+        ("pending_fields", "unknown or missing fields"),
+        ("consumable_type", "unknown or missing fields"),
+        ("phase_order", "out of phase order"),
+    ],
+)
+def test_self_consistent_detail_tampering_is_still_rejected(
+    tmp_path: Path, tamper: str, message: str
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    descriptor = dict(publish_manifest_detail(report.acquisition_manifest, store_root=store))
+    lines = _detail_lines(store, descriptor)
+    records = [json.loads(line.decode("utf-8")) for line in lines]
+    row_positions = [
+        index for index, item in enumerate(records) if item["record_type"] == "row"
+    ]
+    assert len(row_positions) > 1
+    first_row = row_positions[0]
+    recompute = True
+
+    if tamper == "aggregate":
+        # Only the row bytes move; the copied totals are deliberately left alone.
+        record = records[first_row]
+        record["record"]["byte_size"] = int(record["record"].get("byte_size") or 0) + 1_000_000
+        lines = [_canonical(item) for item in records]
+        recompute = False
+    elif tamper == "order":
+        records[first_row], records[row_positions[1]] = (
+            records[row_positions[1]],
+            records[first_row],
+        )
+        lines = [_canonical(item) for item in records]
+    elif tamper == "duplicate":
+        duplicate = json.loads(lines[first_row].decode("utf-8"))
+        # Same physical key, different remaining fields, immediately adjacent so the
+        # key-primary contract sees a repeated key rather than a later order reversal.
+        duplicate["record"]["family_group"] = "zzz_duplicate_group"
+        duplicate["record"]["byte_size"] = int(duplicate["record"].get("byte_size") or 0) + 1
+        records.insert(first_row + 1, duplicate)
+        lines = [_canonical(item) for item in records]
+    elif tamper == "pending":
+        records.append(
+            {
+                "record_type": "raw_validation_pending_key",
+                "record": {"key": "data/futures/um/monthly/klines/GHOST/1h/never.zip"},
+            }
+        )
+        lines = [_canonical(item) for item in records]
+    elif tamper == "encoding":
+        # Semantically identical, but not the canonical encoding of itself.
+        noncanonical = (json.dumps(records[first_row], default=str) + "\n").encode("utf-8")
+        lines = [
+            *[_canonical(item) for item in records[:first_row]],
+            noncanonical,
+            *[_canonical(item) for item in records[first_row + 1 :]],
+        ]
+    elif tamper == "unknown_field":
+        records[first_row]["record"]["operator_note"] = "approved"
+        lines = [_canonical(item) for item in records]
+    elif tamper == "missing_field":
+        records[first_row]["record"].pop("sidecar_sha256")
+        lines = [_canonical(item) for item in records]
+    elif tamper == "pending_fields":
+        records.append(
+            {
+                "record_type": "raw_validation_pending_key",
+                "record": {
+                    "key": "data/futures/um/monthly/klines/GHOST/1h/never.zip",
+                    "note": "operator",
+                },
+            }
+        )
+        lines = [_canonical(item) for item in records]
+    elif tamper == "consumable_type":
+        records[first_row]["record"]["consumable"] = 1
+        lines = [_canonical(item) for item in records]
+    else:
+        records.insert(
+            row_positions[-1],
+            {
+                "record_type": "collision",
+                "record": {"symbol": "BTCUSDT", "family_group": "klines", "note": "phase"},
+            },
+        )
+        lines = [_canonical(item) for item in records]
+
+    poisoned = _restamp(store, descriptor, lines, recompute=recompute)
+    with pytest.raises(ResumeIntegrityError, match=message):
+        validate_manifest_detail(store, poisoned)
+
+
+def test_receipt_ceiling_fails_closed_without_truncation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    receipt_path = tmp_path / "62_report.json"
+    write_qualification_report(report, receipt_path, store_root=tmp_path / "store")
+    before = receipt_path.read_bytes()
+
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    monkeypatch.setattr(module, "REPORT_PUBLICATION_CEILING_BYTES", 32)
+    with pytest.raises(SourceQualificationError, match="exceeds the publication ceiling"):
+        write_qualification_report(report, receipt_path, store_root=tmp_path / "store")
+    # The prior receipt is byte-identical; nothing was truncated or partially replaced.
+    assert receipt_path.read_bytes() == before
+    assert not list(receipt_path.parent.glob(".partial-*"))
+
+
+def test_receipt_survives_an_injected_detail_publication_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    receipt_path = tmp_path / "62_report.json"
+    write_qualification_report(report, receipt_path, store_root=tmp_path / "store")
+    before = receipt_path.read_bytes()
+
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+
+    def _explode(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        raise OSError("evidence root unavailable")
+
+    monkeypatch.setattr(module, "publish_manifest_detail", _explode)
+    with pytest.raises(OSError, match="evidence root unavailable"):
+        write_qualification_report(report, receipt_path, store_root=tmp_path / "store")
+    # Detail publication precedes the receipt, so a failure leaves the prior one intact.
+    assert receipt_path.read_bytes() == before
+
+
+def test_detail_publication_leaves_no_partial_artifact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    detail_root = store / MANIFEST_DETAIL_RELATIVE_ROOT
+
+    def _partial(_manifest: Mapping[str, Any], handle: Any) -> tuple[str, int]:
+        handle.write(b"half a manifest")
+        raise OSError("detail stream interrupted")
+
+    monkeypatch.setattr(module, "_write_detail_stream", _partial)
+    with pytest.raises(OSError, match="detail stream interrupted"):
+        publish_manifest_detail(report.acquisition_manifest, store_root=store)
+    # Neither the content address nor the temporary file survives the failed write.
+    assert list(detail_root.iterdir()) == []
+
+
+def test_detail_publication_cleans_up_after_a_failed_replace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    detail_root = store / MANIFEST_DETAIL_RELATIVE_ROOT
+
+    def _refuse(self: Path, target: Any) -> None:
+        raise OSError("replace refused")
+
+    monkeypatch.setattr(Path, "replace", _refuse)
+    with pytest.raises(OSError, match="replace refused"):
+        publish_manifest_detail(report.acquisition_manifest, store_root=store)
+    # The fully written temporary file is removed rather than left as pseudo-evidence.
+    assert list(detail_root.iterdir()) == []
+
+
+def test_receipt_publication_flushes_and_fsyncs_before_replacing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    receipt_path = tmp_path / "62_report.json"
+    descriptor = write_qualification_report(report, receipt_path, store_root=store)
+    before = receipt_path.read_bytes()
+
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+
+    def _refuse(_fd: int) -> None:
+        raise OSError("fsync refused")
+
+    # The detail is already published, so only the receipt reaches the durability barrier.
+    monkeypatch.setattr(module.os, "fsync", _refuse)
+    with pytest.raises(OSError, match="fsync refused"):
+        write_qualification_report(report, receipt_path, store_root=store)
+    monkeypatch.undo()
+    # Bytes only become the receipt after they are durable; the prior one is untouched.
+    assert receipt_path.read_bytes() == before
+    assert not list(receipt_path.parent.glob(".partial-*"))
+    assert validate_manifest_detail(store, descriptor)["object_count"] == (
+        report.acquisition_manifest["object_count"]
+    )
+
+
+def test_receipt_partial_write_preserves_the_prior_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    receipt_path = tmp_path / "62_report.json"
+    write_qualification_report(report, receipt_path, store_root=store)
+    before = receipt_path.read_bytes()
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    original = module._atomic_publish
+
+    def _guarded(dest: Path, write: Any) -> None:
+        if Path(dest).name == receipt_path.name:
+
+            def _partial(handle: Any) -> None:
+                handle.write(b"{")
+                raise OSError("receipt stream interrupted")
+
+            original(dest, _partial)
+            return
+        original(dest, write)
+
+    monkeypatch.setattr(module, "_atomic_publish", _guarded)
+    with pytest.raises(OSError, match="receipt stream interrupted"):
+        write_qualification_report(report, receipt_path, store_root=store)
+    monkeypatch.undo()
+    assert receipt_path.read_bytes() == before
+    assert not list(receipt_path.parent.glob(".partial-*"))
+
+
+def test_receipt_replace_failure_preserves_the_prior_receipt_and_valid_detail(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    receipt_path = tmp_path / "62_report.json"
+    receipt_path.write_bytes(b'{"prior": "receipt"}\n')
+    before = receipt_path.read_bytes()
+    original = Path.replace
+
+    def _guarded(self: Path, target: Any) -> Any:
+        if Path(target).name == receipt_path.name:
+            raise OSError("receipt replace refused")
+        return original(self, target)
+
+    monkeypatch.setattr(Path, "replace", _guarded)
+    with pytest.raises(OSError, match="receipt replace refused"):
+        write_qualification_report(report, receipt_path, store_root=store)
+    monkeypatch.undo()
+    # The prior receipt is byte-identical and no temporary file is left behind.
+    assert receipt_path.read_bytes() == before
+    assert not list(receipt_path.parent.glob(".partial-*"))
+    # The orphaned detail is allowed, because it is complete, immutable, and valid.
+    detail_root = store / MANIFEST_DETAIL_RELATIVE_ROOT
+    orphans = list(detail_root.iterdir())
+    assert len(orphans) == 1
+    summary = manifest_detail_summary(report.acquisition_manifest)
+    validate_manifest_detail(
+        store,
+        {
+            **summary,
+            "relative_path": manifest_detail_relative_path(summary["uncompressed_sha256"]),
+            "compressed_sha256": file_sha256(orphans[0]),
+            "compressed_bytes": orphans[0].stat().st_size,
+        },
+    )
+
+
+def test_publication_temporary_files_are_collision_safe_siblings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    receipt_path = tmp_path / "62_report.json"
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    original = module.tempfile.mkstemp
+    observed: list[Path] = []
+
+    def _record(**kwargs: Any) -> tuple[int, str]:
+        handle, name = original(**kwargs)
+        observed.append(Path(name))
+        return handle, name
+
+    monkeypatch.setattr(module.tempfile, "mkstemp", _record)
+    write_qualification_report(report, receipt_path, store_root=store)
+    write_qualification_report(report, receipt_path, store_root=store)
+    monkeypatch.undo()
+
+    receipt_temps = [item for item in observed if item.parent == receipt_path.parent]
+    assert len(receipt_temps) == 2
+    # Same directory, so the replace stays atomic; distinct names, so two concurrent
+    # publications can never write through one another's temporary file.
+    assert receipt_temps[0] != receipt_temps[1]
+    for temp in receipt_temps:
+        assert temp.name.startswith(f".partial-{receipt_path.name}.")
+        assert not temp.exists()
+
+
+def test_existing_detail_artifact_is_revalidated_and_reused(tmp_path: Path) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    first = publish_manifest_detail(report.acquisition_manifest, store_root=store)
+    assert first["reused_existing"] is False
+    second = publish_manifest_detail(report.acquisition_manifest, store_root=store)
+    # A pre-existing content-addressed artifact is rehashed and structurally revalidated.
+    assert second["reused_existing"] is True
+    assert second["uncompressed_sha256"] == first["uncompressed_sha256"]
+    assert second["compressed_sha256"] == first["compressed_sha256"]
+    assert len(list((store / MANIFEST_DETAIL_RELATIVE_ROOT).iterdir())) == 1
+
+
+def test_reuse_of_a_tampered_existing_artifact_fails_closed(tmp_path: Path) -> None:
+    report = _detail_report(tmp_path, "store")
+    store = tmp_path / "store"
+    first = publish_manifest_detail(report.acquisition_manifest, store_root=store)
+    path = store / str(first["relative_path"])
+    _write_detail_bytes(path, _canonical({"record_type": "header", "record": {}}))
+    # Content-addressed reuse never trusts the file name it found.
+    with pytest.raises(ResumeIntegrityError, match="digest does not match"):
+        publish_manifest_detail(report.acquisition_manifest, store_root=store)
+
+
+def test_split_publication_leaves_gate1_authority_unchanged(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    store = tmp_path / "store"
+    report = run_source_qualification(
+        store_root=store,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    identity_before = identity_bytes(report)
+    descriptor = write_qualification_report(report, tmp_path / "62.json", store_root=store)
+    # Publication is evidence-only: it changes no authority, plan, or acquisition state.
+    assert identity_bytes(report) == identity_before
+    assert report.candidate_plan["migration_authorized"] is False
+    assert report.candidate_plan["download_authorized"] is False
+    assert report.accepted is False
+    assert report.gate_status == "BLOCKED"
+    assert not (store / AMENDMENT_LEDGER_FILENAME).exists()
+    document = json.loads((tmp_path / "62.json").read_text())
+    for key in ("membership", "plan_lock", "budget", "storage", "product_matrix", "coinalyze"):
+        assert key in document
+    assert document["acquisition_manifest"]["detail"] == descriptor
+    assert descriptor["record_counts"]["row"] == len(report.acquisition_manifest["rows"])

@@ -21,18 +21,22 @@ full-universe support map.
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import io
 import json
+import os
 import random
 import re
 import shutil
+import tempfile
 import threading
 import time
 import zipfile
-from collections.abc import Callable, Collection, Mapping, Sequence
+import zlib
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -425,6 +429,58 @@ LISTING_DEFAULT_WORKERS: int = LISTING_MAX_WORKERS
 # own self-identifying bytes, so an interruption between publication and flush never
 # refetches.
 LISTING_CHECKPOINT_FLUSH_PAGES: int = 256
+
+# ADR-0019 evidence publication. The tracked receipt stays compact and the complete
+# manifest detail is published once, content-addressably, beneath the ignored data root.
+MANIFEST_DETAIL_SCHEMA_VERSION: str = "cex002_manifest_detail_v1"
+MANIFEST_DETAIL_FORMAT: str = "canonical_jsonl_gzip"
+MANIFEST_DETAIL_RELATIVE_ROOT: str = "evidence/manifests/sha256"
+MANIFEST_DETAIL_SUFFIX: str = ".jsonl.gz"
+MANIFEST_DETAIL_RECORD_TYPES: tuple[str, ...] = (
+    "row",
+    "collision",
+    "rejection",
+    "raw_validation_pending_key",
+)
+MANIFEST_DETAIL_KIND: str = "cex002_manifest_detail"
+# Every selected-manifest row field. An unknown or missing field fails closed instead of
+# being coerced to a default.
+MANIFEST_ROW_FIELDS: frozenset[str] = frozenset(
+    {
+        "key",
+        "family",
+        "family_group",
+        "symbol",
+        "cadence",
+        "byte_size",
+        "integrity_state",
+        "validation_state",
+        "consumable",
+        "sidecar_key",
+        "sidecar_sha256",
+        "economic_interval",
+        "economic_interval_kind",
+    }
+)
+MANIFEST_DETAIL_DESCRIPTOR_FIELDS: tuple[str, ...] = (
+    "schema_version",
+    "format",
+    "relative_path",
+    "uncompressed_sha256",
+    "uncompressed_bytes",
+    "compressed_sha256",
+    "compressed_bytes",
+    "record_counts",
+    "object_count",
+    "compressed_raw_bytes",
+    "consumable_object_count",
+    "family_object_counts",
+    "cadence_rule",
+    "integrity_rule",
+)
+# A conservative publication ceiling for the tracked receipt. Exceeding it fails before
+# any replacement; evidence is never truncated and no field is silently dropped.
+REPORT_PUBLICATION_CEILING_BYTES: int = 90_000_000
 
 # A monthly package is canonical only once its provider checksum is officially listed.
 # Anything else is quarantined provenance and its interval falls back to daily objects.
@@ -1072,6 +1128,42 @@ class QualificationReport:
         payload = asdict(self)
         payload["product_matrix"] = [asdict(row) for row in self.product_matrix]
         payload["samples"] = [asdict(sample) for sample in self.samples]
+        return payload
+
+    def to_receipt_dict(self, detail: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        """The compact tracked receipt: every field except the detailed collections.
+
+        ADR-0019 keeps the detailed manifest out of the receipt entirely. The manifest
+        block keeps its low-cardinality totals plus the content-addressed detail
+        descriptor, so nothing is summarized away and nothing is duplicated.
+        """
+        payload: dict[str, Any] = {}
+        for item in fields(self):
+            name = item.name
+            if name == "acquisition_manifest":
+                continue
+            if name == "product_matrix":
+                payload[name] = [asdict(row) for row in self.product_matrix]
+            elif name == "samples":
+                payload[name] = [asdict(sample) for sample in self.samples]
+            else:
+                payload[name] = getattr(self, name)
+        manifest = dict(self.acquisition_manifest)
+        descriptor = dict(detail or manifest.get("detail") or {})
+        payload["acquisition_manifest"] = {
+            "object_count": manifest.get("object_count"),
+            "compressed_raw_bytes": manifest.get("compressed_raw_bytes"),
+            "consumable_object_count": manifest.get("consumable_object_count"),
+            "collision_count": len(manifest.get("collisions") or ()),
+            "rejection_count": len(manifest.get("rejections") or ()),
+            "raw_validation_pending_count": len(
+                manifest.get("raw_validation_pending_keys") or ()
+            ),
+            "integrity_rule": manifest.get("integrity_rule"),
+            "cadence_rule": manifest.get("cadence_rule"),
+            "family_object_counts": dict(manifest.get("family_object_counts") or {}),
+            "detail": descriptor,
+        }
         return payload
 
 
@@ -3550,8 +3642,14 @@ def build_acquisition_manifest(
                     )
                 )
                 by_family[family] = by_family.get(family, 0) + 1
-    rows.sort(key=lambda item: (item["family_group"], item["symbol"], item["key"]))
+    # Canonical order is established exactly once, here at the construction boundary.
+    # ``key`` is the selected physical-object identity and the primary sort component.
+    # Publication then streams these collections without copying or re-sorting them.
+    rows.sort(key=lambda item: str(item["key"]))
+    collisions.sort(key=_canonical_line)
+    rejections.sort(key=_canonical_line)
     _assert_no_overlapping_coverage(rows)
+    # Row order is the canonical pending order: the keys of the non-consumable rows.
     pending = tuple(row["key"] for row in rows if not row["consumable"])
     return {
         "object_count": len(selected),
@@ -5892,7 +5990,9 @@ def drop_identity_volatility(value: Any) -> Any:
 
 
 def identity_payload(report: QualificationReport) -> dict[str, Any]:
-    return drop_identity_volatility(report.to_dict())
+    # Semantic identity is taken over the compact receipt, so it carries the detail's
+    # uncompressed digest and summary counters rather than a second copy of every row.
+    return drop_identity_volatility(report.to_receipt_dict())
 
 
 def identity_bytes(report: QualificationReport) -> bytes:
@@ -7354,6 +7454,11 @@ def run_source_qualification(
             inventory=inventory, manifest=acquisition_manifest, cost_sample=cost_sample
         )
 
+    # 4c. Detail identity of the final manifest: a streamed digest and counts that carry
+    #     the complete detailed evidence into semantic report identity without embedding
+    #     a single row in the tracked receipt.
+    manifest_detail = manifest_detail_summary(acquisition_manifest)
+
     # 5. Derive every logical product row from the shared inventory. Source authority
     #    and universe/temporal coverage are judged separately.
     matrix_rows: list[ProductMatrixRow] = []
@@ -7960,19 +8065,25 @@ def run_source_qualification(
                 "selector": cost_sample["selector"],
                 "families": list(cost_sample["families"]),
             },
+            # ADR-0019: a summary/reference only. ``acquisition_manifest`` is the sole
+            # owner of the detailed collections; they are never serialized twice.
             "acquisition_manifest": {
                 "object_count": acquisition_manifest["object_count"],
                 "compressed_raw_bytes": acquisition_manifest["compressed_raw_bytes"],
-                "rows": [dict(row) for row in acquisition_manifest["rows"]],
-                "collisions": list(acquisition_manifest["collisions"]),
-                "rejections": list(acquisition_manifest["rejections"]),
-                "raw_validation_pending_keys": list(
+                "consumable_object_count": acquisition_manifest["consumable_object_count"],
+                "collision_count": len(acquisition_manifest["collisions"]),
+                "rejection_count": len(acquisition_manifest["rejections"]),
+                "raw_validation_pending_count": len(
                     acquisition_manifest["raw_validation_pending_keys"]
                 ),
-                "consumable_object_count": acquisition_manifest["consumable_object_count"],
                 "integrity_rule": acquisition_manifest["integrity_rule"],
                 "cadence_rule": acquisition_manifest["cadence_rule"],
                 "family_object_counts": dict(acquisition_manifest["family_object_counts"]),
+                "detail": manifest_detail,
+                "detail_reference": (
+                    "detailed rows, collisions, rejections, and pending keys live in the "
+                    "content-addressed manifest detail artifact, not in this receipt"
+                ),
             },
             "gate2_feasibility": {
                 **feasibility,
@@ -8060,6 +8171,7 @@ def run_source_qualification(
         },
         candidate_plan=candidate_plan_record,
         prospective_holdout=prospective_holdout_record(holdout_boundary),
+        # The sole in-memory owner of the detailed manifest collections.
         acquisition_manifest={
             "object_count": acquisition_manifest["object_count"],
             "compressed_raw_bytes": acquisition_manifest["compressed_raw_bytes"],
@@ -8072,6 +8184,8 @@ def run_source_qualification(
             "consumable_object_count": acquisition_manifest["consumable_object_count"],
             "integrity_rule": acquisition_manifest["integrity_rule"],
             "cadence_rule": acquisition_manifest["cadence_rule"],
+            "family_object_counts": dict(acquisition_manifest["family_object_counts"]),
+            "detail": manifest_detail,
         },
     )
 
@@ -8092,9 +8206,576 @@ def accept_qualification(report: QualificationReport) -> None:
         )
 
 
-def write_qualification_report(report: QualificationReport, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(report.to_dict(), indent=2, sort_keys=True, default=str) + "\n",
-        encoding="utf-8",
+def _canonical_line(payload: Mapping[str, Any]) -> bytes:
+    """One canonical JSON Lines record: sorted keys, no whitespace, one newline."""
+    return (
+        json.dumps(dict(payload), sort_keys=True, separators=(",", ":"), default=str) + "\n"
+    ).encode("utf-8")
+
+
+def manifest_detail_records(manifest: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
+    """Every detailed manifest record, streamed in its already-canonical order.
+
+    The collections were canonicalized once at their construction boundary, so this
+    generator never copies or re-sorts them: publication holds one record at a time
+    however many rows the universe selects.
+    """
+    rows = manifest.get("rows") or ()
+    collisions = manifest.get("collisions") or ()
+    rejections = manifest.get("rejections") or ()
+    pending = manifest.get("raw_validation_pending_keys") or ()
+    yield {
+        "record_type": "header",
+        "record": {
+            "kind": MANIFEST_DETAIL_KIND,
+            "ticket": TICKET_ID,
+            "schema_version": MANIFEST_DETAIL_SCHEMA_VERSION,
+            "format": MANIFEST_DETAIL_FORMAT,
+            "cadence_rule": str(manifest.get("cadence_rule") or ""),
+            "integrity_rule": str(manifest.get("integrity_rule") or ""),
+            "object_count": int(manifest.get("object_count") or 0),
+            "compressed_raw_bytes": int(manifest.get("compressed_raw_bytes") or 0),
+            "consumable_object_count": int(manifest.get("consumable_object_count") or 0),
+            "family_object_counts": dict(manifest.get("family_object_counts") or {}),
+            "record_counts": {
+                "row": len(rows),
+                "collision": len(collisions),
+                "rejection": len(rejections),
+                "raw_validation_pending_key": len(pending),
+            },
+        },
+    }
+    for row in rows:
+        yield {"record_type": "row", "record": row}
+    for item in collisions:
+        yield {"record_type": "collision", "record": item}
+    for item in rejections:
+        yield {"record_type": "rejection", "record": item}
+    for key in pending:
+        yield {"record_type": "raw_validation_pending_key", "record": {"key": key}}
+
+
+def manifest_detail_summary(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Content identity and counts of the detail artifact, without writing anything."""
+    digest = hashlib.sha256()
+    counts = {name: 0 for name in MANIFEST_DETAIL_RECORD_TYPES}
+    uncompressed = 0
+    total = 0
+    for record in manifest_detail_records(manifest):
+        line = _canonical_line(record)
+        digest.update(line)
+        uncompressed += len(line)
+        total += 1
+        kind = str(record["record_type"])
+        if kind in counts:
+            counts[kind] += 1
+    return {
+        "schema_version": MANIFEST_DETAIL_SCHEMA_VERSION,
+        "format": MANIFEST_DETAIL_FORMAT,
+        "uncompressed_sha256": digest.hexdigest(),
+        "uncompressed_bytes": uncompressed,
+        "record_counts": {**counts, "total_records": total},
+        "object_count": int(manifest.get("object_count") or 0),
+        "compressed_raw_bytes": int(manifest.get("compressed_raw_bytes") or 0),
+        "consumable_object_count": int(manifest.get("consumable_object_count") or 0),
+        "family_object_counts": dict(manifest.get("family_object_counts") or {}),
+        "cadence_rule": str(manifest.get("cadence_rule") or ""),
+        "integrity_rule": str(manifest.get("integrity_rule") or ""),
+    }
+
+
+def manifest_detail_root(store_root: Path) -> Path:
+    return Path(store_root) / MANIFEST_DETAIL_RELATIVE_ROOT
+
+
+def manifest_detail_relative_path(uncompressed_sha256: str) -> str:
+    return f"{MANIFEST_DETAIL_RELATIVE_ROOT}/{uncompressed_sha256}{MANIFEST_DETAIL_SUFFIX}"
+
+
+def resolve_manifest_detail_path(store_root: Path, relative_path: str) -> Path:
+    """Resolve a store-relative detail path, refusing absolute or escaping references."""
+    relative = str(relative_path)
+    candidate_relative = Path(relative)
+    if candidate_relative.is_absolute() or ".." in candidate_relative.parts:
+        raise ResumeIntegrityError(
+            "manifest detail path escapes the store evidence root",
+            context={"relative_path": relative},
+        )
+    root = manifest_detail_root(store_root).resolve()
+    candidate = (Path(store_root) / candidate_relative).resolve()
+    if candidate.parent != root:
+        raise ResumeIntegrityError(
+            "manifest detail path escapes the store evidence root",
+            context={"relative_path": relative, "root": str(root)},
+        )
+    if not candidate.name.endswith(MANIFEST_DETAIL_SUFFIX):
+        raise ResumeIntegrityError(
+            "manifest detail path is not a canonical JSONL gzip artifact",
+            context={"relative_path": relative},
+        )
+    return candidate
+
+
+def _atomic_publish(dest: Path, write: Callable[[Any], None]) -> None:
+    """Write through a collision-safe sibling temp file, fsync, then atomically replace."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    handle_fd, tmp_name = tempfile.mkstemp(
+        dir=str(dest.parent), prefix=f".partial-{dest.name}.", suffix=".tmp"
     )
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(handle_fd, "wb") as handle:
+            write(handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        tmp.replace(dest)
+    finally:
+        # Every failure path removes its own temporary file.
+        if tmp.exists():
+            tmp.unlink()
+
+
+def _write_detail_stream(manifest: Mapping[str, Any], handle: Any) -> tuple[str, int]:
+    """Stream canonical JSONL into a deterministic gzip member, hashing as it goes."""
+    digest = hashlib.sha256()
+    uncompressed = 0
+    # ``mtime=0`` keeps the gzip member byte-identical across independent roots and runs.
+    with gzip.GzipFile(fileobj=handle, mode="wb", compresslevel=9, mtime=0) as gz:
+        for record in manifest_detail_records(manifest):
+            line = _canonical_line(record)
+            gz.write(line)
+            digest.update(line)
+            uncompressed += len(line)
+    return digest.hexdigest(), uncompressed
+
+
+def publish_manifest_detail(
+    manifest: Mapping[str, Any],
+    *,
+    store_root: Path,
+    summary: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Publish the complete manifest detail atomically and content-addressably.
+
+    The bytes stream to a collision-safe sibling temp file, are flushed and fsynced, and
+    only then replace the content address. A pre-existing artifact is fully revalidated
+    before reuse; anything missing, truncated, malformed, mismatched, or count-inconsistent
+    fails closed.
+    """
+    expected = dict(summary or manifest_detail_summary(manifest))
+    relative = manifest_detail_relative_path(str(expected["uncompressed_sha256"]))
+    manifest_detail_root(store_root).mkdir(parents=True, exist_ok=True)
+    dest = resolve_manifest_detail_path(store_root, relative)
+    if dest.is_file():
+        probe = {
+            **expected,
+            "relative_path": relative,
+            "compressed_sha256": compute_sha256(dest),
+            "compressed_bytes": int(dest.stat().st_size),
+        }
+        verified = validate_manifest_detail(store_root, probe)
+        return {
+            **expected,
+            "relative_path": relative,
+            "compressed_sha256": verified["compressed_sha256"],
+            "compressed_bytes": verified["compressed_bytes"],
+            "reused_existing": True,
+            "reader": "iter_manifest_detail",
+        }
+    def _write(handle: Any) -> None:
+        digest, size = _write_detail_stream(manifest, handle)
+        # The published bytes prove their own declared identity before they are named.
+        if digest != expected["uncompressed_sha256"] or size != int(
+            expected["uncompressed_bytes"]
+        ):
+            raise ResumeIntegrityError(
+                "published manifest detail does not match its streamed identity",
+                context={"expected": expected["uncompressed_sha256"], "actual": digest},
+            )
+
+    _atomic_publish(dest, _write)
+    return {
+        **expected,
+        "relative_path": relative,
+        "compressed_sha256": compute_sha256(dest),
+        "compressed_bytes": int(dest.stat().st_size),
+        "reused_existing": False,
+        "reader": "iter_manifest_detail",
+    }
+
+
+def _detail_int(source: Mapping[str, Any], field_name: str, context: Mapping[str, Any]) -> int:
+    """Read a declared integer, failing closed instead of coercing or raising raw."""
+    value = source.get(field_name)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ResumeIntegrityError(
+            "manifest detail declares a non-integer value",
+            context={**context, "field": field_name},
+        )
+    return value
+
+
+def _detail_object(source: Mapping[str, Any], field_name: str, context: Mapping[str, Any]) -> dict[str, Any]:
+    """Read a declared object, failing closed instead of iterating a foreign type."""
+    value = source.get(field_name)
+    if not isinstance(value, dict):
+        raise ResumeIntegrityError(
+            "manifest detail declares a non-object value",
+            context={**context, "field": field_name},
+        )
+    return dict(value)
+
+
+def _require_detail_descriptor(descriptor: Mapping[str, Any]) -> None:
+    missing = [
+        name for name in MANIFEST_DETAIL_DESCRIPTOR_FIELDS if descriptor.get(name) is None
+    ]
+    if missing:
+        raise ResumeIntegrityError(
+            "manifest detail descriptor is incomplete", context={"missing": missing}
+        )
+    if str(descriptor["schema_version"]) != MANIFEST_DETAIL_SCHEMA_VERSION:
+        raise ResumeIntegrityError(
+            "manifest detail schema version is not supported",
+            context={"schema_version": str(descriptor["schema_version"])},
+        )
+    if str(descriptor["format"]) != MANIFEST_DETAIL_FORMAT:
+        raise ResumeIntegrityError(
+            "manifest detail format is not supported",
+            context={"format": str(descriptor["format"])},
+        )
+    relative = str(descriptor["relative_path"])
+    # Path shape is proved before identity: an absolute or escaping reference is refused
+    # even when it would otherwise address the right content.
+    candidate = Path(relative)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise ResumeIntegrityError(
+            "manifest detail path escapes the store evidence root",
+            context={"relative_path": relative},
+        )
+    expected_relative = manifest_detail_relative_path(str(descriptor["uncompressed_sha256"]))
+    if relative != expected_relative:
+        raise ResumeIntegrityError(
+            "manifest detail is not at its own content address",
+            context={"relative_path": relative, "expected": expected_relative},
+        )
+
+
+def validate_manifest_detail(
+    store_root: Path, descriptor: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Fully re-prove a detail artifact before any record is exposed.
+
+    One bounded pass recomputes every declared aggregate from the row records themselves,
+    enforces canonical encoding, record phase order, strict canonical ordering, unique row
+    identities, and the pending-key reconciliation, and reconciles the descriptor, the
+    artifact's own header, and both content identities. Nothing is trusted because it was
+    copied into a header.
+    """
+    _require_detail_descriptor(descriptor)
+    relative = str(descriptor["relative_path"])
+    path = resolve_manifest_detail_path(store_root, relative)
+    if not path.is_file():
+        raise ResumeIntegrityError(
+            "manifest detail artifact is missing", context={"relative_path": relative}
+        )
+    compressed_bytes = int(path.stat().st_size)
+    if compressed_bytes != _detail_int(descriptor, "compressed_bytes", {"relative_path": relative}):
+        raise ResumeIntegrityError(
+            "manifest detail compressed size does not match its descriptor",
+            context={"relative_path": relative, "actual": compressed_bytes},
+        )
+    compressed_sha256 = compute_sha256(path)
+    if compressed_sha256 != str(descriptor["compressed_sha256"]):
+        raise ResumeIntegrityError(
+            "manifest detail compressed digest does not match its descriptor",
+            context={"relative_path": relative, "actual": compressed_sha256},
+        )
+
+    phases = ("header", *MANIFEST_DETAIL_RECORD_TYPES)
+    digest = hashlib.sha256()
+    counts = {name: 0 for name in MANIFEST_DETAIL_RECORD_TYPES}
+    pending_expected = hashlib.sha256()
+    pending_expected_count = 0
+    pending_actual = hashlib.sha256()
+    uncompressed = 0
+    total = 0
+    phase = 0
+    header: dict[str, Any] = {}
+    last_key: str | None = None
+    last_line: bytes | None = None
+    object_count = 0
+    raw_bytes = 0
+    consumable = 0
+    families: dict[str, int] = {}
+    context = {"relative_path": relative}
+
+    try:
+        with gzip.open(path, "rb") as handle:
+            for raw in handle:
+                digest.update(raw)
+                uncompressed += len(raw)
+                total += 1
+                try:
+                    record = json.loads(raw.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise ResumeIntegrityError(
+                        "manifest detail record is not canonical JSON",
+                        context={**context, "record": total},
+                    ) from exc
+                if not isinstance(record, dict) or "record_type" not in record:
+                    raise ResumeIntegrityError(
+                        "manifest detail record has no record type",
+                        context={**context, "record": total},
+                    )
+                if raw != _canonical_line(record):
+                    raise ResumeIntegrityError(
+                        "manifest detail record is not canonically encoded",
+                        context={**context, "record": total},
+                    )
+                kind = str(record["record_type"])
+                if kind not in phases:
+                    raise ResumeIntegrityError(
+                        "manifest detail record type is unknown",
+                        context={**context, "record_type": kind},
+                    )
+                position = phases.index(kind)
+                if position < phase:
+                    raise ResumeIntegrityError(
+                        "manifest detail records are out of phase order",
+                        context={**context, "record": total, "record_type": kind},
+                    )
+                if position != phase:
+                    phase = position
+                    last_line = None
+                body = record.get("record")
+                if not isinstance(body, dict):
+                    raise ResumeIntegrityError(
+                        "manifest detail record body is not an object",
+                        context={**context, "record": total},
+                    )
+                if kind == "header":
+                    if total != 1:
+                        raise ResumeIntegrityError(
+                            "manifest detail header is misplaced or duplicated",
+                            context={**context, "record": total},
+                        )
+                    header = dict(body)
+                    continue
+                counts[kind] += 1
+                if kind == "row":
+                    if set(body) != MANIFEST_ROW_FIELDS:
+                        raise ResumeIntegrityError(
+                            "manifest detail row has unknown or missing fields",
+                            context={**context, "record": total},
+                        )
+                    key = str(body["key"])
+                    # Strict key-primary order: only the previous key is retained. A
+                    # repeated key is a duplicate even when every other field changed.
+                    if last_key is not None and key == last_key:
+                        raise ResumeIntegrityError(
+                            "manifest detail contains a duplicate row key",
+                            context={**context, "key": key},
+                        )
+                    if last_key is not None and key < last_key:
+                        raise ResumeIntegrityError(
+                            "manifest detail rows are not in strict canonical order",
+                            context={**context, "record": total},
+                        )
+                    last_key = key
+                    size = body["byte_size"]
+                    # An unlisted size stays ``None``; the manifest total counts it as zero.
+                    if size is not None and (
+                        isinstance(size, bool) or not isinstance(size, int) or size < 0
+                    ):
+                        raise ResumeIntegrityError(
+                            "manifest detail row size is invalid",
+                            context={**context, "record": total},
+                        )
+                    if not isinstance(body["consumable"], bool):
+                        raise ResumeIntegrityError(
+                            "manifest detail row has unknown or missing fields",
+                            context={**context, "record": total, "field": "consumable"},
+                        )
+                    object_count += 1
+                    raw_bytes += int(size or 0)
+                    families[str(body["family"])] = families.get(str(body["family"]), 0) + 1
+                    if body["consumable"] is True:
+                        consumable += 1
+                    else:
+                        pending_expected.update(_canonical_line({"key": str(body["key"])}))
+                        pending_expected_count += 1
+                elif kind == "raw_validation_pending_key":
+                    key = body.get("key")
+                    if set(body) != {"key"} or not isinstance(key, str) or not key:
+                        raise ResumeIntegrityError(
+                            "manifest detail pending key has unknown or missing fields",
+                            context={**context, "record": total},
+                        )
+                    pending_actual.update(_canonical_line({"key": key}))
+                else:
+                    line = _canonical_line(body)
+                    if last_line is not None and line <= last_line:
+                        raise ResumeIntegrityError(
+                            "manifest detail records are not in strict canonical order",
+                            context={**context, "record": total, "record_type": kind},
+                        )
+                    last_line = line
+    except (OSError, EOFError, gzip.BadGzipFile, zlib.error) as exc:
+        raise ResumeIntegrityError(
+            "manifest detail artifact is unreadable or truncated", context=context
+        ) from exc
+
+    actual_digest = digest.hexdigest()
+    if actual_digest != str(descriptor["uncompressed_sha256"]):
+        raise ResumeIntegrityError(
+            "manifest detail digest does not match its descriptor",
+            context={**context, "actual": actual_digest},
+        )
+    if uncompressed != _detail_int(descriptor, "uncompressed_bytes", context):
+        raise ResumeIntegrityError(
+            "manifest detail byte count does not match its descriptor",
+            context={**context, "actual": uncompressed},
+        )
+    if not header:
+        raise ResumeIntegrityError(
+            "manifest detail artifact has no header", context=context
+        )
+    if str(header.get("kind") or "") != MANIFEST_DETAIL_KIND or str(
+        header.get("ticket") or ""
+    ) != TICKET_ID:
+        raise ResumeIntegrityError(
+            "manifest detail header identity is not this ticket's artifact", context=context
+        )
+    if str(header.get("schema_version") or "") != MANIFEST_DETAIL_SCHEMA_VERSION or str(
+        header.get("format") or ""
+    ) != MANIFEST_DETAIL_FORMAT:
+        raise ResumeIntegrityError(
+            "manifest detail header schema or format is not supported", context=context
+        )
+    declared = _detail_object(descriptor, "record_counts", context)
+    header_counts = _detail_object(header, "record_counts", context)
+    for name in MANIFEST_DETAIL_RECORD_TYPES:
+        if _detail_int(declared, name, context) != counts[name]:
+            raise ResumeIntegrityError(
+                "manifest detail record count does not match its descriptor",
+                context={**context, "record_type": name, "actual": counts[name]},
+            )
+        if _detail_int(header_counts, name, context) != counts[name]:
+            raise ResumeIntegrityError(
+                "manifest detail record count does not match its own header",
+                context={**context, "record_type": name, "actual": counts[name]},
+            )
+    if _detail_int(declared, "total_records", context) != total:
+        raise ResumeIntegrityError(
+            "manifest detail total record count does not match its descriptor",
+            context={**context, "actual": total},
+        )
+    if counts["raw_validation_pending_key"] != pending_expected_count:
+        raise ResumeIntegrityError(
+            "manifest detail pending keys do not reconcile with its non-consumable rows",
+            context={**context, "expected": pending_expected_count},
+        )
+    if pending_actual.digest() != pending_expected.digest():
+        raise ResumeIntegrityError(
+            "manifest detail pending keys do not reconcile with its non-consumable rows",
+            context=context,
+        )
+    # Every declared aggregate is recomputed from the rows themselves, never trusted.
+    recomputed = {
+        "object_count": object_count,
+        "compressed_raw_bytes": raw_bytes,
+        "consumable_object_count": consumable,
+    }
+    for name, value in recomputed.items():
+        if _detail_int(descriptor, name, context) != value:
+            raise ResumeIntegrityError(
+                "manifest detail aggregate does not match its descriptor",
+                context={**context, "field": name, "recomputed": value},
+            )
+        if _detail_int(header, name, context) != value:
+            raise ResumeIntegrityError(
+                "manifest detail aggregate does not match its own header",
+                context={**context, "field": name, "recomputed": value},
+            )
+    for source in (descriptor, header):
+        declared_families = _detail_object(source, "family_object_counts", context)
+        if {
+            str(name): _detail_int(declared_families, name, context)
+            for name in declared_families
+        } != families:
+            raise ResumeIntegrityError(
+                "manifest detail family totals do not match its rows",
+                context={**context, "recomputed": families},
+            )
+    if str(header.get("cadence_rule") or "") != str(descriptor["cadence_rule"]):
+        raise ResumeIntegrityError(
+            "manifest detail cadence rule disagrees with its descriptor", context=context
+        )
+    if str(header.get("integrity_rule") or "") != str(descriptor["integrity_rule"]):
+        raise ResumeIntegrityError(
+            "manifest detail integrity rule disagrees with its descriptor", context=context
+        )
+    return {
+        "relative_path": relative,
+        "uncompressed_sha256": actual_digest,
+        "uncompressed_bytes": uncompressed,
+        "compressed_sha256": compressed_sha256,
+        "compressed_bytes": compressed_bytes,
+        "record_counts": {**counts, "total_records": total},
+        "object_count": object_count,
+        "compressed_raw_bytes": raw_bytes,
+        "consumable_object_count": consumable,
+        "family_object_counts": dict(sorted(families.items())),
+    }
+
+
+def iter_manifest_detail(
+    store_root: Path, descriptor: Mapping[str, Any]
+) -> Iterator[dict[str, Any]]:
+    """Stream every detailed record only after the artifact has fully re-proved itself.
+
+    Gate 2 consumes the manifest only through this contract: validation completes before
+    the first record is exposed, so a consumer can never act on evidence that a later
+    digest, count, aggregate, order, or encoding check would have rejected.
+    """
+    validate_manifest_detail(store_root, descriptor)
+    path = resolve_manifest_detail_path(store_root, str(descriptor["relative_path"]))
+    with gzip.open(path, "rb") as handle:
+        for raw in handle:
+            record = json.loads(raw.decode("utf-8"))
+            if str(record.get("record_type")) == "header":
+                continue
+            yield record
+
+
+def write_qualification_report(
+    report: QualificationReport, path: Path, *, store_root: Path
+) -> dict[str, Any]:
+    """Publish the detail artifact, then the compact tracked receipt, atomically.
+
+    The detail bytes are published first and content-addressably, so a receipt can never
+    reference evidence that does not exist. The receipt is serialized without any detailed
+    collection, checked against the publication ceiling, and only then replaces the prior
+    tracked file: on any failure the previous receipt stays byte-identical and a valid
+    orphan detail blob is harmless immutable data.
+    """
+    descriptor = publish_manifest_detail(
+        report.acquisition_manifest,
+        store_root=store_root,
+        summary=report.acquisition_manifest.get("detail"),
+    )
+    payload = report.to_receipt_dict(descriptor)
+    text = json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n"
+    encoded = text.encode("utf-8")
+    if len(encoded) > REPORT_PUBLICATION_CEILING_BYTES:
+        raise SourceQualificationError(
+            "qualification receipt exceeds the publication ceiling",
+            context={
+                "path": str(path),
+                "bytes": len(encoded),
+                "ceiling_bytes": REPORT_PUBLICATION_CEILING_BYTES,
+            },
+        )
+    _atomic_publish(path, lambda handle: handle.write(encoded))
+    return descriptor

@@ -219,8 +219,20 @@ def main(argv: list[str] | None = None) -> int:
         raise cleanup_error
 
     report_path = Path(args.report_path)
-    write_qualification_report(report, report_path)
+    # ADR-0019: the complete manifest detail is published content-addressably beneath the
+    # store's evidence root, and the tracked receipt carries only its descriptor.
+    detail = write_qualification_report(report, report_path, store_root=store_root)
     print(f"Qualification report written to {report_path}", file=sys.stderr)
+    print(
+        f"manifest_detail: path={detail['relative_path']} "
+        f"uncompressed_sha256={detail['uncompressed_sha256']} "
+        f"uncompressed_bytes={detail['uncompressed_bytes']} "
+        f"compressed_sha256={detail['compressed_sha256']} "
+        f"compressed_bytes={detail['compressed_bytes']} "
+        f"records={detail['record_counts']} "
+        f"reused_existing={detail['reused_existing']}",
+        file=sys.stderr,
+    )
     print(
         f"gate_status={report.gate_status} accepted={report.accepted} "
         f"symbols={len(report.discovered_symbols)} "
