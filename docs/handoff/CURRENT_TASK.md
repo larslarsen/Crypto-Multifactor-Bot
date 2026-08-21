@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-115 candidate resume
+Next required actor: Sr Dev - Claude Build - implement review-116 listing execution correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -66,6 +66,8 @@ Governing documents:
 - research/sprint_004/113_CEX002_PLAN3_CANDIDATE_EXECUTION.md
 - research/sprint_004/114_CEX002_CANDIDATE_TIMEOUT_REVIEW.md
 - research/sprint_004/115_CEX002_PLAN3_CANDIDATE_RESUME.md
+- docs/adr/0018-resumable-bounded-listing-execution.md
+- research/sprint_004/116_CEX002_LISTING_EXECUTION_ARCHITECTURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -760,4 +762,25 @@ task and no out-of-band instruction is authority.
 No source/test edit, focused test rerun, store reconstruction, cache reset, plan migration,
 sample acquisition, amendment-ledger creation, Gate 2, normalization, catalog work,
 Nautilus work, Harmonic Trader work, or other-ticket work is authorized. Gate 1 remains
+`IN_PROGRESS`; next ticket remains `NONE`.
+
+## Review-115 measured resume outcome
+
+Review 116 accepts the status-124 execution evidence and the proved authority/raw/report
+invariants. Hermes advanced the checkpoint by 561 entries and captured the complete
+before/after state. Its unauthorized rerun of the already accepted 189-test suite is a
+governance violation and is not new acceptance evidence, but it does not invalidate the
+separately measured candidate execution.
+
+Further serial resume slices are rejected. The current path creates a fresh HTTP client per
+page, rewrites the complete 25 MB checkpoint per new page, and traverses thousands of
+family/symbol/page requests serially. ADR-0018 preserves the complete data contract while
+requiring reusable bounded transport resources, bounded deterministic listing concurrency,
+amortized crash-recoverable checkpoint publication, and efficient known-cache bootstrap.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 116's five-path
+source/test correction. Claude performs no tests, network/data run, candidate execution,
+integration, records, ADR, Git, catalog work, Nautilus work, or Harmonic Trader work and
+stops for source inspection with exact changed-path hashes and the unique CEX test-function
+count. Hermes and further real execution remain unauthorized. Gate 1 remains
 `IN_PROGRESS`; next ticket remains `NONE`.
