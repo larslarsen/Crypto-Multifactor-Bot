@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - finish review-123 report split correction
+Next required actor: Sr Dev - Grok Build - remove unbounded manifest-validator key state
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -77,6 +77,7 @@ Governing documents:
 - research/sprint_004/122_CEX002_TERMINAL_REPORT_ARCHITECTURE_REVIEW.md
 - research/sprint_004/123_CEX002_REPORT_SPLIT_SOURCE_REVIEW.md
 - research/sprint_004/124_CEX002_GROK_REPORT_SPLIT_CONTINUATION.md
+- research/sprint_004/125_CEX002_GROK_REPORT_SPLIT_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -945,3 +946,24 @@ No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
 PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
 remains `NONE`.
+
+## Grok report-split continuation outcome - one bounded-memory defect remains
+
+Review 125 accepts Grok's prevalidation, identity, aggregate, canonical encoding/path,
+atomic-publication, bounded-writer, and test-proof corrections, but rejects the drop before
+Hermes integration. The validator's claimed bounded pass retains every selected row key in
+`row_keys`; with 733,203 rows this is O(n) auxiliary memory and leaves review 123's explicit
+bounded duplicate-check requirement open. The boundedness test covers only the writer.
+
+Sr Dev - Grok Build using Grok 4.6 High is authorized only for review 125's surgical
+production/test correction. It must establish a canonical key-primary row order once at
+manifest construction, detect duplicate keys and order failures with constant retained
+state, remove the whole-key set, and add a direct validator-boundedness proof while
+preserving every accepted behavior. The unchanged CLI hash is frozen. Grok runs no
+commands or data, touches no records or Git, and stops for source review with exact hashes
+and the unique test-function count. Hermes remains unauthorized.
+
+The oversized report remains frozen. No reduced scope, report truncation, plan migration,
+sample acquisition, Gate 2, normalization, catalog publication, Nautilus work, Harmonic
+Trader work, payoff analysis, PAPER, LIVE, or other-ticket work is authorized. Gate 1
+remains `IN_PROGRESS`; next ticket remains `NONE`.
