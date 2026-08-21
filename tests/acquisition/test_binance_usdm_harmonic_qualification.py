@@ -4474,7 +4474,31 @@ def test_manifest_rows_bind_identity_cadence_and_interval(tmp_path: Path) -> Non
     )
     published = report.acquisition_manifest["rows"]
     assert [row["key"] for row in published] == [row["key"] for row in rows]
-    assert report.storage["acquisition_manifest"]["rows"] == published
+    storage_manifest = report.storage["acquisition_manifest"]
+    for name in ("rows", "collisions", "rejections", "raw_validation_pending_keys"):
+        assert name not in storage_manifest
+    assert storage_manifest["object_count"] == report.acquisition_manifest["object_count"]
+    assert (
+        storage_manifest["compressed_raw_bytes"]
+        == report.acquisition_manifest["compressed_raw_bytes"]
+    )
+    assert (
+        storage_manifest["consumable_object_count"]
+        == report.acquisition_manifest["consumable_object_count"]
+    )
+    assert storage_manifest["collision_count"] == len(report.acquisition_manifest["collisions"])
+    assert storage_manifest["rejection_count"] == len(report.acquisition_manifest["rejections"])
+    assert storage_manifest["raw_validation_pending_count"] == len(
+        report.acquisition_manifest["raw_validation_pending_keys"]
+    )
+    assert (
+        storage_manifest["integrity_rule"] == report.acquisition_manifest["integrity_rule"]
+    )
+    assert storage_manifest["cadence_rule"] == report.acquisition_manifest["cadence_rule"]
+    assert storage_manifest["family_object_counts"] == dict(
+        report.acquisition_manifest["family_object_counts"]
+    )
+    assert storage_manifest["detail"] == manifest_detail_summary(report.acquisition_manifest)
     assert report.acquisition_manifest["integrity_rule"]
 
 
@@ -6002,11 +6026,18 @@ def test_compact_receipt_never_duplicates_the_detailed_manifest(tmp_path: Path) 
         assert row["key"].encode("utf-8") not in surfaces
     for key in report.acquisition_manifest["raw_validation_pending_keys"]:
         assert key.encode("utf-8") not in surfaces
-    # At most one selected key may appear anywhere in the receipt at all, as the
-    # taker-flow schema lineage reference; a duplicated collection would put every one
-    # of them there.
-    named = [row["key"] for row in rows if row["key"].encode("utf-8") in rendered]
-    assert len(named) <= 1
+    # No complete row objects should occur in the compact receipt text, but selected
+    # keys may still appear as lineage references in the compact sample_plan.
+    compact_receipt = json.dumps(document, sort_keys=True, separators=(",", ":"), default=str)
+    for row in rows:
+        compact_row = json.dumps(dict(row), sort_keys=True, separators=(",", ":"), default=str)
+        assert compact_row not in compact_receipt
+    selected_keys = {row["key"] for row in rows}
+    plan_keys = {entry["key"] for entry in document["sample_plan"]["entries"]}
+    intersecting_keys = selected_keys & plan_keys
+    assert intersecting_keys
+    for key in intersecting_keys:
+        assert key in compact_receipt
     # Publication mutates nothing: the in-memory manifest remains the full authority.
     assert json.dumps(
         {
