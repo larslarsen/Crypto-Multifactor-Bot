@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build (review-101 final preflight/lineage correction only)
+Next required actor: Sr Dev - Claude Build (review-102 CLI preflight correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -52,6 +52,7 @@ Governing documents:
 - research/sprint_004/99_CEX002_GROK_RESOLUTION_SOURCE_REVIEW.md
 - research/sprint_004/100_CEX002_CLAUDE_CANDIDATE_SOURCE_REVIEW.md
 - research/sprint_004/101_CEX002_CLAUDE_LINEAGE_SOURCE_REVIEW.md
+- research/sprint_004/102_CEX002_CLAUDE_CLI_PREFLIGHT_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -558,6 +559,27 @@ candidate write or remote/cache operation, requires ordered and strictly typed h
 versions `[0, 1]`, parses and structurally validates both historical plan documents under
 their version-appropriate contracts, and includes a deterministic derived version-0 plan
 content identity in reuse comparison without rewriting the lock. Claude performs no tests,
+network/data run, migration, integration, repository records, Git, acquisition, catalog
+work, Nautilus work, or Harmonic Trader work and stops for reviewer inspection with exact
+hashes and the test-function count. Hermes remains unauthorized. Gate 1 remains
+`IN_PROGRESS`; Gate 2 and every next ticket remain unauthorized; next ticket is `NONE`.
+
+## Claude review-101 source outcome - CLI boundary rejected
+
+Review 102 accepts the production preflight, strict ordered lineage, derived version-0
+identity, reusable authority objects, final lock/ledger rehash, and intact 168-function
+test source. The production and fixture hashes are frozen. Hermes remains unauthorized
+because the executable CLI creates the store and loads/bootstraps listing and retry state
+before it calls the safe production function. An invalid `--candidate-plan-only` request
+can therefore mutate through the real entry point before production preflight rejects it.
+Review 101 incorrectly froze that CLI while demanding process-wide preflight; this is a
+reviewer scope error, not a failure to implement the authorized two-path correction.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only to move a read-only
+`candidate_preflight` call in front of every CLI-side directory, transport, cache,
+checkpoint, journal, listing, current-contract, and Coinalyze operation and to add one
+focused CLI test proving invalid authority returns exit 1 without any store-tree or remote
+facility mutation. Only the CLI and CEX-002 test path may change. Claude performs no tests,
 network/data run, migration, integration, repository records, Git, acquisition, catalog
 work, Nautilus work, or Harmonic Trader work and stops for reviewer inspection with exact
 hashes and the test-function count. Hermes remains unauthorized. Gate 1 remains
