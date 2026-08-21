@@ -83,6 +83,7 @@ Governing documents:
 - research/sprint_004/128_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/129_CEX002_SPARK_TEST_SOURCE_REVIEW.md
 - research/sprint_004/130_CEX002_SPARK_TEST_SOURCE_ACCEPTANCE.md
+- research/sprint_004/131_CEX002_TEST_INTEGRATION_AND_CANDIDATE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
