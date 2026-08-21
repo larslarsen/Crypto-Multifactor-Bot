@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect review-110 candidate execution
+Next required actor: Sr Dev - Claude Build (review-111 record-path correction only)
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -61,6 +61,7 @@ Governing documents:
 - research/sprint_004/108_CEX002_RESIDUAL_FOCUSED_FAILURE_REVIEW.md
 - research/sprint_004/109_CEX002_RESIDUAL_CORRECTION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/110_CEX002_PLAN3_CANDIDATE_EXECUTION.md
+- research/sprint_004/111_CEX002_HOLDOUT_RECORD_PATH_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -699,3 +700,21 @@ No plan migration, sample acquisition, amendment-ledger creation, Gate 2, normal
 catalog work, Nautilus work, Harmonic Trader work, or other-ticket work is authorized. A
 nonzero focused-command exit stops immediately before all later commands and the real
 candidate process. Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Review-110 focused execution outcome - rejected
+
+Review 111 accepts Hermes's exact two-path integration and strict stop after focused
+command 1 failed 2 of 189 cases. Commands 2 through 5 and the real candidate process were
+correctly not run. Both remaining identity differences are the local prospective-holdout
+`record_path`: independently created test roots contain `/clean/` versus `/resumed/`.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only to add `record_path` to the
+execution-plane identity drop-key set. All semantic holdout boundary times, identifiers,
+lineage, replay state, and complete identity tests remain unchanged. Only the production
+module may change; the test path, CLI, 17 fixtures, holdout implementation, manifest,
+taker-flow, locked plan, and ledger behavior are frozen.
+
+Claude performs no tests, network/data run, migration, integration, repository-record
+edit, Git, acquisition, catalog work, Nautilus work, Harmonic Trader work, or publication
+and stops for reviewer inspection with the exact source hash. Hermes and real candidate
+execution remain unauthorized. Gate 1 remains `IN_PROGRESS`; next ticket remains `NONE`.
