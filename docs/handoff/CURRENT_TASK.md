@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct ADR-0020 source under review 138
+Next required actor: Sr Dev - Claude Build - close review 139's four residuals
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -92,6 +92,7 @@ Governing documents:
 - docs/adr/0020-historical-contract-authority-and-qualification-budget.md
 - research/sprint_004/137_CEX002_MEMBERSHIP_AND_BUDGET_ARCHITECTURE.md
 - research/sprint_004/138_CEX002_CLAUDE_ADR0020_SOURCE_REVIEW.md
+- research/sprint_004/139_CEX002_CLAUDE_ADR0020_CORRECTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1149,6 +1150,25 @@ Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 138's bo
 production/test correction. The CLI and all other paths are frozen. Claude runs no command
 or network/data work, performs no Git or repository-record operation, and stops with the
 two exact hashes and unique CEX test-function count. Hermes remains unauthorized.
+
+No candidate integration/execution, migration, acquisition, Gate 2, reduced scope,
+Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude review-138 correction outcome - four residuals remain
+
+Review 139 accepts and freezes the independent authority-table boundary, delivery-price
+correction, cost economic rules and three acquisition-path wiring, complete-manifest digest
+domain/report binding, selection, and candidate lineage. It rejects four narrow residuals:
+cost ZIP validation still ignores every member after the first and does not use structured
+CSV parsing; the version-4 builder permits an empty complete-manifest digest; one retained-
+content test now reaches the preceding filename check; and the test file has a blank EOF.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 139's four exact
+production/test corrections. Every accepted region, the CLI, fixtures, and all other paths
+are frozen. Claude runs no command or network/data work, performs no Git or repository-
+record operation, and stops with the two exact hashes and unique CEX test-function count.
+Hermes remains unauthorized.
 
 No candidate integration/execution, migration, acquisition, Gate 2, reduced scope,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
