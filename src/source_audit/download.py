@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import tempfile
+import threading
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -133,6 +134,145 @@ class HttpxTransport:
             except Exception:
                 pass
             raise
+
+
+class PooledHttpxTransport:
+    """Streaming transport that reuses one bounded connection pool per invocation.
+
+    ``HttpxTransport`` opens and closes a client for every request, which prevents
+    connection reuse across thousands of listing pages. This transport keeps exactly one
+    client with an explicit, inspectable connection ceiling and closes it deterministically
+    on success, error, or cancellation via ``close()`` or the context-manager protocol.
+
+    It changes nothing else: per-call timeouts are still applied per request, response
+    bodies are streamed and never retained, headers (and therefore any credential) stay
+    per request, and publication semantics are untouched. Closing a response never closes
+    the shared client, and closing the transport twice is safe.
+    """
+
+    def __init__(
+        self,
+        *,
+        max_connections: int = 8,
+        timeout: TimeoutConfig | None = None,
+        client_factory: Callable[..., httpx.Client] | None = None,
+    ) -> None:
+        if max_connections < 1:
+            raise ValueError("max_connections must be at least 1")
+        self.max_connections = int(max_connections)
+        self._default_timeout = timeout or TimeoutConfig()
+        self._client_factory = client_factory or httpx.Client
+        self._client: httpx.Client | None = None
+        self._closed = False
+        # Shared lifecycle state. First use, the counters, and the close transition are
+        # all guarded, so concurrent first use constructs exactly one client and can
+        # never leak a loser or overwrite the retained reference.
+        self._lock = threading.Lock()
+        self.clients_constructed = 0
+        self.clients_closed = 0
+        self.requests_sent = 0
+
+    def _ensure_client(self) -> httpx.Client:
+        with self._lock:
+            if self._closed:
+                raise DownloadError(
+                    "pooled transport is closed",
+                    context={"max_connections": self.max_connections},
+                )
+            if self._client is None:
+                limits = httpx.Limits(
+                    max_connections=self.max_connections,
+                    max_keepalive_connections=self.max_connections,
+                )
+                self._client = self._client_factory(
+                    timeout=httpx.Timeout(
+                        connect=self._default_timeout.connect_s,
+                        read=self._default_timeout.read_s,
+                        write=self._default_timeout.read_s,
+                        pool=self._default_timeout.connect_s,
+                    ),
+                    follow_redirects=True,
+                    limits=limits,
+                )
+                self.clients_constructed += 1
+            return self._client
+
+    def stream_get(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str] | None,
+        timeout: TimeoutConfig,
+    ) -> StreamResponse:
+        client = self._ensure_client()
+        timeout_cfg = httpx.Timeout(
+            connect=timeout.connect_s,
+            read=timeout.read_s,
+            write=timeout.read_s,
+            pool=timeout.connect_s,
+        )
+        response: httpx.Response | None = None
+        try:
+            request = client.build_request(
+                "GET", url, headers=dict(headers or {}), timeout=timeout_cfg
+            )
+            response = client.send(request, stream=True)
+            with self._lock:
+                self.requests_sent += 1
+            status = response.status_code
+            resp_headers = {k: v for k, v in response.headers.items()}
+            resp = response
+
+            def _chunks() -> Iterator[bytes]:
+                try:
+                    yield from resp.iter_bytes()
+                finally:
+                    # The response closes; the shared client stays open for reuse.
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
+
+            def _close() -> None:
+                try:
+                    resp.close()
+                except Exception:
+                    pass
+
+            return StreamResponse(
+                status_code=status,
+                headers=resp_headers,
+                iter_bytes=_chunks(),
+                close=_close,
+            )
+        except Exception:
+            if response is not None:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            raise
+
+    def close(self) -> None:
+        """Close the shared client exactly once; safe to call repeatedly.
+
+        ``clients_closed`` counts successful closures only. If the client raises, the
+        transport still refuses new work and holds no alternate client, and the failure
+        propagates instead of being reported as a clean shutdown.
+        """
+        with self._lock:
+            self._closed = True
+            client, self._client = self._client, None
+            if client is None:
+                return
+            client.close()
+            self.clients_closed += 1
+
+    def __enter__(self) -> PooledHttpxTransport:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
 
 
 def content_addressed_path(dest_dir: Path, sha256_hex: str) -> Path:

@@ -30,6 +30,8 @@ from pathlib import Path
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     BUDGET_LEDGER_FILENAME,
     GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+    LISTING_DEFAULT_WORKERS,
+    LISTING_MAX_WORKERS,
     SAMPLE_PLAN_LOCK_FILENAME,
     VISION_S3_ENDPOINT,
     FapiCurrentContractSource,
@@ -47,9 +49,27 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     run_source_qualification,
     write_qualification_report,
 )
-from source_audit.download import HttpxTransport, TimeoutConfig
+from source_audit.download import PooledHttpxTransport, TimeoutConfig
 
 DEFAULT_REPORT = Path("research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json")
+
+
+def cleanup_execution_resources(
+    transport: PooledHttpxTransport, checkpoint: ListingCheckpointStore
+) -> BaseException | None:
+    """Attempt both cleanup actions and return the first failure, if any.
+
+    Both actions always run: closing the connection pool never skips the checkpoint
+    boundary flush, and a later failure never replaces the first one.
+    """
+    first: BaseException | None = None
+    for action in (transport.close, checkpoint.flush):
+        try:
+            action()
+        except BaseException as exc:  # noqa: BLE001 - returned to the caller below
+            if first is None:
+                first = exc
+    return first
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
         help="total NEW sample download budget; may only lower the Gate 1 default",
     )
     parser.add_argument("--retry-max-attempts", type=int, default=5)
+    parser.add_argument(
+        "--listing-workers",
+        type=int,
+        default=LISTING_DEFAULT_WORKERS,
+        help=(
+            "finite ceiling on simultaneous independent listing requests; clamped to "
+            f"{LISTING_MAX_WORKERS}. Retry budgets stay per request"
+        ),
+    )
     parser.add_argument(
         "--candidate-plan-only",
         action="store_true",
@@ -110,8 +139,11 @@ def main(argv: list[str] | None = None) -> int:
     if api_key is not None and not str(api_key).strip():
         api_key = None
 
-    transport = HttpxTransport()
     timeout = TimeoutConfig()
+    listing_workers = max(1, min(int(args.listing_workers), LISTING_MAX_WORKERS))
+    # One bounded connection pool per invocation, closed deterministically below on
+    # success, error, or cancellation.
+    transport = PooledHttpxTransport(max_connections=listing_workers, timeout=timeout)
     list_cache_dir = store_root / "list_cache"
     checkpoint_path = (
         Path(args.listing_checkpoint_path)
@@ -124,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         "listing checkpoint bootstrap: "
         f"claimed={bootstrapped['claimed']} "
         f"checksum_blobs={bootstrapped['checksum_blobs']} "
+        f"skipped_already_bound={bootstrapped['skipped_already_bound']} "
         f"unclaimed={bootstrapped['unclaimed']}",
         file=sys.stderr,
     )
@@ -162,11 +195,28 @@ def main(argv: list[str] | None = None) -> int:
             retry=retry,
             listing_checkpoint=listing_checkpoint,
             candidate_plan_only=bool(args.candidate_plan_only),
+            listing_workers=listing_workers,
             sample_budget_bytes=sample_budget,
         )
     except SourceQualificationError as exc:
+        # Documented precedence: an already active body failure stays primary. Cleanup
+        # still runs in full, and any cleanup failure is reported after it, never
+        # substituted for it.
         print(f"ERROR: {exc}", file=sys.stderr)
+        cleanup_error = cleanup_execution_resources(transport, listing_checkpoint)
+        if cleanup_error is not None:
+            print(f"ERROR: cleanup failed: {cleanup_error}", file=sys.stderr)
         return 1
+    except BaseException:
+        cleanup_error = cleanup_execution_resources(transport, listing_checkpoint)
+        if cleanup_error is not None:
+            print(f"ERROR: cleanup failed: {cleanup_error}", file=sys.stderr)
+        raise
+
+    # The body succeeded, so the first cleanup failure is the primary error.
+    cleanup_error = cleanup_execution_resources(transport, listing_checkpoint)
+    if cleanup_error is not None:
+        raise cleanup_error
 
     report_path = Path(args.report_path)
     write_qualification_report(report, report_path)
@@ -239,7 +289,10 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"listing_checkpoint: reused={report.listing_checkpoint.get('reused_requests')} "
         f"fetched={report.listing_checkpoint.get('fetched_requests')} "
-        f"unclaimed={report.listing_checkpoint.get('unclaimed_evidence')} | "
+        f"unclaimed={report.listing_checkpoint.get('unclaimed_evidence')} "
+        f"serializations={report.listing_checkpoint.get('serializations')} | "
+        f"workers={listing_workers} "
+        f"clients={transport.clients_constructed}/{transport.clients_closed} "
         f"retries={report.retry.get('retries')}",
         file=sys.stderr,
     )

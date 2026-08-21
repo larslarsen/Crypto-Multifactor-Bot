@@ -27,9 +27,11 @@ import json
 import random
 import re
 import shutil
+import threading
 import time
 import zipfile
 from collections.abc import Callable, Collection, Mapping, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
@@ -412,6 +414,18 @@ GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES: int = 268_435_456
 GATE1_MAX_NEW_OBJECT_BYTES: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES
 SAMPLE_BUDGET_BLOCK: str = "sample_budget_exceeded"
 
+# ADR-0018 execution mechanics. These bound round trips and checkpoint write
+# amplification; they never change the universe, cadence, integrity, or report contracts.
+# The worker ceiling is finite and inspectable, and a request's retry budget stays per
+# request however many workers are running.
+LISTING_MAX_WORKERS: int = 8
+LISTING_DEFAULT_WORKERS: int = LISTING_MAX_WORKERS
+# Full-checkpoint serialization is amortized across newly retained pages and explicitly
+# flushed at normal boundaries. Uncheckpointed retained responses are recovered from their
+# own self-identifying bytes, so an interruption between publication and flush never
+# refetches.
+LISTING_CHECKPOINT_FLUSH_PAGES: int = 256
+
 # A monthly package is canonical only once its provider checksum is officially listed.
 # Anything else is quarantined provenance and its interval falls back to daily objects.
 # A listed sidecar path is selection evidence, not proof. Only a rehashed retained
@@ -698,6 +712,29 @@ def is_retryable_failure(exc: BaseException) -> bool:
     return 500 <= status < 600
 
 
+def canonical_retry_incidents(
+    incidents: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Retry evidence in a canonical, scheduling-independent order.
+
+    Concurrent requests append in completion order. Reported and durable evidence is
+    ordered by redacted label, then attempt, then status and error, so the same failures
+    always read the same way however they were scheduled.
+    """
+    return [
+        dict(item)
+        for item in sorted(
+            incidents,
+            key=lambda entry: (
+                str(entry.get("label", "")),
+                int(entry.get("attempt") or 0),
+                str(entry.get("status_code", "")),
+                str(entry.get("error", "")),
+            ),
+        )
+    ]
+
+
 def redact_retry_label(label: str) -> str:
     """Retry labels are journalled, so drop any query string before persisting."""
     return label.split("?", 1)[0]
@@ -719,6 +756,9 @@ class RetryRunner:
     attempts: int = 0
     retries: int = 0
     incidents: list[dict[str, Any]] = field(default_factory=list)
+    # Counters and journal appends are shared state; the attempt budget itself remains
+    # per call, so bounded concurrency can never multiply a request's retry allowance.
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def _jittered(self, delay: float) -> float:
         if self.jitter is not None:
@@ -729,7 +769,8 @@ class RetryRunner:
     def run(self, label: str, call: Callable[[], Any]) -> Any:
         last: BaseException | None = None
         for attempt in range(1, self.policy.max_attempts + 1):
-            self.attempts += 1
+            with self._lock:
+                self.attempts += 1
             try:
                 return call()
             except BaseException as exc:  # noqa: BLE001 - re-raised below
@@ -743,13 +784,15 @@ class RetryRunner:
                     "error": type(exc).__name__,
                     "retryable": True,
                 }
-                self.incidents.append(incident)
-                # Persist as it happens: an aborted run must not erase retry evidence.
-                if self.journal is not None:
-                    self.journal.append(incident)
+                with self._lock:
+                    self.incidents.append(incident)
+                    # Persist as it happens: an aborted run must not erase retry evidence.
+                    if self.journal is not None:
+                        self.journal.append(incident)
                 if attempt >= self.policy.max_attempts:
                     break
-                self.retries += 1
+                with self._lock:
+                    self.retries += 1
                 self.sleeper(self._jittered(self.policy.backoff_delay(attempt)))
         raise SourceQualificationError(
             "retryable request failed after the bounded attempt limit",
@@ -768,7 +811,7 @@ class RetryRunner:
             "jitter_ratio": self.policy.jitter_ratio,
             "attempts": self.attempts,
             "retries": self.retries,
-            "incidents": list(self.incidents),
+            "incidents": canonical_retry_incidents(self.incidents),
             "journal_path": None if self.journal is None else str(self.journal.path),
         }
 
@@ -1341,10 +1384,41 @@ class FamilyInventory:
         return len(self.objects.get(symbol, ()))
 
 
+def bounded_map(
+    call: Callable[[Any], Any],
+    items: Sequence[Any],
+    *,
+    workers: int,
+) -> list[Any]:
+    """Run independent work with a finite worker ceiling and explicit backpressure.
+
+    Results are returned in submission order, never completion order, so semantic
+    inventory and report identity cannot depend on scheduling. At most ``workers``
+    requests are ever in flight: the submission window is the backpressure.
+    """
+    limit = max(1, min(int(workers), LISTING_MAX_WORKERS))
+    if limit == 1 or len(items) <= 1:
+        return [call(item) for item in items]
+    results: list[Any] = [None] * len(items)
+    with ThreadPoolExecutor(max_workers=limit) as pool:
+        pending: dict[Future[Any], int] = {}
+        for position in range(len(items)):
+            if len(pending) >= limit:
+                # Backpressure: nothing new is submitted until a slot actually frees.
+                done, _running = wait(pending, return_when=FIRST_COMPLETED)
+                for future in done:
+                    results[pending.pop(future)] = future.result()
+            pending[pool.submit(call, items[position])] = position
+        for future, position in list(pending.items()):
+            results[position] = future.result()
+    return results
+
+
 def build_family_inventory(
     index: ObjectIndex,
     *,
     families: Sequence[str] = MEMBERSHIP_FAMILY_PREFIXES,
+    workers: int = 1,
 ) -> dict[str, FamilyInventory]:
     """Inventory every unique physical family once.
 
@@ -1372,28 +1446,34 @@ def build_family_inventory(
         symbols = symbols_from_prefixes(prefix_list)
         objects: dict[str, tuple[ListingObject, ...]] = {}
         checksum_keys: set[str] = set()
-        for symbol in symbols:
+
+        def _listing(symbol: str) -> tuple[str, list[ListingObject] | SourceQualificationError]:
             try:
-                listed_objects = _list_objects_for_symbol(index, family, prefix, symbol)
-                checksum_keys.update(
-                    item.key[: -len(".CHECKSUM")]
-                    for item in listed_objects
-                    if item.key.endswith(".CHECKSUM")
-                )
-                objs = [
-                    obj for obj in listed_objects if not obj.key.endswith(".CHECKSUM")
-                ]
+                return symbol, _list_objects_for_symbol(index, family, prefix, symbol)
             except SourceQualificationError as exc:
+                return symbol, exc
+
+        # Independent symbol listings run under a bounded ceiling; the results are
+        # consumed in submission order, so incidents and inventory stay deterministic.
+        for symbol, outcome in bounded_map(_listing, symbols, workers=workers):
+            if isinstance(outcome, SourceQualificationError):
                 incidents.append(
                     {
                         "family": family,
                         "symbol": symbol,
                         "kind": "listing_error",
-                        "note": str(exc),
+                        "note": str(outcome),
                     }
                 )
                 continue
-            objects[symbol] = tuple(objs)
+            checksum_keys.update(
+                item.key[: -len(".CHECKSUM")]
+                for item in outcome
+                if item.key.endswith(".CHECKSUM")
+            )
+            objects[symbol] = tuple(
+                obj for obj in outcome if not obj.key.endswith(".CHECKSUM")
+            )
         inventory[family] = FamilyInventory(
             checksum_keys=frozenset(checksum_keys),
             family=family,
@@ -5130,8 +5210,13 @@ class RetryJournal:
     def append(self, incident: Mapping[str, Any]) -> None:
         self.incidents.append(dict(incident))
         if self.path is not None:
+            # Durable evidence is written in canonical order, so concurrent completion
+            # order can never change the journal a reviewer inspects.
             _atomic_write_json(
-                self.path, _checkpoint_document("retry_journal", {"incidents": self.incidents})
+                self.path,
+                _checkpoint_document(
+                    "retry_journal", {"incidents": canonical_retry_incidents(self.incidents)}
+                ),
             )
 
 
@@ -5150,6 +5235,14 @@ class ListingCheckpointStore:
     unclaimed: list[dict[str, Any]] = field(default_factory=list)
     reused: int = 0
     fetched: int = 0
+    # ADR-0018: the full document is not rewritten per page. Newly retained pages are
+    # published content-addressably first, recorded in memory, and serialized on an
+    # amortized boundary or an explicit flush. Serialization is single-writer and the
+    # document is key-sorted, so completion order cannot change its identity.
+    flush_pages: int = LISTING_CHECKPOINT_FLUSH_PAGES
+    serializations: int = 0
+    pending_records: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     @classmethod
     def load(cls, path: Path, cache_dir: Path) -> ListingCheckpointStore:
@@ -5221,17 +5314,42 @@ class ListingCheckpointStore:
         return validated
 
     def _flush(self) -> None:
+        """Serialize the complete document. One writer, key-sorted, order-independent.
+
+        Counters and pending state commit only after the atomic publication succeeds, so
+        a failed write never reports a serialization that did not happen and never turns
+        the next explicit boundary flush into a no-op.
+        """
         _atomic_write_json(
             self.path,
             _checkpoint_document(
                 "listing_checkpoint", {"entries": self.entries, "unclaimed": self.unclaimed}
             ),
         )
+        self.serializations += 1
+        self.pending_records = 0
+
+    def note_fetched(self) -> None:
+        """Count one newly retrieved page under the single shared lock."""
+        with self._lock:
+            self.fetched += 1
+
+    def flush(self) -> None:
+        """Explicit boundary flush; a no-op when nothing is pending."""
+        with self._lock:
+            if self.pending_records:
+                self._flush()
 
     def record(self, identity: Mapping[str, Any], entry: Mapping[str, Any]) -> None:
         key = listing_request_key(_normalized_identity(identity))
-        self.entries[key] = self._validated_entry(key, entry)
-        self._flush()
+        validated = self._validated_entry(key, entry)
+        with self._lock:
+            self.entries[key] = validated
+            self.pending_records += 1
+            # The retained bytes are already published by content hash, so an interruption
+            # before this boundary is recovered by bootstrap rather than refetched.
+            if self.pending_records >= max(int(self.flush_pages), 1):
+                self._flush()
 
     def retained_bytes(self, identity: Mapping[str, Any]) -> bytes | None:
         """Retained response for this exact request, or ``None`` when not checkpointed.
@@ -5242,7 +5360,11 @@ class ListingCheckpointStore:
         """
         wanted = _normalized_identity(identity)
         key = listing_request_key(wanted)
-        entry = self.entries.get(key)
+        # Snapshot the entry under the lock, then hash and parse outside it: shared state
+        # is synchronized without serializing file I/O or XML work.
+        with self._lock:
+            recorded = self.entries.get(key)
+            entry = dict(recorded) if recorded else None
         if not entry:
             return None
         entry = self._validated_entry(key, entry)
@@ -5285,7 +5407,8 @@ class ListingCheckpointStore:
                     "parsed_next_token": next_token,
                 },
             )
-        self.reused += 1
+        with self._lock:
+            self.reused += 1
         return payload
 
     def bootstrap(self, *, endpoint: str) -> dict[str, int]:
@@ -5299,8 +5422,22 @@ class ListingCheckpointStore:
         checksum_blobs = 0
         unclaimed = 0
         if not self.cache_dir.is_dir():
-            return {"claimed": 0, "checksum_blobs": 0, "unclaimed": 0}
+            # A cold store has no cache yet. The result shape is identical on every
+            # branch so callers never key into a missing field.
+            return {
+                "claimed": 0,
+                "checksum_blobs": 0,
+                "unclaimed": 0,
+                "skipped_already_bound": 0,
+            }
         known_unclaimed = {str(item.get("content_path")) for item in self.unclaimed}
+        # A blob already bound by a loaded checkpoint entry needs no rehash or reparse
+        # here. It is still rehashed and its echoed request and pagination metadata are
+        # revalidated whenever that request is actually consumed.
+        bound_digests = {
+            str(entry.get("response_sha256") or "") for entry in self.entries.values()
+        }
+        skipped_bound = 0
 
         def _mark_unclaimed(blob: Path, reason: str, note: str | None = None) -> int:
             if str(blob) in known_unclaimed:
@@ -5314,6 +5451,11 @@ class ListingCheckpointStore:
 
         for blob in sorted(self.cache_dir.iterdir()):
             if not blob.is_file() or len(blob.name) != 64:
+                continue
+            if blob.name in bound_digests:
+                skipped_bound += 1
+                continue
+            if str(blob) in known_unclaimed:
                 continue
             digest = compute_sha256(blob)
             if digest != blob.name:
@@ -5352,7 +5494,12 @@ class ListingCheckpointStore:
             )
             claimed += 1
         self._flush()
-        return {"claimed": claimed, "checksum_blobs": checksum_blobs, "unclaimed": unclaimed}
+        return {
+            "claimed": claimed,
+            "checksum_blobs": checksum_blobs,
+            "unclaimed": unclaimed,
+            "skipped_already_bound": skipped_bound,
+        }
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -5361,6 +5508,9 @@ class ListingCheckpointStore:
             "reused_requests": self.reused,
             "fetched_requests": self.fetched,
             "unclaimed_evidence": len(self.unclaimed),
+            "serializations": self.serializations,
+            "flush_pages": int(self.flush_pages),
+            "pending_records": self.pending_records,
         }
 
 
@@ -5875,7 +6025,7 @@ class TransportObjectIndex:
                 context={"prefix": prefix, "echoed": echoed},
             )
         if self._checkpoint is not None:
-            self._checkpoint.fetched += 1
+            self._checkpoint.note_fetched()
             # The recorded path is the published one; the checkpoint contract re-proves
             # that it is the cache-local content address.
             self._checkpoint.record(
@@ -6620,6 +6770,9 @@ def run_source_qualification(
     max_sample_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
     budget_ledger: BudgetLedger | None = None,
     candidate_plan_only: bool = False,
+    # ADR-0018: the programmatic function stays serial for backward compatibility. The
+    # production CLI passes its bounded default explicitly; every other caller opts in.
+    listing_workers: int = 1,
 ) -> QualificationReport:
     refuse_restricted_scope(
         max_symbols=max_symbols,
@@ -6658,8 +6811,11 @@ def run_source_qualification(
     checkpoint = SampleCheckpointStore.load(progress_file, sidecar_dir=list_cache_dir)
     checksums = RetainedChecksumIndex.from_cache(list_cache_dir)
 
-    # 1. Inventory every unique physical family exactly once.
-    inventory = build_family_inventory(index)
+    # 1. Inventory every unique physical family exactly once, under a bounded ceiling.
+    inventory = build_family_inventory(index, workers=listing_workers)
+    if listing_checkpoint is not None:
+        # Explicit boundary flush: amortized page records are durable before planning.
+        listing_checkpoint.flush()
     discovered = inventory_symbols(inventory)
     family_products = family_product_map()
     family_object_counts: dict[str, int] = {

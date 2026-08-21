@@ -8,6 +8,8 @@ import importlib.util
 import inspect
 import io
 import json
+import threading
+import time
 import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
@@ -48,6 +50,8 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     LEDGER_TRANSFERRED,
     LEGACY_BUDGET_UNRESOLVED,
     LEGACY_PLAN_BACKUP_FILENAME,
+    LISTING_DEFAULT_WORKERS,
+    LISTING_MAX_WORKERS,
     MANIFEST_DAILY_FALLBACK,
     MANIFEST_INTEGRITY_MISSING,
     MANIFEST_MONTHLY_REJECTED,
@@ -105,6 +109,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     TransportObjectIndex,
     _assert_no_overlapping_coverage,
     accept_qualification,
+    bounded_map,
     build_acquisition_manifest,
     build_amendment_allowance,
     build_candidate_plan_v3,
@@ -113,6 +118,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     candidate_envelope_digest,
     candidate_preflight,
     canonical_contract_row,
+    canonical_retry_incidents,
     classify_membership,
     coinalyze_perp_symbol,
     contract_close_ms,
@@ -1103,12 +1109,17 @@ def test_listing_checkpoint_reuses_completed_pages_after_a_reset(tmp_path: Path)
     )
     with pytest.raises(SourceQualificationError, match="bounded attempt limit"):
         index.list_common_prefixes(root)
-    # The first page completed and is durably checkpointed even though the run aborted.
+    # The first page completed. Its bytes are durably published by content hash even
+    # though the amortized checkpoint boundary was never reached before the abort.
     assert len(store.entries) == 1
+    assert store.serializations == 0
     assert (root, None) in failing.requests
 
     healthy = _ScriptedTransport(pages)
     resumed_store = ListingCheckpointStore.load(checkpoint_path, cache)
+    assert resumed_store.entries == {}
+    # The uncheckpointed retained response is recovered from its own bytes, not refetched.
+    assert resumed_store.bootstrap(endpoint=VISION_S3_ENDPOINT)["claimed"] == 1
     assert len(resumed_store.entries) == 1
     resumed = TransportObjectIndex(
         healthy,
@@ -1136,9 +1147,12 @@ def test_listing_checkpoint_rehashes_and_fails_closed_on_tampered_bytes(tmp_path
         retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
     )
     index.list_common_prefixes(root)
+    store.flush()
+    assert store.serializations == 1
     entry = next(iter(store.entries.values()))
     Path(entry["content_path"]).write_bytes(b"tampered listing")
     reloaded = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    assert reloaded.entries
     with pytest.raises(ResumeIntegrityError, match="listing checkpoint hash mismatch"):
         TransportObjectIndex(
             _ScriptedTransport(pages),
@@ -1488,6 +1502,8 @@ def _listing_store_with_two_prefixes(tmp_path: Path) -> tuple[ListingCheckpointS
     )
     index.list_common_prefixes(trades)
     index.list_common_prefixes(metrics)
+    # Amortized records become durable at an explicit boundary flush.
+    store.flush()
     return store, path, {"trades": trades, "metrics": metrics, "cache": cache, "pages": pages}
 
 
@@ -4990,7 +5006,7 @@ _CLI_SCRIPT = (
 
 # Everything the executable must not construct, load, or call before its preflight passes.
 _CLI_FORBIDDEN_BEFORE_PREFLIGHT: tuple[str, ...] = (
-    "HttpxTransport",
+    "PooledHttpxTransport",
     "ListingCheckpointStore",
     "RetryJournal",
     "RetryRunner",
@@ -5082,7 +5098,7 @@ def test_cli_noncandidate_initialization_is_unchanged() -> None:
             func = node.func
             if isinstance(func, ast.Name) and func.id == "candidate_preflight":
                 lines["preflight"] = node.lineno
-            elif isinstance(func, ast.Name) and func.id == "HttpxTransport":
+            elif isinstance(func, ast.Name) and func.id == "PooledHttpxTransport":
                 lines["transport"] = node.lineno
             elif isinstance(func, ast.Attribute) and func.attr == "mkdir":
                 lines["mkdir"] = node.lineno
@@ -5103,3 +5119,661 @@ def test_cli_noncandidate_initialization_is_unchanged() -> None:
     # journal operation, and the ordinary non-candidate path still performs them.
     for name in ("mkdir", "api_key", "transport", "checkpoint", "journal"):
         assert lines["preflight"] < lines[name], (name, lines)
+
+
+# --- ADR-0018 bounded listing execution -----------------------------------------------
+
+
+class _ConcurrencyProbeIndex:
+    """Wraps an index and records the maximum simultaneous listing requests."""
+
+    def __init__(self, index: MemoryObjectIndex, *, delay: float = 0.005) -> None:
+        self._index = index
+        self._delay = delay
+        self._lock = threading.Lock()
+        self.active = 0
+        self.max_active = 0
+        self.listings = 0
+
+    def _enter(self) -> None:
+        with self._lock:
+            self.active += 1
+            self.listings += 1
+            self.max_active = max(self.max_active, self.active)
+
+    def _exit(self) -> None:
+        with self._lock:
+            self.active -= 1
+
+    def list_common_prefixes(self, prefix: str) -> list[str]:
+        return self._index.list_common_prefixes(prefix)
+
+    def list_objects(self, prefix: str) -> list[ListingObject]:
+        self._enter()
+        try:
+            time.sleep(self._delay)
+            return self._index.list_objects(prefix)
+        finally:
+            self._exit()
+
+    def fetch_bytes(self, url: str) -> bytes:
+        return self._index.fetch_bytes(url)
+
+
+def test_listing_concurrency_ceiling_is_finite_and_observable() -> None:
+    symbols = [f"SYM{index:02d}USDT" for index in range(12)]
+    index = _index_with_family(
+        symbols=symbols, families=[("monthly/trades", "trades")], months=CONTIGUOUS_MONTHS
+    )
+    serial_probe = _ConcurrencyProbeIndex(index)
+    build_family_inventory(serial_probe, families=("monthly/trades",), workers=1)
+    assert serial_probe.max_active == 1
+
+    bounded_probe = _ConcurrencyProbeIndex(index)
+    build_family_inventory(bounded_probe, families=("monthly/trades",), workers=4)
+    # Finite, inspectable, and never exceeded; the work still all happens.
+    assert 1 < bounded_probe.max_active <= 4
+    assert bounded_probe.listings == serial_probe.listings == len(symbols)
+
+    # The ceiling is clamped, so no caller can request unbounded fan-out.
+    state = {"active": 0, "max": 0}
+    guard = threading.Lock()
+
+    def _watch(value: int) -> int:
+        with guard:
+            state["active"] += 1
+            state["max"] = max(state["max"], state["active"])
+        time.sleep(0.002)
+        with guard:
+            state["active"] -= 1
+        return value
+
+    assert bounded_map(_watch, list(range(40)), workers=1_000) == list(range(40))
+    assert state["max"] <= LISTING_MAX_WORKERS
+    assert LISTING_DEFAULT_WORKERS <= LISTING_MAX_WORKERS
+
+
+def test_full_checkpoint_serialization_is_amortized_and_flushed(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    cache = tmp_path / "list_cache"
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    store.flush_pages = 1_000
+    index = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    index.list_common_prefixes(root)
+    # Two pages retained, no full-document rewrite yet.
+    assert store.fetched == 2
+    assert store.pending_records == 2
+    assert store.serializations == 0
+    assert not (tmp_path / "listing.json").exists()
+
+    store.flush()
+    assert store.serializations == 1
+    assert store.pending_records == 0
+    store.flush()
+    # An explicit boundary flush with nothing pending never rewrites the document.
+    assert store.serializations == 1
+
+    eager = ListingCheckpointStore.load(tmp_path / "eager.json", cache)
+    eager.flush_pages = 1
+    eager_index = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=eager,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    eager_index.list_common_prefixes(root)
+    assert eager.serializations == 2
+    assert eager.to_dict()["serializations"] == 2
+    assert eager.to_dict()["flush_pages"] == 1
+    # Amortization changes only write count, never the recorded entries.
+    assert set(eager.entries) == set(store.entries)
+
+
+def test_interruption_between_publication_and_flush_recovers_without_refetch(
+    tmp_path: Path,
+) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    cache = tmp_path / "list_cache"
+    checkpoint_path = tmp_path / "listing.json"
+    store = ListingCheckpointStore.load(checkpoint_path, cache)
+    store.flush_pages = 1_000_000
+    index = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    prefixes = index.list_common_prefixes(root)
+
+    # Crash after the bytes are published by content hash and before any flush.
+    assert not checkpoint_path.exists()
+    blobs = [item for item in cache.iterdir() if len(item.name) == 64]
+    assert len(blobs) == 2
+
+    recovered = ListingCheckpointStore.load(checkpoint_path, cache)
+    assert recovered.entries == {}
+    stats = recovered.bootstrap(endpoint=VISION_S3_ENDPOINT)
+    assert stats["claimed"] == 2
+    assert stats["skipped_already_bound"] == 0
+
+    resumed_transport = _ScriptedTransport(pages)
+    resumed = TransportObjectIndex(
+        resumed_transport,
+        list_cache_dir=cache,
+        checkpoint=recovered,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    assert resumed.list_common_prefixes(root) == prefixes
+    # Recovered from the responses' own self-identifying bytes: nothing is refetched.
+    assert resumed_transport.requests == []
+    assert recovered.reused == 2
+    assert recovered.fetched == 0
+
+    again = recovered.bootstrap(endpoint=VISION_S3_ENDPOINT)
+    # A bound blob is not rehashed and reparsed again on the next bootstrap.
+    assert again["claimed"] == 0
+    assert again["skipped_already_bound"] == 2
+
+
+def test_bootstrap_still_refuses_tampered_unbound_evidence(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    cache.mkdir(parents=True)
+    root = vision_prefix("monthly", "trades")
+    page = _real_shaped_page(prefix=root, prefixes=[f"{root}BTCUSDT/"])
+    blob = cache / hashlib.sha256(page).hexdigest()
+    blob.write_bytes(page)
+    (cache / ("c" * 64)).write_bytes(page)
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    stats = store.bootstrap(endpoint=VISION_S3_ENDPOINT)
+    assert stats["claimed"] == 1
+    # A blob that is not at its own content address is never claimed as authority.
+    assert stats["unclaimed"] == 1
+    assert any(
+        item["reason"] == "content_address_mismatch" for item in store.unclaimed
+    )
+
+
+def test_bounded_listing_keeps_retry_ownership_per_request(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    transport = _ScriptedTransport(pages, fail_on=(root, None), failures=99)
+    retry = RetryRunner(
+        policy=RetryPolicy(max_attempts=3), sleeper=lambda _d: None, jitter=lambda d: d
+    )
+    index = TransportObjectIndex(
+        transport,
+        list_cache_dir=tmp_path / "list_cache",
+        checkpoint=ListingCheckpointStore.load(tmp_path / "listing.json", tmp_path / "list_cache"),
+        retry=retry,
+    )
+
+    def _attempt(_position: int) -> bool:
+        with pytest.raises(SourceQualificationError, match="bounded attempt limit"):
+            index.list_common_prefixes(root)
+        return True
+
+    assert bounded_map(_attempt, list(range(4)), workers=4) == [True] * 4
+    attempts = sum(1 for item in transport.requests if item == (root, None))
+    # Four concurrent owners, three attempts each: the per-request bound never multiplies.
+    assert attempts == 12
+    assert retry.retries == 8
+    assert all(item["attempt"] <= 3 for item in retry.incidents)
+
+
+def test_serial_and_bounded_listing_produce_identical_identity(tmp_path: Path) -> None:
+    symbols = ["AAAUSDT", "BBBUSDT", "CCCUSDT"]
+    index = _trades_index(symbols)
+    serial = run_source_qualification(
+        store_root=tmp_path / "serial",
+        index=index,
+        current_contracts=_contracts(*symbols),
+        now=FIXED_QUALIFICATION_INSTANT,
+        listing_workers=1,
+    )
+    bounded = run_source_qualification(
+        store_root=tmp_path / "bounded",
+        index=index,
+        current_contracts=_contracts(*symbols),
+        now=FIXED_QUALIFICATION_INSTANT,
+        listing_workers=LISTING_MAX_WORKERS,
+    )
+    # Completion order may not change semantic inventory or report identity.
+    assert identity_bytes(serial) == identity_bytes(bounded)
+    assert serial.discovered_symbols == bounded.discovered_symbols
+    assert [row.product for row in serial.product_matrix] == [
+        row.product for row in bounded.product_matrix
+    ]
+    assert serial.acquisition_manifest["rows"] == bounded.acquisition_manifest["rows"]
+    assert serial.retry["incidents"] == bounded.retry["incidents"]
+
+
+# --- review-117 corrections: cold path, synchronization, cleanup, canonical evidence ---
+
+
+def test_bootstrap_result_shape_is_stable_on_a_cold_store(tmp_path: Path) -> None:
+    cold = ListingCheckpointStore.load(tmp_path / "listing.json", tmp_path / "absent_cache")
+    stats = cold.bootstrap(endpoint=VISION_S3_ENDPOINT)
+    # A fresh store has no cache directory at all; the result shape never varies.
+    assert stats == {
+        "claimed": 0,
+        "checksum_blobs": 0,
+        "unclaimed": 0,
+        "skipped_already_bound": 0,
+    }
+    warm = ListingCheckpointStore.load(tmp_path / "warm.json", tmp_path / "cache")
+    (tmp_path / "cache").mkdir()
+    assert set(warm.bootstrap(endpoint=VISION_S3_ENDPOINT)) == set(stats)
+
+
+def test_cli_cold_store_bootstrap_reports_every_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _load_cli_module("cex002_cli_cold_store_under_test")
+    store_root = tmp_path / "cold"
+    captured: dict[str, Any] = {}
+
+    def _fake_run(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+        raise SourceQualificationError("stop after bootstrap")
+
+    monkeypatch.setattr(module, "run_source_qualification", _fake_run)
+    code = module.main(["--store-root", str(store_root), "--report-path", str(tmp_path / "r.json")])
+    text = capsys.readouterr().err
+    # The cold path reaches the qualifier instead of raising KeyError on a missing field.
+    assert code == 1
+    assert "listing checkpoint bootstrap: " in text
+    assert "skipped_already_bound=0" in text
+    assert captured["listing_workers"] == LISTING_DEFAULT_WORKERS
+
+
+def test_library_default_is_serial_and_cli_passes_its_own_default() -> None:
+    parameters = inspect.signature(run_source_qualification).parameters
+    # ADR-0018: programmatic callers stay serial unless they opt in deliberately.
+    assert parameters["listing_workers"].default == 1
+    source = _CLI_SCRIPT.read_text(encoding="utf-8")
+    assert "listing_workers=listing_workers" in source
+    assert "default=LISTING_DEFAULT_WORKERS" in source
+
+
+def test_checkpoint_counters_are_synchronized_under_concurrency(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    cache = tmp_path / "list_cache"
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    index = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+    index.list_common_prefixes(root)
+    assert store.fetched == 2
+    assert store.reused == 0
+
+    reader = TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    )
+
+    def _reuse(_position: int) -> list[str]:
+        return reader.list_common_prefixes(root)
+
+    results = bounded_map(_reuse, list(range(8)), workers=8)
+    assert all(item == [f"{root}BTCUSDT/", f"{root}ETHUSDT/"] for item in results)
+    # Eight concurrent reusers, two pages each: no count is lost to a race.
+    assert store.reused == 16
+    assert store.fetched == 2
+
+
+def test_failed_checkpoint_write_does_not_publish_false_state(tmp_path: Path) -> None:
+    root = vision_prefix("monthly", "trades")
+    pages = _trades_pages()
+    cache = tmp_path / "list_cache"
+    store = ListingCheckpointStore.load(tmp_path / "listing.json", cache)
+    store.flush_pages = 1_000
+    TransportObjectIndex(
+        _ScriptedTransport(pages),
+        list_cache_dir=cache,
+        checkpoint=store,
+        retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+    ).list_common_prefixes(root)
+    assert store.pending_records == 2
+
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    real_write = module._atomic_write_json
+
+    def _failing_write(path: Path, payload: Mapping[str, Any]) -> None:
+        raise OSError("disk full")
+
+    module._atomic_write_json = _failing_write  # type: ignore[assignment]
+    try:
+        with pytest.raises(OSError, match="disk full"):
+            store.flush()
+    finally:
+        module._atomic_write_json = real_write  # type: ignore[assignment]
+    # A write that did not happen is never reported as a serialization, and the pending
+    # records stay pending so the next explicit boundary flush still writes them.
+    assert store.serializations == 0
+    assert store.pending_records == 2
+    store.flush()
+    assert store.serializations == 1
+    assert store.pending_records == 0
+    assert json.loads((tmp_path / "listing.json").read_text())["entries"]
+
+
+def test_canonical_retry_incident_ordering_is_scheduling_independent(tmp_path: Path) -> None:
+    incidents = [
+        {"label": "list:zebra", "attempt": 2, "status_code": None, "error": "ConnectError"},
+        {"label": "list:alpha", "attempt": 2, "status_code": None, "error": "ConnectError"},
+        {"label": "list:alpha", "attempt": 1, "status_code": None, "error": "ConnectError"},
+        {"label": "list:zebra", "attempt": 1, "status_code": None, "error": "ConnectError"},
+    ]
+    canonical = canonical_retry_incidents(incidents)
+    assert [(item["label"], item["attempt"]) for item in canonical] == [
+        ("list:alpha", 1),
+        ("list:alpha", 2),
+        ("list:zebra", 1),
+        ("list:zebra", 2),
+    ]
+    # The same evidence in any completion order reads identically.
+    assert canonical_retry_incidents(list(reversed(incidents))) == canonical
+
+    journal_path = tmp_path / "journal.json"
+    journal = RetryJournal.load(journal_path)
+    for incident in incidents:
+        journal.append(incident)
+    durable = json.loads(journal_path.read_text())["incidents"]
+    assert [(item["label"], item["attempt"]) for item in durable] == [
+        (item["label"], item["attempt"]) for item in canonical
+    ]
+    runner = RetryRunner(journal=journal)
+    runner.incidents.extend(reversed(incidents))
+    assert runner.to_dict()["incidents"] == canonical
+
+
+def test_cli_cleanup_flushes_the_checkpoint_even_when_close_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _load_cli_module("cex002_cli_cleanup_under_test")
+    flushed: list[str] = []
+    closed: list[str] = []
+
+    class _ExplodingTransport:
+        def __init__(self, **_kwargs: Any) -> None:
+            self.clients_constructed = 0
+            self.clients_closed = 0
+
+        def close(self) -> None:
+            closed.append("close")
+            raise RuntimeError("pool close failed")
+
+    class _RecordingCheckpoint:
+        entries: dict[str, Any] = {}
+
+        @classmethod
+        def load(cls, _path: Path, _cache: Path) -> "_RecordingCheckpoint":
+            return cls()
+
+        def bootstrap(self, *, endpoint: str) -> dict[str, int]:
+            return {
+                "claimed": 0,
+                "checksum_blobs": 0,
+                "unclaimed": 0,
+                "skipped_already_bound": 0,
+            }
+
+        def flush(self) -> None:
+            flushed.append("flush")
+
+    monkeypatch.setattr(module, "PooledHttpxTransport", _ExplodingTransport)
+    monkeypatch.setattr(module, "ListingCheckpointStore", _RecordingCheckpoint)
+    monkeypatch.setattr(
+        module,
+        "run_source_qualification",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            SourceQualificationError("qualification stopped")
+        ),
+    )
+    report_path = tmp_path / "r.json"
+    code = module.main(
+        ["--store-root", str(tmp_path / "store"), "--report-path", str(report_path)]
+    )
+    captured = capsys.readouterr()
+    # An active body failure stays primary: the qualification error is reported and the
+    # exit code is 1, while both cleanup actions still run and the cleanup failure is
+    # reported after it rather than substituted for it.
+    assert code == 1
+    assert closed == ["close"]
+    assert flushed == ["flush"]
+    assert "ERROR: qualification stopped" in captured.err
+    assert "ERROR: cleanup failed: pool close failed" in captured.err
+    assert captured.err.index("ERROR: qualification stopped") < captured.err.index(
+        "ERROR: cleanup failed"
+    )
+    assert not report_path.exists()
+
+
+def test_cli_cleanup_reports_the_first_failure_when_both_fail(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load_cli_module("cex002_cli_double_failure_under_test")
+    attempted: list[str] = []
+
+    class _ExplodingTransport:
+        def __init__(self, **_kwargs: Any) -> None:
+            self.clients_constructed = 0
+            self.clients_closed = 0
+
+        def close(self) -> None:
+            attempted.append("close")
+            raise RuntimeError("pool close failed")
+
+    class _ExplodingCheckpoint:
+        entries: dict[str, Any] = {}
+
+        @classmethod
+        def load(cls, _path: Path, _cache: Path) -> "_ExplodingCheckpoint":
+            return cls()
+
+        def bootstrap(self, *, endpoint: str) -> dict[str, int]:
+            return {
+                "claimed": 0,
+                "checksum_blobs": 0,
+                "unclaimed": 0,
+                "skipped_already_bound": 0,
+            }
+
+        def flush(self) -> None:
+            attempted.append("flush")
+            raise RuntimeError("checkpoint flush failed")
+
+    monkeypatch.setattr(module, "PooledHttpxTransport", _ExplodingTransport)
+    monkeypatch.setattr(module, "ListingCheckpointStore", _ExplodingCheckpoint)
+    monkeypatch.setattr(module, "run_source_qualification", lambda **_kwargs: object())
+    with pytest.raises(RuntimeError, match="pool close failed"):
+        module.main(
+            ["--store-root", str(tmp_path / "store"), "--report-path", str(tmp_path / "r.json")]
+        )
+    # Both actions are attempted even though both fail, and the declared first cleanup
+    # failure is the one that propagates.
+    assert attempted == ["close", "flush"]
+    first = module.cleanup_execution_resources(_ExplodingTransport(), _ExplodingCheckpoint())
+    assert isinstance(first, RuntimeError)
+    assert str(first) == "pool close failed"
+
+
+# --- review-118 residual proof --------------------------------------------------------
+
+
+class _CheckpointListingSource:
+    """Deterministic multi-prefix listing pages for checkpoint-mapping comparison."""
+
+    def __init__(self, symbols: Sequence[str]) -> None:
+        self.root = vision_prefix("monthly", "trades")
+        self.symbols = list(symbols)
+        self.pages: dict[tuple[str, str | None], bytes] = {
+            (self.root, None): _real_shaped_page(
+                prefix=self.root,
+                prefixes=[f"{self.root}{symbol}/" for symbol in self.symbols],
+            )
+        }
+        for symbol in self.symbols:
+            prefix = f"{self.root}{symbol}/"
+            self.pages[(prefix, None)] = _real_shaped_page(
+                prefix=prefix,
+                objects=[
+                    ListingObject(key=f"{prefix}{symbol}-trades-2020-01.zip", size=11),
+                    ListingObject(key=f"{prefix}{symbol}-trades-2020-02.zip", size=12),
+                ],
+            )
+
+    def index(self, tmp_path: Path, name: str) -> tuple[Any, ListingCheckpointStore, Path]:
+        cache = tmp_path / name / "list_cache"
+        store = ListingCheckpointStore.load(tmp_path / name / "listing.json", cache)
+        index = TransportObjectIndex(
+            _ScriptedTransport(self.pages),
+            list_cache_dir=cache,
+            checkpoint=store,
+            retry=RetryRunner(sleeper=lambda _d: None, jitter=lambda d: d),
+        )
+        return index, store, tmp_path / name / "listing.json"
+
+
+def _normalized_checkpoint(path: Path) -> tuple[list[str], dict[str, dict[str, Any]]]:
+    """Canonical keys and request-to-content entries, minus real retrieval times."""
+    document = json.loads(path.read_text())
+    entries = document["entries"]
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, entry in entries.items():
+        row = {name: value for name, value in entry.items() if name != "retrieved_at"}
+        # Only the local store root differs between two independent cold executions.
+        row["content_path"] = Path(str(row["content_path"])).name
+        normalized[key] = row
+    return list(entries), normalized
+
+
+def test_serial_and_bounded_listing_bind_the_same_requests_to_content(
+    tmp_path: Path,
+) -> None:
+    source = _CheckpointListingSource(["AAAUSDT", "BBBUSDT", "CCCUSDT", "DDDUSDT"])
+    serial_index, serial_store, serial_path = source.index(tmp_path, "serial")
+    bounded_index, bounded_store, bounded_path = source.index(tmp_path, "bounded")
+
+    serial_inventory = build_family_inventory(
+        serial_index, families=("monthly/trades",), workers=1
+    )
+    bounded_inventory = build_family_inventory(
+        bounded_index, families=("monthly/trades",), workers=LISTING_MAX_WORKERS
+    )
+    serial_store.flush()
+    bounded_store.flush()
+
+    # Scheduling changes neither the inventory nor its incidents.
+    assert serial_inventory["monthly/trades"].symbols == bounded_inventory[
+        "monthly/trades"
+    ].symbols
+    assert serial_inventory["monthly/trades"].objects == bounded_inventory[
+        "monthly/trades"
+    ].objects
+    assert serial_inventory["monthly/trades"].incidents == bounded_inventory[
+        "monthly/trades"
+    ].incidents
+
+    serial_keys, serial_entries = _normalized_checkpoint(serial_path)
+    bounded_keys, bounded_entries = _normalized_checkpoint(bounded_path)
+    # Canonical key order and every request-to-content binding are identical once the
+    # only legitimate difference - each response's real retrieval timestamp - is removed.
+    assert serial_keys == bounded_keys
+    assert serial_entries == bounded_entries
+    assert len(serial_keys) == len(source.pages)
+    assert serial_store.fetched == bounded_store.fetched == len(source.pages)
+    # Real retrieval timestamps are retained as evidence in both documents; they are the
+    # only field normalization removes.
+    for path in (serial_path, bounded_path):
+        entries = json.loads(path.read_text())["entries"]
+        assert entries
+        assert all(entry.get("retrieved_at") for entry in entries.values())
+
+
+def test_concurrent_distinct_retry_failures_are_canonically_ordered(tmp_path: Path) -> None:
+    def _record(
+        order: Sequence[str], journal_path: Path
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        journal = RetryJournal.load(journal_path)
+        runner = RetryRunner(
+            policy=RetryPolicy(max_attempts=2),
+            sleeper=lambda _d: None,
+            jitter=lambda d: d,
+            journal=journal,
+        )
+        gates = {label: threading.Event() for label in order}
+        failures: list[str] = []
+
+        def _worker(label: str) -> None:
+            gates[label].wait(timeout=5)
+
+            def _always_fails() -> bytes:
+                # The project's transport wrapper with no HTTP status is the retryable
+                # transient failure. A raw provider exception stays terminal by contract.
+                raise DownloadError("connection reset by peer")
+
+            try:
+                runner.run(
+                    f"list:https://example.test/{label}?api_key=cex002-secret-sentinel",
+                    _always_fails,
+                )
+            except SourceQualificationError:
+                failures.append(label)
+
+        threads = {label: threading.Thread(target=_worker, args=(label,)) for label in order}
+        for thread in threads.values():
+            thread.start()
+        # Controlled completion order: each request finishes before the next is released.
+        for label in order:
+            gates[label].set()
+            threads[label].join(timeout=5)
+        assert sorted(failures) == sorted(order)
+        return runner.to_dict(), json.loads(journal_path.read_text())["incidents"]
+
+    forward, forward_journal = _record(
+        ("alpha", "zulu"), tmp_path / "forward.json"
+    )
+    inverted, inverted_journal = _record(
+        ("zulu", "alpha"), tmp_path / "inverted.json"
+    )
+
+    expected = [
+        ("list:https://example.test/alpha", 1),
+        ("list:https://example.test/alpha", 2),
+        ("list:https://example.test/zulu", 1),
+        ("list:https://example.test/zulu", 2),
+    ]
+    # Two distinct requests, each bounded at two attempts: concurrency never multiplies
+    # a per-request budget.
+    assert forward["attempts"] == inverted["attempts"] == 4
+    assert forward["retries"] == inverted["retries"] == 2
+    # Canonical report and durable journal evidence, whichever request finished first.
+    for payload in (forward, inverted):
+        assert [(item["label"], item["attempt"]) for item in payload["incidents"]] == expected
+    for durable in (forward_journal, inverted_journal):
+        assert [(item["label"], item["attempt"]) for item in durable] == expected
+    assert forward["incidents"] == inverted["incidents"]
+    # Retryable transport failures carry no HTTP status and are named by their wrapper.
+    assert all(item["status_code"] is None for item in forward["incidents"])
+    assert {item["error"] for item in forward["incidents"]} == {"DownloadError"}
+    # Labels are redacted: no query string and no credential ever reaches the evidence.
+    for payload in (forward["incidents"], forward_journal, inverted_journal):
+        rendered = json.dumps(payload)
+        assert "?" not in rendered
+        assert "cex002-secret-sentinel" not in rendered
