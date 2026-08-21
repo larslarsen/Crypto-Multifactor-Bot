@@ -576,6 +576,11 @@ _IDENTITY_DROP_KEYS = frozenset(
         "gate2_feasibility",
         "plan_lock",
         "budget",
+        # Where the durable holdout record happens to live locally, not what boundary was
+        # pinned. Every semantic holdout field - boundary_utc, boundary_ms, boundary_id,
+        # pinned_at, prior_record_sha256, replay_rule, state, and the outcome-blind
+        # assertion - stays in semantic identity.
+        "record_path",
     }
 )
 
