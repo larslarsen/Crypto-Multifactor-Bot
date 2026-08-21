@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement ADR-0019 report split
+Next required actor: Sr Dev - Claude Build - correct review-123 report split findings
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -75,6 +75,7 @@ Governing documents:
 - research/sprint_004/121_CEX002_LISTING_INTEGRATION_AND_CANDIDATE_RESUME.md
 - docs/adr/0019-scalable-qualification-evidence-publication.md
 - research/sprint_004/122_CEX002_TERMINAL_REPORT_ARCHITECTURE_REVIEW.md
+- research/sprint_004/123_CEX002_REPORT_SPLIT_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -898,6 +899,27 @@ three-path ADR-0019 source/test implementation. The current oversized report and
 are frozen. Claude runs no commands, touches no records or Git, and stops for source review
 with exact hashes and the unique test-function count. Hermes and any report/candidate rerun
 remain unauthorized.
+
+No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
+normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
+PAPER, LIVE, or other-ticket work is authorized. Gate 1 remains `IN_PROGRESS`; next ticket
+remains `NONE`.
+
+## Claude ADR-0019 source outcome - rejected before integration
+
+Review 123 accepts the split-writer direction but rejects the three-path drop. The public
+iterator yields detail rows before its final digest/count checks, so a consumer may use
+unvalidated evidence or stop before validation. The reader does not compare compressed
+hash/size, schema/format identity, or recompute row totals/family/pending authority. It
+also accepts noncanonical JSON and some non-relative paths. Publication failure proofs do
+not reach partial-write/replace boundaries, the writer sorts the full 733,203-row
+collection despite its bounded-memory claim, and one no-duplication assertion is vacuous.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 123's same
+three-path correction. It preserves the split architecture and all accepted source/data
+semantics, runs no commands, touches no data/records/Git, and stops for source review with
+exact hashes and the unique test-function count. The preserved 1.06 GB report remains
+frozen. Hermes and report rerun remain unauthorized.
 
 No reduced scope, report truncation, plan migration, sample acquisition, Gate 2,
 normalization, catalog publication, Nautilus work, Harmonic Trader work, payoff analysis,
