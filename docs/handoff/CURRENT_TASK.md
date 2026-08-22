@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and execute review 167
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 168
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -121,6 +121,7 @@ Governing documents:
 - research/sprint_004/165_CEX002_CLAUDE_AUTHORITY_RESIDUAL_REVIEW.md
 - research/sprint_004/166_CEX002_CLAUDE_AUTHORITY_TEST_REVIEW.md
 - research/sprint_004/167_CEX002_AUTHORITY_SOURCE_ACCEPTANCE.md
+- research/sprint_004/168_CEX002_AUTHORITY_SOURCE_INTEGRATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1717,3 +1718,19 @@ pushes, ordinary qualification, Gate 1
 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER,
 LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
 passed; next ticket remains `NONE`.
+
+## Record-168 authority source integration stop published
+
+Hermes integrated review 167's exact three accepted Python paths in commit `1e62cd8` and
+pushed it. The focused sequence stopped at C1:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
+
+C1 exited status 2 during collection because
+`src/cryptofactors/acquisition/binance_usdm_harmonic_qualification.py` references
+`COST_OBSERVATION_PRICEABLE` while defining `CostSampleValidation` before that name is
+defined.
+
+Commands C2-C5 were not run. No live source-authority transaction, data mutation,
+ordinary qualification, Gate 1 acceptance, Gate 2, or later work was run. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
