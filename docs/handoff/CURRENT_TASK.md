@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 165 residual
+Next required actor: Implementation Dev - Codex Spark - correct review 166 test residual
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -119,6 +119,7 @@ Governing documents:
 - research/sprint_004/163_CEX002_SAMPLE_OUTCOME_ARCHITECTURE_REVIEW.md
 - research/sprint_004/164_CEX002_CLAUDE_SEMANTIC_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/165_CEX002_CLAUDE_AUTHORITY_RESIDUAL_REVIEW.md
+- research/sprint_004/166_CEX002_CLAUDE_AUTHORITY_TEST_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1668,6 +1669,31 @@ production/test residual. The accepted CLI is frozen at SHA-256
 `473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f`.
 Claude runs no command or Git operation and returns both changed hashes, the unchanged CLI
 hash, and the unique CEX test-function count. Hermes remains unauthorized.
+
+No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
+bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains
+`NONE`.
+
+## Claude authority production accepted - Spark test correction
+
+Review 166 accepts and freezes the production source-authority transaction at
+`bed5ab4a9d18ed0cb7410d8efc58b6a6fdb88153a68c03ae409494358d48fac7` and retains the
+accepted CLI at
+`473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f`.
+
+The 305-test path is rejected only because its accepted-state fixture searches for an
+uncharged download after the synthetic plan has settled every download, and its
+altered-accounting branch reserves an already-accounted key and therefore changes nothing.
+The existing rejected-state tests also need the explicit public-apply snapshot assertions
+specified in review 166.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only for
+review 166's exact mechanical correction in
+`tests/acquisition/test_binance_usdm_harmonic_qualification.py`. Spark changes no
+production/CLI byte, adds no test, preserves the 305-test count, runs no command or Git
+operation, and returns the exact test hash. Hermes remains unauthorized pending reviewer
+source acceptance.
 
 No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
 bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
