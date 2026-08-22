@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - close final ADR-0022 residuals per review 200
+Next required actor: Sr Dev - Claude Build - correct ADR-0022 tests only per review 201
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -155,6 +155,7 @@ Governing documents:
 - research/sprint_004/198_CEX002_PATH_BOUND_RECOVERY_CORRECTION_REVIEW.md
 - research/sprint_004/199_CEX002_PATH_BOUND_RECOVERY_RESIDUAL_REVIEW.md
 - research/sprint_004/200_CEX002_PATH_BOUND_RECOVERY_FINAL_RESIDUAL_REVIEW.md
+- research/sprint_004/201_CEX002_PATH_BOUND_SOURCE_ACCEPTANCE_TEST_RESIDUAL.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
