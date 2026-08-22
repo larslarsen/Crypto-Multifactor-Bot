@@ -1,15 +1,14 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 217 once
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 218
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Hermes: follow review 217. Prove the exact path-bound authority
-pre-state, obtain network permission, and run the one exact ordinary qualification command.
-Publish record 218 and stop for reviewer inspection. Do not retry, run a second
-qualification, run sizing, acquire the full release, or perform any later work.
+Immediate bounded task: reviewer inspection of record 218 and the changed report 62.
+Hermes has stopped. Do not retry, run a second qualification, run sizing, acquire the full
+release, or perform any later work unless the reviewer authorizes it.
 
 Governing documents:
 
@@ -177,6 +176,7 @@ Governing documents:
 - research/sprint_004/215_CEX002_TRANSITION_INTEGRATION_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/216_CEX002_PATH_BOUND_TRANSITION_EXECUTION.md
 - research/sprint_004/217_CEX002_PATH_BOUND_QUALIFICATION_AUTHORIZATION.md
+- research/sprint_004/218_CEX002_PATH_BOUND_QUALIFICATION_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2559,3 +2559,34 @@ work. A full 41,369-file store manifest comparison before and after the second c
 identical. Hermes published record 216, ran repository control and the three-path
 whitespace check, and stopped for reviewer inspection. Gate 2 remains unaccepted. Next
 ticket remains `NONE`.
+
+## Record-218 path-bound qualification execution published
+
+Hermes proved review 217's exact path-bound pre-state at `HEAD == origin/main`
+`320d795b346eb30316591f6a6f57bdcb4bb609cf`, confirmed no qualification process was
+running, obtained network-enabled execution permission, and ran exactly one ordinary
+qualification invocation. The command exited status 0 after 596 seconds and wrote a
+changed terminal report 62.
+
+The new report is 13,745,360 bytes at SHA-256
+`f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09`. It reports
+`gate_status=QUALIFIED`, `accepted=true`, zero source blockers, zero blocked products,
+and seven release-blocked products. The new manifest detail gzip is 11,292,635 bytes at
+SHA-256 `64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113`, with
+uncompressed SHA-256 `d6c1fac650aaf16d88750da2a40d837f543d0c5fc88c73d463753a576d5bdd17`
+and 466,714,158 uncompressed bytes.
+
+The ADR-0022 retained decomposition matched expectation: 73 valid retained requirement
+keys, 73 retained verified credit objects, 5,225,416 retained verified credit bytes, 56
+selected-manifest consumable objects, and 17 retained complete-cost keys. The report
+rejected 176 ambiguous basename-only retained rows for consumability, reuse credit, and
+source evidence while preserving lineage.
+
+The live lock and amendment ledger stayed at SHA-256 `6cbd044a...` and `2d41fbf0...`
+with the same three-receipt binding. All four transition-preserved evidence objects
+remained byte-identical. The store file count changed from 41,369 to 41,372, with
+network-cache/snapshot and progress/metadata mutations recorded in record 218. Hermes ran
+no retry, second qualification, sizing, bulk acquisition, normalization, catalog
+publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced
+scope, pytest, Ruff, or next-ticket work. Gate 2 remains unaccepted. Next ticket remains
+`NONE`.
