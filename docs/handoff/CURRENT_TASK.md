@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement review 179
+Next required actor: Sr Dev - Claude Build - correct review 181
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -134,6 +134,7 @@ Governing documents:
 - research/sprint_004/178_CEX002_CORRECTED_QUALIFICATION_EXECUTION.md
 - docs/adr/0021-bounded-real-sample-storage-sizing.md
 - research/sprint_004/179_CEX002_GATE1_ACCEPTANCE_AND_STORAGE_SIZING_ARCHITECTURE.md
+- research/sprint_004/181_CEX002_CLAUDE_STORAGE_SIZING_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1963,3 +1964,24 @@ No sizing execution, Gate 2 acceptance, bulk acquisition, normalization, catalog
 publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced
 scope, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 is
 accepted; next ticket remains `NONE`.
+
+## Claude sizing source rejected - bounded senior correction
+
+Review 181 rejects Claude's three-path sizing drop. Scope was correct, but the source
+cannot run against the accepted store and can materially understate capacity: it omits
+the separate 3,144-object, 12,522,974,218-byte cost manifest; accepts caller-created
+Coinalyze lifecycle/response authority; substitutes a floating-point-selected Binance
+ratio for a Coinalyze envelope; and miscomputes symbol-month partitions and high-water.
+Envelope measurement, durable receipt identity/publication, and the synthetic tests also
+violate review 179.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only to correct the same exact
+three untracked sizing paths under review 181. Claude runs no test, linter, control, Git,
+network, sizing, acquisition, or data command; changes no other path, record, or data;
+returns three hashes and the corrected test-function count; and stops for reviewer
+inspection. Hermes remains unauthorized.
+
+Gate 1 remains accepted. No integration, sizing execution, Gate 2 acceptance, bulk
+acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
+PAPER, LIVE, paid source, reduced scope, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; next ticket remains `NONE`.
