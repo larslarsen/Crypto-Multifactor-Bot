@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 204
+Next required actor: Sr Dev - Claude Build - correct one migration fixture per review 205
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -159,6 +159,7 @@ Governing documents:
 - research/sprint_004/202_CEX002_PATH_BOUND_TEST_ASSERTION_REVIEW.md
 - research/sprint_004/203_CEX002_PATH_BOUND_SOURCE_TEST_ACCEPTANCE.md
 - research/sprint_004/204_CEX002_PATH_BOUND_RECOVERY_INTEGRATION.md
+- research/sprint_004/205_CEX002_MIGRATION_FIXTURE_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2338,3 +2339,21 @@ stopped for reviewer inspection. No qualification, authority mutation, sizing re
 acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
 PAPER, LIVE, paid source, reduced scope, or next-ticket work was run. Gate 2 remains
 unaccepted. Next ticket remains `NONE`.
+
+## Record-204 failure accepted; one test fixture correction required
+
+Review 205 accepts Hermes's five-path integration commit and record 204 as accurate
+failure evidence. The focused suite's sole failure is a test-fixture defect:
+`test_migration_does_not_adopt_a_recoverable_missing_checkpoint_entry` searches the
+monthly/daily Kline fixture for an exact-singleton retained basename, but every retained
+data basename has multiple candidate paths under ADR-0022.
+
+Sr Dev - Claude Build is authorized only to correct that fixture in
+`tests/acquisition/test_binance_usdm_harmonic_qualification.py`. The correction must use a
+genuinely basename-unique recoverable entry, bind against the complete fixture domain,
+prove the lookup precondition, and preserve the migration no-write assertions. Production
+is frozen at SHA-256
+`2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74`.
+Claude runs no commands or Git operation and stops with source/test hashes and the test
+count. Hermes remains unauthorized. Gate 2 remains unaccepted; next ticket remains
+`NONE`.
