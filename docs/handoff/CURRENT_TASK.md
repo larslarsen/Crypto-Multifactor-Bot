@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct review 172 assertions
+Next required actor: Jr Dev - Hermes - integrate and execute review 173
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -126,6 +126,7 @@ Governing documents:
 - research/sprint_004/170_CEX002_AUTHORITY_IMPORT_SOURCE_ACCEPTANCE.md
 - research/sprint_004/171_CEX002_AUTHORITY_IMPORT_INTEGRATION.md
 - research/sprint_004/172_CEX002_AUTHORITY_FOCUSED_FAILURE_REVIEW.md
+- research/sprint_004/173_CEX002_AUTHORITY_TEST_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1805,4 +1806,21 @@ unauthorized.
 No integration, live transaction, data or source-data network operation, ordinary
 qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic
 Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Authority test assertions accepted - Hermes restart
+
+Review 173 accepts and freezes the test path at
+`4cf2b786e95723f933a293b8bfdfb59236cfad8490ec7afcbadecc347e543ff0`. Production remains
+`068763e2359abf4fc4fe4b7e7fdea95495db5c22bf362d468fec4056775ecb7e`; CLI remains
+`473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f`; the test count
+remains 305.
+
+Jr Dev - Hermes is authorized only for the exact test-path integration, a complete C1-C5
+restart, and record 174 publication specified in review 173. The first failure stops later
+commands. The live source-authority transaction remains unauthorized.
+
+No live transaction, data or source-data network operation beyond authorized Git pushes,
+ordinary qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus,
+Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
