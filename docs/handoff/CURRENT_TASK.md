@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct transition resume per review 210
+Next required actor: Sr Dev - Claude Build - complete advanced preflight per review 211
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -165,6 +165,7 @@ Governing documents:
 - research/sprint_004/208_CEX002_PATH_BOUND_INTEGRATION_ACCEPTANCE_AND_TRANSITION_DESIGN.md
 - research/sprint_004/209_CEX002_PATH_BOUND_TRANSITION_SOURCE_REVIEW.md
 - research/sprint_004/210_CEX002_PATH_BOUND_TRANSITION_RESUME_REVIEW.md
+- research/sprint_004/211_CEX002_PATH_BOUND_TRANSITION_PREFLIGHT_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2449,6 +2450,24 @@ and completed states must require, rehash, and reuse all four already-preserved 
 objects without republishing missing evidence or treating advanced authority bytes as the
 prior artifacts. Claude must scope the interruption patch without undoing fixture pins and
 add the evidence/resume/idempotence coverage required by review 210. The standalone
+script remains frozen at SHA-256
+`ada238d22560ddcaf834dff03d0da44c546856090e6133cf5afeb7be3d50aabd`.
+Claude runs no command or Git operation and stops with three hashes and the test count.
+Hermes and all execution remain unauthorized. Gate 2 remains unaccepted; next ticket
+remains `NONE`.
+
+## Advanced transition preflight requires all evidence
+
+Review 211 accepts and freezes the corrected state-aware evidence resolver, recoverable
+ledger-first execution, completed no-op, scoped interruption patch, and every prior
+authority correction. One narrow gap remains: direct advanced-state `preflight()` can
+return authority when prior report or checkpoint evidence is absent or damaged because
+the all-evidence resolver is called only later by `apply_path_bound_transition()`.
+
+Sr Dev - Claude Build is authorized only to make advanced preflight call the existing
+no-live-authority evidence verifier before returning and extend the existing evidence
+matrix to prove direct preflight and apply both reject all four damaged evidence objects.
+Fresh preflight and the immediate pre-write recheck remain unchanged. The standalone
 script remains frozen at SHA-256
 `ada238d22560ddcaf834dff03d0da44c546856090e6133cf5afeb7be3d50aabd`.
 Claude runs no command or Git operation and stops with three hashes and the test count.
