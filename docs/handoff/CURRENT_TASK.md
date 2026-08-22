@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 152
+Next required actor: Sr Dev - Grok Build - correct review-153 migration test fixtures
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -106,6 +106,7 @@ Governing documents:
 - research/sprint_004/150_CEX002_SPARK_MIGRATION_TEST_REVIEW.md
 - research/sprint_004/151_CEX002_MIGRATION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/152_CEX002_MIGRATION_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/153_CEX002_MIGRATION_FOCUSED_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1419,3 +1420,24 @@ version-4 digest `2fb0e47a...`.
 Commands 2-5, migration preconditions, the migration-only invocation, ordinary resume,
 sample acquisition, Gate 2, and later work were not run. CEX-002 remains `IN_PROGRESS`;
 Gate 1 has not passed; next ticket remains `NONE`.
+
+## Focused migration tests rejected - Grok fixture correction
+
+Review 153 accepts Hermes's exact integration and required stop, and keeps the integrated
+production and CLI source frozen. The 15 failures reduce to three test-only defects: the
+fixture patches production-module migration identities but its assertions read stale
+imported literals; seeding and candidacy use the same fully acquired inventory so the
+candidate has no download entries; and one fail-closed assertion expects a different
+message than the exact binding validator emits.
+
+Sr Dev - Grok Build using Grok 4.6 High is authorized only for review 153's correction in
+`tests/acquisition/test_binance_usdm_harmonic_qualification.py`. Grok aligns fixture-scoped
+test identities without weakening the production-literal test, makes the real planner
+produce at least two candidate downloads while retaining at least one object, and corrects
+the wrong-authority ledger proof/message. It changes no production/CLI byte, runs no
+command or Git operation, and returns the test hash plus unchanged 285-test count. Hermes
+remains unauthorized pending source acceptance.
+
+No migration invocation, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic
+Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
