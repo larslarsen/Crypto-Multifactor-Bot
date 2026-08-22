@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 140 and run one candidate
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 141
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -94,6 +94,7 @@ Governing documents:
 - research/sprint_004/138_CEX002_CLAUDE_ADR0020_SOURCE_REVIEW.md
 - research/sprint_004/139_CEX002_CLAUDE_ADR0020_CORRECTION_REVIEW.md
 - research/sprint_004/140_CEX002_ADR0020_SOURCE_ACCEPTANCE.md
+- research/sprint_004/141_CEX002_ADR0020_INTEGRATION_AND_CANDIDATE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1192,3 +1193,16 @@ unrelated dirty path.
 No plan migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
 next ticket remains `NONE`.
+
+## Record-141 integration stop published
+
+Hermes integrated review 140's exact three accepted paths in commit `68d437c` and pushed
+it. The required focused sequence stopped at command 1:
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
+returned exit 1 on
+`test_frozen_delivery_identity_resolves_only_while_its_evidence_reproves`, where the
+expected archive family count was 2 and the observed value was 3.
+
+Commands 2-5, compact-report preservation, candidate execution, post-proof, report
+publication, migration, sample acquisition, Gate 2, and later work were not run. CEX-002
+remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
