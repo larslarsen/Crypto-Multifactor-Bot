@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct review 169 import order
+Next required actor: Jr Dev - Hermes - integrate and execute review 170
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -123,6 +123,7 @@ Governing documents:
 - research/sprint_004/167_CEX002_AUTHORITY_SOURCE_ACCEPTANCE.md
 - research/sprint_004/168_CEX002_AUTHORITY_SOURCE_INTEGRATION.md
 - research/sprint_004/169_CEX002_AUTHORITY_IMPORT_FAILURE_REVIEW.md
+- research/sprint_004/170_CEX002_AUTHORITY_IMPORT_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1751,4 +1752,20 @@ CLI/test hashes and unchanged 305-test count. Hermes remains unauthorized.
 No integration, live transaction, data or source-data network operation, ordinary
 qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic
 Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Authority import correction accepted - Hermes restart
+
+Review 170 accepts and freezes the corrected production module at
+`068763e2359abf4fc4fe4b7e7fdea95495db5c22bf362d468fec4056775ecb7e`. The CLI remains
+`473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f`; the 305-test path
+remains `4a9602d7247c0b211dd21925f724ec5e22d529646b71c77cbd529ad7d59a9fef`.
+
+Jr Dev - Hermes is authorized only for the exact one-path production integration, a
+complete C1-C5 restart, and record 171 publication specified in review 170. The first
+failure stops later commands. The live source-authority transaction remains unauthorized.
+
+No live transaction, data or source-data network operation beyond authorized Git pushes,
+ordinary qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus,
+Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
