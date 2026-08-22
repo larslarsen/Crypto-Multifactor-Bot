@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - correct review-148 migration residuals
+Next required actor: Implementation Dev - Codex Spark - correct one migration test harness
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -102,6 +102,7 @@ Governing documents:
 - research/sprint_004/146_CEX002_CLAUDE_MIGRATION_SOURCE_REVIEW.md
 - research/sprint_004/147_CEX002_GROK_MIGRATION_CONTINUATION.md
 - research/sprint_004/148_CEX002_GROK_MIGRATION_SOURCE_REVIEW.md
+- research/sprint_004/149_CEX002_GROK_MIGRATION_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1344,6 +1345,25 @@ and lock input, rejects non-object/malformed binding and receipt structures, and
 direct sentinel and two-file substitution proofs. It runs no command or Git operation and
 stops with all three hashes and the unique test-function count. Hermes remains
 unauthorized.
+
+No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
+
+## Grok residual production accepted - one Spark test correction
+
+Review 149 accepts and freezes the corrected production and unchanged CLI hashes. Migration
+retained recovery and terminal reporting no longer mutate the sample checkpoint, and the
+installed amendment binding now rejects malformed types and binds its final receipt to the
+exact live source plus lock code/config input.
+
+The test source is rejected on one local harness error. The prepared-interruption test
+calls `monkeypatch.undo()`, which removes the fixture's reviewed identity constants before
+the second migration and makes valid recovery fail preflight. Implementation Dev - Codex
+Spark using GPT-5.3-Codex-Spark High is authorized only to scope restoration to
+`install_migrated_lock` inside that test and retain the checkpoint-sentinel/byte proofs
+through recovery. Spark changes no other byte, runs no command or Git operation, and
+returns the test hash with the unchanged 285-test count. Hermes remains unauthorized.
 
 No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
