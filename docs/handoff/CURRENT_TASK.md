@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - finish review-146 migration correction
+Next required actor: Sr Dev - Grok Build - correct review-148 migration residuals
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -101,6 +101,7 @@ Governing documents:
 - research/sprint_004/145_CEX002_VERSION4_CANDIDATE_REVIEW.md
 - research/sprint_004/146_CEX002_CLAUDE_MIGRATION_SOURCE_REVIEW.md
 - research/sprint_004/147_CEX002_GROK_MIGRATION_CONTINUATION.md
+- research/sprint_004/148_CEX002_GROK_MIGRATION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1322,6 +1323,27 @@ command execution, Git, or repository-record edits. The unchanged rejected CLI a
 ordinary-input validation ordering, and exact migrated-history proof remain unfinished;
 every review-146 requirement remains binding. Grok stops with all three exact hashes and
 the unique test-function count. Hermes remains unauthorized.
+
+No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
+
+## Grok migration continuation rejected - two residuals
+
+Review 148 accepts the mixed-state refusal, CLI report preservation, current-input
+ordering, exact prior-history evidence, full lock/ledger comparison, and reviewed-plan
+accounting directions, but rejects the drop before Hermes integration. Migration-only
+still records or unconditionally flushes the sample checkpoint, and a self-consistent
+lock-plus-ledger edit can substitute the executing source receipt because only its shape
+is checked. The ledger loader also coerces a non-object JSON binding through `dict()`.
+
+Sr Dev - Grok Build using Grok 4.6 High is authorized only for review 148's residual
+production/test correction in the same three paths. Grok makes migration checkpoint use
+strictly read-only, binds the installed final source receipt to the exact executing source
+and lock input, rejects non-object/malformed binding and receipt structures, and adds the
+direct sentinel and two-file substitution proofs. It runs no command or Git operation and
+stops with all three hashes and the unique test-function count. Hermes remains
+unauthorized.
 
 No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
