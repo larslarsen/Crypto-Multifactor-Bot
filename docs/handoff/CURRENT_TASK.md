@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 195
+Next required actor: Sr Dev - Claude Build - implement ADR-0022 per review 196
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -149,6 +149,8 @@ Governing documents:
 - research/sprint_004/193_CEX002_STORAGE_SIZING_RUFF_FAILURE_REVIEW.md
 - research/sprint_004/194_CEX002_STORAGE_SIZING_RUFF_SOURCE_ACCEPTANCE.md
 - research/sprint_004/195_CEX002_STORAGE_SIZING_VERIFICATION_AND_EXECUTION.md
+- docs/adr/0022-path-bound-retained-checksum-recovery.md
+- research/sprint_004/196_CEX002_SIZING_AUTHORITY_FAILURE_ARCHITECTURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2275,3 +2277,21 @@ It exited status 1 in 167 seconds with:
 Per review 194, Hermes did not run the second sizing invocation. Receipt 180 and the
 content-addressed sizing-envelope tree remain absent. Gate 1 remains accepted. Gate 2
 remains unaccepted. Next ticket remains `NONE`.
+
+## Record 195 accepted - path-bound authority correction
+
+Review 196 accepts Hermes's stop and identifies the exact failure. The sizing proof uses
+only 73 manifest-consumable keys totaling 763,304 retained bytes, while report 62's valid
+deduplicated selected-plus-cost authority remains 73 unique blobs totaling 5,225,416
+bytes.
+
+ADR-0022 finds 17 basename-only recovered Kline mappings that are not full-key authority.
+They duplicate valid fresh digests and therefore add no byte credit, but they falsely mark
+17 selected-manifest keys consumable. The 96-object Gate-1 cohort contains none of those
+substitutions, so the source finding remains accepted; report 62's affected publication
+authority is suspended for sizing and acquisition until corrected and superseded.
+
+Sr Dev - Claude Build is authorized only to implement ADR-0022 in the qualification source
+and its test source per review 196, return both hashes and the test count, and stop. No
+command execution, Git, repository-record edit, data mutation, sizing edit, or sizing retry
+is authorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
