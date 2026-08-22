@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - remove three imports per review 193
+Next required actor: Jr Dev - Hermes - integrate and restart review 194
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -147,6 +147,7 @@ Governing documents:
 - research/sprint_004/191_CEX002_STORAGE_SIZING_FINAL_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/192_CEX002_STORAGE_SIZING_FINAL_RESTART_AND_EXECUTION.md
 - research/sprint_004/193_CEX002_STORAGE_SIZING_RUFF_FAILURE_REVIEW.md
+- research/sprint_004/194_CEX002_STORAGE_SIZING_RUFF_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2238,3 +2239,20 @@ Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, networ
 qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
 Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
 authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Ruff correction accepted - Hermes verification and sizing restart
+
+Review 194 accepts Claude's exact three-import deletion at test SHA-256
+`fda45c767e8cf271136f2a25769e37f64c57428fde15e508d0045b975679b2c7`, preserving 44
+test functions and the frozen production/CLI identities.
+
+Jr Dev - Hermes is authorized only to integrate that exact test diff, restart focused
+tests, exact-path Ruff, and control, then conditionally run exactly two local sizing
+invocations for first publication and byte-identical reproof. The first nonzero result
+stops. Hermes publishes record 195 and receipt 180 if created, updates the control plane,
+commits/pushes only the enumerated CEX-002 paths, and stops for reviewer inspection.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted until reviewer inspection of a real
+receipt. No network, qualification, bulk acquisition, normalization, catalog publication,
+NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or
+next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
