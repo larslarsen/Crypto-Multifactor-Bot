@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - correct review-153 migration test fixtures
+Next required actor: Jr Dev - Hermes - integrate test correction and restart migration sequence
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -107,6 +107,7 @@ Governing documents:
 - research/sprint_004/151_CEX002_MIGRATION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/152_CEX002_MIGRATION_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/153_CEX002_MIGRATION_FOCUSED_FAILURE_REVIEW.md
+- research/sprint_004/154_CEX002_MIGRATION_TEST_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1441,3 +1442,21 @@ remains unauthorized pending source acceptance.
 No migration invocation, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic
 Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Migration test correction accepted - Hermes restart authorized
+
+Review 154 accepts and freezes Grok's exact test correction at
+`a753afc0290708c630198714d574f1ddb65fa43e97b516a100ba32f0a915fd1e`. The fixture now
+aligns generated identities in both namespaces, derives retained and download entries
+through the real planner, and isolates the wrong-binding error with a valid source receipt.
+The integrated production and CLI hashes remain frozen.
+
+Jr Dev - Hermes is authorized for review 154's exact test-only integration and a complete
+restart of review 151's C1-C5 stop-on-first-failure sequence. Only if all five commands
+pass may Hermes perform review 151's exact migration preconditions, single migration-only
+invocation, after-proof, and record 155 publication. No retry, ordinary resume, second
+migration, or sample acquisition is authorized.
+
+No migration before all focused commands pass, sample acquisition, Gate 2, reduced scope,
+Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
