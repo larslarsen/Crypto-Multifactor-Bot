@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 175
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 176
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -129,6 +129,7 @@ Governing documents:
 - research/sprint_004/173_CEX002_AUTHORITY_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/174_CEX002_AUTHORITY_TEST_INTEGRATION.md
 - research/sprint_004/175_CEX002_AUTHORITY_TRANSACTION_AUTHORIZATION.md
+- research/sprint_004/176_CEX002_AUTHORITY_TRANSACTION_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1864,3 +1865,31 @@ No network call, report write, sample acquisition, reservation reconciliation, o
 qualification, Gate-1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic
 Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-176 authority transaction execution published
+
+Hermes executed review 175's single local
+`--apply-reviewed-v4-source-correction-only` invocation. It exited status 0 and reported
+`transaction=cex002_reviewed_v4_source_correction`, `executed=true`, and
+`state=source_identity_advanced`.
+
+The live lock advanced to
+`522271238e38a3652f9521b236981544782e02459450703f21e9ef344d476fa6`; the live amendment
+ledger advanced to `832228fd2b4b9394e205a69441281ddbfccc92c227144c5c0c2b8181e164e488`.
+The prior lock and prior amendment ledger now exist at their required content-addressed
+evidence paths and rehash to
+`8fda3c7db11173dafa122114667622f501b62ecf05f12cdf796897d5af0942bc` and
+`2a4c4db6e14350d6814b6f72a3caa1357659cd064a13fd2edeb84a2896223c8c`.
+
+Plan version 4 and digest
+`2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef` remain exact.
+Accounting remains 82 charges, 845,471 transferred bytes, 1,049,324 charged bytes, two
+reservations, 203,853 planned reservation bytes, 268,435,456-byte allowance, zero acquired
+samples, zero reconciled reservations, and `download_authorized=false`.
+
+The report, legacy ledger, sample plan, retry journal, listing checkpoint, official
+metadata, raw tree, list cache, FAPI caches, Coinalyze cache, prior-report tree, and
+manifest tree remained byte-identical to the pre-snapshot. No `.env` file was loaded. No
+network permission, retry, recovery, ordinary qualification, report write, sample
+acquisition, reservation reconciliation, Gate 1 acceptance, Gate 2, or later work was run.
+CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
