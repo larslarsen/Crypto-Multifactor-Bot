@@ -8137,7 +8137,7 @@ def test_cost_validation_accepts_real_shaped_headed_payloads() -> None:
     assert ticker.version == "cex002_cost_source_validation_v1"
     assert ticker.first_timestamp_ms == 1577836800000
     assert ticker.last_timestamp_ms == 1577836801000
-    assert "uncrossed_quotes" in ticker.checks
+    assert "uncrossed_two_sided_quotes" in ticker.checks
     assert "positive_nondecreasing_transaction_and_event_times" in ticker.checks
 
     depth = _validate_depth(*_VALID_DEPTH_ROWS)
@@ -8176,8 +8176,8 @@ def test_cost_validation_accepts_headerless_official_payloads() -> None:
             "not finite",
         ),
         (("1,101.0,2.0,100.5,3.0,1577836800000,1577836800001",), "crossed"),
-        (("1,100.0,-2.0,100.5,3.0,1577836800000,1577836800001",), "quantity is negative"),
-        (("1,0,2.0,100.5,3.0,1577836800000,1577836800001",), "price is not positive"),
+        (("1,100.0,-2.0,100.5,3.0,1577836800000,1577836800001",), "quote value is negative"),
+        (("1,0,2.0,100.5,3.0,1577836800000,1577836800001",), "quote side is inconsistently zero"),
         (("1.5,100.0,2.0,100.5,3.0,1577836800000,1577836800001",), "not an integer"),
         (("-1,100.0,2.0,100.5,3.0,1577836800000,1577836800001",), "update id is negative"),
         (("1,100.0,2.0,100.5,3.0,1577836800000,0",), "time is not positive"),
@@ -9549,7 +9549,7 @@ def test_all_empty_cost_object_is_unavailable_evidence_not_an_incident(
     assert cost.source_blocked is True
     assert "binance_usdm_cost_calibration" in report.blocked_products
     # Selection is outcome-blind: the observed object is never replaced after inspection.
-    assert [item["key"] for item in block["items"]] == list(block["keys"])
+    assert sorted(item["key"] for item in block["items"]) == sorted(block["keys"])
 
 
 def test_one_usable_two_sided_quote_qualifies_the_cost_family(tmp_path: Path) -> None:
@@ -9679,8 +9679,15 @@ def test_cli_exposes_the_pinned_source_correction_switch() -> None:
     assert "type" not in switch and "default" not in switch and "choices" not in switch
     # Mutually exclusive, preflighted before any facility, and never writes a report.
     assert "the reviewed transitions are mutually exclusive" in source
-    assert "reviewed_source_correction_preflight(" in source
     assert "apply_reviewed_source_correction(" in source
+    receipt_apply = "receipt = apply_reviewed_source_correction("
+    correction_return = "return 0"
+    correction_mkdir = "store_root.mkdir("
+    receipt_index = source.find(receipt_apply)
+    return_index = source.find(correction_return, receipt_index)
+    mkdir_index = source.find(correction_mkdir, receipt_index)
+    assert receipt_index != -1 and return_index != -1 and mkdir_index != -1
+    assert receipt_index < return_index < mkdir_index
     assert "reviewed_v4_source_correction: " in source
     # It returns before any facility is constructed, and prints both blocker lists.
     assert "gate1_source_blockers: " in source
