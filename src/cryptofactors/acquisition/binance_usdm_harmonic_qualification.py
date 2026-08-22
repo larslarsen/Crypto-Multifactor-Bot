@@ -1837,6 +1837,19 @@ COST_VALIDATION_CHECKS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+QUOTE_STATE_TWO_SIDED: str = "two_sided"
+QUOTE_STATE_BID_ONLY: str = "bid_only"
+QUOTE_STATE_ASK_ONLY: str = "ask_only"
+QUOTE_STATE_EMPTY: str = "empty"
+QUOTE_STATES: tuple[str, ...] = (
+    QUOTE_STATE_TWO_SIDED,
+    QUOTE_STATE_BID_ONLY,
+    QUOTE_STATE_ASK_ONLY,
+    QUOTE_STATE_EMPTY,
+)
+COST_OBSERVATION_PRICEABLE: str = "priceable_two_sided_quotes_observed"
+COST_OBSERVATION_UNPRICEABLE: str = "typed_unavailable_cost_observation"
+
 
 @dataclass(frozen=True, slots=True)
 class CostSampleValidation:
@@ -1965,20 +1978,6 @@ def cost_sample_rows(payload: bytes, *, key: str) -> tuple[SchemaIdentity, list[
     if schema.kind == "headed" and rows:
         rows = rows[1:]
     return schema, rows
-
-
-QUOTE_STATE_TWO_SIDED: str = "two_sided"
-QUOTE_STATE_BID_ONLY: str = "bid_only"
-QUOTE_STATE_ASK_ONLY: str = "ask_only"
-QUOTE_STATE_EMPTY: str = "empty"
-QUOTE_STATES: tuple[str, ...] = (
-    QUOTE_STATE_TWO_SIDED,
-    QUOTE_STATE_BID_ONLY,
-    QUOTE_STATE_ASK_ONLY,
-    QUOTE_STATE_EMPTY,
-)
-COST_OBSERVATION_PRICEABLE: str = "priceable_two_sided_quotes_observed"
-COST_OBSERVATION_UNPRICEABLE: str = "typed_unavailable_cost_observation"
 
 
 def classify_quote_row(
