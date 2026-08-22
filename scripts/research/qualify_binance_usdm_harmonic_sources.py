@@ -14,6 +14,11 @@ and complete-cost identities, accepts no operator authority, writes the prepared
 ledger before the version-4 lock, keeps the legacy ledger byte-identical, treats the
 accepted report and its manifest artifacts as read-only, and downloads no sample.
 
+`--apply-reviewed-v4-source-correction-only` applies the single reviewed ADR-0020 4b
+source-authority advance. It is pinned to the exact accepted executed state, advances
+only the executing source identity, acquires no sample, reconciles no reservation, and
+writes no qualification report.
+
 `--candidate-plan-only` proves the durable version-2 lock and legacy ledger before this
 process creates or touches anything, then constructs the version-4 candidate plan from that
 read-only prior authority. It migrates no plan or ledger, downloads no sample, and proves
@@ -55,6 +60,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     candidate_preflight,
     qualification_exit_code,
     reviewed_migration_preflight,
+    apply_reviewed_source_correction,
     run_source_qualification,
     write_qualification_report,
 )
@@ -128,6 +134,16 @@ def main(argv: list[str] | None = None) -> int:
             "download authority, and stops before every sample acquisition"
         ),
     )
+    parser.add_argument(
+        "--apply-reviewed-v4-source-correction-only",
+        action="store_true",
+        help=(
+            "apply the one reviewed ADR-0020 4b source-authority advance: it is pinned to "
+            "the exact accepted report, version-4 lock, amendment ledger, legacy ledger, "
+            "and checkpoint identities, advances only the executing source identity, "
+            "acquires no sample, reconciles no reservation, and writes no report"
+        ),
+    )
     args = parser.parse_args(argv)
 
     # The Gate 1 execution budget may be tightened but never raised. There is no
@@ -137,6 +153,32 @@ def main(argv: list[str] | None = None) -> int:
     store_root = Path(args.store_root)
     report_path = Path(args.report_path)
     apply_migration = bool(args.apply_reviewed_v4_migration_only)
+    apply_correction = bool(args.apply_reviewed_v4_source_correction_only)
+
+    if sum((bool(args.candidate_plan_only), apply_migration, apply_correction)) > 1:
+        print(
+            "ERROR: the reviewed transitions are mutually exclusive",
+            file=sys.stderr,
+        )
+        return 1
+
+    if apply_correction:
+        # ADR-0020 4b: the whole transition runs here, before this process creates the
+        # store, a transport, a cache, a checkpoint, a journal, an index, a contract
+        # source, or reads a credential. It writes no report and acquires nothing.
+        try:
+            receipt = apply_reviewed_source_correction(
+                store_root=store_root, report_path=report_path
+            )
+        except (SourceQualificationError, ResumeIntegrityError) as exc:
+            print(f"ERROR: {exc.message}", file=sys.stderr)
+            return 1
+        print(
+            "reviewed_v4_source_correction: "
+            + json.dumps(receipt, sort_keys=True, default=str),
+            file=sys.stderr,
+        )
+        return 0
 
     if apply_migration and args.candidate_plan_only:
         print(
@@ -290,6 +332,15 @@ def main(argv: list[str] | None = None) -> int:
             f"reused_existing={detail['reused_existing']}",
             file=sys.stderr,
         )
+    # ADR-0020 4b: Gate-1 source blockers and later-release blockers are separate lists.
+    print(
+        "gate1_source_blockers: " + ",".join(report.blocked_products),
+        file=sys.stderr,
+    )
+    print(
+        "release_blockers: " + ",".join(report.release_blocked_products),
+        file=sys.stderr,
+    )
     print(
         f"gate_status={report.gate_status} accepted={report.accepted} "
         f"symbols={len(report.discovered_symbols)} "

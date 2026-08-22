@@ -31,6 +31,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     CONTRACT_METADATA_FILENAME,
     CONTRACT_SNAPSHOT_DIRNAME,
     COVERAGE_BLOCKING_GAPS,
+    COVERAGE_COMPLETE,
     COVERAGE_TYPED_GAPS,
     COVERAGE_UNRESOLVED_MEMBERSHIP,
     DERIVED_PRODUCTS,
@@ -146,6 +147,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     build_acquisition_manifest,
     build_amendment_allowance,
     build_candidate_plan_v4,
+    apply_reviewed_source_correction,
     build_family_inventory,
     FapiDeliveryPriceSource,
     MemoryDeliveryPriceSource,
@@ -211,6 +213,16 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     reviewed_migration_binding,
     reviewed_migration_preflight,
     reviewed_plan_shape,
+    COST_OBSERVATION_PRICEABLE,
+    COST_OBSERVATION_UNPRICEABLE,
+    QUOTE_STATES,
+    QUOTE_STATE_ASK_ONLY,
+    QUOTE_STATE_BID_ONLY,
+    QUOTE_STATE_EMPTY,
+    QUOTE_STATE_TWO_SIDED,
+    SOURCE_CORRECTION_ID,
+    classify_quote_row,
+    reviewed_source_correction_preflight,
     run_source_qualification,
     select_cost_calibration_sample,
     select_nonoverlapping_objects,
@@ -702,7 +714,10 @@ def test_empty_listed_symbol_prefix_blocks_official_complete(tmp_path: Path) -> 
     # A listed prefix with no objects is a coverage fact, not a loss of source authority.
     assert bars.coverage_state == COVERAGE_BLOCKING_GAPS
     assert "ETHUSDT" in bars.uncovered_listed_symbols
-    assert "binance_usdm_bar_1h" in report.blocked_products
+    # ADR-0020 4b: a coverage gap blocks the release, not the qualified source.
+    assert bars.source_blocked is False
+    assert "binance_usdm_bar_1h" not in report.blocked_products
+    assert "binance_usdm_bar_1h" in report.release_blocked_products
     coverage = report.storage["symbol_coverage"]["binance_usdm_bar_1h"]
     assert coverage["monthly/klines/ETHUSDT"] == 0
 
@@ -738,7 +753,9 @@ def test_absent_family_prefix_blocks_official_complete(tmp_path: Path) -> None:
     assert bars.coverage_state == COVERAGE_BLOCKING_GAPS
     assert "ETHUSDT" in bars.uncovered_universe_symbols
     assert "ETHUSDT" not in bars.uncovered_listed_symbols
-    assert "binance_usdm_bar_1h" in report.blocked_products
+    assert bars.source_blocked is False
+    assert "binance_usdm_bar_1h" not in report.blocked_products
+    assert "binance_usdm_bar_1h" in report.release_blocked_products
     gaps = [item for item in bars.universe_coverage_gaps if item["symbol"] == "ETHUSDT"]
     assert [item["status"] for item in gaps] == ["current_unarchived"]
     assert gaps[0]["blocking"] is True
@@ -2800,7 +2817,10 @@ def test_interior_month_gap_blocks_release_without_withdrawing_authority(
     assert bars.coverage_state == COVERAGE_BLOCKING_GAPS
     assert "interior_month_gap" in bars.coverage_gap_kinds
     assert bars.release_blocked is True
-    assert "binance_usdm_bar_1h" in report.blocked_products
+    # The source stays qualified; only the release is blocked by the interior gap.
+    assert bars.source_blocked is False
+    assert "binance_usdm_bar_1h" not in report.blocked_products
+    assert "binance_usdm_bar_1h" in report.release_blocked_products
     gap = next(
         item for item in bars.universe_coverage_gaps if item["kind"] == "interior_month_gap"
     )
@@ -9402,3 +9422,595 @@ def test_amendment_binding_rejects_non_object_and_malformed_receipts(
     assert recording.calls == []
     assert contracts.calls == 0
     assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+
+
+# --- ADR-0020 4b typed quote states and Gate-1 separation ------------------------------
+
+
+def test_every_authentic_quote_state_is_classified() -> None:
+    common = {"context": {"key": "k", "row": 0}}
+    assert classify_quote_row(bid=1.0, bid_qty=2.0, ask=1.5, ask_qty=3.0, **common) == (
+        QUOTE_STATE_TWO_SIDED
+    )
+    assert classify_quote_row(bid=1.0, bid_qty=2.0, ask=0.0, ask_qty=0.0, **common) == (
+        QUOTE_STATE_BID_ONLY
+    )
+    assert classify_quote_row(bid=0.0, bid_qty=0.0, ask=1.5, ask_qty=3.0, **common) == (
+        QUOTE_STATE_ASK_ONLY
+    )
+    assert classify_quote_row(bid=0.0, bid_qty=0.0, ask=0.0, ask_qty=0.0, **common) == (
+        QUOTE_STATE_EMPTY
+    )
+    assert set(QUOTE_STATES) == {
+        QUOTE_STATE_TWO_SIDED,
+        QUOTE_STATE_BID_ONLY,
+        QUOTE_STATE_ASK_ONLY,
+        QUOTE_STATE_EMPTY,
+    }
+    # ADR-0020 4b classifies by price. A positive price with zero size is a real thin
+    # quote and is not an integrity failure.
+    assert classify_quote_row(bid=1.0, bid_qty=0.0, ask=1.5, ask_qty=3.0, **common) == (
+        QUOTE_STATE_TWO_SIDED
+    )
+    assert classify_quote_row(bid=1.0, bid_qty=0.0, ask=0.0, ask_qty=0.0, **common) == (
+        QUOTE_STATE_BID_ONLY
+    )
+    # Size without a price, a negative value, and a crossed two-sided quote still fail.
+    with pytest.raises(SourceQualificationError, match="inconsistently zero"):
+        classify_quote_row(bid=0.0, bid_qty=2.0, ask=1.5, ask_qty=3.0, **common)
+    with pytest.raises(SourceQualificationError, match="is negative"):
+        classify_quote_row(bid=-1.0, bid_qty=2.0, ask=1.5, ask_qty=3.0, **common)
+    with pytest.raises(SourceQualificationError, match="crossed"):
+        classify_quote_row(bid=2.0, bid_qty=2.0, ask=1.5, ask_qty=3.0, **common)
+
+
+def test_retained_terminal_empty_quote_is_a_typed_observation() -> None:
+    # The LTCBUSD shape: one all-zero terminal quote in a structurally valid file.
+    proof = _validate_ticker("1,0,0,0,0,1692921600000,1692921600001")
+    assert proof.row_count == 1
+    assert proof.quote_states[QUOTE_STATE_EMPTY] == 1
+    assert proof.priceable_rows == 0
+    assert proof.cost_priceable is False
+    assert proof.observation == COST_OBSERVATION_UNPRICEABLE
+    assert proof.to_dict()["quote_states"][QUOTE_STATE_EMPTY] == 1
+
+
+def test_retained_bid_only_prefix_keeps_the_rest_of_the_day() -> None:
+    # The XRPUSDC shape: bid-only rows first, then valid two-sided quotes.
+    rows = [
+        f"{index},0.5,10,0,0,{1692921600000 + index},{1692921600001 + index}"
+        for index in range(4)
+    ]
+    rows += [
+        f"{index},0.5,10,0.6,11,{1692921700000 + index},{1692921700001 + index}"
+        for index in range(4, 12)
+    ]
+    proof = _validate_ticker(*rows)
+    assert proof.row_count == 12
+    assert proof.quote_states[QUOTE_STATE_BID_ONLY] == 4
+    assert proof.quote_states[QUOTE_STATE_TWO_SIDED] == 8
+    # Four sparse rows never discard the eight priceable ones.
+    assert proof.priceable_rows == 8
+    assert proof.cost_priceable is True
+    assert proof.observation == COST_OBSERVATION_PRICEABLE
+
+
+def test_mixed_and_one_sided_files_keep_every_still_failing_invariant() -> None:
+    ask_only = _validate_ticker("1,0,0,1.5,3,1692921600000,1692921600001")
+    assert ask_only.quote_states[QUOTE_STATE_ASK_ONLY] == 1
+    assert ask_only.observation == COST_OBSERVATION_UNPRICEABLE
+    # Width drift, non-finite values, and time reversal still fail closed.
+    with pytest.raises(SourceQualificationError, match="row width"):
+        _validate_ticker("1,0,0,0,0,1692921600000")
+    with pytest.raises(SourceQualificationError, match="not finite"):
+        _validate_ticker("1,nan,1,1.5,3,1692921600000,1692921600001")
+    with pytest.raises(SourceQualificationError, match="moves backwards"):
+        _validate_ticker(
+            "1,0.5,10,0.6,11,1692921700000,1692921700001",
+            "2,0.5,10,0.6,11,1692921600000,1692921600001",
+        )
+
+
+def _sparse_cost_index(*ticker_rows: str) -> MemoryObjectIndex:
+    ticker = _ticker_payload(*ticker_rows)
+    depth = _depth_payload(*_VALID_DEPTH_ROWS)
+
+    def _payload(key: str) -> bytes:
+        return ticker if "/bookTicker/" in key else depth
+
+    return _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("daily/bookTicker", "bookTicker"), ("daily/bookDepth", "bookDepth")],
+        payload_for_key=_payload,
+        months=("2020-01-01",),
+    )
+
+
+def test_all_empty_cost_object_is_unavailable_evidence_not_an_incident(
+    tmp_path: Path,
+) -> None:
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=_sparse_cost_index("1,0,0,0,0,1692921600000,1692921600001"),
+        current_contracts=_contracts("BTCUSDT"),
+    )
+    # No integrity incident: the file parsed and the state is real.
+    assert not [
+        item
+        for item in report.incidents
+        if item.get("kind") == "sample_error" and "bookTicker" in str(item.get("family"))
+    ]
+    block = report.storage["cost_source_sample"]
+    assert block["quote_states"][QUOTE_STATE_EMPTY] >= 1
+    assert block["unpriceable_observations"]
+    cost = _row("binance_usdm_cost_calibration", report)
+    # The family still does not qualify without one usable two-sided quote.
+    assert cost.source_qualification_state == SOURCE_STATE_SAMPLE_PENDING
+    assert cost.source_blocked is True
+    assert "binance_usdm_cost_calibration" in report.blocked_products
+    # Selection is outcome-blind: the observed object is never replaced after inspection.
+    assert [item["key"] for item in block["items"]] == list(block["keys"])
+
+
+def test_one_usable_two_sided_quote_qualifies_the_cost_family(tmp_path: Path) -> None:
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=_sparse_cost_index(
+            "1,0,0,0,0,1692921600000,1692921600001",
+            "2,0.5,10,0.6,11,1692921700000,1692921700001",
+        ),
+        current_contracts=_contracts("BTCUSDT"),
+    )
+    block = report.storage["cost_source_sample"]
+    assert block["quote_states"][QUOTE_STATE_TWO_SIDED] >= 1
+    assert block["quote_states"][QUOTE_STATE_EMPTY] >= 1
+    cost = _row("binance_usdm_cost_calibration", report)
+    assert cost.source_qualification_state != SOURCE_STATE_SAMPLE_PENDING
+    assert cost.source_blocked is False
+    assert "binance_usdm_cost_calibration" not in report.blocked_products
+
+
+def test_membership_coverage_is_its_classification_not_a_family_sweep(
+    tmp_path: Path,
+) -> None:
+    # One current perpetual that the archives do not carry at all.
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=_kline_manifest_index(),
+        current_contracts=_contracts("BTCUSDT", "NEWCOINUSDT"),
+    )
+    membership = _row("binance_usdm_perpetual_membership", report)
+    assert report.membership["unresolved_count"] == 0
+    # Membership owns no data family, so it is never evaluated against an empty one.
+    assert membership.universe_coverage_gaps == ()
+    assert membership.uncovered_listed_symbols == ()
+    assert membership.uncovered_universe_symbols == ()
+    assert membership.coverage_state == COVERAGE_COMPLETE
+    assert membership.source_blocked is False
+    assert membership.release_blocked is False
+    assert "binance_usdm_perpetual_membership" not in report.blocked_products
+    # The unarchived name is still a confirmed member, and still a data-family gap.
+    assert "NEWCOINUSDT" in report.accepted_universe
+    bars = _row("binance_usdm_bar_1h", report)
+    assert "NEWCOINUSDT" in bars.uncovered_universe_symbols
+
+
+def test_gate_one_separates_source_blockers_from_release_blockers(tmp_path: Path) -> None:
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=_kline_manifest_index(),
+        current_contracts=_contracts("BTCUSDT"),
+    )
+    matrix = {row.product: row for row in report.product_matrix}
+    for product in report.blocked_products:
+        assert matrix[product].source_blocked is True
+    for product in report.release_blocked_products:
+        assert matrix[product].release_blocked is True
+    # Every Gate-1 blocker is also release-blocked; the reverse need not hold.
+    assert set(report.blocked_products) <= set(report.release_blocked_products)
+    assert report.accepted == (len(report.blocked_products) == 0)
+    # No matrix row, gap, symbol, interval, or release block disappears.
+    assert len(report.product_matrix) == len(matrix)
+    bars = matrix["binance_usdm_bar_1h"]
+    assert bars.coverage_gap_kinds or bars.coverage_state == COVERAGE_COMPLETE
+    flow = matrix["binance_usdm_trade_flow_1h"]
+    # Derived flow inherits the bar product's release state, and the later-release list
+    # follows that value rather than the source gate.
+    assert flow.coverage_state == bars.coverage_state
+    assert flow.release_blocked == bars.release_blocked
+    assert flow.source_gate is False
+    assert "binance_usdm_trade_flow_1h" not in report.blocked_products
+    assert ("binance_usdm_trade_flow_1h" in report.release_blocked_products) == (
+        flow.release_blocked
+    )
+
+
+def test_source_correction_never_enters_the_qualification_pipeline() -> None:
+    parameters = inspect.signature(run_source_qualification).parameters
+    # ADR-0020 4b: the advance is not a qualification mode at all.
+    assert not [name for name in parameters if "source_correction" in name]
+    entry = inspect.signature(apply_reviewed_source_correction).parameters
+    # It takes a store and the accepted report only: no plan, digest, version,
+    # allowance, ledger, relock, or download authority.
+    # No caller may redirect the retained-evidence roots away from the accepted store.
+    assert set(entry) == {"store_root", "report_path", "now"}
+    assert SOURCE_CORRECTION_ID == "cex002_reviewed_v4_source_correction"
+    source = inspect.getsource(apply_reviewed_source_correction)
+    for forbidden in (
+        "HttpTransport",
+        "TransportObjectIndex",
+        "fetch_",
+        "write_qualification_report",
+    ):
+        assert forbidden not in source
+
+
+def test_source_correction_refuses_a_store_that_is_not_the_accepted_state(
+    tmp_path: Path,
+) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    report_path = tmp_path / "62_report.json"
+    report_path.write_bytes(b"{}\n")
+    before = _store_snapshot(tmp_path)
+    # A version-2 store is not the accepted executed state, and nothing is touched.
+    with pytest.raises(SourceQualificationError):
+        reviewed_source_correction_preflight(store_root=tmp_path, report_path=report_path)
+    assert _store_snapshot(tmp_path) == before
+
+
+def test_cli_exposes_the_pinned_source_correction_switch() -> None:
+    source = _CLI_SCRIPT.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    switches: dict[str, dict[str, Any]] = {}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr != "add_argument" or not node.args:
+            continue
+        name = node.args[0]
+        if isinstance(name, ast.Constant) and str(name.value).startswith("--"):
+            switches[str(name.value)] = {
+                keyword.arg: keyword.value for keyword in node.keywords if keyword.arg
+            }
+    switch = switches["--apply-reviewed-v4-source-correction-only"]
+    assert isinstance(switch.get("action"), ast.Constant)
+    assert switch["action"].value == "store_true"
+    assert "type" not in switch and "default" not in switch and "choices" not in switch
+    # Mutually exclusive, preflighted before any facility, and never writes a report.
+    assert "the reviewed transitions are mutually exclusive" in source
+    assert "reviewed_source_correction_preflight(" in source
+    assert "apply_reviewed_source_correction(" in source
+    assert "reviewed_v4_source_correction: " in source
+    # It returns before any facility is constructed, and prints both blocker lists.
+    assert "gate1_source_blockers: " in source
+    assert "release_blockers: " in source
+
+
+def _accepted_v4_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[MemoryObjectIndex, Path]:
+    """A migrated store pinned as review 163's accepted executed state."""
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, report_path)
+    # The accepted state carries settled charges and unsettled reservations; the
+    # transition must carry both through byte-exact.
+    run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+    changed_key, record = next(iter(ledger.charges.items()))
+    ledger.reservations[str(changed_key)] = {
+        "planned_bytes": int(record["planned_bytes"]) if isinstance(record, Mapping) else 1
+    }
+    ledger.charges.pop(changed_key, None)
+    ledger.flush()
+    assert ledger.charges and ledger.reservations
+    for name, path in (
+        ("SOURCE_CORRECTION_REPORT", report_path),
+        ("SOURCE_CORRECTION_LOCK", tmp_path / SAMPLE_PLAN_LOCK_FILENAME),
+        ("SOURCE_CORRECTION_AMENDMENT", tmp_path / AMENDMENT_LEDGER_FILENAME),
+        ("SOURCE_CORRECTION_CHECKPOINT", tmp_path / "cex002_qualification_progress.json"),
+    ):
+        monkeypatch.setattr(module, f"{name}_SHA256", file_sha256(path))
+        monkeypatch.setattr(module, f"{name}_BYTES", int(path.stat().st_size))
+    # The executing source now differs from the one the accepted lock recorded.
+    monkeypatch.setattr(module, "COST_SOURCE_SELECTOR", "three_era_smallest_positive_v9")
+    return index, report_path
+
+
+def _correction_snapshot(store: Path) -> dict[str, str]:
+    return {
+        str(path.relative_to(store)): file_sha256(path)
+        for path in sorted(store.rglob("*"))
+        if path.is_file()
+    }
+
+
+def test_source_correction_advances_only_the_executing_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    lock_before = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock_before is not None
+    accepted_digest = lock_before.inputs["code_config_digest"]
+    before = _correction_snapshot(tmp_path)
+
+    receipt = apply_reviewed_source_correction(
+        store_root=tmp_path, report_path=report_path
+    )
+
+    assert receipt["executed"] is True
+    assert receipt["state"] == "source_identity_advanced"
+    assert receipt["accepted_code_config_digest"] == accepted_digest
+    assert receipt["executing_code_config_digest"] != accepted_digest
+    assert receipt["download_authorized"] is False
+    assert receipt["samples_acquired"] == 0
+    assert receipt["reservations_reconciled"] == 0
+
+    lock_after = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock_after is not None
+    # Only the executing identity moved; plan, digest, history, and lineage are exact.
+    assert lock_after.plan == lock_before.plan
+    assert lock_after.plan_digest == lock_before.plan_digest
+    assert lock_after.history == lock_before.history
+    assert lock_after.retained_snapshot == lock_before.retained_snapshot
+    assert lock_after.inputs["code_config_digest"] == receipt["executing_code_config_digest"]
+    for name in ("inventory_digest", "listing_digest", "membership_digest", "retained_digest"):
+        assert lock_after.inputs[name] == lock_before.inputs[name]
+
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    assert len(ledger.binding["source_receipts"]) == 2
+    # Settled charges and unsettled reservations both carry through byte-exact.
+    assert ledger.charges and ledger.reservations
+    accepted_ledger = BudgetLedger.load(
+        Path(receipt["prior_ledger_evidence_path"]),
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert accepted_ledger is not None
+    assert ledger.charges == accepted_ledger.charges
+    assert ledger.reservations == accepted_ledger.reservations
+    assert receipt["charge_count"] == len(accepted_ledger.charges)
+    assert receipt["reservation_count"] == len(accepted_ledger.reservations)
+
+    # Exactly three paths may change: both preserved evidence objects and the two files.
+    after = _correction_snapshot(tmp_path)
+    changed = {name for name in set(before) | set(after) if before.get(name) != after.get(name)}
+    assert changed == {
+        SAMPLE_PLAN_LOCK_FILENAME,
+        AMENDMENT_LEDGER_FILENAME,
+        str(Path(receipt["prior_lock_evidence_path"]).relative_to(tmp_path)),
+        str(Path(receipt["prior_ledger_evidence_path"]).relative_to(tmp_path)),
+    }
+    assert file_sha256(tmp_path / BUDGET_LEDGER_FILENAME) == receipt["legacy_ledger_sha256"]
+
+
+def test_source_correction_is_idempotent_and_keeps_the_accepted_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    first = apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    snapshot = _correction_snapshot(tmp_path)
+
+    second = apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    assert second["executed"] is False
+    # A rerun changes nothing and still reports the identity the accepted lock carried.
+    assert _correction_snapshot(tmp_path) == snapshot
+    assert second["accepted_code_config_digest"] == first["accepted_code_config_digest"]
+    assert second["executing_code_config_digest"] == first["executing_code_config_digest"]
+    assert second["source_receipts"] == first["source_receipts"]
+
+
+def test_source_correction_recovers_from_a_ledger_advanced_interruption(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    lock_bytes = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+
+    def _interrupt(self: Any) -> None:
+        raise _InjectedAbort("lock publication interrupted")
+
+    # Only this patch is undone: every pinned accepted identity survives the interruption.
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(SamplePlanLock, "flush", _interrupt)
+        with pytest.raises(_InjectedAbort):
+            apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    # Receipt first: the ledger advanced and the lock is still exactly the accepted one.
+    assert (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes() == lock_bytes
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None and len(ledger.binding["source_receipts"]) == 2
+
+    receipt = apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    assert receipt["executed"] is True
+    finished = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    # Recovery finishes the same transition; it never appends a second receipt.
+    assert finished is not None and len(finished.binding["source_receipts"]) == 2
+
+
+@pytest.mark.parametrize(
+    ("mixed_state", "message"),
+    [
+        ("extra_receipt", "exactly one appended receipt"),
+        ("altered_accounting", "changed more than its receipt"),
+        ("changed_evidence", "does not match its content address"),
+    ],
+)
+def test_source_correction_refuses_every_mixed_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mixed_state: str, message: str
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    ledger_path = tmp_path / AMENDMENT_LEDGER_FILENAME
+    ledger = BudgetLedger.load(
+        ledger_path, budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+    )
+    assert ledger is not None
+
+    if mixed_state == "extra_receipt":
+        receipts = list(ledger.binding["source_receipts"])
+        ledger.binding = {
+            **ledger.binding,
+            "source_receipts": [*receipts, dict(receipts[-1])],
+        }
+        ledger.flush()
+    elif mixed_state == "altered_accounting":
+        altered_key, altered = next(iter(ledger.charges.items()))
+        mutation = dict(altered)
+        mutation["planned_bytes"] = int(mutation["planned_bytes"]) + 1
+        ledger.charges[str(altered_key)] = mutation
+        ledger.flush()
+    else:
+        evidence = Path(
+            str(
+                SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME).budget_snapshot[
+                    "corrected_ledger_evidence_path"
+                ]
+            )
+        )
+        evidence.write_bytes(b"{}\n")
+
+    before = _correction_snapshot(tmp_path)
+    with pytest.raises(SourceQualificationError, match=message):
+        apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    assert _correction_snapshot(tmp_path) == before
+
+
+def test_source_correction_refuses_a_lock_advanced_without_its_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    ledger_bytes = (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes()
+    apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    # Put the accepted ledger back beside the advanced lock.
+    (tmp_path / AMENDMENT_LEDGER_FILENAME).write_bytes(ledger_bytes)
+    before = _correction_snapshot(tmp_path)
+    with pytest.raises(SourceQualificationError, match="authorizes nothing"):
+        apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    assert _correction_snapshot(tmp_path) == before
+
+
+def test_source_correction_reproves_retained_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.retained_snapshot
+    document = json.loads((tmp_path / "cex002_qualification_progress.json").read_text())
+    retained_key = next(iter(lock.retained_snapshot))
+    entry = document["objects"].get(retained_key)
+    assert entry is not None
+    blob = tmp_path / "raw" / "sha256" / str(entry["sha256"])
+    assert blob.is_file()
+    blob.unlink()
+    before = _correction_snapshot(tmp_path)
+    # Retained evidence is re-proved read-only before anything advances.
+    with pytest.raises(SourceQualificationError, match="retained_digest"):
+        apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    assert _correction_snapshot(tmp_path) == before
+    assert file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME) != ""
+
+
+def test_source_correction_rejects_corrupt_evidence_before_any_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    corrupt = (
+        tmp_path
+        / module.PRIOR_LEDGER_EVIDENCE_ROOT
+        / f"{module.SOURCE_CORRECTION_AMENDMENT_SHA256}.json"
+    )
+    corrupt.parent.mkdir(parents=True, exist_ok=True)
+    corrupt.write_bytes(b'{"ticket": "CEX-002"}\n')
+    before = _correction_snapshot(tmp_path)
+    with pytest.raises(SourceQualificationError, match="content address"):
+        apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    # Nothing was written: the transition refuses before it touches either file.
+    assert _correction_snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    [
+        ("extra_ledger_field", "changed more than its receipt"),
+        ("legacy_ledger_field", "changed more than its receipt"),
+        ("wrong_correction_id", "changed more than the executing identity"),
+        ("wrong_evidence_path", "changed more than the executing identity"),
+        ("extra_snapshot_field", "changed more than the executing identity"),
+    ],
+)
+def test_source_correction_completed_state_is_exact_in_both_directions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str, message: str
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    ledger_path = tmp_path / AMENDMENT_LEDGER_FILENAME
+    lock_path = tmp_path / SAMPLE_PLAN_LOCK_FILENAME
+
+    if tamper in {"extra_ledger_field", "legacy_ledger_field"}:
+        document = json.loads(ledger_path.read_text())
+        if tamper == "extra_ledger_field":
+            document["operator_note"] = "approved"
+        else:
+            document["legacy_note"] = "reclassified"
+        ledger_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+    else:
+        document = json.loads(lock_path.read_text())
+        snapshot = dict(document["budget_snapshot"])
+        if tamper == "wrong_correction_id":
+            snapshot["source_correction_id"] = "cex002_some_other_transaction"
+        elif tamper == "wrong_evidence_path":
+            snapshot["corrected_ledger_evidence_path"] = str(tmp_path / "elsewhere.json")
+        else:
+            snapshot["operator_note"] = "approved"
+        document["budget_snapshot"] = snapshot
+        lock_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+
+    before = _correction_snapshot(tmp_path)
+    with pytest.raises(SourceQualificationError, match=message):
+        apply_reviewed_source_correction(store_root=tmp_path, report_path=report_path)
+    assert _correction_snapshot(tmp_path) == before
+
+
+def test_source_correction_normalizes_the_preserved_lock_envelope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _index, report_path = _accepted_v4_state(tmp_path, monkeypatch)
+    receipt = apply_reviewed_source_correction(
+        store_root=tmp_path, report_path=report_path
+    )
+    preserved = Path(receipt["prior_lock_evidence_path"])
+    document = json.loads(preserved.read_text())
+    # The preserved object is a real checkpoint document, envelope included.
+    assert document["ticket"] == "CEX-002"
+    assert document["kind"] == "sample_plan_lock"
+    assert "plan_digest" in document
+    # The transition returned only after complete state re-proved against that document.
+    assert receipt["state"] == "source_identity_advanced"
+    assert (
+        reviewed_source_correction_preflight(
+            store_root=tmp_path, report_path=report_path
+        ).state
+        == "source_identity_advanced"
+    )

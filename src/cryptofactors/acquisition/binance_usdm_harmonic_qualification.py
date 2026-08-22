@@ -1445,6 +1445,8 @@ class ProductMatrixRow:
     source_qualification_state: str = ""
     coverage_state: str = ""
     release_blocked: bool = True
+    # ADR-0020 4b: the Gate-1 source blocker, separate from later release completeness.
+    source_blocked: bool = True
     typed_gap_symbols: tuple[str, ...] = ()
     coverage_gap_kinds: tuple[str, ...] = ()
 
@@ -1476,6 +1478,8 @@ class QualificationReport:
     accepted: bool
     membership: Mapping[str, Any] = field(default_factory=dict)
     accepted_universe: tuple[str, ...] = ()
+    # Gate-1 source blockers are ``blocked_products``; these stay blocked for release.
+    release_blocked_products: tuple[str, ...] = ()
     plan_lock: Mapping[str, Any] = field(default_factory=dict)
     budget: Mapping[str, Any] = field(default_factory=dict)
     candidate_plan: Mapping[str, Any] = field(default_factory=dict)
@@ -1818,9 +1822,9 @@ COST_VALIDATION_CHECKS: dict[str, tuple[str, ...]] = {
         "fixed_width_rows",
         "finite_numeric_values",
         "integral_nonnegative_update_ids",
-        "positive_bid_and_ask_prices",
-        "nonnegative_quantities",
-        "uncrossed_quotes",
+        "typed_two_sided_bid_only_ask_only_or_empty_states",
+        "nonnegative_consistent_price_and_quantity_sides",
+        "uncrossed_two_sided_quotes",
         "positive_nondecreasing_transaction_and_event_times",
     ),
     "bookDepth": (
@@ -1847,6 +1851,12 @@ class CostSampleValidation:
     first_timestamp_ms: int
     last_timestamp_ms: int
     checks: tuple[str, ...]
+    # ADR-0020 4b: a no-liquidity state is authentic evidence, not corruption. Sparse
+    # rows are retained and counted here and never enter spread or impact arithmetic.
+    quote_states: Mapping[str, int] = field(default_factory=dict)
+    priceable_rows: int = 0
+    cost_priceable: bool = True
+    observation: str = COST_OBSERVATION_PRICEABLE
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1859,6 +1869,10 @@ class CostSampleValidation:
             "first_timestamp_ms": self.first_timestamp_ms,
             "last_timestamp_ms": self.last_timestamp_ms,
             "checks": list(self.checks),
+            "quote_states": {str(k): int(v) for k, v in sorted(self.quote_states.items())},
+            "priceable_rows": self.priceable_rows,
+            "cost_priceable": self.cost_priceable,
+            "observation": self.observation,
         }
 
 
@@ -1953,14 +1967,60 @@ def cost_sample_rows(payload: bytes, *, key: str) -> tuple[SchemaIdentity, list[
     return schema, rows
 
 
+QUOTE_STATE_TWO_SIDED: str = "two_sided"
+QUOTE_STATE_BID_ONLY: str = "bid_only"
+QUOTE_STATE_ASK_ONLY: str = "ask_only"
+QUOTE_STATE_EMPTY: str = "empty"
+QUOTE_STATES: tuple[str, ...] = (
+    QUOTE_STATE_TWO_SIDED,
+    QUOTE_STATE_BID_ONLY,
+    QUOTE_STATE_ASK_ONLY,
+    QUOTE_STATE_EMPTY,
+)
+COST_OBSERVATION_PRICEABLE: str = "priceable_two_sided_quotes_observed"
+COST_OBSERVATION_UNPRICEABLE: str = "typed_unavailable_cost_observation"
+
+
+def classify_quote_row(
+    *,
+    bid: float,
+    bid_qty: float,
+    ask: float,
+    ask_qty: float,
+    context: Mapping[str, Any],
+) -> str:
+    """Which authentic book state one finite, nonnegative quote row records.
+
+    A zero price with liquidity on the same side, a negative value, or a crossed
+    two-sided quote is still an integrity failure. Everything else is a real state the
+    venue published: two-sided, one-sided, or an empty book.
+    """
+    if bid < 0 or ask < 0 or bid_qty < 0 or ask_qty < 0:
+        raise _cost_error("cost sample quote value is negative", context)
+    # ADR-0020 4b: size without a price is not a book state. A positive price with zero
+    # size is a real thin quote and is not rejected here.
+    if (bid <= 0 and bid_qty > 0) or (ask <= 0 and ask_qty > 0):
+        raise _cost_error("cost sample quote side is inconsistently zero", context)
+    if bid > 0 and ask > 0:
+        if bid > ask:
+            raise _cost_error("cost sample quote is crossed", context)
+        return QUOTE_STATE_TWO_SIDED
+    if bid > 0:
+        return QUOTE_STATE_BID_ONLY
+    if ask > 0:
+        return QUOTE_STATE_ASK_ONLY
+    return QUOTE_STATE_EMPTY
+
+
 def _validate_book_ticker_rows(
     rows: Sequence[tuple[str, ...]], *, key: str
-) -> tuple[int, int]:
-    """Every quote row: finite, positive, uncrossed, and forward in time."""
+) -> tuple[int, int, dict[str, int]]:
+    """Every quote row: finite, consistent, uncrossed, forward in time, and typed."""
     width = len(KNOWN_ARCHIVE_SCHEMAS["bookTicker"]["headerless"])
     first_time = 0
     last_time = 0
     last_event = 0
+    states = {name: 0 for name in QUOTE_STATES}
     for index, row in enumerate(rows):
         context = {"key": key, "row": index}
         if len(row) != width:
@@ -1975,12 +2035,11 @@ def _validate_book_ticker_rows(
         bid_qty = _cost_float(row[2], field_name="best_bid_qty", context=context)
         ask = _cost_float(row[3], field_name="best_ask_price", context=context)
         ask_qty = _cost_float(row[4], field_name="best_ask_qty", context=context)
-        if bid <= 0 or ask <= 0:
-            raise _cost_error("cost sample quote price is not positive", context)
-        if bid_qty < 0 or ask_qty < 0:
-            raise _cost_error("cost sample quote quantity is negative", context)
-        if bid > ask:
-            raise _cost_error("cost sample quote is crossed", context)
+        states[
+            classify_quote_row(
+                bid=bid, bid_qty=bid_qty, ask=ask, ask_qty=ask_qty, context=context
+            )
+        ] += 1
         transaction = _cost_int(row[5], field_name="transaction_time", context=context)
         event = _cost_int(row[6], field_name="event_time", context=context)
         if transaction <= 0 or event <= 0:
@@ -1991,7 +2050,7 @@ def _validate_book_ticker_rows(
             first_time = transaction
         last_time = transaction
         last_event = event
-    return first_time, last_time
+    return first_time, last_time, states
 
 
 def _validate_book_depth_rows(
@@ -2046,9 +2105,10 @@ def validate_cost_sample_payload(
     if not rows:
         raise _cost_error("cost sample has no data rows", {"key": key, "family": family})
     if hint == "bookTicker":
-        first_ms, last_ms = _validate_book_ticker_rows(rows, key=key)
+        first_ms, last_ms, states = _validate_book_ticker_rows(rows, key=key)
     else:
         first_ms, last_ms = _validate_book_depth_rows(rows, key=key)
+        states = {}
     return CostSampleValidation(
         version=COST_VALIDATION_VERSION,
         family=family,
@@ -2059,6 +2119,20 @@ def validate_cost_sample_payload(
         first_timestamp_ms=first_ms,
         last_timestamp_ms=last_ms,
         checks=COST_VALIDATION_CHECKS[hint],
+        quote_states=dict(states),
+        priceable_rows=(
+            int(states.get(QUOTE_STATE_TWO_SIDED, 0)) if hint == "bookTicker" else len(rows)
+        ),
+        cost_priceable=(
+            bool(states.get(QUOTE_STATE_TWO_SIDED, 0)) if hint == "bookTicker" else True
+        ),
+        observation=(
+            COST_OBSERVATION_PRICEABLE
+            if hint != "bookTicker" or states.get(QUOTE_STATE_TWO_SIDED, 0)
+            # A structurally valid file with no two-sided quote is a real observation of
+            # no liquidity, not evidence that the source schema is corrupt.
+            else COST_OBSERVATION_UNPRICEABLE
+        ),
     )
 
 
@@ -4310,6 +4384,503 @@ def load_migrated_amendment_ledger(
     """The amendment ledger a version-4 lock must execute under, fully re-proved."""
     _plan, ledger = validate_migrated_state(store_root=store_root, lock=lock)
     return ledger
+
+
+# --- ADR-0020 4b reviewed version-4 source-authority advance --------------------------
+
+# Review 163 pinned this transition to one exact executed state. It advances only the
+# executing source identity: it selects nothing, acquires nothing, reconciles nothing,
+# and never enters the ordinary qualification pipeline.
+SOURCE_CORRECTION_ID: str = "cex002_reviewed_v4_source_correction"
+SOURCE_CORRECTION_REPORT_SHA256: str = (
+    "53f8f93379cb55d66b6de062f1a6a85f4c9dd318f5b41cc047bff2f5feeaaf51"
+)
+SOURCE_CORRECTION_REPORT_BYTES: int = 13_944_475
+SOURCE_CORRECTION_LOCK_SHA256: str = (
+    "8fda3c7db11173dafa122114667622f501b62ecf05f12cdf796897d5af0942bc"
+)
+SOURCE_CORRECTION_LOCK_BYTES: int = 425_308
+SOURCE_CORRECTION_AMENDMENT_SHA256: str = (
+    "2a4c4db6e14350d6814b6f72a3caa1357659cd064a13fd2edeb84a2896223c8c"
+)
+SOURCE_CORRECTION_AMENDMENT_BYTES: int = 25_223
+SOURCE_CORRECTION_CHECKPOINT_SHA256: str = (
+    "d6c327faa144e819ca6fd4c7b0325b4a39b3ecb7cf1daa2bfdb747b2f22e85ee"
+)
+SOURCE_CORRECTION_CHECKPOINT_BYTES: int = 395_626
+PRIOR_LEDGER_EVIDENCE_ROOT: str = "evidence/ledgers/sha256"
+SOURCE_CORRECTION_STATE_FRESH: str = "accepted_state_not_advanced"
+SOURCE_CORRECTION_STATE_LEDGER_ADVANCED: str = "ledger_advanced_lock_pending"
+SOURCE_CORRECTION_STATE_COMPLETE: str = "source_identity_advanced"
+# The only lock fields this transition may change.
+SOURCE_CORRECTION_LOCK_TRANSFORM: frozenset[str] = frozenset(
+    {"inputs", "budget_snapshot"}
+)
+SOURCE_CORRECTION_SNAPSHOT_TRANSFORM: frozenset[str] = frozenset(
+    {
+        "amendment_binding",
+        "source_correction_id",
+        "corrected_lock_evidence_path",
+        "corrected_ledger_evidence_path",
+    }
+)
+
+
+def _correction_error(message: str, context: Mapping[str, Any]) -> SourceQualificationError:
+    return SourceQualificationError(
+        message, context={"transaction": SOURCE_CORRECTION_ID, **dict(context)}
+    )
+
+
+def _correction_paths(store_root: Path) -> dict[str, Path]:
+    store = Path(store_root)
+    return {
+        "lock": store / SAMPLE_PLAN_LOCK_FILENAME,
+        "ledger": store / AMENDMENT_LEDGER_FILENAME,
+        "legacy_ledger": store / BUDGET_LEDGER_FILENAME,
+        "checkpoint": store / "cex002_qualification_progress.json",
+        "lock_evidence": store
+        / PRIOR_LOCK_EVIDENCE_ROOT
+        / f"{SOURCE_CORRECTION_LOCK_SHA256}.json",
+        "ledger_evidence": store
+        / PRIOR_LEDGER_EVIDENCE_ROOT
+        / f"{SOURCE_CORRECTION_AMENDMENT_SHA256}.json",
+    }
+
+
+CHECKPOINT_ENVELOPE_FIELDS: tuple[str, ...] = ("ticket", "kind", "version")
+
+
+def _checkpoint_body(document: Mapping[str, Any]) -> dict[str, Any]:
+    """One durable document without its envelope, comparable with an in-memory body."""
+    return {
+        str(key): value
+        for key, value in document.items()
+        if key not in CHECKPOINT_ENVELOPE_FIELDS
+    }
+
+
+def _preserved_body(
+    path: Path, digest: str, *, kind: str, label: str
+) -> dict[str, Any]:
+    """Rehash one preserved evidence object and return its comparable body."""
+    if not path.is_file():
+        raise _correction_error(f"the preserved {label} is missing", {"path": str(path)})
+    actual = compute_sha256(path)
+    if actual != digest:
+        raise _correction_error(
+            f"the preserved {label} does not match its content address",
+            {"path": str(path), "expected": digest, "actual": actual},
+        )
+    document = read_checkpoint_document(path, kind=kind)
+    if document is None:
+        raise _correction_error(f"the preserved {label} is unreadable", {"path": str(path)})
+    return _checkpoint_body(document)
+
+
+def _live_body(path: Path, *, kind: str, label: str) -> dict[str, Any]:
+    document = read_checkpoint_document(path, kind=kind)
+    if document is None:
+        raise _correction_error(f"the {label} is missing", {"path": str(path)})
+    return _checkpoint_body(document)
+
+
+def _require_advanced_ledger(
+    *, store_root: Path, live: BudgetLedger, identity: Mapping[str, str]
+) -> list[dict[str, Any]]:
+    """The live ledger is the accepted ledger plus exactly one appended receipt.
+
+    The whole document is compared, so an added, removed, or edited field anywhere -
+    legacy accounting included - fails closed rather than riding along behind a valid
+    receipt.
+    """
+    paths = _correction_paths(store_root)
+    accepted = _preserved_body(
+        paths["ledger_evidence"],
+        SOURCE_CORRECTION_AMENDMENT_SHA256,
+        kind="budget_ledger",
+        label="prior amendment ledger",
+    )
+    live_body = _live_body(paths["ledger"], kind="budget_ledger", label="amendment ledger")
+    accepted_binding = dict(accepted.get("binding") or {})
+    accepted_receipts = list(accepted_binding.pop("source_receipts", ()) or ())
+    receipts = validate_amendment_binding(live_body.get("binding") or {})
+    advanced_binding = dict(live_body.get("binding") or {})
+    stripped = {k: v for k, v in advanced_binding.items() if k != "source_receipts"}
+    if stripped != accepted_binding:
+        raise _correction_error(
+            "the advanced amendment binding differs from the accepted binding", {}
+        )
+    if len(receipts) != len(accepted_receipts) + 1:
+        raise _correction_error(
+            "the amendment ledger does not carry exactly one appended receipt",
+            {"accepted": len(accepted_receipts), "live": len(receipts)},
+        )
+    if [dict(item) for item in receipts[:-1]] != [dict(item) for item in accepted_receipts]:
+        raise _correction_error("the accepted source receipts were rewritten", {})
+    if dict(receipts[-1]["source_identity"]) != dict(identity):
+        raise _correction_error(
+            "the appended source receipt does not name the executing source", {}
+        )
+    # Exactly the accepted document, the advanced binding, and its recomputed integrity.
+    expected = {
+        **accepted,
+        "binding": advanced_binding,
+        "integrity": live.integrity_summary(),
+    }
+    if live_body != expected:
+        raise _correction_error(
+            "the advanced amendment ledger changed more than its receipt",
+            {
+                "changed": sorted(
+                    name
+                    for name in set(expected) | set(live_body)
+                    if expected.get(name) != live_body.get(name)
+                )
+            },
+        )
+    return receipts
+
+
+def _require_single_lock_transform(
+    *,
+    store_root: Path,
+    accepted_body: Mapping[str, Any],
+    live: SamplePlanLock,
+    ledger: BudgetLedger,
+    identity: Mapping[str, str],
+) -> None:
+    """The live lock is the accepted lock plus exactly the reviewed identity transform."""
+    paths = _correction_paths(store_root)
+    live_body = live.to_dict()
+    accepted_inputs = dict(accepted_body.get("inputs") or {})
+    live_inputs = dict(live_body.get("inputs") or {})
+    expected = {
+        **dict(accepted_body),
+        "inputs": {
+            **accepted_inputs,
+            "code_config_digest": identity["code_config_digest"],
+        },
+        "budget_snapshot": {
+            **dict(accepted_body.get("budget_snapshot") or {}),
+            "amendment_binding": dict(ledger.binding),
+            "source_correction_id": SOURCE_CORRECTION_ID,
+            "corrected_lock_evidence_path": str(paths["lock_evidence"]),
+            "corrected_ledger_evidence_path": str(paths["ledger_evidence"]),
+        },
+    }
+    if live_body != expected:
+        raise _correction_error(
+            "the source advance changed more than the executing identity",
+            {
+                "changed": sorted(
+                    name
+                    for name in set(expected) | set(live_body)
+                    if expected.get(name) != live_body.get(name)
+                )
+            },
+        )
+    if live_inputs.get("code_config_digest") != identity["code_config_digest"]:
+        raise _correction_error(
+            "the corrected lock does not name the executing source identity", {}
+        )
+
+
+def preserve_prior_ledger_bytes(
+    *, store_root: Path, ledger_path: Path, sha256: str
+) -> str:
+    """Preserve the accepted amendment ledger at its own verified content address."""
+    dest = Path(store_root) / PRIOR_LEDGER_EVIDENCE_ROOT / f"{sha256}.json"
+    if dest.is_file():
+        actual = compute_sha256(dest)
+        if actual != sha256:
+            raise _correction_error(
+                "the preserved prior amendment ledger does not match its content address",
+                {"path": str(dest), "expected": sha256, "actual": actual},
+            )
+        return str(dest)
+    payload = ledger_path.read_bytes()
+    actual = _object_sha256(payload)
+    if actual != sha256:
+        raise _correction_error(
+            "the amendment ledger changed before it could be preserved",
+            {"path": str(ledger_path), "expected": sha256, "actual": actual},
+        )
+    _atomic_publish(dest, lambda handle: handle.write(payload))
+    return str(dest)
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewedSourceCorrectionAuthority:
+    """The exact executed state this advance is pinned to, and where it stands."""
+
+    report_path: Path
+    lock: SamplePlanLock
+    ledger: BudgetLedger
+    plan: SamplePlan
+    accepted_inputs: PlanInputs
+    state: str
+
+
+def reviewed_source_correction_preflight(
+    *, store_root: Path, report_path: Path
+) -> ReviewedSourceCorrectionAuthority:
+    """Prove the exact accepted state read-only, before anything at all is created.
+
+    Fresh, ledger-advanced/lock-pending, and complete are each proved structurally and by
+    content address. A lock advanced without its receipt, extra receipts, altered
+    accounting, changed evidence, or any other mixed state authorizes nothing.
+    """
+    store = Path(store_root)
+    paths = _correction_paths(store)
+    context = {"store_root": str(store)}
+    identity = migration_source_identity()
+    lock = SamplePlanLock.load(paths["lock"])
+    if lock is None or lock.plan_version != MIGRATED_PLAN_VERSION:
+        raise _correction_error(
+            "the accepted version-4 lock is missing",
+            {**context, "plan_version": None if lock is None else lock.plan_version},
+        )
+    for name, digest, size in (
+        ("report", SOURCE_CORRECTION_REPORT_SHA256, SOURCE_CORRECTION_REPORT_BYTES),
+        (
+            "checkpoint",
+            SOURCE_CORRECTION_CHECKPOINT_SHA256,
+            SOURCE_CORRECTION_CHECKPOINT_BYTES,
+        ),
+    ):
+        path = report_path if name == "report" else paths["checkpoint"]
+        if not path.is_file():
+            raise _correction_error(
+                f"the accepted {name} is missing", {**context, "path": str(path)}
+            )
+        _require_exact(
+            file_sha256(path), digest, field_name=f"{name}_sha256", context=context
+        )
+        _require_exact(
+            int(path.stat().st_size), size, field_name=f"{name}_bytes", context=context
+        )
+    _require_exact(
+        file_sha256(paths["legacy_ledger"]),
+        REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256,
+        field_name="legacy_ledger_sha256",
+        context=context,
+    )
+    ledger = BudgetLedger.load(
+        paths["ledger"], budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+    ) if paths["ledger"].is_file() else None
+    if ledger is None:
+        raise _correction_error("the accepted amendment ledger is missing", context)
+    plan = SamplePlan.from_dict(lock.plan)
+    validate_sample_plan(plan)
+    _require_exact(
+        plan_content_digest(plan),
+        REVIEWED_MIGRATION_PLAN_DIGEST,
+        field_name="accepted_plan_digest",
+        context=context,
+    )
+    _require_exact(
+        reviewed_plan_shape(plan),
+        dict(REVIEWED_MIGRATION_PLAN_SHAPE),
+        field_name="accepted_plan_shape",
+        context=context,
+    )
+    lock_sha256 = file_sha256(paths["lock"])
+    ledger_sha256 = file_sha256(paths["ledger"])
+    lock_accepted = lock_sha256 == SOURCE_CORRECTION_LOCK_SHA256
+    ledger_accepted = ledger_sha256 == SOURCE_CORRECTION_AMENDMENT_SHA256
+    accepted_inputs = PlanInputs(**{str(k): str(v) for k, v in lock.inputs.items()})
+    if lock_accepted and ledger_accepted:
+        state = SOURCE_CORRECTION_STATE_FRESH
+        _require_exact(
+            int(paths["lock"].stat().st_size),
+            SOURCE_CORRECTION_LOCK_BYTES,
+            field_name="accepted_lock_bytes",
+            context=context,
+        )
+        _require_exact(
+            int(paths["ledger"].stat().st_size),
+            SOURCE_CORRECTION_AMENDMENT_BYTES,
+            field_name="accepted_amendment_bytes",
+            context=context,
+        )
+        validate_amendment_binding(ledger.binding)
+    elif lock_accepted:
+        # Ledger advanced, lock pending: the one recoverable middle of this transaction.
+        state = SOURCE_CORRECTION_STATE_LEDGER_ADVANCED
+        _require_advanced_ledger(store_root=store, live=ledger, identity=identity)
+    elif ledger_accepted:
+        raise _correction_error(
+            "a lock advanced without its amendment receipt authorizes nothing", context
+        )
+    else:
+        state = SOURCE_CORRECTION_STATE_COMPLETE
+        accepted_body = _preserved_body(
+            paths["lock_evidence"],
+            SOURCE_CORRECTION_LOCK_SHA256,
+            kind="sample_plan_lock",
+            label="prior lock",
+        )
+        # The advanced ledger is proved first, so the lock is only ever classified
+        # complete against a ledger that already agrees with it.
+        _require_advanced_ledger(store_root=store, live=ledger, identity=identity)
+        _require_single_lock_transform(
+            store_root=store,
+            accepted_body=accepted_body,
+            live=lock,
+            ledger=ledger,
+            identity=identity,
+        )
+        # The accepted identity is read from the preserved prior lock, never from the
+        # corrected one, so an idempotent rerun cannot lose it.
+        accepted_inputs = PlanInputs(
+            **{str(k): str(v) for k, v in dict(accepted_body.get("inputs") or {}).items()}
+        )
+    return ReviewedSourceCorrectionAuthority(
+        report_path=report_path,
+        lock=lock,
+        ledger=ledger,
+        plan=plan,
+        accepted_inputs=accepted_inputs,
+        state=state,
+    )
+
+
+def apply_reviewed_source_correction(
+    *,
+    store_root: Path,
+    report_path: Path,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """The whole transition: prove read-only, then advance exactly two files.
+
+    This never constructs a transport, cache, journal, index, contract source, or report,
+    and it mutates only the content-addressed prior-lock/prior-ledger evidence, the
+    amendment ledger, and the lock.
+    """
+    store = Path(store_root)
+    paths = _correction_paths(store)
+    now_iso = (now or datetime.now(UTC)).astimezone(UTC).isoformat()
+    authority = reviewed_source_correction_preflight(
+        store_root=store, report_path=report_path
+    )
+    identity = migration_source_identity()
+    accepted = authority.accepted_inputs.to_dict()
+    # Retained evidence is re-proved from the store itself, read-only.
+    # Retained-evidence roots are the accepted store's own, never a caller's.
+    sample_dir = store / "raw" / "sha256"
+    sidecar_dir = store / "list_cache"
+    checkpoint = SampleCheckpointStore.load(paths["checkpoint"], sidecar_dir=sidecar_dir)
+    retained_snapshot = retained_evidence_snapshot(
+        sorted(authority.lock.retained_snapshot),
+        checkpoint.objects,
+        sample_dir=sample_dir,
+        sidecar_dir=sidecar_dir,
+    )
+    _require_exact(
+        retained_evidence_digest(retained_snapshot),
+        accepted["retained_digest"],
+        field_name="retained_digest",
+        context={"store_root": str(store)},
+    )
+    executing = {**accepted, "code_config_digest": identity["code_config_digest"]}
+    ledger = authority.ledger
+    executed = False
+    if authority.state != SOURCE_CORRECTION_STATE_COMPLETE:
+        # A corrupt object already sitting at either content address is rejected before
+        # anything is written at all.
+        for dest, digest, label in (
+            (paths["lock_evidence"], SOURCE_CORRECTION_LOCK_SHA256, "prior lock"),
+            (
+                paths["ledger_evidence"],
+                SOURCE_CORRECTION_AMENDMENT_SHA256,
+                "prior amendment ledger",
+            ),
+        ):
+            if dest.is_file() and compute_sha256(dest) != digest:
+                raise _correction_error(
+                    f"the preserved {label} does not match its content address",
+                    {"path": str(dest), "expected": digest},
+                )
+        # Both prior objects are preserved at their fixed content addresses first.
+        preserve_prior_lock_bytes(
+            store_root=store,
+            plan_lock_path=paths["lock"],
+            sha256=SOURCE_CORRECTION_LOCK_SHA256,
+        )
+        if authority.state == SOURCE_CORRECTION_STATE_FRESH:
+            preserve_prior_ledger_bytes(
+                store_root=store,
+                ledger_path=paths["ledger"],
+                sha256=SOURCE_CORRECTION_AMENDMENT_SHA256,
+            )
+            # 1. the amendment receipt advances first.
+            ledger.binding = {
+                **{k: v for k, v in ledger.binding.items() if k != "source_receipts"},
+                "source_receipts": [
+                    *validate_amendment_binding(ledger.binding),
+                    {"prepared_at": now_iso, "source_identity": dict(identity)},
+                ],
+            }
+            ledger.flush()
+        # 2. the matching lock identity and binding are published last.
+        SamplePlanLock(
+            path=paths["lock"],
+            plan_version=MIGRATED_PLAN_VERSION,
+            locked_at=authority.lock.locked_at,
+            inputs=executing,
+            plan=dict(authority.lock.plan),
+            plan_digest=authority.lock.plan_digest,
+            retained_snapshot={
+                str(k): list(v) for k, v in authority.lock.retained_snapshot.items()
+            },
+            budget_snapshot={
+                **dict(authority.lock.budget_snapshot),
+                "amendment_binding": dict(ledger.binding),
+                "source_correction_id": SOURCE_CORRECTION_ID,
+                "corrected_lock_evidence_path": str(paths["lock_evidence"]),
+                "corrected_ledger_evidence_path": str(paths["ledger_evidence"]),
+            },
+            history=[dict(item) for item in authority.lock.history],
+        ).flush()
+        executed = True
+    final = reviewed_source_correction_preflight(store_root=store, report_path=report_path)
+    if final.state != SOURCE_CORRECTION_STATE_COMPLETE:
+        raise _correction_error(
+            "the source advance did not re-prove as complete", {"state": final.state}
+        )
+    plan, proved = validate_migrated_state(
+        store_root=store,
+        lock=final.lock,
+        executing_inputs=PlanInputs(**{str(k): str(v) for k, v in executing.items()}),
+    )
+    return {
+        "transaction": SOURCE_CORRECTION_ID,
+        "executed": executed,
+        "state": SOURCE_CORRECTION_STATE_COMPLETE,
+        "plan_version": MIGRATED_PLAN_VERSION,
+        "plan_digest": REVIEWED_MIGRATION_PLAN_DIGEST,
+        "plan_shape": reviewed_plan_shape(plan),
+        "accepted_code_config_digest": final.accepted_inputs.to_dict()["code_config_digest"],
+        "executing_code_config_digest": identity["code_config_digest"],
+        "source_identity": identity,
+        "source_receipts": [dict(item) for item in proved.binding["source_receipts"]],
+        "charge_count": len(proved.charges),
+        "reservation_count": len(proved.reservations),
+        "charged_bytes": proved.charged_bytes,
+        "allowance_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        "legacy_ledger_sha256": file_sha256(paths["legacy_ledger"]),
+        "prior_lock_evidence_path": str(paths["lock_evidence"]),
+        "prior_ledger_evidence_path": str(paths["ledger_evidence"]),
+        "retained_objects_reproved": len(retained_snapshot),
+        "samples_acquired": 0,
+        "reservations_reconciled": 0,
+        "download_authorized": False,
+        "note": (
+            "only the executing source identity advanced; the reviewed plan, accounting, "
+            "history, and lineage are unchanged, and no sample was acquired"
+        ),
+    }
 
 
 def build_candidate_plan_v4(
@@ -10054,21 +10625,34 @@ def run_source_qualification(
             for symbol in evaluation_universe:
                 family_symbol_objects.setdefault((family, symbol), 0)
 
-        uncovered = tuple(
-            symbol
-            for symbol in _uncovered_listed_symbols(family_symbol_lists, family_symbol_objects)
-            if symbol in universe_set
-        )
-        universe_gaps, blocking_symbols, typed_symbols = universe_coverage_gaps(
-            universe=evaluation_universe,
-            families=families,
-            family_symbol_lists=family_symbol_lists,
-            family_symbol_objects=family_symbol_objects,
-            family_symbol_periods=family_symbol_periods,
-            currently_listed=current,
-            lifecycle_windows=lifecycle_windows,
-            require_every_group=not is_membership,
-        )
+        if is_membership:
+            # ADR-0020 4b: historical membership coverage is the affirmative membership
+            # classification itself. Membership owns no archive family, so a family sweep
+            # would mark every authenticated perpetual uncovered. A confirmed member absent
+            # from the archives is still a member; it is `current_unarchived` only for the
+            # data families it lacks, which those products report themselves.
+            uncovered = ()
+            universe_gaps = ()
+            blocking_symbols = ()
+            typed_symbols = ()
+        else:
+            uncovered = tuple(
+                symbol
+                for symbol in _uncovered_listed_symbols(
+                    family_symbol_lists, family_symbol_objects
+                )
+                if symbol in universe_set
+            )
+            universe_gaps, blocking_symbols, typed_symbols = universe_coverage_gaps(
+                universe=evaluation_universe,
+                families=families,
+                family_symbol_lists=family_symbol_lists,
+                family_symbol_objects=family_symbol_objects,
+                family_symbol_periods=family_symbol_periods,
+                currently_listed=current,
+                lifecycle_windows=lifecycle_windows,
+                require_every_group=True,
+            )
         symbol_coverage[product] = {
             f"{family}/{symbol}": count
             for (family, symbol), count in sorted(family_symbol_objects.items())
@@ -10236,6 +10820,22 @@ def run_source_qualification(
             else:
                 source_state = SOURCE_STATE_OFFICIAL
 
+            if product == "binance_usdm_cost_calibration":
+                # ADR-0020 4b: one-sided and empty books are authentic no-liquidity
+                # evidence, not corruption, but the locked sample must still contain a
+                # usable two-sided quote before the cost source qualifies.
+                quote_validations = [
+                    dict(item.cost_validation)
+                    for item in product_sample_rows
+                    if str(dict(item.cost_validation).get("family_hint") or "")
+                    == "bookTicker"
+                ]
+                priceable_rows = sum(
+                    int(item.get("priceable_rows") or 0) for item in quote_validations
+                )
+                if quote_validations and priceable_rows == 0:
+                    source_state = SOURCE_STATE_SAMPLE_PENDING
+
             reason = _state_reason(
                 product=product,
                 source_state=source_state,
@@ -10249,10 +10849,17 @@ def run_source_qualification(
             )
 
         authority = SOURCE_STATE_AUTHORITY[source_state]
-        release_blocked = bool(
+        # ADR-0020 4b: Gate 1 accepts source contracts, not the final release. Source
+        # authority, access, integrity, required evidence, membership resolution, and the
+        # qualification budget block Gate 1; an explicit universe or temporal gap keeps a
+        # product release-blocked without unqualifying its source.
+        source_blocked = bool(
             source_state not in QUALIFIED_SOURCE_STATES
-            or coverage_state in {COVERAGE_BLOCKING_GAPS, COVERAGE_UNRESOLVED_MEMBERSHIP}
             or evidence_blocked
+            or coverage_state == COVERAGE_UNRESOLVED_MEMBERSHIP
+        )
+        release_blocked = bool(
+            source_blocked or coverage_state == COVERAGE_BLOCKING_GAPS
         )
         complete = source_gate and not release_blocked
 
@@ -10285,7 +10892,13 @@ def run_source_qualification(
                 accepted_universe_listed_bytes=None if universe_unknown_sizes else universe_bytes,
                 source_qualification_state=source_state,
                 coverage_state=coverage_state,
-                release_blocked=release_blocked if source_gate else False,
+                source_blocked=source_blocked if source_gate else False,
+                release_blocked=(
+                    release_blocked
+                    if source_gate
+                    # A derived row carries the release state it inherits, truthfully.
+                    else bool(release_blocked_override)
+                ),
                 typed_gap_symbols=typed_symbols if source_gate else (),
                 coverage_gap_kinds=gap_kinds if source_gate else (),
             )
@@ -10409,6 +11022,8 @@ def run_source_qualification(
                     sample_budget_blocked=row.sample_budget_blocked,
                     source_qualification_state=SOURCE_STATE_SECONDARY,
                     coverage_state=liquidation_coverage,
+                    # A qualified secondary source is never a Gate-1 source blocker.
+                    source_blocked=liquidation_coverage == COVERAGE_UNRESOLVED_MEMBERSHIP,
                     release_blocked=liquidation_coverage == COVERAGE_UNRESOLVED_MEMBERSHIP,
                     typed_gap_symbols=unmapped,
                     coverage_gap_kinds=("coinalyze_symbol_unmapped",) if unmapped else (),
@@ -10440,7 +11055,11 @@ def run_source_qualification(
         )
     )
     blocked = tuple(
-        row.product for row in matrix_rows if row.source_gate and not row.official_complete
+        row.product for row in matrix_rows if row.source_gate and row.source_blocked
+    )
+    # Every required product whose row is release-blocked, derived rows included.
+    release_blocked_products = tuple(
+        row.product for row in matrix_rows if row.release_blocked
     )
     accepted = len(blocked) == 0
 
@@ -10528,6 +11147,7 @@ def run_source_qualification(
         product_matrix=tuple(matrix_rows),
         samples=samples_sorted,
         blocked_products=blocked,
+        release_blocked_products=release_blocked_products,
         storage={
             "sample_store": str(sample_dir),
             "progress_path": str(progress_file),
@@ -10604,6 +11224,21 @@ def run_source_qualification(
                 "charged_to_gate1_allowance": True,
                 # Published proof that each acquired cost object was read row by row.
                 "validation_version": COST_VALIDATION_VERSION,
+                "quote_states": {
+                    name: sum(
+                        int(dict(item.cost_validation).get("quote_states", {}).get(name, 0))
+                        for item in samples_sorted
+                        if item.cost_validation
+                    )
+                    for name in QUOTE_STATES
+                },
+                "unpriceable_observations": [
+                    str(dict(item.cost_validation).get("key") or "")
+                    for item in samples_sorted
+                    if item.cost_validation
+                    and dict(item.cost_validation).get("observation")
+                    == COST_OBSERVATION_UNPRICEABLE
+                ],
                 "validations": [
                     dict(item.cost_validation)
                     for item in samples_sorted
