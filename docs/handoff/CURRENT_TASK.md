@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 183
+Next required actor: Jr Dev - Hermes - integrate and execute review 184
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -137,6 +137,7 @@ Governing documents:
 - research/sprint_004/181_CEX002_CLAUDE_STORAGE_SIZING_SOURCE_REVIEW.md
 - research/sprint_004/182_CEX002_CLAUDE_STORAGE_SIZING_CORRECTION_REVIEW.md
 - research/sprint_004/183_CEX002_CLAUDE_STORAGE_SIZING_RESIDUAL_REVIEW.md
+- research/sprint_004/184_CEX002_STORAGE_SIZING_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2040,3 +2041,25 @@ Gate 1 remains accepted. No integration, sizing execution, Gate 2 acceptance, bu
 acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
 PAPER, LIVE, paid source, reduced scope, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Storage-sizing source accepted - integration and real sizing authorized
+
+Review 184 accepts Claude's review-183 correction at production SHA-256
+`795eab0312064e3d7be7dd8f826b5dc5754a8e6b5e702872ac3699dad1532390`, unchanged CLI
+SHA-256 `78ee687c734fc94070952d290752acdbd007970fb26c616e5e6845f1de3702ad`, and 44-test
+SHA-256 `e7127f9724ce046233979ec29d43035ff5358c213beee2b9cd22b0e841ee323a`.
+The four review-183 residuals are closed. No further static source-correction cycle is
+authorized.
+
+Jr Dev - Hermes is authorized only for review 184's exact three-path integration, focused
+44-test run, exact-path lint and control check, followed conditionally by exactly two
+local credential-free sizing invocations: first publication and identical fixed-target
+reproof. Hermes publishes record 185, the real receipt if created, and the matching
+control-plane transition, commits and pushes only the enumerated CEX-002 paths, and stops
+for reviewer inspection. The first nonzero command stops all later work.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted until the reviewer inspects the real
+receipt and record 185. No network call, qualification, bulk acquisition, normalization,
+catalog publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source,
+reduced scope, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next
+ticket remains `NONE`.
