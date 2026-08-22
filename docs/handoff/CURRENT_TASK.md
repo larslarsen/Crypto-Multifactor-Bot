@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 158
+Next required actor: Jr Dev - Hermes - run one network-enabled migration-only retry
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -112,6 +112,7 @@ Governing documents:
 - research/sprint_004/156_CEX002_MIGRATION_RUFF_FAILURE_REVIEW.md
 - research/sprint_004/157_CEX002_MIGRATION_RUFF_SOURCE_ACCEPTANCE.md
 - research/sprint_004/158_CEX002_MIGRATION_RUFF_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/159_CEX002_MIGRATION_NETWORK_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1465,21 +1466,6 @@ No migration before all focused commands pass, sample acquisition, Gate 2, reduc
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
 
-## Record-158 migration restart and invocation stop published
-
-Hermes integrated review 157's exact accepted import cleanup in commit `21fb4ec` and
-pushed it. The focused restart passed C1-C5. Hermes then ran exactly one reviewed
-`--apply-reviewed-v4-migration-only` invocation. The invocation exited status 1 after 495
-seconds because `fapi:exchangeInfo` failed all five bounded attempts with DNS resolution
-failure for `https://fapi.binance.com/fapi/v1/exchangeInfo`.
-
-No retry, ordinary resume, second migration command, sample acquisition, Gate 2, or later
-work was run. No version-4 lock was installed and no amendment ledger was prepared. The
-retry journal changed to record the failed attempts; accepted report, manifest detail,
-lock, legacy ledger, sample checkpoint/progress, listing checkpoint, official metadata, and
-retained raw tree remained byte-identical. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
-passed; next ticket remains `NONE`.
-
 ## Record-155 migration test integration stop published
 
 Hermes integrated review 154's exact accepted test correction in commit `3155293` and
@@ -1525,3 +1511,35 @@ or sample acquisition is authorized.
 No migration before all focused commands pass, sample acquisition, Gate 2, reduced scope,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-158 migration restart and invocation stop published
+
+Hermes integrated review 157's exact accepted import cleanup in commit `21fb4ec` and
+pushed it. The focused restart passed C1-C5. Hermes then ran exactly one reviewed
+`--apply-reviewed-v4-migration-only` invocation. The invocation exited status 1 after 495
+seconds because `fapi:exchangeInfo` failed all five bounded attempts with DNS resolution
+failure for `https://fapi.binance.com/fapi/v1/exchangeInfo`.
+
+No retry, ordinary resume, second migration command, sample acquisition, Gate 2, or later
+work was run. No version-4 lock was installed and no amendment ledger was prepared. The
+retry journal changed to record the failed attempts; accepted report, manifest detail,
+lock, legacy ledger, sample checkpoint/progress, listing checkpoint, official metadata, and
+retained raw tree remained byte-identical. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
+passed; next ticket remains `NONE`.
+
+## Network failure accepted - one direct migration retry authorized
+
+Review 159 accepts the exact cleanup integration, all five exit-0 focused commands, and
+Hermes's required stop. The migration failed before the transaction because restricted-
+sandbox DNS could not resolve the official FAPI endpoint. Preflight remains `not_started`;
+the version-2 lock is unchanged and the amendment ledger is absent.
+
+Jr Dev - Hermes is authorized to preserve the advanced retry journal, re-prove review
+159's exact immutable state, obtain network permission before launch, and make exactly one
+direct network-enabled migration-only invocation. Hermes does not rerun C1-C5 and does not
+consume a preliminary sandboxed attempt. It publishes record 160 and stops after every
+status. No ordinary resume, further retry, or sample acquisition is authorized.
+
+No sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff, PAPER,
+LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
+passed; next ticket remains `NONE`.
