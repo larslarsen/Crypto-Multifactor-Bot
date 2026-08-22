@@ -2,14 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 216
+Next required actor: Jr Dev - Hermes - execute review 217 once
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for reviewer: inspect record 216. Hermes ran the one exact
-transition command in review 215, reran it once for `executed=false` idempotence, published
-record 216, and stopped. Do not run qualification, sizing, acquisition, pytest, Ruff,
-network, or any other data task.
+Immediate bounded task for Hermes: follow review 217. Prove the exact path-bound authority
+pre-state, obtain network permission, and run the one exact ordinary qualification command.
+Publish record 218 and stop for reviewer inspection. Do not retry, run a second
+qualification, run sizing, acquire the full release, or perform any later work.
 
 Governing documents:
 
@@ -176,6 +176,7 @@ Governing documents:
 - research/sprint_004/214_CEX002_TRANSITION_INTEGRATION.md
 - research/sprint_004/215_CEX002_TRANSITION_INTEGRATION_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/216_CEX002_PATH_BOUND_TRANSITION_EXECUTION.md
+- research/sprint_004/217_CEX002_PATH_BOUND_QUALIFICATION_AUTHORIZATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
