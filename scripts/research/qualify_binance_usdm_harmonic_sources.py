@@ -8,6 +8,12 @@ Listing pages and verified samples are checkpointed durably, retained evidence i
 bootstrapped and reused instead of redownloaded, and transient transport failures are
 retried under a bounded policy.
 
+`--apply-reviewed-v4-migration-only` applies the single reviewed ADR-0020 transition. It is
+fixed to the accepted report, candidate plan/envelope, prior version-2 lock, legacy ledger,
+and complete-cost identities, accepts no operator authority, writes the prepared amendment
+ledger before the version-4 lock, keeps the legacy ledger byte-identical, treats the
+accepted report and its manifest artifacts as read-only, and downloads no sample.
+
 `--candidate-plan-only` proves the durable version-2 lock and legacy ledger before this
 process creates or touches anything, then constructs the version-4 candidate plan from that
 read-only prior authority. It migrates no plan or ledger, downloads no sample, and proves
@@ -23,6 +29,7 @@ against a single cumulative Gate 1 allowance that a new invocation never restore
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -47,6 +54,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     accept_qualification,
     candidate_preflight,
     qualification_exit_code,
+    reviewed_migration_preflight,
     run_source_qualification,
     write_qualification_report,
 )
@@ -110,6 +118,16 @@ def main(argv: list[str] | None = None) -> int:
             "plan or ledger migration, no sample download, and no relock"
         ),
     )
+    parser.add_argument(
+        "--apply-reviewed-v4-migration-only",
+        action="store_true",
+        help=(
+            "apply the one reviewed ADR-0020 version-4 transition: it is fixed to the "
+            "accepted report, candidate, prior lock, legacy ledger, and complete-cost "
+            "identities, takes no plan, digest, version, allowance, ledger, relock, or "
+            "download authority, and stops before every sample acquisition"
+        ),
+    )
     args = parser.parse_args(argv)
 
     # The Gate 1 execution budget may be tightened but never raised. There is no
@@ -117,6 +135,25 @@ def main(argv: list[str] | None = None) -> int:
     sample_budget = min(int(args.sample_budget_bytes), GATE1_NEW_DOWNLOAD_BUDGET_BYTES)
 
     store_root = Path(args.store_root)
+    report_path = Path(args.report_path)
+    apply_migration = bool(args.apply_reviewed_v4_migration_only)
+
+    if apply_migration and args.candidate_plan_only:
+        print(
+            "ERROR: candidate construction and reviewed migration are separate transitions",
+            file=sys.stderr,
+        )
+        return 1
+
+    if apply_migration:
+        # The reviewed transition proves its whole authority before this process creates
+        # the store, a transport, a listing cache, a checkpoint, a journal, or reads a
+        # credential. An invalid transition must change nothing at all.
+        try:
+            reviewed_migration_preflight(store_root=store_root, report_path=report_path)
+        except (SourceQualificationError, ResumeIntegrityError) as exc:
+            print(f"ERROR: {exc.message}", file=sys.stderr)
+            return 1
 
     if args.candidate_plan_only:
         # Prove the exact prior authority before this process creates the store,
@@ -204,6 +241,8 @@ def main(argv: list[str] | None = None) -> int:
             retry=retry,
             listing_checkpoint=listing_checkpoint,
             candidate_plan_only=bool(args.candidate_plan_only),
+            apply_reviewed_v4_migration=apply_migration,
+            migration_report_path=report_path if apply_migration else None,
             listing_workers=listing_workers,
             sample_budget_bytes=sample_budget,
         )
@@ -227,21 +266,30 @@ def main(argv: list[str] | None = None) -> int:
     if cleanup_error is not None:
         raise cleanup_error
 
-    report_path = Path(args.report_path)
-    # ADR-0019: the complete manifest detail is published content-addressably beneath the
-    # store's evidence root, and the tracked receipt carries only its descriptor.
-    detail = write_qualification_report(report, report_path, store_root=store_root)
-    print(f"Qualification report written to {report_path}", file=sys.stderr)
-    print(
-        f"manifest_detail: path={detail['relative_path']} "
-        f"uncompressed_sha256={detail['uncompressed_sha256']} "
-        f"uncompressed_bytes={detail['uncompressed_bytes']} "
-        f"compressed_sha256={detail['compressed_sha256']} "
-        f"compressed_bytes={detail['compressed_bytes']} "
-        f"records={detail['record_counts']} "
-        f"reused_existing={detail['reused_existing']}",
-        file=sys.stderr,
-    )
+    if apply_migration:
+        # The accepted report is immutable authority. Migration emits its receipt to this
+        # transcript and never replaces that path or republishes a manifest detail.
+        receipt = report.candidate_plan.get("migration") or {}
+        print(
+            "reviewed_v4_migration: "
+            + json.dumps(receipt, sort_keys=True, default=str),
+            file=sys.stderr,
+        )
+    else:
+        # ADR-0019: the complete manifest detail is published content-addressably beneath
+        # the store's evidence root, and the tracked receipt carries only its descriptor.
+        detail = write_qualification_report(report, report_path, store_root=store_root)
+        print(f"Qualification report written to {report_path}", file=sys.stderr)
+        print(
+            f"manifest_detail: path={detail['relative_path']} "
+            f"uncompressed_sha256={detail['uncompressed_sha256']} "
+            f"uncompressed_bytes={detail['uncompressed_bytes']} "
+            f"compressed_sha256={detail['compressed_sha256']} "
+            f"compressed_bytes={detail['compressed_bytes']} "
+            f"records={detail['record_counts']} "
+            f"reused_existing={detail['reused_existing']}",
+            file=sys.stderr,
+        )
     print(
         f"gate_status={report.gate_status} accepted={report.accepted} "
         f"symbols={len(report.discovered_symbols)} "

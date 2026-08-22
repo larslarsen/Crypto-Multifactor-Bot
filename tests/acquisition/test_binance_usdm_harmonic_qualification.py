@@ -75,6 +75,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     MANIFEST_DETAIL_RELATIVE_ROOT,
     MANIFEST_DETAIL_SCHEMA_VERSION,
     MANIFEST_INTEGRITY_MISSING,
+    MIGRATED_PLAN_VERSION,
     MANIFEST_MONTHLY_REJECTED,
     MANIFEST_OVERLAP,
     MEMBERSHIP_CONFIRMED,
@@ -86,7 +87,17 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     OFFICIAL_ARCHIVE_FAMILIES,
     OFFICIAL_INCREMENTAL_ENDPOINTS,
     PLAN_INPUTS_CHANGED,
+    PRIOR_LOCK_EVIDENCE_ROOT,
     REPORT_PUBLICATION_CEILING_BYTES,
+    REVIEWED_MIGRATION_COST_MANIFEST_DIGEST,
+    REVIEWED_MIGRATION_ENVELOPE_DIGEST,
+    REVIEWED_MIGRATION_ID,
+    REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256,
+    REVIEWED_MIGRATION_PLAN_DIGEST,
+    REVIEWED_MIGRATION_PLAN_SHAPE,
+    REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+    REVIEWED_MIGRATION_REPORT_BYTES,
+    REVIEWED_MIGRATION_REPORT_SHA256,
     SAMPLE_BUDGET_BLOCK,
     REQUIRED_PRODUCTS,
     SAMPLE_PLAN_LOCK_FILENAME,
@@ -163,6 +174,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     contract_provenance,
     contract_semantics_state,
     exchange_info_server_time_ms,
+    execute_reviewed_v4_migration,
     family_product_map,
     file_sha256,
     holdout_boundary_id,
@@ -172,6 +184,8 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     is_retryable_failure,
     iter_manifest_detail,
     kline_schema_supports_taker_flow,
+    install_migrated_lock,
+    load_migrated_amendment_ledger,
     listing_authority_digest,
     listing_authority_manifest,
     listing_request_identity,
@@ -180,6 +194,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     manifest_detail_relative_path,
     manifest_detail_summary,
     membership_evidence_digest,
+    migration_source_identity,
     object_calendar_date,
     object_integrity_state,
     object_period,
@@ -188,13 +203,18 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     parse_provider_checksum,
     parse_s3_list_bucket,
     plan_code_config_digest,
+    prepare_amendment_ledger,
     plan_content_digest,
+    preserve_prior_lock_bytes,
     publish_manifest_detail,
     qualification_exit_code,
     recover_retained_samples,
     refuse_restricted_scope,
     retained_evidence_digest,
     retained_evidence_snapshot,
+    reviewed_migration_binding,
+    reviewed_migration_preflight,
+    reviewed_plan_shape,
     run_source_qualification,
     select_cost_calibration_sample,
     select_nonoverlapping_objects,
@@ -8416,3 +8436,956 @@ def test_cost_validation_parses_strict_csv_and_keeps_empty_cells() -> None:
         _validate_ticker(
             _VALID_TICKER_ROWS[0], "2,100.1,1.5,100.6,2.5,1577836801000,1577836801001,"
         )
+
+
+# --- ADR-0020 4a reviewed version-4 migration transaction ------------------------------
+
+
+def _accepted_v4_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[MemoryObjectIndex, Path]:
+    """A store holding a durable version-2 authority and one accepted v4 candidate.
+
+    The reviewed identities are the production ones, so the frozen constants are pointed
+    at this fixture's own accepted candidate. Their literal production values are proved
+    separately; everything else here exercises the real transition.
+    """
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    report_path = tmp_path / "62_report.json"
+    write_qualification_report(report, report_path, store_root=tmp_path)
+    candidate = report.candidate_plan
+    plan = SamplePlan.from_dict(candidate["plan"])
+    for name, value in (
+        ("REVIEWED_MIGRATION_REPORT_SHA256", file_sha256(report_path)),
+        ("REVIEWED_MIGRATION_REPORT_BYTES", int(report_path.stat().st_size)),
+        ("REVIEWED_MIGRATION_PLAN_DIGEST", str(candidate["plan_digest"])),
+        (
+            "REVIEWED_MIGRATION_ENVELOPE_DIGEST",
+            str(candidate["candidate_envelope_digest"]),
+        ),
+        (
+            "REVIEWED_MIGRATION_COST_MANIFEST_DIGEST",
+            str(candidate["complete_cost_manifest_digest"]),
+        ),
+        (
+            "REVIEWED_MIGRATION_PRIOR_LOCK_SHA256",
+            file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME),
+        ),
+        (
+            "REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256",
+            file_sha256(tmp_path / BUDGET_LEDGER_FILENAME),
+        ),
+        ("REVIEWED_MIGRATION_PLAN_SHAPE", reviewed_plan_shape(plan)),
+    ):
+        monkeypatch.setattr(module, name, value)
+    return index, report_path
+
+
+def _migrate(tmp_path: Path, index: MemoryObjectIndex, report_path: Path) -> Any:
+    return run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        apply_reviewed_v4_migration=True,
+        migration_report_path=report_path,
+    )
+
+
+def _watch_sample_checkpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """Record every sample-checkpoint record/flush without changing the real methods."""
+    recorded: list[str] = []
+    flushed: list[dict[str, Any]] = []
+    real_record = SampleCheckpointStore.record
+    real_flush = SampleCheckpointStore.flush
+
+    def _record(self: SampleCheckpointStore, key: str, entry: Mapping[str, Any]) -> None:
+        recorded.append(key)
+        real_record(self, key, entry)
+
+    def _flush(self: SampleCheckpointStore, **updates: Any) -> None:
+        flushed.append(dict(updates))
+        real_flush(self, **updates)
+
+    monkeypatch.setattr(SampleCheckpointStore, "record", _record)
+    monkeypatch.setattr(SampleCheckpointStore, "flush", _flush)
+    return recorded, flushed
+
+
+def test_reviewed_migration_identities_are_the_review145_literals() -> None:
+    # The transition exists for exactly one accepted candidate.
+    assert REVIEWED_MIGRATION_ID == "cex002_reviewed_v4_migration"
+    assert MIGRATED_PLAN_VERSION == 4
+    assert REVIEWED_MIGRATION_REPORT_SHA256 == (
+        "f26abbc577307e5dcef693ec159fa65d1373d7b03c2be0eb6b926e5b09f97406"
+    )
+    assert REVIEWED_MIGRATION_REPORT_BYTES == 13_946_727
+    assert REVIEWED_MIGRATION_PLAN_DIGEST == (
+        "2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef"
+    )
+    assert REVIEWED_MIGRATION_ENVELOPE_DIGEST == (
+        "be63989bd4d3d40c95c7ca405eae7558ce0ef997a2289892d14ed8d773d4cbfe"
+    )
+    assert REVIEWED_MIGRATION_COST_MANIFEST_DIGEST == (
+        "04842ff6b9b58280b3ec2ea2644b3d44769be62d460bef785262cd4dd65cac57"
+    )
+    assert REVIEWED_MIGRATION_PRIOR_LOCK_SHA256 == (
+        "e04a5ce2f2513cc8a0f4e6698dcbf9d43c5a7bec0295021ca5d431ff886f0d84"
+    )
+    assert REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256 == (
+        "47341a9ca2c60caf73485fb9bac40c6526cb35a13471e4545cd9cdcee6e227f6"
+    )
+    assert REVIEWED_MIGRATION_PLAN_SHAPE == {
+        "entries": 106,
+        "new_objects": 84,
+        "new_bytes": 1_049_324,
+        "retained_objects": 12,
+        "retained_bytes": 44_642,
+        "aliases": 10,
+        "blocked": 0,
+    }
+    binding = reviewed_migration_binding()
+    assert binding["allowance_id"] == AMENDMENT_LEDGER_ID
+    assert binding["allowance_bytes"] == GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES == 268_435_456
+    assert binding["prior_plan_version"] == 2
+    assert binding["download_authorized"] is False
+    # No caller may name a plan, digest, version, allowance, ledger, relock, or download.
+    signature = inspect.signature(run_source_qualification).parameters
+    assert "relock" not in signature
+    assert "migration_plan_digest" not in signature
+    assert "migration_allowance_bytes" not in signature
+    assert set(signature) & {"apply_reviewed_v4_migration", "migration_report_path"} == {
+        "apply_reviewed_v4_migration",
+        "migration_report_path",
+    }
+
+
+def test_reviewed_migration_installs_version_four_ledger_first_and_lock_last(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    legacy_before = (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes()
+    prior_lock_bytes = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+    prior_lock_sha256 = file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+
+    report = _migrate(tmp_path, index, report_path)
+
+    # The version-4 lock is the commit point, and version 3 is never installed.
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+    assert lock.plan_version == 4
+    assert lock.plan_digest == REVIEWED_MIGRATION_PLAN_DIGEST
+    assert sorted(int(item["plan_version"]) for item in lock.history) == [0, 1, 2]
+    lineage = lock.budget_snapshot["superseded_candidates"]
+    assert [item["plan_version"] for item in lineage] == [3]
+    assert lineage[0]["plan_digest"] == SUPERSEDED_CANDIDATE_PLAN_DIGEST
+    assert lock.budget_snapshot["ledger_id"] == AMENDMENT_LEDGER_ID
+    assert lock.budget_snapshot["download_authorized"] is False
+    # The exact prior lock is preserved at its own content address.
+    evidence = tmp_path / PRIOR_LOCK_EVIDENCE_ROOT / f"{prior_lock_sha256}.json"
+    assert evidence.is_file()
+    assert evidence.read_bytes() == prior_lock_bytes
+    assert file_sha256(evidence) == prior_lock_sha256
+    assert lock.budget_snapshot["prior_lock_evidence_path"] == str(evidence)
+
+    # The amendment ledger is whole, unspent, and bound to this exact authority.
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    assert ledger.charges == {} and ledger.reservations == {}
+    assert ledger.charged_bytes == 0
+    binding = dict(ledger.binding)
+    receipts = binding.pop("source_receipts")
+    assert binding == reviewed_migration_binding()
+    assert len(receipts) == 1
+    assert receipts[0]["source_identity"] == migration_source_identity()
+    # The legacy ledger is lineage: byte-identical, and never the active accounting.
+    assert (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes() == legacy_before
+    assert report.budget["active_ledger_id"] == AMENDMENT_LEDGER_ID
+    assert report.budget["legacy_ledger_sha256"] == REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256
+
+    # Migration acquires nothing at all.
+    assert report.samples == ()
+    candidate_block = report.candidate_plan
+    assert candidate_block["plan_version"] == 4
+    assert candidate_block["state"] == "migrated_reviewed_v4"
+    assert candidate_block["download_authorized"] is False
+    receipt = candidate_block["migration"]
+    assert receipt["executed"] is True
+    assert receipt["samples_acquired"] == 0
+    assert receipt["preserved_plan_versions"] == [0, 1, 2]
+    assert receipt["plan_shape"] == REVIEWED_MIGRATION_PLAN_SHAPE
+    assert receipt["legacy_ledger_role"] == "preserved_lineage_only"
+
+
+def test_reviewed_migration_fetches_nothing_and_never_migrates_twice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    recorded, flushed = _watch_sample_checkpoint(monkeypatch)
+    first = _migrate(tmp_path, index, report_path)
+    lock_after_first = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+    ledger_after_first = (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes()
+    # No sample object is fetched, and the sample checkpoint is untouched.
+    assert not [url for url in fetched if url.endswith(".zip")]
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+    assert recorded == []
+    assert flushed == []
+
+    second = _migrate(tmp_path, index, report_path)
+    # A completed migration re-proves itself and changes nothing.
+    assert (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes() == lock_after_first
+    assert (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes() == ledger_after_first
+    assert second.candidate_plan["migration"]["executed"] is False
+    assert second.candidate_plan["migration"]["state"] == first.candidate_plan["migration"]["state"]
+    assert second.samples == ()
+    assert recorded == []
+    assert flushed == []
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+
+
+def test_reviewed_migration_finishes_after_a_prepared_ledger_interruption(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    prior_lock = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recorded, flushed = _watch_sample_checkpoint(monkeypatch)
+
+    def _interrupt(**_kwargs: Any) -> SamplePlanLock:
+        raise _InjectedAbort("lock publication interrupted")
+
+    original_install_migrated_lock = module.install_migrated_lock
+    monkeypatch.setattr(module, "install_migrated_lock", _interrupt)
+    with pytest.raises(_InjectedAbort):
+        _migrate(tmp_path, index, report_path)
+    monkeypatch.setattr(module, "install_migrated_lock", original_install_migrated_lock)
+    assert recorded == []
+    assert flushed == []
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+    # Ledger-first: the prepared ledger exists, and it authorizes nothing on its own.
+    prepared = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert prepared is not None
+    assert prepared.charges == {} and prepared.reservations == {}
+    assert (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes() == prior_lock
+    interrupted_lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert interrupted_lock is not None and interrupted_lock.plan_version == 2
+
+    # Only the same reviewed migration finishes it, idempotently.
+    report = _migrate(tmp_path, index, report_path)
+    finished = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert finished is not None and finished.plan_version == 4
+    assert report.candidate_plan["migration"]["executed"] is True
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    assert len(ledger.binding["source_receipts"]) == 1
+    assert recorded == []
+    assert flushed == []
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+
+
+def test_prior_lock_preservation_failure_leaves_the_transition_unstarted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recorded, flushed = _watch_sample_checkpoint(monkeypatch)
+
+    def _interrupt(**_kwargs: Any) -> str:
+        raise _InjectedAbort("prior lock preservation interrupted")
+
+    monkeypatch.setattr(module, "preserve_prior_lock_bytes", _interrupt)
+    with pytest.raises(_InjectedAbort):
+        _migrate(tmp_path, index, report_path)
+    monkeypatch.undo()
+    # Nothing was prepared and nothing was committed.
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 2
+    assert recorded == []
+    assert flushed == []
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+
+
+@pytest.mark.parametrize(
+    ("constant", "value", "field_name"),
+    [
+        ("REVIEWED_MIGRATION_REPORT_SHA256", "0" * 64, "report_sha256"),
+        ("REVIEWED_MIGRATION_REPORT_BYTES", 1, "report_bytes"),
+        ("REVIEWED_MIGRATION_PLAN_DIGEST", "1" * 64, "plan_digest"),
+        ("REVIEWED_MIGRATION_ENVELOPE_DIGEST", "2" * 64, "candidate_envelope_digest"),
+        (
+            "REVIEWED_MIGRATION_COST_MANIFEST_DIGEST",
+            "3" * 64,
+            "complete_cost_manifest_digest",
+        ),
+        ("REVIEWED_MIGRATION_PRIOR_LOCK_SHA256", "4" * 64, "prior_lock_sha256"),
+        ("REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256", "5" * 64, "legacy_ledger_sha256"),
+    ],
+)
+def test_reviewed_migration_rejects_every_substituted_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    constant: str,
+    value: Any,
+    field_name: str,
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    monkeypatch.setattr(module, constant, value)
+    with pytest.raises(
+        SourceQualificationError, match="does not match the accepted identity"
+    ) as exc:
+        reviewed_migration_preflight(store_root=tmp_path, report_path=report_path)
+    assert exc.value.context["field"] == field_name
+    # A refused transition writes nothing at all.
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 2
+    assert index is not None
+
+
+def test_reviewed_migration_rejects_a_self_consistent_other_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A second store produces its own internally consistent accepted candidate.
+    other = tmp_path / "other"
+    other_index = _trades_index(["BTCUSDT"])
+    _seed_v2_authority(other, other_index)
+    other_report = run_source_qualification(
+        store_root=other,
+        index=other_index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    other_path = other / "62_report.json"
+    write_qualification_report(other_report, other_path, store_root=other)
+    assert other_report.candidate_plan["plan_version"] == 4
+
+    store = tmp_path / "store"
+    index, report_path = _accepted_v4_candidate(store, monkeypatch)
+    # Every digest inside the other report agrees with itself and with nothing reviewed.
+    with pytest.raises(SourceQualificationError, match="does not match the accepted identity"):
+        reviewed_migration_preflight(store_root=store, report_path=other_path)
+    assert index is not None and report_path.is_file()
+    assert not (store / AMENDMENT_LEDGER_FILENAME).exists()
+
+
+def test_reviewed_migration_refuses_a_ledger_bound_to_another_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    ledger = BudgetLedger(
+        path=tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        binding={
+            **reviewed_migration_binding(),
+            "plan_digest": "9" * 64,
+            "source_receipts": [{"prepared_at": "", "source_identity": {}}],
+        },
+    )
+    ledger.flush()
+    with pytest.raises(SourceQualificationError, match="does not match the accepted identity"):
+        reviewed_migration_preflight(store_root=tmp_path, report_path=report_path)
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 2
+    assert index is not None
+
+
+def test_version_four_lock_without_its_amendment_ledger_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, report_path)
+    (tmp_path / AMENDMENT_LEDGER_FILENAME).unlink()
+    # Neither an ordinary resume nor a repeat migration may fall back to legacy accounting.
+    with pytest.raises(SourceQualificationError, match="authorizes nothing"):
+        run_source_qualification(
+            store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+        )
+    with pytest.raises(SourceQualificationError, match="authorizes nothing"):
+        _migrate(tmp_path, index, report_path)
+    assert (tmp_path / BUDGET_LEDGER_FILENAME).is_file()
+
+
+def test_migrated_resume_accounts_only_through_the_amendment_ledger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    migrated = _migrate(tmp_path, index, report_path)
+    assert migrated.candidate_plan["migration"]["executed"] is True
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+    locked_keys = {str(item["key"]) for item in lock.plan["entries"]}
+    legacy_before = (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes()
+
+    resumed = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    # The reviewed plan is replayed, never re-selected.
+    assert resumed.plan_lock["plan_version"] == 4
+    assert resumed.plan_lock["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+    assert {item.key for item in resumed.samples} <= locked_keys
+    # Only the amendment allowance accounts, and the legacy record never moves.
+    assert resumed.budget["active_ledger_id"] == AMENDMENT_LEDGER_ID
+    assert resumed.budget["active_ledger_path"].endswith(AMENDMENT_LEDGER_FILENAME)
+    assert resumed.budget["budget_bytes"] == GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+    assert (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes() == legacy_before
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    assert ledger.binding["migration_id"] == REVIEWED_MIGRATION_ID
+    assert ledger.charged_bytes <= GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+    assert ledger.reservations == {}
+
+
+def test_migrated_resume_fails_closed_on_changed_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, report_path)
+    # A genuinely different universe is a new plan version, not a resume.
+    with pytest.raises(ResumeIntegrityError, match="migrated Gate 1 plan inputs changed"):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=_kline_manifest_index(months=("2020-01", "2020-02")),
+            current_contracts=_contracts("BTCUSDT"),
+        )
+
+
+def test_candidate_only_and_version_two_behaviour_are_unchanged_before_migration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, _report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    lock_before = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+    ledger_before = (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes()
+    again = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    # Candidate construction stays read-only and never migrates anything.
+    assert again.candidate_plan["state"] == "candidate_unmigrated"
+    assert again.candidate_plan["migration_authorized"] is False
+    assert again.plan_lock["plan_version"] == 2
+    assert (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes() == lock_before
+    assert (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes() == ledger_before
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+    assert not (tmp_path / PRIOR_LOCK_EVIDENCE_ROOT).exists()
+
+
+def test_migration_and_candidate_modes_are_mutually_exclusive(tmp_path: Path) -> None:
+    with pytest.raises(SourceQualificationError, match="separate transitions"):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=_trades_index(["BTCUSDT"]),
+            current_contracts=_contracts("BTCUSDT"),
+            candidate_plan_only=True,
+            apply_reviewed_v4_migration=True,
+            migration_report_path=tmp_path / "62_report.json",
+        )
+    with pytest.raises(SourceQualificationError, match="requires the accepted report path"):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=_trades_index(["BTCUSDT"]),
+            current_contracts=_contracts("BTCUSDT"),
+            apply_reviewed_v4_migration=True,
+        )
+    # A refused transition creates nothing.
+    assert not tmp_path.exists() or not (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).exists()
+
+
+def test_cli_exposes_only_the_fixed_migration_switch() -> None:
+    source = Path("scripts/research/qualify_binance_usdm_harmonic_sources.py").read_text()
+    tree = ast.parse(source)
+    options: dict[str, dict[str, Any]] = {}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr != "add_argument" or not node.args:
+            continue
+        name = node.args[0]
+        if not isinstance(name, ast.Constant) or not str(name.value).startswith("--"):
+            continue
+        options[str(name.value)] = {
+            keyword.arg: keyword.value for keyword in node.keywords if keyword.arg
+        }
+    assert "--apply-reviewed-v4-migration-only" in options
+    switch = options["--apply-reviewed-v4-migration-only"]
+    # A switch only: it takes no operator value of any kind.
+    assert isinstance(switch.get("action"), ast.Constant)
+    assert switch["action"].value == "store_true"
+    assert "type" not in switch and "default" not in switch and "choices" not in switch
+    # No operator-selected plan, digest, version, allowance, ledger, relock, or download.
+    forbidden = ("plan-digest", "plan-version", "allowance", "ledger", "relock", "download")
+    assert not [
+        option for option in options if any(word in option for word in forbidden)
+    ]
+    assert "apply_reviewed_v4_migration=apply_migration" in source
+    assert "reviewed_migration_preflight(store_root=store_root, report_path=report_path)" in source
+    # Migration-only mode emits a transcript receipt and never calls the generic writer.
+    assert "reviewed_v4_migration:" in source
+    assert source.index("reviewed_v4_migration:") < source.index(
+        "write_qualification_report(report, report_path, store_root=store_root)"
+    )
+
+
+def test_migration_records_an_advanced_source_identity_explicitly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    accepted_digest = plan_code_config_digest(
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    # The executing source advances without changing what the plan selects.
+    monkeypatch.setattr(module, "COST_SOURCE_SELECTOR", "three_era_smallest_positive_v2")
+    report = _migrate(tmp_path, index, report_path)
+    receipt = report.candidate_plan["migration"]
+    assert receipt["executed"] is True
+    assert receipt["source_config_advanced"] is True
+    assert receipt["accepted_code_config_digest"] == accepted_digest
+    assert receipt["executing_code_config_digest"] != accepted_digest
+    # Selection content is unchanged: the reviewed plan is installed exactly.
+    assert receipt["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+    assert receipt["plan_shape"] == REVIEWED_MIGRATION_PLAN_SHAPE
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+    assert lock.plan_digest == REVIEWED_MIGRATION_PLAN_DIGEST
+    assert lock.inputs["code_config_digest"] == receipt["executing_code_config_digest"]
+
+
+def test_migration_refuses_changed_selection_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    assert index is not None
+    # A different observed universe is different selection evidence, not a source advance.
+    with pytest.raises(
+        SourceQualificationError, match="does not match the accepted identity"
+    ) as exc:
+        run_source_qualification(
+            store_root=tmp_path,
+            index=_kline_manifest_index(months=("2020-01", "2020-02")),
+            current_contracts=_contracts("BTCUSDT"),
+            apply_reviewed_v4_migration=True,
+            migration_report_path=report_path,
+        )
+    assert exc.value.context["field"].startswith("executing_")
+    # Ledger-first means the prepared ledger may exist; the lock never advanced.
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 2
+
+
+def test_cli_migration_preserves_the_accepted_report_on_success_retry_and_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    before = report_path.read_bytes()
+    before_sha256 = file_sha256(report_path)
+    detail_root = tmp_path / MANIFEST_DETAIL_RELATIVE_ROOT
+    detail_before = _store_snapshot(detail_root) if detail_root.exists() else {}
+
+    module = _load_cli_module("cex002_cli_migration_under_test")
+
+    def _run(*_args: Any, **kwargs: Any) -> Any:
+        return run_source_qualification(
+            store_root=kwargs["store_root"],
+            index=index,
+            current_contracts=_contracts("BTCUSDT"),
+            apply_reviewed_v4_migration=True,
+            migration_report_path=kwargs["migration_report_path"],
+        )
+
+    def _forbid_report_write(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("migration CLI must not write the accepted report")
+
+    monkeypatch.setattr(module, "run_source_qualification", _run)
+    monkeypatch.setattr(module, "write_qualification_report", _forbid_report_write)
+    argv = [
+        "--store-root",
+        str(tmp_path),
+        "--report-path",
+        str(report_path),
+        "--apply-reviewed-v4-migration-only",
+    ]
+    assert module.main(argv) == 2
+    assert report_path.read_bytes() == before
+    assert file_sha256(report_path) == before_sha256
+    if detail_root.exists():
+        assert _store_snapshot(detail_root) == detail_before
+    captured = capsys.readouterr()
+    assert "Qualification report written to" not in captured.err
+    assert "reviewed_v4_migration:" in captured.err
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 4
+
+    # A completed retry re-proves the same transition and still leaves the report alone.
+    assert module.main(argv) == 2
+    assert report_path.read_bytes() == before
+    assert file_sha256(report_path) == before_sha256
+    if detail_root.exists():
+        assert _store_snapshot(detail_root) == detail_before
+
+    def _boom(*_args: Any, **_kwargs: Any) -> Any:
+        raise SourceQualificationError("injected migration failure", context={})
+
+    monkeypatch.setattr(module, "run_source_qualification", _boom)
+    assert module.main(argv) == 1
+    assert report_path.read_bytes() == before
+    assert file_sha256(report_path) == before_sha256
+    if detail_root.exists():
+        assert _store_snapshot(detail_root) == detail_before
+
+
+def test_ordinary_mode_refuses_a_prepared_ledger_with_the_version_two_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+
+    def _interrupt(**_kwargs: Any) -> SamplePlanLock:
+        raise _InjectedAbort("lock publication interrupted")
+
+    monkeypatch.setattr(module, "install_migrated_lock", _interrupt)
+    with pytest.raises(_InjectedAbort):
+        _migrate(tmp_path, index, report_path)
+    monkeypatch.undo()
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 2
+    assert (tmp_path / AMENDMENT_LEDGER_FILENAME).is_file()
+
+    progress_path = tmp_path / "cex002_qualification_progress.json"
+    progress_before = progress_path.read_bytes()
+    lock_before = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+    legacy_before = (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes()
+    amendment_before = (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes()
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    with pytest.raises(
+        SourceQualificationError, match="incomplete reviewed migration"
+    ):
+        run_source_qualification(
+            store_root=tmp_path, index=recording, current_contracts=contracts
+        )
+    # Ordinary mode must not list, fetch, recover, or reconcile this mixed state.
+    assert recording.calls == []
+    assert contracts.calls == 0
+    assert progress_path.read_bytes() == progress_before
+    assert (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes() == lock_before
+    assert (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes() == legacy_before
+    assert (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes() == amendment_before
+    assert report_path.is_file()
+
+
+def test_ordinary_mode_refuses_every_unsupported_plan_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, _report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _write_lock(
+        tmp_path / SAMPLE_PLAN_LOCK_FILENAME,
+        _mutate_lock(_load_lock_document(tmp_path), "version_three"),
+    )
+    lock_before = (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes()
+    ledger_before = (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes()
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    with pytest.raises(
+        SourceQualificationError, match="authorizes no ordinary execution"
+    ):
+        run_source_qualification(
+            store_root=tmp_path, index=recording, current_contracts=contracts
+        )
+    assert recording.calls == []
+    assert contracts.calls == 0
+    assert (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_bytes() == lock_before
+    assert (tmp_path / BUDGET_LEDGER_FILENAME).read_bytes() == ledger_before
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    [
+        ("binding", "does not match the accepted identity"),
+        ("source_receipts", "does not match the accepted identity"),
+        ("history", "does not match the accepted identity"),
+        ("prior_lock_evidence", "does not match the accepted identity"),
+        ("inputs", "migrated Gate 1 plan inputs changed"),
+    ],
+)
+def test_completed_migration_rejects_self_consistent_lock_substitutions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tamper: str,
+    message: str,
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, report_path)
+    lock_path = tmp_path / SAMPLE_PLAN_LOCK_FILENAME
+    document = json.loads(lock_path.read_text())
+    assert document["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+    if tamper == "binding":
+        document["budget_snapshot"]["amendment_binding"]["download_authorized"] = True
+    elif tamper == "source_receipts":
+        receipts = document["budget_snapshot"]["amendment_binding"]["source_receipts"]
+        receipts[0]["prepared_at"] = "tampered-receipt"
+    elif tamper == "history":
+        document["history"][0]["plan_digest"] = "a" * 64
+    elif tamper == "prior_lock_evidence":
+        evidence = Path(document["budget_snapshot"]["prior_lock_evidence_path"])
+        evidence.write_bytes(evidence.read_bytes() + b"\n")
+    else:
+        document["inputs"]["inventory_digest"] = "0" * 64
+    if tamper != "prior_lock_evidence":
+        _write_lock(lock_path, document)
+    assert json.loads(lock_path.read_text())["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+
+    amendment_before = (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes()
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    with pytest.raises((SourceQualificationError, ResumeIntegrityError), match=message):
+        run_source_qualification(
+            store_root=tmp_path, index=recording, current_contracts=contracts
+        )
+    assert (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes() == amendment_before
+    if tamper != "inputs":
+        # Authority failures are refused before inventory, fetch, or recovery.
+        assert recording.calls == []
+        assert contracts.calls == 0
+        assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == (
+            progress_before
+        )
+    assert report_path.is_file()
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("out_of_plan", "outside the reviewed plan"),
+        ("wrong_size", "does not match its locked planned size"),
+        ("over_allowance", "exceeds the reviewed allowance"),
+        ("legacy_fields", "legacy range accounting"),
+    ],
+)
+def test_amendment_accounting_rejects_unauthorized_or_over_allowance_records(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: str,
+    message: str,
+) -> None:
+    index, _report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, _report_path)
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None
+    plan = SamplePlan.from_dict(lock.plan)
+    downloads = [item for item in plan.entries if item.action == "download"]
+    download = downloads[0]
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    if mutation == "out_of_plan":
+        ledger.reservations["data/futures/um/monthly/klines/NOTINPLAN/1h/never.zip"] = {
+            "planned_bytes": int(download.byte_size)
+        }
+    elif mutation == "wrong_size":
+        ledger.reservations[download.key] = {"planned_bytes": int(download.byte_size) + 1}
+    elif mutation == "over_allowance":
+        # Each record is independently within the ledger budget; together they exceed
+        # the reviewed allowance while remaining in-plan identities.
+        assert len(downloads) >= 2
+        ceiling = GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+        ledger.reservations[downloads[0].key] = {"planned_bytes": ceiling}
+        ledger.reservations[downloads[1].key] = {"planned_bytes": ceiling}
+    else:
+        ledger.legacy_max_bytes = 1
+        ledger.legacy_state = "unresolved"
+        ledger.legacy_note = "not a resolved amendment ledger"
+    ledger.flush()
+
+    amendment_before = (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes()
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    with pytest.raises(SourceQualificationError, match=message):
+        run_source_qualification(
+            store_root=tmp_path, index=recording, current_contracts=contracts
+        )
+    assert recording.calls == []
+    assert contracts.calls == 0
+    assert (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes() == amendment_before
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+
+
+def test_migration_does_not_adopt_a_recoverable_missing_checkpoint_entry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    progress_path = tmp_path / "cex002_qualification_progress.json"
+    document = json.loads(progress_path.read_text())
+    objects = document["objects"]
+    checksums = RetainedChecksumIndex.from_cache(tmp_path / "list_cache")
+    key = next(
+        name
+        for name, row in objects.items()
+        if row.get("status") == "complete"
+        and not str(name).endswith(".CHECKSUM")
+        and checksums.lookup(name) is not None
+    )
+    del objects[key]
+    progress_path.write_text(
+        json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    after_removal = progress_path.read_bytes()
+    recorded, flushed = _watch_sample_checkpoint(monkeypatch)
+    report = _migrate(tmp_path, index, report_path)
+    # Recoverable bytes stay in memory only; the durable checkpoint is not rewritten.
+    assert recorded == []
+    assert flushed == []
+    assert progress_path.read_bytes() == after_removal
+    assert key not in json.loads(progress_path.read_text())["objects"]
+    assert report.candidate_plan["migration"]["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+    lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    assert lock is not None and lock.plan_version == 4
+
+
+def test_completed_migration_rejects_two_file_source_receipt_substitution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, _report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, _report_path)
+    lock_path = tmp_path / SAMPLE_PLAN_LOCK_FILENAME
+    ledger = BudgetLedger.load(
+        tmp_path / AMENDMENT_LEDGER_FILENAME,
+        budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+    )
+    assert ledger is not None
+    live = migration_source_identity()
+    fake_identity = {
+        **live,
+        "module_sha256": "ab" * 32,
+        "code_config_digest": "cd" * 32,
+    }
+    assert fake_identity != live
+    receipts = [dict(item) for item in ledger.binding["source_receipts"]]
+    receipts[-1] = {**dict(receipts[-1]), "source_identity": fake_identity}
+    ledger.binding = {**dict(ledger.binding), "source_receipts": receipts}
+    ledger.flush()
+    document = json.loads(lock_path.read_text())
+    assert document["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+    document["budget_snapshot"]["amendment_binding"] = dict(ledger.binding)
+    _write_lock(lock_path, document)
+    assert json.loads(lock_path.read_text())["plan_digest"] == REVIEWED_MIGRATION_PLAN_DIGEST
+
+    amendment_before = (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes()
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    with pytest.raises(SourceQualificationError, match="does not match the accepted identity"):
+        run_source_qualification(
+            store_root=tmp_path, index=recording, current_contracts=contracts
+        )
+    assert recording.calls == []
+    assert contracts.calls == 0
+    assert (tmp_path / AMENDMENT_LEDGER_FILENAME).read_bytes() == amendment_before
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("list_binding", "budget ledger binding is not an object"),
+        ("list_receipt", "an amendment source receipt is not the reviewed shape"),
+        ("extra_receipt_field", "an amendment source receipt is not the reviewed shape"),
+        ("malformed_digest", "an amendment source identity digest is malformed"),
+    ],
+)
+def test_amendment_binding_rejects_non_object_and_malformed_receipts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: str,
+    message: str,
+) -> None:
+    index, _report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    _migrate(tmp_path, index, _report_path)
+    ledger_path = tmp_path / AMENDMENT_LEDGER_FILENAME
+    if mutation == "list_binding":
+        document = json.loads(ledger_path.read_text())
+        document["binding"] = list(document["binding"].items())
+        ledger_path.write_text(
+            json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    else:
+        ledger = BudgetLedger.load(
+            ledger_path, budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+        )
+        assert ledger is not None
+        receipts = [dict(item) for item in ledger.binding["source_receipts"]]
+        if mutation == "list_receipt":
+            receipts[0] = list(receipts[0].items())  # type: ignore[assignment]
+        elif mutation == "extra_receipt_field":
+            receipts[0]["operator_note"] = "approved"
+        else:
+            identity = dict(receipts[0]["source_identity"])
+            identity["module_sha256"] = "not-a-digest"
+            receipts[0]["source_identity"] = identity
+        ledger.binding = {**dict(ledger.binding), "source_receipts": receipts}
+        ledger.flush()
+    progress_before = (tmp_path / "cex002_qualification_progress.json").read_bytes()
+    recording = _RecordingIndex(index)
+    contracts = _RecordingContracts(_contracts("BTCUSDT"))
+    with pytest.raises((SourceQualificationError, ResumeIntegrityError), match=message):
+        run_source_qualification(
+            store_root=tmp_path, index=recording, current_contracts=contracts
+        )
+    assert recording.calls == []
+    assert contracts.calls == 0
+    assert (tmp_path / "cex002_qualification_progress.json").read_bytes() == progress_before

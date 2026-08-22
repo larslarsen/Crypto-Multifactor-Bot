@@ -3383,6 +3383,935 @@ def superseded_candidate_lineage() -> tuple[dict[str, Any], ...]:
     )
 
 
+# --- ADR-0020 4a reviewed version-4 migration transaction -----------------------------
+
+# Review 145 accepted exactly one candidate, and this transition exists only for it. No
+# caller-supplied plan, digest, version, allowance, ledger, relock, or download authority
+# is accepted anywhere in this path.
+REVIEWED_MIGRATION_ID: str = "cex002_reviewed_v4_migration"
+MIGRATED_PLAN_VERSION: int = 4
+REVIEWED_MIGRATION_REPORT_SHA256: str = (
+    "f26abbc577307e5dcef693ec159fa65d1373d7b03c2be0eb6b926e5b09f97406"
+)
+REVIEWED_MIGRATION_REPORT_BYTES: int = 13_946_727
+REVIEWED_MIGRATION_PLAN_DIGEST: str = (
+    "2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef"
+)
+REVIEWED_MIGRATION_ENVELOPE_DIGEST: str = (
+    "be63989bd4d3d40c95c7ca405eae7558ce0ef997a2289892d14ed8d773d4cbfe"
+)
+REVIEWED_MIGRATION_COST_MANIFEST_DIGEST: str = (
+    "04842ff6b9b58280b3ec2ea2644b3d44769be62d460bef785262cd4dd65cac57"
+)
+REVIEWED_MIGRATION_PRIOR_LOCK_SHA256: str = (
+    "e04a5ce2f2513cc8a0f4e6698dcbf9d43c5a7bec0295021ca5d431ff886f0d84"
+)
+REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256: str = (
+    "47341a9ca2c60caf73485fb9bac40c6526cb35a13471e4545cd9cdcee6e227f6"
+)
+# The accepted plan's exact shape. Selection content may not change through migration.
+REVIEWED_MIGRATION_PLAN_SHAPE: dict[str, int] = {
+    "entries": 106,
+    "new_objects": 84,
+    "new_bytes": 1_049_324,
+    "retained_objects": 12,
+    "retained_bytes": 44_642,
+    "aliases": 10,
+    "blocked": 0,
+}
+PRIOR_LOCK_EVIDENCE_ROOT: str = "evidence/locks/sha256"
+AMENDMENT_LEDGER_PREPARED_STATE: str = "prepared_for_reviewed_v4_migration"
+MIGRATION_STATE_FRESH: str = "not_started"
+MIGRATION_STATE_PREPARED: str = "prepared_ledger_without_version_4_lock"
+MIGRATION_STATE_MIGRATED: str = "version_4_lock_installed"
+
+
+def migration_source_identity() -> dict[str, str]:
+    """The exact executing source and configuration this transition runs under."""
+    return {
+        "module_sha256": file_sha256(Path(__file__)),
+        "code_config_digest": plan_code_config_digest(
+            budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        ),
+        "reviewed_authority_table_version": REVIEWED_AUTHORITY_TABLE_VERSION,
+        "delivery_table_sha256": reviewed_delivery_table_digest(),
+        "alias_table_sha256": reviewed_alias_table_digest(),
+    }
+
+
+def reviewed_migration_binding() -> dict[str, Any]:
+    """Every identity the prepared amendment ledger is bound to, and nothing else."""
+    return {
+        "migration_id": REVIEWED_MIGRATION_ID,
+        "state": AMENDMENT_LEDGER_PREPARED_STATE,
+        "plan_version": MIGRATED_PLAN_VERSION,
+        "report_sha256": REVIEWED_MIGRATION_REPORT_SHA256,
+        "report_bytes": REVIEWED_MIGRATION_REPORT_BYTES,
+        "plan_digest": REVIEWED_MIGRATION_PLAN_DIGEST,
+        "candidate_envelope_digest": REVIEWED_MIGRATION_ENVELOPE_DIGEST,
+        "complete_cost_manifest_digest": REVIEWED_MIGRATION_COST_MANIFEST_DIGEST,
+        "prior_lock_sha256": REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+        "prior_plan_version": REQUIRED_PRIOR_PLAN_VERSION,
+        "legacy_ledger_sha256": REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256,
+        "allowance_id": AMENDMENT_LEDGER_ID,
+        "allowance_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        "superseded_candidates": [dict(item) for item in superseded_candidate_lineage()],
+        "download_authorized": False,
+    }
+
+
+def reviewed_plan_shape(plan: SamplePlan) -> dict[str, int]:
+    """The counted shape of a plan, independent of anything it claims about itself."""
+    return {
+        "entries": len(plan.entries),
+        "new_objects": sum(1 for item in plan.entries if item.action == "download"),
+        "new_bytes": sum(
+            int(item.byte_size) for item in plan.entries if item.action == "download"
+        ),
+        "retained_objects": sum(
+            1 for item in plan.entries if item.action == "reuse_retained"
+        ),
+        "retained_bytes": sum(
+            int(item.byte_size) for item in plan.entries if item.action == "reuse_retained"
+        ),
+        "aliases": sum(1 for item in plan.entries if item.action == "alias"),
+        "blocked": sum(1 for item in plan.entries if item.action == "blocked"),
+    }
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewedMigrationAuthority:
+    """Everything the reviewed migration proved before any facility existed."""
+
+    report_path: Path
+    report_sha256: str
+    candidate: Mapping[str, Any]
+    plan: SamplePlan
+    inputs: PlanInputs
+    lock: SamplePlanLock
+    prior_lock_sha256: str
+    legacy_ledger: BudgetLedger
+    legacy_ledger_sha256: str
+    state: str
+    prepared_ledger: BudgetLedger | None = None
+
+
+def _migration_error(message: str, context: Mapping[str, Any]) -> SourceQualificationError:
+    return SourceQualificationError(
+        message, context={"migration": REVIEWED_MIGRATION_ID, **dict(context)}
+    )
+
+
+def _require_exact(
+    actual: Any, expected: Any, *, field_name: str, context: Mapping[str, Any]
+) -> None:
+    if actual != expected:
+        raise _migration_error(
+            "reviewed migration authority does not match the accepted identity",
+            {**dict(context), "field": field_name, "actual": actual, "expected": expected},
+        )
+
+
+def reviewed_migration_preflight(
+    *, store_root: Path, report_path: Path
+) -> ReviewedMigrationAuthority:
+    """Prove the whole reviewed transition before any mutable facility exists.
+
+    Nothing here creates a directory, cache, checkpoint, journal, listing, holdout,
+    contract, or Coinalyze facility: the accepted report, the durable version-2 lock, the
+    legacy ledger, the candidate plan and envelope, the complete-cost identity, and the
+    amendment ledger's absence or exact recoverable prepared state are all read-only.
+    """
+    store = Path(store_root)
+    plan_lock_path = store / SAMPLE_PLAN_LOCK_FILENAME
+    budget_ledger_path = store / BUDGET_LEDGER_FILENAME
+    amendment_ledger_path = store / AMENDMENT_LEDGER_FILENAME
+    context = {"report": str(report_path), "store_root": str(store)}
+
+    if not report_path.is_file():
+        raise _migration_error("accepted report is missing", context)
+    report_sha256 = file_sha256(report_path)
+    _require_exact(
+        report_sha256,
+        REVIEWED_MIGRATION_REPORT_SHA256,
+        field_name="report_sha256",
+        context=context,
+    )
+    _require_exact(
+        int(report_path.stat().st_size),
+        REVIEWED_MIGRATION_REPORT_BYTES,
+        field_name="report_bytes",
+        context=context,
+    )
+    try:
+        document = json.loads(report_path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise _migration_error("accepted report is not JSON", context) from exc
+    if not isinstance(document, dict):
+        raise _migration_error("accepted report is not an object", context)
+
+    _require_exact(
+        document.get("gate_status"), "BLOCKED", field_name="gate_status", context=context
+    )
+    _require_exact(
+        document.get("accepted"), False, field_name="accepted", context=context
+    )
+    _require_exact(
+        list(document.get("samples") or ()), [], field_name="samples", context=context
+    )
+    storage = document.get("storage")
+    if not isinstance(storage, dict):
+        raise _migration_error("accepted report has no storage block", context)
+    cost_block = storage.get("cost_sample")
+    if not isinstance(cost_block, dict):
+        raise _migration_error("accepted report has no complete cost block", context)
+    _require_exact(
+        cost_block.get("manifest_digest"),
+        REVIEWED_MIGRATION_COST_MANIFEST_DIGEST,
+        field_name="complete_cost_manifest_digest",
+        context=context,
+    )
+
+    candidate = document.get("candidate_plan")
+    if not isinstance(candidate, dict):
+        raise _migration_error("accepted report has no candidate plan", context)
+    for field_name, expected in (
+        ("plan_version", MIGRATED_PLAN_VERSION),
+        ("state", "candidate_unmigrated"),
+        ("migration_authorized", False),
+        ("download_authorized", False),
+        ("plan_digest", REVIEWED_MIGRATION_PLAN_DIGEST),
+        ("plan_digest_domain", "plan_content_digest"),
+        ("candidate_envelope_digest", REVIEWED_MIGRATION_ENVELOPE_DIGEST),
+        ("complete_cost_manifest_digest", REVIEWED_MIGRATION_COST_MANIFEST_DIGEST),
+        ("prior_plan_version", REQUIRED_PRIOR_PLAN_VERSION),
+        ("prior_lock_sha256", REVIEWED_MIGRATION_PRIOR_LOCK_SHA256),
+        ("digest_reuses_prior", False),
+    ):
+        _require_exact(
+            candidate.get(field_name), expected, field_name=field_name, context=context
+        )
+    _require_exact(
+        [dict(item) for item in (candidate.get("superseded_candidates") or ())],
+        [dict(item) for item in superseded_candidate_lineage()],
+        field_name="superseded_candidates",
+        context=context,
+    )
+    allowance = candidate.get("allowance")
+    if not isinstance(allowance, dict):
+        raise _migration_error("accepted candidate has no allowance", context)
+    _require_exact(
+        allowance.get("ledger_id"),
+        AMENDMENT_LEDGER_ID,
+        field_name="allowance_id",
+        context=context,
+    )
+    _require_exact(
+        allowance.get("allowance_bytes"),
+        GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        field_name="allowance_bytes",
+        context=context,
+    )
+    _require_exact(
+        allowance.get("charged"), False, field_name="allowance_charged", context=context
+    )
+
+    # The plan is rebuilt and re-digested from its own document; a recorded digest is
+    # never the proof of the thing it describes.
+    plan_document = candidate.get("plan")
+    if not isinstance(plan_document, dict):
+        raise _migration_error("accepted candidate has no plan document", context)
+    plan = SamplePlan.from_dict(plan_document)
+    validate_sample_plan(plan)
+    _require_exact(
+        plan_content_digest(plan),
+        REVIEWED_MIGRATION_PLAN_DIGEST,
+        field_name="rebuilt_plan_digest",
+        context=context,
+    )
+    _require_exact(
+        reviewed_plan_shape(plan),
+        dict(REVIEWED_MIGRATION_PLAN_SHAPE),
+        field_name="plan_shape",
+        context=context,
+    )
+    inputs_document = candidate.get("inputs")
+    if not isinstance(inputs_document, dict):
+        raise _migration_error("accepted candidate has no plan inputs", context)
+    try:
+        inputs = PlanInputs(**{str(k): str(v) for k, v in inputs_document.items()})
+    except TypeError as exc:
+        raise _migration_error("accepted candidate inputs are malformed", context) from exc
+    _require_exact(
+        candidate_envelope_digest(
+            plan,
+            allowance_id=AMENDMENT_LEDGER_ID,
+            inputs=inputs,
+            complete_cost_manifest_digest=REVIEWED_MIGRATION_COST_MANIFEST_DIGEST,
+        ),
+        REVIEWED_MIGRATION_ENVELOPE_DIGEST,
+        field_name="rebuilt_envelope_digest",
+        context=context,
+    )
+
+    prior_lock_sha256 = file_sha256(plan_lock_path)
+    legacy_ledger_sha256 = file_sha256(budget_ledger_path)
+    lock = SamplePlanLock.load(plan_lock_path)
+    legacy_ledger = BudgetLedger.load(
+        budget_ledger_path, budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES
+    )
+    if lock is None or legacy_ledger is None:
+        raise _migration_error(
+            "reviewed migration requires the durable version-2 lock and legacy ledger",
+            {**context, "lock": lock is not None, "legacy_ledger": legacy_ledger is not None},
+        )
+    prepared = (
+        BudgetLedger.load(
+            amendment_ledger_path, budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+        )
+        if amendment_ledger_path.exists()
+        else None
+    )
+    if lock.plan_version == MIGRATED_PLAN_VERSION:
+        state = MIGRATION_STATE_MIGRATED
+        # A completed transition is re-proved in full here, before any facility exists.
+        validate_migrated_state(store_root=store, lock=lock)
+    elif lock.plan_version == REQUIRED_PRIOR_PLAN_VERSION:
+        state = MIGRATION_STATE_PREPARED if prepared is not None else MIGRATION_STATE_FRESH
+        _require_exact(
+            prior_lock_sha256,
+            REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+            field_name="prior_lock_sha256",
+            context=context,
+        )
+        _require_exact(
+            legacy_ledger_sha256,
+            REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256,
+            field_name="legacy_ledger_sha256",
+            context=context,
+        )
+    else:
+        raise _migration_error(
+            "reviewed migration refuses every plan version but the reviewed transition",
+            {**context, "plan_version": lock.plan_version},
+        )
+    if prepared is not None:
+        validate_amendment_binding(prepared.binding)
+        if state != MIGRATION_STATE_MIGRATED:
+            # Before the commit point the allowance must still be entirely unspent.
+            validate_amendment_accounting(prepared, plan=None, prepared=True)
+    return ReviewedMigrationAuthority(
+        report_path=report_path,
+        report_sha256=report_sha256,
+        candidate=candidate,
+        plan=plan,
+        inputs=inputs,
+        lock=lock,
+        prior_lock_sha256=prior_lock_sha256,
+        legacy_ledger=legacy_ledger,
+        legacy_ledger_sha256=legacy_ledger_sha256,
+        state=state,
+        prepared_ledger=prepared,
+    )
+
+
+def preserve_prior_lock_bytes(*, store_root: Path, plan_lock_path: Path, sha256: str) -> str:
+    """Preserve the exact prior-lock bytes at a content address before anything moves."""
+    dest = Path(store_root) / PRIOR_LOCK_EVIDENCE_ROOT / f"{sha256}.json"
+    if dest.is_file():
+        actual = compute_sha256(dest)
+        if actual != sha256:
+            raise ResumeIntegrityError(
+                "preserved prior lock does not match its own content address",
+                context={"path": str(dest), "expected": sha256, "actual": actual},
+            )
+        return str(dest)
+    payload = plan_lock_path.read_bytes()
+    actual = _object_sha256(payload)
+    if actual != sha256:
+        raise ResumeIntegrityError(
+            "prior lock bytes changed before they could be preserved",
+            context={"path": str(plan_lock_path), "expected": sha256, "actual": actual},
+        )
+    _atomic_publish(dest, lambda handle: handle.write(payload))
+    return str(dest)
+
+
+def prepare_amendment_ledger(
+    *,
+    path: Path,
+    existing: BudgetLedger | None,
+    source_identity: Mapping[str, str],
+    prepared_at: str,
+) -> BudgetLedger:
+    """Create or re-prove the prepared amendment ledger, ledger-first and unspent.
+
+    The allowance starts whole, with no charge and no reservation. A re-run re-proves the
+    bound identities exactly; only the executing source identity may advance, and only by
+    appending an explicit migration receipt that records it.
+    """
+    binding = reviewed_migration_binding()
+    receipt = {"prepared_at": prepared_at, "source_identity": dict(source_identity)}
+    if existing is None:
+        ledger = BudgetLedger(
+            path=path,
+            budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            binding={**binding, "source_receipts": [receipt]},
+        )
+        ledger.flush()
+        return ledger
+    observed = dict(existing.binding)
+    receipts = list(observed.pop("source_receipts", ()) or ())
+    if observed != binding:
+        raise _migration_error(
+            "prepared amendment ledger is bound to another authority",
+            {"path": str(path)},
+        )
+    if not receipts:
+        raise _migration_error(
+            "prepared amendment ledger has no source receipt", {"path": str(path)}
+        )
+    if dict(receipts[-1].get("source_identity") or {}) != dict(source_identity):
+        # The executing source advanced. That is recorded explicitly, never silently.
+        receipts.append(receipt)
+        existing.binding = {**binding, "source_receipts": receipts}
+        existing.flush()
+    return existing
+
+
+def install_migrated_lock(
+    *,
+    lock: SamplePlanLock,
+    plan: SamplePlan,
+    inputs: PlanInputs,
+    retained_snapshot: Mapping[str, Sequence[Any]],
+    amendment_binding: Mapping[str, Any],
+    prior_lock_evidence_path: str,
+    prior_lock_sha256: str,
+    locked_at: str,
+) -> SamplePlanLock:
+    """Publish the explicit version-4 lock: the commit point of the transaction.
+
+    Locked versions 0-2 are preserved exactly as they were written, the unexecuted
+    version-3 candidate stays recorded by digest and is never installed or relabelled,
+    and the lock binds the prepared amendment-ledger authority it must execute under.
+    """
+    validate_sample_plan(plan)
+    history = [dict(item) for item in lock.history]
+    history.append(
+        {
+            "plan_version": lock.plan_version,
+            "locked_at": lock.locked_at,
+            "inputs": dict(lock.inputs),
+            "plan": dict(lock.plan),
+            "plan_digest": lock.plan_digest,
+        }
+    )
+    migrated = SamplePlanLock(
+        path=lock.path,
+        plan_version=MIGRATED_PLAN_VERSION,
+        locked_at=locked_at,
+        inputs=inputs.to_dict(),
+        plan=plan.to_dict(),
+        plan_digest=plan_content_digest(plan),
+        retained_snapshot={str(k): list(v) for k, v in retained_snapshot.items()},
+        budget_snapshot={
+            "budget_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            "independent_object_cap_bytes": None,
+            "ledger_id": AMENDMENT_LEDGER_ID,
+            "ledger_filename": AMENDMENT_LEDGER_FILENAME,
+            "cumulative_spent_max_bytes_at_lock": 0,
+            "allowance_bytes_at_lock": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            "legacy_ledger_filename": BUDGET_LEDGER_FILENAME,
+            "legacy_ledger_sha256": REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256,
+            "legacy_ledger_role": "preserved_lineage_only",
+            "migration_id": REVIEWED_MIGRATION_ID,
+            "amendment_binding": dict(amendment_binding),
+            "prior_lock_sha256": prior_lock_sha256,
+            "prior_lock_evidence_path": prior_lock_evidence_path,
+            "superseded_candidates": [
+                dict(item) for item in superseded_candidate_lineage()
+            ],
+            "download_authorized": False,
+        },
+        history=history,
+    )
+    migrated.flush()
+    return migrated
+
+
+def execute_reviewed_v4_migration(
+    *,
+    authority: ReviewedMigrationAuthority,
+    store_root: Path,
+    plan: SamplePlan,
+    inputs: PlanInputs,
+    retained_snapshot: Mapping[str, Sequence[Any]],
+    now_iso: str,
+) -> tuple[SamplePlanLock, BudgetLedger, dict[str, Any]]:
+    """The two-file reviewed transition: ledger-first, lock-last, download never.
+
+    Re-running after an interruption finishes the same transition rather than starting a
+    second one, and a completed migration re-proves itself and changes nothing.
+    """
+    store = Path(store_root)
+    plan_lock_path = store / SAMPLE_PLAN_LOCK_FILENAME
+    amendment_ledger_path = store / AMENDMENT_LEDGER_FILENAME
+    # The executing selection must be the accepted selection, byte for byte.
+    _require_exact(
+        plan_content_digest(plan),
+        REVIEWED_MIGRATION_PLAN_DIGEST,
+        field_name="executing_plan_digest",
+        context={"store_root": str(store)},
+    )
+    _require_exact(
+        reviewed_plan_shape(plan),
+        dict(REVIEWED_MIGRATION_PLAN_SHAPE),
+        field_name="executing_plan_shape",
+        context={"store_root": str(store)},
+    )
+    # Selection evidence is frozen: inventory, listing, membership, budget, and retained
+    # evidence must be exactly what the accepted candidate was built from.
+    executing_inputs = inputs.to_dict()
+    accepted_inputs = authority.inputs.to_dict()
+    for name in (
+        "inventory_digest",
+        "listing_digest",
+        "membership_digest",
+        "budget_digest",
+        "retained_digest",
+    ):
+        _require_exact(
+            executing_inputs[name],
+            accepted_inputs[name],
+            field_name=f"executing_inputs.{name}",
+            context={"store_root": str(store)},
+        )
+    # ADR-0020 4a: source and configuration identity may advance, but only through this
+    # explicit receipt, and never by changing what the plan selects.
+    source_advanced = (
+        executing_inputs["code_config_digest"] != accepted_inputs["code_config_digest"]
+    )
+    source_identity = migration_source_identity()
+    if authority.state == MIGRATION_STATE_MIGRATED:
+        executed = False
+    else:
+        # 1. the exact prior lock is preserved before anything is written.
+        evidence_path = preserve_prior_lock_bytes(
+            store_root=store,
+            plan_lock_path=plan_lock_path,
+            sha256=REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+        )
+        # 2. ledger first: an interruption here authorizes no execution at all.
+        prepared = prepare_amendment_ledger(
+            path=amendment_ledger_path,
+            existing=authority.prepared_ledger,
+            source_identity=source_identity,
+            prepared_at=now_iso,
+        )
+        # 3. lock last: publishing the version-4 lock is the commit point.
+        install_migrated_lock(
+            lock=authority.lock,
+            plan=plan,
+            inputs=inputs,
+            retained_snapshot=retained_snapshot,
+            amendment_binding=prepared.binding,
+            prior_lock_evidence_path=evidence_path,
+            prior_lock_sha256=REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+            locked_at=now_iso,
+        )
+        executed = True
+    reloaded = SamplePlanLock.load(plan_lock_path)
+    if reloaded is None:
+        raise _migration_error(
+            "the migrated lock did not re-prove after publication",
+            {"path": str(plan_lock_path)},
+        )
+    # One complete proof for both paths: a fresh commit and a completed re-run are held
+    # to exactly the same authority, evidence, binding, and accounting.
+    _plan, ledger = validate_migrated_state(
+        store_root=store, lock=reloaded, executing_inputs=inputs
+    )
+    evidence_path = str(reloaded.budget_snapshot["prior_lock_evidence_path"])
+    legacy_after = file_sha256(store / BUDGET_LEDGER_FILENAME)
+    receipt = {
+        "migration_id": REVIEWED_MIGRATION_ID,
+        "executed": executed,
+        "state": MIGRATION_STATE_MIGRATED,
+        "migrated_at": reloaded.locked_at,
+        "report_sha256": authority.report_sha256,
+        "report_path": str(authority.report_path),
+        "plan_version": MIGRATED_PLAN_VERSION,
+        "prior_plan_version": REQUIRED_PRIOR_PLAN_VERSION,
+        "plan_digest": REVIEWED_MIGRATION_PLAN_DIGEST,
+        "candidate_envelope_digest": REVIEWED_MIGRATION_ENVELOPE_DIGEST,
+        "complete_cost_manifest_digest": REVIEWED_MIGRATION_COST_MANIFEST_DIGEST,
+        "plan_shape": dict(REVIEWED_MIGRATION_PLAN_SHAPE),
+        "prior_lock_sha256": REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+        "prior_lock_evidence_path": evidence_path,
+        "legacy_ledger_sha256": legacy_after,
+        "legacy_ledger_role": "preserved_lineage_only",
+        "amendment_ledger_path": str(amendment_ledger_path),
+        "amendment_ledger_id": AMENDMENT_LEDGER_ID,
+        "allowance_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+        "allowance_charged_bytes": ledger.charged_bytes,
+        "source_identity": source_identity,
+        "source_config_advanced": source_advanced,
+        "accepted_code_config_digest": accepted_inputs["code_config_digest"],
+        "executing_code_config_digest": executing_inputs["code_config_digest"],
+        "source_receipts": [dict(item) for item in ledger.binding["source_receipts"]],
+        "preserved_plan_versions": sorted(
+            int(item.get("plan_version") or 0) for item in reloaded.history
+        ),
+        "superseded_candidates": [dict(item) for item in superseded_candidate_lineage()],
+        "migration_authorized": True,
+        "download_authorized": False,
+        "samples_acquired": 0,
+        "note": (
+            "ledger-first, lock-last, one shot. This transition installs the reviewed "
+            "version-4 plan and authorizes no sample download"
+        ),
+    }
+    return reloaded, ledger, receipt
+
+
+STORE_TRANSITION_LEGACY: str = "legacy_pre_migration"
+STORE_TRANSITION_MIGRATED: str = "reviewed_version_4"
+LEGACY_PLAN_VERSIONS: frozenset[int] = frozenset({0, 1, REQUIRED_PRIOR_PLAN_VERSION})
+
+
+def classify_store_transition(
+    *, store_root: Path, lock: SamplePlanLock | None
+) -> str:
+    """Which execution state this store is in, decided before anything is touched.
+
+    ADR-0020 4a leaves exactly two executable states: a pre-migration store with no
+    amendment artifact at all, and a fully migrated version-4 store. A prepared amendment
+    ledger beside a version-2 lock is the non-executing middle of the transaction and may
+    be finished only by the same reviewed migration; version 3 and every unsupported
+    version execute nothing.
+    """
+    amendment_present = (Path(store_root) / AMENDMENT_LEDGER_FILENAME).exists()
+    version = 0 if lock is None else int(lock.plan_version)
+    context = {"plan_version": version, "amendment_ledger_present": amendment_present}
+    if version == MIGRATED_PLAN_VERSION:
+        if not amendment_present:
+            raise _migration_error(
+                "a version-4 lock without its exact amendment ledger authorizes nothing",
+                context,
+            )
+        return STORE_TRANSITION_MIGRATED
+    if version in LEGACY_PLAN_VERSIONS:
+        if amendment_present:
+            raise _migration_error(
+                "an incomplete reviewed migration authorizes no ordinary execution",
+                context,
+            )
+        return STORE_TRANSITION_LEGACY
+    raise _migration_error(
+        "this plan version authorizes no ordinary execution", context
+    )
+
+
+def validate_amendment_binding(binding: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The exact reviewed binding and its typed source receipts, or nothing at all."""
+    if not isinstance(binding, dict) or isinstance(binding, bool):
+        raise _migration_error("the amendment ledger binding is not an object", {})
+    observed = dict(binding)
+    receipts = observed.pop("source_receipts", None)
+    if observed != reviewed_migration_binding():
+        raise _migration_error(
+            "the amendment ledger is not bound to the reviewed migration", {}
+        )
+    if not isinstance(receipts, list) or not receipts:
+        raise _migration_error("the amendment ledger has no source receipt", {})
+    live = migration_source_identity()
+    identity_fields = set(live)
+    typed: list[dict[str, Any]] = []
+    for index, item in enumerate(receipts):
+        if not isinstance(item, dict) or isinstance(item, bool) or set(item) != {
+            "prepared_at",
+            "source_identity",
+        }:
+            raise _migration_error(
+                "an amendment source receipt is not the reviewed shape", {"receipt": index}
+            )
+        prepared_at = item["prepared_at"]
+        identity = item["source_identity"]
+        if not isinstance(prepared_at, str) or not prepared_at:
+            raise _migration_error(
+                "an amendment source receipt has no preparation time", {"receipt": index}
+            )
+        if not isinstance(identity, dict) or isinstance(identity, bool) or set(identity) != (
+            identity_fields
+        ):
+            raise _migration_error(
+                "an amendment source receipt does not name the executing source",
+                {"receipt": index},
+            )
+        if any(not isinstance(value, str) or not value for value in identity.values()):
+            raise _migration_error(
+                "an amendment source identity field is not a value", {"receipt": index}
+            )
+        _require_exact(
+            identity["reviewed_authority_table_version"],
+            live["reviewed_authority_table_version"],
+            field_name="source_identity.reviewed_authority_table_version",
+            context={"receipt": index},
+        )
+        _require_exact(
+            identity["delivery_table_sha256"],
+            live["delivery_table_sha256"],
+            field_name="source_identity.delivery_table_sha256",
+            context={"receipt": index},
+        )
+        _require_exact(
+            identity["alias_table_sha256"],
+            live["alias_table_sha256"],
+            field_name="source_identity.alias_table_sha256",
+            context={"receipt": index},
+        )
+        for field_name in ("module_sha256", "code_config_digest"):
+            try:
+                _require_hex_digest(
+                    identity[field_name],
+                    label=field_name,
+                    context={"receipt": index},
+                )
+            except ResumeIntegrityError as exc:
+                raise _migration_error(
+                    "an amendment source identity digest is malformed",
+                    {"receipt": index, "field": field_name},
+                ) from exc
+        typed.append({"prepared_at": prepared_at, "source_identity": dict(identity)})
+    return typed
+
+
+def validate_amendment_accounting(
+    ledger: BudgetLedger, *, plan: SamplePlan | None, prepared: bool
+) -> None:
+    """Amendment accounting may only ever describe the reviewed version-4 downloads.
+
+    A prepared ledger is entirely unspent. An executing ledger may reserve or charge only
+    the locked download identities, only at their locked planned sizes, and only within
+    the fixed allowance. Legacy range accounting has no meaning here and must be empty.
+    """
+    context = {"path": str(ledger.path)}
+    if ledger.budget_bytes != GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES:
+        raise _migration_error("the amendment allowance is not the reviewed one", context)
+    if ledger.legacy_max_bytes or ledger.legacy_state != "resolved" or ledger.legacy_note:
+        raise _migration_error(
+            "the amendment ledger carries legacy range accounting", context
+        )
+    if prepared:
+        if ledger.charges or ledger.reservations:
+            raise _migration_error(
+                "a prepared amendment ledger is not unspent",
+                {**context, "charges": len(ledger.charges)},
+            )
+        return
+    if plan is None:
+        raise _migration_error("executing amendment accounting has no locked plan", context)
+    authorized = {
+        str(item.key): int(item.byte_size)
+        for item in plan.entries
+        if item.action == "download"
+    }
+    planned_total = 0
+    records = (
+        *ledger.charges.items(),
+        *ledger.reservations.items(),
+    )
+    for key, record in records:
+        if key not in authorized:
+            raise _migration_error(
+                "amendment accounting names an object outside the reviewed plan",
+                {**context, "key": key},
+            )
+        planned_total += int(record["planned_bytes"])
+    if planned_total > GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES:
+        raise _migration_error(
+            "amendment accounting exceeds the reviewed allowance",
+            {**context, "planned_total_bytes": planned_total},
+        )
+    for key, record in records:
+        planned = int(record["planned_bytes"])
+        if planned != authorized[key]:
+            raise _migration_error(
+                "amendment accounting does not match its locked planned size",
+                {**context, "key": key, "planned": planned, "locked": authorized[key]},
+            )
+
+
+def validate_migrated_state(
+    *,
+    store_root: Path,
+    lock: SamplePlanLock,
+    executing_inputs: PlanInputs | None = None,
+) -> tuple[SamplePlan, BudgetLedger]:
+    """Re-prove a completed migration in full, from both files and their evidence.
+
+    Every migration re-run and every ordinary version-4 resume passes through here: the
+    plan is rebuilt and re-digested, the preserved history and candidate lineage are
+    exact, the prior-lock evidence is at its canonical content address and still hashes to
+    the reviewed lock, the legacy ledger is the reviewed lineage bytes, and the lock and
+    amendment ledger agree on the complete binding, source receipts included.
+    """
+    store = Path(store_root)
+    context = {"store_root": str(store), "plan_version": lock.plan_version}
+    if lock.plan_version != MIGRATED_PLAN_VERSION:
+        raise _migration_error("the installed lock is not the reviewed version", context)
+    plan = SamplePlan.from_dict(lock.plan)
+    validate_sample_plan(plan)
+    _require_exact(
+        plan_content_digest(plan),
+        REVIEWED_MIGRATION_PLAN_DIGEST,
+        field_name="installed_plan_digest",
+        context=context,
+    )
+    _require_exact(
+        reviewed_plan_shape(plan),
+        dict(REVIEWED_MIGRATION_PLAN_SHAPE),
+        field_name="installed_plan_shape",
+        context=context,
+    )
+    _require_exact(
+        [int(item.get("plan_version") or 0) for item in lock.history],
+        [0, 1, REQUIRED_PRIOR_PLAN_VERSION],
+        field_name="preserved_plan_versions",
+        context=context,
+    )
+    snapshot = dict(lock.budget_snapshot)
+    for field_name, expected in (
+        ("ledger_id", AMENDMENT_LEDGER_ID),
+        ("ledger_filename", AMENDMENT_LEDGER_FILENAME),
+        ("budget_bytes", GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES),
+        ("allowance_bytes_at_lock", GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES),
+        ("cumulative_spent_max_bytes_at_lock", 0),
+        ("independent_object_cap_bytes", None),
+        ("migration_id", REVIEWED_MIGRATION_ID),
+        ("legacy_ledger_filename", BUDGET_LEDGER_FILENAME),
+        ("legacy_ledger_sha256", REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256),
+        ("legacy_ledger_role", "preserved_lineage_only"),
+        ("prior_lock_sha256", REVIEWED_MIGRATION_PRIOR_LOCK_SHA256),
+        ("download_authorized", False),
+    ):
+        _require_exact(
+            snapshot.get(field_name), expected, field_name=f"lock.{field_name}", context=context
+        )
+    _require_exact(
+        [dict(item) for item in (snapshot.get("superseded_candidates") or ())],
+        [dict(item) for item in superseded_candidate_lineage()],
+        field_name="lock.superseded_candidates",
+        context=context,
+    )
+    # The prior lock is preserved at exactly one canonical content address.
+    evidence = store / PRIOR_LOCK_EVIDENCE_ROOT / f"{REVIEWED_MIGRATION_PRIOR_LOCK_SHA256}.json"
+    _require_exact(
+        str(snapshot.get("prior_lock_evidence_path") or ""),
+        str(evidence),
+        field_name="lock.prior_lock_evidence_path",
+        context=context,
+    )
+    if not evidence.is_file():
+        raise _migration_error(
+            "the preserved prior lock is missing", {**context, "path": str(evidence)}
+        )
+    _require_exact(
+        compute_sha256(evidence),
+        REVIEWED_MIGRATION_PRIOR_LOCK_SHA256,
+        field_name="preserved_prior_lock_sha256",
+        context=context,
+    )
+    # Versions 0-2 are the exact prior-lock documents, not merely a sorted version list.
+    prior = SamplePlanLock.load(evidence)
+    if prior is None:
+        raise _migration_error(
+            "the preserved prior lock is missing", {**context, "path": str(evidence)}
+        )
+    expected_history = [dict(item) for item in prior.history]
+    expected_history.append(
+        {
+            "plan_version": prior.plan_version,
+            "locked_at": prior.locked_at,
+            "inputs": dict(prior.inputs),
+            "plan": dict(prior.plan),
+            "plan_digest": prior.plan_digest,
+        }
+    )
+    _require_exact(
+        [dict(item) for item in lock.history],
+        expected_history,
+        field_name="preserved_plan_history",
+        context=context,
+    )
+    _require_exact(
+        file_sha256(store / BUDGET_LEDGER_FILENAME),
+        REVIEWED_MIGRATION_LEGACY_LEDGER_SHA256,
+        field_name="legacy_ledger_sha256",
+        context=context,
+    )
+    amendment_path = store / AMENDMENT_LEDGER_FILENAME
+    ledger = (
+        BudgetLedger.load(
+            amendment_path, budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES
+        )
+        if amendment_path.exists()
+        else None
+    )
+    if ledger is None:
+        raise _migration_error(
+            "a version-4 lock without its exact amendment ledger authorizes nothing",
+            {**context, "path": str(amendment_path)},
+        )
+    lock_binding = snapshot.get("amendment_binding")
+    if not isinstance(lock_binding, dict) or isinstance(lock_binding, bool):
+        raise _migration_error(
+            "the installed lock amendment binding is not an object", context
+        )
+    receipts = validate_amendment_binding(ledger.binding)
+    # Both directions, receipts included: neither file may drift from the other.
+    _require_exact(
+        dict(lock_binding),
+        dict(ledger.binding),
+        field_name="lock.amendment_binding",
+        context=context,
+    )
+    # After commit the final receipt is the source that installed this lock.
+    final_identity = dict(receipts[-1]["source_identity"])
+    live_identity = migration_source_identity()
+    _require_exact(
+        final_identity,
+        live_identity,
+        field_name="final_source_receipt",
+        context=context,
+    )
+    _require_exact(
+        final_identity["code_config_digest"],
+        str(lock.inputs.get("code_config_digest") or ""),
+        field_name="lock.inputs.code_config_digest",
+        context=context,
+    )
+    validate_amendment_accounting(ledger, plan=plan, prepared=False)
+    if executing_inputs is not None:
+        _require_exact(
+            executing_inputs.to_dict(),
+            dict(lock.inputs),
+            field_name="executing_inputs",
+            context=context,
+        )
+    return plan, ledger
+
+
+def load_migrated_amendment_ledger(
+    *, store_root: Path, lock: SamplePlanLock
+) -> BudgetLedger:
+    """The amendment ledger a version-4 lock must execute under, fully re-proved."""
+    _plan, ledger = validate_migrated_state(store_root=store_root, lock=lock)
+    return ledger
+
+
 def build_candidate_plan_v4(
     *,
     lock: SamplePlanLock,
@@ -3541,6 +4470,21 @@ LEDGER_NO_TRANSFER: str = "no_transfer_content_address_reuse"
 _LEDGER_DISPOSITIONS: frozenset[str] = frozenset({LEDGER_TRANSFERRED, LEDGER_NO_TRANSFER})
 
 
+def _load_ledger_binding(value: Any, *, path: Path) -> dict[str, Any]:
+    """Load a ledger binding only when it is absent or a JSON object.
+
+    A missing binding stays empty so historical ledgers remain readable. A JSON list of
+    pairs is not an object and must not be coerced into one.
+    """
+    if value is None:
+        return {}
+    if not isinstance(value, dict) or isinstance(value, bool):
+        raise ResumeIntegrityError(
+            "budget ledger binding is not an object", context={"path": str(path)}
+        )
+    return dict(value)
+
+
 @dataclass
 class BudgetLedger:
     """Write-ahead cumulative accounting of every new Gate 1 sample byte.
@@ -3565,6 +4509,9 @@ class BudgetLedger:
     legacy_max_bytes: int = 0
     legacy_state: str = "resolved"
     legacy_note: str = ""
+    # ADR-0020 4a: the reviewed migration authority this allowance exists for. Empty for
+    # every ledger that is not an amendment ledger, so their documents never change.
+    binding: dict[str, Any] = field(default_factory=dict)
 
     # --- validation -------------------------------------------------------------------
 
@@ -3677,6 +4624,9 @@ class BudgetLedger:
                 },
                 "legacy_max_bytes": self.legacy_max_bytes,
                 "legacy_state": self.legacy_state,
+                # An empty binding hashes exactly as it did before ADR-0020, so no
+                # existing ledger document or digest moves.
+                **({"binding": self.binding} if self.binding else {}),
             }
         )
         return {
@@ -3736,6 +4686,7 @@ class BudgetLedger:
             legacy_max_bytes=legacy_max,
             legacy_state=str(document.get("legacy_state") or "resolved"),
             legacy_note=str(document.get("legacy_note") or ""),
+            binding=_load_ledger_binding(document.get("binding"), path=path),
         )
         ledger.validate()
         recorded = document.get("integrity")
@@ -3811,6 +4762,7 @@ class BudgetLedger:
                     "legacy_max_bytes": self.legacy_max_bytes,
                     "legacy_state": self.legacy_state,
                     "legacy_note": self.legacy_note,
+                    **({"binding": dict(self.binding)} if self.binding else {}),
                     "integrity": self.integrity_summary(),
                 },
             ),
@@ -7192,16 +8144,21 @@ def recover_retained_samples(
     checksums: RetainedChecksumIndex,
     checkpoint: SampleCheckpointStore,
     keys: Sequence[str],
+    persist: bool = True,
+    recovered_into: dict[str, dict[str, Any]] | None = None,
 ) -> int:
     """Re-adopt already downloaded, checksum-proven sample bytes without redownloading.
 
     A retained object is recovered only when its provider checksum sidecar still hashes to
     its own content address, the content-addressed object exists at the digest the sidecar
-    claims, and the retained raw bytes rehash to that same digest.
+    claims, and the retained raw bytes rehash to that same digest. ``persist=False`` keeps
+    that proof in memory only: it never calls sample-checkpoint ``record()`` or ``flush()``.
     """
     recovered = 0
     for key in keys:
         if checkpoint.get(key) is not None:
+            continue
+        if recovered_into is not None and key in recovered_into:
             continue
         evidence = checksums.lookup(key)
         if evidence is None:
@@ -7230,26 +8187,28 @@ def recover_retained_samples(
         cost_validation = cost_validation_record(
             payload, key=key, family=_family_from_object_key(key)
         )
-        checkpoint.record(
-            key,
-            {
-                "status": "complete",
-                "sha256": digest,
-                "byte_size": len(payload),
-                "url": vision_object_url(key),
-                "provider_checksum": digest,
-                "checksum_match": True,
-                "schema_kind": schema.kind,
-                "schema_fields": list(schema.fields),
-                "cost_validation": cost_validation,
-                "retrieval_time": "",
-                "recovered_from_retained_bytes": True,
-                "provider_checksum_path": str(sidecar_path),
-                "provider_checksum_sha256": str(evidence["blob_sha256"]),
-            },
-        )
+        entry = {
+            "status": "complete",
+            "sha256": digest,
+            "byte_size": len(payload),
+            "url": vision_object_url(key),
+            "provider_checksum": digest,
+            "checksum_match": True,
+            "schema_kind": schema.kind,
+            "schema_fields": list(schema.fields),
+            "cost_validation": cost_validation,
+            "retrieval_time": "",
+            "recovered_from_retained_bytes": True,
+            "provider_checksum_path": str(sidecar_path),
+            "provider_checksum_sha256": str(evidence["blob_sha256"]),
+        }
+        if persist:
+            checkpoint.record(key, entry)
+        elif recovered_into is not None:
+            recovered_into[key] = dict(entry)
         recovered += 1
-    checkpoint.recovered += recovered
+    if persist:
+        checkpoint.recovered += recovered
     return recovered
 
 
@@ -8235,6 +9194,10 @@ def run_source_qualification(
     max_sample_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
     budget_ledger: BudgetLedger | None = None,
     candidate_plan_only: bool = False,
+    # ADR-0020 4a: the one-shot reviewed version-4 transition. It carries no operator
+    # authority of any kind; every identity it acts on is fixed by review 145.
+    apply_reviewed_v4_migration: bool = False,
+    migration_report_path: Path | None = None,
     # ADR-0018: the programmatic function stays serial for backward compatibility. The
     # production CLI passes its bounded default explicitly; every other caller opts in.
     listing_workers: int = 1,
@@ -8261,6 +9224,23 @@ def run_source_qualification(
     # A candidate request proves its exact prior authority before anything else exists:
     # no directory is created and no cache, checkpoint, journal, inventory, holdout,
     # listing, current-contract, or Coinalyze facility is loaded or used until it passes.
+    migration_authority: ReviewedMigrationAuthority | None = None
+    if apply_reviewed_v4_migration:
+        if candidate_plan_only:
+            raise SourceQualificationError(
+                "candidate construction and reviewed migration are separate transitions",
+                context={"migration": REVIEWED_MIGRATION_ID},
+            )
+        if migration_report_path is None:
+            raise SourceQualificationError(
+                "reviewed migration requires the accepted report path",
+                context={"migration": REVIEWED_MIGRATION_ID},
+            )
+        # Read-only: nothing exists yet, so an invalid transition changes nothing at all.
+        migration_authority = reviewed_migration_preflight(
+            store_root=store, report_path=Path(migration_report_path)
+        )
+
     candidate_authority: CandidateAuthority | None = None
     if candidate_plan_only:
         candidate_authority = candidate_preflight(
@@ -8268,6 +9248,21 @@ def run_source_qualification(
             budget_ledger_path=budget_ledger_path,
             budget_bytes=sample_budget_bytes,
         )
+
+    if not candidate_plan_only and not apply_reviewed_v4_migration:
+        # Ordinary execution inspects both files before it creates, recovers, reconciles,
+        # or transfers anything. A prepared ledger beside a version-2 lock is not a
+        # resume; version 3 and every mixed or unsupported state execute nothing.
+        installed_for_state = SamplePlanLock.load(plan_lock_path)
+        ordinary_transition = classify_store_transition(
+            store_root=store, lock=installed_for_state
+        )
+        if ordinary_transition == STORE_TRANSITION_MIGRATED:
+            assert installed_for_state is not None
+            # Authority, history, prior-lock evidence, and ledger binding are proved
+            # before inventory or checkpoint recovery. Current inputs are re-proved later,
+            # still before amendment-ledger reconciliation.
+            validate_migrated_state(store_root=store, lock=installed_for_state)
 
     sample_dir.mkdir(parents=True, exist_ok=True)
     retry_runner = retry or RetryRunner()
@@ -8431,13 +9426,29 @@ def run_source_qualification(
             candidate_keys.extend(obj.key for obj in entry.objects.get(symbol, ()))
     candidate_keys.extend(str(item["key"]) for item in cost_sample["items"])
     candidate_keys.extend(str(item["key"]) for item in cost_source_sample["items"])
+    memory_recovered: dict[str, dict[str, Any]] = {}
     recover_retained_samples(
         sample_dir=sample_dir,
         sidecar_dir=list_cache_dir,
         checksums=checksums,
         checkpoint=checkpoint,
         keys=candidate_keys,
+        persist=not apply_reviewed_v4_migration,
+        recovered_into=memory_recovered,
     )
+
+    def _checkpoint_row(key: str) -> dict[str, Any] | None:
+        row = checkpoint.get(key)
+        if row is not None:
+            return row
+        recovered = memory_recovered.get(key)
+        return None if recovered is None else dict(recovered)
+
+    def _evidence_objects() -> dict[str, Any]:
+        if not memory_recovered:
+            return checkpoint.objects
+        return {**checkpoint.objects, **memory_recovered}
+
     # Reuse is planned only from re-proved bytes: a checkpoint claim whose object or
     # sidecar cannot be re-proved right now never becomes an authoritative plan input.
     retained_keys: dict[str, int] = {}
@@ -8446,7 +9457,7 @@ def run_source_qualification(
     # snapshot, and the Gate 2 storage credit.
     verified_cache: dict[tuple[str, str], int | None] = {}
     for key in candidate_keys:
-        entry_row = checkpoint.get(key)
+        entry_row = _checkpoint_row(key)
         if not entry_row or entry_row.get("status") != "complete":
             continue
         verified = verify_retained_object(
@@ -8464,7 +9475,7 @@ def run_source_qualification(
     # The selected manifest is qualified against re-proved retained evidence, so it is
     # built only once that evidence exists.
     proved_objects = {
-        key: dict(checkpoint.get(key) or {}) for key in sorted(retained_keys)
+        key: dict(_checkpoint_row(key) or {}) for key in sorted(retained_keys)
     }
     acquisition_manifest = build_acquisition_manifest(
         inventory=inventory,
@@ -8479,7 +9490,7 @@ def run_source_qualification(
     for key in sorted(retained_keys):
         if family_group_from_key(key) != "klines":
             continue
-        row = checkpoint.get(key) or {}
+        row = _checkpoint_row(key) or {}
         fields = tuple(str(item) for item in (row.get("schema_fields") or ()))
         if not fields:
             continue
@@ -8532,6 +9543,7 @@ def run_source_qualification(
             retained_digest=retained_evidence_digest(snapshot),
         )
 
+    migration_record: dict[str, Any] | None = None
     candidate_plan_record: dict[str, Any] = {
         "state": "not_constructed",
         "plan_version": CANDIDATE_PLAN_VERSION,
@@ -8622,92 +9634,85 @@ def run_source_qualification(
             "unreconciled": 0,
             "state": "not_reconciled_in_candidate_phase",
         }
-    else:
-        ledger = budget_ledger or BudgetLedger.bootstrap(
-            budget_ledger_path,
-            budget_bytes=sample_budget_bytes,
-            retained_objects=checkpoint.objects,
+    elif apply_reviewed_v4_migration:
+        assert migration_authority is not None
+        # The accepted selection is rebuilt from current inventory and re-proved retained
+        # evidence; migration installs it only if it is still exactly that selection.
+        retained_snapshot = retained_evidence_snapshot(
+            sorted(retained_keys),
+            _evidence_objects(),
             sample_dir=sample_dir,
             sidecar_dir=list_cache_dir,
             cache=verified_cache,
         )
-        # A reservation left by an interrupted run is settled only against rehashed
-        # retained evidence; anything unproved stays charged.
-        reconciliation = ledger.reconcile(
-            checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+        plan_inputs = _candidate_inputs(retained_snapshot)
+        plan = build_sample_plan(
+            inventory=inventory,
+            family_products=sampling_family_products,
+            sample_symbols=sample_symbols,
+            delisted=delisted,
+            retained_keys=retained_keys,
+            budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
+            cumulative_spent_bytes=0,
+            cost_source_objects=cost_source_objects,
         )
-        lock = SamplePlanLock.load(plan_lock_path)
-        if lock is None:
-            lock = SamplePlanLock(path=plan_lock_path)
-            # The retained and budget snapshots are frozen at lock time; later execution
-            # progress against this same plan is not an input change.
-            retained_snapshot = retained_evidence_snapshot(
-                sorted(retained_keys),
-                checkpoint.objects,
-                sample_dir=sample_dir,
-                sidecar_dir=list_cache_dir,
-                cache=verified_cache,
-            )
-            plan_inputs = _plan_inputs(retained_snapshot)
-            plan = build_sample_plan(
-                inventory=inventory,
-                family_products=sampling_family_products,
-                sample_symbols=sample_symbols,
-                delisted=delisted,
-                retained_keys=retained_keys,
-                budget_bytes=sample_budget_bytes,
-                max_object_bytes=max_sample_object_bytes,
-                cumulative_spent_bytes=ledger.spent_max_bytes,
-                cost_source_objects=cost_source_objects,
-            )
-            # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
-            # is preserved in the lock history and on disk before the first lock overwrites
-            # the plan document.
-            legacy_plan = read_pre_lock_plan(plan_path)
-            if legacy_plan is not None:
-                lock.history.append(
-                    {
-                        "plan_version": 0,
-                        "locked_at": "",
-                        "inputs": {"source": "pre_lock_greedy_plan", "path": str(plan_path)},
-                        "plan": legacy_plan,
-                        "plan_digest": "",
-                    }
-                )
-                backup = store / LEGACY_PLAN_BACKUP_FILENAME
-                if not backup.exists():
-                    _atomic_write_json(backup, legacy_plan)
-            lock.lock_plan(
-                plan=plan,
-                inputs=plan_inputs,
-                locked_at=generated_at,
-                retained_snapshot=retained_snapshot,
-                budget_snapshot={
-                    "budget_bytes": int(sample_budget_bytes),
-                    "independent_object_cap_bytes": None,
-                    "cumulative_spent_max_bytes_at_lock": ledger.spent_max_bytes,
-                    "allowance_bytes_at_lock": plan.allowance_bytes,
-                },
-            )
-            lock.flush()
-        else:
-            plan = SamplePlan.from_dict(lock.plan)
-            # Only the evidence frozen into this lock is compared, so a normal resume is
-            # stable; a genuine inventory, membership, code, or evidence change fails closed
-            # before any byte is downloaded.
+        lock, ledger, migration_record = execute_reviewed_v4_migration(
+            authority=migration_authority,
+            store_root=store,
+            plan=plan,
+            inputs=plan_inputs,
+            retained_snapshot=retained_snapshot,
+            now_iso=generated_at,
+        )
+        legacy_ledger = migration_authority.legacy_ledger
+        amendment_allowance = None
+        candidate_plan_record = {
+            "plan_version": MIGRATED_PLAN_VERSION,
+            "state": "migrated_reviewed_v4",
+            "migration_authorized": True,
+            "download_authorized": False,
+            "superseded_candidates": [
+                dict(item) for item in superseded_candidate_lineage()
+            ],
+            "migration": dict(migration_record),
+            "note": (
+                "the reviewed version-4 plan is installed and replayed; sample "
+                "acquisition remains a separate reviewer gate"
+            ),
+        }
+        reconciliation = {
+            "settled": 0,
+            "unresolved": 0,
+            "reproved": 0,
+            "unreconciled": 0,
+            "state": "not_reconciled_in_migration_phase",
+        }
+    else:
+        installed_lock = SamplePlanLock.load(plan_lock_path)
+        # ADR-0020 4a: decide the executable state before any reconciliation, reservation,
+        # settlement, checkpoint mutation, or transfer. An incomplete transition, a
+        # version-3 lock, and every unsupported version execute nothing.
+        transition = classify_store_transition(store_root=store, lock=installed_lock)
+        if transition == STORE_TRANSITION_MIGRATED:
+            assert installed_lock is not None
+            # ADR-0020 4a: a migrated store replays the reviewed plan and accounts for it
+            # only through the amendment ledger. Current inputs are proved before any
+            # amendment-ledger reconciliation or other execution mutation.
+            lock = installed_lock
             retained_snapshot = retained_evidence_snapshot(
                 sorted(lock.retained_snapshot),
-                checkpoint.objects,
+                _evidence_objects(),
                 sample_dir=sample_dir,
                 sidecar_dir=list_cache_dir,
                 cache=verified_cache,
             )
-            plan_inputs = _plan_inputs(retained_snapshot)
+            plan_inputs = _candidate_inputs(retained_snapshot)
             changed_inputs = plan_inputs.differences(lock.inputs)
             if changed_inputs:
                 raise ResumeIntegrityError(
-                    "locked Gate 1 plan inputs changed; a new plan version requires a fresh "
-                    "reviewer authorization",
+                    "migrated Gate 1 plan inputs changed; a new plan version requires a "
+                    "fresh reviewer authorization",
                     context={
                         "kind": PLAN_INPUTS_CHANGED,
                         "path": str(plan_lock_path),
@@ -8715,10 +9720,110 @@ def run_source_qualification(
                         "changed": list(changed_inputs),
                     },
                 )
-    if staged_observation is not None and not candidate_plan_only:
+            plan, ledger = validate_migrated_state(
+                store_root=store, lock=lock, executing_inputs=plan_inputs
+            )
+            reconciliation = ledger.reconcile(
+                checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+            )
+        else:
+            ledger = budget_ledger or BudgetLedger.bootstrap(
+                budget_ledger_path,
+                budget_bytes=sample_budget_bytes,
+                retained_objects=checkpoint.objects,
+                sample_dir=sample_dir,
+                sidecar_dir=list_cache_dir,
+                cache=verified_cache,
+            )
+            # A reservation left by an interrupted run is settled only against rehashed
+            # retained evidence; anything unproved stays charged.
+            reconciliation = ledger.reconcile(
+                checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+            )
+            lock = installed_lock
+            if lock is None:
+                lock = SamplePlanLock(path=plan_lock_path)
+                # The retained and budget snapshots are frozen at lock time; later execution
+                # progress against this same plan is not an input change.
+                retained_snapshot = retained_evidence_snapshot(
+                    sorted(retained_keys),
+                    checkpoint.objects,
+                    sample_dir=sample_dir,
+                    sidecar_dir=list_cache_dir,
+                    cache=verified_cache,
+                )
+                plan_inputs = _plan_inputs(retained_snapshot)
+                plan = build_sample_plan(
+                    inventory=inventory,
+                    family_products=sampling_family_products,
+                    sample_symbols=sample_symbols,
+                    delisted=delisted,
+                    retained_keys=retained_keys,
+                    budget_bytes=sample_budget_bytes,
+                    max_object_bytes=max_sample_object_bytes,
+                    cumulative_spent_bytes=ledger.spent_max_bytes,
+                    cost_source_objects=cost_source_objects,
+                )
+                # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
+                # is preserved in the lock history and on disk before the first lock overwrites
+                # the plan document.
+                legacy_plan = read_pre_lock_plan(plan_path)
+                if legacy_plan is not None:
+                    lock.history.append(
+                        {
+                            "plan_version": 0,
+                            "locked_at": "",
+                            "inputs": {"source": "pre_lock_greedy_plan", "path": str(plan_path)},
+                            "plan": legacy_plan,
+                            "plan_digest": "",
+                        }
+                    )
+                    backup = store / LEGACY_PLAN_BACKUP_FILENAME
+                    if not backup.exists():
+                        _atomic_write_json(backup, legacy_plan)
+                lock.lock_plan(
+                    plan=plan,
+                    inputs=plan_inputs,
+                    locked_at=generated_at,
+                    retained_snapshot=retained_snapshot,
+                    budget_snapshot={
+                        "budget_bytes": int(sample_budget_bytes),
+                        "independent_object_cap_bytes": None,
+                        "cumulative_spent_max_bytes_at_lock": ledger.spent_max_bytes,
+                        "allowance_bytes_at_lock": plan.allowance_bytes,
+                    },
+                )
+                lock.flush()
+            else:
+                plan = SamplePlan.from_dict(lock.plan)
+                # Only the evidence frozen into this lock is compared, so a normal resume is
+                # stable; a genuine inventory, membership, code, or evidence change fails closed
+                # before any byte is downloaded.
+                retained_snapshot = retained_evidence_snapshot(
+                    sorted(lock.retained_snapshot),
+                    checkpoint.objects,
+                    sample_dir=sample_dir,
+                    sidecar_dir=list_cache_dir,
+                    cache=verified_cache,
+                )
+                plan_inputs = _plan_inputs(retained_snapshot)
+                changed_inputs = plan_inputs.differences(lock.inputs)
+                if changed_inputs:
+                    raise ResumeIntegrityError(
+                        "locked Gate 1 plan inputs changed; a new plan version requires a fresh "
+                        "reviewer authorization",
+                        context={
+                            "kind": PLAN_INPUTS_CHANGED,
+                            "path": str(plan_lock_path),
+                            "plan_version": lock.plan_version,
+                            "changed": list(changed_inputs),
+                        },
+                    )
+    read_only_transition = candidate_plan_only or apply_reviewed_v4_migration
+    if staged_observation is not None and not read_only_transition:
         # Commit only after the existing plan accepts, or as part of first-plan lock.
         metadata_store.commit(staged_observation, updated_at=generated_at)
-    if not candidate_plan_only:
+    if not read_only_transition:
         ledger.flush()
         _atomic_write_json(plan_path, plan.to_dict())
 
@@ -8726,10 +9831,11 @@ def run_source_qualification(
     #    attributed to every logical product that declares its family.
     # The executing plan is always the durable locked plan. A candidate never becomes
     # the executing plan, and a candidate phase executes nothing at all.
-    execution_plan = SamplePlan.from_dict(lock.plan) if candidate_plan_only else plan
+    execution_plan = SamplePlan.from_dict(lock.plan) if read_only_transition else plan
     samples: list[SampleRecord] = []
     acquired: dict[str, SampleRecord] = {}
-    for planned in (() if candidate_plan_only else plan.entries):
+    # A reviewed migration stops before every sample-acquisition path.
+    for planned in (() if read_only_transition else plan.entries):
         if planned.action == "blocked":
             continue
         already = acquired.get(planned.key)
@@ -8817,7 +9923,7 @@ def run_source_qualification(
         acquired[planned.key] = record
         samples.append(record)
 
-    for item in (() if candidate_plan_only else plan.blocked):
+    for item in (() if read_only_transition else plan.blocked):
         for product in item.get("products", ()):
             incidents.append(
                 {
@@ -9400,10 +10506,11 @@ def run_source_qualification(
                 ),
             )
         )
-    checkpoint.flush(
-        updated_at=generated_at,
-        discovered_symbol_count=len(discovered),
-    )
+    if not apply_reviewed_v4_migration:
+        checkpoint.flush(
+            updated_at=generated_at,
+            discovered_symbol_count=len(discovered),
+        )
     return QualificationReport(
         ticket=TICKET_ID,
         gate="gate_1_source_procurement",
@@ -9604,6 +10711,15 @@ def run_source_qualification(
             "reconciliation": reconciliation,
             "legacy_budget_preserved": True,
             "legacy_ledger_path": str(budget_ledger_path),
+            "legacy_ledger_sha256": file_sha256(budget_ledger_path),
+            # ADR-0020 4a: after migration the amendment ledger is the only accounting;
+            # the legacy record is rehashed lineage that is never written again.
+            "active_ledger_id": (
+                AMENDMENT_LEDGER_ID
+                if lock.plan_version == MIGRATED_PLAN_VERSION
+                else "cex002_gate1_legacy"
+            ),
+            "active_ledger_path": str(ledger.path),
             "architecture_amendment_allowance_bytes": GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
             "independent_object_cap_bytes": None,
             "architecture_amendment": (
