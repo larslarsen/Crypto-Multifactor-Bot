@@ -2,14 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete review 219 source drop
+Next required actor: Sr Dev - Claude Build - correct review 220 failure batch
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 219. Edit only the sizing
-production and test paths, return both hashes and the new test-function count, and stop.
-Do not run commands or edit the frozen sizing CLI, qualification paths, report, data,
-records, or controls. Hermes remains unauthorized.
+Immediate bounded task for Sr Dev - Claude Build: follow review 220. Preserve the accepted
+review-219 direction and make the four exact production/test corrections. Edit only the
+sizing production and test paths, return both hashes and the new test-function count, and
+stop. Run no command and do not edit the frozen CLI, data, records, or controls.
 
 Governing documents:
 
@@ -179,6 +179,7 @@ Governing documents:
 - research/sprint_004/217_CEX002_PATH_BOUND_QUALIFICATION_AUTHORIZATION.md
 - research/sprint_004/218_CEX002_PATH_BOUND_QUALIFICATION_EXECUTION.md
 - research/sprint_004/219_CEX002_CORRECTED_SIZING_AUTHORITY_SOURCE_REVIEW.md
+- research/sprint_004/220_CEX002_SIZING_CORRECTION_FOCUSED_FAILURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
