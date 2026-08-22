@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 207
+Next required actor: Sr Dev - Claude Build - author isolated ADR-0022 transition per review 208
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -162,6 +162,7 @@ Governing documents:
 - research/sprint_004/205_CEX002_MIGRATION_FIXTURE_FAILURE_REVIEW.md
 - research/sprint_004/206_CEX002_MIGRATION_FIXTURE_SOURCE_ACCEPTANCE.md
 - research/sprint_004/207_CEX002_MIGRATION_FIXTURE_REINTEGRATION.md
+- research/sprint_004/208_CEX002_PATH_BOUND_INTEGRATION_ACCEPTANCE_AND_TRANSITION_DESIGN.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2393,3 +2394,20 @@ stopped for reviewer inspection. No qualification, authority or historical-store
 sizing retry, acquisition, normalization, catalog publication, NautilusTrader, Harmonic
 Trader, payoff, PAPER, LIVE, paid source, reduced scope, full-suite, or next-ticket work
 was run. Gate 2 remains unaccepted. Next ticket remains `NONE`.
+
+## ADR-0022 integration accepted; isolated authority transition required
+
+Review 208 accepts record 207 and the integrated ADR-0022 qualification source/tests.
+The focused 315-test suite, exact-path Ruff, repository control, and restricted whitespace
+validation all passed. The historical lock and ledger still end with the prior source
+receipt, so ordinary qualification and sizing remain unauthorized.
+
+Sr Dev - Claude Build is authorized only to create the isolated transition module, thin
+no-network script, and test module enumerated in review 208. The transition pins the exact
+accepted real pre-state, preserves the report/checkpoint/lock/ledger at content addresses,
+preserves the existing two receipts, and appends exactly one receipt for qualification
+source `2f88ad6e...` and code/config `86ff0eb0...`. The accepted qualification source,
+315-test path, existing CLI, sizing paths, repository records, and data may not change.
+Claude runs no commands or Git operation and stops with the three hashes and new test
+count. Hermes and all transition/data execution remain unauthorized. Gate 2 remains
+unaccepted; next ticket remains `NONE`.
