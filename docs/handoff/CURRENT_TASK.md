@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - remove five unused test imports
+Next required actor: Jr Dev - Hermes - integrate import cleanup and restart migration sequence
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -110,6 +110,7 @@ Governing documents:
 - research/sprint_004/154_CEX002_MIGRATION_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/155_CEX002_MIGRATION_TEST_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/156_CEX002_MIGRATION_RUFF_FAILURE_REVIEW.md
+- research/sprint_004/157_CEX002_MIGRATION_RUFF_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1492,3 +1493,19 @@ Hermes remains unauthorized pending reviewer source acceptance.
 No migration invocation, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic
 Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Ruff cleanup accepted - Hermes restart authorized
+
+Review 157 accepts and freezes the exact five-import deletion at
+`5d4b2e2c199b6826e9da6d6561381207644d33c119572995c7211d5cead1c6d4`. Production,
+CLI, all 285 tests, and every behavioral assertion remain unchanged.
+
+Jr Dev - Hermes is authorized for review 157's exact test integration and a complete
+C1-C5 restart. Only after all five commands return exit 0 may Hermes perform review 151's
+exact migration preconditions, one migration-only invocation, after-proof, and record 158
+publication. Every failure stops later work; no retry, ordinary resume, second migration,
+or sample acquisition is authorized.
+
+No migration before all focused commands pass, sample acquisition, Gate 2, reduced scope,
+Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
