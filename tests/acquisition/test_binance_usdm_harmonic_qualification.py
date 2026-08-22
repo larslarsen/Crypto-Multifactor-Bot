@@ -7061,7 +7061,7 @@ def test_frozen_delivery_identity_resolves_only_while_its_evidence_reproves(
     )
     assert authority["authority_class"] == DELIVERY_AUTHORITY_DIRECT
     assert authority["settlement_price_date_matched"] is True
-    assert authority["archive_evidence"]["family_count"] == 2
+    assert authority["archive_evidence"]["family_count"] == 3
     assert authority["realized_funding_objects"] == 0
     assert authority["table_version"] == REVIEWED_AUTHORITY_TABLE_VERSION
     block = report.membership["historical_authority"]
