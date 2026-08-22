@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct ADR-0022 source per review 197
+Next required actor: Sr Dev - Claude Build - finish ADR-0022 correction per review 198
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -152,6 +152,7 @@ Governing documents:
 - docs/adr/0022-path-bound-retained-checksum-recovery.md
 - research/sprint_004/196_CEX002_SIZING_AUTHORITY_FAILURE_ARCHITECTURE.md
 - research/sprint_004/197_CEX002_PATH_BOUND_RECOVERY_SOURCE_REVIEW.md
+- research/sprint_004/198_CEX002_PATH_BOUND_RECOVERY_CORRECTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
