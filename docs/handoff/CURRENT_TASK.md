@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement ADR-0020 reviewed version-4 migration
+Next required actor: Sr Dev - Claude Build - correct rejected ADR-0020 migration source
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -99,6 +99,7 @@ Governing documents:
 - research/sprint_004/143_CEX002_FOCUSED_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/144_CEX002_FOCUSED_TEST_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/145_CEX002_VERSION4_CANDIDATE_REVIEW.md
+- research/sprint_004/146_CEX002_CLAUDE_MIGRATION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1282,6 +1283,27 @@ Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 145's ex
 path migration production/CLI/test-source implementation. Claude runs no command, network
 or data operation, migration, repository-record edit, or Git operation and stops for
 reviewer source inspection with three hashes and the unique test-function count.
+
+No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
+
+## Claude migration source rejected - bounded correction required
+
+Review 146 rejects Claude's first migration source drop. In the prepared-ledger/version-2
+interruption state, an ordinary invocation can still enter legacy execution, contrary to
+the migration-only recovery contract. The real CLI also overwrites the exact accepted
+candidate report after committing the lock, so its next preflight cannot re-prove the
+authority it just destroyed. Completed-state lock/ledger binding, prior-lock evidence,
+history/inputs, and amendment accounting are not yet proved completely.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 146's correction
+in the same three Python paths. Claude implements the explicit ordinary state matrix,
+read-only migration report handling, complete shared migrated-state validation, strict
+reviewed-plan allowance accounting, and focused real-CLI/interruption/tamper test source.
+Claude runs no command, test, Ruff, network/data work, migration, integration, record edit,
+or Git operation and stops with the three exact hashes and unique test-function count.
+Hermes remains unauthorized.
 
 No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
