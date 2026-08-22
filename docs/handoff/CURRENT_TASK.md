@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and execute review 170
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 171
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -124,6 +124,7 @@ Governing documents:
 - research/sprint_004/168_CEX002_AUTHORITY_SOURCE_INTEGRATION.md
 - research/sprint_004/169_CEX002_AUTHORITY_IMPORT_FAILURE_REVIEW.md
 - research/sprint_004/170_CEX002_AUTHORITY_IMPORT_SOURCE_ACCEPTANCE.md
+- research/sprint_004/171_CEX002_AUTHORITY_IMPORT_INTEGRATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1768,4 +1769,20 @@ failure stops later commands. The live source-authority transaction remains unau
 No live transaction, data or source-data network operation beyond authorized Git pushes,
 ordinary qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus,
 Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-171 authority import integration stop published
+
+Hermes integrated review 170's exact accepted production path in commit `c4a3df4` and
+pushed it. The focused restart stopped at C1:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
+
+C1 exited status 1 after reaching `[100%]` with five failed tests: one accepted-check name
+mismatch, two quote-validation message mismatches, one all-empty cost-object key ordering
+mismatch, and one CLI source assertion expecting
+`reviewed_source_correction_preflight(`.
+
+Commands C2-C5 were not run. No live source-authority transaction, data mutation,
+ordinary qualification, Gate 1 acceptance, Gate 2, or later work was run. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
