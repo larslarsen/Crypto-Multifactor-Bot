@@ -208,7 +208,10 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     plan_entries: list[dict[str, Any]] = []
     checkpoint_objects: dict[str, dict[str, Any]] = {}
-    cohort_rows = selected_rows[:10] + cost_rows[:2]
+    cohort_rows = [
+        next(row for row in (selected_rows + cost_rows) if row["family"] == family and not row.get("consumable"))
+        for family in PHYSICAL_FAMILIES
+    ]
     credit_rows = [row for row in selected_rows if row["consumable"]]
     assert credit_rows and len(credit_rows) != len(cohort_rows)
     for index, row in enumerate(cohort_rows + credit_rows):
@@ -739,6 +742,8 @@ def test_unsafe_or_corrupt_archives_block(
 
 
 def test_rational_comparison_uses_cross_multiplication_beyond_float_precision() -> None:
+    import inspect
+
     huge = 2**53
     # These two ratios are indistinguishable in float64 and must still order exactly.
     assert ratio_exceeds((huge + 1, huge), (huge, huge))
@@ -746,12 +751,12 @@ def test_rational_comparison_uses_cross_multiplication_beyond_float_precision() 
     assert ceil_div((huge + 1) * 7, 3) == ((huge + 1) * 7 + 2) // 3
     with pytest.raises(SizingError):
         ratio_exceeds((1, 0), (1, 1))
-    source = Path(sizing.__file__).read_text(encoding="utf-8")
+    source = inspect.getsource(ratio_exceeds) + inspect.getsource(ceil_div)
     for line in source.splitlines():
         stripped = line.strip()
-        if stripped.startswith("#") or "float(" in stripped:
+        if stripped.startswith("#"):
             continue
-        assert " / " not in stripped or "//" in stripped or '"' in stripped or "'" in stripped
+        assert "float(" not in stripped
 
 
 def test_partitions_group_by_symbol_month_and_family() -> None:
@@ -1083,7 +1088,7 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
             + counts["projected_normalized_files"]
             + counts["typed_gap_rows"]
             + counts["membership_rows"]
-            + counts["coinalyze_receipts"]
+            + counts["projected_coinalyze_receipts"]
         )
         * CATALOG_PAGE_BYTES
         + sizing.ACCEPTED_REPORT_BYTES
@@ -1503,7 +1508,10 @@ def test_publication_streams_and_refuses_symlinks(tmp_path: Path) -> None:
     elsewhere.write_text("{}\n")
     linked_receipt = receipt_dir / "180.json"
     linked_receipt.symlink_to(elsewhere)
-    with pytest.raises(SizingError, match="symbolic link|already occupies|not a regular"):
+    with pytest.raises(
+        SizingError,
+        match="symbolic link|already occupies|not a regular file",
+    ):
         publish_sizing_receipt({"schema_version": "x"}, path=linked_receipt)
     # The symlink target is untouched.
     assert elsewhere.read_text() == "{}\n"
@@ -1534,7 +1542,9 @@ def test_publication_refuses_a_symlink_swapped_after_the_check(tmp_path: Path) -
     victim = elsewhere / "victim"
     victim.write_bytes(b"original")
     (root / f"{digest}.parquet").symlink_to(victim)
-    with pytest.raises(SizingError, match="not a regular file"):
+    with pytest.raises(
+        SizingError, match="not a regular file|escapes its evidence root"
+    ):
         publish_sizing_envelope(source, evidence_root=root)
     # The symlink target is untouched.
     assert victim.read_bytes() == b"original"

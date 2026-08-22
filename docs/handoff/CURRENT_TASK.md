@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and restart review 191
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 192
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -145,6 +145,7 @@ Governing documents:
 - research/sprint_004/189_CEX002_STORAGE_SIZING_SECOND_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/190_CEX002_STORAGE_SIZING_SPARK_TEST_SOURCE_REVIEW.md
 - research/sprint_004/191_CEX002_STORAGE_SIZING_FINAL_TEST_SOURCE_ACCEPTANCE.md
+- research/sprint_004/192_CEX002_STORAGE_SIZING_FINAL_RESTART_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2200,3 +2201,23 @@ Gate 1 remains accepted. Gate 2 remains unaccepted until reviewer inspection of 
 receipt. No network, qualification, bulk acquisition, normalization, catalog publication,
 NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or
 next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Record-192 storage-sizing final restart stop published
+
+Hermes integrated review 191's accepted one-file sizing-test correction and restarted the
+verification sequence. The focused sizing tests passed:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_sizing.py -q --tb=short`
+
+It exited status 0 in 2 seconds. The next required exact-path ruff command failed:
+
+`.venv/bin/python -m ruff check src/cryptofactors/acquisition/binance_usdm_harmonic_sizing.py scripts/research/size_binance_usdm_harmonic_release.py tests/acquisition/test_binance_usdm_harmonic_sizing.py`
+
+It exited status 1 in 1 second with three `F401` unused imports in
+`tests/acquisition/test_binance_usdm_harmonic_sizing.py`: `SIZING_ROW_BATCH`,
+`family_coefficients`, and `verify_retained_sample`.
+
+Per review 191, Hermes ran no repo-control command and no sizing invocation.
+`research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json` and
+`data/cex002_qualify/evidence/sizing/v1/envelopes/sha256` remain absent. Gate 1 remains
+accepted. Gate 2 remains unaccepted. Next ticket remains `NONE`.
