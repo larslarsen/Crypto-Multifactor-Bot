@@ -2,14 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 220 failure batch
+Next required actor: Sr Dev - Claude Build - apply ADR-0023 review 221 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 220. Preserve the accepted
-review-219 direction and make the four exact production/test corrections. Edit only the
-sizing production and test paths, return both hashes and the new test-function count, and
-stop. Run no command and do not edit the frozen CLI, data, records, or controls.
+Immediate bounded task for Sr Dev - Claude Build: follow review 221 and ADR-0023. Preserve
+all accepted review-219/220 work and correct the sizing credit authority from the mistaken
+56/17 inference to the proved 56 manifest-consumable, 68 selected retained, and 5 cost
+retained facts. Edit only sizing production/tests, return both hashes and test count, stop.
 
 Governing documents:
 
@@ -155,6 +155,7 @@ Governing documents:
 - research/sprint_004/194_CEX002_STORAGE_SIZING_RUFF_SOURCE_ACCEPTANCE.md
 - research/sprint_004/195_CEX002_STORAGE_SIZING_VERIFICATION_AND_EXECUTION.md
 - docs/adr/0022-path-bound-retained-checksum-recovery.md
+- docs/adr/0023-retained-credit-separate-from-manifest-consumability.md
 - research/sprint_004/196_CEX002_SIZING_AUTHORITY_FAILURE_ARCHITECTURE.md
 - research/sprint_004/197_CEX002_PATH_BOUND_RECOVERY_SOURCE_REVIEW.md
 - research/sprint_004/198_CEX002_PATH_BOUND_RECOVERY_CORRECTION_REVIEW.md
@@ -180,6 +181,7 @@ Governing documents:
 - research/sprint_004/218_CEX002_PATH_BOUND_QUALIFICATION_EXECUTION.md
 - research/sprint_004/219_CEX002_CORRECTED_SIZING_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/220_CEX002_SIZING_CORRECTION_FOCUSED_FAILURE.md
+- research/sprint_004/221_CEX002_REAL_AUTHORITY_DECOMPOSITION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
