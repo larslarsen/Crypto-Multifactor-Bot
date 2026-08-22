@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate accepted migration source and execute migration-only
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 152
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -105,6 +105,7 @@ Governing documents:
 - research/sprint_004/149_CEX002_GROK_MIGRATION_RESIDUAL_REVIEW.md
 - research/sprint_004/150_CEX002_SPARK_MIGRATION_TEST_REVIEW.md
 - research/sprint_004/151_CEX002_MIGRATION_SOURCE_ACCEPTANCE.md
+- research/sprint_004/152_CEX002_MIGRATION_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1405,3 +1406,16 @@ migration invocation and downloads no sample.
 No sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff, PAPER,
 LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
 passed; next ticket remains `NONE`.
+
+## Record-152 migration integration stop published
+
+Hermes integrated review 151's exact three accepted paths in commit `bce618f` and pushed
+it. The required focused sequence stopped at command 1:
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
+returned exit 1 with 15 migration-test failures. The repeated central mismatch was an
+installed/migration plan digest of `d3fe13d9...` where tests expected the accepted
+version-4 digest `2fb0e47a...`.
+
+Commands 2-5, migration preconditions, the migration-only invocation, ordinary resume,
+sample acquisition, Gate 2, and later work were not run. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
