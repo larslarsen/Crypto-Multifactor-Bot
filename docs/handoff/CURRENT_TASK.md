@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 143 and restart candidate sequence
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 144
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -97,6 +97,7 @@ Governing documents:
 - research/sprint_004/141_CEX002_ADR0020_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/142_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/143_CEX002_FOCUSED_TEST_SOURCE_ACCEPTANCE.md
+- research/sprint_004/144_CEX002_FOCUSED_TEST_INTEGRATION_AND_CANDIDATE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1243,4 +1244,21 @@ automatic second candidate invocation.
 No source/test edit after integration, unrelated dirty-path mutation, plan migration,
 sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff, PAPER, LIVE,
 or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed;
+next ticket remains `NONE`.
+
+## Record-144 version-4 candidate published
+
+Hermes integrated review 143's exact one-assertion test correction in commit `56dc471` and
+ran all five focused commands successfully. Hermes then preserved the accepted compact
+report, ran exactly one candidate-only invocation, and published record 144 plus the
+replacement compact report.
+
+The candidate returned terminal status 2 with `gate_status=BLOCKED` and `accepted=false`.
+The version-4 candidate resolves the 46 reviewed delivery identities and 17 settlement
+aliases, leaving zero unresolved archive names, but the product matrix remains incomplete
+with seven blocked products. Candidate migration and download remain false, samples remain
+empty, and Gate 1 has not passed.
+
+No plan migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
 next ticket remains `NONE`.
