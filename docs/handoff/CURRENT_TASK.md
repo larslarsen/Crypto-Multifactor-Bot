@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - run one network-enabled migration-only retry
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 160
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -113,6 +113,7 @@ Governing documents:
 - research/sprint_004/157_CEX002_MIGRATION_RUFF_SOURCE_ACCEPTANCE.md
 - research/sprint_004/158_CEX002_MIGRATION_RUFF_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/159_CEX002_MIGRATION_NETWORK_FAILURE_REVIEW.md
+- research/sprint_004/160_CEX002_MIGRATION_NETWORK_RETRY.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1413,6 +1414,24 @@ migration invocation and downloads no sample.
 No sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff, PAPER,
 LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
 passed; next ticket remains `NONE`.
+
+## Record-160 network-enabled migration retry published
+
+Hermes re-proved review 159's accepted retry preconditions, obtained network permission,
+and ran exactly one direct network-enabled `--apply-reviewed-v4-migration-only`
+invocation. The command exited status 2 after 555 seconds, the expected terminal status
+for successful migration with Gate 1 still blocked.
+
+The migration installed the reviewed version-4 lock at plan digest
+`2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef`, preserved the
+prior version-2 lock content-addressably, and created an empty prepared amendment ledger
+bound to the installed lock. `download_authorized=false`; no samples were acquired.
+
+No ordinary resume, further retry, second migration command, Gate 2, or later work was
+run. The accepted report, manifest detail, legacy ledger, sample checkpoint/progress,
+retry journal, sample plan, listing checkpoint, official metadata, and retained raw tree
+remained unchanged. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
+remains `NONE`.
 
 ## Record-152 migration integration stop published
 
