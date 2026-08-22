@@ -4502,10 +4502,39 @@ def test_architecture_plan_digest_does_not_reuse_a_prior_plan() -> None:
 def _kline_manifest_index(months: Sequence[str] = CONTIGUOUS_MONTHS) -> MemoryObjectIndex:
     return _index_with_family(
         symbols=["BTCUSDT"],
+        # Both Kline families publish stem "1h", so their basenames collide by design.
         families=[("monthly/klines", "1h"), ("daily/klines", "1h")],
         interval_map={"monthly/klines": ["1h"], "daily/klines": ["1h"]},
         payload_by_stem={
             "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+        },
+        months=months,
+    )
+
+
+def _kline_and_funding_index(
+    months: Sequence[str] = CONTIGUOUS_MONTHS,
+) -> MemoryObjectIndex:
+    """The Kline manifest plus one family whose basenames are genuinely unique.
+
+    Monthly funding-rate objects carry stem ``fundingRate`` and no interval segment, and
+    no other family here publishes that stem, so each basename resolves to exactly one
+    full key in the complete candidate domain. That makes a real ADR-0022 recovery
+    possible without weakening the complete-domain rule.
+    """
+    return _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[
+            ("monthly/klines", "1h"),
+            ("daily/klines", "1h"),
+            ("monthly/fundingRate", "fundingRate"),
+        ],
+        interval_map={"monthly/klines": ["1h"], "daily/klines": ["1h"]},
+        payload_by_stem={
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()),
+            "fundingRate": _zip_bytes(
+                "f.csv", (FIXTURES / "headed_funding.csv").read_bytes()
+            ),
         },
         months=months,
     )
@@ -8486,7 +8515,9 @@ def test_cost_validation_parses_strict_csv_and_keeps_empty_cells() -> None:
 
 
 def _accepted_v4_candidate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    index_factory: Callable[..., MemoryObjectIndex] = _kline_manifest_index,
 ) -> tuple[MemoryObjectIndex, Path]:
     """A store holding a durable version-2 authority and one accepted v4 candidate.
 
@@ -8499,8 +8530,8 @@ def _accepted_v4_candidate(
     )
     # Seed version 2 from a strict earlier inventory, then candidacy on the full set, so
     # the real planner retains the already acquired objects and plans new downloads.
-    full_index = _kline_manifest_index()
-    seed_index = _kline_manifest_index(months=CONTIGUOUS_MONTHS[:1])
+    full_index = index_factory()
+    seed_index = index_factory(months=CONTIGUOUS_MONTHS[:1])
     _seed_v2_authority(tmp_path, seed_index)
     report = run_source_qualification(
         store_root=tmp_path,
@@ -9329,13 +9360,26 @@ def test_amendment_accounting_rejects_unauthorized_or_over_allowance_records(
 def test_migration_does_not_adopt_a_recoverable_missing_checkpoint_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    index, report_path = _accepted_v4_candidate(tmp_path, monkeypatch)
+    # The default Kline fixture collides every basename across its monthly and daily
+    # families, so it can hold no recoverable entry at all. This variant adds the
+    # basename-unique funding family, giving the test a real premise.
+    index, report_path = _accepted_v4_candidate(
+        tmp_path, monkeypatch, index_factory=_kline_and_funding_index
+    )
     progress_path = tmp_path / "cex002_qualification_progress.json"
     document = json.loads(progress_path.read_text())
     objects = document["objects"]
+    # Bound to the complete fixture candidate domain - a superset of production's - so
+    # uniqueness is proved where it actually has to hold, not against a singleton.
+    domain = [
+        obj.key
+        for objects_for_prefix in index.objects.values()
+        for obj in objects_for_prefix
+        if not obj.key.endswith(".CHECKSUM")
+    ]
     checksums = RetainedChecksumIndex.from_cache(
         tmp_path / "list_cache"
-    ).bind_candidate_domain(objects)
+    ).bind_candidate_domain(domain)
     key = next(
         name
         for name, row in objects.items()
@@ -9343,6 +9387,11 @@ def test_migration_does_not_adopt_a_recoverable_missing_checkpoint_entry(
         and not str(name).endswith(".CHECKSUM")
         and checksums.lookup(name) is not None
     )
+    # The premise is explicit: the key is in the complete domain, binds exactly one full
+    # key there, and is genuinely recoverable.
+    assert key in domain
+    assert checksums.binds_full_key(key) is True
+    assert checksums.lookup(key) is not None
     del objects[key]
     progress_path.write_text(
         json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"

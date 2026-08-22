@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - reintegrate corrected migration fixture per review 206
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 207
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -161,6 +161,7 @@ Governing documents:
 - research/sprint_004/204_CEX002_PATH_BOUND_RECOVERY_INTEGRATION.md
 - research/sprint_004/205_CEX002_MIGRATION_FIXTURE_FAILURE_REVIEW.md
 - research/sprint_004/206_CEX002_MIGRATION_FIXTURE_SOURCE_ACCEPTANCE.md
+- research/sprint_004/207_CEX002_MIGRATION_FIXTURE_REINTEGRATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2375,3 +2376,20 @@ check, record-207 publication, and the corresponding four-path commit and push. 
 sequence stops on its first pytest or Ruff failure and always returns to the reviewer. No
 qualification, authority or historical-store mutation, sizing, acquisition, later work,
 or next ticket is authorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
+
+## Record-207 migration fixture reintegration published
+
+Hermes integrated review 206's accepted corrected qualification test fixture. The
+qualification-module test command passed in 7 seconds:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
+
+Exact-path Ruff also passed:
+
+`.venv/bin/python -m ruff check src/cryptofactors/acquisition/binance_usdm_harmonic_qualification.py tests/acquisition/test_binance_usdm_harmonic_qualification.py`
+
+Hermes published record 207, ran repo-control and restricted whitespace validation, and
+stopped for reviewer inspection. No qualification, authority or historical-store mutation,
+sizing retry, acquisition, normalization, catalog publication, NautilusTrader, Harmonic
+Trader, payoff, PAPER, LIVE, paid source, reduced scope, full-suite, or next-ticket work
+was run. Gate 2 remains unaccepted. Next ticket remains `NONE`.
