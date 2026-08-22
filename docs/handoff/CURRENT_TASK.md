@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 174
+Next required actor: Jr Dev - Hermes - execute review 175
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -128,6 +128,7 @@ Governing documents:
 - research/sprint_004/172_CEX002_AUTHORITY_FOCUSED_FAILURE_REVIEW.md
 - research/sprint_004/173_CEX002_AUTHORITY_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/174_CEX002_AUTHORITY_TEST_INTEGRATION.md
+- research/sprint_004/175_CEX002_AUTHORITY_TRANSACTION_AUTHORIZATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1847,4 +1848,19 @@ commands. The live source-authority transaction remains unauthorized.
 No live transaction, data or source-data network operation beyond authorized Git pushes,
 ordinary qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus,
 Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Authority tests passed - one local transaction authorized
+
+Review 175 accepts Hermes's exact test integration and complete exit-zero C1-C5 sequence.
+The live store remains in the exact fresh state pinned by ADR-0020 section 4b.
+
+Jr Dev - Hermes is authorized only for review 175's exact preproof, one local
+`--apply-reviewed-v4-source-correction-only` invocation, after-proof, and record 176
+publication. Any nonzero result stops without retry or recovery. Ordinary qualification
+remains a separate unauthorized gate.
+
+No network call, report write, sample acquisition, reservation reconciliation, ordinary
+qualification, Gate-1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic
+Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
