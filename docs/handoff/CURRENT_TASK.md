@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - author isolated ADR-0022 transition per review 208
+Next required actor: Sr Dev - Claude Build - correct transition authority proof per review 209
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -163,6 +163,7 @@ Governing documents:
 - research/sprint_004/206_CEX002_MIGRATION_FIXTURE_SOURCE_ACCEPTANCE.md
 - research/sprint_004/207_CEX002_MIGRATION_FIXTURE_REINTEGRATION.md
 - research/sprint_004/208_CEX002_PATH_BOUND_INTEGRATION_ACCEPTANCE_AND_TRANSITION_DESIGN.md
+- research/sprint_004/209_CEX002_PATH_BOUND_TRANSITION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2411,3 +2412,23 @@ source `2f88ad6e...` and code/config `86ff0eb0...`. The accepted qualification s
 Claude runs no commands or Git operation and stops with the three hashes and new test
 count. Hermes and all transition/data execution remain unauthorized. Gate 2 remains
 unaccepted; next ticket remains `NONE`.
+
+## Isolated transition source requires authority-proof correction
+
+Review 209 rejects the first isolated transition drop. The completed-state proof checks
+the receipt prefix but not the entire live ledger against the preserved ledger, so a
+changed non-receipt binding field such as `download_authorized` can be mirrored into the
+lock and pass preflight. Separately, unconditional lock/ledger binding equality makes the
+required ledger-first interruption state unreachable. The declared uncompressed manifest
+identity is also never stream-proved.
+
+Sr Dev - Claude Build is authorized only to correct the new transition production and
+test paths. It must reconstruct and compare the complete expected advanced ledger, make
+the exact ledger-first middle state reachable while rejecting every other mismatch,
+reject binding/receipt/legacy/envelope/integrity changes, stream-prove the pinned
+uncompressed manifest hash and bytes, and add the adversarial coverage in review 209. The
+standalone script is frozen at SHA-256
+`ada238d22560ddcaf834dff03d0da44c546856090e6133cf5afeb7be3d50aabd`.
+All accepted isolation and transaction behavior remains frozen. Claude runs no commands
+or Git operation and stops with three hashes and the test count. Hermes and all execution
+remain unauthorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
