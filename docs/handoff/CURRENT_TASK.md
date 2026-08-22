@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct review 189
+Next required actor: Implementation Dev - Codex Spark - correct review 190
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -143,6 +143,7 @@ Governing documents:
 - research/sprint_004/187_CEX002_STORAGE_SIZING_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/188_CEX002_STORAGE_SIZING_RESTART_AND_EXECUTION.md
 - research/sprint_004/189_CEX002_STORAGE_SIZING_SECOND_FOCUSED_TEST_FAILURE_REVIEW.md
+- research/sprint_004/190_CEX002_STORAGE_SIZING_SPARK_TEST_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2155,6 +2156,26 @@ review 189's three exact corrections in the tracked sizing test path. Spark pres
 44 test functions, runs no command or Git operation, changes no production/CLI byte,
 returns the test SHA-256, and stops for reviewer inspection. Hermes restart remains
 unauthorized.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, network,
+qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
+Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Spark sizing-test correction rejected - final mechanical correction
+
+Review 190 accepts the corrected 12-family non-consumable cohort and focused arithmetic
+scan but rejects the test drop at SHA-256
+`ee556f77d860bc9c439221254203143d6baffbc5d36ef468f57e9430d5651aaa`. One now-reachable
+end-to-end assertion uses the nonexistent `coinalyze_receipts` field instead of
+`projected_coinalyze_receipts`; the no-float scan skips rather than rejects `float(`; and
+two unrelated symlink regexes were broadened beyond review 189.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only for
+review 190's four exact mechanical corrections in the tracked sizing test path, including
+100-column wrapping. Spark preserves all 44 tests, runs no command or Git operation,
+changes no production/CLI byte, returns the test SHA-256, and stops for reviewer
+inspection. Hermes restart remains unauthorized.
 
 Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, network,
 qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
