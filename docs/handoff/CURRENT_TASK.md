@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 160
+Next required actor: Jr Dev - Hermes - execute bounded version-4 qualification samples
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -114,6 +114,7 @@ Governing documents:
 - research/sprint_004/158_CEX002_MIGRATION_RUFF_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/159_CEX002_MIGRATION_NETWORK_FAILURE_REVIEW.md
 - research/sprint_004/160_CEX002_MIGRATION_NETWORK_RETRY.md
+- research/sprint_004/161_CEX002_MIGRATION_ACCEPTANCE_AND_SAMPLE_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1415,24 +1416,6 @@ No sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff,
 LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
 passed; next ticket remains `NONE`.
 
-## Record-160 network-enabled migration retry published
-
-Hermes re-proved review 159's accepted retry preconditions, obtained network permission,
-and ran exactly one direct network-enabled `--apply-reviewed-v4-migration-only`
-invocation. The command exited status 2 after 555 seconds, the expected terminal status
-for successful migration with Gate 1 still blocked.
-
-The migration installed the reviewed version-4 lock at plan digest
-`2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef`, preserved the
-prior version-2 lock content-addressably, and created an empty prepared amendment ledger
-bound to the installed lock. `download_authorized=false`; no samples were acquired.
-
-No ordinary resume, further retry, second migration command, Gate 2, or later work was
-run. The accepted report, manifest detail, legacy ledger, sample checkpoint/progress,
-retry journal, sample plan, listing checkpoint, official metadata, and retained raw tree
-remained unchanged. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
-remains `NONE`.
-
 ## Record-152 migration integration stop published
 
 Hermes integrated review 151's exact three accepted paths in commit `bce618f` and pushed
@@ -1562,3 +1545,38 @@ status. No ordinary resume, further retry, or sample acquisition is authorized.
 No sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff, PAPER,
 LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
 passed; next ticket remains `NONE`.
+
+## Record-160 network-enabled migration retry published
+
+Hermes re-proved review 159's accepted retry preconditions, obtained network permission,
+and ran exactly one direct network-enabled `--apply-reviewed-v4-migration-only`
+invocation. The command exited status 2 after 555 seconds, the expected terminal status
+for successful migration with Gate 1 still blocked.
+
+The migration installed the reviewed version-4 lock at plan digest
+`2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef`, preserved the
+prior version-2 lock content-addressably, and created an empty prepared amendment ledger
+bound to the installed lock. `download_authorized=false`; no samples were acquired.
+
+No ordinary resume, further retry, second migration command, Gate 2, or later work was
+run. The accepted report, manifest detail, legacy ledger, sample checkpoint/progress,
+retry journal, sample plan, listing checkpoint, official metadata, and retained raw tree
+remained unchanged. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
+remains `NONE`.
+
+## Version-4 migration accepted - bounded sample execution authorized
+
+Review 161 accepts the exact network-enabled migration transaction and the installed
+version-4 authority. The lock contains 84 new sample objects totaling 1,049,324 planned
+bytes, 12 retained objects, 10 aliases, and no budget-blocked entry. The amendment ledger
+is empty and bound to the reviewed lock and executing source/config.
+
+Jr Dev - Hermes is authorized for review 161's exact preproof, content-addressed
+preservation of the accepted report, one direct network-enabled ordinary qualification
+invocation, complete after-proof, and record 162 publication. Every status stops; there is
+no retry or second invocation. This is bounded Gate-1 source sampling, not historical bulk
+acquisition.
+
+No Gate 2, normalization, catalog publication, Nautilus, Harmonic Trader, payoff, PAPER,
+LIVE, reduced scope, paid source, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
