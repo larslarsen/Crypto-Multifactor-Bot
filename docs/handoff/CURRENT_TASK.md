@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct one migration test harness
+Next required actor: Implementation Dev - Codex Spark - complete migration checkpoint assertions
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -103,6 +103,7 @@ Governing documents:
 - research/sprint_004/147_CEX002_GROK_MIGRATION_CONTINUATION.md
 - research/sprint_004/148_CEX002_GROK_MIGRATION_SOURCE_REVIEW.md
 - research/sprint_004/149_CEX002_GROK_MIGRATION_RESIDUAL_REVIEW.md
+- research/sprint_004/150_CEX002_SPARK_MIGRATION_TEST_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1364,6 +1365,23 @@ Spark using GPT-5.3-Codex-Spark High is authorized only to scope restoration to
 `install_migrated_lock` inside that test and retain the checkpoint-sentinel/byte proofs
 through recovery. Spark changes no other byte, runs no command or Git operation, and
 returns the test hash with the unchanged 285-test count. Hermes remains unauthorized.
+
+No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
+
+## Spark restoration repair accepted - final recovery assertions missing
+
+Review 150 accepts Spark's local restoration of only `install_migrated_lock`; the
+fixture-specific reviewed constants and checkpoint watcher now remain active through the
+recovery migration. The test path is still rejected because Spark omitted review 149's
+required post-recovery assertions for no checkpoint `record()`, no checkpoint `flush()`,
+and byte-identical checkpoint state.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only to add
+those three assertions after the successful recovery in the same test function. Every
+other byte remains frozen. Spark runs no command or Git operation and returns the exact
+test hash with the unchanged 285-test count. Hermes remains unauthorized.
 
 No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
