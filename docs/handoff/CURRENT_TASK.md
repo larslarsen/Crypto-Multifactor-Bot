@@ -2,14 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 214
+Next required actor: Jr Dev - Hermes - execute isolated transition per review 215
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Hermes: integrate the three exact accepted transition paths at
-the hashes in review 213 without editing them. Publish record 214 and update only the two
-control files; run repository control and the exact six-path whitespace check; commit and
-push only those six paths. Do not rerun pytest or Ruff and do not execute the transition.
+Immediate bounded task for Hermes: run the one exact transition command in review 215. If
+it succeeds with `executed=true`, run it once more to prove `executed=false` idempotence.
+Publish record 216 and update only the two control files. Stop on any command failure. Do
+not run qualification, sizing, acquisition, pytest, Ruff, network, or any other data task.
 
 Governing documents:
 
@@ -174,6 +174,7 @@ Governing documents:
 - research/sprint_004/212_CEX002_TRANSITION_FOCUSED_TEST_FAILURE.md
 - research/sprint_004/213_CEX002_TRANSITION_SOURCE_TEST_ACCEPTANCE.md
 - research/sprint_004/214_CEX002_TRANSITION_INTEGRATION.md
+- research/sprint_004/215_CEX002_TRANSITION_INTEGRATION_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2526,3 +2527,16 @@ qualification, sizing source change or retry, acquisition, normalization, catalo
 publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced
 scope, or next-ticket work was run. Gate 2 remains unaccepted. Next ticket remains
 `NONE`.
+
+## Transition integration accepted; isolated execution authorized
+
+Review 215 accepts record 214 and confirms `HEAD == origin/main` at `6ab3cf0...`. A fresh
+read-only preproof found all ten historical artifacts byte-identical to review 208 and all
+four new prior-evidence destinations absent.
+
+Jr Dev - Hermes is authorized only to run review 215's exact transition command. After a
+successful `executed=true` result, it runs the identical command once more to prove
+`executed=false` idempotence, publishes record 216, updates the two control files, commits
+and pushes only those three repository paths, and stops for reviewer inspection. Any
+failure stops the sequence. No qualification, sizing, acquisition, tests, lint, network,
+or other data work is authorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
