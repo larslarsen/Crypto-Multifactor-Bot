@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 177
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 178
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -131,6 +131,7 @@ Governing documents:
 - research/sprint_004/175_CEX002_AUTHORITY_TRANSACTION_AUTHORIZATION.md
 - research/sprint_004/176_CEX002_AUTHORITY_TRANSACTION_EXECUTION.md
 - research/sprint_004/177_CEX002_CORRECTED_QUALIFICATION_AUTHORIZATION.md
+- research/sprint_004/178_CEX002_CORRECTED_QUALIFICATION_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1910,3 +1911,29 @@ No second invocation, source correction, migration, candidate construction, full
 or bulk acquisition, Gate 1 acceptance, Gate 2, normalization, catalog publication,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized.
 CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-178 corrected qualification execution published
+
+Hermes executed review 177's single network-enabled ordinary qualification run. It exited
+status 0 after 592 seconds and wrote a changed valid report at
+`research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json`.
+
+The report identity is
+`bf01f88976e2ac3d224e843f340de726f5c8c337ba56a50f9e3c6f75c4d6f227` with size
+13,559,766 bytes. It claims `gate_status=QUALIFIED`, `accepted=true`, no source-blocked
+products, seven release-blocked products, 11 product-matrix rows, 106 reused samples, zero
+acquired samples, and a new manifest detail at
+`evidence/manifests/sha256/1d21de4d68fb0dfd330dc480a0d27ddf2216c3b7d5e93b13ff70ea26230f968d.jsonl.gz`
+with compressed hash `576b3d7b03ff16fd492c5a9382e35f65e54d73ef3996c3a7fe5c6e6ba49b0fb4`.
+
+The accepted prior report was preserved content-addressably at
+`data/cex002_qualify/evidence/prior_reports/sha256/53f8f93379cb55d66b6de062f1a6a85f4c9dd318f5b41cc047bff2f5feeaaf51.json`.
+The raw tree and list cache stayed byte-identical. The two prior reservations settled in
+the amendment ledger; the ledger now has 84 charges, zero reservations, and 1,049,324
+transferred/charged bytes. The corrected authority binding and two source receipts remain
+exact.
+
+Gate 1 is not accepted by Hermes. Reviewer inspection of record 178 and report 62 remains
+mandatory. No second invocation, retry, source correction, migration, candidate
+construction, bulk acquisition, Gate 1 acceptance, Gate 2, or later work was run. CEX-002
+remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
