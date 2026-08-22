@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute bounded version-4 qualification samples
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 162
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -115,6 +115,7 @@ Governing documents:
 - research/sprint_004/159_CEX002_MIGRATION_NETWORK_FAILURE_REVIEW.md
 - research/sprint_004/160_CEX002_MIGRATION_NETWORK_RETRY.md
 - research/sprint_004/161_CEX002_MIGRATION_ACCEPTANCE_AND_SAMPLE_EXECUTION.md
+- research/sprint_004/162_CEX002_VERSION4_SAMPLE_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1580,3 +1581,23 @@ acquisition.
 No Gate 2, normalization, catalog publication, Nautilus, Harmonic Trader, payoff, PAPER,
 LIVE, reduced scope, paid source, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-162 bounded version-4 sample execution published
+
+Hermes preserved the accepted report bytes content-addressably, obtained network
+permission, and ran exactly one ordinary qualification invocation against the installed
+version-4 lock. The command exited status 2 after 829 seconds: valid terminal report, Gate
+1 still blocked.
+
+The run wrote a changed report 62 at SHA-256
+`53f8f93379cb55d66b6de062f1a6a85f4c9dd318f5b41cc047bff2f5feeaaf51` and manifest detail
+compressed SHA-256 `64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113`.
+The raw tree advanced by exactly the locked 84 new files / 1,049,324 bytes. The version-4
+lock, preserved prior report, preserved prior lock, legacy ledger, listing checkpoint, and
+retry journal remained byte-identical.
+
+The amendment ledger records the full 1,049,324-byte planned charge under the
+268,435,456-byte allowance, with 82 settled transfer entries and 2 outstanding
+reservations totaling 203,853 bytes. No retry, second invocation, automatic resume, Gate 2,
+or later work was run. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
+remains `NONE`.
