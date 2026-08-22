@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 185
+Next required actor: Implementation Dev - Codex Spark - correct review 186
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -139,6 +139,7 @@ Governing documents:
 - research/sprint_004/183_CEX002_CLAUDE_STORAGE_SIZING_RESIDUAL_REVIEW.md
 - research/sprint_004/184_CEX002_STORAGE_SIZING_SOURCE_ACCEPTANCE.md
 - research/sprint_004/185_CEX002_STORAGE_SIZING_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/186_CEX002_STORAGE_SIZING_FOCUSED_TEST_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2081,3 +2082,23 @@ Per review 184, Hermes ran no ruff command, no review-184 control command, and n
 invocation. `research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json` and
 `data/cex002_qualify/evidence/sizing/v1/envelopes/sha256` remain absent. Gate 1 remains
 accepted. Gate 2 remains unaccepted. Next ticket remains `NONE`.
+
+## Record 185 reviewed - mechanical test correction authorized
+
+Review 186 accepts Hermes's exact stop and proves the failure is confined to two test
+source mistakes. `gzip.open()` does not accept the fixture's `mtime` argument, causing 37
+setup errors. The first direct test then reloads the sizing module and replaces its
+`SizingError` class while the test module retains the old imported class, causing 16
+otherwise-expected exceptions to escape `pytest.raises`.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only to
+replace the gzip writer with deterministic `gzip.GzipFile`, remove the destructive module
+reload, and point the literal-pin assertions at the existing module. Spark edits only the
+tracked sizing test path, preserves all cases and the 44-test count, runs no command or Git
+operation, returns the test SHA-256, and stops for reviewer inspection. Production and CLI
+remain frozen at their review-184 hashes. Hermes restart remains unauthorized.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, network,
+qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
+Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
