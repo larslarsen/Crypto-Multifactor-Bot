@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 155
+Next required actor: Implementation Dev - Codex Spark - remove five unused test imports
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -109,6 +109,7 @@ Governing documents:
 - research/sprint_004/153_CEX002_MIGRATION_FOCUSED_FAILURE_REVIEW.md
 - research/sprint_004/154_CEX002_MIGRATION_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/155_CEX002_MIGRATION_TEST_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/156_CEX002_MIGRATION_RUFF_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1475,3 +1476,19 @@ pushed it. The required focused restart reached C3:
 Commands C4-C5, migration preconditions, the migration-only invocation, ordinary resume,
 sample acquisition, Gate 2, and later work were not run. CEX-002 remains `IN_PROGRESS`;
 Gate 1 has not passed; next ticket remains `NONE`.
+
+## Focused tests accepted - five-import Spark cleanup
+
+Review 156 accepts Hermes's exact test integration and required C3 stop. C1 and C2 both
+returned exit 0. Ruff's only findings are five `F401` imports for migration helpers that
+the tests now access through the imported module object rather than direct names.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only to
+remove the five exact unused names enumerated in review 156 from the test import list.
+Spark changes no other byte, runs no command or Git operation, and returns the exact test
+hash with the unchanged 285-test count. Production, CLI, and test behavior remain frozen;
+Hermes remains unauthorized pending reviewer source acceptance.
+
+No migration invocation, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic
+Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
