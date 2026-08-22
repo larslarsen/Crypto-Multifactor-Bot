@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct Gate-1 semantics and source authority
+Next required actor: Sr Dev - Claude Build - correct review 164 source
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -117,6 +117,7 @@ Governing documents:
 - research/sprint_004/161_CEX002_MIGRATION_ACCEPTANCE_AND_SAMPLE_EXECUTION.md
 - research/sprint_004/162_CEX002_VERSION4_SAMPLE_EXECUTION.md
 - research/sprint_004/163_CEX002_SAMPLE_OUTCOME_ARCHITECTURE_REVIEW.md
+- research/sprint_004/164_CEX002_CLAUDE_SEMANTIC_AUTHORITY_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1619,6 +1620,29 @@ execution.
 Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 163's three-path
 source/test correction and exact-hash return. Claude runs no command or Git operation.
 Hermes remains unauthorized pending reviewer source acceptance.
+
+No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
+bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains
+`NONE`.
+
+## Claude review-163 source outcome - rejected before integration
+
+Review 164 rejects the exact 296-test three-path drop before integration. The production
+module has invalid dataclass field ordering and cannot import. The reviewed transaction is
+also unreachable from both exact fresh and ledger-advanced states, the CLI withholds its
+required report path, and the correction route enters ordinary network/cache/checkpoint
+work that review 163 forbids.
+
+Qualified Coinalyze rows retain a blocking default, derived taker flow is absent from the
+actual later-release list, the CLI omits that list, and the quote classifier adds a zero-
+quantity rule not present in ADR-0020. The required successful, recovery, idempotence,
+mixed-state, mutation-boundary, lineage, and accounting tests are absent.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 164's bounded
+correction in the same three Python paths. Claude runs no command or Git operation and
+returns all three hashes plus the unique CEX test-function count. Hermes remains
+unauthorized pending reviewer source acceptance.
 
 No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
 bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
