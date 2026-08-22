@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - change one assertion from 2 to 3
+Next required actor: Jr Dev - Hermes - integrate review 143 and restart candidate sequence
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -96,6 +96,7 @@ Governing documents:
 - research/sprint_004/140_CEX002_ADR0020_SOURCE_ACCEPTANCE.md
 - research/sprint_004/141_CEX002_ADR0020_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/142_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
+- research/sprint_004/143_CEX002_FOCUSED_TEST_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1223,4 +1224,23 @@ unauthorized.
 
 No candidate, migration, acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+next ticket remains `NONE`.
+
+## Spark focused test correction accepted - Hermes restart authorized
+
+Review 143 accepts Spark's exact one-assertion correction at test SHA-256
+`186eccc22df2eb8f49f8f004141b6be7efdae15080afefa0675cfbd26e7a3fdd`. The test now
+expects the three official archive families supplied by its fixture, while production's
+two-family minimum remains unchanged. The file retains exactly 261 unique tests; every
+frozen production, CLI, dependency, fixture, and compact-report identity still matches.
+
+Jr Dev - Hermes is authorized only for review 143's exact test integration, full five-
+command restart, and, after all five pass, the accepted compact-report preservation,
+single 50-minute candidate-only invocation, complete post-proof, record 144, enumerated
+publication, commits, and pushes. Hermes stops at the first command failure and makes no
+automatic second candidate invocation.
+
+No source/test edit after integration, unrelated dirty-path mutation, plan migration,
+sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader, payoff, PAPER, LIVE,
+or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed;
 next ticket remains `NONE`.
