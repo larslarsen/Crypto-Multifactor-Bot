@@ -2,14 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute isolated transition per review 215
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 216
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Hermes: run the one exact transition command in review 215. If
-it succeeds with `executed=true`, run it once more to prove `executed=false` idempotence.
-Publish record 216 and update only the two control files. Stop on any command failure. Do
-not run qualification, sizing, acquisition, pytest, Ruff, network, or any other data task.
+Immediate bounded task for reviewer: inspect record 216. Hermes ran the one exact
+transition command in review 215, reran it once for `executed=false` idempotence, published
+record 216, and stopped. Do not run qualification, sizing, acquisition, pytest, Ruff,
+network, or any other data task.
 
 Governing documents:
 
@@ -175,6 +175,7 @@ Governing documents:
 - research/sprint_004/213_CEX002_TRANSITION_SOURCE_TEST_ACCEPTANCE.md
 - research/sprint_004/214_CEX002_TRANSITION_INTEGRATION.md
 - research/sprint_004/215_CEX002_TRANSITION_INTEGRATION_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/216_CEX002_PATH_BOUND_TRANSITION_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2540,3 +2541,20 @@ successful `executed=true` result, it runs the identical command once more to pr
 and pushes only those three repository paths, and stops for reviewer inspection. Any
 failure stops the sequence. No qualification, sizing, acquisition, tests, lint, network,
 or other data work is authorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
+
+## Record-216 path-bound transition execution published
+
+Hermes ran review 215's exact isolated transition command. The first invocation exited
+status 0 with `executed=true`, final lock SHA-256
+`6cbd044adf4ace577ff8899b2825723e8c0ae99d1fe3c855f2783ce54d7b722e`, amendment-ledger
+SHA-256 `2d41fbf009d9803ca5bda05c3a11d75dafe505a1397756e5fafefeb2d1cb90bf`, target
+code/config digest `86ff0eb0ee5fa379855745aedb41bb8442b0a244a8c5a740665acc735fba28fb`,
+three source receipts, zero samples acquired, zero network requests, and zero credentials
+read.
+
+Hermes then ran the identical command once more. It exited status 0 with `executed=false`,
+the same final lock and amendment-ledger identities, three source receipts, and zero sample
+work. A full 41,369-file store manifest comparison before and after the second command was
+identical. Hermes published record 216, ran repository control and the three-path
+whitespace check, and stopped for reviewer inspection. Gate 2 remains unaccepted. Next
+ticket remains `NONE`.
