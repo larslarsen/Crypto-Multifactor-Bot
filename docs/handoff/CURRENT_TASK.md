@@ -2,9 +2,16 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete advanced preflight per review 211
+Next required actor: Implementation Dev - Codex Spark - make two test-only edits per review 212
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
+
+Immediate bounded task for Spark: edit only
+`tests/acquisition/test_binance_usdm_harmonic_path_bound_transition.py`. Remove the unused
+top-level `import os`. In `test_pinned_review208_identities_are_literal`, remove
+`import importlib` and replace `fresh = importlib.reload(transition)` with
+`fresh = transition`. Change nothing else, run no command, and return only the corrected
+SHA-256 plus the unchanged count of 26 `def test_` functions.
 
 Governing documents:
 
@@ -166,6 +173,7 @@ Governing documents:
 - research/sprint_004/209_CEX002_PATH_BOUND_TRANSITION_SOURCE_REVIEW.md
 - research/sprint_004/210_CEX002_PATH_BOUND_TRANSITION_RESUME_REVIEW.md
 - research/sprint_004/211_CEX002_PATH_BOUND_TRANSITION_PREFLIGHT_REVIEW.md
+- research/sprint_004/212_CEX002_TRANSITION_FOCUSED_TEST_FAILURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2473,3 +2481,20 @@ script remains frozen at SHA-256
 Claude runs no command or Git operation and stops with three hashes and the test count.
 Hermes and all execution remain unauthorized. Gate 2 remains unaccepted; next ticket
 remains `NONE`.
+
+## Focused transition test failure
+
+Review 212 statically accepts and freezes transition production
+`f9a1bc89c63b22c974d020044ea8732939358efae00b42f2141bfd0eee34e5e5`
+and the standalone script. Under the owner's explicit focused-test authorization, the
+reviewer ran the 69-case synthetic suite: 53 failed and 16 passed because the literal-pin
+test reloads the module and invalidates the file-level `TransitionError` class alias. The
+representative rejection test passes alone. Exact-path Ruff found only the test module's
+unused `os` import.
+
+Implementation Dev - Codex Spark is authorized only for the two mechanical test edits
+stated at the top of this handoff and in review 212. Production, CLI, all other tests,
+records, controls, and data are frozen. Spark runs no command or Git operation and returns
+the corrected test hash and unchanged function count. The reviewer will rerun pytest and
+Ruff. Hermes and transition/data execution remain unauthorized. Gate 2 remains
+unaccepted; next ticket remains `NONE`.
