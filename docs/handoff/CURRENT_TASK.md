@@ -2,15 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - make two test-only edits per review 212
+Next required actor: Jr Dev - Hermes - integrate accepted transition per review 213
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded residual task for Spark: edit only
-`tests/acquisition/test_binance_usdm_harmonic_path_bound_transition.py`. Inside
-`test_pinned_review208_identities_are_literal`, replace every remaining `fresh.` reference
-with `transition.`. Change nothing else, run no command, and return only the corrected
-SHA-256 plus the unchanged count of 26 `def test_` functions.
+Immediate bounded task for Hermes: integrate the three exact accepted transition paths at
+the hashes in review 213 without editing them. Publish record 214 and update only the two
+control files; run repository control and the exact six-path whitespace check; commit and
+push only those six paths. Do not rerun pytest or Ruff and do not execute the transition.
 
 Governing documents:
 
@@ -173,6 +172,7 @@ Governing documents:
 - research/sprint_004/210_CEX002_PATH_BOUND_TRANSITION_RESUME_REVIEW.md
 - research/sprint_004/211_CEX002_PATH_BOUND_TRANSITION_PREFLIGHT_REVIEW.md
 - research/sprint_004/212_CEX002_TRANSITION_FOCUSED_TEST_FAILURE.md
+- research/sprint_004/213_CEX002_TRANSITION_SOURCE_TEST_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2497,3 +2497,18 @@ records, controls, and data are frozen. Spark runs no command or Git operation a
 the corrected test hash and unchanged function count. The reviewer will rerun pytest and
 Ruff. Hermes and transition/data execution remain unauthorized. Gate 2 remains
 unaccepted; next ticket remains `NONE`.
+
+## Transition source and tests accepted for integration
+
+Review 213 accepts transition production `f9a1bc89...`, standalone CLI `ada238d...`, and
+test source `60b018f0...`. Under the owner's focused-validation authorization, the reviewer
+corrected the test harness and all 69 cases passed; exact-path Ruff and restricted
+whitespace validation also passed. The production state machine, complete authority
+proof, evidence ordering, recovery, idempotence, receipt, and CLI boundaries are accepted.
+
+Jr Dev - Hermes is authorized only to integrate the three exact accepted paths and
+publish record 214 plus the two control updates. It verifies hashes and Git identity,
+runs repository control and the exact six-path whitespace check, commits and pushes only
+those six paths, and stops for reviewer inspection. It does not rerun pytest or Ruff and
+does not execute the transition or any data workflow. Gate 2 remains unaccepted; next
+ticket remains `NONE`.
