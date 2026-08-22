@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and execute review 184
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 185
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -138,6 +138,7 @@ Governing documents:
 - research/sprint_004/182_CEX002_CLAUDE_STORAGE_SIZING_CORRECTION_REVIEW.md
 - research/sprint_004/183_CEX002_CLAUDE_STORAGE_SIZING_RESIDUAL_REVIEW.md
 - research/sprint_004/184_CEX002_STORAGE_SIZING_SOURCE_ACCEPTANCE.md
+- research/sprint_004/185_CEX002_STORAGE_SIZING_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2063,3 +2064,20 @@ receipt and record 185. No network call, qualification, bulk acquisition, normal
 catalog publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source,
 reduced scope, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next
 ticket remains `NONE`.
+
+## Record-185 storage-sizing integration stop published
+
+Hermes integrated review 184's exact three accepted sizing paths. The focused sizing test
+command stopped the sequence:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_sizing.py -q --tb=short`
+
+It exited status 1 in 3 seconds. The primary setup error was
+`TypeError: open() got an unexpected keyword argument 'mtime'` at the test fixture call
+`gzip.open(..., mtime=0)`. Pytest also reported direct `SizingError` failures in retained
+sample validation, rational/reserve validation, and receipt/envelope publication tests.
+
+Per review 184, Hermes ran no ruff command, no review-184 control command, and no sizing
+invocation. `research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json` and
+`data/cex002_qualify/evidence/sizing/v1/envelopes/sha256` remain absent. Gate 1 remains
+accepted. Gate 2 remains unaccepted. Next ticket remains `NONE`.
