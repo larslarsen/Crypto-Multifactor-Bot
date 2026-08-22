@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct rejected ADR-0020 migration source
+Next required actor: Sr Dev - Grok Build - finish review-146 migration correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -100,6 +100,7 @@ Governing documents:
 - research/sprint_004/144_CEX002_FOCUSED_TEST_INTEGRATION_AND_CANDIDATE.md
 - research/sprint_004/145_CEX002_VERSION4_CANDIDATE_REVIEW.md
 - research/sprint_004/146_CEX002_CLAUDE_MIGRATION_SOURCE_REVIEW.md
+- research/sprint_004/147_CEX002_GROK_MIGRATION_CONTINUATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1304,6 +1305,23 @@ reviewed-plan allowance accounting, and focused real-CLI/interruption/tamper tes
 Claude runs no command, test, Ruff, network/data work, migration, integration, record edit,
 or Git operation and stops with the three exact hashes and unique test-function count.
 Hermes remains unauthorized.
+
+No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
+
+## Claude correction interrupted - Grok continuation authorized
+
+Claude Opus 5 exhausted its available context after partially editing only the production
+path. Review 147 records the exact three continuation hashes and reassigns the complete
+review-146 correction to Sr Dev - Grok Build using Grok 4.6 High. Claude is no longer the
+authorized senior actor for this drop.
+
+Grok continues in the same three paths without reset, restore, wholesale replacement,
+command execution, Git, or repository-record edits. The unchanged rejected CLI and tests,
+ordinary-input validation ordering, and exact migrated-history proof remain unfinished;
+every review-146 requirement remains binding. Grok stops with all three exact hashes and
+the unique test-function count. Hermes remains unauthorized.
 
 No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
