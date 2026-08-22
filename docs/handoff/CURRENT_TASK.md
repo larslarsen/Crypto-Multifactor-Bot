@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct one ADR-0022 test assertion per review 202
+Next required actor: Jr Dev - Hermes - integrate ADR-0022 source/tests per review 203
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -157,6 +157,7 @@ Governing documents:
 - research/sprint_004/200_CEX002_PATH_BOUND_RECOVERY_FINAL_RESIDUAL_REVIEW.md
 - research/sprint_004/201_CEX002_PATH_BOUND_SOURCE_ACCEPTANCE_TEST_RESIDUAL.md
 - research/sprint_004/202_CEX002_PATH_BOUND_TEST_ASSERTION_REVIEW.md
+- research/sprint_004/203_CEX002_PATH_BOUND_SOURCE_TEST_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
