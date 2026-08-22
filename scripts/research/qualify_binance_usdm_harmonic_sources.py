@@ -9,7 +9,7 @@ bootstrapped and reused instead of redownloaded, and transient transport failure
 retried under a bounded policy.
 
 `--candidate-plan-only` proves the durable version-2 lock and legacy ledger before this
-process creates or touches anything, then constructs the version-3 candidate plan from that
+process creates or touches anything, then constructs the version-4 candidate plan from that
 read-only prior authority. It migrates no plan or ledger, downloads no sample, and proves
 the durable version-2 lock and legacy budget bytes are unchanged.
 
@@ -35,6 +35,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     SAMPLE_PLAN_LOCK_FILENAME,
     VISION_S3_ENDPOINT,
     FapiCurrentContractSource,
+    FapiDeliveryPriceSource,
     HttpxCoinalyzeTransport,
     ListingCheckpointStore,
     ResumeIntegrityError,
@@ -105,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         "--candidate-plan-only",
         action="store_true",
         help=(
-            "construct the version-3 candidate plan from read-only prior authority: no "
+            "construct the version-4 candidate plan from read-only prior authority: no "
             "plan or ledger migration, no sample download, and no relock"
         ),
     )
@@ -176,6 +177,13 @@ def main(argv: list[str] | None = None) -> int:
         cache_dir=store_root / "fapi_cache",
         timeout=timeout,
     )
+    # ADR-0020: read-only official settlement-price evidence for exactly the frozen
+    # delivery pairs, retained content-addressably beside the other official responses.
+    delivery_prices = FapiDeliveryPriceSource(
+        transport,
+        cache_dir=store_root / "fapi_cache",
+        timeout=timeout,
+    )
     coinalyze = None
     if api_key is not None:
         coinalyze = HttpxCoinalyzeTransport(
@@ -190,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
             transport=transport,
             progress_path=Path(args.progress_path) if args.progress_path else None,
             current_contracts=current,
+            delivery_prices=delivery_prices,
             coinalyze_transport=coinalyze,
             coinalyze_api_key=api_key,
             retry=retry,

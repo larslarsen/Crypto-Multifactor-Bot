@@ -21,10 +21,12 @@ full-universe support map.
 
 from __future__ import annotations
 
+import csv
 import gzip
 import hashlib
 import io
 import json
+import math
 import os
 import random
 import re
@@ -37,7 +39,7 @@ import zlib
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, field, fields, replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol
@@ -78,6 +80,8 @@ OFFICIAL_INCREMENTAL_ENDPOINTS: dict[str, str] = {
     "forceOrders": f"{FAPI_BASE}/fapi/v1/allForceOrders",
     "premiumIndex": f"{FAPI_BASE}/fapi/v1/premiumIndex",
     "commissionRate": f"{FAPI_BASE}/fapi/v1/commissionRate",
+    # ADR-0020: the official quarterly-contract settlement-price endpoint.
+    "deliveryPrice": f"{FAPI_BASE}/futures/data/delivery-price",
 }
 
 COINALYZE_HISTORY_ENDPOINTS: dict[str, str] = {
@@ -174,6 +178,11 @@ OFFICIAL_ARCHIVE_FAMILIES: dict[str, tuple[str, ...]] = {
 }
 
 COST_SAMPLE_FAMILIES: tuple[str, ...] = ("daily/bookTicker", "daily/bookDepth")
+# ADR-0020: Gate 1 qualifies the cost *source* from three deterministic eras per cost
+# family. The complete first/midpoint/last cost manifest is a Gate-2 acquisition product
+# and is never charged to the bounded qualification allowance.
+COST_SOURCE_STRATA: tuple[str, ...] = ("early", "middle", "recent")
+COST_SOURCE_SELECTOR: str = "three_era_smallest_positive_cost_source_v1"
 KLINE_TAKER_FLOW_FIELDS: tuple[str, ...] = (
     "volume",
     "quote_volume",
@@ -505,8 +514,18 @@ HOLDOUT_REPLAY_RULE: str = (
     "the pinned boundary is the first authenticated qualification instant; every later "
     "run replays it unchanged, and no model outcome may move it"
 )
-CANDIDATE_PLAN_VERSION: int = 3
+# ADR-0020 emits candidate version 4. Locked versions 0-2 stay immutable and the
+# unexecuted version-3 candidate is preserved by digest as superseded lineage, never as a
+# migrated lock: it downloaded and charged nothing, so version 4 reuses its allowance.
+CANDIDATE_PLAN_VERSION: int = 4
 REQUIRED_PRIOR_PLAN_VERSION: int = 2
+SUPERSEDED_CANDIDATE_PLAN_VERSION: int = 3
+SUPERSEDED_CANDIDATE_PLAN_DIGEST: str = (
+    "0a1c358c8fee3df35d1049424502b11e38c0084592a03ab6f9de99b8a0078593"
+)
+SUPERSEDED_CANDIDATE_ENVELOPE_DIGEST: str = (
+    "a14018c27d8e00d3f59d4181d7da546ca99d43f5625c34d39cb07398859605c3"
+)
 CHECKPOINT_VERSION: int = 1
 
 # Transient transport/service failures are retried; integrity and authentication
@@ -555,6 +574,10 @@ MEMBERSHIP_SETTLEMENT_ARTIFACT: str = "settlement_artifact_candidate"
 MEMBERSHIP_DATED_DELIVERY: str = "dated_delivery_candidate"
 MEMBERSHIP_UNRESOLVED: str = "unresolved_archive_candidate"
 MEMBERSHIP_UNSUPPORTED_SEMANTICS: str = "unsupported_contract_semantics"
+# ADR-0020 reviewed historical identities. Both are resolved, non-perpetual, and excluded
+# from membership; neither is ever promoted into the accepted universe.
+MEMBERSHIP_REVIEWED_DELIVERY: str = "reviewed_delivery_non_perpetual"
+MEMBERSHIP_SETTLEMENT_ALIAS: str = "official_archive_settlement_alias"
 # Unresolved classes block membership; they are never silently dropped from the report.
 MEMBERSHIP_BLOCKING_CLASSES: frozenset[str] = frozenset(
     {
@@ -569,6 +592,288 @@ MEMBERSHIP_BLOCKING_CLASSES: frozenset[str] = frozenset(
 # exclude one from the report; an unresolved candidate blocks whatever its spelling is.
 _DATED_DELIVERY_NAME_RE = re.compile(r"^[A-Z0-9]+_\d{6}$")
 _SETTLEMENT_NAME_RE = re.compile(r"SETTLED")
+
+# --- ADR-0020 reviewed historical contract authority ----------------------------------
+
+# Review 137 froze these identities from official evidence. They are evidence tables, not
+# classifiers: a future ``*_YYMMDD`` or ``*SETTLED*`` name is not a member of either table
+# and stays blocking until a new reviewed version is published.
+REVIEWED_AUTHORITY_TABLE_VERSION: str = "review137-v1"
+
+# A frozen delivery date that the current settlement-price endpoint still retains.
+DELIVERY_AUTHORITY_DIRECT: str = "official_delivery_direct"
+# A frozen delivery identity whose evidence is the reviewer's explicit inference from the
+# retained official multi-family archive lifecycle and realized-funding absence. It is not
+# a claim that a retained type row or the settlement endpoint covers the name.
+DELIVERY_AUTHORITY_REVIEWED_ARCHIVE: str = "reviewed_archive_delivery_inference"
+DELIVERY_AUTHORITY_CLASSES: frozenset[str] = frozenset(
+    {DELIVERY_AUTHORITY_DIRECT, DELIVERY_AUTHORITY_REVIEWED_ARCHIVE}
+)
+
+ALIAS_BASE_AUTHORITY_CURRENT: str = "authenticated_current_exchange_info"
+ALIAS_BASE_AUTHORITY_FUNDING: str = "official_realized_funding_observation"
+ALIAS_BASE_AUTHORITY_RETAINED: str = "retained_official_contract_metadata"
+
+# (symbol, pair, UTC delivery date encoded by the YYMMDD suffix, authority class).
+REVIEWED_DELIVERY_IDENTITIES: tuple[tuple[str, str, str, str], ...] = (
+    ("BTCBUSD_210129", "BTCBUSD", "2021-01-29", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCBUSD_210226", "BTCBUSD", "2021-02-26", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_210326", "BTCUSDT", "2021-03-26", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_210625", "BTCUSDT", "2021-06-25", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_210924", "BTCUSDT", "2021-09-24", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_211231", "BTCUSDT", "2021-12-31", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_210326", "ETHUSDT", "2021-03-26", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_210625", "ETHUSDT", "2021-06-25", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_210924", "ETHUSDT", "2021-09-24", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_211231", "ETHUSDT", "2021-12-31", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_220325", "BTCUSDT", "2022-03-25", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_220624", "BTCUSDT", "2022-06-24", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_220930", "BTCUSDT", "2022-09-30", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_221230", "BTCUSDT", "2022-12-30", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_230331", "BTCUSDT", "2023-03-31", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_230630", "BTCUSDT", "2023-06-30", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_230929", "BTCUSDT", "2023-09-29", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_231229", "BTCUSDT", "2023-12-29", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_240329", "BTCUSDT", "2024-03-29", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_240628", "BTCUSDT", "2024-06-28", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_240927", "BTCUSDT", "2024-09-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_241227", "BTCUSDT", "2024-12-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_250328", "BTCUSDT", "2025-03-28", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_250627", "BTCUSDT", "2025-06-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_250926", "BTCUSDT", "2025-09-26", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_251226", "BTCUSDT", "2025-12-26", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_260327", "BTCUSDT", "2026-03-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_260626", "BTCUSDT", "2026-06-26", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_220325", "ETHUSDT", "2022-03-25", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_220624", "ETHUSDT", "2022-06-24", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_220930", "ETHUSDT", "2022-09-30", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_221230", "ETHUSDT", "2022-12-30", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_230331", "ETHUSDT", "2023-03-31", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_230630", "ETHUSDT", "2023-06-30", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_230929", "ETHUSDT", "2023-09-29", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_231229", "ETHUSDT", "2023-12-29", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_240329", "ETHUSDT", "2024-03-29", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_240628", "ETHUSDT", "2024-06-28", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_240927", "ETHUSDT", "2024-09-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_241227", "ETHUSDT", "2024-12-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_250328", "ETHUSDT", "2025-03-28", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_250627", "ETHUSDT", "2025-06-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_250926", "ETHUSDT", "2025-09-26", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_251226", "ETHUSDT", "2025-12-26", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_260327", "ETHUSDT", "2026-03-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_260626", "ETHUSDT", "2026-06-26", DELIVERY_AUTHORITY_DIRECT),
+)
+
+# (archive alias, exact confirmed base perpetual, frozen base-authority kind).
+REVIEWED_SETTLEMENT_ALIASES: tuple[tuple[str, str, str], ...] = (
+    ("AERGOUSDTSETTLED", "AERGOUSDT", ALIAS_BASE_AUTHORITY_FUNDING),
+    ("AERGOUSDTSETTLEDSETTLED", "AERGOUSDT", ALIAS_BASE_AUTHORITY_FUNDING),
+    ("AIAUSDTSETTLED", "AIAUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("BDXNUSDTSETTLED", "BDXNUSDT", ALIAS_BASE_AUTHORITY_FUNDING),
+    ("BNXUSDTSETTLED", "BNXUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("BTCSTUSDTSETTLED", "BTCSTUSDT", ALIAS_BASE_AUTHORITY_FUNDING),
+    ("CTKUSDTSETTLED", "CTKUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("CVCUSDTSETTLED", "CVCUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("CVXUSDTSETTLED", "CVXUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("ICPUSDT_SETTLED", "ICPUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("LITUSDTSETTLED", "LITUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("MAVIAUSDTSETTLED", "MAVIAUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("MINAUSDTSETTLED", "MINAUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("PUMPUSDTSETTLED", "PUMPUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("SLPUSDTSETTLED", "SLPUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+    ("SXPUSDTSETTLED", "SXPUSDT", ALIAS_BASE_AUTHORITY_FUNDING),
+    ("TLMUSDTSETTLED", "TLMUSDT", ALIAS_BASE_AUTHORITY_CURRENT),
+)
+
+# A reviewed delivery identity must still be observable across at least this many official
+# archive families before its frozen lifecycle evidence counts as re-proved.
+REVIEWED_DELIVERY_MIN_FAMILIES: int = 2
+
+# The independent review-137 boundary. These are not derived from the tuples above: they
+# are the reviewer's own canonical counts and digests, so a structurally valid row
+# substitution, deletion, alias remap, or authority-class swap fails closed instead of
+# quietly becoming the new authority.
+REVIEWED_DELIVERY_IDENTITY_COUNT: int = 46
+REVIEWED_DELIVERY_DIRECT_COUNT: int = 36
+REVIEWED_DELIVERY_ARCHIVE_COUNT: int = 10
+REVIEWED_DELIVERY_PAIRS: tuple[str, ...] = ("BTCBUSD", "BTCUSDT", "ETHUSDT")
+REVIEWED_ALIAS_COUNT: int = 17
+REVIEWED_ALIAS_BASE_COUNT: int = 16
+REVIEWED_DELIVERY_TABLE_SHA256: str = (
+    "678d07e0679b0e116a372a333c3c33f74f5e421dadba393cb9516e56ae8b9a01"
+)
+REVIEWED_ALIAS_TABLE_SHA256: str = (
+    "e9837ee2ac0711e41981e27979532be5095d61f04fb82442919c9f301f5998f8"
+)
+
+REVIEWED_AUTHORITY_RULE: str = (
+    "review 137 freezes 46 exact delivery identities and 17 exact settlement aliases. A "
+    "delivery identity resolves only while its retained official multi-family archive "
+    "lifecycle and realized-funding absence re-prove, and a direct member also requires an "
+    "exact date in a retained official settlement-price response. An alias resolves only "
+    "while its frozen base independently passes the affirmative perpetual rule with the "
+    "frozen authority kind. Every other date- or settlement-shaped name stays blocking."
+)
+
+
+def _table_digest(version: str, rows: Sequence[Mapping[str, Any]]) -> str:
+    """Canonical serialization digest of one frozen authority table."""
+    payload = {"version": version, "rows": [dict(row) for row in rows]}
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def reviewed_delivery_table() -> tuple[dict[str, Any], ...]:
+    """The frozen 46-identity delivery table in canonical order."""
+    return tuple(
+        {
+            "symbol": symbol,
+            "pair": pair,
+            "delivery_date": delivery_date,
+            "authority_class": authority_class,
+        }
+        for symbol, pair, delivery_date, authority_class in REVIEWED_DELIVERY_IDENTITIES
+    )
+
+
+def reviewed_alias_table() -> tuple[dict[str, Any], ...]:
+    """The frozen 17-alias settlement table in canonical order."""
+    return tuple(
+        {"alias": alias, "base": base, "base_authority": base_authority}
+        for alias, base, base_authority in REVIEWED_SETTLEMENT_ALIASES
+    )
+
+
+def reviewed_delivery_table_digest() -> str:
+    return _table_digest(REVIEWED_AUTHORITY_TABLE_VERSION, reviewed_delivery_table())
+
+
+def reviewed_alias_table_digest() -> str:
+    return _table_digest(REVIEWED_AUTHORITY_TABLE_VERSION, reviewed_alias_table())
+
+
+def _symbol_delivery_date(symbol: str) -> str:
+    """The UTC date encoded by a ``PAIR_YYMMDD`` identity, or "" when it encodes none."""
+    _, _, suffix = symbol.partition("_")
+    if len(suffix) != 6 or not suffix.isdigit():
+        return ""
+    try:
+        return date(2000 + int(suffix[:2]), int(suffix[2:4]), int(suffix[4:])).isoformat()
+    except ValueError:
+        return ""
+
+
+def validate_reviewed_authority_tables() -> dict[str, Any]:
+    """Prove both frozen tables before any name is resolved from them.
+
+    Membership counts, symbol uniqueness, the pair and encoded date bound to every
+    delivery identity, the authority enums, and both published digests are all re-derived
+    here. Table drift is a fail-closed condition, never a silent reclassification.
+    """
+    delivery = reviewed_delivery_table()
+    aliases = reviewed_alias_table()
+    symbols = [str(row["symbol"]) for row in delivery]
+    if len(set(symbols)) != len(symbols):
+        raise SourceQualificationError(
+            "reviewed delivery table repeats a symbol",
+            context={"table_version": REVIEWED_AUTHORITY_TABLE_VERSION},
+        )
+    for row in delivery:
+        symbol = str(row["symbol"])
+        pair, _, _suffix = symbol.partition("_")
+        if pair != str(row["pair"]):
+            raise SourceQualificationError(
+                "reviewed delivery identity does not bind its own pair",
+                context={"symbol": symbol, "pair": str(row["pair"])},
+            )
+        if _symbol_delivery_date(symbol) != str(row["delivery_date"]):
+            raise SourceQualificationError(
+                "reviewed delivery identity does not bind its own encoded date",
+                context={"symbol": symbol, "delivery_date": str(row["delivery_date"])},
+            )
+        if str(row["authority_class"]) not in DELIVERY_AUTHORITY_CLASSES:
+            raise SourceQualificationError(
+                "reviewed delivery identity has an unknown authority class",
+                context={"symbol": symbol, "authority_class": str(row["authority_class"])},
+            )
+    alias_names = [str(row["alias"]) for row in aliases]
+    if len(set(alias_names)) != len(alias_names):
+        raise SourceQualificationError(
+            "reviewed settlement table repeats an alias",
+            context={"table_version": REVIEWED_AUTHORITY_TABLE_VERSION},
+        )
+    for row in aliases:
+        if str(row["alias"]) == str(row["base"]):
+            raise SourceQualificationError(
+                "reviewed settlement alias maps to itself",
+                context={"alias": str(row["alias"])},
+            )
+        if str(row["base_authority"]) not in {
+            ALIAS_BASE_AUTHORITY_CURRENT,
+            ALIAS_BASE_AUTHORITY_FUNDING,
+            ALIAS_BASE_AUTHORITY_RETAINED,
+        }:
+            raise SourceQualificationError(
+                "reviewed settlement alias has an unknown base authority",
+                context={"alias": str(row["alias"])},
+            )
+    direct = sum(
+        1 for row in delivery if str(row["authority_class"]) == DELIVERY_AUTHORITY_DIRECT
+    )
+    archive = sum(
+        1
+        for row in delivery
+        if str(row["authority_class"]) == DELIVERY_AUTHORITY_REVIEWED_ARCHIVE
+    )
+    pairs = sorted({str(row["pair"]) for row in delivery})
+    bases = {str(row["base"]) for row in aliases}
+    # The reviewed shape is fixed. A row that is individually well formed still fails
+    # here unless the whole table is exactly the one review 137 froze.
+    expected_counts = {
+        "delivery_identity_count": (len(delivery), REVIEWED_DELIVERY_IDENTITY_COUNT),
+        "delivery_direct_count": (direct, REVIEWED_DELIVERY_DIRECT_COUNT),
+        "delivery_reviewed_archive_count": (archive, REVIEWED_DELIVERY_ARCHIVE_COUNT),
+        "alias_count": (len(aliases), REVIEWED_ALIAS_COUNT),
+        "alias_base_count": (len(bases), REVIEWED_ALIAS_BASE_COUNT),
+    }
+    for name, (actual, expected) in sorted(expected_counts.items()):
+        if actual != expected:
+            raise SourceQualificationError(
+                "reviewed authority table count is not the frozen review-137 count",
+                context={"field": name, "actual": actual, "expected": expected},
+            )
+    if tuple(pairs) != REVIEWED_DELIVERY_PAIRS:
+        raise SourceQualificationError(
+            "reviewed delivery table pairs are not the frozen review-137 pairs",
+            context={"actual": pairs, "expected": list(REVIEWED_DELIVERY_PAIRS)},
+        )
+    delivery_digest = reviewed_delivery_table_digest()
+    if delivery_digest != REVIEWED_DELIVERY_TABLE_SHA256:
+        raise SourceQualificationError(
+            "reviewed delivery table digest is not the frozen review-137 digest",
+            context={"actual": delivery_digest, "expected": REVIEWED_DELIVERY_TABLE_SHA256},
+        )
+    alias_digest = reviewed_alias_table_digest()
+    if alias_digest != REVIEWED_ALIAS_TABLE_SHA256:
+        raise SourceQualificationError(
+            "reviewed settlement-alias table digest is not the frozen review-137 digest",
+            context={"actual": alias_digest, "expected": REVIEWED_ALIAS_TABLE_SHA256},
+        )
+    return {
+        "table_version": REVIEWED_AUTHORITY_TABLE_VERSION,
+        "delivery_identity_count": len(delivery),
+        "delivery_direct_count": direct,
+        "delivery_reviewed_archive_count": archive,
+        "delivery_pairs": pairs,
+        "delivery_table_sha256": delivery_digest,
+        "expected_delivery_table_sha256": REVIEWED_DELIVERY_TABLE_SHA256,
+        "alias_count": len(aliases),
+        "alias_base_count": len(bases),
+        "alias_table_sha256": alias_digest,
+        "expected_alias_table_sha256": REVIEWED_ALIAS_TABLE_SHA256,
+        "rule": REVIEWED_AUTHORITY_RULE,
+    }
+
 
 # --- review-75 immutable planning, cumulative budget, storage feasibility -------------
 
@@ -903,6 +1208,30 @@ class CurrentContractSource(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class DeliveryPriceResponse:
+    """One official settlement-price fetch for one pair with its retained raw bytes.
+
+    ADR-0020 resolves frozen delivery identities from these bytes, so the response keeps
+    its own endpoint, redacted request, retrieval time, size, digest, and retained path
+    rather than a re-serialised parse.
+    """
+
+    endpoint: str
+    pair: str
+    payload: Any
+    raw_bytes: bytes
+    sha256: str
+    byte_size: int
+    retrieval_time: str
+    request_params: Mapping[str, str] = field(default_factory=dict)
+    content_path: str = ""
+
+
+class DeliveryPriceSource(Protocol):
+    def fetch_delivery_prices(self, pair: str) -> DeliveryPriceResponse: ...
+
+
+@dataclass(frozen=True, slots=True)
 class CoinalyzeResponse:
     """One Coinalyze fetch with its retained raw response bytes and identity.
 
@@ -986,6 +1315,32 @@ class MemoryCurrentContractSource:
 
 
 @dataclass
+class MemoryDeliveryPriceSource:
+    """Fixture settlement-price source that retains real raw response bytes."""
+
+    payloads: dict[str, Any] = field(default_factory=dict)
+    endpoint: str = OFFICIAL_INCREMENTAL_ENDPOINTS["deliveryPrice"]
+    retrieved_at: str = "1970-01-01T00:00:00+00:00"
+    requested_pairs: list[str] = field(default_factory=list)
+
+    def fetch_delivery_prices(self, pair: str) -> DeliveryPriceResponse:
+        self.requested_pairs.append(pair)
+        payload = self.payloads.get(pair, [])
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return DeliveryPriceResponse(
+            endpoint=self.endpoint,
+            pair=pair,
+            payload=json.loads(raw.decode("utf-8")),
+            raw_bytes=raw,
+            sha256=_object_sha256(raw),
+            byte_size=len(raw),
+            retrieval_time=self.retrieved_at,
+            request_params=redact_request_params({"pair": pair}),
+            content_path="",
+        )
+
+
+@dataclass
 class MemoryCoinalyzeTransport:
     """Fixture transport holding raw response bytes, not parsed objects.
 
@@ -1056,6 +1411,9 @@ class SampleRecord:
     availability_semantics: str
     retrieval_time: str
     content_path: str
+    # ADR-0020: the full-row validation summary of a cost-calibration object. Empty for
+    # every other family, which is qualified by its own existing rules.
+    cost_validation: Mapping[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1444,6 +1802,289 @@ def infer_schema_fields(payload: bytes, *, name: str) -> SchemaIdentity:
     )
 
 
+# --- ADR-0020 cost-source data validation ---------------------------------------------
+
+COST_VALIDATION_VERSION: str = "cex002_cost_source_validation_v1"
+# The archive family hint each cost family carries inside its object keys.
+COST_VALIDATION_FAMILY_HINTS: dict[str, str] = {
+    "daily/bookTicker": "bookTicker",
+    "monthly/bookTicker": "bookTicker",
+    "daily/bookDepth": "bookDepth",
+    "monthly/bookDepth": "bookDepth",
+}
+COST_VALIDATION_CHECKS: dict[str, tuple[str, ...]] = {
+    "bookTicker": (
+        "nonempty_data_rows",
+        "fixed_width_rows",
+        "finite_numeric_values",
+        "integral_nonnegative_update_ids",
+        "positive_bid_and_ask_prices",
+        "nonnegative_quantities",
+        "uncrossed_quotes",
+        "positive_nondecreasing_transaction_and_event_times",
+    ),
+    "bookDepth": (
+        "nonempty_data_rows",
+        "fixed_width_rows",
+        "finite_numeric_values",
+        "positive_nondecreasing_timestamps",
+        "finite_nonzero_percentage_bands",
+        "nonnegative_finite_depth_and_notional",
+    ),
+}
+
+
+@dataclass(frozen=True, slots=True)
+class CostSampleValidation:
+    """Proof that one cost object is economically usable, not merely well named."""
+
+    version: str
+    family: str
+    family_hint: str
+    key: str
+    schema_kind: str
+    row_count: int
+    first_timestamp_ms: int
+    last_timestamp_ms: int
+    checks: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "family": self.family,
+            "family_hint": self.family_hint,
+            "key": self.key,
+            "schema_kind": self.schema_kind,
+            "row_count": self.row_count,
+            "first_timestamp_ms": self.first_timestamp_ms,
+            "last_timestamp_ms": self.last_timestamp_ms,
+            "checks": list(self.checks),
+        }
+
+
+def _cost_error(message: str, context: Mapping[str, Any]) -> SourceQualificationError:
+    return SourceQualificationError(message, context=dict(context))
+
+
+def _cost_float(value: str, *, field_name: str, context: Mapping[str, Any]) -> float:
+    """A finite numeric cell. NaN and infinity are defects, not values."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise _cost_error(
+            "cost sample cell is not numeric", {**context, "field": field_name}
+        ) from exc
+    if not math.isfinite(number):
+        raise _cost_error(
+            "cost sample cell is not finite", {**context, "field": field_name}
+        )
+    return number
+
+
+def _cost_int(value: str, *, field_name: str, context: Mapping[str, Any]) -> int:
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError) as exc:
+        raise _cost_error(
+            "cost sample cell is not an integer", {**context, "field": field_name}
+        ) from exc
+
+
+def _cost_timestamp_ms(value: str, *, context: Mapping[str, Any]) -> int:
+    """Either official encoding: epoch milliseconds, or a UTC calendar timestamp."""
+    text = str(value).strip()
+    if text.lstrip("-").isdigit():
+        return int(text)
+    try:
+        moment = datetime.fromisoformat(text.replace(" ", "T"))
+    except ValueError as exc:
+        raise _cost_error(
+            "cost sample timestamp is not a known official encoding",
+            {**context, "value": text},
+        ) from exc
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return int(moment.astimezone(UTC).timestamp() * 1000)
+
+
+def cost_sample_rows(payload: bytes, *, key: str) -> tuple[SchemaIdentity, list[tuple[str, ...]]]:
+    """Every data row of a cost object, parsed in full from its one archive member.
+
+    A cost archive holds exactly one CSV member; a second member is unproved content and
+    fails closed rather than riding along behind a valid first one. The member is read
+    with the standard strict CSV parser, so empty cells survive into fixed-width
+    validation and malformed CSV is rejected instead of silently reshaped.
+    """
+    schema = infer_schema_fields(payload, name=key)
+    context = {"key": key}
+    if len(payload) >= 2 and payload[:2] == b"PK":
+        try:
+            with zipfile.ZipFile(io.BytesIO(payload)) as handle:
+                members = [info for info in handle.infolist() if not info.is_dir()]
+                if len(members) != 1:
+                    raise _cost_error(
+                        "cost sample ZIP does not hold exactly one CSV member",
+                        {**context, "members": [item.filename for item in members]},
+                    )
+                member = members[0]
+                if not member.filename.lower().endswith(".csv"):
+                    raise _cost_error(
+                        "cost sample ZIP member is not a CSV file",
+                        {**context, "member": member.filename},
+                    )
+                raw = handle.read(member)
+        except (OSError, zipfile.BadZipFile) as exc:
+            raise _cost_error("cost sample ZIP is unreadable", context) from exc
+    else:
+        raw = payload
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise _cost_error("cost sample bytes are not UTF-8 text", context) from exc
+    try:
+        # ``strict`` rejects malformed quoting instead of repairing it, and every cell of
+        # every row is preserved exactly as written, empty ones included.
+        parsed = [tuple(row) for row in csv.reader(io.StringIO(text, newline=""), strict=True)]
+    except csv.Error as exc:
+        raise _cost_error("cost sample is not parseable CSV", context) from exc
+    rows = [row for row in parsed if row]
+    if schema.kind == "headed" and rows:
+        rows = rows[1:]
+    return schema, rows
+
+
+def _validate_book_ticker_rows(
+    rows: Sequence[tuple[str, ...]], *, key: str
+) -> tuple[int, int]:
+    """Every quote row: finite, positive, uncrossed, and forward in time."""
+    width = len(KNOWN_ARCHIVE_SCHEMAS["bookTicker"]["headerless"])
+    first_time = 0
+    last_time = 0
+    last_event = 0
+    for index, row in enumerate(rows):
+        context = {"key": key, "row": index}
+        if len(row) != width:
+            raise _cost_error(
+                "cost sample row width does not match its family schema",
+                {**context, "width": len(row), "expected_width": width},
+            )
+        update_id = _cost_int(row[0], field_name="update_id", context=context)
+        if update_id < 0:
+            raise _cost_error("cost sample update id is negative", context)
+        bid = _cost_float(row[1], field_name="best_bid_price", context=context)
+        bid_qty = _cost_float(row[2], field_name="best_bid_qty", context=context)
+        ask = _cost_float(row[3], field_name="best_ask_price", context=context)
+        ask_qty = _cost_float(row[4], field_name="best_ask_qty", context=context)
+        if bid <= 0 or ask <= 0:
+            raise _cost_error("cost sample quote price is not positive", context)
+        if bid_qty < 0 or ask_qty < 0:
+            raise _cost_error("cost sample quote quantity is negative", context)
+        if bid > ask:
+            raise _cost_error("cost sample quote is crossed", context)
+        transaction = _cost_int(row[5], field_name="transaction_time", context=context)
+        event = _cost_int(row[6], field_name="event_time", context=context)
+        if transaction <= 0 or event <= 0:
+            raise _cost_error("cost sample quote time is not positive", context)
+        if transaction < last_time or event < last_event:
+            raise _cost_error("cost sample quote time moves backwards", context)
+        if index == 0:
+            first_time = transaction
+        last_time = transaction
+        last_event = event
+    return first_time, last_time
+
+
+def _validate_book_depth_rows(
+    rows: Sequence[tuple[str, ...]], *, key: str
+) -> tuple[int, int]:
+    """Every depth row: a real band, a real depth, and forward in time."""
+    width = len(KNOWN_ARCHIVE_SCHEMAS["bookDepth"]["headerless"])
+    first_time = 0
+    last_time = 0
+    for index, row in enumerate(rows):
+        context = {"key": key, "row": index}
+        if len(row) != width:
+            raise _cost_error(
+                "cost sample row width does not match its family schema",
+                {**context, "width": len(row), "expected_width": width},
+            )
+        moment = _cost_timestamp_ms(row[0], context=context)
+        if moment <= 0:
+            raise _cost_error("cost sample depth timestamp is not positive", context)
+        if moment < last_time:
+            raise _cost_error("cost sample depth timestamp moves backwards", context)
+        percentage = _cost_float(row[1], field_name="percentage", context=context)
+        if percentage == 0:
+            raise _cost_error("cost sample depth band is zero", context)
+        depth = _cost_float(row[2], field_name="depth", context=context)
+        notional = _cost_float(row[3], field_name="notional", context=context)
+        if depth < 0 or notional < 0:
+            raise _cost_error("cost sample depth or notional is negative", context)
+        if index == 0:
+            first_time = moment
+        last_time = moment
+    return first_time, last_time
+
+
+def validate_cost_sample_payload(
+    payload: bytes, *, key: str, family: str
+) -> CostSampleValidation:
+    """Prove a bookTicker or bookDepth qualification object row by row.
+
+    ADR-0020 accepts a cost source only on evidence that its objects parse completely,
+    hold at least one data row, move forward in time, and carry economically valid
+    quote or depth values. The same proof runs for fresh acquisition, content-addressed
+    reuse, and retained recovery, so no path can adopt an object the others would reject.
+    """
+    hint = COST_VALIDATION_FAMILY_HINTS.get(family) or _family_hint_from_name(key)
+    if hint not in COST_VALIDATION_CHECKS:
+        raise _cost_error(
+            "cost sample validation requires a cost-calibration family",
+            {"key": key, "family": family, "family_hint": hint},
+        )
+    schema, rows = cost_sample_rows(payload, key=key)
+    if not rows:
+        raise _cost_error("cost sample has no data rows", {"key": key, "family": family})
+    if hint == "bookTicker":
+        first_ms, last_ms = _validate_book_ticker_rows(rows, key=key)
+    else:
+        first_ms, last_ms = _validate_book_depth_rows(rows, key=key)
+    return CostSampleValidation(
+        version=COST_VALIDATION_VERSION,
+        family=family,
+        family_hint=hint,
+        key=key,
+        schema_kind=schema.kind,
+        row_count=len(rows),
+        first_timestamp_ms=first_ms,
+        last_timestamp_ms=last_ms,
+        checks=COST_VALIDATION_CHECKS[hint],
+    )
+
+
+def _is_cost_validation_family(family: str) -> bool:
+    return (COST_VALIDATION_FAMILY_HINTS.get(family) or "") in COST_VALIDATION_CHECKS
+
+
+def _family_from_object_key(key: str) -> str:
+    """The archive family a retained object key belongs to, or "" when unknown."""
+    hint = _family_hint_from_name(key)
+    if not hint:
+        return ""
+    for family in DISCOVERY_ARCHIVE_FAMILIES:
+        cadence, _, name = family.partition("/")
+        if name == hint and f"/{cadence}/{name}/" in key:
+            return family
+    return ""
+
+
+def cost_validation_record(payload: bytes, *, key: str, family: str) -> dict[str, Any]:
+    """The persisted validation summary, or an empty mapping for a non-cost family."""
+    if (COST_VALIDATION_FAMILY_HINTS.get(family) or "") not in COST_VALIDATION_CHECKS:
+        return {}
+    return validate_cost_sample_payload(payload, key=key, family=family).to_dict()
+
+
 def symbols_from_prefixes(prefixes: Sequence[str]) -> list[str]:
     symbols: list[str] = []
     seen: set[str] = set()
@@ -1745,9 +2386,14 @@ def build_sample_plan(
     budget_bytes: int = GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
     max_object_bytes: int = GATE1_MAX_NEW_OBJECT_BYTES,
     cumulative_spent_bytes: int = 0,
-    required_objects: Sequence[tuple[str, str, ListingObject, tuple[str, ...]]] = (),
+    cost_source_objects: Sequence[Mapping[str, Any]] = (),
 ) -> SamplePlan:
     """Plan every sample before downloading, choosing the smallest adequate objects.
+
+    ADR-0020 fixes the priority order: the required non-cost early/middle/recent/delisted
+    samples are selected first, and the bounded three-era cost-source objects are planned
+    afterwards, so a large book object can never block a tiny bar, metric, funding, or
+    mark/index sample.
 
     Already retained, verified objects never consume the new-download budget. The budget
     is cumulative: bytes already spent by earlier invocations reduce this plan's
@@ -1768,7 +2414,13 @@ def build_sample_plan(
     emitted: set[str] = set()
     retained_seen: set[str] = set()
 
-    def _plan_required(obj: ListingObject, family: str, symbol: str, products: tuple[str, ...]) -> None:
+    def _plan_cost_source(
+        obj: ListingObject,
+        family: str,
+        symbol: str,
+        products: tuple[str, ...],
+        regime: str,
+    ) -> None:
         nonlocal spent, retained_total
         size = int(obj.size) if obj.size is not None else 0
         if obj.key in emitted:
@@ -1776,7 +2428,7 @@ def build_sample_plan(
                 SamplePlanEntry(
                     family=family,
                     symbol=symbol,
-                    regime="cost_sample",
+                    regime=regime,
                     products=products,
                     key=obj.key,
                     url=vision_object_url(obj.key),
@@ -1793,7 +2445,7 @@ def build_sample_plan(
                 SamplePlanEntry(
                     family=family,
                     symbol=symbol,
-                    regime="cost_sample",
+                    regime=regime,
                     products=products,
                     key=obj.key,
                     url=vision_object_url(obj.key),
@@ -1808,7 +2460,7 @@ def build_sample_plan(
                     "kind": SAMPLE_BUDGET_BLOCK,
                     "family": family,
                     "symbol": symbol,
-                    "regime": "cost_sample",
+                    "regime": regime,
                     "products": list(products),
                     "required_key": obj.key,
                     "required_bytes": size,
@@ -1823,7 +2475,7 @@ def build_sample_plan(
                 SamplePlanEntry(
                     family=family,
                     symbol=symbol,
-                    regime="cost_sample",
+                    regime=regime,
                     products=products,
                     key=obj.key,
                     url=vision_object_url(obj.key),
@@ -1839,7 +2491,7 @@ def build_sample_plan(
             SamplePlanEntry(
                 family=family,
                 symbol=symbol,
-                regime="cost_sample",
+                regime=regime,
                 products=products,
                 key=obj.key,
                 url=vision_object_url(obj.key),
@@ -1847,9 +2499,6 @@ def build_sample_plan(
                 action="download",
             )
         )
-
-    for family, symbol, obj, products in required_objects:
-        _plan_required(obj, family, symbol, products)
 
     for family in sorted(inventory):
         products = family_products.get(family, ())
@@ -1939,6 +2588,17 @@ def build_sample_plan(
                     )
                     continue
                 entries.append(chosen)
+
+    # ADR-0020 priority: the bounded cost-source sample is planned last, from whatever
+    # allowance the required non-cost samples left.
+    for item in cost_source_objects:
+        _plan_cost_source(
+            item["object"],
+            str(item["family"]),
+            str(item["symbol"]),
+            ("binance_usdm_cost_calibration",),
+            str(item.get("regime") or "cost_source"),
+        )
     return SamplePlan(
         entries=tuple(entries),
         blocked=tuple(blocked),
@@ -2111,6 +2771,12 @@ def plan_code_config_digest(*, budget_bytes: int, max_object_bytes: int) -> str:
             },
             "cadence_selector": "monthly_preferred_daily_gap_tail_v1",
             "cost_sample": "first_midpoint_last_daily_book_v1",
+            # ADR-0020: the bounded Gate-1 cost-source rule is plan identity too, so a
+            # changed stratification can never replay under an existing lock.
+            "cost_source_sample": COST_SOURCE_SELECTOR,
+            "cost_source_strata": list(COST_SOURCE_STRATA),
+            "qualification_priority": "non_cost_samples_then_cost_source_strata_v1",
+            "reviewed_authority_table_version": REVIEWED_AUTHORITY_TABLE_VERSION,
             "regime_selector": "smallest_adequate_per_regime_v1",
             "budget_bytes": int(budget_bytes),
             "independent_object_cap_bytes": None,
@@ -2483,19 +3149,25 @@ def build_amendment_allowance(
 
 
 def candidate_envelope_digest(
-    plan: SamplePlan, *, allowance_id: str, inputs: PlanInputs | None = None
+    plan: SamplePlan,
+    *,
+    allowance_id: str,
+    inputs: PlanInputs | None = None,
+    complete_cost_manifest_digest: str = "",
 ) -> str:
     """Identity of the candidate envelope: its plan, allowance, and input identities.
 
-    This is deliberately not the plan digest. A future exact version-3 lock records
+    This is deliberately not the plan digest. A future exact version-4 lock records
     ``plan_content_digest`` of the same plan, so that value must remain the comparable
-    one; this envelope only adds allowance and input binding on top of it.
+    one; this envelope only adds allowance, input, and complete-cost-product binding on
+    top of it.
     """
     return _digest_of(
         {
             "allowance_id": allowance_id,
             "plan_content_digest": plan_content_digest(plan),
             "inputs": {} if inputs is None else inputs.to_dict(),
+            "complete_cost_manifest_digest": complete_cost_manifest_digest,
         }
     )
 
@@ -2691,28 +3363,66 @@ def candidate_preflight(
     )
 
 
-def build_candidate_plan_v3(
+def superseded_candidate_lineage() -> tuple[dict[str, Any], ...]:
+    """The preserved, unexecuted version-3 candidate, recorded by its exact digests."""
+    return (
+        {
+            "plan_version": SUPERSEDED_CANDIDATE_PLAN_VERSION,
+            "plan_digest": SUPERSEDED_CANDIDATE_PLAN_DIGEST,
+            "plan_digest_domain": "plan_content_digest",
+            "candidate_envelope_digest": SUPERSEDED_CANDIDATE_ENVELOPE_DIGEST,
+            "state": "superseded_candidate",
+            "migrated": False,
+            "downloaded_bytes": 0,
+            "charged_bytes": 0,
+            "note": (
+                "preserved as a superseded candidate, never as a migrated lock; it "
+                "downloaded and charged nothing, so its allowance is reused"
+            ),
+        },
+    )
+
+
+def build_candidate_plan_v4(
     *,
     lock: SamplePlanLock,
     prior_lock_sha256: str,
     plan: SamplePlan,
     inputs: PlanInputs,
     allowance: AmendmentAllowance,
+    complete_cost_manifest_digest: str,
     prior_plan_digests: Sequence[str] = (),
 ) -> dict[str, Any]:
-    """An independent version-3 candidate that migrates nothing and downloads nothing.
+    """An independent version-4 candidate that migrates nothing and downloads nothing.
 
     The candidate is constructed from its own allowance and inputs, not by relabelling
-    the executing plan. Its digest must differ from the currently locked plan and from
-    every historical plan digest.
+    the executing plan. Its digest must differ from the currently locked plan, from every
+    historical plan digest, and from the superseded version-3 candidate it replaces.
     """
     validate_sample_plan(plan)
+    # A version-4 candidate exists only as a claim about a specific complete Gate-2 cost
+    # product. Without that exact identity there is nothing to be a candidate for.
+    if (
+        not isinstance(complete_cost_manifest_digest, str)
+        or len(complete_cost_manifest_digest) != 64
+        or any(char not in "0123456789abcdef" for char in complete_cost_manifest_digest)
+    ):
+        raise SourceQualificationError(
+            "candidate plan requires the complete cost manifest identity",
+            context={
+                "plan_version": CANDIDATE_PLAN_VERSION,
+                "complete_cost_manifest_digest": str(complete_cost_manifest_digest),
+            },
+        )
     # The comparable identity is the plan-content digest an exact future lock would
     # record. The envelope digest additionally binds the allowance and input identity but
     # never replaces or conceals plan-content equality.
     digest = plan_content_digest(plan)
     envelope = candidate_envelope_digest(
-        plan, allowance_id=allowance.ledger_id, inputs=inputs
+        plan,
+        allowance_id=allowance.ledger_id,
+        inputs=inputs,
+        complete_cost_manifest_digest=complete_cost_manifest_digest,
     )
     # Every preserved version participates, including the derived version-0 identity, so
     # an identical historical plan cannot evade reuse detection behind a new allowance.
@@ -2720,6 +3430,9 @@ def build_candidate_plan_v3(
         {lock.plan_digest}
         | {str(item.get("plan_digest") or "") for item in lock.history}
         | {str(item) for item in prior_plan_digests}
+        # The unexecuted version-3 candidate is preserved lineage, so an identical
+        # version-4 plan is a reuse rather than a new candidate.
+        | {str(item["plan_digest"]) for item in superseded_candidate_lineage()}
     )
     prior_digests.discard("")
     if digest in prior_digests:
@@ -2739,6 +3452,10 @@ def build_candidate_plan_v3(
             int(item.get("plan_version") or 0) for item in lock.history
         ),
         "prior_plan_digests": sorted(prior_digests),
+        "superseded_candidates": [dict(item) for item in superseded_candidate_lineage()],
+        # The complete Gate-2 cost product this candidate preserves, by digest.
+        "complete_cost_manifest_digest": complete_cost_manifest_digest,
+        "complete_cost_manifest_digest_version": COST_MANIFEST_DIGEST_VERSION,
         "plan_digest": digest,
         "plan_digest_domain": "plan_content_digest",
         "candidate_envelope_digest": envelope,
@@ -2755,7 +3472,8 @@ def build_candidate_plan_v3(
             "legacy_ledger_charged_again": False,
         },
         "note": (
-            "versions 0-2 remain durable; this candidate is not locked and authorizes no "
+            "versions 0-2 remain durable and the version-3 candidate remains preserved "
+            "as superseded lineage; this candidate is not locked and authorizes no "
             "sample download until a later reviewer decision"
         ),
     }
@@ -3672,6 +4390,55 @@ def build_acquisition_manifest(
     }
 
 
+COST_MANIFEST_DIGEST_VERSION: str = "cex002_complete_cost_manifest_v1"
+
+
+def cost_manifest_digest(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    selector: str,
+    families: Sequence[str],
+    gaps: Sequence[Mapping[str, Any]],
+) -> str:
+    """Canonical identity of the complete first/midpoint/last cost product.
+
+    It binds every selected object's family, symbol, key, listed size, and ETag together
+    with the selector, the families, and the typed gaps, so any change to the final Gate-2
+    product is visible even though Gate 1 only ever samples six of its objects.
+    """
+    objects = sorted(
+        (
+            {
+                "family": str(item["family"]),
+                "symbol": str(item["symbol"]),
+                "key": str(item["key"]),
+                "byte_size": (
+                    None if item["object"].size is None else int(item["object"].size)
+                ),
+                "etag": str(item["object"].etag or ""),
+            }
+            for item in items
+        ),
+        key=lambda row: (row["family"], row["symbol"], row["key"]),
+    )
+    return _digest_of(
+        {
+            "version": COST_MANIFEST_DIGEST_VERSION,
+            "selector": selector,
+            "families": list(families),
+            "objects": objects,
+            "gaps": sorted(
+                ({str(k): v for k, v in dict(gap).items()} for gap in gaps),
+                key=lambda gap: (
+                    str(gap.get("family") or ""),
+                    str(gap.get("symbol") or ""),
+                    str(gap.get("kind") or ""),
+                ),
+            ),
+        }
+    )
+
+
 def select_cost_calibration_sample(
     *,
     inventory: Mapping[str, FamilyInventory],
@@ -3724,6 +4491,114 @@ def select_cost_calibration_sample(
         "gaps": tuple(gaps),
         "selector": "first_midpoint_last_daily_book_v1",
         "families": list(COST_SAMPLE_FAMILIES),
+        "manifest_digest_version": COST_MANIFEST_DIGEST_VERSION,
+        "manifest_digest": cost_manifest_digest(
+            items,
+            selector="first_midpoint_last_daily_book_v1",
+            families=COST_SAMPLE_FAMILIES,
+            gaps=gaps,
+        ),
+    }
+
+
+def select_cost_source_sample(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    universe: Sequence[str],
+) -> dict[str, Any]:
+    """The bounded Gate-1 cost-source sample: one object per era per cost family.
+
+    Every available object of a cost family is ordered canonically by economic date and
+    key, zero-based item ``i`` of ``n`` is assigned stratum ``min(2, floor(3 * i / n))``,
+    and the smallest positive-byte object of each non-empty stratum is selected, ties
+    broken by canonical key. The result qualifies the source contract; it never replaces
+    the complete cost manifest, which stays whole for Gate-2 acquisition.
+    """
+    members = set(universe)
+    items: list[dict[str, Any]] = []
+    gaps: list[dict[str, Any]] = []
+    selected: dict[str, ListingObject] = {}
+    for family in COST_SAMPLE_FAMILIES:
+        entry = inventory.get(family)
+        group = _family_group(family)
+        available: list[tuple[str, str, str, ListingObject]] = []
+        for symbol in sorted(members):
+            objects = () if entry is None else entry.objects.get(symbol, ())
+            for obj in objects:
+                day = object_calendar_date(obj.key)
+                if day is None:
+                    continue
+                available.append((day, obj.key, symbol, obj))
+        # One canonical order for the whole family: economic date first, then key.
+        available.sort(key=lambda item: (item[0], item[1]))
+        total = len(available)
+        if total == 0:
+            gaps.append(
+                {
+                    "family": family,
+                    "family_group": group,
+                    "kind": "cost_source_unavailable",
+                    "blocking": True,
+                    "status": "cost_source_unavailable",
+                }
+            )
+            continue
+        strata: dict[int, list[tuple[str, str, str, ListingObject]]] = {}
+        for index, item in enumerate(available):
+            strata.setdefault(min(2, (3 * index) // total), []).append(item)
+        for stratum_index, stratum in enumerate(COST_SOURCE_STRATA):
+            bucket = strata.get(stratum_index, [])
+            positive = [
+                item
+                for item in bucket
+                if item[3].size is not None and int(item[3].size) > 0
+            ]
+            if not positive:
+                gaps.append(
+                    {
+                        "family": family,
+                        "family_group": group,
+                        "stratum": stratum,
+                        "kind": "cost_source_stratum_unavailable",
+                        "blocking": True,
+                        "status": "cost_source_stratum_unavailable",
+                        "stratum_object_count": len(bucket),
+                    }
+                )
+                continue
+            day, key, symbol, obj = min(
+                positive, key=lambda item: (int(item[3].size or 0), item[1])
+            )
+            selected[key] = obj
+            items.append(
+                {
+                    "family": family,
+                    "family_group": group,
+                    "symbol": symbol,
+                    "key": key,
+                    "stratum": stratum,
+                    "regime": f"cost_source_{stratum}",
+                    "economic_date": day,
+                    "byte_size": int(obj.size or 0),
+                    "stratum_object_count": len(bucket),
+                    "family_object_count": total,
+                    "object": obj,
+                }
+            )
+    return {
+        "object_count": len(selected),
+        "compressed_raw_bytes": sum(int(obj.size or 0) for obj in selected.values()),
+        "keys": tuple(sorted(selected)),
+        "objects": selected,
+        "items": tuple(items),
+        "gaps": tuple(gaps),
+        "strata": list(COST_SOURCE_STRATA),
+        "selector": COST_SOURCE_SELECTOR,
+        "families": list(COST_SAMPLE_FAMILIES),
+        "rule": (
+            "a bounded three-era source sample qualifies the cost source; final "
+            "acceptance still requires the complete cost manifest under Gate 2"
+        ),
     }
 
 
@@ -4754,6 +5629,392 @@ def funding_membership_evidence(
     return evidence
 
 
+def parse_delivery_price_response(payload: Any, *, pair: str) -> tuple[dict[str, Any], ...]:
+    """Parse one official settlement-price response, proving its schema and economics.
+
+    An empty array is honest evidence that the endpoint retains no history for the pair.
+    A non-list body, a malformed record, a non-positive time or price, or a repeated
+    delivery date is a fail-closed defect, never a reason to fall back to spelling.
+    """
+    context = {"pair": pair, "endpoint": OFFICIAL_INCREMENTAL_ENDPOINTS["deliveryPrice"]}
+    if not isinstance(payload, list):
+        raise SourceQualificationError(
+            "delivery-price response is not a list", context=context
+        )
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(payload):
+        if not isinstance(item, dict):
+            raise SourceQualificationError(
+                "delivery-price record is not an object",
+                context={**context, "record": index},
+            )
+        moment = item.get("deliveryTime")
+        price = item.get("deliveryPrice")
+        if isinstance(moment, bool) or not isinstance(moment, int) or moment <= 0:
+            raise SourceQualificationError(
+                "delivery-price record has no positive delivery time",
+                context={**context, "record": index},
+            )
+        if (
+            isinstance(price, bool)
+            or not isinstance(price, (int, float))
+            # NaN and infinity are not positive prices; ``NaN <= 0`` would let them pass.
+            or not math.isfinite(float(price))
+            or price <= 0
+        ):
+            raise SourceQualificationError(
+                "delivery-price record has no positive delivery price",
+                context={**context, "record": index},
+            )
+        delivery_date = (
+            datetime.fromtimestamp(moment / 1000, UTC).date().isoformat()
+        )
+        if delivery_date in seen:
+            raise SourceQualificationError(
+                "delivery-price response repeats a delivery date",
+                context={**context, "delivery_date": delivery_date},
+            )
+        seen.add(delivery_date)
+        rows.append(
+            {
+                "delivery_date": delivery_date,
+                "delivery_time_ms": int(moment),
+                "delivery_price": float(price),
+            }
+        )
+    rows.sort(key=lambda row: str(row["delivery_date"]))
+    return tuple(rows)
+
+
+def validate_delivery_price_response(response: DeliveryPriceResponse) -> tuple[dict[str, Any], ...]:
+    """Prove a settlement-price response against its own retained bytes before use."""
+    endpoint = OFFICIAL_INCREMENTAL_ENDPOINTS["deliveryPrice"]
+    context = {"pair": response.pair, "endpoint": response.endpoint}
+    if response.endpoint != endpoint:
+        raise SourceQualificationError(
+            "delivery-price response came from another endpoint", context=context
+        )
+    if not response.pair:
+        raise SourceQualificationError(
+            "delivery-price response names no pair", context=context
+        )
+    digest = _object_sha256(response.raw_bytes)
+    if digest != response.sha256 or len(response.raw_bytes) != response.byte_size:
+        raise ResumeIntegrityError(
+            "delivery-price response identity does not match its retained bytes",
+            context={**context, "actual_sha256": digest},
+        )
+    if not response.retrieval_time:
+        raise SourceQualificationError(
+            "delivery-price response has no retrieval time", context=context
+        )
+    # Provenance is exactly one redacted pair: the response can never describe a request
+    # it did not make, and no other request value may ride along.
+    if dict(response.request_params) != {"pair": response.pair}:
+        raise SourceQualificationError(
+            "delivery-price provenance does not describe its own request pair",
+            context={**context, "request_params": sorted(response.request_params)},
+        )
+    if response.content_path:
+        blob = Path(response.content_path)
+        if blob.name != response.sha256:
+            raise ResumeIntegrityError(
+                "retained delivery-price path is not its own content address",
+                context={**context, "content_path": response.content_path},
+            )
+        if not blob.is_file() or compute_sha256(blob) != response.sha256:
+            raise ResumeIntegrityError(
+                "retained delivery-price content does not match its digest",
+                context={**context, "content_path": response.content_path},
+            )
+    try:
+        decoded = json.loads(response.raw_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SourceQualificationError(
+            "delivery-price response bytes are not JSON", context=context
+        ) from exc
+    if decoded != response.payload:
+        raise ResumeIntegrityError(
+            "delivery-price payload is not what its retained bytes decode to",
+            context=context,
+        )
+    return parse_delivery_price_response(decoded, pair=response.pair)
+
+
+def delivery_price_evidence(
+    responses: Sequence[DeliveryPriceResponse],
+) -> tuple[dict[str, Any], ...]:
+    """Report every retained settlement-price response and which frozen symbols it met."""
+    frozen = reviewed_delivery_table()
+    evidence: list[dict[str, Any]] = []
+    for response in sorted(responses, key=lambda item: item.pair):
+        rows = validate_delivery_price_response(response)
+        dates = {str(row["delivery_date"]) for row in rows}
+        members = [row for row in frozen if str(row["pair"]) == response.pair]
+        matched = sorted(
+            str(row["symbol"]) for row in members if str(row["delivery_date"]) in dates
+        )
+        missing = sorted(
+            str(row["symbol"]) for row in members if str(row["delivery_date"]) not in dates
+        )
+        evidence.append(
+            {
+                "endpoint": response.endpoint,
+                "pair": response.pair,
+                "request_params": dict(response.request_params),
+                "retrieval_time": response.retrieval_time,
+                "byte_size": int(response.byte_size),
+                "sha256": response.sha256,
+                "content_path": response.content_path,
+                "record_count": len(rows),
+                "records": [dict(row) for row in rows],
+                "delivery_dates": sorted(dates),
+                "matched_frozen_symbols": matched,
+                "missing_frozen_symbols": missing,
+                "retention": (
+                    "present records are authoritative; an absent date is retention "
+                    "truncation, never permission to generalize from spelling"
+                ),
+            }
+        )
+    return tuple(evidence)
+
+
+def _archive_presence(symbol: str, inventory: Mapping[str, FamilyInventory]) -> dict[str, Any]:
+    """Retained official archive provenance for one exact name."""
+    families: list[str] = []
+    object_count = 0
+    byte_total = 0
+    unknown_size = 0
+    example_key = ""
+    for family in sorted(inventory):
+        objects = inventory[family].objects.get(symbol) or ()
+        if not objects:
+            continue
+        families.append(family)
+        object_count += len(objects)
+        for obj in objects:
+            if obj.size is None:
+                unknown_size += 1
+            else:
+                byte_total += int(obj.size)
+        if not example_key:
+            example_key = objects[0].key
+    return {
+        "families": families,
+        "family_count": len(families),
+        "object_count": object_count,
+        "compressed_raw_bytes": byte_total,
+        "unknown_size_objects": unknown_size,
+        "example_key": example_key,
+    }
+
+
+def affirmative_perpetual_authority(
+    symbol: str,
+    *,
+    current_rows: Mapping[str, Mapping[str, Any]],
+    historical_rows: Mapping[str, Mapping[str, Any]],
+    funding_evidence: Mapping[str, Mapping[str, Any]],
+) -> str:
+    """The evidence kind that independently confirms a perpetual, or "" when none does.
+
+    This is the same affirmative rule the normal membership path applies; an alias never
+    creates authority for its base, it only borrows what the base already proves.
+    """
+    current = current_rows.get(symbol)
+    if current is not None and is_confirmed_perpetual_row(current):
+        return ALIAS_BASE_AUTHORITY_CURRENT
+    historical = historical_rows.get(symbol)
+    if historical is not None and is_confirmed_perpetual_row(historical):
+        return ALIAS_BASE_AUTHORITY_RETAINED
+    if symbol in funding_evidence:
+        return ALIAS_BASE_AUTHORITY_FUNDING
+    return ""
+
+
+def resolve_reviewed_delivery_identities(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    funding_evidence: Mapping[str, Mapping[str, Any]],
+    delivery_dates: Mapping[str, Collection[str]],
+) -> dict[str, dict[str, Any]]:
+    """Re-prove every frozen delivery identity from retained official evidence.
+
+    Frozen membership alone resolves nothing. Each identity must still be observable
+    across at least two official archive families and must still show no realized funding,
+    and a direct member must still match an exact retained settlement-price date. Anything
+    else keeps the name blocking.
+    """
+    resolutions: dict[str, dict[str, Any]] = {}
+    for row in reviewed_delivery_table():
+        symbol = str(row["symbol"])
+        authority_class = str(row["authority_class"])
+        presence = _archive_presence(symbol, inventory)
+        funding = funding_evidence.get(symbol)
+        dates = set(delivery_dates.get(str(row["pair"]), ()))
+        date_matched = str(row["delivery_date"]) in dates
+        observed = presence["object_count"] > 0
+        reasons: list[str] = []
+        if presence["family_count"] < REVIEWED_DELIVERY_MIN_FAMILIES:
+            reasons.append("archive_multi_family_lifecycle_unproved")
+        if funding is not None:
+            # A realized-funding observation would contradict a delivery identity.
+            reasons.append("realized_funding_observed")
+        if authority_class == DELIVERY_AUTHORITY_DIRECT and not date_matched:
+            reasons.append("official_settlement_price_date_absent")
+        resolutions[symbol] = {
+            "symbol": symbol,
+            "pair": str(row["pair"]),
+            "delivery_date": str(row["delivery_date"]),
+            "authority_class": authority_class,
+            "table_version": REVIEWED_AUTHORITY_TABLE_VERSION,
+            "table_sha256": reviewed_delivery_table_digest(),
+            "observed_in_archive": observed,
+            "archive_evidence": presence,
+            "realized_funding_objects": 0 if funding is None else int(
+                funding.get("object_count") or 0
+            ),
+            "settlement_price_date_matched": date_matched,
+            "resolved": not reasons,
+            "unresolved_reasons": reasons,
+            "membership": "delivery_non_perpetual",
+            "basis": (
+                "retained official multi-family archive lifecycle and realized-funding "
+                "absence, plus an exact retained settlement-price date"
+                if authority_class == DELIVERY_AUTHORITY_DIRECT
+                else "reviewer inference from the retained official multi-family archive "
+                "lifecycle and realized-funding absence"
+            ),
+        }
+    return resolutions
+
+
+def resolve_reviewed_settlement_aliases(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    current_rows: Mapping[str, Mapping[str, Any]],
+    historical_rows: Mapping[str, Mapping[str, Any]],
+    funding_evidence: Mapping[str, Mapping[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Resolve each frozen alias only through its base's independent perpetual evidence.
+
+    The alias is never a separate contract and never silently merges into the base: its
+    raw name, base, families, objects, and bytes stay typed, nonconsumable evidence until
+    later economic validation proves which intervals belong to the base contract.
+    """
+    resolutions: dict[str, dict[str, Any]] = {}
+    for row in reviewed_alias_table():
+        alias = str(row["alias"])
+        base = str(row["base"])
+        expected = str(row["base_authority"])
+        presence = _archive_presence(alias, inventory)
+        observed_authority = affirmative_perpetual_authority(
+            base,
+            current_rows=current_rows,
+            historical_rows=historical_rows,
+            funding_evidence=funding_evidence,
+        )
+        reasons: list[str] = []
+        if not observed_authority:
+            reasons.append("base_has_no_affirmative_perpetual_evidence")
+        elif observed_authority != expected:
+            reasons.append("base_authority_changed_since_review")
+        resolutions[alias] = {
+            "alias": alias,
+            "base": base,
+            "table_version": REVIEWED_AUTHORITY_TABLE_VERSION,
+            "table_sha256": reviewed_alias_table_digest(),
+            "frozen_base_authority": expected,
+            "observed_base_authority": observed_authority,
+            "observed_in_archive": presence["object_count"] > 0,
+            "archive_evidence": presence,
+            "resolved": not reasons,
+            "unresolved_reasons": reasons,
+            "consumable": False,
+            "membership": "not_a_separate_contract",
+            "economic_status": (
+                "alias objects stay typed and nonconsumable until later economic "
+                "validation proves whether a non-overlapping interval belongs to the base"
+            ),
+        }
+    return resolutions
+
+
+def reviewed_authority_report(
+    *,
+    inventory: Mapping[str, FamilyInventory],
+    current_rows: Mapping[str, Mapping[str, Any]],
+    historical_rows: Mapping[str, Mapping[str, Any]],
+    funding_evidence: Mapping[str, Mapping[str, Any]],
+    delivery_responses: Sequence[DeliveryPriceResponse] = (),
+) -> dict[str, Any]:
+    """The complete ADR-0020 historical-authority evidence block.
+
+    Both frozen tables are proved, every retained settlement-price response is validated,
+    and every frozen identity and alias is re-proved. An observed member that fails its
+    re-proof is reported as an explicit mismatch and stays blocking.
+    """
+    tables = validate_reviewed_authority_tables()
+    evidence = delivery_price_evidence(delivery_responses)
+    delivery_dates = {
+        str(item["pair"]): set(item["delivery_dates"]) for item in evidence
+    }
+    delivery = resolve_reviewed_delivery_identities(
+        inventory=inventory,
+        funding_evidence=funding_evidence,
+        delivery_dates=delivery_dates,
+    )
+    aliases = resolve_reviewed_settlement_aliases(
+        inventory=inventory,
+        current_rows=current_rows,
+        historical_rows=historical_rows,
+        funding_evidence=funding_evidence,
+    )
+    mismatches = [
+        {
+            "kind": "reviewed_delivery_identity",
+            "symbol": item["symbol"],
+            "reasons": list(item["unresolved_reasons"]),
+        }
+        for item in delivery.values()
+        if item["observed_in_archive"] and not item["resolved"]
+    ] + [
+        {
+            "kind": "reviewed_settlement_alias",
+            "symbol": item["alias"],
+            "base": item["base"],
+            "reasons": list(item["unresolved_reasons"]),
+        }
+        for item in aliases.values()
+        if item["observed_in_archive"] and not item["resolved"]
+    ]
+    return {
+        **tables,
+        "delivery_price_evidence": [dict(item) for item in evidence],
+        "delivery_identities": [dict(delivery[name]) for name in sorted(delivery)],
+        "settlement_aliases": [dict(aliases[name]) for name in sorted(aliases)],
+        "resolved_delivery_identities": sorted(
+            name for name, item in delivery.items() if item["resolved"]
+        ),
+        "resolved_settlement_aliases": sorted(
+            name for name, item in aliases.items() if item["resolved"]
+        ),
+        "observed_delivery_identities": sorted(
+            name for name, item in delivery.items() if item["observed_in_archive"]
+        ),
+        "observed_settlement_aliases": sorted(
+            name for name, item in aliases.items() if item["observed_in_archive"]
+        ),
+        "mismatches": mismatches,
+        "future_name_rule": (
+            "a date- or settlement-shaped name outside these frozen tables is never "
+            "classified by spelling and remains blocking until a new reviewed version"
+        ),
+    }
+
+
 def classify_membership(
     *,
     discovered: Sequence[str],
@@ -4761,6 +6022,8 @@ def classify_membership(
     historical_rows: Mapping[str, Mapping[str, Any]],
     funding_evidence: Mapping[str, Mapping[str, Any]],
     current_response_sha256: str = "",
+    reviewed_delivery: Mapping[str, Mapping[str, Any]] | None = None,
+    reviewed_aliases: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> tuple[MembershipClassification, ...]:
     """Classify every observed name from affirmative official evidence only.
 
@@ -4768,6 +6031,11 @@ def classify_membership(
     historical contract-metadata row, then an official realized-funding observation. A
     name with no official evidence stays unresolved and blocks membership; its spelling is
     recorded as an audit hint and never decides the class.
+
+    ADR-0020 adds one further evidence step for names with no such row: an exact member of
+    a frozen reviewed authority table whose evidence still re-proves is resolved as a
+    delivery identity or a settlement alias. Neither becomes a perpetual, and a member
+    whose evidence no longer re-proves falls through and blocks like any other name.
     """
     archive = set(discovered)
     names = sorted(archive | set(current_rows))
@@ -4810,6 +6078,31 @@ def classify_membership(
                 }
             )
             membership_class = MEMBERSHIP_CONFIRMED
+        frozen_delivery = (reviewed_delivery or {}).get(symbol)
+        if frozen_delivery is not None:
+            evidence.append(
+                {"kind": "reviewed_delivery_authority", **dict(frozen_delivery)}
+            )
+            if membership_class == MEMBERSHIP_CONFIRMED:
+                # A frozen delivery identity is never an accepted perpetual. Perpetual
+                # evidence under one of these exact names contradicts the reviewed
+                # authority, so the name blocks instead of joining the universe.
+                membership_class = MEMBERSHIP_DATED_DELIVERY
+            elif (
+                membership_class == MEMBERSHIP_UNRESOLVED
+                and frozen_delivery.get("resolved") is True
+            ):
+                membership_class = MEMBERSHIP_REVIEWED_DELIVERY
+        frozen_alias = (reviewed_aliases or {}).get(symbol)
+        if frozen_alias is not None:
+            evidence.append({"kind": "reviewed_settlement_alias", **dict(frozen_alias)})
+            # An alias is never a separate member: it is either resolved through its base
+            # or it blocks, whatever its own archive objects would otherwise imply.
+            if frozen_alias.get("resolved") is True:
+                if membership_class in {MEMBERSHIP_UNRESOLVED, MEMBERSHIP_CONFIRMED}:
+                    membership_class = MEMBERSHIP_SETTLEMENT_ALIAS
+            elif membership_class == MEMBERSHIP_CONFIRMED:
+                membership_class = MEMBERSHIP_SETTLEMENT_ARTIFACT
         hint = _name_pattern_hint(symbol)
         if membership_class == MEMBERSHIP_UNRESOLVED:
             if hint == "settlement_suffix":
@@ -5933,6 +7226,10 @@ def recover_retained_samples(
         )
         payload = dest.read_bytes()
         schema = infer_schema_fields(payload, name=key)
+        # Recovery adopts an object on the same evidence a fresh download would need.
+        cost_validation = cost_validation_record(
+            payload, key=key, family=_family_from_object_key(key)
+        )
         checkpoint.record(
             key,
             {
@@ -5944,6 +7241,7 @@ def recover_retained_samples(
                 "checksum_match": True,
                 "schema_kind": schema.kind,
                 "schema_fields": list(schema.fields),
+                "cost_validation": cost_validation,
                 "retrieval_time": "",
                 "recovered_from_retained_bytes": True,
                 "provider_checksum_path": str(sidecar_path),
@@ -6239,6 +7537,53 @@ class FapiCurrentContractSource:
             sha256=digest,
             byte_size=len(raw),
             retrieval_time=result.retrieval_utc.astimezone(UTC).isoformat(),
+            content_path=str(result.dest_path),
+        )
+
+
+class FapiDeliveryPriceSource:
+    """Official settlement-price reads for exactly the frozen delivery pairs."""
+
+    def __init__(
+        self,
+        transport: HttpTransport,
+        *,
+        cache_dir: Path,
+        timeout: TimeoutConfig | None = None,
+    ) -> None:
+        self._transport = transport
+        self._cache_dir = cache_dir
+        self._timeout = timeout or TimeoutConfig()
+
+    def fetch_delivery_prices(self, pair: str) -> DeliveryPriceResponse:
+        endpoint = OFFICIAL_INCREMENTAL_ENDPOINTS["deliveryPrice"]
+        params = {"pair": pair}
+        result = atomic_download(
+            endpoint,
+            self._cache_dir,
+            params=params,
+            transport=self._transport,
+            timeout=self._timeout,
+            max_bytes=1_048_576,
+        )
+        raw = result.dest_path.read_bytes()
+        digest = _object_sha256(raw)
+        if digest != result.sha256:
+            raise ResumeIntegrityError(
+                "retained delivery-price bytes do not match the download digest",
+                context={"pair": pair, "path": str(result.dest_path)},
+            )
+        return DeliveryPriceResponse(
+            endpoint=endpoint,
+            pair=pair,
+            payload=json.loads(raw.decode("utf-8")),
+            raw_bytes=raw,
+            sha256=digest,
+            byte_size=len(raw),
+            retrieval_time=result.retrieval_utc.astimezone(UTC).isoformat(),
+            # The endpoint and pair are recorded through the redaction helper, so no
+            # secret-shaped request value can ever reach the evidence.
+            request_params=redact_request_params(params),
             content_path=str(result.dest_path),
         )
 
@@ -6600,6 +7945,18 @@ def _acquire_sample(
             sidecar_dir=sidecar_dir,
         )
         schema = tuple(str(item) for item in (prior.get("schema_fields") or ()))
+        schema_kind = str(prior.get("schema_kind") or "")
+        cost_validation = dict(prior.get("cost_validation") or {})
+        if _is_cost_validation_family(family):
+            # Reuse re-proves the payload itself. A checkpointed schema line is not
+            # evidence that the retained rows are still parseable and economically valid.
+            retained = dest.read_bytes()
+            proof = validate_cost_sample_payload(retained, key=key, family=family)
+            identity = infer_schema_fields(retained, name=key)
+            schema = identity.fields
+            schema_kind = identity.kind
+            cost_validation = proof.to_dict()
+            checkpoint.record(key, {**dict(prior), "cost_validation": cost_validation})
         return SampleRecord(
             product=primary,
             products=products,
@@ -6613,11 +7970,12 @@ def _acquire_sample(
             reused_existing=True,
             provider_checksum=checksum,
             checksum_match=True,
-            schema_kind=str(prior.get("schema_kind") or ""),
+            schema_kind=schema_kind,
             schema_fields=schema,
             availability_semantics="source_object_listing_time_unknown",
             retrieval_time=str(prior.get("retrieval_time") or ""),
             content_path=str(dest),
+            cost_validation=cost_validation,
         )
 
     if listed_size <= 0:
@@ -6733,6 +8091,8 @@ def _acquire_sample(
             context={"key": key},
         )
     schema = infer_schema_fields(payload, name=key)
+    # A cost object is qualified only by reading every row it contains.
+    cost_validation = cost_validation_record(payload, key=key, family=family)
     # The sidecar must prove this exact object before the checkpoint can be written.
     verify_provider_sidecar(
         key=key,
@@ -6758,6 +8118,7 @@ def _acquire_sample(
             "provider_checksum_source": checksum_source,
             "provider_checksum_path": str(sidecar_path),
             "provider_checksum_sha256": sidecar_sha256,
+            "cost_validation": cost_validation,
         },
     )
     return SampleRecord(
@@ -6778,6 +8139,7 @@ def _acquire_sample(
         availability_semantics="source_object_listing_time_unknown",
         retrieval_time=retrieval_time,
         content_path=str(dest_path),
+        cost_validation=cost_validation,
     )
 
 
@@ -6858,6 +8220,7 @@ def run_source_qualification(
     transport: HttpTransport | None = None,
     progress_path: Path | None = None,
     current_contracts: CurrentContractSource | None = None,
+    delivery_prices: DeliveryPriceSource | None = None,
     coinalyze_transport: CoinalyzeTransport | None = None,
     coinalyze_api_key: str | None = None,
     max_symbols: int | None = None,
@@ -6961,6 +8324,32 @@ def run_source_qualification(
     historical_rows = metadata_store.historical_rows()
     lifecycle_rows: dict[str, dict[str, Any]] = {**historical_rows, **current_rows}
     funding_evidence = funding_membership_evidence(inventory)
+    # ADR-0020: exactly the distinct pairs the frozen delivery table needs, once each.
+    delivery_responses: list[DeliveryPriceResponse] = []
+    delivery_pairs = sorted({str(row["pair"]) for row in reviewed_delivery_table()})
+    if delivery_prices is not None:
+        settlement_source = delivery_prices
+        for pair in delivery_pairs:
+            delivery_responses.append(
+                retry_runner.run(
+                    # The label carries the pair only: no query string, no credential.
+                    f"delivery-price:{pair}",
+                    lambda pair=pair: settlement_source.fetch_delivery_prices(pair),
+                )
+            )
+    historical_authority = reviewed_authority_report(
+        inventory=inventory,
+        current_rows=current_rows,
+        historical_rows=historical_rows,
+        funding_evidence=funding_evidence,
+        delivery_responses=tuple(delivery_responses),
+    )
+    reviewed_delivery = {
+        str(item["symbol"]): item for item in historical_authority["delivery_identities"]
+    }
+    reviewed_aliases = {
+        str(item["alias"]): item for item in historical_authority["settlement_aliases"]
+    }
     classifications = classify_membership(
         discovered=discovered,
         current_rows=current_rows,
@@ -6969,6 +8358,8 @@ def run_source_qualification(
         current_response_sha256=(
             exchange_response.sha256 if exchange_response is not None else ""
         ),
+        reviewed_delivery=reviewed_delivery,
+        reviewed_aliases=reviewed_aliases,
     )
     by_class: dict[str, list[str]] = {}
     for item in classifications:
@@ -7013,15 +8404,12 @@ def run_source_qualification(
     sampling_family_products = {
         family: products for family, products in sampling_family_products.items() if products
     }
-    required_cost_objects = tuple(
-        (
-            str(item["family"]),
-            str(item["symbol"]),
-            item["object"],
-            ("binance_usdm_cost_calibration",),
-        )
-        for item in cost_sample["items"]
+    # ADR-0020: the complete cost manifest above stays whole for Gate-2 acquisition and
+    # storage; Gate 1 plans only this bounded three-era cost-source sample.
+    cost_source_sample = select_cost_source_sample(
+        inventory=inventory, universe=evaluation_universe
     )
+    cost_source_objects = tuple(cost_source_sample["items"])
 
     incidents: list[dict[str, Any]] = []
     product_incident_counts: dict[str, int] = {product: 0 for product in REQUIRED_PRODUCTS}
@@ -7042,6 +8430,7 @@ def run_source_qualification(
                 continue
             candidate_keys.extend(obj.key for obj in entry.objects.get(symbol, ()))
     candidate_keys.extend(str(item["key"]) for item in cost_sample["items"])
+    candidate_keys.extend(str(item["key"]) for item in cost_source_sample["items"])
     recover_retained_samples(
         sample_dir=sample_dir,
         sidecar_dir=list_cache_dir,
@@ -7148,14 +8537,25 @@ def run_source_qualification(
         "plan_version": CANDIDATE_PLAN_VERSION,
         "migration_authorized": False,
         "download_authorized": False,
+        "superseded_candidates": [dict(item) for item in superseded_candidate_lineage()],
         "note": (
-            "a version-3 candidate is constructed only in candidate-plan-only mode, from "
+            "a version-4 candidate is constructed only in candidate-plan-only mode, from "
             "read-only prior authority; the executing plan is never relabelled as one"
         ),
     }
     amendment_allowance: AmendmentAllowance | None = None
 
     if candidate_plan_only:
+        # ADR-0020: a frozen identity whose official evidence no longer re-proves is a
+        # closed door, not a footnote. No candidate plan is built over it.
+        if historical_authority["mismatches"]:
+            raise SourceQualificationError(
+                "reviewed historical authority mismatch blocks candidate construction",
+                context={
+                    "table_version": REVIEWED_AUTHORITY_TABLE_VERSION,
+                    "mismatches": list(historical_authority["mismatches"]),
+                },
+            )
         # The preflight already hashed, loaded, and validated this authority before any
         # store or remote facility existed; those exact objects are reused here.
         assert candidate_authority is not None
@@ -7182,7 +8582,7 @@ def run_source_qualification(
             budget_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
             max_object_bytes=GATE1_ARCHITECTURE_AMENDMENT_BUDGET_BYTES,
             cumulative_spent_bytes=0,
-            required_objects=required_cost_objects,
+            cost_source_objects=cost_source_objects,
         )
         amendment_allowance = build_amendment_allowance(
             path=amendment_ledger_path,
@@ -7192,12 +8592,13 @@ def run_source_qualification(
             retained_keys=retained_keys,
             planned_new_bytes=plan.new_download_bytes,
         )
-        candidate_plan_record = build_candidate_plan_v3(
+        candidate_plan_record = build_candidate_plan_v4(
             lock=lock,
             prior_lock_sha256=prior_lock_sha256,
             plan=plan,
             inputs=plan_inputs,
             allowance=amendment_allowance,
+            complete_cost_manifest_digest=str(cost_sample["manifest_digest"]),
             prior_plan_digests=candidate_authority.prior_plan_digests,
         )
         # Prove the prior authority bytes did not move while the candidate was built.
@@ -7257,7 +8658,7 @@ def run_source_qualification(
                 budget_bytes=sample_budget_bytes,
                 max_object_bytes=max_sample_object_bytes,
                 cumulative_spent_bytes=ledger.spent_max_bytes,
-                required_objects=required_cost_objects,
+                cost_source_objects=cost_source_objects,
             )
             # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
             # is preserved in the lock history and on disk before the first lock overwrites
@@ -8059,6 +9460,8 @@ def run_source_qualification(
                 ),
             },
             "selected_storage": selected_storage,
+            # The complete Gate-2 cost product: every object, byte, gap, and digest of
+            # the frozen first/midpoint/last manifest, unreduced.
             "cost_sample": {
                 "object_count": cost_sample["object_count"],
                 "compressed_raw_bytes": cost_sample["compressed_raw_bytes"],
@@ -8066,6 +9469,39 @@ def run_source_qualification(
                 "gaps": list(cost_sample["gaps"]),
                 "selector": cost_sample["selector"],
                 "families": list(cost_sample["families"]),
+                "manifest_digest_version": cost_sample["manifest_digest_version"],
+                "manifest_digest": cost_sample["manifest_digest"],
+                "gate": "gate2_acquisition_and_storage",
+                "charged_to_gate1_allowance": False,
+            },
+            # ADR-0020: the bounded Gate-1 cost-source sample. It qualifies the source
+            # contract and never substitutes for the complete manifest above.
+            "cost_source_sample": {
+                "object_count": cost_source_sample["object_count"],
+                "compressed_raw_bytes": cost_source_sample["compressed_raw_bytes"],
+                "keys": list(cost_source_sample["keys"]),
+                "items": [
+                    {
+                        name: value
+                        for name, value in item.items()
+                        if name != "object"
+                    }
+                    for item in cost_source_sample["items"]
+                ],
+                "gaps": list(cost_source_sample["gaps"]),
+                "selector": cost_source_sample["selector"],
+                "strata": list(cost_source_sample["strata"]),
+                "families": list(cost_source_sample["families"]),
+                "rule": cost_source_sample["rule"],
+                "gate": "gate1_source_qualification",
+                "charged_to_gate1_allowance": True,
+                # Published proof that each acquired cost object was read row by row.
+                "validation_version": COST_VALIDATION_VERSION,
+                "validations": [
+                    dict(item.cost_validation)
+                    for item in samples_sorted
+                    if item.cost_validation
+                ],
             },
             # ADR-0019: a summary/reference only. ``acquisition_manifest`` is the sole
             # owner of the detailed collections; they are never serialized twice.
@@ -8156,6 +9592,9 @@ def run_source_qualification(
             ],
             "retained_contract_metadata_rows": len(metadata_store.symbol_snapshot),
             "retained_contract_snapshots": len(metadata_store.snapshots),
+            # ADR-0020: the frozen reviewed tables, their retained official evidence, and
+            # every delivery/alias classification with its exact basis.
+            "historical_authority": historical_authority,
             "classifications": [item.to_dict() for item in classifications],
         },
         accepted_universe=confirmed_universe,

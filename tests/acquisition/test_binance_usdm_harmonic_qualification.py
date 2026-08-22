@@ -51,8 +51,24 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     LEDGER_TRANSFERRED,
     LEGACY_BUDGET_UNRESOLVED,
     LEGACY_PLAN_BACKUP_FILENAME,
+    COST_SOURCE_SELECTOR,
+    COST_SOURCE_STRATA,
     LISTING_DEFAULT_WORKERS,
     LISTING_MAX_WORKERS,
+    DELIVERY_AUTHORITY_DIRECT,
+    DELIVERY_AUTHORITY_REVIEWED_ARCHIVE,
+    MEMBERSHIP_DATED_DELIVERY,
+    MEMBERSHIP_REVIEWED_DELIVERY,
+    MEMBERSHIP_SETTLEMENT_ALIAS,
+    MEMBERSHIP_SETTLEMENT_ARTIFACT,
+    REVIEWED_AUTHORITY_TABLE_VERSION,
+    REVIEWED_ALIAS_TABLE_SHA256,
+    REVIEWED_DELIVERY_IDENTITIES,
+    REVIEWED_DELIVERY_TABLE_SHA256,
+    REVIEWED_SETTLEMENT_ALIASES,
+    SUPERSEDED_CANDIDATE_ENVELOPE_DIGEST,
+    SUPERSEDED_CANDIDATE_PLAN_DIGEST,
+    SUPERSEDED_CANDIDATE_PLAN_VERSION,
     MANIFEST_DAILY_FALLBACK,
     MANIFEST_DETAIL_FORMAT,
     MANIFEST_DETAIL_KIND,
@@ -62,10 +78,8 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     MANIFEST_MONTHLY_REJECTED,
     MANIFEST_OVERLAP,
     MEMBERSHIP_CONFIRMED,
-    MEMBERSHIP_DATED_DELIVERY,
     MEMBERSHIP_DELIVERY,
     MEMBERSHIP_FAMILY_PREFIXES,
-    MEMBERSHIP_SETTLEMENT_ARTIFACT,
     MEMBERSHIP_TRADIFI,
     MEMBERSHIP_UNRESOLVED,
     MEMBERSHIP_UNSUPPORTED_SEMANTICS,
@@ -73,6 +87,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     OFFICIAL_INCREMENTAL_ENDPOINTS,
     PLAN_INPUTS_CHANGED,
     REPORT_PUBLICATION_CEILING_BYTES,
+    SAMPLE_BUDGET_BLOCK,
     REQUIRED_PRODUCTS,
     SAMPLE_PLAN_LOCK_FILENAME,
     SEMANTICS_INCOHERENT_IDENTITY,
@@ -118,10 +133,27 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     bounded_map,
     build_acquisition_manifest,
     build_amendment_allowance,
-    build_candidate_plan_v3,
+    build_candidate_plan_v4,
     build_family_inventory,
+    FapiDeliveryPriceSource,
+    MemoryDeliveryPriceSource,
+    affirmative_perpetual_authority,
+    delivery_price_evidence,
+    parse_delivery_price_response,
+    resolve_reviewed_delivery_identities,
+    resolve_reviewed_settlement_aliases,
+    reviewed_alias_table,
+    reviewed_alias_table_digest,
+    reviewed_authority_report,
+    reviewed_delivery_table,
+    reviewed_delivery_table_digest,
+    select_cost_source_sample,
+    validate_delivery_price_response,
+    validate_reviewed_authority_tables,
     build_sample_plan,
     candidate_envelope_digest,
+    cost_manifest_digest,
+    cost_validation_record,
     candidate_preflight,
     canonical_contract_row,
     canonical_retry_incidents,
@@ -155,15 +187,18 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     parse_exchange_info_rows,
     parse_provider_checksum,
     parse_s3_list_bucket,
+    plan_code_config_digest,
     plan_content_digest,
     publish_manifest_detail,
     qualification_exit_code,
+    recover_retained_samples,
     refuse_restricted_scope,
     retained_evidence_digest,
     retained_evidence_snapshot,
     run_source_qualification,
     select_cost_calibration_sample,
     select_nonoverlapping_objects,
+    validate_cost_sample_payload,
     validate_exchange_info_response,
     validate_manifest_detail,
     validate_prior_plan_history,
@@ -4268,7 +4303,9 @@ def test_candidate_plan_v3_is_not_a_lock_mutation(tmp_path: Path) -> None:
         candidate_plan_only=True,
     )
     candidate = report.candidate_plan
-    assert candidate["plan_version"] == 3
+    # ADR-0020 emits version 4; the unexecuted version-3 candidate stays preserved
+    # lineage rather than a migrated lock.
+    assert candidate["plan_version"] == 4
     assert candidate["state"] == "candidate_unmigrated"
     assert candidate["migration_authorized"] is False
     assert candidate["download_authorized"] is False
@@ -4288,7 +4325,7 @@ def test_candidate_plan_v3_is_not_a_lock_mutation(tmp_path: Path) -> None:
     assert fetched == []
     assert report.samples == ()
     assert report.plan_lock["plan_version"] == 2
-    # The comparable identity is the plan-content digest an exact version-3 lock would
+    # The comparable identity is the plan-content digest an exact version-4 lock would
     # record, not an envelope hash that could conceal plan-content reuse.
     assert candidate["plan_digest_domain"] == "plan_content_digest"
     assert candidate["plan_digest"] == plan_content_digest(
@@ -5008,14 +5045,40 @@ def test_candidate_reuse_detection_includes_the_derived_version_zero_identity(
     )
     # An identical historical plan cannot evade reuse detection behind the new allowance.
     with pytest.raises(ResumeIntegrityError, match="reuses a prior plan-content digest"):
-        build_candidate_plan_v3(
+        build_candidate_plan_v4(
             lock=lock,
             prior_lock_sha256="",
             plan=legacy_plan,
             inputs=inputs,
             allowance=allowance,
+            complete_cost_manifest_digest="1" * 64,
             prior_plan_digests=digests,
         )
+
+    # A version-4 candidate without a well-formed complete cost identity is refused
+    # before any plan-lineage question is reached.
+    for invalid in ("", "not-a-digest", "A" * 64, "1" * 63, "g" * 64):
+        with pytest.raises(
+            SourceQualificationError, match="requires the complete cost manifest identity"
+        ):
+            build_candidate_plan_v4(
+                lock=lock,
+                prior_lock_sha256="",
+                plan=legacy_plan,
+                inputs=inputs,
+                allowance=allowance,
+                complete_cost_manifest_digest=invalid,
+                prior_plan_digests=digests,
+            )
+    assert "complete_cost_manifest_digest" in inspect.signature(
+        build_candidate_plan_v4
+    ).parameters
+    assert (
+        inspect.signature(build_candidate_plan_v4)
+        .parameters["complete_cost_manifest_digest"]
+        .default
+        is inspect.Parameter.empty
+    )
 
 
 def test_prior_history_validation_accepts_the_preserved_transition(tmp_path: Path) -> None:
@@ -6665,3 +6728,1691 @@ def test_split_publication_leaves_gate1_authority_unchanged(tmp_path: Path) -> N
         assert key in document
     assert document["acquisition_manifest"]["detail"] == descriptor
     assert descriptor["record_counts"]["row"] == len(report.acquisition_manifest["rows"])
+
+
+# --- ADR-0020 reviewed historical authority and qualification budget -------------------
+
+
+def _delivery_payload(*dates: str) -> list[dict[str, Any]]:
+    """An official settlement-price body for exactly these UTC delivery dates."""
+    return [
+        {
+            "deliveryTime": int(
+                datetime.fromisoformat(f"{day}T08:00:00+00:00").timestamp() * 1000
+            ),
+            "deliveryPrice": 27000.5 + index,
+        }
+        for index, day in enumerate(dates)
+    ]
+
+
+def _authority_index(
+    symbols: list[str],
+    *,
+    families: list[tuple[str, str]] | None = None,
+    months: Sequence[str] = ("2021-01", "2021-02"),
+) -> MemoryObjectIndex:
+    """An archive holding exactly these names across the given official families."""
+    return _index_with_family(
+        symbols=symbols,
+        families=families
+        or [
+            ("monthly/trades", "trades"),
+            ("monthly/aggTrades", "aggTrades"),
+            ("monthly/klines", "1h"),
+        ],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+        },
+        months=months,
+    )
+
+
+def _classification(report: QualificationReport, symbol: str) -> dict[str, Any]:
+    return next(
+        item
+        for item in report.membership["classifications"]
+        if item["symbol"] == symbol
+    )
+
+
+def test_reviewed_authority_tables_hold_exactly_the_reviewed_63_identities() -> None:
+    summary = validate_reviewed_authority_tables()
+    delivery = reviewed_delivery_table()
+    aliases = reviewed_alias_table()
+    assert summary["table_version"] == REVIEWED_AUTHORITY_TABLE_VERSION == "review137-v1"
+    # 46 exact delivery identities: 36 direct, 10 reviewed-archive inferences.
+    assert summary["delivery_identity_count"] == len(delivery) == 46
+    assert summary["delivery_direct_count"] == 36
+    assert summary["delivery_reviewed_archive_count"] == 10
+    assert summary["delivery_pairs"] == ["BTCBUSD", "BTCUSDT", "ETHUSDT"]
+    by_pair: dict[str, list[str]] = {}
+    for row in delivery:
+        by_pair.setdefault(str(row["pair"]), []).append(str(row["symbol"]))
+    assert len(by_pair["BTCBUSD"]) == 2
+    assert len(by_pair["BTCUSDT"]) == len(by_pair["ETHUSDT"]) == 22
+    inference = {
+        str(row["symbol"])
+        for row in delivery
+        if str(row["authority_class"]) == DELIVERY_AUTHORITY_REVIEWED_ARCHIVE
+    }
+    assert inference == {
+        "BTCBUSD_210129",
+        "BTCBUSD_210226",
+        "BTCUSDT_210326",
+        "BTCUSDT_210625",
+        "BTCUSDT_210924",
+        "BTCUSDT_211231",
+        "ETHUSDT_210326",
+        "ETHUSDT_210625",
+        "ETHUSDT_210924",
+        "ETHUSDT_211231",
+    }
+    direct = sorted(
+        str(row["delivery_date"])
+        for row in delivery
+        if str(row["authority_class"]) == DELIVERY_AUTHORITY_DIRECT
+        and str(row["pair"]) == "BTCUSDT"
+    )
+    # The direct class is exactly the probed 2022-03-25 through 2026-06-26 history.
+    assert direct[0] == "2022-03-25"
+    assert direct[-1] == "2026-06-26"
+    assert len(direct) == 18
+    # Every identity binds its own pair and its own YYMMDD-encoded UTC date.
+    for row in delivery:
+        symbol = str(row["symbol"])
+        pair, _, suffix = symbol.partition("_")
+        assert pair == str(row["pair"])
+        assert str(row["delivery_date"]).replace("-", "") == f"20{suffix}"
+    # 17 exact aliases reduce to 16 exact confirmed bases.
+    assert summary["alias_count"] == len(aliases) == 17
+    assert summary["alias_base_count"] == 16
+    assert {str(row["alias"]) for row in aliases if str(row["base"]) == "AERGOUSDT"} == {
+        "AERGOUSDTSETTLED",
+        "AERGOUSDTSETTLEDSETTLED",
+    }
+    # The published digests are the reviewer's own independent review-137 values.
+    assert summary["delivery_table_sha256"] == reviewed_delivery_table_digest()
+    assert summary["alias_table_sha256"] == reviewed_alias_table_digest()
+    assert summary["delivery_table_sha256"] == REVIEWED_DELIVERY_TABLE_SHA256 == (
+        "678d07e0679b0e116a372a333c3c33f74f5e421dadba393cb9516e56ae8b9a01"
+    )
+    assert summary["alias_table_sha256"] == REVIEWED_ALIAS_TABLE_SHA256 == (
+        "e9837ee2ac0711e41981e27979532be5095d61f04fb82442919c9f301f5998f8"
+    )
+    assert summary["expected_delivery_table_sha256"] == REVIEWED_DELIVERY_TABLE_SHA256
+    assert summary["expected_alias_table_sha256"] == REVIEWED_ALIAS_TABLE_SHA256
+
+
+@pytest.mark.parametrize(
+    ("row", "message"),
+    [
+        (
+            ("BTCUSDT_220325", "ETHUSDT", "2022-03-25", DELIVERY_AUTHORITY_DIRECT),
+            "own pair",
+        ),
+        (
+            ("BTCUSDT_220325", "BTCUSDT", "2022-03-26", DELIVERY_AUTHORITY_DIRECT),
+            "own encoded date",
+        ),
+        (
+            ("BTCUSDT_220325", "BTCUSDT", "2022-03-25", "reviewer_hunch"),
+            "unknown authority class",
+        ),
+    ],
+)
+def test_delivery_table_drift_fails_closed(
+    monkeypatch: pytest.MonkeyPatch, row: tuple[str, str, str, str], message: str
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    before = reviewed_delivery_table_digest()
+    monkeypatch.setattr(module, "REVIEWED_DELIVERY_IDENTITIES", (row,))
+    # Any edit to a frozen table changes its published digest.
+    assert reviewed_delivery_table_digest() != before
+    with pytest.raises(SourceQualificationError, match=message):
+        validate_reviewed_authority_tables()
+
+
+def test_repeated_table_members_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    monkeypatch.setattr(
+        module,
+        "REVIEWED_DELIVERY_IDENTITIES",
+        (REVIEWED_DELIVERY_IDENTITIES[0], REVIEWED_DELIVERY_IDENTITIES[0]),
+    )
+    with pytest.raises(SourceQualificationError, match="repeats a symbol"):
+        validate_reviewed_authority_tables()
+    monkeypatch.undo()
+    monkeypatch.setattr(
+        module,
+        "REVIEWED_SETTLEMENT_ALIASES",
+        (REVIEWED_SETTLEMENT_ALIASES[0], REVIEWED_SETTLEMENT_ALIASES[0]),
+    )
+    with pytest.raises(SourceQualificationError, match="repeats an alias"):
+        validate_reviewed_authority_tables()
+
+
+def test_alias_that_maps_to_itself_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    monkeypatch.setattr(
+        module,
+        "REVIEWED_SETTLEMENT_ALIASES",
+        (("CTKUSDTSETTLED", "CTKUSDTSETTLED", "authenticated_current_exchange_info"),),
+    )
+    with pytest.raises(SourceQualificationError, match="maps to itself"):
+        validate_reviewed_authority_tables()
+
+
+def test_empty_delivery_history_is_evidence_not_an_error() -> None:
+    # BTCBUSD returns no retained history; that is honest retention truncation.
+    assert parse_delivery_price_response([], pair="BTCBUSD") == ()
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ({"rows": []}, "not a list"),
+        ([["2022-03-25", 1.0]], "not an object"),
+        ([{"deliveryTime": 0, "deliveryPrice": 1.0}], "positive delivery time"),
+        ([{"deliveryTime": -1, "deliveryPrice": 1.0}], "positive delivery time"),
+        ([{"deliveryTime": True, "deliveryPrice": 1.0}], "positive delivery time"),
+        ([{"deliveryPrice": 1.0}], "positive delivery time"),
+        ([{"deliveryTime": 1648166400000, "deliveryPrice": 0}], "positive delivery price"),
+        ([{"deliveryTime": 1648166400000, "deliveryPrice": -3.5}], "positive delivery price"),
+        ([{"deliveryTime": 1648166400000, "deliveryPrice": "27000"}], "positive delivery price"),
+        ([{"deliveryTime": 1648166400000}], "positive delivery price"),
+        (
+            [
+                {"deliveryTime": 1648166400000, "deliveryPrice": 1.0},
+                {"deliveryTime": 1648195200000, "deliveryPrice": 2.0},
+            ],
+            "repeats a delivery date",
+        ),
+    ],
+)
+def test_delivery_price_response_fails_closed(payload: Any, message: str) -> None:
+    with pytest.raises(SourceQualificationError, match=message):
+        parse_delivery_price_response(payload, pair="BTCUSDT")
+
+
+def test_delivery_price_response_is_proved_against_its_retained_bytes(
+    tmp_path: Path,
+) -> None:
+    source = MemoryDeliveryPriceSource(
+        payloads={"BTCUSDT": _delivery_payload("2022-03-25", "2022-06-24")}
+    )
+    response = source.fetch_delivery_prices("BTCUSDT")
+    rows = validate_delivery_price_response(response)
+    assert [row["delivery_date"] for row in rows] == ["2022-03-25", "2022-06-24"]
+
+    tampered = replace(response, sha256="0" * 64)
+    with pytest.raises(ResumeIntegrityError, match="does not match its retained bytes"):
+        validate_delivery_price_response(tampered)
+    resized = replace(response, byte_size=response.byte_size + 1)
+    with pytest.raises(ResumeIntegrityError, match="does not match its retained bytes"):
+        validate_delivery_price_response(resized)
+    # A payload that is not what the retained bytes decode to can never be used.
+    substituted = replace(response, payload=_delivery_payload("2019-01-01"))
+    with pytest.raises(ResumeIntegrityError, match="not what its retained bytes decode"):
+        validate_delivery_price_response(substituted)
+    with pytest.raises(SourceQualificationError, match="another endpoint"):
+        validate_delivery_price_response(replace(response, endpoint="https://evil.test"))
+    with pytest.raises(SourceQualificationError, match="names no pair"):
+        validate_delivery_price_response(replace(response, pair=""))
+    with pytest.raises(SourceQualificationError, match="no retrieval time"):
+        validate_delivery_price_response(replace(response, retrieval_time=""))
+    # A retained path at the right content address must still hold exactly those bytes.
+    blob = tmp_path / response.sha256
+    blob.write_bytes(b"[]")
+    with pytest.raises(ResumeIntegrityError, match="retained delivery-price content"):
+        validate_delivery_price_response(replace(response, content_path=str(blob)))
+
+
+def test_delivery_price_evidence_reports_matches_and_retention_truncation() -> None:
+    source = MemoryDeliveryPriceSource(
+        payloads={
+            "BTCUSDT": _delivery_payload("2022-03-25", "2022-06-24"),
+            "BTCBUSD": [],
+        }
+    )
+    evidence = delivery_price_evidence(
+        [source.fetch_delivery_prices("BTCUSDT"), source.fetch_delivery_prices("BTCBUSD")]
+    )
+    by_pair = {item["pair"]: item for item in evidence}
+    btcusdt = by_pair["BTCUSDT"]
+    assert btcusdt["record_count"] == 2
+    assert btcusdt["matched_frozen_symbols"] == ["BTCUSDT_220325", "BTCUSDT_220624"]
+    # The other 20 BTCUSDT identities are absent from this response, not disproved.
+    assert len(btcusdt["missing_frozen_symbols"]) == 20
+    assert btcusdt["byte_size"] > 0
+    assert len(btcusdt["sha256"]) == 64
+    assert btcusdt["endpoint"].endswith("/futures/data/delivery-price")
+    busd = by_pair["BTCBUSD"]
+    assert busd["record_count"] == 0
+    assert busd["matched_frozen_symbols"] == []
+    assert busd["missing_frozen_symbols"] == ["BTCBUSD_210129", "BTCBUSD_210226"]
+
+
+def test_delivery_price_provenance_carries_no_secret(tmp_path: Path) -> None:
+    class _JsonTransport:
+        def __init__(self, body: bytes) -> None:
+            self.body = body
+            self.urls: list[str] = []
+
+        def stream_get(self, url: str, *, headers, timeout: TimeoutConfig) -> StreamResponse:
+            self.urls.append(url)
+            assert "cex002-secret-sentinel" not in url
+
+            def _iter() -> Any:
+                yield self.body
+
+            return StreamResponse(
+                status_code=200, headers={}, iter_bytes=_iter(), close=lambda: None
+            )
+
+    body = json.dumps(_delivery_payload("2022-03-25")).encode("utf-8")
+    transport = _JsonTransport(body)
+    source = FapiDeliveryPriceSource(transport, cache_dir=tmp_path / "fapi")
+    response = source.fetch_delivery_prices("BTCUSDT")
+    # Exactly one read, of exactly one pair.
+    assert transport.urls == [
+        f"{response.endpoint}?pair=BTCUSDT"
+    ]
+    assert dict(response.request_params) == {"pair": "BTCUSDT"}
+    rendered = json.dumps(
+        [dict(item) for item in delivery_price_evidence([response])], sort_keys=True
+    )
+    assert "cex002-secret-sentinel" not in rendered
+    assert "apiKey" not in rendered
+    assert "?" not in rendered
+    assert Path(response.content_path).is_file()
+
+
+def test_frozen_delivery_identity_resolves_only_while_its_evidence_reproves(
+    tmp_path: Path,
+) -> None:
+    index = _authority_index(["BTCUSDT", "BTCUSDT_220325"])
+    source = MemoryDeliveryPriceSource(
+        payloads={"BTCUSDT": _delivery_payload("2022-03-25"), "ETHUSDT": [], "BTCBUSD": []}
+    )
+    report = run_source_qualification(
+        store_root=tmp_path / "resolved",
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        delivery_prices=source,
+    )
+    # Exactly the three frozen pairs are read, once each.
+    assert source.requested_pairs == ["BTCBUSD", "BTCUSDT", "ETHUSDT"]
+    resolved = _classification(report, "BTCUSDT_220325")
+    assert resolved["membership_class"] == MEMBERSHIP_REVIEWED_DELIVERY
+    assert resolved["blocking"] is False
+    assert resolved["accepted"] is False
+    # Resolved, but never a member of the accepted perpetual universe.
+    assert "BTCUSDT_220325" not in report.accepted_universe
+    authority = next(
+        item for item in resolved["evidence"] if item["kind"] == "reviewed_delivery_authority"
+    )
+    assert authority["authority_class"] == DELIVERY_AUTHORITY_DIRECT
+    assert authority["settlement_price_date_matched"] is True
+    assert authority["archive_evidence"]["family_count"] == 2
+    assert authority["realized_funding_objects"] == 0
+    assert authority["table_version"] == REVIEWED_AUTHORITY_TABLE_VERSION
+    block = report.membership["historical_authority"]
+    assert "BTCUSDT_220325" in block["resolved_delivery_identities"]
+    assert block["mismatches"] == []
+
+    # Without the exact retained settlement date the direct identity blocks again.
+    blocked = run_source_qualification(
+        store_root=tmp_path / "no_date",
+        index=_authority_index(["BTCUSDT", "BTCUSDT_220325"]),
+        current_contracts=_contracts("BTCUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(payloads={"BTCUSDT": []}),
+    )
+    absent = _classification(blocked, "BTCUSDT_220325")
+    assert absent["membership_class"] == MEMBERSHIP_DATED_DELIVERY
+    assert absent["blocking"] is True
+    reasons = next(
+        item
+        for item in absent["evidence"]
+        if item["kind"] == "reviewed_delivery_authority"
+    )["unresolved_reasons"]
+    assert reasons == ["official_settlement_price_date_absent"]
+    assert blocked.membership["historical_authority"]["mismatches"] == [
+        {
+            "kind": "reviewed_delivery_identity",
+            "symbol": "BTCUSDT_220325",
+            "reasons": ["official_settlement_price_date_absent"],
+        }
+    ]
+
+
+def test_frozen_delivery_identity_needs_multi_family_lifecycle(tmp_path: Path) -> None:
+    single = _authority_index(
+        ["BTCUSDT", "BTCUSDT_220325"], families=[("monthly/klines", "1h")]
+    )
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=single,
+        current_contracts=_contracts("BTCUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(
+            payloads={"BTCUSDT": _delivery_payload("2022-03-25")}
+        ),
+    )
+    item = _classification(report, "BTCUSDT_220325")
+    # One family is not a lifecycle; frozen membership alone proves nothing.
+    assert item["membership_class"] == MEMBERSHIP_DATED_DELIVERY
+    assert item["blocking"] is True
+    assert "archive_multi_family_lifecycle_unproved" in next(
+        entry
+        for entry in item["evidence"]
+        if entry["kind"] == "reviewed_delivery_authority"
+    )["unresolved_reasons"]
+
+
+def test_reviewed_archive_inference_resolves_without_the_settlement_endpoint(
+    tmp_path: Path,
+) -> None:
+    index = _authority_index(["BTCUSDT", "BTCUSDT_210326"])
+    report = run_source_qualification(
+        store_root=tmp_path / "inference",
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        # The endpoint omits every 2021 delivery; the reviewed inference stands on the
+        # retained archive lifecycle and funding absence alone.
+        delivery_prices=MemoryDeliveryPriceSource(payloads={"BTCUSDT": []}),
+    )
+    item = _classification(report, "BTCUSDT_210326")
+    assert item["membership_class"] == MEMBERSHIP_REVIEWED_DELIVERY
+    assert item["blocking"] is False
+    authority = next(
+        entry
+        for entry in item["evidence"]
+        if entry["kind"] == "reviewed_delivery_authority"
+    )
+    assert authority["authority_class"] == DELIVERY_AUTHORITY_REVIEWED_ARCHIVE
+    assert authority["settlement_price_date_matched"] is False
+    assert "reviewer inference" in authority["basis"]
+
+
+def test_realized_funding_under_a_frozen_delivery_name_blocks_it(tmp_path: Path) -> None:
+    index = _authority_index(
+        ["BTCUSDT", "BTCUSDT_210326"],
+        families=[
+            ("monthly/trades", "trades"),
+            ("monthly/aggTrades", "aggTrades"),
+            ("monthly/klines", "1h"),
+            ("monthly/fundingRate", "fundingRate"),
+        ],
+    )
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(payloads={}),
+    )
+    item = _classification(report, "BTCUSDT_210326")
+    # Only a perpetual realizes funding, so this contradicts the frozen identity: the
+    # name blocks and is never promoted into the accepted universe.
+    assert item["membership_class"] == MEMBERSHIP_DATED_DELIVERY
+    assert item["blocking"] is True
+    assert "BTCUSDT_210326" not in report.accepted_universe
+    assert report.membership["historical_authority"]["mismatches"][0]["reasons"] == [
+        "realized_funding_observed"
+    ]
+
+
+def test_settlement_alias_resolves_only_through_its_confirmed_base(tmp_path: Path) -> None:
+    index = _authority_index(["CTKUSDT", "CTKUSDTSETTLED"])
+    report = run_source_qualification(
+        store_root=tmp_path / "alias",
+        index=index,
+        current_contracts=_contracts("CTKUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(payloads={}),
+    )
+    alias = _classification(report, "CTKUSDTSETTLED")
+    assert alias["membership_class"] == MEMBERSHIP_SETTLEMENT_ALIAS
+    assert alias["blocking"] is False
+    assert alias["accepted"] is False
+    # The alias is not a member; the base is, exactly once.
+    assert "CTKUSDTSETTLED" not in report.accepted_universe
+    assert "CTKUSDT" in report.accepted_universe
+    evidence = next(
+        item for item in alias["evidence"] if item["kind"] == "reviewed_settlement_alias"
+    )
+    assert evidence["base"] == "CTKUSDT"
+    assert evidence["consumable"] is False
+    assert evidence["observed_base_authority"] == "authenticated_current_exchange_info"
+    # Raw alias provenance is preserved rather than merged away.
+    assert evidence["archive_evidence"]["object_count"] > 0
+    assert evidence["archive_evidence"]["compressed_raw_bytes"] > 0
+    assert evidence["archive_evidence"]["families"] == [
+        "monthly/aggTrades",
+        "monthly/klines",
+        "monthly/trades",
+    ]
+    assert evidence["archive_evidence"]["example_key"].startswith("data/futures/um/")
+
+
+def test_settlement_alias_blocks_when_its_base_is_unconfirmed(tmp_path: Path) -> None:
+    # The base is absent from the current contract set and owns no funding evidence.
+    index = _authority_index(["BTCUSDT", "CTKUSDT", "CTKUSDTSETTLED"])
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(payloads={}),
+    )
+    alias = _classification(report, "CTKUSDTSETTLED")
+    assert alias["membership_class"] == MEMBERSHIP_SETTLEMENT_ARTIFACT
+    assert alias["blocking"] is True
+    evidence = next(
+        item for item in alias["evidence"] if item["kind"] == "reviewed_settlement_alias"
+    )
+    assert evidence["unresolved_reasons"] == ["base_has_no_affirmative_perpetual_evidence"]
+    assert evidence["observed_base_authority"] == ""
+
+
+def test_settlement_alias_blocks_when_its_base_authority_changed(tmp_path: Path) -> None:
+    # SXPUSDT is frozen as a funding-evidenced base; an authenticated current row is a
+    # different authority than the reviewer recorded, so the alias fails closed.
+    index = _authority_index(["SXPUSDT", "SXPUSDTSETTLED"])
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("SXPUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(payloads={}),
+    )
+    alias = _classification(report, "SXPUSDTSETTLED")
+    assert alias["membership_class"] == MEMBERSHIP_SETTLEMENT_ARTIFACT
+    assert alias["blocking"] is True
+    evidence = next(
+        item for item in alias["evidence"] if item["kind"] == "reviewed_settlement_alias"
+    )
+    assert evidence["frozen_base_authority"] == "official_realized_funding_observation"
+    assert evidence["observed_base_authority"] == "authenticated_current_exchange_info"
+    assert evidence["unresolved_reasons"] == ["base_authority_changed_since_review"]
+
+
+def test_affirmative_perpetual_authority_prefers_authenticated_evidence() -> None:
+    current = parse_exchange_info_rows(_exchange_info("BTCUSDT"))
+    funding = {"BTCUSDT": {"object_count": 3, "families": ["monthly/fundingRate"]}}
+    # No evidence at all is not authority.
+    assert (
+        affirmative_perpetual_authority(
+            "BTCUSDT", current_rows={}, historical_rows={}, funding_evidence={}
+        )
+        == ""
+    )
+    assert (
+        affirmative_perpetual_authority(
+            "BTCUSDT", current_rows={}, historical_rows={}, funding_evidence=funding
+        )
+        == "official_realized_funding_observation"
+    )
+    # An authenticated current row outranks a funding observation.
+    assert (
+        affirmative_perpetual_authority(
+            "BTCUSDT", current_rows=current, historical_rows={}, funding_evidence=funding
+        )
+        == "authenticated_current_exchange_info"
+    )
+    assert (
+        affirmative_perpetual_authority(
+            "BTCUSDT", current_rows={}, historical_rows=current, funding_evidence={}
+        )
+        == "retained_official_contract_metadata"
+    )
+    # A non-perpetual row is never authority for a perpetual.
+    delivery = parse_exchange_info_rows(_exchange_info("ETHUSDT"))
+    delivery["ETHUSDT"]["contract_type"] = "CURRENT_QUARTER"
+    assert (
+        affirmative_perpetual_authority(
+            "ETHUSDT", current_rows=delivery, historical_rows={}, funding_evidence={}
+        )
+        == ""
+    )
+
+
+def test_future_dated_and_settlement_names_stay_blocking(tmp_path: Path) -> None:
+    future_dated = "BTCUSDT_270101"
+    future_alias = "NEWCOINUSDTSETTLED"
+    assert future_dated not in {row[0] for row in REVIEWED_DELIVERY_IDENTITIES}
+    assert future_alias not in {row[0] for row in REVIEWED_SETTLEMENT_ALIASES}
+    index = _authority_index(["BTCUSDT", future_dated, future_alias])
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(
+            payloads={"BTCUSDT": _delivery_payload("2027-01-01")}
+        ),
+    )
+    dated = _classification(report, future_dated)
+    alias = _classification(report, future_alias)
+    # A matching spelling, and even a matching settlement date, resolve nothing.
+    assert dated["membership_class"] == MEMBERSHIP_DATED_DELIVERY
+    assert dated["blocking"] is True
+    assert not [
+        item for item in dated["evidence"] if item["kind"] == "reviewed_delivery_authority"
+    ]
+    assert alias["membership_class"] == MEMBERSHIP_SETTLEMENT_ARTIFACT
+    assert alias["blocking"] is True
+    block = report.membership["historical_authority"]
+    assert future_dated not in block["resolved_delivery_identities"]
+    assert future_alias not in block["resolved_settlement_aliases"]
+    assert "remains blocking" in block["future_name_rule"]
+
+
+def test_reviewed_authority_report_binds_both_tables_to_their_digests(
+    tmp_path: Path,
+) -> None:
+    index = _authority_index(["BTCUSDT", "BTCUSDT_220325", "CTKUSDT", "CTKUSDTSETTLED"])
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT", "CTKUSDT"),
+        delivery_prices=MemoryDeliveryPriceSource(
+            payloads={"BTCUSDT": _delivery_payload("2022-03-25")}
+        ),
+    )
+    block = report.membership["historical_authority"]
+    assert block["table_version"] == REVIEWED_AUTHORITY_TABLE_VERSION
+    assert block["delivery_table_sha256"] == reviewed_delivery_table_digest()
+    assert block["alias_table_sha256"] == reviewed_alias_table_digest()
+    # Every frozen member is classified, observed or not.
+    assert len(block["delivery_identities"]) == 46
+    assert len(block["settlement_aliases"]) == 17
+    assert block["observed_delivery_identities"] == ["BTCUSDT_220325"]
+    assert block["observed_settlement_aliases"] == ["CTKUSDTSETTLED"]
+    assert block["delivery_price_evidence"][0]["pair"] == "BTCBUSD"
+    assert block["mismatches"] == []
+
+
+def test_direct_and_reviewed_identities_are_resolved_by_their_own_basis() -> None:
+    inventory = build_family_inventory(
+        _authority_index(["BTCUSDT_220325", "BTCUSDT_210326"])
+    )
+    resolutions = resolve_reviewed_delivery_identities(
+        inventory=inventory,
+        funding_evidence={},
+        delivery_dates={"BTCUSDT": {"2022-03-25"}},
+    )
+    assert resolutions["BTCUSDT_220325"]["resolved"] is True
+    assert resolutions["BTCUSDT_210326"]["resolved"] is True
+    # A direct member of the same pair whose date is absent stays unresolved.
+    assert resolutions["BTCUSDT_220624"]["resolved"] is False
+    assert resolutions["BTCUSDT_220624"]["observed_in_archive"] is False
+    aliases = resolve_reviewed_settlement_aliases(
+        inventory=inventory,
+        current_rows={},
+        historical_rows={},
+        funding_evidence={},
+    )
+    assert all(item["resolved"] is False for item in aliases.values())
+    assert all(item["consumable"] is False for item in aliases.values())
+
+
+def _cost_index(
+    dates: Sequence[str], sizes: Mapping[str, int] | None = None
+) -> MemoryObjectIndex:
+    """Cost families over these whole days.
+
+    Without ``sizes`` the objects are the real book fixtures, so a full qualification can
+    acquire and validate them; with ``sizes`` they are byte-exact stand-ins for selection
+    arithmetic that never reaches a download.
+    """
+    ticker = _zip_bytes("b.csv", (FIXTURES / "headerless_book_ticker.csv").read_bytes())
+    depth = _zip_bytes("d.csv", (FIXTURES / "headerless_book_depth.csv").read_bytes())
+
+    def _payload(key: str) -> bytes:
+        if sizes is not None:
+            day = object_calendar_date(key) or ""
+            return b"c" * sizes[day]
+        return ticker if "/bookTicker/" in key else depth
+
+    return _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("daily/bookTicker", "bookTicker"), ("daily/bookDepth", "bookDepth")],
+        payload_for_key=_payload,
+        months=dates,
+    )
+
+
+def test_cost_source_sample_is_six_deterministic_strata() -> None:
+    # Seven whole days per family: strata sizes 3, 2, 2 under min(2, floor(3i/n)).
+    dates = (
+        "2020-01-01",
+        "2020-01-02",
+        "2020-01-03",
+        "2020-01-04",
+        "2020-01-05",
+        "2020-01-06",
+        "2020-01-07",
+    )
+    sizes = {
+        "2020-01-01": 900,
+        "2020-01-02": 300,
+        "2020-01-03": 800,
+        "2020-01-04": 700,
+        "2020-01-05": 400,
+        "2020-01-06": 600,
+        "2020-01-07": 200,
+    }
+    inventory = build_family_inventory(_cost_index(dates, sizes))
+    sample = select_cost_source_sample(inventory=inventory, universe=["BTCUSDT"])
+    assert sample["selector"] == COST_SOURCE_SELECTOR
+    assert list(sample["strata"]) == list(COST_SOURCE_STRATA) == ["early", "middle", "recent"]
+    # Two cost families, three eras each: six cost-source objects and no more.
+    assert sample["object_count"] == 6
+    assert len(sample["items"]) == 6
+    assert sample["gaps"] == ()
+    by_family: dict[str, dict[str, dict[str, Any]]] = {}
+    for item in sample["items"]:
+        by_family.setdefault(str(item["family"]), {})[str(item["stratum"])] = item
+    for family in ("daily/bookTicker", "daily/bookDepth"):
+        strata = by_family[family]
+        assert sorted(strata) == ["early", "middle", "recent"]
+        # The smallest positive object of each era, by economic date then key.
+        assert strata["early"]["economic_date"] == "2020-01-02"
+        assert strata["early"]["byte_size"] == 300
+        assert strata["early"]["stratum_object_count"] == 3
+        assert strata["middle"]["economic_date"] == "2020-01-05"
+        assert strata["middle"]["byte_size"] == 400
+        assert strata["middle"]["stratum_object_count"] == 2
+        assert strata["recent"]["economic_date"] == "2020-01-07"
+        assert strata["recent"]["byte_size"] == 200
+        assert strata["recent"]["regime"] == "cost_source_recent"
+        assert strata["recent"]["family_object_count"] == 7
+    assert sample["compressed_raw_bytes"] == 2 * (300 + 400 + 200)
+
+
+def test_cost_source_strata_follow_the_declared_arithmetic() -> None:
+    # One object per stratum boundary for n = 4: items 0 and 1 are early, 2 middle,
+    # 3 recent, exactly as min(2, floor(3 * i / n)) prescribes.
+    dates = ("2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04")
+    inventory = build_family_inventory(
+        _cost_index(dates, {day: 500 + index for index, day in enumerate(dates)})
+    )
+    sample = select_cost_source_sample(inventory=inventory, universe=["BTCUSDT"])
+    ticker = {
+        str(item["stratum"]): item
+        for item in sample["items"]
+        if item["family"] == "daily/bookTicker"
+    }
+    assert ticker["early"]["economic_date"] == "2020-01-01"
+    assert ticker["early"]["stratum_object_count"] == 2
+    assert ticker["middle"]["economic_date"] == "2020-01-03"
+    assert ticker["recent"]["economic_date"] == "2020-01-04"
+
+
+def test_cost_source_sample_reports_a_typed_gap_for_a_missing_family() -> None:
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("daily/bookTicker", "bookTicker")],
+        months=("2020-01-01", "2020-01-02", "2020-01-03"),
+    )
+    sample = select_cost_source_sample(
+        inventory=build_family_inventory(index), universe=["BTCUSDT"]
+    )
+    assert sample["object_count"] == 3
+    gap = next(item for item in sample["gaps"] if item["family"] == "daily/bookDepth")
+    # An absent cost family is a typed blocking gap, never a silent substitution.
+    assert gap["kind"] == "cost_source_unavailable"
+    assert gap["blocking"] is True
+
+
+def test_qualification_plans_non_cost_samples_before_the_cost_source(
+    tmp_path: Path,
+) -> None:
+    kline = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+
+    def _payload(key: str) -> bytes:
+        if "/klines/" in key:
+            return kline
+        # One book object larger than the whole allowance if it were planned first.
+        return b"b" * 400_000
+
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[
+            ("monthly/klines", "1h"),
+            ("daily/bookTicker", "bookTicker"),
+            ("daily/bookDepth", "bookDepth"),
+        ],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_for_key=_payload,
+        months=("2020-01-01", "2020-01-02", "2020-01-03"),
+        months_by_family={"monthly/klines": ("2020-01", "2020-02", "2020-03")},
+    )
+    inventory = build_family_inventory(index)
+    cost_source = select_cost_source_sample(inventory=inventory, universe=["BTCUSDT"])
+    budget = 300_000
+    plan = build_sample_plan(
+        inventory=inventory,
+        family_products=family_product_map(),
+        sample_symbols=["BTCUSDT"],
+        delisted=[],
+        retained_keys={},
+        budget_bytes=budget,
+        max_object_bytes=budget,
+        cost_source_objects=cost_source["items"],
+    )
+    entries = list(plan.entries)
+    cost_regimes = {f"cost_source_{name}" for name in COST_SOURCE_STRATA}
+    non_cost = [item for item in entries if item.regime not in cost_regimes]
+    cost = [item for item in entries if item.regime in cost_regimes]
+    assert non_cost and cost
+    # Priority: every non-cost sample is planned before any cost-source object.
+    assert entries[: len(non_cost)] == non_cost
+    # The tiny bar samples are downloaded; the oversized book objects block instead.
+    downloads = [item for item in non_cost if item.action == "download"]
+    assert downloads
+    assert not [item for item in non_cost if item.action == "blocked"]
+    assert {item.action for item in cost} == {"blocked"}
+    assert all(item.block_reason == SAMPLE_BUDGET_BLOCK for item in cost)
+    assert all(item.products == ("binance_usdm_cost_calibration",) for item in cost)
+    # Exact byte accounting: only the planned downloads are charged.
+    assert plan.new_download_bytes == sum(item.byte_size for item in downloads)
+    assert plan.new_download_bytes <= budget
+    assert plan.unique_new_objects == len({item.key for item in downloads})
+    assert plan.budget_bytes == budget
+    assert plan.allowance_bytes == budget
+    blocked_keys = {str(item["required_key"]) for item in plan.blocked}
+    assert blocked_keys == {item.key for item in cost}
+
+
+def test_cost_source_objects_are_deduplicated_and_reuse_retained_bytes() -> None:
+    dates = ("2020-01-01", "2020-01-02", "2020-01-03")
+    inventory = build_family_inventory(_cost_index(dates))
+    cost_source = select_cost_source_sample(inventory=inventory, universe=["BTCUSDT"])
+    retained = {str(cost_source["items"][0]["key"]): 1_000}
+    plan = build_sample_plan(
+        inventory=inventory,
+        family_products=family_product_map(),
+        sample_symbols=["BTCUSDT"],
+        delisted=[],
+        retained_keys=retained,
+        budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+        max_object_bytes=GATE1_MAX_NEW_OBJECT_BYTES,
+        cost_source_objects=list(cost_source["items"]) + list(cost_source["items"]),
+    )
+    cost_regimes = {f"cost_source_{name}" for name in COST_SOURCE_STRATA}
+    cost = [item for item in plan.entries if item.regime in cost_regimes]
+    # The same physical key planned twice is an alias, never a second download.
+    assert len(cost) == 12
+    assert sum(1 for item in cost if item.action == "alias") == 6
+    assert sum(1 for item in cost if item.action == "reuse_retained") == 1
+    # Retained bytes never consume the new-download allowance.
+    assert plan.retained_bytes == 1_000
+    assert plan.new_download_bytes == sum(
+        item.byte_size for item in cost if item.action == "download"
+    )
+
+
+def test_complete_cost_manifest_is_preserved_outside_the_gate1_allowance(
+    tmp_path: Path,
+) -> None:
+    dates = tuple(f"2020-01-{day:02d}" for day in range(1, 10))
+    index = _cost_index(dates)
+    inventory = build_family_inventory(index)
+    complete = select_cost_calibration_sample(inventory=inventory, universe=["BTCUSDT"])
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+    )
+    storage = report.storage
+    manifest = storage["cost_sample"]
+    source = storage["cost_source_sample"]
+    # The complete first/midpoint/last product keeps every object, byte, and gap.
+    assert manifest["object_count"] == complete["object_count"] == 6
+    assert manifest["compressed_raw_bytes"] == complete["compressed_raw_bytes"]
+    assert list(manifest["keys"]) == list(complete["keys"])
+    assert manifest["selector"] == "first_midpoint_last_daily_book_v1"
+    assert manifest["gate"] == "gate2_acquisition_and_storage"
+    assert manifest["charged_to_gate1_allowance"] is False
+    # Gate 1 charges only the bounded three-era source sample.
+    assert source["object_count"] == 6
+    assert source["selector"] == COST_SOURCE_SELECTOR
+    assert source["gate"] == "gate1_source_qualification"
+    assert source["charged_to_gate1_allowance"] is True
+    assert source["compressed_raw_bytes"] <= manifest["compressed_raw_bytes"]
+    # Gate-2 storage still accounts for the complete product, unreduced.
+    selected = storage["selected_storage"]
+    assert selected["cost_sample_compressed_raw_bytes"] == complete["compressed_raw_bytes"]
+    assert selected["selected_plus_cost_compressed_raw_bytes"] == (
+        selected["selected_compressed_raw_bytes"] + complete["compressed_raw_bytes"]
+    )
+    assert storage["physical_source_requirement"]["scope"] == (
+        "selected_nonoverlapping_manifest_plus_cost_sample"
+    )
+
+
+def test_candidate_plan_is_version_four_with_superseded_v3_lineage(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    lock_before, ledger_before = _seed_v2_authority(tmp_path, index)
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    candidate = report.candidate_plan
+    assert candidate["plan_version"] == 4
+    lineage = candidate["superseded_candidates"]
+    assert len(lineage) == 1
+    assert lineage[0]["plan_version"] == SUPERSEDED_CANDIDATE_PLAN_VERSION == 3
+    assert lineage[0]["plan_digest"] == SUPERSEDED_CANDIDATE_PLAN_DIGEST
+    assert lineage[0]["candidate_envelope_digest"] == SUPERSEDED_CANDIDATE_ENVELOPE_DIGEST
+    assert lineage[0]["state"] == "superseded_candidate"
+    assert lineage[0]["migrated"] is False
+    assert lineage[0]["charged_bytes"] == 0
+    # The superseded candidate participates in reuse detection.
+    assert SUPERSEDED_CANDIDATE_PLAN_DIGEST in set(candidate["prior_plan_digests"])
+    assert candidate["plan_digest"] != SUPERSEDED_CANDIDATE_PLAN_DIGEST
+    assert candidate["digest_reuses_prior"] is False
+    # Locked versions 0-2 are untouched and nothing is migrated or downloaded.
+    assert report.plan_lock["plan_version"] == 2
+    assert sorted(candidate["prior_plan_history_versions"]) == [0, 1]
+    assert file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME) == lock_before
+    assert file_sha256(tmp_path / BUDGET_LEDGER_FILENAME) == ledger_before
+    assert candidate["migration_authorized"] is False
+    assert candidate["download_authorized"] is False
+    assert report.samples == ()
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+
+
+def test_candidate_refuses_to_build_over_an_authority_mismatch(tmp_path: Path) -> None:
+    index = _authority_index(["BTCUSDT", "BTCUSDT_220325"])
+    _seed_v2_authority(tmp_path, index)
+    lock_before = file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
+    ledger_before = file_sha256(tmp_path / BUDGET_LEDGER_FILENAME)
+    # No retained settlement date, so an observed frozen identity no longer re-proves.
+    with pytest.raises(
+        SourceQualificationError, match="authority mismatch blocks candidate construction"
+    ):
+        run_source_qualification(
+            store_root=tmp_path,
+            index=index,
+            current_contracts=_contracts("BTCUSDT"),
+            delivery_prices=MemoryDeliveryPriceSource(payloads={"BTCUSDT": []}),
+            candidate_plan_only=True,
+        )
+    # A refused candidate changes no durable authority at all.
+    assert file_sha256(tmp_path / SAMPLE_PLAN_LOCK_FILENAME) == lock_before
+    assert file_sha256(tmp_path / BUDGET_LEDGER_FILENAME) == ledger_before
+    assert not (tmp_path / AMENDMENT_LEDGER_FILENAME).exists()
+
+
+def test_candidate_preflight_still_mutates_nothing(tmp_path: Path) -> None:
+    store = tmp_path / "absent"
+    with pytest.raises(SourceQualificationError, match="requires the durable version-2"):
+        run_source_qualification(
+            store_root=store,
+            index=_trades_index(["BTCUSDT"]),
+            current_contracts=_contracts("BTCUSDT"),
+            delivery_prices=MemoryDeliveryPriceSource(payloads={}),
+            candidate_plan_only=True,
+        )
+    # The preflight runs before anything exists: no store, cache, or journal is created.
+    assert not store.exists()
+
+
+def test_plan_identity_binds_the_adr0020_selection_rule() -> None:
+    digest = plan_code_config_digest(
+        budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES,
+        max_object_bytes=GATE1_MAX_NEW_OBJECT_BYTES,
+    )
+    assert len(digest) == 64
+    # A different cost-source rule is a different plan identity, so a changed
+    # stratification can never replay silently under an existing lock.
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    source = inspect.getsource(module.plan_code_config_digest)
+    assert "cost_source_sample" in source
+    assert "qualification_priority" in source
+    assert "reviewed_authority_table_version" in source
+
+
+def test_reviewed_authority_report_aggregates_every_mismatch() -> None:
+    inventory = build_family_inventory(
+        _authority_index(["BTCUSDT_220325", "CTKUSDTSETTLED"])
+    )
+    report = reviewed_authority_report(
+        inventory=inventory,
+        current_rows={},
+        historical_rows={},
+        funding_evidence={},
+        delivery_responses=(),
+    )
+    assert report["table_version"] == REVIEWED_AUTHORITY_TABLE_VERSION
+    assert report["delivery_price_evidence"] == []
+    # Both observed members fail their re-proof, and both are named explicitly.
+    assert report["observed_delivery_identities"] == ["BTCUSDT_220325"]
+    assert report["observed_settlement_aliases"] == ["CTKUSDTSETTLED"]
+    assert report["resolved_delivery_identities"] == []
+    assert report["resolved_settlement_aliases"] == []
+    assert report["mismatches"] == [
+        {
+            "kind": "reviewed_delivery_identity",
+            "symbol": "BTCUSDT_220325",
+            "reasons": ["official_settlement_price_date_absent"],
+        },
+        {
+            "kind": "reviewed_settlement_alias",
+            "symbol": "CTKUSDTSETTLED",
+            "base": "CTKUSDT",
+            "reasons": ["base_has_no_affirmative_perpetual_evidence"],
+        },
+    ]
+
+
+REVIEW137_DELIVERY_ROWS: tuple[tuple[str, str, str, str], ...] = (
+    ("BTCBUSD_210129", "BTCBUSD", "2021-01-29", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCBUSD_210226", "BTCBUSD", "2021-02-26", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_210326", "BTCUSDT", "2021-03-26", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_210625", "BTCUSDT", "2021-06-25", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_210924", "BTCUSDT", "2021-09-24", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_211231", "BTCUSDT", "2021-12-31", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_210326", "ETHUSDT", "2021-03-26", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_210625", "ETHUSDT", "2021-06-25", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_210924", "ETHUSDT", "2021-09-24", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("ETHUSDT_211231", "ETHUSDT", "2021-12-31", DELIVERY_AUTHORITY_REVIEWED_ARCHIVE),
+    ("BTCUSDT_220325", "BTCUSDT", "2022-03-25", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_220624", "BTCUSDT", "2022-06-24", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_220930", "BTCUSDT", "2022-09-30", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_221230", "BTCUSDT", "2022-12-30", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_230331", "BTCUSDT", "2023-03-31", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_230630", "BTCUSDT", "2023-06-30", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_230929", "BTCUSDT", "2023-09-29", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_231229", "BTCUSDT", "2023-12-29", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_240329", "BTCUSDT", "2024-03-29", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_240628", "BTCUSDT", "2024-06-28", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_240927", "BTCUSDT", "2024-09-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_241227", "BTCUSDT", "2024-12-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_250328", "BTCUSDT", "2025-03-28", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_250627", "BTCUSDT", "2025-06-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_250926", "BTCUSDT", "2025-09-26", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_251226", "BTCUSDT", "2025-12-26", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_260327", "BTCUSDT", "2026-03-27", DELIVERY_AUTHORITY_DIRECT),
+    ("BTCUSDT_260626", "BTCUSDT", "2026-06-26", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_220325", "ETHUSDT", "2022-03-25", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_220624", "ETHUSDT", "2022-06-24", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_220930", "ETHUSDT", "2022-09-30", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_221230", "ETHUSDT", "2022-12-30", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_230331", "ETHUSDT", "2023-03-31", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_230630", "ETHUSDT", "2023-06-30", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_230929", "ETHUSDT", "2023-09-29", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_231229", "ETHUSDT", "2023-12-29", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_240329", "ETHUSDT", "2024-03-29", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_240628", "ETHUSDT", "2024-06-28", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_240927", "ETHUSDT", "2024-09-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_241227", "ETHUSDT", "2024-12-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_250328", "ETHUSDT", "2025-03-28", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_250627", "ETHUSDT", "2025-06-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_250926", "ETHUSDT", "2025-09-26", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_251226", "ETHUSDT", "2025-12-26", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_260327", "ETHUSDT", "2026-03-27", DELIVERY_AUTHORITY_DIRECT),
+    ("ETHUSDT_260626", "ETHUSDT", "2026-06-26", DELIVERY_AUTHORITY_DIRECT),
+)
+
+REVIEW137_ALIAS_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("AERGOUSDTSETTLED", "AERGOUSDT", "official_realized_funding_observation"),
+    ("AERGOUSDTSETTLEDSETTLED", "AERGOUSDT", "official_realized_funding_observation"),
+    ("AIAUSDTSETTLED", "AIAUSDT", "authenticated_current_exchange_info"),
+    ("BDXNUSDTSETTLED", "BDXNUSDT", "official_realized_funding_observation"),
+    ("BNXUSDTSETTLED", "BNXUSDT", "authenticated_current_exchange_info"),
+    ("BTCSTUSDTSETTLED", "BTCSTUSDT", "official_realized_funding_observation"),
+    ("CTKUSDTSETTLED", "CTKUSDT", "authenticated_current_exchange_info"),
+    ("CVCUSDTSETTLED", "CVCUSDT", "authenticated_current_exchange_info"),
+    ("CVXUSDTSETTLED", "CVXUSDT", "authenticated_current_exchange_info"),
+    ("ICPUSDT_SETTLED", "ICPUSDT", "authenticated_current_exchange_info"),
+    ("LITUSDTSETTLED", "LITUSDT", "authenticated_current_exchange_info"),
+    ("MAVIAUSDTSETTLED", "MAVIAUSDT", "authenticated_current_exchange_info"),
+    ("MINAUSDTSETTLED", "MINAUSDT", "authenticated_current_exchange_info"),
+    ("PUMPUSDTSETTLED", "PUMPUSDT", "authenticated_current_exchange_info"),
+    ("SLPUSDTSETTLED", "SLPUSDT", "authenticated_current_exchange_info"),
+    ("SXPUSDTSETTLED", "SXPUSDT", "official_realized_funding_observation"),
+    ("TLMUSDTSETTLED", "TLMUSDT", "authenticated_current_exchange_info"),
+)
+
+
+def test_frozen_tables_are_the_literal_review137_contents() -> None:
+    # Row for row, in order: the source tables are exactly what review 137 froze.
+    assert tuple(REVIEWED_DELIVERY_IDENTITIES) == REVIEW137_DELIVERY_ROWS
+    assert tuple(REVIEWED_SETTLEMENT_ALIASES) == REVIEW137_ALIAS_ROWS
+    assert [dict(row) for row in reviewed_delivery_table()] == [
+        {"symbol": s, "pair": p, "delivery_date": d, "authority_class": c}
+        for s, p, d, c in REVIEW137_DELIVERY_ROWS
+    ]
+    assert [dict(row) for row in reviewed_alias_table()] == [
+        {"alias": a, "base": b, "base_authority": k} for a, b, k in REVIEW137_ALIAS_ROWS
+    ]
+
+
+def _swap_delivery(index: int, row: tuple[str, str, str, str]) -> tuple[Any, ...]:
+    rows = list(REVIEW137_DELIVERY_ROWS)
+    rows[index] = row
+    return tuple(rows)
+
+
+def _swap_alias(index: int, row: tuple[str, str, str]) -> tuple[Any, ...]:
+    rows = list(REVIEW137_ALIAS_ROWS)
+    rows[index] = row
+    return tuple(rows)
+
+
+@pytest.mark.parametrize(
+    ("table", "rows", "message"),
+    [
+        (
+            "REVIEWED_DELIVERY_IDENTITIES",
+            # A well-formed substitution: same counts, same shape, different identity.
+            _swap_delivery(
+                45, ("ETHUSDT_260925", "ETHUSDT", "2026-09-25", DELIVERY_AUTHORITY_DIRECT)
+            ),
+            "delivery table digest is not the frozen",
+        ),
+        (
+            "REVIEWED_DELIVERY_IDENTITIES",
+            # A well-formed authority-class swap changes the direct/reviewed split.
+            _swap_delivery(
+                45,
+                (
+                    "ETHUSDT_260626",
+                    "ETHUSDT",
+                    "2026-06-26",
+                    DELIVERY_AUTHORITY_REVIEWED_ARCHIVE,
+                ),
+            ),
+            "count is not the frozen review-137 count",
+        ),
+        (
+            "REVIEWED_DELIVERY_IDENTITIES",
+            REVIEW137_DELIVERY_ROWS[:-1],
+            "count is not the frozen review-137 count",
+        ),
+        (
+            "REVIEWED_SETTLEMENT_ALIASES",
+            # A well-formed remap to a fresh base keeps every count identical.
+            _swap_alias(
+                6,
+                (
+                    "CTKUSDTSETTLED",
+                    "OTHERBASEUSDT",
+                    "authenticated_current_exchange_info",
+                ),
+            ),
+            "settlement-alias table digest is not the frozen",
+        ),
+        (
+            "REVIEWED_SETTLEMENT_ALIASES",
+            REVIEW137_ALIAS_ROWS[:-1],
+            "count is not the frozen review-137 count",
+        ),
+    ],
+)
+def test_structurally_valid_table_drift_is_rejected(
+    monkeypatch: pytest.MonkeyPatch, table: str, rows: tuple[Any, ...], message: str
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    monkeypatch.setattr(module, table, rows)
+    # Every row remains individually well formed; only the frozen table as a whole moved.
+    with pytest.raises(SourceQualificationError, match=message):
+        validate_reviewed_authority_tables()
+
+
+def test_table_drift_blocks_resolution_and_candidate_construction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index = _authority_index(["BTCUSDT", "BTCUSDT_220325"])
+    monkeypatch.setattr(
+        module,
+        "REVIEWED_DELIVERY_IDENTITIES",
+        _swap_delivery(
+            45, ("ETHUSDT_260925", "ETHUSDT", "2026-09-25", DELIVERY_AUTHORITY_DIRECT)
+        ),
+    )
+    # No name is resolved from a table that is no longer the reviewed one.
+    with pytest.raises(SourceQualificationError, match="digest is not the frozen"):
+        run_source_qualification(
+            store_root=tmp_path / "drift",
+            index=index,
+            current_contracts=_contracts("BTCUSDT"),
+            delivery_prices=MemoryDeliveryPriceSource(
+                payloads={"BTCUSDT": _delivery_payload("2022-03-25")}
+            ),
+        )
+    assert not (tmp_path / "drift" / SAMPLE_PLAN_LOCK_FILENAME).exists()
+
+
+@pytest.mark.parametrize(
+    ("price", "message"),
+    [
+        (float("nan"), "positive delivery price"),
+        (float("inf"), "positive delivery price"),
+        (float("-inf"), "positive delivery price"),
+    ],
+)
+def test_non_finite_delivery_prices_fail_closed(price: float, message: str) -> None:
+    payload = [{"deliveryTime": 1648166400000, "deliveryPrice": price}]
+    with pytest.raises(SourceQualificationError, match=message):
+        parse_delivery_price_response(payload, pair="BTCUSDT")
+
+
+def test_delivery_provenance_must_describe_its_own_pair(tmp_path: Path) -> None:
+    source = MemoryDeliveryPriceSource(payloads={"BTCUSDT": _delivery_payload("2022-03-25")})
+    response = source.fetch_delivery_prices("BTCUSDT")
+    mismatched = replace(response, request_params={"pair": "ETHUSDT"})
+    with pytest.raises(SourceQualificationError, match="does not describe its own request"):
+        validate_delivery_price_response(mismatched)
+    extra = replace(response, request_params={"pair": "BTCUSDT", "apiKey": "<redacted>"})
+    with pytest.raises(SourceQualificationError, match="does not describe its own request"):
+        validate_delivery_price_response(extra)
+    with pytest.raises(SourceQualificationError, match="does not describe its own request"):
+        validate_delivery_price_response(replace(response, request_params={}))
+
+
+def test_retained_delivery_path_must_be_its_own_content_address(tmp_path: Path) -> None:
+    source = MemoryDeliveryPriceSource(payloads={"BTCUSDT": _delivery_payload("2022-03-25")})
+    response = source.fetch_delivery_prices("BTCUSDT")
+    named = tmp_path / "delivery-btcusdt.json"
+    named.write_bytes(response.raw_bytes)
+    # The bytes are right, but a retained response must live at its own digest.
+    with pytest.raises(ResumeIntegrityError, match="not its own content address"):
+        validate_delivery_price_response(replace(response, content_path=str(named)))
+    addressed = tmp_path / response.sha256
+    addressed.write_bytes(response.raw_bytes)
+    assert validate_delivery_price_response(replace(response, content_path=str(addressed)))
+
+
+def test_complete_cost_manifest_publishes_a_canonical_digest(tmp_path: Path) -> None:
+    dates = ("2020-01-01", "2020-01-02", "2020-01-03")
+    inventory = build_family_inventory(_cost_index(dates))
+    complete = select_cost_calibration_sample(inventory=inventory, universe=["BTCUSDT"])
+    digest = complete["manifest_digest"]
+    assert len(digest) == 64
+    assert complete["manifest_digest_version"] == "cex002_complete_cost_manifest_v1"
+    assert digest == cost_manifest_digest(
+        complete["items"],
+        selector=complete["selector"],
+        families=complete["families"],
+        gaps=complete["gaps"],
+    )
+    # Taking the bounded Gate-1 sample changes nothing about the complete product.
+    select_cost_source_sample(inventory=inventory, universe=["BTCUSDT"])
+    again = select_cost_calibration_sample(inventory=inventory, universe=["BTCUSDT"])
+    assert again["manifest_digest"] == digest
+    assert again["object_count"] == complete["object_count"]
+
+
+def test_complete_cost_manifest_digest_moves_with_its_evidence() -> None:
+    base_items = [
+        {
+            "family": "daily/bookTicker",
+            "symbol": "BTCUSDT",
+            "key": "data/futures/um/daily/bookTicker/BTCUSDT/a.zip",
+            "object": ListingObject(key="a", size=10, etag="e1"),
+        },
+        {
+            "family": "daily/bookDepth",
+            "symbol": "BTCUSDT",
+            "key": "data/futures/um/daily/bookDepth/BTCUSDT/b.zip",
+            "object": ListingObject(key="b", size=20, etag="e2"),
+        },
+    ]
+    gaps = [{"family": "daily/bookDepth", "symbol": "ETHUSDT", "kind": "cost_sample_unavailable"}]
+    baseline = cost_manifest_digest(
+        base_items, selector="first_midpoint_last_daily_book_v1", families=["x"], gaps=gaps
+    )
+
+    def _digest(items: list[dict[str, Any]], **kwargs: Any) -> str:
+        return cost_manifest_digest(
+            items,
+            selector=kwargs.get("selector", "first_midpoint_last_daily_book_v1"),
+            families=kwargs.get("families", ["x"]),
+            gaps=kwargs.get("gaps", gaps),
+        )
+
+    changed_key = [
+        dict(base_items[0], key="data/futures/um/daily/bookTicker/BTCUSDT/z.zip"),
+        base_items[1],
+    ]
+    changed_size = [
+        dict(base_items[0], object=ListingObject(key="a", size=11, etag="e1")),
+        base_items[1],
+    ]
+    changed_etag = [
+        dict(base_items[0], object=ListingObject(key="a", size=10, etag="e9")),
+        base_items[1],
+    ]
+    # Key, size, ETag, selector, and typed gaps are all part of the product identity.
+    assert _digest(changed_key) != baseline
+    assert _digest(changed_size) != baseline
+    assert _digest(changed_etag) != baseline
+    assert _digest(base_items, selector="other_selector_v1") != baseline
+    assert _digest(base_items, families=["y"]) != baseline
+    assert _digest(base_items, gaps=[]) != baseline
+    # Order of the same evidence is not identity.
+    assert _digest(list(reversed(base_items))) == baseline
+
+
+def test_candidate_binds_the_complete_cost_manifest_digest(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    _seed_v2_authority(tmp_path, index)
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        candidate_plan_only=True,
+    )
+    candidate = report.candidate_plan
+    complete = report.storage["cost_sample"]
+    assert candidate["complete_cost_manifest_digest"] == complete["manifest_digest"]
+    assert candidate["complete_cost_manifest_digest_version"] == (
+        complete["manifest_digest_version"]
+    )
+    # The envelope binds it, so a different complete cost product is a different envelope.
+    plan = SamplePlan.from_dict(candidate["plan"])
+    assert candidate["candidate_envelope_digest"] == candidate_envelope_digest(
+        plan,
+        allowance_id=candidate["allowance"]["ledger_id"],
+        inputs=PlanInputs(**candidate["inputs"]),
+        complete_cost_manifest_digest=complete["manifest_digest"],
+    )
+    assert candidate["candidate_envelope_digest"] != candidate_envelope_digest(
+        plan,
+        allowance_id=candidate["allowance"]["ledger_id"],
+        inputs=PlanInputs(**candidate["inputs"]),
+        complete_cost_manifest_digest="0" * 64,
+    )
+
+
+# --- ADR-0020 cost-source data validation ---------------------------------------------
+
+_TICKER_HEADER = (
+    "update_id,best_bid_price,best_bid_qty,best_ask_price,best_ask_qty,"
+    "transaction_time,event_time"
+)
+_DEPTH_HEADER = "timestamp,percentage,depth,notional"
+_VALID_TICKER_ROWS = (
+    "1,100.0,2.0,100.5,3.0,1577836800000,1577836800001",
+    "2,100.1,1.5,100.6,2.5,1577836801000,1577836801001",
+)
+_VALID_DEPTH_ROWS = (
+    "2020-01-01 00:00:00,-1,5.0,500.0",
+    "2020-01-01 00:01:00,1,6.0,600.0",
+)
+_VALID_DEPTH_ROWS_EPOCH = (
+    "1577836800000,-1,5.0,500.0",
+    "1577836860000,1,6.0,600.0",
+)
+
+
+def _cost_key(family: str, name: str) -> str:
+    cadence, _, hint = family.partition("/")
+    return f"{vision_prefix(cadence, hint)}BTCUSDT/BTCUSDT-{hint}-{name}.zip"
+
+
+def _ticker_payload(*rows: str, headed: bool = True) -> bytes:
+    body = "\n".join(([_TICKER_HEADER] if headed else []) + list(rows)) + "\n"
+    return _zip_bytes("BTCUSDT-bookTicker-2020-01-01.csv", body.encode("utf-8"))
+
+
+def _depth_payload(*rows: str, headed: bool = True) -> bytes:
+    body = "\n".join(([_DEPTH_HEADER] if headed else []) + list(rows)) + "\n"
+    return _zip_bytes("BTCUSDT-bookDepth-2020-01-01.csv", body.encode("utf-8"))
+
+
+def _validate_ticker(*rows: str, headed: bool = True) -> Any:
+    return validate_cost_sample_payload(
+        _ticker_payload(*rows, headed=headed),
+        key=_cost_key("daily/bookTicker", "2020-01-01"),
+        family="daily/bookTicker",
+    )
+
+
+def _validate_depth(*rows: str, headed: bool = True) -> Any:
+    return validate_cost_sample_payload(
+        _depth_payload(*rows, headed=headed),
+        key=_cost_key("daily/bookDepth", "2020-01-01"),
+        family="daily/bookDepth",
+    )
+
+
+def test_cost_validation_accepts_real_shaped_headed_payloads() -> None:
+    ticker = _validate_ticker(*_VALID_TICKER_ROWS)
+    assert ticker.schema_kind == "headed"
+    assert ticker.row_count == 2
+    assert ticker.family_hint == "bookTicker"
+    assert ticker.version == "cex002_cost_source_validation_v1"
+    assert ticker.first_timestamp_ms == 1577836800000
+    assert ticker.last_timestamp_ms == 1577836801000
+    assert "uncrossed_quotes" in ticker.checks
+    assert "positive_nondecreasing_transaction_and_event_times" in ticker.checks
+
+    depth = _validate_depth(*_VALID_DEPTH_ROWS)
+    assert depth.schema_kind == "headed"
+    assert depth.row_count == 2
+    assert depth.family_hint == "bookDepth"
+    # The calendar encoding is read as UTC milliseconds.
+    assert depth.first_timestamp_ms == 1577836800000
+    assert depth.last_timestamp_ms == 1577836860000
+    assert "finite_nonzero_percentage_bands" in depth.checks
+    assert depth.to_dict()["row_count"] == 2
+
+
+def test_cost_validation_accepts_headerless_official_payloads() -> None:
+    ticker = _validate_ticker(*_VALID_TICKER_ROWS, headed=False)
+    assert ticker.schema_kind == "headerless"
+    assert ticker.row_count == 2
+    # Both official bookDepth timestamp encodings are accepted.
+    depth = _validate_depth(*_VALID_DEPTH_ROWS_EPOCH, headed=False)
+    assert depth.schema_kind == "headerless"
+    assert depth.row_count == 2
+    assert depth.first_timestamp_ms == 1577836800000
+
+
+@pytest.mark.parametrize(
+    ("rows", "message"),
+    [
+        # A later row is read as carefully as the first.
+        ((_VALID_TICKER_ROWS[0], "2,100.1,1.5,100.6,2.5,1577836801000"), "row width"),
+        (
+            (_VALID_TICKER_ROWS[0], "2,nan,1.5,100.6,2.5,1577836801000,1577836801001"),
+            "not finite",
+        ),
+        (
+            (_VALID_TICKER_ROWS[0], "2,100.1,inf,100.6,2.5,1577836801000,1577836801001"),
+            "not finite",
+        ),
+        (("1,101.0,2.0,100.5,3.0,1577836800000,1577836800001",), "crossed"),
+        (("1,100.0,-2.0,100.5,3.0,1577836800000,1577836800001",), "quantity is negative"),
+        (("1,0,2.0,100.5,3.0,1577836800000,1577836800001",), "price is not positive"),
+        (("1.5,100.0,2.0,100.5,3.0,1577836800000,1577836800001",), "not an integer"),
+        (("-1,100.0,2.0,100.5,3.0,1577836800000,1577836800001",), "update id is negative"),
+        (("1,100.0,2.0,100.5,3.0,1577836800000,0",), "time is not positive"),
+        (
+            (_VALID_TICKER_ROWS[1], _VALID_TICKER_ROWS[0]),
+            "quote time moves backwards",
+        ),
+    ],
+)
+def test_cost_validation_rejects_defective_quote_rows(
+    rows: tuple[str, ...], message: str
+) -> None:
+    with pytest.raises(SourceQualificationError, match=message):
+        _validate_ticker(*rows)
+
+
+@pytest.mark.parametrize(
+    ("rows", "message"),
+    [
+        ((_VALID_DEPTH_ROWS[0], "2020-01-01 00:01:00,1,6.0"), "row width"),
+        (("2020-01-01 00:00:00,0,5.0,500.0",), "depth band is zero"),
+        (("2020-01-01 00:00:00,-1,-5.0,500.0",), "depth or notional is negative"),
+        (("2020-01-01 00:00:00,-1,5.0,-500.0",), "depth or notional is negative"),
+        (("2020-01-01 00:00:00,-1,5.0,nan",), "not finite"),
+        (("2020-01-01 00:00:00,-1,inf,500.0",), "not finite"),
+        (("yesterday,-1,5.0,500.0",), "known official encoding"),
+        (
+            (_VALID_DEPTH_ROWS[1], _VALID_DEPTH_ROWS[0]),
+            "depth timestamp moves backwards",
+        ),
+    ],
+)
+def test_cost_validation_rejects_defective_depth_rows(
+    rows: tuple[str, ...], message: str
+) -> None:
+    with pytest.raises(SourceQualificationError, match=message):
+        _validate_depth(*rows)
+
+
+def test_cost_validation_requires_data_and_a_cost_family() -> None:
+    with pytest.raises(SourceQualificationError, match="no data rows"):
+        _validate_ticker()
+    with pytest.raises(SourceQualificationError, match="no data rows"):
+        _validate_depth()
+    # A non-cost family is never validated by this path, in either direction.
+    with pytest.raises(SourceQualificationError, match="requires a cost-calibration family"):
+        validate_cost_sample_payload(
+            _ticker_payload(*_VALID_TICKER_ROWS),
+            key=f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip",
+            family="monthly/trades",
+        )
+    assert cost_validation_record(
+        _ticker_payload(*_VALID_TICKER_ROWS),
+        key=f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip",
+        family="monthly/trades",
+    ) == {}
+
+
+def _crossed_cost_index() -> MemoryObjectIndex:
+    """One whole day per cost family, whose quote object is economically invalid."""
+    ticker = _ticker_payload("1,101.0,2.0,100.5,3.0,1577836800000,1577836800001")
+    depth = _depth_payload(*_VALID_DEPTH_ROWS)
+
+    def _payload(key: str) -> bytes:
+        return ticker if "/bookTicker/" in key else depth
+
+    return _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[("daily/bookTicker", "bookTicker"), ("daily/bookDepth", "bookDepth")],
+        payload_for_key=_payload,
+        months=("2020-01-01",),
+    )
+
+
+def _crossed_incidents(report: QualificationReport) -> list[dict[str, Any]]:
+    return [
+        item
+        for item in report.incidents
+        if item.get("kind") == "sample_error" and "crossed" in str(item.get("note"))
+    ]
+
+
+def _ticker_keys(store_root: Path) -> list[str]:
+    document = json.loads((store_root / "cex002_qualification_progress.json").read_text())
+    return [key for key in document.get("objects", {}) if "/bookTicker/" in key]
+
+
+def test_invalid_cost_object_fails_fresh_acquisition(tmp_path: Path) -> None:
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=_crossed_cost_index(),
+        current_contracts=_contracts("BTCUSDT"),
+    )
+    # The crossed quote is typed evidence, and the object is never adopted.
+    assert _crossed_incidents(report)
+    assert all(item.family != "daily/bookTicker" for item in report.samples)
+    assert _ticker_keys(tmp_path) == []
+    assert report.accepted is False
+
+
+def test_invalid_cost_object_fails_content_addressed_reuse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    index = _crossed_cost_index()
+    # Adopt the object under a disabled validator, exactly as a pre-ADR-0020 store would.
+    monkeypatch.setattr(module, "cost_validation_record", lambda payload, *, key, family: {})
+    first = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    monkeypatch.undo()
+    assert any(item.family == "daily/bookTicker" for item in first.samples)
+    assert _ticker_keys(tmp_path)
+    assert not _crossed_incidents(first)
+
+    # The reuse path re-proves the retained payload instead of trusting the checkpoint.
+    second = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    assert _crossed_incidents(second)
+    assert all(item.family != "daily/bookTicker" for item in second.samples)
+
+
+def test_invalid_cost_object_fails_retained_recovery(tmp_path: Path) -> None:
+    index = _crossed_cost_index()
+    report = run_source_qualification(
+        store_root=tmp_path, index=index, current_contracts=_contracts("BTCUSDT")
+    )
+    assert _crossed_incidents(report)
+    # The rejected acquisition still retained checksum-proved bytes and their sidecar.
+    checksums = RetainedChecksumIndex.from_cache(tmp_path / "list_cache")
+    key = next(
+        obj.key
+        for prefix, objects in index.objects.items()
+        if "/bookTicker/" in prefix
+        for obj in objects
+        if not obj.key.endswith(".CHECKSUM")
+    )
+    assert checksums.lookup(key) is not None
+    checkpoint = SampleCheckpointStore.load(
+        tmp_path / "cex002_qualification_progress.json", sidecar_dir=tmp_path / "list_cache"
+    )
+    assert checkpoint.get(key) is None
+    # Recovery adopts nothing it could not have downloaded.
+    with pytest.raises(SourceQualificationError, match="crossed"):
+        recover_retained_samples(
+            sample_dir=tmp_path / "raw" / "sha256",
+            sidecar_dir=tmp_path / "list_cache",
+            checksums=checksums,
+            checkpoint=checkpoint,
+            keys=[key],
+        )
+
+
+def test_valid_cost_objects_publish_and_persist_their_validation(tmp_path: Path) -> None:
+    # Both cost families plus a non-cost family, so the non-cost contrast is real.
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[
+            ("monthly/klines", "1h"),
+            ("daily/bookTicker", "bookTicker"),
+            ("daily/bookDepth", "bookDepth"),
+        ],
+        interval_map={"monthly/klines": ["1h"]},
+        payload_by_stem={
+            "1h": _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes()),
+            "bookTicker": _zip_bytes(
+                "b.csv", (FIXTURES / "headerless_book_ticker.csv").read_bytes()
+            ),
+            "bookDepth": _zip_bytes(
+                "d.csv", (FIXTURES / "headerless_book_depth.csv").read_bytes()
+            ),
+        },
+        months=("2020-01-01", "2020-01-02", "2020-01-03"),
+        months_by_family={"monthly/klines": ("2020-01", "2020-02", "2020-03")},
+    )
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+    )
+    source_block = report.storage["cost_source_sample"]
+    validations = source_block["validations"]
+    assert source_block["validation_version"] == "cex002_cost_source_validation_v1"
+    assert len(validations) == source_block["object_count"] == 6
+    assert {item["family"] for item in validations} == {
+        "daily/bookTicker",
+        "daily/bookDepth",
+    }
+    for item in validations:
+        assert item["row_count"] >= 1
+        assert item["first_timestamp_ms"] > 0
+        assert item["last_timestamp_ms"] >= item["first_timestamp_ms"]
+        assert item["checks"]
+    # Every acquired cost sample carries its own proof, and the checkpoint persists it.
+    cost_families = {"daily/bookTicker", "daily/bookDepth"}
+    cost_samples = [item for item in report.samples if item.family in cost_families]
+    assert cost_samples
+    assert all(item.cost_validation for item in cost_samples)
+    document = json.loads((tmp_path / "cex002_qualification_progress.json").read_text())
+    persisted = [
+        entry
+        for entry in document["objects"].values()
+        if entry.get("cost_validation")
+    ]
+    assert len(persisted) == len(cost_samples)
+    # Non-cost samples are acquired by their own rules and carry no cost validation.
+    non_cost = [item for item in report.samples if item.family not in cost_families]
+    assert non_cost
+    assert all(not item.cost_validation for item in non_cost)
+
+
+def _multi_member_ticker_payload(*extra: tuple[str, str]) -> bytes:
+    """A checksum-valid archive whose first member is a perfectly good CSV."""
+    body = "\n".join([_TICKER_HEADER, *_VALID_TICKER_ROWS]) + "\n"
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as handle:
+        handle.writestr("BTCUSDT-bookTicker-2020-01-01.csv", body)
+        for name, text in extra:
+            handle.writestr(name, text)
+    return buffer.getvalue()
+
+
+def test_cost_validation_requires_exactly_one_csv_member() -> None:
+    key = _cost_key("daily/bookTicker", "2020-01-01")
+    # The first member is valid and would have validated on its own.
+    single = _multi_member_ticker_payload()
+    assert validate_cost_sample_payload(
+        single, key=key, family="daily/bookTicker"
+    ).row_count == 2
+    for extra in (
+        ("second.csv", "1,100.0,2.0,100.5,3.0,1577836800000,1577836800001\n"),
+        ("second.csv", "not,even,close\n"),
+        ("notes.txt", "anything at all\n"),
+    ):
+        with pytest.raises(
+            SourceQualificationError, match="exactly one CSV member"
+        ):
+            validate_cost_sample_payload(
+                _multi_member_ticker_payload(extra), key=key, family="daily/bookTicker"
+            )
+
+
+def test_cost_validation_requires_a_csv_member_name() -> None:
+    body = "\n".join([_TICKER_HEADER, *_VALID_TICKER_ROWS]) + "\n"
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as handle:
+        handle.writestr("BTCUSDT-bookTicker-2020-01-01.txt", body)
+    with pytest.raises(SourceQualificationError, match="member is not a CSV file"):
+        validate_cost_sample_payload(
+            buffer.getvalue(),
+            key=_cost_key("daily/bookTicker", "2020-01-01"),
+            family="daily/bookTicker",
+        )
+
+
+def test_cost_validation_parses_strict_csv_and_keeps_empty_cells() -> None:
+    # Malformed quoting is rejected rather than repaired.
+    with pytest.raises(SourceQualificationError, match="not parseable CSV"):
+        _validate_ticker(
+            _VALID_TICKER_ROWS[0], '2,"100.1"x,1.5,100.6,2.5,1577836801000,1577836801001'
+        )
+    # An empty cell survives parsing, so it fails as a value instead of shrinking the row.
+    with pytest.raises(SourceQualificationError, match="not numeric"):
+        _validate_ticker(
+            _VALID_TICKER_ROWS[0], "2,,1.5,100.6,2.5,1577836801000,1577836801001"
+        )
+    # A trailing separator is a real extra cell, and the width check sees it.
+    with pytest.raises(SourceQualificationError, match="row width"):
+        _validate_ticker(
+            _VALID_TICKER_ROWS[0], "2,100.1,1.5,100.6,2.5,1577836801000,1577836801001,"
+        )
