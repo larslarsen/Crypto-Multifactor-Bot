@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 162
+Next required actor: Sr Dev - Claude Build - correct Gate-1 semantics and source authority
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -116,6 +116,7 @@ Governing documents:
 - research/sprint_004/160_CEX002_MIGRATION_NETWORK_RETRY.md
 - research/sprint_004/161_CEX002_MIGRATION_ACCEPTANCE_AND_SAMPLE_EXECUTION.md
 - research/sprint_004/162_CEX002_VERSION4_SAMPLE_EXECUTION.md
+- research/sprint_004/163_CEX002_SAMPLE_OUTCOME_ARCHITECTURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1601,3 +1602,25 @@ The amendment ledger records the full 1,049,324-byte planned charge under the
 reservations totaling 203,853 bytes. No retry, second invocation, automatic resume, Gate 2,
 or later work was run. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket
 remains `NONE`.
+
+## Sample outcome accepted - Claude semantic and authority correction
+
+Review 163 accepts Hermes's exact bounded run and required stop as honest blocking
+evidence. It does not accept Gate 1. The two reserved quote files prove that authentic
+empty and one-sided book states are being rejected as whole-file corruption. The product
+matrix also conflates source qualification with final release coverage and evaluates the
+membership product against an empty family set.
+
+ADR-0020 section 4b now separates Gate-1 source blockers from later release blockers,
+defines typed two-sided/one-sided/empty quote semantics, fixes membership coverage, and
+requires an explicit one-shot version-4 source-authority advance before corrected ordinary
+execution.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 163's three-path
+source/test correction and exact-hash return. Claude runs no command or Git operation.
+Hermes remains unauthorized pending reviewer source acceptance.
+
+No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
+bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains
+`NONE`.

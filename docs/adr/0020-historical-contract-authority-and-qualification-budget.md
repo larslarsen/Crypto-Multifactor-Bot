@@ -2,8 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-21
+- **Amended:** 2026-08-21 - Gate-1 source/release separation and quote-state semantics
 - **Amends:** ADR-0017 historical-membership authority and Gate-1 sampling
 - **Evidence:** `research/sprint_004/137_CEX002_MEMBERSHIP_AND_BUDGET_ARCHITECTURE.md`
+  and `research/sprint_004/163_CEX002_SAMPLE_OUTCOME_ARCHITECTURE_REVIEW.md`
 
 ## Context
 
@@ -177,6 +179,70 @@ it cannot silently change selection content or conceal a changed plan-content di
 This section fixes the implementation contract but does not itself authorize a live
 migration or sample download. Source acceptance, integration, migration execution, and
 sample execution remain separate reviewer gates.
+
+### 4b. Gate-1 source acceptance, quote states, and source-authority advance
+
+The reviewed version-4 run acquired all 84 locked new objects. It proved that Gate-1
+source qualification and final release coverage were still conflated. A product with an
+officially qualified source remained a Gate-1 blocker solely because the source does not
+cover every contract interval. The membership product was worse: because it has no archive
+data family, generic family coverage marked all 771 affirmatively confirmed perpetuals as
+uncovered, including 698 authenticated by current `exchangeInfo`.
+
+Gate 1 now accepts source contracts, not the final release. Its blocking domain is source
+authority, access, listing completeness, checksum/integrity, required qualification
+evidence, membership resolution, and the qualification budget. Explicit universe and
+temporal coverage gaps remain complete, typed, contract/interval-level evidence and may
+keep a product release-blocked, but they do not turn an otherwise qualified source into a
+Gate-1 failure. The report must publish separate Gate-1 source blockers and later-release
+blockers. No gap, symbol, interval, or required product disappears from either matrix.
+
+Historical membership coverage is the affirmative membership classification itself. An
+authenticated current perpetual absent from archives is still a confirmed member and is
+reported as `current_unarchived` only for data families it lacks. A membership row with
+zero unresolved classifications must not be evaluated against an empty family list.
+Derived hourly taker flow inherits the bar product's release-coverage state even though its
+source qualification comes from the native kline schema.
+
+The same run proved that zero prices in official `bookTicker` rows are not necessarily
+corrupt bytes. One selected LTCBUSD file contains a single all-zero terminal quote. One
+selected XRPUSDC file begins with four bid-only rows and then contains 12,974 valid
+two-sided rows. The validator must classify every finite, nonnegative row as one of:
+
+1. `two_sided`, with positive bid and ask and an uncrossed quote;
+2. `bid_only`, with positive bid and zero ask/ask quantity;
+3. `ask_only`, with zero bid/bid quantity and positive ask; or
+4. `empty`, with both prices and both quantities zero.
+
+Negative values, a zero price with a positive quantity on that side, crossed two-sided
+quotes, malformed identifiers/times, non-finite values, width drift, or nonmonotonic time
+remain integrity failures. One-sided and empty rows are authentic no-liquidity states: they
+are retained, counted, excluded from spread/impact arithmetic, and surfaced as typed
+unpriceable observations. A structurally valid all-empty object is a typed unavailable
+cost observation, not proof that the source schema is corrupt. The family qualifies only
+when the locked sample also contains at least one usable two-sided quote. Selection stays
+outcome-blind; no failed or sparse object is replaced after inspection.
+
+Any source correction changes the executing module and therefore the locked code/config
+identity. Ordinary execution must continue to fail closed until an explicit one-shot
+source-authority transaction advances the reviewed version-4 receipt without changing its
+plan. That transaction:
+
+1. requires the exact accepted report, version-4 lock, amendment ledger, legacy ledger,
+   checkpoint, plan digest, plan shape, retained evidence, and executing non-code inputs;
+2. permits only the reviewed code/config and source-receipt advance; the plan, selected
+   keys, sizes, history, prior-lock lineage, budget allowance, charges, and reservations
+   remain exact;
+3. preserves the prior lock and prior amendment ledger content-addressably;
+4. appends the executing source identity to the amendment ledger first and publishes the
+   matching lock binding and code/config input last;
+5. treats ledger-advanced/lock-pending as a recoverable non-executing state that only the
+   same reviewed transition may finish; every other mixed state authorizes nothing; and
+6. acquires no sample, reconciles no reservation, writes no qualification report, and
+   mutates no checkpoint, raw object, cache, legacy ledger, or plan document.
+
+Source acceptance, integration, the source-authority transaction, and the corrected
+ordinary qualification run remain separate reviewer gates.
 
 ### 5. Storage and scope
 
