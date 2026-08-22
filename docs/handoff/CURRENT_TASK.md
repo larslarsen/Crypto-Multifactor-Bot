@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate accepted transition per review 213
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 214
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -173,6 +173,7 @@ Governing documents:
 - research/sprint_004/211_CEX002_PATH_BOUND_TRANSITION_PREFLIGHT_REVIEW.md
 - research/sprint_004/212_CEX002_TRANSITION_FOCUSED_TEST_FAILURE.md
 - research/sprint_004/213_CEX002_TRANSITION_SOURCE_TEST_ACCEPTANCE.md
+- research/sprint_004/214_CEX002_TRANSITION_INTEGRATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2512,3 +2513,16 @@ runs repository control and the exact six-path whitespace check, commits and pus
 those six paths, and stops for reviewer inspection. It does not rerun pytest or Ruff and
 does not execute the transition or any data workflow. Gate 2 remains unaccepted; next
 ticket remains `NONE`.
+
+## Record-214 transition integration published
+
+Hermes integrated review 213's three accepted isolated-transition paths at the accepted
+hashes. Per review 213, Hermes did not rerun pytest or Ruff and did not execute the
+transition or any data workflow.
+
+Hermes published record 214, ran repository control and the exact six-path whitespace
+check, and stopped for reviewer inspection. No historical-store transition, ordinary
+qualification, sizing source change or retry, acquisition, normalization, catalog
+publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced
+scope, or next-ticket work was run. Gate 2 remains unaccepted. Next ticket remains
+`NONE`.
