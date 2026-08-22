@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 144
+Next required actor: Sr Dev - Claude Build - implement ADR-0020 reviewed version-4 migration
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -98,6 +98,7 @@ Governing documents:
 - research/sprint_004/142_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/143_CEX002_FOCUSED_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/144_CEX002_FOCUSED_TEST_INTEGRATION_AND_CANDIDATE.md
+- research/sprint_004/145_CEX002_VERSION4_CANDIDATE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1262,3 +1263,26 @@ empty, and Gate 1 has not passed.
 No plan migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
 payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
 next ticket remains `NONE`.
+
+## Version-4 candidate accepted - migration source required
+
+Review 145 accepts Hermes's exact test integration, all five exit-0 focused commands,
+terminal status-2 candidate, compact report, preserved reports, and ADR-0020 authority and
+cost proofs. All 46 reviewed deliveries and 17 settlement aliases resolve; zero archive
+names remain unresolved. Samples are still empty, seven source products remain blocked,
+and Gate 1 has not passed.
+
+The current source has no valid 2-to-4 migration or independent-amendment-ledger execution
+path, so Hermes is not authorized to mutate the live plan. ADR-0020 now fixes a one-shot,
+ledger-first/lock-last transaction that preserves versions 0-2, keeps the version-3
+candidate as unmigrated lineage, binds the exact reviewed version-4 plan and source
+identity, and stops before sample acquisition.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 145's exact three-
+path migration production/CLI/test-source implementation. Claude runs no command, network
+or data operation, migration, repository-record edit, or Git operation and stops for
+reviewer source inspection with three hashes and the unique test-function count.
+
+No live migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.

@@ -125,6 +125,59 @@ version 3 downloaded and charged nothing. Candidate construction remains read-on
 legacy-ledger rewrite, and empty samples. A later reviewer decision is required before any
 plan mutation or sample download.
 
+### 4a. Reviewed version-4 migration transaction
+
+Review 145 accepts the read-only version-4 candidate at report SHA-256
+`f26abbc577307e5dcef693ec159fa65d1373d7b03c2be0eb6b926e5b09f97406`.
+Its plan-content digest is
+`2fb0e47a3666f0e87b35dd7fdd6ea26aa352e34acf8dfd5debf590409aecbbef`,
+its candidate-envelope digest is
+`be63989bd4d3d40c95c7ca405eae7558ce0ef997a2289892d14ed8d773d4cbfe`,
+and its complete-cost-manifest digest is
+`04842ff6b9b58280b3ec2ea2644b3d44769be62d460bef785262cd4dd65cac57`.
+It contains 106 entries: 84 new objects / 1,049,324 bytes, 12 retained objects /
+44,642 bytes, 10 aliases, and zero blocked entries.
+
+Migration is an explicit one-shot state transition, never a general relock facility. The
+only interface is fixed to the reviewed identities above and accepts no caller-selected
+plan, digest, version, allowance, ledger, relock, or download authority. Candidate-only
+construction remains read-only, ordinary execution never auto-migrates, and migration
+itself stops before sample acquisition.
+
+The prior version-2 lock at SHA-256
+`e04a5ce2f2513cc8a0f4e6698dcbf9d43c5a7bec0295021ca5d431ff886f0d84`
+and legacy ledger at SHA-256
+`47341a9ca2c60caf73485fb9bac40c6526cb35a13471e4545cd9cdcee6e227f6`
+are immutable authorities. Migration first preserves the exact prior-lock bytes at a
+content-addressed evidence path. It then atomically creates a prepared amendment ledger
+bound to the accepted report, candidate plan/envelope, prior lock, legacy ledger,
+complete-cost manifest, the `cex002_architecture_amendment_v3` allowance identity, and the
+exact executing source/config identity. The separately validated amendment ledger starts
+with the full 268,435,456-byte allowance and no charge or reservation.
+
+Publishing the explicit version-4 lock is the transaction commit point. The lock preserves
+locked versions 0-2 without rewriting their plan documents or digests and records the
+unexecuted version-3 candidate separately by its accepted plan/envelope digests; version 3
+is never installed or relabelled. The version-4 lock binds the reviewed candidate and the
+prepared amendment-ledger authority. The legacy ledger remains byte-identical.
+
+The two-file transaction is ledger-first and lock-last. A crash leaving the exact prepared
+ledger with the version-2 lock authorizes no execution; only the same reviewed migration
+may idempotently finish. A version-4 lock with a missing, substituted, malformed, or
+authority-mismatched amendment ledger fails closed before sample transfer. Every other
+partial or mixed state fails closed without falling back to the legacy ledger.
+
+After a separately reviewed live migration, ordinary version-4 execution re-proves its
+frozen plan inputs and retained evidence, replays the exact accepted keys without
+re-selection, and uses only the amendment ledger for write-ahead reservation,
+reconciliation, and settlement. The legacy ledger is read and rehashed only as preserved
+lineage. A source/config change advances through an explicit reviewed migration receipt;
+it cannot silently change selection content or conceal a changed plan-content digest.
+
+This section fixes the implementation contract but does not itself authorize a live
+migration or sample download. Source acceptance, integration, migration execution, and
+sample execution remain separate reviewer gates.
+
 ### 5. Storage and scope
 
 The current inventory reports 7,833,966,625 selected compressed raw bytes and
