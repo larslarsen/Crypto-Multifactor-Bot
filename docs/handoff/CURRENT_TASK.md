@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 178
+Next required actor: Sr Dev - Claude Build - implement review 179
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -132,6 +132,8 @@ Governing documents:
 - research/sprint_004/176_CEX002_AUTHORITY_TRANSACTION_EXECUTION.md
 - research/sprint_004/177_CEX002_CORRECTED_QUALIFICATION_AUTHORIZATION.md
 - research/sprint_004/178_CEX002_CORRECTED_QUALIFICATION_EXECUTION.md
+- docs/adr/0021-bounded-real-sample-storage-sizing.md
+- research/sprint_004/179_CEX002_GATE1_ACCEPTANCE_AND_STORAGE_SIZING_ARCHITECTURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1937,3 +1939,27 @@ Gate 1 is not accepted by Hermes. Reviewer inspection of record 178 and report 6
 mandatory. No second invocation, retry, source correction, migration, candidate
 construction, bulk acquisition, Gate 1 acceptance, Gate 2, or later work was run. CEX-002
 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Gate 1 accepted - bounded storage-sizing source authorized
+
+Review 179 accepts Gate 1 at report-62 SHA-256
+`bf01f88976e2ac3d224e843f340de726f5c8c337ba56a50f9e3c6f75c4d6f227` and reviewed
+commit `dea14dcd7606bd4fb01d035e7440d0b15f2b4abd`. All nine source-gated products are
+qualified against real declared sources with no source blocker. Seven products remain
+honestly release-blocked pending full acquisition/publication; no later gate has passed.
+
+ADR-0021 defines the missing full-universe storage-sizing method. The exact Binance raw
+component is 20,351,715,427 projected new bytes, but total capacity remains unknown until
+the local lossless-envelope sizing includes full supported Coinalyze liquidation receipts,
+normalized/catalog allocation, immutable-publication high-water, and operating reserve.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only to author the three new
+sizing production/CLI/test paths enumerated in review 179. Claude runs no test, linter,
+control, Git, network, sizing, acquisition, or data command; edits no existing path, data,
+or repository record; returns the three hashes and test count; and stops for reviewer
+inspection. Hermes remains unauthorized.
+
+No sizing execution, Gate 2 acceptance, bulk acquisition, normalization, catalog
+publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced
+scope, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 is
+accepted; next ticket remains `NONE`.
