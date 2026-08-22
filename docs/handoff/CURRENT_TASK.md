@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct transition authority proof per review 209
+Next required actor: Sr Dev - Claude Build - correct transition resume per review 210
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -164,6 +164,7 @@ Governing documents:
 - research/sprint_004/207_CEX002_MIGRATION_FIXTURE_REINTEGRATION.md
 - research/sprint_004/208_CEX002_PATH_BOUND_INTEGRATION_ACCEPTANCE_AND_TRANSITION_DESIGN.md
 - research/sprint_004/209_CEX002_PATH_BOUND_TRANSITION_SOURCE_REVIEW.md
+- research/sprint_004/210_CEX002_PATH_BOUND_TRANSITION_RESUME_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2432,3 +2433,24 @@ standalone script is frozen at SHA-256
 All accepted isolation and transaction behavior remains frozen. Claude runs no commands
 or Git operation and stops with three hashes and the test count. Hermes and all execution
 remain unauthorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
+
+## Isolated transition resume requires correction
+
+Review 210 accepts and freezes review 209's whole-ledger comparison, branch-specific
+binding proof, and streamed uncompressed-manifest proof, but rejects the corrected drop.
+The transaction unconditionally tries to preserve the live lock and ledger as prior bytes
+after preflight, so a ledger-first resume and completed idempotent call both fail once
+those authority files have legitimately advanced. The interruption test helper also
+removes every synthetic fixture pin when it calls `monkeypatch.undo()`.
+
+Sr Dev - Claude Build is authorized only to correct the new transition production and
+test paths. Fresh state alone may publish prior evidence from live pinned bytes. Resumed
+and completed states must require, rehash, and reuse all four already-preserved evidence
+objects without republishing missing evidence or treating advanced authority bytes as the
+prior artifacts. Claude must scope the interruption patch without undoing fixture pins and
+add the evidence/resume/idempotence coverage required by review 210. The standalone
+script remains frozen at SHA-256
+`ada238d22560ddcaf834dff03d0da44c546856090e6133cf5afeb7be3d50aabd`.
+Claude runs no command or Git operation and stops with three hashes and the test count.
+Hermes and all execution remain unauthorized. Gate 2 remains unaccepted; next ticket
+remains `NONE`.
