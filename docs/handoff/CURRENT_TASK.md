@@ -1,14 +1,15 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 218
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - complete review 219 source drop
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task: reviewer inspection of record 218 and the changed report 62.
-Hermes has stopped. Do not retry, run a second qualification, run sizing, acquire the full
-release, or perform any later work unless the reviewer authorizes it.
+Immediate bounded task for Sr Dev - Claude Build: follow review 219. Edit only the sizing
+production and test paths, return both hashes and the new test-function count, and stop.
+Do not run commands or edit the frozen sizing CLI, qualification paths, report, data,
+records, or controls. Hermes remains unauthorized.
 
 Governing documents:
 
@@ -177,6 +178,7 @@ Governing documents:
 - research/sprint_004/216_CEX002_PATH_BOUND_TRANSITION_EXECUTION.md
 - research/sprint_004/217_CEX002_PATH_BOUND_QUALIFICATION_AUTHORIZATION.md
 - research/sprint_004/218_CEX002_PATH_BOUND_QUALIFICATION_EXECUTION.md
+- research/sprint_004/219_CEX002_CORRECTED_SIZING_AUTHORITY_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
