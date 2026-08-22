@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate import cleanup and restart migration sequence
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 158
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -111,6 +111,7 @@ Governing documents:
 - research/sprint_004/155_CEX002_MIGRATION_TEST_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/156_CEX002_MIGRATION_RUFF_FAILURE_REVIEW.md
 - research/sprint_004/157_CEX002_MIGRATION_RUFF_SOURCE_ACCEPTANCE.md
+- research/sprint_004/158_CEX002_MIGRATION_RUFF_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1463,6 +1464,21 @@ migration, or sample acquisition is authorized.
 No migration before all focused commands pass, sample acquisition, Gate 2, reduced scope,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-158 migration restart and invocation stop published
+
+Hermes integrated review 157's exact accepted import cleanup in commit `21fb4ec` and
+pushed it. The focused restart passed C1-C5. Hermes then ran exactly one reviewed
+`--apply-reviewed-v4-migration-only` invocation. The invocation exited status 1 after 495
+seconds because `fapi:exchangeInfo` failed all five bounded attempts with DNS resolution
+failure for `https://fapi.binance.com/fapi/v1/exchangeInfo`.
+
+No retry, ordinary resume, second migration command, sample acquisition, Gate 2, or later
+work was run. No version-4 lock was installed and no amendment ledger was prepared. The
+retry journal changed to record the failed attempts; accepted report, manifest detail,
+lock, legacy ledger, sample checkpoint/progress, listing checkpoint, official metadata, and
+retained raw tree remained byte-identical. CEX-002 remains `IN_PROGRESS`; Gate 1 has not
+passed; next ticket remains `NONE`.
 
 ## Record-155 migration test integration stop published
 
