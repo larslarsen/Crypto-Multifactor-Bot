@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - close review 139's four residuals
+Next required actor: Jr Dev - Hermes - integrate review 140 and run one candidate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -93,6 +93,7 @@ Governing documents:
 - research/sprint_004/137_CEX002_MEMBERSHIP_AND_BUDGET_ARCHITECTURE.md
 - research/sprint_004/138_CEX002_CLAUDE_ADR0020_SOURCE_REVIEW.md
 - research/sprint_004/139_CEX002_CLAUDE_ADR0020_CORRECTION_REVIEW.md
+- research/sprint_004/140_CEX002_ADR0020_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1173,3 +1174,21 @@ Hermes remains unauthorized.
 No candidate integration/execution, migration, acquisition, Gate 2, reduced scope,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## ADR-0020 source accepted - Hermes integration and one candidate
+
+Review 140 accepts the exact production, CLI, and 261-test source identities. Review 139's
+single-member strict CSV proof, mandatory complete-cost identity, retained-content test,
+and clean-diff residuals are closed. The complete ADR-0020 authority, cost validation,
+manifest identity, qualification priority, and version-4 lineage source is accepted for
+runtime proof; no runtime result is inferred from source inspection.
+
+Jr Dev - Hermes is authorized only for review 140's exact three-path integration, five
+stop-on-first-failure focused commands, content-address preservation of the accepted compact
+report, one bounded candidate-only execution, complete post-proof, record 141, enumerated
+publication, commit, and push. It edits no source/test after integration and touches no
+unrelated dirty path.
+
+No plan migration, sample acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+next ticket remains `NONE`.
