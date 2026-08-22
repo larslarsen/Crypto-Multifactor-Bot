@@ -9,6 +9,7 @@ import importlib.util
 import inspect
 import io
 import json
+import sys
 import threading
 import time
 import zipfile
@@ -8453,11 +8454,14 @@ def _accepted_v4_candidate(
     module = importlib.import_module(
         "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
     )
-    index = _kline_manifest_index()
-    _seed_v2_authority(tmp_path, index)
+    # Seed version 2 from a strict earlier inventory, then candidacy on the full set, so
+    # the real planner retains the already acquired objects and plans new downloads.
+    full_index = _kline_manifest_index()
+    seed_index = _kline_manifest_index(months=CONTIGUOUS_MONTHS[:1])
+    _seed_v2_authority(tmp_path, seed_index)
     report = run_source_qualification(
         store_root=tmp_path,
-        index=index,
+        index=full_index,
         current_contracts=_contracts("BTCUSDT"),
         candidate_plan_only=True,
     )
@@ -8465,6 +8469,11 @@ def _accepted_v4_candidate(
     write_qualification_report(report, report_path, store_root=tmp_path)
     candidate = report.candidate_plan
     plan = SamplePlan.from_dict(candidate["plan"])
+    download_count = sum(1 for item in plan.entries if item.action == "download")
+    retained_count = sum(1 for item in plan.entries if item.action == "reuse_retained")
+    assert download_count >= 2
+    assert retained_count >= 1
+    this_module = sys.modules[__name__]
     for name, value in (
         ("REVIEWED_MIGRATION_REPORT_SHA256", file_sha256(report_path)),
         ("REVIEWED_MIGRATION_REPORT_BYTES", int(report_path.stat().st_size)),
@@ -8488,7 +8497,8 @@ def _accepted_v4_candidate(
         ("REVIEWED_MIGRATION_PLAN_SHAPE", reviewed_plan_shape(plan)),
     ):
         monkeypatch.setattr(module, name, value)
-    return index, report_path
+        monkeypatch.setattr(this_module, name, value)
+    return full_index, report_path
 
 
 def _migrate(tmp_path: Path, index: MemoryObjectIndex, report_path: Path) -> Any:
@@ -8817,11 +8827,19 @@ def test_reviewed_migration_refuses_a_ledger_bound_to_another_authority(
         binding={
             **reviewed_migration_binding(),
             "plan_digest": "9" * 64,
-            "source_receipts": [{"prepared_at": "", "source_identity": {}}],
+            "source_receipts": [
+                {
+                    "prepared_at": "2020-01-01T00:00:00+00:00",
+                    "source_identity": dict(migration_source_identity()),
+                }
+            ],
         },
     )
     ledger.flush()
-    with pytest.raises(SourceQualificationError, match="does not match the accepted identity"):
+    with pytest.raises(
+        SourceQualificationError,
+        match="the amendment ledger is not bound to the reviewed migration",
+    ):
         reviewed_migration_preflight(store_root=tmp_path, report_path=report_path)
     lock = SamplePlanLock.load(tmp_path / SAMPLE_PLAN_LOCK_FILENAME)
     assert lock is not None and lock.plan_version == 2
