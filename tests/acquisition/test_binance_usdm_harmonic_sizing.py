@@ -33,7 +33,6 @@ from cryptofactors.acquisition.binance_usdm_harmonic_sizing import (
     MINIMUM_OPERATING_RESERVE_BYTES,
     OUTPUT_MULTIPLICITY,
     PHYSICAL_FAMILIES,
-    SIZING_ROW_BATCH,
     STATE_BLOCKED,
     STATE_SUFFICIENT,
     AuthorityPaths,
@@ -45,7 +44,6 @@ from cryptofactors.acquisition.binance_usdm_harmonic_sizing import (
     coinalyze_symbol_sets,
     derive_sample_cohort,
     envelope_schema,
-    family_coefficients,
     group_objects,
     load_sizing_authority,
     measure_liquidation_response,
@@ -61,7 +59,6 @@ from cryptofactors.acquisition.binance_usdm_harmonic_sizing import (
     resolve_cost_objects,
     resolve_selected_objects,
     run_storage_sizing,
-    verify_retained_sample,
     write_liquidation_envelope,
 )
 

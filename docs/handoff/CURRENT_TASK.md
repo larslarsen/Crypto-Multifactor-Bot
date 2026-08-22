@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and restart review 194
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 195
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -148,6 +148,7 @@ Governing documents:
 - research/sprint_004/192_CEX002_STORAGE_SIZING_FINAL_RESTART_AND_EXECUTION.md
 - research/sprint_004/193_CEX002_STORAGE_SIZING_RUFF_FAILURE_REVIEW.md
 - research/sprint_004/194_CEX002_STORAGE_SIZING_RUFF_SOURCE_ACCEPTANCE.md
+- research/sprint_004/195_CEX002_STORAGE_SIZING_VERIFICATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2256,3 +2257,21 @@ Gate 1 remains accepted. Gate 2 remains unaccepted until reviewer inspection of 
 receipt. No network, qualification, bulk acquisition, normalization, catalog publication,
 NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or
 next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Record-195 storage-sizing verification and execution stop published
+
+Hermes integrated review 194's accepted three-import test cleanup and ran the authorized
+stop-on-first-failure sequence. Focused sizing tests passed in 2 seconds, exact-path Ruff
+passed, and repository control passed in 1 second.
+
+The first authorized local sizing invocation then failed:
+
+`.venv/bin/python scripts/research/size_binance_usdm_harmonic_release.py --manifest-detail-path data/cex002_qualify/evidence/manifests/sha256/1d21de4d68fb0dfd330dc480a0d27ddf2216c3b7d5e93b13ff70ea26230f968d.jsonl.gz`
+
+It exited status 1 in 167 seconds with:
+
+`ERROR: accepted sizing authority does not match its pinned identity`
+
+Per review 194, Hermes did not run the second sizing invocation. Receipt 180 and the
+content-addressed sizing-envelope tree remain absent. Gate 1 remains accepted. Gate 2
+remains unaccepted. Next ticket remains `NONE`.
