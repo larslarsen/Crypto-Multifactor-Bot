@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 168
+Next required actor: Implementation Dev - Codex Spark - correct review 169 import order
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -122,6 +122,7 @@ Governing documents:
 - research/sprint_004/166_CEX002_CLAUDE_AUTHORITY_TEST_REVIEW.md
 - research/sprint_004/167_CEX002_AUTHORITY_SOURCE_ACCEPTANCE.md
 - research/sprint_004/168_CEX002_AUTHORITY_SOURCE_INTEGRATION.md
+- research/sprint_004/169_CEX002_AUTHORITY_IMPORT_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1733,4 +1734,21 @@ defined.
 
 Commands C2-C5 were not run. No live source-authority transaction, data mutation,
 ordinary qualification, Gate 1 acceptance, Gate 2, or later work was run. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Authority import failure - Spark constant-order correction
+
+Review 169 accepts Hermes's exact integration and required C1 stop. C1 could not collect
+because `CostSampleValidation` evaluates `COST_OBSERVATION_PRICEABLE` before the module
+declares that constant. CLI and tests remain accepted and frozen.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only to move
+the unchanged quote-state/cost-observation constant block above `CostSampleValidation` in
+the production module, leaving no duplicate and changing no other byte. Spark runs no
+command or Git operation and returns the production hash plus confirmation of the frozen
+CLI/test hashes and unchanged 305-test count. Hermes remains unauthorized.
+
+No integration, live transaction, data or source-data network operation, ordinary
+qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic
+Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
