@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 176
+Next required actor: Jr Dev - Hermes - execute review 177
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -130,6 +130,7 @@ Governing documents:
 - research/sprint_004/174_CEX002_AUTHORITY_TEST_INTEGRATION.md
 - research/sprint_004/175_CEX002_AUTHORITY_TRANSACTION_AUTHORIZATION.md
 - research/sprint_004/176_CEX002_AUTHORITY_TRANSACTION_EXECUTION.md
+- research/sprint_004/177_CEX002_CORRECTED_QUALIFICATION_AUTHORIZATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1892,4 +1893,20 @@ metadata, raw tree, list cache, FAPI caches, Coinalyze cache, prior-report tree,
 manifest tree remained byte-identical to the pre-snapshot. No `.env` file was loaded. No
 network permission, retry, recovery, ordinary qualification, report write, sample
 acquisition, reservation reconciliation, Gate 1 acceptance, Gate 2, or later work was run.
+CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Authority transaction accepted - corrected qualification authorized
+
+Review 177 accepts the exact source-authority transaction. Review 175's phrase "exactly
+one source receipt exists" is corrected to two total receipts, exactly one appended by
+the correction; record 176 and the live authority are architecture-correct.
+
+Jr Dev - Hermes is authorized only for review 177's exact preproof, collision-safe report
+preservation, one network-enabled corrected ordinary qualification invocation, complete
+after-proof, and record 178 publication. Every terminal status stops further execution.
+Reviewer inspection remains required before Gate 1 can be accepted.
+
+No second invocation, source correction, migration, candidate construction, full-history
+or bulk acquisition, Gate 1 acceptance, Gate 2, normalization, catalog publication,
+Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized.
 CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
