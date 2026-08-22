@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 192
+Next required actor: Sr Dev - Claude Build - remove three imports per review 193
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -146,6 +146,7 @@ Governing documents:
 - research/sprint_004/190_CEX002_STORAGE_SIZING_SPARK_TEST_SOURCE_REVIEW.md
 - research/sprint_004/191_CEX002_STORAGE_SIZING_FINAL_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/192_CEX002_STORAGE_SIZING_FINAL_RESTART_AND_EXECUTION.md
+- research/sprint_004/193_CEX002_STORAGE_SIZING_RUFF_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2221,3 +2222,19 @@ Per review 191, Hermes ran no repo-control command and no sizing invocation.
 `research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json` and
 `data/cex002_qualify/evidence/sizing/v1/envelopes/sha256` remain absent. Gate 1 remains
 accepted. Gate 2 remains unaccepted. Next ticket remains `NONE`.
+
+## Record 192 reviewed - exact three-import correction
+
+Review 193 accepts the 74-case focused test pass and Hermes's required Ruff stop. The only
+Ruff findings are three unused direct imports in the sizing test path:
+`SIZING_ROW_BATCH`, `family_coefficients`, and `verify_retained_sample`.
+
+To conserve Spark usage, Sr Dev - Claude Build using Claude Opus 5 is authorized only to
+delete those exact three import lines. Claude changes no other byte, reads no other path,
+runs no command or Git operation, preserves all 44 test functions, returns the test hash,
+and stops for reviewer inspection. Hermes remains unauthorized.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, network,
+qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
+Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
