@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 188
+Next required actor: Implementation Dev - Codex Spark - correct review 189
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -142,6 +142,7 @@ Governing documents:
 - research/sprint_004/186_CEX002_STORAGE_SIZING_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/187_CEX002_STORAGE_SIZING_TEST_SOURCE_ACCEPTANCE.md
 - research/sprint_004/188_CEX002_STORAGE_SIZING_RESTART_AND_EXECUTION.md
+- research/sprint_004/189_CEX002_STORAGE_SIZING_SECOND_FOCUSED_TEST_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2141,3 +2142,21 @@ Per review 187, Hermes ran no ruff command, no review-187 control command, and n
 invocation. `research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json` and
 `data/cex002_qualify/evidence/sizing/v1/envelopes/sha256` remain absent. Gate 1 remains
 accepted. Gate 2 remains unaccepted. Next ticket remains `NONE`.
+
+## Record 188 reviewed - bounded test correction authorized
+
+Review 189 accepts Hermes's exact stop and classifies all observed failures as test-source
+defects. The fixture selects the first rows rather than one non-consumable sample from each
+of 12 physical families; the arithmetic test scans unrelated path-join syntax; and the
+symlink test omits production's equally safe confinement error.
+
+Implementation Dev - Codex Spark using GPT-5.3-Codex-Spark High is authorized only for
+review 189's three exact corrections in the tracked sizing test path. Spark preserves all
+44 test functions, runs no command or Git operation, changes no production/CLI byte,
+returns the test SHA-256, and stops for reviewer inspection. Hermes restart remains
+unauthorized.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, network,
+qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
+Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
