@@ -193,7 +193,7 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                 )
 
     detail_path = store / "manifest_detail.jsonl.gz"
-    with gzip.open(detail_path, "wb", compresslevel=9, mtime=0) as handle:
+    with gzip.GzipFile(detail_path, mode="wb", compresslevel=9, mtime=0) as handle:
         for row in selected_rows:
             handle.write(
                 (json.dumps({"record_type": "row", "record": row}, sort_keys=True) + "\n").encode()
@@ -457,48 +457,45 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_pinned_review179_and_181_identities_are_literal() -> None:
-    import importlib
-
-    fresh = importlib.reload(sizing)
-    assert fresh.ACCEPTED_REPORT_BYTES == 13_559_766
-    assert fresh.ACCEPTED_MANIFEST_DETAIL_BYTES == 11_294_610
-    assert fresh.ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_BYTES == 466_713_055
-    assert fresh.ACCEPTED_PROGRESS_CHECKPOINT_SHA256 == (
+    assert sizing.ACCEPTED_REPORT_BYTES == 13_559_766
+    assert sizing.ACCEPTED_MANIFEST_DETAIL_BYTES == 11_294_610
+    assert sizing.ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_BYTES == 466_713_055
+    assert sizing.ACCEPTED_PROGRESS_CHECKPOINT_SHA256 == (
         "cc35a5c2c1fd72904d0d6a899565a763c89a38bb1295275e589e4d92be67eaff"
     )
-    assert fresh.ACCEPTED_LISTING_CHECKPOINT_SHA256 == (
+    assert sizing.ACCEPTED_LISTING_CHECKPOINT_SHA256 == (
         "d584e22aaaa9414b06dbe13bc24dda0b01ed48e37bdf66f5b42f90865959bf9a"
     )
-    assert fresh.ACCEPTED_CONTRACT_METADATA_SHA256 == (
+    assert sizing.ACCEPTED_CONTRACT_METADATA_SHA256 == (
         "e520f0f072730f566d027342ddc7e09f7b690ab80e76acbd40756759f13add1f"
     )
     # The exact accepted physical requirement, and its two separate authorities.
-    assert fresh.ACCEPTED_SELECTED_OBJECTS == 733_203
-    assert fresh.ACCEPTED_SELECTED_BYTES == 7_833_966_625
-    assert fresh.ACCEPTED_COST_OBJECTS == 3_144
-    assert fresh.ACCEPTED_COST_BYTES == 12_522_974_218
-    assert fresh.ACCEPTED_COMBINED_OBJECTS == 736_347
-    assert fresh.ACCEPTED_COMBINED_BYTES == 20_356_940_843
-    assert fresh.ACCEPTED_RETAINED_CREDIT_OBJECTS == 73
-    assert fresh.ACCEPTED_RETAINED_CREDIT_BYTES == 5_225_416
-    assert fresh.ACCEPTED_NEW_BINANCE_RAW_BYTES == 20_351_715_427
+    assert sizing.ACCEPTED_SELECTED_OBJECTS == 733_203
+    assert sizing.ACCEPTED_SELECTED_BYTES == 7_833_966_625
+    assert sizing.ACCEPTED_COST_OBJECTS == 3_144
+    assert sizing.ACCEPTED_COST_BYTES == 12_522_974_218
+    assert sizing.ACCEPTED_COMBINED_OBJECTS == 736_347
+    assert sizing.ACCEPTED_COMBINED_BYTES == 20_356_940_843
+    assert sizing.ACCEPTED_RETAINED_CREDIT_OBJECTS == 73
+    assert sizing.ACCEPTED_RETAINED_CREDIT_BYTES == 5_225_416
+    assert sizing.ACCEPTED_NEW_BINANCE_RAW_BYTES == 20_351_715_427
     assert (
-        fresh.ACCEPTED_COMBINED_BYTES - fresh.ACCEPTED_RETAINED_CREDIT_BYTES
-        == fresh.ACCEPTED_NEW_BINANCE_RAW_BYTES
+        sizing.ACCEPTED_COMBINED_BYTES - sizing.ACCEPTED_RETAINED_CREDIT_BYTES
+        == sizing.ACCEPTED_NEW_BINANCE_RAW_BYTES
     )
-    assert fresh.ACCEPTED_PLAN_ACTIONS == {
+    assert sizing.ACCEPTED_PLAN_ACTIONS == {
         "download": 84,
         "reuse_retained": 12,
         "alias": 10,
     }
-    assert sum(fresh.ACCEPTED_PLAN_ACTIONS.values()) == fresh.ACCEPTED_PLAN_ENTRIES == 106
-    assert fresh.ACCEPTED_SAMPLE_COHORT == 96
-    assert len(fresh.ARCHIVE_FAMILIES) == 10
-    assert len(fresh.COST_FAMILIES) == 2
-    assert len(fresh.PHYSICAL_FAMILIES) == 12
-    assert fresh.ACCEPTED_COINALYZE_SUPPORTED_MAPPINGS == 569
-    assert fresh.ACCEPTED_COINALYZE_TYPED_GAPS == 202
-    assert fresh.ACCEPTED_COINALYZE_PROVENANCE_RECORDS == 5
+    assert sum(sizing.ACCEPTED_PLAN_ACTIONS.values()) == sizing.ACCEPTED_PLAN_ENTRIES == 106
+    assert sizing.ACCEPTED_SAMPLE_COHORT == 96
+    assert len(sizing.ARCHIVE_FAMILIES) == 10
+    assert len(sizing.COST_FAMILIES) == 2
+    assert len(sizing.PHYSICAL_FAMILIES) == 12
+    assert sizing.ACCEPTED_COINALYZE_SUPPORTED_MAPPINGS == 569
+    assert sizing.ACCEPTED_COINALYZE_TYPED_GAPS == 202
+    assert sizing.ACCEPTED_COINALYZE_PROVENANCE_RECORDS == 5
 
 
 def test_accepted_authority_loads_with_every_new_pin(accepted: dict[str, Any]) -> None:

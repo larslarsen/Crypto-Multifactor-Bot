@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and restart review 187
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 188
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -141,6 +141,7 @@ Governing documents:
 - research/sprint_004/185_CEX002_STORAGE_SIZING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/186_CEX002_STORAGE_SIZING_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/187_CEX002_STORAGE_SIZING_TEST_SOURCE_ACCEPTANCE.md
+- research/sprint_004/188_CEX002_STORAGE_SIZING_RESTART_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2122,3 +2123,21 @@ Gate 1 remains accepted. Gate 2 remains unaccepted until reviewer inspection of 
 receipt. No network, qualification, bulk acquisition, normalization, catalog publication,
 NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or
 next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Record-188 storage-sizing restart stop published
+
+Hermes integrated review 187's accepted one-file sizing-test correction and restarted the
+review-184 sequence from the focused sizing tests:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_sizing.py -q --tb=short`
+
+It exited status 1 in 2 seconds. Pytest reported 18 failed tests. The dominant failure was
+`SizingError: the cohort does not cover every physical family`, with missing physical
+families including daily and monthly premium/mark/index kline families, monthly klines,
+monthly funding rate, and daily book depth. Additional failures involved the static
+rational-comparison source scan and two publication-error expectation mismatches.
+
+Per review 187, Hermes ran no ruff command, no review-187 control command, and no sizing
+invocation. `research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json` and
+`data/cex002_qualify/evidence/sizing/v1/envelopes/sha256` remain absent. Gate 1 remains
+accepted. Gate 2 remains unaccepted. Next ticket remains `NONE`.
