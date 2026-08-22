@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 141
+Next required actor: Implementation Dev - Codex Spark - change one assertion from 2 to 3
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -95,6 +95,7 @@ Governing documents:
 - research/sprint_004/139_CEX002_CLAUDE_ADR0020_CORRECTION_REVIEW.md
 - research/sprint_004/140_CEX002_ADR0020_SOURCE_ACCEPTANCE.md
 - research/sprint_004/141_CEX002_ADR0020_INTEGRATION_AND_CANDIDATE.md
+- research/sprint_004/142_CEX002_FOCUSED_TEST_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1206,3 +1207,20 @@ expected archive family count was 2 and the observed value was 3.
 Commands 2-5, compact-report preservation, candidate execution, post-proof, report
 publication, migration, sample acquisition, Gate 2, and later work were not run. CEX-002
 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-141 stop accepted - one stale test assertion
+
+Review 142 accepts the exact review-140 integration, record 141, unchanged compact report,
+and stop-on-first-failure behavior. Production correctly reports all three archive families
+created by the test fixture; the test incorrectly compares that observed count with the
+two-family minimum threshold.
+
+Implementation Dev - Codex Spark changes only the one assertion in
+`test_frozen_delivery_identity_resolves_only_while_its_evidence_reproves` from
+`family_count == 2` to `family_count == 3`. Spark changes nothing else, runs no command,
+uses no Git, and returns the test hash plus the unchanged 261-test count. Hermes remains
+unauthorized.
+
+No candidate, migration, acquisition, Gate 2, reduced scope, Nautilus, Harmonic Trader,
+payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`;
+next ticket remains `NONE`.
