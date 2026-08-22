@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct review 190
+Next required actor: Jr Dev - Hermes - integrate and restart review 191
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -144,6 +144,7 @@ Governing documents:
 - research/sprint_004/188_CEX002_STORAGE_SIZING_RESTART_AND_EXECUTION.md
 - research/sprint_004/189_CEX002_STORAGE_SIZING_SECOND_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/190_CEX002_STORAGE_SIZING_SPARK_TEST_SOURCE_REVIEW.md
+- research/sprint_004/191_CEX002_STORAGE_SIZING_FINAL_TEST_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2181,3 +2182,21 @@ Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, networ
 qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
 Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
 authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Final sizing-test correction accepted - Hermes restart authorized
+
+Review 191 accepts Spark's final test-only correction at SHA-256
+`585f20db0461ad92af7cf6b1d4143aa52c4dfdff5f2bbfa44e76d4f6334e9f96`, preserving 44
+test functions and the frozen production/CLI identities. No further Spark work is
+authorized.
+
+Jr Dev - Hermes is authorized only to integrate that exact test diff and restart focused
+tests, exact-path lint, and control. The first nonzero result stops. If all three pass,
+Hermes runs exactly two local sizing invocations for first publication and byte-identical
+reproof, publishes record 192 and receipt 180 if created, updates the control plane,
+commits/pushes only the enumerated CEX-002 paths, and stops for reviewer inspection.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted until reviewer inspection of a real
+receipt. No network, qualification, bulk acquisition, normalization, catalog publication,
+NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or
+next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
