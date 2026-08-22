@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - correct review 186
+Next required actor: Jr Dev - Hermes - integrate and restart review 187
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -140,6 +140,7 @@ Governing documents:
 - research/sprint_004/184_CEX002_STORAGE_SIZING_SOURCE_ACCEPTANCE.md
 - research/sprint_004/185_CEX002_STORAGE_SIZING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/186_CEX002_STORAGE_SIZING_FOCUSED_TEST_FAILURE_REVIEW.md
+- research/sprint_004/187_CEX002_STORAGE_SIZING_TEST_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2102,3 +2103,22 @@ Gate 1 remains accepted. Gate 2 remains unaccepted. No sizing invocation, networ
 qualification, bulk acquisition, normalization, catalog publication, NautilusTrader,
 Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or next-ticket work is
 authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Storage-sizing test correction accepted - Hermes restart authorized
+
+Review 187 accepts Spark's exact one-file correction at test SHA-256
+`e7b7103cb36f83642762a91101be98ae368ba41b425f8a3e00711632895da6de` with 44 test
+functions. The deterministic fixture now uses `gzip.GzipFile`, the destructive module
+reload is absent, and production/CLI remain frozen at their review-184 identities.
+
+Jr Dev - Hermes is authorized only to integrate that exact test diff and restart the
+review-184 sequence from focused tests. The first nonzero result stops. If focused tests,
+exact-path lint, and control all pass, Hermes runs the exact local sizing command once,
+proves the receipt/envelope publication, runs it exactly once more for byte-identical
+reproof, publishes record 188 and receipt 180 if created, commits/pushes only the
+enumerated CEX-002 paths, and stops for reviewer inspection.
+
+Gate 1 remains accepted. Gate 2 remains unaccepted until reviewer inspection of a real
+receipt. No network, qualification, bulk acquisition, normalization, catalog publication,
+NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced scope, or
+next-ticket work is authorized. CEX-002 remains `IN_PROGRESS`; next ticket remains `NONE`.
