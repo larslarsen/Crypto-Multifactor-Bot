@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 182
+Next required actor: Sr Dev - Claude Build - correct review 183
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -136,6 +136,7 @@ Governing documents:
 - research/sprint_004/179_CEX002_GATE1_ACCEPTANCE_AND_STORAGE_SIZING_ARCHITECTURE.md
 - research/sprint_004/181_CEX002_CLAUDE_STORAGE_SIZING_SOURCE_REVIEW.md
 - research/sprint_004/182_CEX002_CLAUDE_STORAGE_SIZING_CORRECTION_REVIEW.md
+- research/sprint_004/183_CEX002_CLAUDE_STORAGE_SIZING_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2009,6 +2010,31 @@ accepted review-181 corrections, closes the six exact review-182 findings, runs 
 linter, control, Git, network, sizing, acquisition, or data command, edits no other path,
 and returns three hashes plus the corrected test-function count. Hermes remains
 unauthorized.
+
+Gate 1 remains accepted. No integration, sizing execution, Gate 2 acceptance, bulk
+acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
+PAPER, LIVE, paid source, reduced scope, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude sizing residual review - narrow correction
+
+Review 183 rejects the review-182 correction. It successfully separates the real
+73-object acquisition credit from the 96-sample coefficient cohort and corrects production
+partition fan-out, integer conversion, projected catalog receipts, exact receipt length,
+and streaming copies. Four residuals remain.
+
+Coinalyze still models the one retained two-symbol liquidation response as two synthetic
+receipts, omits the exact retained inventory bytes, and does not prove timestamp coverage.
+The fixed-target rerun still collides when available space changes above the reserve floor,
+and prior validation omits material receipt sections. One older test contradicts the
+corrected partition implementation. Publication checks still have pathname race windows
+and the tests do not simulate a symlink swap or actual race.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 183's four-finding
+correction in the same exact three untracked paths. Claude preserves all accepted prior
+corrections, runs no test, linter, control, Git, network, sizing, acquisition, or data
+command, edits no other path, and returns three hashes plus test-function count. Hermes
+remains unauthorized.
 
 Gate 1 remains accepted. No integration, sizing execution, Gate 2 acceptance, bulk
 acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
