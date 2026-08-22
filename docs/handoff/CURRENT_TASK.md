@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement ADR-0022 per review 196
+Next required actor: Sr Dev - Claude Build - correct ADR-0022 source per review 197
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -151,6 +151,7 @@ Governing documents:
 - research/sprint_004/195_CEX002_STORAGE_SIZING_VERIFICATION_AND_EXECUTION.md
 - docs/adr/0022-path-bound-retained-checksum-recovery.md
 - research/sprint_004/196_CEX002_SIZING_AUTHORITY_FAILURE_ARCHITECTURE.md
+- research/sprint_004/197_CEX002_PATH_BOUND_RECOVERY_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2295,3 +2296,20 @@ Sr Dev - Claude Build is authorized only to implement ADR-0022 in the qualificat
 and its test source per review 196, return both hashes and the test count, and stop. No
 command execution, Git, repository-record edit, data mutation, sizing edit, or sizing retry
 is authorized. Gate 2 remains unaccepted; next ticket remains `NONE`.
+
+## ADR-0022 source drop rejected - exact correction
+
+Review 197 rejects Claude's first ADR-0022 drop. The domain rule rejects multiple matches
+but still accepts a persisted recovered key with zero domain matches. Rejected rows also
+re-enter through raw checkpoint consumers in plan execution, acquisition reuse, retained
+snapshots, ledger accounting, and credit. Existing direct-lookup tests were not migrated
+to the new required domain binding, and the new helper-only test does not prove production
+exclusion.
+
+Sr Dev - Claude Build is authorized only to correct the same qualification source/test
+paths: require exact-singleton full-key binding, use one effective checkpoint authority
+through every consumer, fail closed if execution would require rejected lineage, migrate
+affected existing tests, and add the integration and real dedup proofs in review 197.
+Claude returns hashes/count and stops without commands, data, Git, records, sizing edits,
+or a sizing retry. Hermes remains unauthorized. Gate 2 remains unaccepted; next ticket
+remains `NONE`.
