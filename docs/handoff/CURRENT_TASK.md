@@ -6,11 +6,10 @@ Next required actor: Implementation Dev - Codex Spark - make two test-only edits
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Spark: edit only
-`tests/acquisition/test_binance_usdm_harmonic_path_bound_transition.py`. Remove the unused
-top-level `import os`. In `test_pinned_review208_identities_are_literal`, remove
-`import importlib` and replace `fresh = importlib.reload(transition)` with
-`fresh = transition`. Change nothing else, run no command, and return only the corrected
+Immediate bounded residual task for Spark: edit only
+`tests/acquisition/test_binance_usdm_harmonic_path_bound_transition.py`. Inside
+`test_pinned_review208_identities_are_literal`, replace every remaining `fresh.` reference
+with `transition.`. Change nothing else, run no command, and return only the corrected
 SHA-256 plus the unchanged count of 26 `def test_` functions.
 
 Governing documents:
