@@ -148,6 +148,8 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     build_amendment_allowance,
     build_candidate_plan_v4,
     apply_reviewed_source_correction,
+    ambiguous_recovered_rows,
+    effective_retained_objects,
     build_family_inventory,
     FapiDeliveryPriceSource,
     MemoryDeliveryPriceSource,
@@ -201,6 +203,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     parse_current_perpetuals,
     parse_exchange_info_rows,
     parse_provider_checksum,
+    persist_provider_sidecar,
     parse_s3_list_bucket,
     plan_code_config_digest,
     plan_content_digest,
@@ -208,6 +211,7 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     qualification_exit_code,
     recover_retained_samples,
     refuse_restricted_scope,
+    retained_credit_decomposition,
     retained_evidence_digest,
     retained_evidence_snapshot,
     reviewed_migration_binding,
@@ -1750,8 +1754,9 @@ def test_tampered_retained_sidecar_is_not_provider_authority(tmp_path: Path) -> 
     body = f"{digest}  BTCUSDT-trades-2020-01.zip\n".encode()
     blob = cache / hashlib.sha256(body).hexdigest()
     blob.write_bytes(body)
-    checksums = RetainedChecksumIndex.from_cache(cache)
     key = "data/futures/um/monthly/trades/BTCUSDT/BTCUSDT-trades-2020-01.zip"
+    # ADR-0022: basename evidence binds a full key only against a bound domain.
+    checksums = RetainedChecksumIndex.from_cache(cache).bind_candidate_domain([key])
     assert checksums.lookup(key) is not None
     # Modify the sidecar after indexing: it no longer matches its content address.
     blob.write_bytes(f"{'d' * 64}  BTCUSDT-trades-2020-01.zip\n".encode())
@@ -1980,7 +1985,10 @@ def _aborted_same_digest_state(store_root: Path) -> tuple[MemoryObjectIndex, str
     document = json.loads((store_root / "cex002_qualification_progress.json").read_text())
     proven_key = next(iter(document["objects"]))
     prefix = f"{vision_prefix('monthly', 'klines')}BTCUSDT/1h/"
-    checksums = RetainedChecksumIndex.from_cache(store_root / "list_cache")
+    domain = [obj.key for obj in index.objects[prefix]]
+    checksums = RetainedChecksumIndex.from_cache(
+        store_root / "list_cache"
+    ).bind_candidate_domain(domain)
     pending_key = next(
         obj.key
         for obj in index.objects[prefix]
@@ -1993,7 +2001,11 @@ def _aborted_same_digest_state(store_root: Path) -> tuple[MemoryObjectIndex, str
 def test_same_digest_cross_key_recovery_skips_the_redundant_raw_fetch(tmp_path: Path) -> None:
     store_root = tmp_path / "store"
     index, proven_key, pending_key = _aborted_same_digest_state(store_root)
-    evidence = RetainedChecksumIndex.from_cache(store_root / "list_cache").lookup(pending_key)
+    evidence = (
+        RetainedChecksumIndex.from_cache(store_root / "list_cache")
+        .bind_candidate_domain([pending_key])
+        .lookup(pending_key)
+    )
     assert evidence is not None
     digest = str(evidence["provider_checksum"])
     # These synthetic objects legitimately share bytes, so the blob retained under the
@@ -2029,7 +2041,11 @@ def test_same_digest_cross_key_recovery_requires_every_leg(
     store_root = tmp_path / "store"
     index, _proven_key, pending_key = _aborted_same_digest_state(store_root)
     cache = store_root / "list_cache"
-    evidence = RetainedChecksumIndex.from_cache(cache).lookup(pending_key)
+    evidence = (
+        RetainedChecksumIndex.from_cache(cache)
+        .bind_candidate_domain([pending_key])
+        .lookup(pending_key)
+    )
     assert evidence is not None
     digest = str(evidence["provider_checksum"])
     basename = pending_key.rsplit("/", 1)[-1]
@@ -2074,7 +2090,11 @@ def test_same_digest_cross_key_recovery_requires_every_leg(
 def test_same_digest_cross_key_recovery_fails_closed_on_tampered_bytes(tmp_path: Path) -> None:
     store_root = tmp_path / "store"
     index, _proven_key, pending_key = _aborted_same_digest_state(store_root)
-    evidence = RetainedChecksumIndex.from_cache(store_root / "list_cache").lookup(pending_key)
+    evidence = (
+        RetainedChecksumIndex.from_cache(store_root / "list_cache")
+        .bind_candidate_domain([pending_key])
+        .lookup(pending_key)
+    )
     assert evidence is not None
     (store_root / "raw" / "sha256" / str(evidence["provider_checksum"])).write_bytes(b"tampered")
     with pytest.raises(ResumeIntegrityError, match="do not match the retained provider checksum"):
@@ -8310,7 +8330,15 @@ def test_invalid_cost_object_fails_retained_recovery(tmp_path: Path) -> None:
     )
     assert _crossed_incidents(report)
     # The rejected acquisition still retained checksum-proved bytes and their sidecar.
-    checksums = RetainedChecksumIndex.from_cache(tmp_path / "list_cache")
+    domain = [
+        obj.key
+        for _prefix, objects in index.objects.items()
+        for obj in objects
+        if not obj.key.endswith(".CHECKSUM")
+    ]
+    checksums = RetainedChecksumIndex.from_cache(
+        tmp_path / "list_cache"
+    ).bind_candidate_domain(domain)
     key = next(
         obj.key
         for prefix, objects in index.objects.items()
@@ -9305,7 +9333,9 @@ def test_migration_does_not_adopt_a_recoverable_missing_checkpoint_entry(
     progress_path = tmp_path / "cex002_qualification_progress.json"
     document = json.loads(progress_path.read_text())
     objects = document["objects"]
-    checksums = RetainedChecksumIndex.from_cache(tmp_path / "list_cache")
+    checksums = RetainedChecksumIndex.from_cache(
+        tmp_path / "list_cache"
+    ).bind_candidate_domain(objects)
     key = next(
         name
         for name, row in objects.items()
@@ -10020,4 +10050,656 @@ def test_source_correction_normalizes_the_preserved_lock_envelope(
             store_root=tmp_path, report_path=report_path
         ).state
         == "source_identity_advanced"
+    )
+
+
+# --- ADR-0022 path-bound retained checksum recovery ------------------------------------
+
+
+def _kline_key(family: str, symbol: str, interval: str, period: str) -> str:
+    cadence, _, hint = family.partition("/")
+    return (
+        f"{vision_prefix(cadence, hint)}{symbol}/{interval}/"
+        f"{symbol}-{interval}-{period}.zip"
+    )
+
+
+def _retain_sidecar(cache: Path, payload: bytes, basename: str) -> tuple[Path, str]:
+    return persist_provider_sidecar(_checksum_text(payload, basename), sidecar_dir=cache)
+
+
+def _retain_object(sample_dir: Path, payload: bytes) -> str:
+    digest = hashlib.sha256(payload).hexdigest()
+    sample_dir.mkdir(parents=True, exist_ok=True)
+    (sample_dir / digest).write_bytes(payload)
+    return digest
+
+
+def _colliding_keys(symbol: str = "BTCUSDT", period: str = "2020-01") -> tuple[str, ...]:
+    """Three Kline families whose objects share one basename."""
+    return tuple(
+        _kline_key(family, symbol, "1h", period)
+        for family in (
+            "monthly/premiumIndexKlines",
+            "monthly/markPriceKlines",
+            "monthly/indexPriceKlines",
+        )
+    )
+
+
+def test_one_sidecar_cannot_bind_a_basename_with_several_candidate_keys(
+    tmp_path: Path,
+) -> None:
+    cache = tmp_path / "list_cache"
+    sample_dir = tmp_path / "raw" / "sha256"
+    cache.mkdir(parents=True)
+    keys = _colliding_keys()
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    basename = keys[0].rsplit("/", 1)[-1]
+    _retain_sidecar(cache, payload, basename)
+    _retain_object(sample_dir, payload)
+
+    index = RetainedChecksumIndex.from_cache(cache)
+    # Exactly one sidecar is retained, so the old rule saw no ambiguity at all.
+    assert basename not in index.ambiguous
+    # Unbound, basename-only evidence carries no full-key authority.
+    assert index.lookup(keys[0]) is None
+    index.bind_candidate_domain(keys)
+    for key in keys:
+        assert index.basename_collides(key) is True
+        assert index.lookup(key) is None
+    assert index.collision_context(keys[0])["candidate_keys"] == sorted(keys)
+
+
+def test_competing_kline_keys_cannot_recover_each_others_bytes(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    sample_dir = tmp_path / "raw" / "sha256"
+    cache.mkdir(parents=True)
+    keys = _colliding_keys()
+    # One real premium-index payload, retained once under a shared basename.
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    _retain_sidecar(cache, payload, keys[0].rsplit("/", 1)[-1])
+    _retain_object(sample_dir, payload)
+    checkpoint = SampleCheckpointStore.load(tmp_path / "progress.json", sidecar_dir=cache)
+    index = RetainedChecksumIndex.from_cache(cache)
+
+    recovered = recover_retained_samples(
+        sample_dir=sample_dir,
+        sidecar_dir=cache,
+        checksums=index,
+        checkpoint=checkpoint,
+        keys=list(keys),
+    )
+    # No mark-price or index-price key adopts the premium-index object.
+    assert recovered == 0
+    assert checkpoint.objects == {}
+
+
+def test_a_persisted_ambiguous_row_is_excluded_from_every_authority_path(
+    tmp_path: Path,
+) -> None:
+    cache = tmp_path / "list_cache"
+    sample_dir = tmp_path / "raw" / "sha256"
+    cache.mkdir(parents=True)
+    keys = _colliding_keys()
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    sidecar_path, sidecar_digest = _retain_sidecar(
+        cache, payload, keys[0].rsplit("/", 1)[-1]
+    )
+    digest = _retain_object(sample_dir, payload)
+    checkpoint = SampleCheckpointStore.load(tmp_path / "progress.json", sidecar_dir=cache)
+    legacy = {
+        "status": "complete",
+        "sha256": digest,
+        "byte_size": len(payload),
+        "url": vision_object_url(keys[1]),
+        "provider_checksum": digest,
+        "checksum_match": True,
+        "schema_kind": "headerless",
+        "schema_fields": ["open_time"],
+        "retrieval_time": "",
+        "recovered_from_retained_bytes": True,
+        "provider_checksum_path": str(sidecar_path),
+        "provider_checksum_sha256": sidecar_digest,
+    }
+    checkpoint.record(keys[1], legacy)
+    before = json.loads((tmp_path / "progress.json").read_text())
+
+    index = RetainedChecksumIndex.from_cache(cache).bind_candidate_domain(keys)
+    rejected = ambiguous_recovered_rows(checkpoint, checksums=index)
+    assert set(rejected) == {keys[1]}
+    assert rejected[keys[1]]["kind"] == "retained_basename_ambiguous"
+    assert rejected[keys[1]]["state"] == "preserved_rejected_lineage"
+    assert rejected[keys[1]]["candidate_keys"] == sorted(keys)
+    assert rejected[keys[1]]["candidate_count"] == 3
+    # Excluded from effective authority, but preserved on disk exactly as written.
+    assert effective_retained_objects(checkpoint, checksums=index) == {}
+    assert json.loads((tmp_path / "progress.json").read_text()) == before
+    assert checkpoint.get(keys[1]) is not None
+
+
+def _seed_ambiguous_recovery(store: Path, index: MemoryObjectIndex, key: str) -> dict[str, Any]:
+    """Persist one legacy basename-only recovery into a real qualification store."""
+    cache = store / "list_cache"
+    sample_dir = store / "raw" / "sha256"
+    cache.mkdir(parents=True, exist_ok=True)
+    payload = index.bodies[vision_object_url(key)]
+    sidecar_path, sidecar_digest = _retain_sidecar(cache, payload, key.rsplit("/", 1)[-1])
+    digest = _retain_object(sample_dir, payload)
+    progress = store / "cex002_qualification_progress.json"
+    checkpoint = SampleCheckpointStore.load(progress, sidecar_dir=cache)
+    entry = {
+        "status": "complete",
+        "sha256": digest,
+        "byte_size": len(payload),
+        "url": vision_object_url(key),
+        "provider_checksum": digest,
+        "checksum_match": True,
+        "schema_kind": "headerless",
+        "schema_fields": ["open_time"],
+        "retrieval_time": "",
+        "recovered_from_retained_bytes": True,
+        "provider_checksum_path": str(sidecar_path),
+        "provider_checksum_sha256": sidecar_digest,
+    }
+    checkpoint.record(key, entry)
+    return entry
+
+
+def _ambiguity_index(
+    months: Sequence[str] = CONTIGUOUS_MONTHS,
+) -> tuple[MemoryObjectIndex, tuple[str, ...]]:
+    """A real inventory whose Kline families publish colliding basenames.
+
+    Returns the index and the mark-price keys, in the fixture's own object order. With
+    more months than the planner's early/middle/recent selection consumes, at least one
+    mark-price key is deterministically left out of the executing plan.
+    """
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    funding = _zip_bytes("f.csv", (FIXTURES / "headed_funding.csv").read_bytes())
+    index = _index_with_family(
+        symbols=["BTCUSDT"],
+        families=[
+            # The four Kline families all publish stem "1h", so their basenames collide.
+            ("monthly/klines", "1h"),
+            ("monthly/premiumIndexKlines", "1h"),
+            ("monthly/markPriceKlines", "1h"),
+            ("monthly/indexPriceKlines", "1h"),
+            # Funding rate is the one family here whose basenames are unique across the
+            # complete candidate domain, so it is the only valid recovery source.
+            ("monthly/fundingRate", "fundingRate"),
+        ],
+        interval_map={
+            "monthly/klines": ["1h"],
+            "monthly/premiumIndexKlines": ["1h"],
+            "monthly/markPriceKlines": ["1h"],
+            "monthly/indexPriceKlines": ["1h"],
+        },
+        payload_by_stem={"1h": payload, "fundingRate": funding},
+        months=months,
+    )
+    prefix = f"{vision_prefix('monthly', 'markPriceKlines')}BTCUSDT/1h/"
+    keys = tuple(
+        obj.key for obj in index.objects[prefix] if not obj.key.endswith(".CHECKSUM")
+    )
+    return index, keys
+
+
+def _fixture_domain(index: MemoryObjectIndex) -> list[str]:
+    """Every candidate key the fixture publishes: a superset of production's domain.
+
+    Uniqueness proved against a superset holds in any subset, so this is the conservative
+    domain to bind when asserting that a basename really is unique.
+    """
+    return [
+        obj.key
+        for objects in index.objects.values()
+        for obj in objects
+        if not obj.key.endswith(".CHECKSUM")
+    ]
+
+
+def _funding_keys(index: MemoryObjectIndex) -> tuple[str, ...]:
+    prefix = f"{vision_prefix('monthly', 'fundingRate')}BTCUSDT/"
+    return tuple(
+        obj.key
+        for obj in index.objects.get(prefix, ())
+        if not obj.key.endswith(".CHECKSUM")
+    )
+
+
+# Six contiguous months: the planner selects three, so three mark-price keys remain
+# unselected and the outside-plan scenario is mathematically possible.
+_WIDE_MONTHS: tuple[str, ...] = (
+    "2020-01",
+    "2020-02",
+    "2020-03",
+    "2020-04",
+    "2020-05",
+    "2020-06",
+)
+
+
+def _planned_keys(store: Path) -> set[str]:
+    document = json.loads((store / SAMPLE_PLAN_LOCK_FILENAME).read_text())
+    return {str(item["key"]) for item in document["plan"]["entries"]}
+
+
+def _control_surface(store: Path) -> dict[str, str]:
+    """Every mutable durable control artifact, by content hash."""
+    return {
+        str(path.relative_to(store)): file_sha256(path)
+        for path in sorted(store.rglob("*"))
+        if path.is_file()
+    }
+
+
+def test_a_locked_plan_needing_a_rejected_row_fails_before_any_write(
+    tmp_path: Path,
+) -> None:
+    index, mark_keys = _ambiguity_index(months=_WIDE_MONTHS)
+    # Lock a plan first, while the ambiguous row does not yet exist.
+    run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    planned = _planned_keys(tmp_path)
+    executing_key = next(key for key in mark_keys if key in planned)
+    # Deterministic membership, asserted rather than skipped.
+    assert executing_key in planned
+
+    # Both reachable pre-preflight mutation paths must be present in this store:
+    # (a) a valid recoverable object that is not yet checkpointed, so persistent recovery
+    #     would call record()/flush(); and
+    # (b) an outstanding ledger reservation, so reconcile() would settle and flush.
+    progress_path = tmp_path / "cex002_qualification_progress.json"
+    # The recoverable object is constructed independently: every checkpoint row after a
+    # qualification belongs to a plan entry, so one cannot be borrowed from there. It
+    # comes from the funding-rate family, whose basenames are unique in the complete
+    # candidate domain, so production really would adopt it.
+    recoverable_key = next(
+        key for key in _funding_keys(index) if key not in planned
+    )
+    assert recoverable_key not in planned
+    assert recoverable_key not in json.loads(progress_path.read_text())["objects"]
+    recoverable_payload = index.bodies[vision_object_url(recoverable_key)]
+    _retain_sidecar(
+        tmp_path / "list_cache", recoverable_payload, recoverable_key.rsplit("/", 1)[-1]
+    )
+    recoverable_digest = _retain_object(
+        tmp_path / "raw" / "sha256", recoverable_payload
+    )
+    assert (tmp_path / "raw" / "sha256" / recoverable_digest).is_file()
+    # Bound against the complete fixture domain - not a synthetic singleton - the lookup
+    # succeeds, so the pre-preflight checkpoint-write path is genuinely reachable.
+    domain_index = RetainedChecksumIndex.from_cache(
+        tmp_path / "list_cache"
+    ).bind_candidate_domain(_fixture_domain(index))
+    assert domain_index.binds_full_key(recoverable_key) is True
+    assert domain_index.lookup(recoverable_key) is not None
+
+    ledger = BudgetLedger.load(
+        tmp_path / BUDGET_LEDGER_FILENAME, budget_bytes=GATE1_NEW_DOWNLOAD_BUDGET_BYTES
+    )
+    assert ledger is not None
+    settled_key, settled_charge = next(iter(sorted(ledger.charges.items())))
+    del ledger.charges[settled_key]
+    ledger.reservations[settled_key] = {
+        "planned_bytes": int(settled_charge["planned_bytes"])
+    }
+    ledger.flush()
+    reserved_before = json.loads((tmp_path / BUDGET_LEDGER_FILENAME).read_text())
+    assert reserved_before["reservations"], "the fixture carries no reconcilable reservation"
+
+    _seed_ambiguous_recovery(tmp_path, index, executing_key)
+    before = _control_surface(tmp_path)
+
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    writes: list[str] = []
+    real_write = module._atomic_write_json
+    real_commit = OfficialContractMetadataStore.commit
+    real_ledger_flush = BudgetLedger.flush
+    real_settle = BudgetLedger.settle
+    real_lock_flush = SamplePlanLock.flush
+    real_record = SampleCheckpointStore.record
+    real_checkpoint_flush = SampleCheckpointStore.flush
+
+    def _tracked_write(path: Path, document: Any) -> None:
+        writes.append(f"atomic_write:{path}")
+        real_write(path, document)
+
+    def _tracked_commit(self: Any, *args: Any, **kwargs: Any) -> Any:
+        writes.append("metadata_commit")
+        return real_commit(self, *args, **kwargs)
+
+    def _tracked_ledger_flush(self: Any, *args: Any, **kwargs: Any) -> Any:
+        writes.append("ledger_flush")
+        return real_ledger_flush(self, *args, **kwargs)
+
+    def _tracked_settle(self: Any, *args: Any, **kwargs: Any) -> Any:
+        writes.append("ledger_settle")
+        return real_settle(self, *args, **kwargs)
+
+    def _tracked_lock_flush(self: Any, *args: Any, **kwargs: Any) -> Any:
+        writes.append("lock_flush")
+        return real_lock_flush(self, *args, **kwargs)
+
+    def _tracked_record(self: Any, *args: Any, **kwargs: Any) -> Any:
+        writes.append("checkpoint_record")
+        return real_record(self, *args, **kwargs)
+
+    def _tracked_checkpoint_flush(self: Any, *args: Any, **kwargs: Any) -> Any:
+        writes.append("checkpoint_flush")
+        return real_checkpoint_flush(self, *args, **kwargs)
+
+    module._atomic_write_json = _tracked_write  # type: ignore[assignment]
+    OfficialContractMetadataStore.commit = _tracked_commit  # type: ignore[method-assign]
+    BudgetLedger.flush = _tracked_ledger_flush  # type: ignore[method-assign]
+    BudgetLedger.settle = _tracked_settle  # type: ignore[method-assign]
+    SamplePlanLock.flush = _tracked_lock_flush  # type: ignore[method-assign]
+    SampleCheckpointStore.record = _tracked_record  # type: ignore[method-assign]
+    SampleCheckpointStore.flush = _tracked_checkpoint_flush  # type: ignore[method-assign]
+    try:
+        with pytest.raises(ResumeIntegrityError, match="no proved full-key binding"):
+            run_source_qualification(
+                store_root=tmp_path,
+                index=index,
+                current_contracts=_contracts("BTCUSDT"),
+                now=FIXED_QUALIFICATION_INSTANT,
+            )
+    finally:
+        module._atomic_write_json = real_write  # type: ignore[assignment]
+        OfficialContractMetadataStore.commit = real_commit  # type: ignore[method-assign]
+        BudgetLedger.flush = real_ledger_flush  # type: ignore[method-assign]
+        BudgetLedger.settle = real_settle  # type: ignore[method-assign]
+        SamplePlanLock.flush = real_lock_flush  # type: ignore[method-assign]
+        SampleCheckpointStore.record = real_record  # type: ignore[method-assign]
+        SampleCheckpointStore.flush = real_checkpoint_flush  # type: ignore[method-assign]
+
+    # Neither recovery nor reconciliation wrote anything on the way to the refusal.
+    assert writes == []
+    assert _control_surface(tmp_path) == before
+    # The uncheckpointed object stayed uncheckpointed and the reservation unsettled.
+    assert recoverable_key not in json.loads(progress_path.read_text())["objects"]
+    assert json.loads((tmp_path / BUDGET_LEDGER_FILENAME).read_text()) == reserved_before
+
+
+def test_a_persisted_ambiguous_row_is_rejected_end_to_end(tmp_path: Path) -> None:
+    index, mark_keys = _ambiguity_index(months=_WIDE_MONTHS)
+    run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    planned = _planned_keys(tmp_path)
+    outside = [key for key in mark_keys if key not in planned]
+    # The fixture must leave at least one unselected same-family key, or this scenario
+    # would silently test nothing.
+    assert outside, "the fixture leaves no mark-price key outside the executing plan"
+    outside_key = outside[0]
+    seeded = _seed_ambiguous_recovery(tmp_path, index, outside_key)
+    before = json.loads((tmp_path / "cex002_qualification_progress.json").read_text())
+
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    # Rejected in resume evidence, named rather than silently dropped.
+    assert outside_key in report.resume["rejected_ambiguous_retained_keys"]
+    assert report.resume["rejected_ambiguous_retained_count"] >= 1
+    # Rejected in manifest consumability and pending evidence.
+    manifest_row = next(
+        (
+            item
+            for item in report.acquisition_manifest["rows"]
+            if item["key"] == outside_key
+        ),
+        None,
+    )
+    if manifest_row is not None:
+        assert manifest_row["consumable"] is False
+        assert outside_key in report.acquisition_manifest["raw_validation_pending_keys"]
+    # Rejected in production storage credit.
+    credit = report.storage["gate2_feasibility"]
+    rejected_keys = {str(item["key"]) for item in credit["rejected_retained_rows"]}
+    assert outside_key in rejected_keys
+    assert credit["rejected_retained_row_count"] >= 1
+    # The legacy row is preserved on disk exactly as written.
+    after = json.loads((tmp_path / "cex002_qualification_progress.json").read_text())
+    assert after["objects"][outside_key] == before["objects"][outside_key] == seeded
+
+
+def test_an_out_of_domain_persisted_row_is_also_rejected(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    sample_dir = tmp_path / "raw" / "sha256"
+    cache.mkdir(parents=True)
+    absent = (
+        f"{vision_prefix('monthly', 'trades')}NOTPLANNED/"
+        "NOTPLANNED-trades-2020-01.zip"
+    )
+    payload = _zip_bytes("t.csv", (FIXTURES / "headerless_trades.csv").read_bytes())
+    sidecar_path, sidecar_digest = _retain_sidecar(
+        cache, payload, absent.rsplit("/", 1)[-1]
+    )
+    digest = _retain_object(sample_dir, payload)
+    checkpoint = SampleCheckpointStore.load(tmp_path / "progress.json", sidecar_dir=cache)
+    checkpoint.record(
+        absent,
+        {
+            "status": "complete",
+            "sha256": digest,
+            "byte_size": len(payload),
+            "url": vision_object_url(absent),
+            "provider_checksum": digest,
+            "checksum_match": True,
+            "schema_kind": "headerless",
+            "schema_fields": ["id"],
+            "retrieval_time": "",
+            "recovered_from_retained_bytes": True,
+            "provider_checksum_path": str(sidecar_path),
+            "provider_checksum_sha256": sidecar_digest,
+        },
+    )
+    # The bound domain does not contain this key at all: zero matches reject exactly as
+    # several matches do.
+    other = f"{vision_prefix('monthly', 'trades')}BTCUSDT/BTCUSDT-trades-2020-01.zip"
+    index = RetainedChecksumIndex.from_cache(cache).bind_candidate_domain([other])
+    assert index.binds_full_key(absent) is False
+    assert index.lookup(absent) is None
+    rejected = ambiguous_recovered_rows(checkpoint, checksums=index)
+    assert set(rejected) == {absent}
+    assert rejected[absent]["candidate_count"] == 0
+    assert rejected[absent]["in_candidate_domain"] is False
+    assert effective_retained_objects(checkpoint, checksums=index) == {}
+
+
+def test_keys_objects_and_bytes_are_separately_deduplicated(tmp_path: Path) -> None:
+    cache = tmp_path / "list_cache"
+    sample_dir = tmp_path / "raw" / "sha256"
+    cache.mkdir(parents=True)
+    # Two independently valid full-key bindings backed by exactly one content digest:
+    # different symbols, different basenames, identical bytes.
+    payload = _zip_bytes("k.csv", (FIXTURES / "headerless_klines.csv").read_bytes())
+    first = _kline_key("monthly/klines", "BTCUSDT", "1h", "2020-01")
+    second = _kline_key("monthly/klines", "ETHUSDT", "1h", "2020-01")
+    assert first.rsplit("/", 1)[-1] != second.rsplit("/", 1)[-1]
+    digest = _retain_object(sample_dir, payload)
+    for key in (first, second):
+        _retain_sidecar(cache, payload, key.rsplit("/", 1)[-1])
+    checkpoint = SampleCheckpointStore.load(tmp_path / "progress.json", sidecar_dir=cache)
+    index = RetainedChecksumIndex.from_cache(cache)
+
+    recovered = recover_retained_samples(
+        sample_dir=sample_dir,
+        sidecar_dir=cache,
+        checksums=index,
+        checkpoint=checkpoint,
+        keys=[first, second],
+    )
+    # Two valid logical keys, one unique physical object.
+    assert recovered == 2
+    assert set(checkpoint.objects) == {first, second}
+    assert {str(row["sha256"]) for row in checkpoint.objects.values()} == {digest}
+
+    # The production credit helper - the same one run_source_qualification uses - charges
+    # the shared bytes once while both logical keys stay valid.
+    credit = retained_credit_decomposition(
+        checkpoint.objects,
+        requirement_keys={first, second},
+        sample_dir=sample_dir,
+        sidecar_dir=cache,
+    )
+    assert credit["valid_requirement_keys"] == 2
+    assert credit["keys"] == sorted([first, second])
+    assert credit["unique_objects"] == 1
+    assert credit["unique_bytes"] == len(payload)
+    assert credit["unverified_objects"] == 0
+    assert ambiguous_recovered_rows(
+        checkpoint, checksums=index.bind_candidate_domain([first, second])
+    ) == {}
+
+
+def test_production_credit_uses_the_shared_decomposition_helper() -> None:
+    module = importlib.import_module(
+        "cryptofactors.acquisition.binance_usdm_harmonic_qualification"
+    )
+    source = inspect.getsource(module.run_source_qualification)
+    # The report's credit is not a second copy of the loop: it is this one helper.
+    assert "retained_credit_decomposition(" in source
+    assert source.count("retained_credit_decomposition(") == 1
+    assert 'credit["unique_objects"]' in source
+    assert 'credit["valid_requirement_keys"]' in source
+    parameters = inspect.signature(module.retained_credit_decomposition).parameters
+    assert "requirement_keys" in parameters
+
+
+def test_report_credit_reports_three_separate_quantities(tmp_path: Path) -> None:
+    index = _kline_manifest_index()
+    report = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    credit = report.storage["gate2_feasibility"]
+    keys = int(credit["retained_valid_requirement_keys"])
+    objects = int(credit["retained_verified_credit_objects"])
+    byte_total = int(credit["retained_verified_credit_bytes"])
+    # Three separate quantities: logical keys, unique objects, unique bytes.
+    assert keys >= objects
+    assert objects > 0 and byte_total > 0
+    assert credit["rejected_retained_row_count"] == 0
+    assert credit["rejected_retained_rows"] == []
+    assert "credited once" in credit["credit_rule"]
+    assert "exactly one key" in report.resume["retained_recovery_rule"]
+    assert report.resume["rejected_ambiguous_retained_count"] == 0
+
+
+def test_fresh_plan_recovery_is_in_its_snapshot_accounting_and_rerun(
+    tmp_path: Path,
+) -> None:
+    """A first run must reuse a retained object and freeze it consistently.
+
+    Seeded state: real retained bytes and their sidecar for a funding-rate object whose
+    basename is unique across the complete candidate domain, and no checkpoint or lock at
+    all. The plan the first run builds must reuse that object, and its frozen snapshot and
+    budget accounting must describe the same evidence, so the immediate rerun replays
+    without redownload or changed-input drift.
+    """
+    index, _mark_keys = _ambiguity_index(months=_WIDE_MONTHS)
+    cache = tmp_path / "list_cache"
+    sample_dir = tmp_path / "raw" / "sha256"
+    cache.mkdir(parents=True, exist_ok=True)
+    domain = _fixture_domain(index)
+    seeded_key = _funding_keys(index)[0]
+    payload = index.bodies[vision_object_url(seeded_key)]
+    sidecar_path, sidecar_digest = _retain_sidecar(
+        cache, payload, seeded_key.rsplit("/", 1)[-1]
+    )
+    digest = _retain_object(sample_dir, payload)
+    # The basename really is unique in the complete domain production will bind.
+    probe = RetainedChecksumIndex.from_cache(cache).bind_candidate_domain(domain)
+    assert probe.binds_full_key(seeded_key) is True
+    assert probe.lookup(seeded_key) is not None
+    # No checkpoint and no lock: this is a genuine first run over retained bytes.
+    assert not (tmp_path / "cex002_qualification_progress.json").exists()
+    assert not (tmp_path / SAMPLE_PLAN_LOCK_FILENAME).exists()
+
+    fetched: list[str] = []
+    real_fetch = index.fetch_bytes
+
+    def _tracking(url: str) -> bytes:
+        fetched.append(url)
+        return real_fetch(url)
+
+    index.fetch_bytes = _tracking  # type: ignore[method-assign]
+    first = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    # The retained object is reused, not downloaded again.
+    assert vision_object_url(seeded_key) not in fetched
+    document = json.loads((tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_text())
+    entries = {str(item["key"]): item for item in document["plan"]["entries"]}
+    assert entries[seeded_key]["action"] == "reuse_retained"
+
+    # The frozen snapshot records real identities: exact object and sidecar digests and
+    # the exact byte size, never empty strings or zero.
+    snapshot = document["retained_snapshot"]
+    assert seeded_key in snapshot
+    rendered = json.dumps(snapshot[seeded_key])
+    assert digest in rendered
+    assert sidecar_digest in rendered
+    assert str(len(payload)) in rendered
+    # The budget snapshot is frozen before acquisition, so it counts exactly the unique
+    # retained bytes and nothing this run went on to download.
+    retained_reused = {
+        str(item["key"]) for item in document["plan"]["entries"]
+        if item["action"] == "reuse_retained"
+    }
+    checkpoint = json.loads(
+        (tmp_path / "cex002_qualification_progress.json").read_text()
+    )["objects"]
+    expected_retained_bytes = sum(
+        int(size)
+        for size in {
+            str(checkpoint[key]["sha256"]): int(checkpoint[key]["byte_size"])
+            for key in retained_reused
+        }.values()
+    )
+    # Only the seeded object had retained bytes when the plan was built.
+    assert retained_reused == {seeded_key}
+    assert expected_retained_bytes == len(payload)
+    assert (
+        int(document["budget_snapshot"]["cumulative_spent_max_bytes_at_lock"])
+        == expected_retained_bytes
+    )
+    assert checkpoint[seeded_key]["sha256"] == digest
+    assert int(checkpoint[seeded_key]["byte_size"]) == len(payload)
+    assert checkpoint[seeded_key]["provider_checksum_sha256"] == sidecar_digest
+    assert str(sidecar_path).endswith(sidecar_digest)
+
+    # The immediate rerun accepts the same inputs: no drift, no redownload.
+    fetched.clear()
+    second = run_source_qualification(
+        store_root=tmp_path,
+        index=index,
+        current_contracts=_contracts("BTCUSDT"),
+        now=FIXED_QUALIFICATION_INSTANT,
+    )
+    assert vision_object_url(seeded_key) not in fetched
+    assert second.plan_lock["plan_digest"] == first.plan_lock["plan_digest"]
+    assert second.plan_lock["inputs"] == first.plan_lock["inputs"]
+    assert (
+        json.loads((tmp_path / SAMPLE_PLAN_LOCK_FILENAME).read_text())["retained_snapshot"]
+        == snapshot
     )

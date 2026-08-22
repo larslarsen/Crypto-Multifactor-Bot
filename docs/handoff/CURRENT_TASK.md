@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate ADR-0022 source/tests per review 203
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 204
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -158,6 +158,7 @@ Governing documents:
 - research/sprint_004/201_CEX002_PATH_BOUND_SOURCE_ACCEPTANCE_TEST_RESIDUAL.md
 - research/sprint_004/202_CEX002_PATH_BOUND_TEST_ASSERTION_REVIEW.md
 - research/sprint_004/203_CEX002_PATH_BOUND_SOURCE_TEST_ACCEPTANCE.md
+- research/sprint_004/204_CEX002_PATH_BOUND_RECOVERY_INTEGRATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2319,3 +2320,21 @@ affected existing tests, and add the integration and real dedup proofs in review
 Claude returns hashes/count and stops without commands, data, Git, records, sizing edits,
 or a sizing retry. Hermes remains unauthorized. Gate 2 remains unaccepted; next ticket
 remains `NONE`.
+
+## Record-204 path-bound recovery integration stop published
+
+Hermes integrated review 203's accepted ADR-0022 qualification source and test files.
+The required qualification-module test command failed:
+
+`.venv/bin/python -m pytest tests/acquisition/test_binance_usdm_harmonic_qualification.py -q --tb=short`
+
+It exited status 1 in 7 seconds. The single failure was
+`test_migration_does_not_adopt_a_recoverable_missing_checkpoint_entry`, which raised
+`StopIteration` at `tests/acquisition/test_binance_usdm_harmonic_qualification.py:9339`.
+
+Per review 203, exact-path Ruff was skipped after the first nonzero command. Hermes
+published record 204, ran repo-control and path-restricted whitespace validation, and
+stopped for reviewer inspection. No qualification, authority mutation, sizing retry,
+acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
+PAPER, LIVE, paid source, reduced scope, or next-ticket work was run. Gate 2 remains
+unaccepted. Next ticket remains `NONE`.

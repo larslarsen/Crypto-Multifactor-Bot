@@ -6640,6 +6640,8 @@ def storage_feasibility(
     *,
     requirement: PhysicalRequirement,
     retained_credit_bytes: int,
+    retained_credit_keys: int = 0,
+    rejected_retained_rows: Mapping[str, Mapping[str, Any]] | None = None,
     retained_credit_objects: int,
     local_available_bytes: int | None,
     unverified_credit_objects: int = 0,
@@ -6692,12 +6694,20 @@ def storage_feasibility(
         "physical_object_count": requirement.object_count,
         "physical_compressed_raw_bytes": requirement.byte_total,
         "unknown_size_objects": requirement.unknown_size_objects,
+        # ADR-0022: keys, unique objects, and unique bytes are three separate counts.
+        "retained_valid_requirement_keys": int(retained_credit_keys),
         "retained_verified_credit_objects": int(retained_credit_objects),
         "retained_verified_credit_bytes": int(retained_credit_bytes),
         "unverified_retained_objects": int(unverified_credit_objects),
+        "rejected_retained_rows": [
+            dict(value) for _key, value in sorted((rejected_retained_rows or {}).items())
+        ],
+        "rejected_retained_row_count": len(rejected_retained_rows or {}),
         "credit_rule": (
             "credit requires a rehashed content-addressed object and a re-proved provider "
-            "sidecar; unverified rows are excluded, never assumed present"
+            "sidecar; a basename-only sidecar binds a full key only when the frozen "
+            "candidate domain maps that basename to exactly one key; duplicate bytes are "
+            "credited once, and unverified or rejected rows are excluded, never assumed"
         ),
         "projected_new_compressed_raw_bytes": projected_new,
         "local_available_bytes": local_available_bytes,
@@ -8454,11 +8464,57 @@ class RetainedChecksumIndex:
 
     A sidecar only carries provider authority while its bytes still hash to its own
     content-addressed filename, so every lookup re-proves that before returning it.
+
+    ADR-0022: a legacy sidecar names only a basename, which is not a full-key identity.
+    Several distinct archive families publish objects whose basenames collide, so a
+    basename-only sidecar may be attributed to a full key only when the *complete frozen
+    candidate domain* maps that basename to exactly one key. The retained cache contents
+    are not that domain: one retained sidecar proves nothing about uniqueness.
     """
 
     cache_dir: Path | None = None
     by_basename: dict[str, dict[str, Any]] = field(default_factory=dict)
     ambiguous: set[str] = field(default_factory=set)
+    # basename -> every full key the frozen candidate domain could resolve it to.
+    candidate_keys: dict[str, set[str]] = field(default_factory=dict)
+    domain_bound: bool = False
+
+    def bind_candidate_domain(self, keys: Collection[str]) -> RetainedChecksumIndex:
+        """Bind the complete candidate-key domain this index may resolve against.
+
+        Binding is what makes basename recovery decidable: after it, a basename that the
+        domain maps to more than one full key can never be attributed to any of them.
+        """
+        domain: dict[str, set[str]] = {}
+        for key in keys:
+            domain.setdefault(str(key).rsplit("/", 1)[-1], set()).add(str(key))
+        self.candidate_keys = domain
+        self.domain_bound = True
+        return self
+
+    def binds_full_key(self, key: str) -> bool:
+        """Whether the frozen domain resolves this basename to exactly this one key.
+
+        Zero matches are as disqualifying as several: an out-of-domain key has no proved
+        full-path authority at all, so a basename-only sidecar can never bind it.
+        """
+        basename = str(key).rsplit("/", 1)[-1]
+        return self.candidate_keys.get(basename, set()) == {str(key)}
+
+    def basename_collides(self, key: str) -> bool:
+        """Whether basename-only evidence fails to bind this exact full key."""
+        return not self.binds_full_key(key)
+
+    def collision_context(self, key: str) -> dict[str, Any]:
+        basename = str(key).rsplit("/", 1)[-1]
+        candidates = sorted(self.candidate_keys.get(basename, ()))
+        return {
+            "key": key,
+            "basename": basename,
+            "candidate_keys": candidates,
+            "candidate_count": len(candidates),
+            "in_candidate_domain": str(key) in set(candidates),
+        }
 
     @classmethod
     def from_cache(cls, cache_dir: Path) -> RetainedChecksumIndex:
@@ -8496,6 +8552,15 @@ class RetainedChecksumIndex:
     def lookup(self, key: str) -> dict[str, Any] | None:
         basename = key.rsplit("/", 1)[-1]
         if basename in self.ambiguous:
+            return None
+        if not self.domain_bound:
+            # Without the frozen domain there is no way to know a basename is unique, so
+            # basename-only evidence carries no full-key authority at all.
+            return None
+        if not self.binds_full_key(key):
+            # ADR-0022: the domain must resolve this basename to exactly this key. Several
+            # candidates, or none at all, means no legacy sidecar binds it. A real
+            # full-key fetch is still available.
             return None
         evidence = self.by_basename.get(basename)
         if evidence is None:
@@ -8707,6 +8772,106 @@ def verify_provider_sidecar(
     return provider
 
 
+RETAINED_AMBIGUOUS_BASENAME: str = "retained_basename_ambiguous"
+
+
+def retained_credit_decomposition(
+    retained_objects: Mapping[str, Mapping[str, Any]],
+    *,
+    requirement_keys: Collection[str],
+    sample_dir: Path,
+    sidecar_dir: Path,
+    cache: dict[tuple[str, str], int | None] | None = None,
+) -> dict[str, Any]:
+    """The three ADR-0022 credit quantities, computed once for the whole run.
+
+    Logical requirement keys with valid retained authority, the unique content-addressed
+    objects behind them, and the bytes of those unique objects. Credit is granted only to
+    bytes re-proved right now, and duplicate bytes are charged once no matter how many
+    valid keys point at them.
+    """
+    digests: set[str] = set()
+    keys: list[str] = []
+    byte_total = 0
+    unverified = 0
+    wanted = set(requirement_keys)
+    for key, entry in sorted(retained_objects.items()):
+        if key not in wanted:
+            continue
+        size = verify_retained_object(
+            key,
+            entry,
+            sample_dir=sample_dir,
+            sidecar_dir=sidecar_dir,
+            cache=cache,
+        )
+        if size is None:
+            unverified += 1
+            continue
+        keys.append(key)
+        digest = str(entry.get("sha256") or "")
+        if digest in digests:
+            continue
+        digests.add(digest)
+        byte_total += size
+    return {
+        "valid_requirement_keys": len(keys),
+        "keys": sorted(keys),
+        "unique_objects": len(digests),
+        "unique_bytes": byte_total,
+        "unverified_objects": unverified,
+    }
+
+
+def ambiguous_recovered_rows(
+    checkpoint: SampleCheckpointStore, *, checksums: RetainedChecksumIndex
+) -> dict[str, dict[str, Any]]:
+    """Persisted legacy rows whose basename the frozen domain cannot bind to one key.
+
+    These were recovered before ADR-0022 under a basename-only rule. They are preserved
+    exactly as written - never deleted, relabelled, or silently accepted - but they are
+    excluded from every effective authority path until a reviewed transition resolves
+    them. A row recovered from a *fresh exact-key* fetch is unaffected.
+    """
+    rejected: dict[str, dict[str, Any]] = {}
+    if not checksums.domain_bound:
+        return rejected
+    for key, entry in sorted(checkpoint.objects.items()):
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("recovered_from_retained_bytes") is not True:
+            continue
+        if not checksums.binds_full_key(key):
+            rejected[key] = {
+                **checksums.collision_context(key),
+                "kind": RETAINED_AMBIGUOUS_BASENAME,
+                "sha256": str(entry.get("sha256") or ""),
+                "byte_size": int(entry.get("byte_size") or 0),
+                "provider_checksum_sha256": str(
+                    entry.get("provider_checksum_sha256") or ""
+                ),
+                "state": "preserved_rejected_lineage",
+                "reason": (
+                    "a basename-only sidecar binds a full key only when the frozen "
+                    "candidate domain resolves that basename to exactly that one key; "
+                    "several candidates or none at all both fail closed"
+                ),
+            }
+    return rejected
+
+
+def effective_retained_objects(
+    checkpoint: SampleCheckpointStore, *, checksums: RetainedChecksumIndex
+) -> dict[str, dict[str, Any]]:
+    """The checkpoint rows that may influence planning, credit, or source evidence."""
+    rejected = ambiguous_recovered_rows(checkpoint, checksums=checksums)
+    return {
+        key: dict(entry)
+        for key, entry in checkpoint.objects.items()
+        if key not in rejected
+    }
+
+
 def recover_retained_samples(
     *,
     sample_dir: Path,
@@ -8724,6 +8889,10 @@ def recover_retained_samples(
     claims, and the retained raw bytes rehash to that same digest. ``persist=False`` keeps
     that proof in memory only: it never calls sample-checkpoint ``record()`` or ``flush()``.
     """
+    # ADR-0022: the complete candidate domain decides basename ambiguity, so it is bound
+    # from every requested key before the first lookup rather than from cache contents.
+    if not checksums.domain_bound:
+        checksums.bind_candidate_domain(keys)
     recovered = 0
     for key in keys:
         if checkpoint.get(key) is not None:
@@ -9435,10 +9604,17 @@ def _acquire_sample(
     checkpoint: SampleCheckpointStore,
     checksums: RetainedChecksumIndex | None,
     retry: RetryRunner,
+    effective_objects: Mapping[str, Any] | None = None,
 ) -> SampleRecord:
     url = vision_object_url(key)
     primary = products[0] if products else ""
-    prior = checkpoint.get(key)
+    # ADR-0022: resume authority comes from the effective view, so a rejected legacy row
+    # is never reused as provider authority here.
+    prior = (
+        checkpoint.get(key)
+        if effective_objects is None
+        else (dict(effective_objects[key]) if key in effective_objects else None)
+    )
     if isinstance(prior, dict) and prior.get("status") == "complete" and prior.get("sha256"):
         expected = str(prior["sha256"])
         dest = content_addressed_path(sample_dir, expected)
@@ -9996,28 +10172,92 @@ def run_source_qualification(
             candidate_keys.extend(obj.key for obj in entry.objects.get(symbol, ()))
     candidate_keys.extend(str(item["key"]) for item in cost_sample["items"])
     candidate_keys.extend(str(item["key"]) for item in cost_source_sample["items"])
+    # ADR-0022: the complete frozen candidate domain - every key this run could plan -
+    # decides basename ambiguity, before any lookup or recovery is attempted.
+    checksums.bind_candidate_domain(candidate_keys)
+    # Legacy rows recovered under the old basename-only rule are identified once here and
+    # excluded from every effective authority path below. They are never rewritten.
+    rejected_retained = ambiguous_recovered_rows(checkpoint, checksums=checksums)
     memory_recovered: dict[str, dict[str, Any]] = {}
-    recover_retained_samples(
-        sample_dir=sample_dir,
-        sidecar_dir=list_cache_dir,
-        checksums=checksums,
-        checkpoint=checkpoint,
-        keys=candidate_keys,
-        persist=not apply_reviewed_v4_migration,
-        recovered_into=memory_recovered,
-    )
 
     def _checkpoint_row(key: str) -> dict[str, Any] | None:
+        if key in rejected_retained:
+            # Preserved lineage, never effective authority.
+            return None
         row = checkpoint.get(key)
         if row is not None:
             return row
         recovered = memory_recovered.get(key)
         return None if recovered is None else dict(recovered)
 
+    def _effective_objects() -> dict[str, Any]:
+        """The sole retained-authority view: rejected legacy rows never appear in it.
+
+        Planning, retained snapshots, manifest proof, budget bootstrap/reconciliation,
+        source evidence, and storage credit all read this. Raw ``checkpoint.objects``
+        stays reserved for persistence, rejected-lineage reporting, and the total-row
+        observability counter.
+        """
+        return {
+            key: dict(value)
+            for key, value in checkpoint.objects.items()
+            if key not in rejected_retained
+        }
+
+    def _require_no_rejected_plan_entries(candidate_plan: SamplePlan) -> None:
+        """Fail closed before any durable artifact is created, preserved, or rewritten.
+
+        ADR-0022: a plan that requires a retained row with no proved full-key binding is
+        not executable. This runs as soon as the plan is known - before legacy-plan
+        backup, lock publication, ledger flush, metadata commit, plan publication, or
+        reconciliation persistence - so ordinary execution never mutates anything on the
+        way to discovering it. Only a separately reviewed lineage-preserving transition
+        may resolve such a row.
+        """
+        if not rejected_retained:
+            return
+        for entry in candidate_plan.entries:
+            if entry.action == "blocked":
+                continue
+            if entry.key in rejected_retained:
+                raise ResumeIntegrityError(
+                    "the locked plan requires a retained row with no proved full-key "
+                    "binding",
+                    context={
+                        "kind": RETAINED_AMBIGUOUS_BASENAME,
+                        **dict(rejected_retained[entry.key]),
+                        "action": entry.action,
+                    },
+                )
+
     def _evidence_objects() -> dict[str, Any]:
+        effective = _effective_objects()
         if not memory_recovered:
-            return checkpoint.objects
-        return {**checkpoint.objects, **memory_recovered}
+            return effective
+        return {**effective, **memory_recovered}
+
+    # ADR-0022: an already installed executing plan is preflighted here, before retained
+    # recovery may persist anything. Recovery itself can checkpoint and flush a valid
+    # object, so a store whose locked plan needs a rejected row must refuse first.
+    installed_plan_lock = (
+        None if candidate_plan_only else SamplePlanLock.load(plan_lock_path)
+    )
+    if installed_plan_lock is not None and installed_plan_lock.plan:
+        _require_no_rejected_plan_entries(SamplePlan.from_dict(installed_plan_lock.plan))
+    # A fresh-plan run has no installed plan to check yet, so recovery stays in memory
+    # until the plan it will build passes the same check.
+    persist_recovery = (
+        not apply_reviewed_v4_migration and installed_plan_lock is not None
+    )
+    recover_retained_samples(
+        sample_dir=sample_dir,
+        sidecar_dir=list_cache_dir,
+        checksums=checksums,
+        checkpoint=checkpoint,
+        keys=candidate_keys,
+        persist=persist_recovery,
+        recovered_into=memory_recovered,
+    )
 
     # Reuse is planned only from re-proved bytes: a checkpoint claim whose object or
     # sidecar cannot be re-proved right now never becomes an authoritative plan input.
@@ -10147,7 +10387,7 @@ def run_source_qualification(
         prior_ledger_sha256 = candidate_authority.ledger_sha256
         retained_snapshot = retained_evidence_snapshot(
             sorted(retained_keys),
-            checkpoint.objects,
+            _effective_objects(),
             sample_dir=sample_dir,
             sidecar_dir=list_cache_dir,
             cache=verified_cache,
@@ -10293,14 +10533,27 @@ def run_source_qualification(
             plan, ledger = validate_migrated_state(
                 store_root=store, lock=lock, executing_inputs=plan_inputs
             )
+            _require_no_rejected_plan_entries(plan)
             reconciliation = ledger.reconcile(
-                checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+                _effective_objects(), sample_dir=sample_dir, sidecar_dir=list_cache_dir
             )
         else:
+            lock = installed_lock
+            if lock is not None and lock.plan:
+                # ADR-0022: an installed plan is proved executable before reconciliation,
+                # which settles reservations and flushes the ledger.
+                _require_no_rejected_plan_entries(SamplePlan.from_dict(lock.plan))
+            # A fresh plan holds its recoveries in memory until the plan proves executable,
+            # so its read-only accounting and snapshot must read the same combined evidence
+            # that drives ``retained_keys``. Otherwise a plan could reuse a recovered object
+            # while the frozen snapshot recorded it as absent.
+            accounting_objects = (
+                _evidence_objects() if lock is None else _effective_objects()
+            )
             ledger = budget_ledger or BudgetLedger.bootstrap(
                 budget_ledger_path,
                 budget_bytes=sample_budget_bytes,
-                retained_objects=checkpoint.objects,
+                retained_objects=accounting_objects,
                 sample_dir=sample_dir,
                 sidecar_dir=list_cache_dir,
                 cache=verified_cache,
@@ -10308,16 +10561,15 @@ def run_source_qualification(
             # A reservation left by an interrupted run is settled only against rehashed
             # retained evidence; anything unproved stays charged.
             reconciliation = ledger.reconcile(
-                checkpoint.objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
+                accounting_objects, sample_dir=sample_dir, sidecar_dir=list_cache_dir
             )
-            lock = installed_lock
             if lock is None:
                 lock = SamplePlanLock(path=plan_lock_path)
                 # The retained and budget snapshots are frozen at lock time; later execution
                 # progress against this same plan is not an input change.
                 retained_snapshot = retained_evidence_snapshot(
                     sorted(retained_keys),
-                    checkpoint.objects,
+                    accounting_objects,
                     sample_dir=sample_dir,
                     sidecar_dir=list_cache_dir,
                     cache=verified_cache,
@@ -10334,6 +10586,16 @@ def run_source_qualification(
                     cumulative_spent_bytes=ledger.spent_max_bytes,
                     cost_source_objects=cost_source_objects,
                 )
+                _require_no_rejected_plan_entries(plan)
+                # The plan is executable, so exactly the recovery set that produced the
+                # snapshot, the accounting, and the plan actions becomes durable. Snapshot,
+                # budget, plan, and checkpoint therefore describe one identical evidence
+                # set, and the next resume re-proves it without identity drift.
+                for recovered_key, recovered_entry in sorted(memory_recovered.items()):
+                    if checkpoint.get(recovered_key) is None:
+                        checkpoint.record(recovered_key, recovered_entry)
+                        checkpoint.recovered += 1
+                memory_recovered.clear()
                 # A pre-lock greedy plan is evidence of what earlier runs selected and spent. It
                 # is preserved in the lock history and on disk before the first lock overwrites
                 # the plan document.
@@ -10366,12 +10628,13 @@ def run_source_qualification(
                 lock.flush()
             else:
                 plan = SamplePlan.from_dict(lock.plan)
+                _require_no_rejected_plan_entries(plan)
                 # Only the evidence frozen into this lock is compared, so a normal resume is
                 # stable; a genuine inventory, membership, code, or evidence change fails closed
                 # before any byte is downloaded.
                 retained_snapshot = retained_evidence_snapshot(
                     sorted(lock.retained_snapshot),
-                    checkpoint.objects,
+                    _effective_objects(),
                     sample_dir=sample_dir,
                     sidecar_dir=list_cache_dir,
                     cache=verified_cache,
@@ -10390,6 +10653,11 @@ def run_source_qualification(
                         },
                     )
     read_only_transition = candidate_plan_only or apply_reviewed_v4_migration
+    if not read_only_transition:
+        # Every executing path has already proved this; asserting it once more here makes
+        # the durable-write boundary itself unconditional, whichever branch produced the
+        # plan. Read-only candidate and reviewed-migration phases stay non-executing.
+        _require_no_rejected_plan_entries(plan)
     if staged_observation is not None and not read_only_transition:
         # Commit only after the existing plan accepts, or as part of first-plan lock.
         metadata_store.commit(staged_observation, updated_at=generated_at)
@@ -10423,7 +10691,7 @@ def run_source_qualification(
         planned_new = (
             planned.action == "download"
             and planned.key not in retained_keys
-            and (checkpoint.get(planned.key) or {}).get("status") != "complete"
+            and (_effective_objects().get(planned.key) or {}).get("status") != "complete"
         )
         if planned_new and (
             planned.byte_size > ledger.remaining_bytes or ledger.exhausted
@@ -10462,6 +10730,7 @@ def run_source_qualification(
                 checkpoint=checkpoint,
                 checksums=checksums,
                 retry=retry_runner,
+                effective_objects=_effective_objects(),
             )
         except ResumeIntegrityError:
             raise
@@ -11073,31 +11342,24 @@ def run_source_qualification(
     )
     # Credit is only granted to bytes re-proved right now: rehashed raw object plus a
     # re-proved provider sidecar. An unverifiable row reduces nothing.
-    credit_digests: set[str] = set()
-    credit_bytes = 0
-    unverified_credit = 0
-    for key, entry_row in sorted(checkpoint.objects.items()):
-        if key not in requirement.keys:
-            continue
-        size = verify_retained_object(
-            key,
-            entry_row,
-            sample_dir=sample_dir,
-            sidecar_dir=list_cache_dir,
-            cache=verified_cache,
-        )
-        if size is None:
-            unverified_credit += 1
-            continue
-        digest = str(entry_row.get("sha256") or "")
-        if digest in credit_digests:
-            continue
-        credit_digests.add(digest)
-        credit_bytes += size
+    # ADR-0022 separates three quantities, computed by the one shared helper. The
+    # effective view already excludes rejected legacy rows, so credit can never be earned
+    # by a row that planning and manifest proof refused.
+    credit = retained_credit_decomposition(
+        _effective_objects(),
+        requirement_keys=requirement.keys,
+        sample_dir=sample_dir,
+        sidecar_dir=list_cache_dir,
+        cache=verified_cache,
+    )
+    credit_bytes = int(credit["unique_bytes"])
+    unverified_credit = int(credit["unverified_objects"])
     feasibility = storage_feasibility(
         requirement=requirement,
         retained_credit_bytes=credit_bytes,
-        retained_credit_objects=len(credit_digests),
+        retained_credit_objects=int(credit["unique_objects"]),
+        retained_credit_keys=int(credit["valid_requirement_keys"]),
+        rejected_retained_rows=rejected_retained,
         local_available_bytes=available_bytes(store),
         unverified_credit_objects=unverified_credit,
         # This phase measures none of these, so Gate 2 stays unproved.
@@ -11308,6 +11570,13 @@ def run_source_qualification(
             "recovered_samples": checkpoint.recovered,
             "rehash_required": True,
             "unverified_retained_sample_keys": len(unverified_retained_keys),
+            # ADR-0022: legacy basename-ambiguous recoveries, preserved and excluded.
+            "rejected_ambiguous_retained_keys": sorted(rejected_retained),
+            "rejected_ambiguous_retained_count": len(rejected_retained),
+            "retained_recovery_rule": (
+                "a basename-only sidecar binds a full key only when the complete frozen "
+                "candidate domain maps that basename to exactly one key"
+            ),
             "physical_families_inventoried": len(inventory),
         },
         sample_plan=execution_plan.to_dict(),
