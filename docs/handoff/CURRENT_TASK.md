@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 164 source
+Next required actor: Sr Dev - Claude Build - correct review 165 residual
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -118,6 +118,7 @@ Governing documents:
 - research/sprint_004/162_CEX002_VERSION4_SAMPLE_EXECUTION.md
 - research/sprint_004/163_CEX002_SAMPLE_OUTCOME_ARCHITECTURE_REVIEW.md
 - research/sprint_004/164_CEX002_CLAUDE_SEMANTIC_AUTHORITY_SOURCE_REVIEW.md
+- research/sprint_004/165_CEX002_CLAUDE_AUTHORITY_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1643,6 +1644,30 @@ Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 164's bo
 correction in the same three Python paths. Claude runs no command or Git operation and
 returns all three hashes plus the unique CEX test-function count. Hermes remains
 unauthorized pending reviewer source acceptance.
+
+No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
+bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
+authorized. CEX-002 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains
+`NONE`.
+
+## Claude review-164 correction - authority residual rejected
+
+Review 165 accepts and freezes the corrected quote, membership, source/release, Coinalyze,
+derived-flow, and CLI regions, but rejects the source-authority transaction before
+integration. Its complete-state proof compares checkpoint-envelope fields against a lock
+body that cannot contain them, so a fresh run mutates the ledger and lock and then fails.
+
+The transaction also accepts caller-selected retained-evidence roots, incompletely proves
+partial ledger and complete lock transforms, and overwrites a corrupt prior-ledger content
+address. The recovery test removes all fixture authority constants before its retry, and
+the accounting tests use an empty migrated ledger rather than preserving nonempty settled
+charges and reservations.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 165's two-path
+production/test residual. The accepted CLI is frozen at SHA-256
+`473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f`.
+Claude runs no command or Git operation and returns both changed hashes, the unchanged CLI
+hash, and the unique CEX test-function count. Hermes remains unauthorized.
 
 No integration, live transaction, ordinary resume, Gate 1 acceptance, sizing, Gate 2,
 bulk acquisition, Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is
