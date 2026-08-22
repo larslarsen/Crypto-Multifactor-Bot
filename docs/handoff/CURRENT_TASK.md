@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 171
+Next required actor: Implementation Dev - Codex Spark - correct review 172 assertions
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -125,6 +125,7 @@ Governing documents:
 - research/sprint_004/169_CEX002_AUTHORITY_IMPORT_FAILURE_REVIEW.md
 - research/sprint_004/170_CEX002_AUTHORITY_IMPORT_SOURCE_ACCEPTANCE.md
 - research/sprint_004/171_CEX002_AUTHORITY_IMPORT_INTEGRATION.md
+- research/sprint_004/172_CEX002_AUTHORITY_FOCUSED_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1785,4 +1786,23 @@ mismatch, and one CLI source assertion expecting
 
 Commands C2-C5 were not run. No live source-authority transaction, data mutation,
 ordinary qualification, Gate 1 acceptance, Gate 2, or later work was run. CEX-002 remains
+`IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Focused authority failures - Spark assertions only
+
+Review 172 accepts the import correction and Hermes's exact C1 stop. Production remains
+frozen at `068763e2359abf4fc4fe4b7e7fdea95495db5c22bf362d468fec4056775ecb7e`; CLI remains
+frozen at `473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f`.
+
+C1's five failures are confined to stale check/message assertions, an incorrect ordering
+comparison between two exact cost-sample views, and an obsolete assertion that the CLI
+calls an internally encapsulated preflight directly. Implementation Dev - Codex Spark
+using GPT-5.3-Codex-Spark High is authorized only for review 172's exact five assertion
+corrections in the CEX test path. Spark changes no other byte, adds no test, preserves the
+305-test count, runs no command or Git operation, and returns the test hash. Hermes remains
+unauthorized.
+
+No integration, live transaction, data or source-data network operation, ordinary
+qualification, Gate 1 acceptance, sizing, Gate 2, bulk acquisition, Nautilus, Harmonic
+Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002 remains
 `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
