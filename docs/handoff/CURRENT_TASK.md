@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 181
+Next required actor: Sr Dev - Claude Build - correct review 182
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -135,6 +135,7 @@ Governing documents:
 - docs/adr/0021-bounded-real-sample-storage-sizing.md
 - research/sprint_004/179_CEX002_GATE1_ACCEPTANCE_AND_STORAGE_SIZING_ARCHITECTURE.md
 - research/sprint_004/181_CEX002_CLAUDE_STORAGE_SIZING_SOURCE_REVIEW.md
+- research/sprint_004/182_CEX002_CLAUDE_STORAGE_SIZING_CORRECTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1980,6 +1981,34 @@ three untracked sizing paths under review 181. Claude runs no test, linter, cont
 network, sizing, acquisition, or data command; changes no other path, record, or data;
 returns three hashes and the corrected test-function count; and stops for reviewer
 inspection. Hermes remains unauthorized.
+
+Gate 1 remains accepted. No integration, sizing execution, Gate 2 acceptance, bulk
+acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
+PAPER, LIVE, paid source, reduced scope, or next-ticket work is authorized. CEX-002
+remains `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Claude sizing correction rejected - final surgical correction
+
+Review 182 rejects Claude's corrected three-path sizing drop. The rewrite closes the
+separate cost-manifest, report-bound Coinalyze, exact-rational envelope, grouping, fixed
+CLI target, and basic collision-publication defects, but the real invocation still cannot
+complete. It counts the 96 sizing samples as acquisition credit although report 62 proves
+a separate 73-object, 5,225,416-byte consumable set; the synthetic fixture explicitly
+masks that distinction.
+
+The source also labels gross liquidation bytes as new Coinalyze raw while omitting the
+inventory/retained-credit equation, counts five qualification evidence responses instead
+of projected acquisition receipts for catalog overhead, undercounts the final receipt,
+and cannot reproduce the fixed receipt on rerun. Largest-partition high-water combines
+multiple logical outputs; source division contradicts its own integer guard; and
+publication still lacks streaming and complete no-follow behavior.
+
+Sr Dev - Claude Build using Claude Opus 5 is authorized only for review 182's final
+surgical correction of the same three untracked sizing paths. Claude preserves all
+accepted review-181 corrections, closes the six exact review-182 findings, runs no test,
+linter, control, Git, network, sizing, acquisition, or data command, edits no other path,
+and returns three hashes plus the corrected test-function count. Hermes remains
+unauthorized.
 
 Gate 1 remains accepted. No integration, sizing execution, Gate 2 acceptance, bulk
 acquisition, normalization, catalog publication, NautilusTrader, Harmonic Trader, payoff,
