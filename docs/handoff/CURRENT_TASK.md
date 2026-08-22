@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate test correction and restart migration sequence
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 155
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -108,6 +108,7 @@ Governing documents:
 - research/sprint_004/152_CEX002_MIGRATION_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/153_CEX002_MIGRATION_FOCUSED_FAILURE_REVIEW.md
 - research/sprint_004/154_CEX002_MIGRATION_TEST_SOURCE_ACCEPTANCE.md
+- research/sprint_004/155_CEX002_MIGRATION_TEST_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -1460,3 +1461,17 @@ migration, or sample acquisition is authorized.
 No migration before all focused commands pass, sample acquisition, Gate 2, reduced scope,
 Nautilus, Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work is authorized. CEX-002
 remains `IN_PROGRESS`; Gate 1 has not passed; next ticket remains `NONE`.
+
+## Record-155 migration test integration stop published
+
+Hermes integrated review 154's exact accepted test correction in commit `3155293` and
+pushed it. The required focused restart reached C3:
+
+- C1 migration tests returned exit 0.
+- C2 download atomicity tests returned exit 0.
+- C3 Ruff returned exit 1 with five `F401` unused-import findings in
+  `tests/acquisition/test_binance_usdm_harmonic_qualification.py`.
+
+Commands C4-C5, migration preconditions, the migration-only invocation, ordinary resume,
+sample acquisition, Gate 2, and later work were not run. CEX-002 remains `IN_PROGRESS`;
+Gate 1 has not passed; next ticket remains `NONE`.
