@@ -2,18 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - final test-only review-254 correction
+Next required actor: Jr Dev - Hermes - integrate and execute review 255 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: implement review 254 once in the sizing
-test file only. Preserve the accepted sizing source and CLI byte-for-byte. Repair the
-malformed metrics fixture and prove one four-row mixed present/null table with exact Arrow
-types and exact values; complete the two-row timestamp type/value/retention proof and all
-structural/redaction failure assertions. Preserve the restored invalid-decimal test and
-all unrelated tests. Make no production or semantic change. Run no commands/tests/Git/data
-work and stop once with all three hashes plus test count. Gate 2 remains not accepted and
-next ticket remains `NONE`.
+Immediate bounded task for Jr Dev - Hermes: follow review 255 exactly. Verify and stage
+only the accepted sizing source/test paths, run focused pytest and exact-path Ruff, then
+run the real v2 sizing CLI once and one identical idempotence invocation only if every
+prior step succeeds. Publish record 256 and receipt 231 only if valid; update the control
+plane, commit/push only the enumerated paths, and stop for reviewer inspection. Stop
+immediately on any mismatch, failure, timeout, or idempotence disagreement. Do not acquire,
+normalize, publish a catalog, or perform NautilusTrader, Harmonic Trader, PAPER/LIVE, or
+next-ticket work. Gate 2 remains not accepted and next ticket remains `NONE`.
 
 Governing documents:
 
@@ -221,6 +221,7 @@ Governing documents:
 - research/sprint_004/252_CEX002_TYPED_SOURCE_IMPLEMENTATION_ROUTING.md
 - research/sprint_004/253_CEX002_TYPED_SOURCE_TEST_RESIDUAL_REVIEW.md
 - research/sprint_004/254_CEX002_CLAUDE_TYPED_SOURCE_TEST_CORRECTION.md
+- research/sprint_004/255_CEX002_REAL_TYPED_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
