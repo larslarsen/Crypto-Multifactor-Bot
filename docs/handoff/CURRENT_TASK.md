@@ -1,19 +1,21 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 271 and execute corrected v3 sizing gate
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 272 and the focused validation failure
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer accepted Sol High's review-269 test-only correction at test
+Immediate state: Hermes integrated Sol High's review-269 test-only correction at test
 SHA-256 `f67851a952bc5fdacf5a951344f119e0efd721d47974af0f6f1424449299777c`, frozen
 production/CLI identities, and 161 test functions. Review 271 authorizes Hermes for exact
 test integration, corrected focused pytest, Ruff, one real v3 sizing invocation, one
 identical idempotence invocation after success, record 272, receipt 258 only if valid, and
-the exact commit/push scope. Acquisition, normalization, catalog, NautilusTrader,
-Harmonic Trader, PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not
-accepted. Next ticket remains `NONE`.
+the exact commit/push scope. The focused pytest failed with an `UnboundLocalError` in
+`test_the_v3_capacity_terms_reconcile_exactly`; per review 271, Hermes stopped before
+Ruff and sizing. Acquisition, normalization, catalog, NautilusTrader, Harmonic Trader,
+PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not accepted. Next ticket
+remains `NONE`.
 
 Governing documents:
 

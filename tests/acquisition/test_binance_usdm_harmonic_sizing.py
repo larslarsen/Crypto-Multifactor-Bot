@@ -491,7 +491,7 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             "product": product,
             "universe_coverage_gaps": [
                 {
-                    "symbol": f"GAP{index}USDT",
+                    "symbol": supported_natives[index],
                     "family_group": "klines",
                     "families": [family],
                     "status": "interior_month_gap",
@@ -504,7 +504,10 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                 }
                 for index, family in enumerate(families)
             ],
-            "typed_gap_symbols": [f"TYPED{index}USDT" for index in range(index_count)],
+            "typed_gap_symbols": [
+                supported_natives[(index + 1) % len(supported_natives)]
+                for index in range(index_count)
+            ],
         }
         for product, families, index_count in (
             ("binance_usdm_bar_1h", ("daily/klines", "monthly/klines"), 2),
@@ -2752,13 +2755,19 @@ def test_liquidation_projection_uses_its_own_parquet_envelopes(
     # The normalized ratio is a Coinalyze envelope ratio, never a Binance family ratio.
     assert projection.envelope_numerator > 0 and projection.envelope_denominator > 0
     assert projection.envelopes
-    footer = max(item["footer_per_row_group_bytes"] for item in projection.envelopes)
-    framing = max(item["framing_bytes"] for item in projection.envelopes)
-    assert projection.projected_normalized_bytes == sum(
-        ceil_div(points * projection.envelope_numerator, projection.envelope_denominator)
-        + max(1, ceil_div(points, sizing.SIZING_ROW_BATCH)) * footer
-        + framing
-        for points in _expected_group_bytes(projection, supported, lifecycles)
+    block = projection.to_dict()
+    allocation = block["allocation"]
+    assert (
+        allocation["anchor_bytes"]
+        + allocation["additional_dictionary_bytes"]
+        + allocation["incremental_bytes"]
+        == allocation["total_payload_bytes"]
+        == projection.projected_typed_payload_bytes
+    )
+    assert projection.projected_normalized_bytes == (
+        projection.projected_typed_payload_bytes
+        + projection.projected_typed_overhead_bytes
+        + projection.projected_manifest_bytes
     )
     assert projection.partition_count == len(
         _expected_group_bytes(projection, supported, lifecycles)
@@ -4951,6 +4960,15 @@ def test_the_coverage_authority_starts_from_the_full_accepted_matrix(
     coverage = sizing.prove_coverage_authority(report)
     counts = coverage["counts"]
     matrix = accepted["matrix_rows"]
+    accepted_symbols = {symbol for symbol, *_ in accepted["accepted_membership"]}
+    assert all(
+        symbol in accepted_symbols
+        for row in matrix
+        for symbol in [
+            *(item["symbol"] for item in row["universe_coverage_gaps"]),
+            *row["typed_gap_symbols"],
+        ]
+    )
     assert counts["accepted_source_coverage_gaps"] == sum(
         len(row["universe_coverage_gaps"]) for row in matrix
     )
@@ -5046,29 +5064,30 @@ def test_the_coinalyze_projection_applies_each_coefficient_once(
         staging=tmp_path,
     )
     block = projection.to_dict()
-    per_point = min(int(item["bytes_per_point"]) for item in projection.envelopes)
-    best = max(int(item["bytes_per_point"]) for item in projection.envelopes)
-    assert per_point > 0
-    # Typed payload is the projected point count times the typed per-point coefficient,
-    # with the raw point charge appearing only in the raw projection.
-    assert block["projected_typed_payload_bytes"] == (
-        projection.projected_points * best
+    # Typed payload is the measured anchor plus additional dictionary values and
+    # incremental rows; the raw point charge remains only in the raw projection.
+    allocation = block["allocation"]
+    assert (
+        allocation["anchor_bytes"]
+        + allocation["additional_dictionary_bytes"]
+        + allocation["incremental_bytes"]
+        == allocation["total_payload_bytes"]
+        == block["projected_typed_payload_bytes"]
     )
-    assert block["projected_typed_payload_bytes"] != (
-        projection.projected_points * projection.point_charge_bytes * best
-    )
-    assert block["gross_liquidation_bytes"] == (
-        projection.projected_points * projection.point_charge_bytes
-        + projection.liquidation_receipts * projection.framing_charge_bytes
-    )
-    # Payload, overhead, lineage, and mapping counts are published separately.
     assert block["projected_normalized_bytes"] == (
         block["projected_typed_payload_bytes"]
         + block["projected_typed_overhead_bytes"]
         + block["projected_partition_manifest_bytes"]
     )
+    assert projection.gross_liquidation_bytes == (
+        projection.projected_points * projection.point_charge_bytes
+        + projection.liquidation_receipts * projection.framing_charge_bytes
+    )
     assert block["partition_manifest_mappings"] == projection.partition_count
-    assert block["largest_partition_bytes"] > 0
+    assert projection.largest_partition_bytes > 0
+    assert projection.projected_typed_payload_bytes != (
+        projection.projected_points * projection.envelope_numerator
+    )
 
 
 def test_real_lineage_is_bound_and_unknowns_stay_unknown(
@@ -5735,7 +5754,7 @@ def test_one_owner_per_validity_byte_across_current_and_future_fields() -> None:
     )
     assert "current typed" in reference["validity_owner"]
     # A nullable non-dictionary column still carries exactly one validity allocation.
-    assert widths["missing_run_start_ms"] == 8 + 1
+    assert widths["missing_run_start_ms"] == 1
     assert widths["expected_grid_count"] == 8
     # The archive and cost target-only path declares the same two current nulls, so its
     # shared current identity allocation carries them explicitly.
