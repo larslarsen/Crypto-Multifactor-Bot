@@ -2,19 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - one consolidated review-251 typed-source correction
+Next required actor: Implementation Dev - Codex Spark - mechanical review-252 typed-source drop
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 251 once. Correct retained
-book-depth UTC-text timestamps to normalize through the existing exact epoch-millisecond
-converter, and preserve empty values in exactly the four observed metrics ratio columns
-as typed nullable decimals. Update realistic fixtures and prove exact timestamp output,
-row retention, nullable schemas/nulls, strict nonempty conversion, and continued failure
-for missing required OI values. Preserve every review-249 sizing, idempotence, capacity,
-lineage, and publication protection. Edit only the sizing source/test paths; leave the
-CLI byte-identical. Run no commands/tests/Git/data work and stop once with all three
-hashes plus test count. Gate 2 remains not accepted and next ticket remains `NONE`.
+Immediate bounded task for Implementation Dev - Codex Spark: implement review 252 once.
+Change the book-depth timestamp source dispatch to the existing exact UTC-text converter;
+make exactly the four named metrics ratios nullable; map empty tokens to `None` only for
+explicitly nullable source columns; update the realistic fixture and add the exact focused
+regression tests. All financial/source semantics are already decided in review 251; make
+no new decision. Preserve every review-249 protection. Edit only the sizing source/test
+paths, leave the CLI byte-identical, run no commands/tests/Git/data work, and stop once
+with all three hashes plus test count. Gate 2 remains not accepted and next ticket remains
+`NONE`.
 
 Governing documents:
 
@@ -219,6 +219,7 @@ Governing documents:
 - research/sprint_004/249_CEX002_V2_RECEIPT_BOUNDARY_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/250_CEX002_V2_SIZING_FINAL_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/251_CEX002_REAL_TYPED_SOURCE_SEMANTICS_REVIEW.md
+- research/sprint_004/252_CEX002_TYPED_SOURCE_IMPLEMENTATION_ROUTING.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
