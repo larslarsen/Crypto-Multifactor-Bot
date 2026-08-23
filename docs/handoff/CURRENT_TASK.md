@@ -2,18 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Sol High - complete review 273 exact test ordering correction
+Next required actor: Sr Dev - Sol High - complete review 273 and targeted test in review 274
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer accepted record 272 as faithful execution. Focused pytest
-had exactly one failure: the capacity test reads its existing `liquidation` local before
-the assignment later in the same function. Review 273 routes the exact assignment move
-and duplicate removal to Sol High in the sizing test only. Production and CLI remain
-frozen. Hermes, commands, Git integration, receipt 258, sizing, acquisition,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain
-unauthorized pending reviewer static acceptance. Gate 2 remains not accepted. Next ticket
-remains `NONE`.
+Immediate state: Review 273 routes one exact assignment move and duplicate removal to Sol
+High in the sizing test only. At the owner's explicit direction, review 274 and the
+development-role governance authorize Sol to run the single enumerated capacity-test
+pytest command once after the edit, then stop with exact output and hashes. Production and
+CLI remain frozen. Hermes retains integration, full validation, Ruff, sizing, evidence,
+records, and Git. Receipt 258, acquisition, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not
+accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -240,6 +240,7 @@ Governing documents:
 - research/sprint_004/271_CEX002_V3_TEST_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/272_CEX002_V3_CORRECTED_SIZING_EXECUTION.md
 - research/sprint_004/273_CEX002_V3_CAPACITY_TEST_ORDERING_FAILURE.md
+- research/sprint_004/274_CEX002_TARGETED_SENIOR_TEST_AUTHORIZATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

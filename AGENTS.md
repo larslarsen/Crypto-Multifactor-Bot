@@ -51,6 +51,13 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     production-code actor with the same source/test-source scope and prohibitions as Grok
     Build. The reviewer authorizes exactly one senior actor for a bounded drop based on
     accepted-result evidence, remaining usage, and task fit; the roles are not concurrent.
+  - **Targeted senior test exception:** for a bounded corrective drop, the reviewer may
+    explicitly authorize the selected senior actor to run one enumerated targeted test
+    command against the actor's edited
+    path when immediate source feedback reduces integration handoffs. This narrow
+    exception does not transfer integration, acceptance-suite, repository-record, Git,
+    commit, push, data, or publication ownership. The senior stops on the first nonzero
+    result and reports the exact command and output.
   - **Jr Dev — Hermes:** agentic, using the best reliable free Nous Portal model currently
     available. Owns production/test source-drop integration, test and acceptance-command
     execution, implementation/evidence records, and the corresponding Git, commits, and
