@@ -1,19 +1,20 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 266 failed focused validation
+State: IN_PROGRESS
+Next required actor: Implementation Dev - Codex Spark - complete review 267 test-only correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Jr Dev - Hermes followed review 265 through exact-byte preproof, staged
-only the two accepted modified sizing paths, and ran the focused sizing pytest command
-with the two-pass real-authority receipt test deselected. Focused pytest exited 1 with 30
-failing tests, so Hermes stopped as required, ran no Ruff, ran no v3 sizing CLI, produced
-no receipt 258, and performed no acquisition, network, normalization, catalog,
-NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work. Review record 266 is
-published for reviewer inspection. Gate 2 remains not accepted. Next ticket remains
-`NONE`.
+Immediate state: The reviewer accepted record 266 as faithful execution and reduced all
+30 focused failures to one unclassified synthetic fixture-identity defect plus three stale
+assertion blocks. Review 267 authorizes Implementation Dev - Codex Spark to edit only the
+sizing test source: use existing accepted identities for product-scoped fixture gaps,
+assert that membership relationship, update the two Coinalyze assertions to the accepted
+disjoint allocation ledger, and expect one current validity byte for the null nullable
+field. Production and CLI are frozen; commands, Git, integration, receipt 258, sizing,
+acquisition, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and
+later work remain unauthorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -233,6 +234,7 @@ Governing documents:
 - research/sprint_004/264_CEX002_V3_MEASURED_ANCHOR_TEST_RESIDUAL.md
 - research/sprint_004/265_CEX002_V3_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/266_CEX002_V3_SIZING_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/267_CEX002_V3_FOCUSED_TEST_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
