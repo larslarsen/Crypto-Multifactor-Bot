@@ -2,19 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - one consolidated review-241 correction
+Next required actor: Jr Dev - Hermes - review-242 exact integration and execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 241 once. Preserve the
-integrated sizing design. Separate verified retained-object byte length from full
-requirement-listing byte size, then correct the six enumerated stale test patterns for
-premium scope, 2/2/6 manifest mappings, exact decimal error text, shared identity fields,
-synthetic fee-gap count, and accepted alias decomposition. Edit only the sizing source and
-test paths; leave the CLI unchanged unless mechanically required. Do not run commands or
-tests, use Git, mutate data/evidence, or write repository records. Stop once with all three
-path hashes and the final test-function count. Gate 2 remains not accepted and next ticket
-remains `NONE`.
+Immediate bounded task for Jr Dev - Hermes: execute review 242 exactly. Verify Claude's
+accepted source/test hashes, the unchanged CLI hash, 138 tests, and clean review-publication
+HEAD; integrate only the two modified sizing paths. Run the one focused pytest pass with
+the real two-pass receipt test deselected, then exact-path Ruff. Only if both pass, run the
+real v2 sizing CLI once and one identical idempotence invocation. Publish record 243 and
+receipt 231 only if valid, update the control plane, commit and push only the exact
+enumerated paths, and stop for reviewer inspection. Do not use network, acquire or
+normalize data, publish a catalog, or start Harmonic Trader or later work. Gate 2 remains
+not accepted and next ticket remains `NONE`.
 
 Governing documents:
 
@@ -209,6 +209,7 @@ Governing documents:
 - research/sprint_004/239_CEX002_V2_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/240_CEX002_V2_SIZING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/241_CEX002_V2_SIZING_VALIDATION_FAILURE_REVIEW.md
+- research/sprint_004/242_CEX002_V2_SIZING_CORRECTION_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
