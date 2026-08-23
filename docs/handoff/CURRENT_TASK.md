@@ -2,19 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - complete review 262 exactly
+Next required actor: Sr Dev - Claude Build - complete review 263 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Edit only the sizing source and sizing test in review 262. Preserve the
-current drop. Fix six literal items: separate 12 shared index bytes, 2 current-null bytes,
-14 current total, and 8 future index bytes; make empty reference scopes cardinality zero;
-remove validity from the largest-lineage counter charge; measure and allocate the shared
-current identity/null page anchor per row group; instantiate its full ledger with each
-product's actual rows/groups/totals; and make rule text plus production-path Coinalyze and
-reconciliation tests match those equations. Do not run commands or Git. Stop with the two
-hashes, unchanged CLI hash, and test count. Receipt 258, Hermes, integration, execution,
-acquisition, and later work remain unauthorized. Next ticket remains `NONE`.
+Immediate state: Complete review 263 in only the sizing source and sizing test. Preserve
+Luna's four literal widths, value-only largest-lineage term, and actual product row/group
+facts. Fix empty class cardinalities; measure and publish the real one-row five-column
+shared identity/null Parquet anchor; allocate `R*14 + G*(anchor-14)` with per-column value
+and page-residual facts; reconcile shared plus derived target allocation; correct names and
+conditional ownership rules; and replace the isolated Coinalyze width test with a real
+`project_coinalyze` comparison. Do not run commands or Git. Stop with hashes and test
+count. Receipt 258, Hermes, integration, execution, acquisition, and later work remain
+unauthorized. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -230,14 +230,15 @@ Governing documents:
 - research/sprint_004/260_CEX002_V3_COMPLETE_ALLOCATION_RESIDUAL_REVIEW.md
 - research/sprint_004/261_CEX002_V3_DISJOINT_LAYOUT_FINAL_SOURCE_REVIEW.md
 - research/sprint_004/262_CEX002_V3_LITERAL_ALLOCATION_CORRECTION.md
+- research/sprint_004/263_CEX002_V3_MEASURED_IDENTITY_ANCHOR_COMPLETION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
 
-Review 262 is the active bounded correction. Its six equations are implementation of the
-accepted ADR-0027 allocation and require no architecture decision. Spark may edit only the
-two sizing source paths, runs no command or Git, leaves the CLI unchanged, and stops once
-with hashes and test count. No other actor or work is authorized.
+Review 263 is the active bounded correction. Its measured-anchor equation implements the
+accepted ADR-0027 allocation and requires no architecture decision. Claude may edit only
+the two sizing source paths, runs no command or Git, leaves the CLI unchanged, and stops
+once with hashes and test count. No other actor or work is authorized.
 
 The destination is the complete real data needed by the original Harmonic Trader
 geometry-plus-derivatives thesis before model development. CEX-002 acquires every
