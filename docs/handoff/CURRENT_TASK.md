@@ -2,18 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - one residual review-245 correction
+Next required actor: Jr Dev - Hermes - review-246 exact integration and execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 245 once. Preserve the
-review-244 drop in place. Move only fixed `capacity.equation` from the volatile capacity
-set into the stable capacity comparison and make the focused test prove a changed value
-names `capacity.equation`; leave only the observed reserve and derived total volatile.
-Edit only the sizing source/test paths and leave the CLI byte-identical. Do not run
-commands or tests, use Git, mutate data/evidence, or write repository records. Stop once
-with all three path hashes and the final test-function count. Gate 2 remains not accepted
-and next ticket remains `NONE`.
+Immediate bounded task for Jr Dev - Hermes: execute review 246 exactly. Verify the accepted
+source/test hashes, unchanged CLI hash, 139 tests, and clean review-publication HEAD;
+integrate only the two modified sizing paths. Run one focused pytest pass with the real
+two-pass receipt test deselected, then exact-path Ruff. Only if both pass, run the real v2
+sizing CLI once and one identical idempotence invocation. Publish record 247 and receipt
+231 only if valid, update the control plane, commit and push only the exact enumerated
+paths, and stop for reviewer inspection. Do not use network, acquire or normalize data,
+publish a catalog, or start Harmonic Trader or later work. Gate 2 remains not accepted and
+next ticket remains `NONE`.
 
 Governing documents:
 
@@ -212,6 +213,7 @@ Governing documents:
 - research/sprint_004/243_CEX002_V2_SIZING_CORRECTION_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/244_CEX002_V2_SIZING_IDEMPOTENCE_FAILURE_REVIEW.md
 - research/sprint_004/245_CEX002_V2_STABLE_CAPACITY_RESIDUAL_REVIEW.md
+- research/sprint_004/246_CEX002_V2_SIZING_IDEMPOTENCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
