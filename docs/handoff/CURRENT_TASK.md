@@ -1,19 +1,20 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and execute review 255 exactly
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 256 and valid blocked receipt 231
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Jr Dev - Hermes: follow review 255 exactly. Verify and stage
-only the accepted sizing source/test paths, run focused pytest and exact-path Ruff, then
-run the real v2 sizing CLI once and one identical idempotence invocation only if every
-prior step succeeds. Publish record 256 and receipt 231 only if valid; update the control
-plane, commit/push only the enumerated paths, and stop for reviewer inspection. Stop
-immediately on any mismatch, failure, timeout, or idempotence disagreement. Do not acquire,
-normalize, publish a catalog, or perform NautilusTrader, Harmonic Trader, PAPER/LIVE, or
-next-ticket work. Gate 2 remains not accepted and next ticket remains `NONE`.
+Immediate state: Jr Dev - Hermes followed review 255 exactly. Exact-byte preproof,
+focused sizing pytest, exact-path Ruff, the first real v2 sizing CLI invocation, and one
+identical idempotence invocation all passed. Receipt 231 was validly produced at SHA-256
+`d3b2e81e46ecb17ea98dee160a98a551720b4bb27f5c29497839081acabaad29` with byte length
+39,553,673. The idempotence invocation published zero new envelopes, reused all 151 v2
+envelopes, and returned the same receipt identity. The receipt state is `blocked` with
+blocker `available_capacity_insufficient`; this is measurement evidence only and does not
+accept Gate 2 or authorize acquisition. Review record 256 is published for reviewer
+inspection. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -222,6 +223,7 @@ Governing documents:
 - research/sprint_004/253_CEX002_TYPED_SOURCE_TEST_RESIDUAL_REVIEW.md
 - research/sprint_004/254_CEX002_CLAUDE_TYPED_SOURCE_TEST_CORRECTION.md
 - research/sprint_004/255_CEX002_REAL_TYPED_SOURCE_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/256_CEX002_V2_SIZING_TYPED_SOURCE_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

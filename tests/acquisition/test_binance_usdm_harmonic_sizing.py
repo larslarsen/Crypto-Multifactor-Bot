@@ -16,6 +16,7 @@ import hashlib
 import io
 import json
 import zipfile
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal, localcontext
 from pathlib import Path
@@ -91,7 +92,7 @@ _TOKENS: dict[str, tuple[str, ...]] = {
         "15.0", "7", "4.0", "6.0", "0",
     ),
     "bookTicker": ("1", "100.0", "2.0", "100.5", "3.0", "1577836800000", "1577836800001"),
-    "bookDepth": ("1577836800000", "1", "5.0", "500.0"),
+    "bookDepth": ("2020-01-01 00:00:00", "1", "5.0", "500.0"),
     "fundingRate": ("1577836800000", "8", "0.0001"),
 }
 _ONBOARD_MS = int(datetime(2020, 1, 1, tzinfo=UTC).timestamp() * 1000)
@@ -3265,7 +3266,7 @@ def test_a_float_round_trip_would_have_changed_the_value() -> None:
     assert Decimal(float(token)) != Decimal(token)
 
 
-def test_strict_timestamp_and_dictionary_conversion() -> None:
+def test_strict_timestamp_and_dictionary_conversion(tmp_path: Path) -> None:
     assert sizing.convert_timestamp_text(
         "2020-01-01 00:00:00", key="k", output="o", column="c", row=0
     ) == _ONBOARD_MS
@@ -3273,6 +3274,17 @@ def test_strict_timestamp_and_dictionary_conversion() -> None:
         sizing.convert_timestamp_text(
             "not-a-time", key="k", output="o", column="c", row=0
         )
+    output = contribution("binance_usdm_cost_calibration:daily_book_depth")
+    destination = tmp_path / "book_depth_parsed.parquet"
+    measure_typed_envelope(
+        _cohort_sample("daily/bookDepth"),
+        payload=_zip("data.csv", _csv("daily/bookDepth", 1)),
+        output=output,
+        destination=destination,
+        schema_kind="headerless",
+    )
+    table = sizing.pq.read_table(str(destination))
+    assert table["timestamp"].to_pylist() == [_ONBOARD_MS]
     assert sizing.convert_dictionary(
         " BTCUSDT ", key="k", output="o", column="c", row=0
     ) == "BTCUSDT"
@@ -3281,15 +3293,13 @@ def test_strict_timestamp_and_dictionary_conversion() -> None:
 
 
 def test_a_failed_conversion_blocks_the_whole_envelope(tmp_path: Path) -> None:
-    """A failed row is never dropped, rounded, or replaced with zero."""
+    """A malformed numeric lexeme blocks the entire envelope and is redacted."""
     body = b"1577836800000,1.0,2.0,0.5,not-a-number,10,1577840399999,15.0,7,4.0,6.0,0\n"
-    payload = _zip("data.csv", body)
     destination = tmp_path / "typed.parquet"
-    # The pinned converter contract, not the obsolete wording.
     with pytest.raises(SizingError, match="not a decimal lexeme") as failure:
         measure_typed_envelope(
             _cohort_sample(),
-            payload=payload,
+            payload=_zip("data.csv", body),
             output=contributions_for_family("daily/klines")[0],
             destination=destination,
             schema_kind="headerless",
@@ -3298,6 +3308,247 @@ def test_a_failed_conversion_blocks_the_whole_envelope(tmp_path: Path) -> None:
         "binance_usdm_bar_1h:daily_klines"
     )
     assert "not-a-number" not in str(failure.value)
+
+
+# Two retained-style book-depth rows: a UTC-text timestamp and its exact epoch
+# milliseconds. The second row is five minutes later, so an ordering or overwrite defect
+# cannot hide behind one repeated value.
+_BOOK_DEPTH_TIMESTAMPS: tuple[tuple[str, int], ...] = (
+    ("2020-01-01 00:00:00", 1_577_836_800_000),
+    ("2020-01-01 00:05:00", 1_577_837_100_000),
+)
+
+
+def _book_depth_payload(timestamps: Sequence[str]) -> bytes:
+    """One headerless book-depth member: the declared four fields, one row per stamp."""
+    trailing = _TOKENS["bookDepth"][1:]
+    return (
+        "\n".join(",".join((stamp, *trailing)) for stamp in timestamps) + "\n"
+    ).encode("ascii")
+
+
+def test_book_depth_timestamp_schema_and_parsed_value_are_exact(tmp_path: Path) -> None:
+    output = contribution("binance_usdm_cost_calibration:daily_book_depth")
+    destination = tmp_path / "book_depth_timestamp.parquet"
+    measured = measure_typed_envelope(
+        _cohort_sample("daily/bookDepth"),
+        payload=_zip(
+            "data.csv",
+            _book_depth_payload([stamp for stamp, _ in _BOOK_DEPTH_TIMESTAMPS]),
+        ),
+        output=output,
+        destination=destination,
+        schema_kind="headerless",
+    )
+    # Every source row is retained: none is sampled away, folded, or duplicated.
+    assert measured.source_rows == len(_BOOK_DEPTH_TIMESTAMPS) == 2
+    assert measured.rows == 2
+    table = sizing.pq.read_table(str(destination))
+    assert table.num_rows == 2
+    assert table.schema.names == output.schema().names
+    field = table.schema.field("timestamp")
+    # A cost timestamp is a required integer instant, never a nullable text column.
+    assert field.type == pa.int64()
+    assert field.nullable is False
+    assert table["timestamp"].to_pylist() == [
+        milliseconds for _, milliseconds in _BOOK_DEPTH_TIMESTAMPS
+    ]
+    assert table["timestamp"].null_count == 0
+    assert _BOOK_DEPTH_TIMESTAMPS[0][1] == _ONBOARD_MS
+
+
+_METRICS_RATIO_NAMES: tuple[str, ...] = (
+    "count_toptrader_long_short_ratio",
+    "sum_toptrader_long_short_ratio",
+    "count_long_short_ratio",
+    "sum_taker_long_short_vol_ratio",
+)
+# Four mixed rows over the accepted eight-field metrics schema: all four ratios present,
+# both top-trader ratios absent, only the taker ratio absent, and all four absent.
+_MIXED_METRICS_RATIOS: tuple[tuple[str, str, str, str], ...] = (
+    ("1.5", "2.5", "3.5", "4.5"),
+    ("", "", "3.5", "4.5"),
+    ("1.5", "2.5", "3.5", ""),
+    ("", "", "", ""),
+)
+
+
+def _metrics_row(ordinal: int, ratios: Sequence[str]) -> tuple[str, ...]:
+    """One complete eight-field headerless metrics row. Required fields are present."""
+    return (
+        f"2020-01-01 00:{ordinal * 5:02d}:00",
+        "BTCUSDT",
+        "1",
+        "2",
+        *ratios,
+    )
+
+
+def _metrics_payload(rows: Sequence[Sequence[str]]) -> bytes:
+    return ("\n".join(",".join(row) for row in rows) + "\n").encode("ascii")
+
+
+def test_open_interest_nullable_ratio_tokens_remain_nullable_and_rows_are_retained(
+    tmp_path: Path,
+) -> None:
+    """An absent ratio stays absent. It never becomes zero and never drops its row."""
+    output = contributions_for_family("daily/metrics")[0]
+    destination = tmp_path / "mixed_nullable_ratios.parquet"
+    rows = [
+        _metrics_row(ordinal, ratios)
+        for ordinal, ratios in enumerate(_MIXED_METRICS_RATIOS)
+    ]
+    # The fixture is exactly the declared width; a malformed row would block on width
+    # before any nullable conversion could be proved.
+    assert all(
+        len(row) == len(KNOWN_ARCHIVE_SCHEMAS["metrics"]["headerless"]) == 8
+        for row in rows
+    )
+    measured = measure_typed_envelope(
+        _cohort_sample("daily/metrics"),
+        payload=_zip("data.csv", _metrics_payload(rows)),
+        output=output,
+        destination=destination,
+        schema_kind="headerless",
+    )
+    assert measured.source_rows == 4
+    assert measured.rows == 4
+    table = sizing.pq.read_table(str(destination))
+    assert table.num_rows == 4
+    expected: dict[str, list[Decimal | None]] = {
+        "count_toptrader_long_short_ratio": [
+            Decimal("1.5"), None, Decimal("1.5"), None
+        ],
+        "sum_toptrader_long_short_ratio": [
+            Decimal("2.5"), None, Decimal("2.5"), None
+        ],
+        "count_long_short_ratio": [
+            Decimal("3.5"), Decimal("3.5"), Decimal("3.5"), None
+        ],
+        "sum_taker_long_short_vol_ratio": [
+            Decimal("4.5"), Decimal("4.5"), None, None
+        ],
+    }
+    assert set(expected) == set(_METRICS_RATIO_NAMES)
+    # The expectations and the fixture tokens agree row by row and column by column.
+    for index, ratios in enumerate(_MIXED_METRICS_RATIOS):
+        for name, token in zip(_METRICS_RATIO_NAMES, ratios, strict=True):
+            assert (expected[name][index] is None) == (token == "")
+    for name, values in expected.items():
+        field = table.schema.field(name)
+        assert field.type == pa.decimal128(38, 18)
+        assert field.nullable is True
+        assert table[name].to_pylist() == values
+        assert table[name].null_count == values.count(None)
+        # No absent ratio was filled in, and no present ratio was zeroed.
+        assert Decimal(0) not in table[name].to_pylist()
+    # Every retained row still carries its required identity and level fields exactly.
+    assert table["sum_open_interest"].to_pylist() == [Decimal("1")] * 4
+    assert table["sum_open_interest_value"].to_pylist() == [Decimal("2")] * 4
+    assert table["metric_symbol"].to_pylist() == ["BTCUSDT"] * 4
+    assert table["create_time"].to_pylist() == [
+        _ONBOARD_MS + ordinal * 5 * 60 * 1000 for ordinal in range(4)
+    ]
+
+
+@pytest.mark.parametrize("ratio_name", list(_METRICS_RATIO_NAMES))
+def test_open_interest_nonempty_ratio_token_cannot_be_treated_as_nullable(
+    ratio_name: str, tmp_path: Path
+) -> None:
+    """Nullable means absent, never malformed: a nonempty bad token still blocks."""
+    rejected = "not-a-ratio"
+    ratios = list(_MIXED_METRICS_RATIOS[0])
+    ratios[_METRICS_RATIO_NAMES.index(ratio_name)] = rejected
+    body = _metrics_payload([_metrics_row(0, ratios)])
+    output = contributions_for_family("daily/metrics")[0]
+    destination = tmp_path / f"nullable_ratio_{ratio_name}.parquet"
+    with pytest.raises(
+        SizingError, match="an exact decimal column is not a decimal lexeme"
+    ) as failure:
+        measure_typed_envelope(
+            _cohort_sample("daily/metrics"),
+            payload=_zip("data.csv", body),
+            output=output,
+            destination=destination,
+            schema_kind="headerless",
+        )
+    assert failure.value.context["contribution"] == (
+        "binance_usdm_open_interest_5m:daily_metrics"
+    )
+    assert failure.value.context["column"] == ratio_name
+    assert failure.value.context["source_row_ordinal"] == 0
+    # Only structure reaches the failure surface: never the rejected source token.
+    assert rejected not in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    "timestamp,message",
+    [
+        ("not-a-time", "a typed timestamp column is not an ISO UTC instant"),
+        ("", "a typed timestamp column has no value"),
+    ],
+)
+def test_book_depth_timestamp_validation_blocks_the_envelope(
+    tmp_path: Path, timestamp: str, message: str
+) -> None:
+    output = contribution("binance_usdm_cost_calibration:daily_book_depth")
+    destination = tmp_path / "book_depth_timestamp_invalid.parquet"
+    with pytest.raises(SizingError, match=message) as failure:
+        measure_typed_envelope(
+            _cohort_sample("daily/bookDepth"),
+            payload=_zip("data.csv", _book_depth_payload([timestamp])),
+            output=output,
+            destination=destination,
+            schema_kind="headerless",
+        )
+    assert failure.value.context["contribution"] == (
+        "binance_usdm_cost_calibration:daily_book_depth"
+    )
+    assert failure.value.context["column"] == "timestamp"
+    assert failure.value.context["source_row_ordinal"] == 0
+    # Only structure reaches the failure surface: never the rejected source token.
+    assert not timestamp or timestamp not in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    "source_field, column, message",
+    [
+        ("create_time", "create_time", "a typed timestamp column has no value"),
+        ("symbol", "metric_symbol", "a dictionary column has no value"),
+        (
+            "sum_open_interest",
+            "sum_open_interest",
+            "an exact decimal column has no value",
+        ),
+        (
+            "sum_open_interest_value",
+            "sum_open_interest_value",
+            "an exact decimal column has no value",
+        ),
+    ],
+)
+def test_open_interest_missing_required_field_blocks_envelope(
+    tmp_path: Path, source_field: str, column: str, message: str
+) -> None:
+    """A required metrics field is never nullable: an empty token blocks by name."""
+    fields = list(_metrics_row(0, _MIXED_METRICS_RATIOS[0]))
+    index = list(KNOWN_ARCHIVE_SCHEMAS["metrics"]["headerless"]).index(source_field)
+    assert index < 4  # the four required identity and level fields
+    fields[index] = ""
+    output = contributions_for_family("daily/metrics")[0]
+    with pytest.raises(SizingError, match=message) as failure:
+        measure_typed_envelope(
+            _cohort_sample("daily/metrics"),
+            payload=_zip("data.csv", _metrics_payload([fields])),
+            output=output,
+            destination=tmp_path / f"required_oi_{source_field}.parquet",
+            schema_kind="headerless",
+        )
+    assert failure.value.context["contribution"] == (
+        "binance_usdm_open_interest_5m:daily_metrics"
+    )
+    assert failure.value.context["column"] == column
+    assert failure.value.context["source_row_ordinal"] == 0
 
 
 def test_the_partition_manifest_maps_each_product_and_keeps_unknowns_unknown(
@@ -3638,6 +3889,13 @@ def test_final_product_schemas_are_complete_and_target_only_fields_are_allocated
         "gap_break_status",
     } <= set(oi)
     assert oi["previous_sum_open_interest"].nullable is True
+    for ratio in (
+        "count_toptrader_long_short_ratio",
+        "sum_toptrader_long_short_ratio",
+        "count_long_short_ratio",
+        "sum_taker_long_short_vol_ratio",
+    ):
+        assert oi[ratio].nullable is True
     funding = {column.name for column in sizing.final_product_columns(
         "binance_usdm_funding_realized"
     )}

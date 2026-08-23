@@ -1431,8 +1431,8 @@ def _identity_columns() -> tuple[TypedColumn, ...]:
     )
 
 
-def _typed(name: str, kind: str, source: str) -> TypedColumn:
-    return TypedColumn(name, kind, source_field=source)
+def _typed(name: str, kind: str, source: str, *, nullable: bool = False) -> TypedColumn:
+    return TypedColumn(name, kind, source_field=source, nullable=nullable)
 
 
 _OHLCV: tuple[TypedColumn, ...] = (
@@ -1519,17 +1519,25 @@ _OPEN_INTEREST: tuple[TypedColumn, ...] = (
         "count_toptrader_long_short_ratio",
         KIND_DECIMAL,
         "count_toptrader_long_short_ratio",
+        nullable=True,
     ),
     _typed(
         "sum_toptrader_long_short_ratio",
         KIND_DECIMAL,
         "sum_toptrader_long_short_ratio",
+        nullable=True,
     ),
-    _typed("count_long_short_ratio", KIND_DECIMAL, "count_long_short_ratio"),
+    _typed(
+        "count_long_short_ratio",
+        KIND_DECIMAL,
+        "count_long_short_ratio",
+        nullable=True,
+    ),
     _typed(
         "sum_taker_long_short_vol_ratio",
         KIND_DECIMAL,
         "sum_taker_long_short_vol_ratio",
+        nullable=True,
     ),
 )
 _FUNDING_REALIZED: tuple[TypedColumn, ...] = (
@@ -1549,7 +1557,7 @@ _BOOK_TICKER: tuple[TypedColumn, ...] = (
     _typed("event_time", KIND_INTEGER, "event_time"),
 )
 _BOOK_DEPTH: tuple[TypedColumn, ...] = (
-    _typed("timestamp", KIND_INTEGER, "timestamp"),
+    _typed("timestamp", KIND_TIMESTAMP_TEXT, "timestamp"),
     _typed("percentage", KIND_DECIMAL, "percentage"),
     _typed("depth", KIND_DECIMAL, "depth"),
     _typed("notional", KIND_DECIMAL, "notional"),
@@ -2709,9 +2717,13 @@ def _write_typed_batch(
         convert = _CONVERTERS[column.kind]
         values: list[Any] = []
         for index, row in enumerate(batch):
+            token = str(row[position])
+            if column.nullable and not token.strip():
+                values.append(None)
+                continue
             values.append(
                 convert(
-                    str(row[position]),
+                    token,
                     key=sample.key,
                     output=output.name,
                     column=column.name,
