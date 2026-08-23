@@ -2,15 +2,15 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement ADR-0024 review 230
+Next required actor: Sr Dev - Claude Build - correct review 232
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: implement the typed product-real v2
-sizing and partition-atomic capacity model authorized in review 230. Edit only the exact
-three sizing source/test/CLI paths, preserve all accepted authority and all raw/cost scope,
-write no evidence, run no commands or Git, and stop once for reviewer inspection with
-hashes and the test function count. Gate 2 remains blocked and acquisition unauthorized.
+Immediate bounded task for Sr Dev - Claude Build: correct review 232's four consolidated
+findings in the exact three sizing source/test/CLI paths. Preserve the accepted v2
+partition/capacity work, replace float/string normalization with exact typed products,
+bind real lineage, add the five-minute metrics ceiling, run no commands or Git, and stop
+once for reviewer inspection with hashes and the test count. Gate 2 remains blocked.
 
 Governing documents:
 
@@ -193,6 +193,7 @@ Governing documents:
 - research/sprint_004/229_CEX002_IDENTITY_CORRECTED_SIZING_EXECUTION.md
 - docs/adr/0024-typed-normalization-and-partition-atomic-publication.md
 - research/sprint_004/230_CEX002_STORAGE_ARCHITECTURE_CORRECTION.md
+- research/sprint_004/232_CEX002_TYPED_SIZING_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2788,3 +2789,24 @@ Review 230 authorizes Claude Opus 5 for one exact three-path sizing source/test/
 Claude must preserve all accepted authority and v1 evidence, implement the fixed new v2
 receipt/envelope namespace and auditable projection math, run no command or Git, and stop
 once for reviewer inspection. Next ticket remains `NONE`.
+
+## First ADR-0024 source drop rejected with one correction
+
+The reviewer inspected Claude's exact three-path drop once at production SHA-256
+`d33d2cce90fa0b4f8b16736916a00f5bac1a8b0f1a3d18b37cea49f564e10003`, test SHA-256
+`91adc68309a728436d9c57bee09bd8a3aae10e4b13932a0007893174a97c24ec`, and CLI SHA-256
+`36740c926c32e4973bb31dcb570d3c69b89f9f343d52eb8aed3d33d359d7b23c`.
+The test file has 101 functions. No reviewer command execution occurred.
+
+The v2 namespaces, payload/overhead separation, per-partition arithmetic, removal of the
+full duplicate normalized allocation, and accepted authority logic are preserved. Review
+232 rejects integration because float64 silently rounds financial values; Coinalyze is
+still a repeated JSON-string envelope; archive packaging is mislabeled as products while
+required trade-flow/funding/basis/membership/gap/liquidation/bundle contracts are absent;
+real `retrieval_time` and availability semantics are replaced by fabricated metadata;
+partition-local lineage is charged as one global manifest; and daily five-minute metrics
+has no calendar row ceiling.
+
+Review 232 authorizes Claude for one consolidated correction in the same three paths.
+Claude runs no command or Git and stops once for reviewer inspection. Gate 2 remains
+blocked, acquisition unauthorized, and next ticket `NONE`.
