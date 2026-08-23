@@ -2,20 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - one complete ADR-0025/0026 sizing correction
+Next required actor: Sr Dev - Claude Build - one complete review-236 residual correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow reviews 234 and 235 once and edit
-only the sizing production, test, and CLI paths enumerated there. Work from the current
-shared drop in place; do not reset, restore, checkout, discard, or wholesale replace it.
-Deliver the complete correction for accepted alias folding, context-independent exact
-conversion, final-product schemas, partition-local manifests, full 9,088-row known gap
-authority, one-hour funding cadence, unit-correct Coinalyze projection, and the ADR-0026
-non-backdated fee cost product. Do not run commands or tests, mutate evidence/data, use
-Git, or write repository records. Stop once with all three path hashes (mark an unchanged
-path) and the final test-function count. Grok Build is no longer authorized for this drop.
-Gate 1's fee question is resolved; Gate 2 remains blocked.
+Immediate bounded task for Sr Dev - Claude Build: follow review 236 once and edit only its
+three enumerated sizing production, test, and CLI paths. Work from the current shared drop
+in place; do not reset, restore, checkout, discard, or wholesale replace it. Preserve the
+accepted corrections and close all six residual findings plus all ten test requirements as
+one complete drop. Do not run commands or tests, mutate evidence/data, use Git, or write
+repository records. Stop once with all three path hashes (mark an unchanged path) and the
+final test-function count. Grok Build remains unavailable and deauthorized. Gate 1's fee
+question is resolved; Gate 2 remains blocked.
 
 Governing documents:
 
@@ -204,6 +202,7 @@ Governing documents:
 - docs/adr/0026-non-backdated-fee-scenarios.md
 - research/sprint_004/234_CEX002_FEE_AUTHORITY_AND_FINAL_SIZING_CORRECTION.md
 - research/sprint_004/235_CEX002_CLAUDE_SIZING_REASSIGNMENT.md
+- research/sprint_004/236_CEX002_CLAUDE_COMPLETE_SIZING_DROP_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
