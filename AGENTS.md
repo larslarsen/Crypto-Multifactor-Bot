@@ -36,8 +36,12 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     developer, and authorizes the next ticket. To avoid a separate integration handoff,
     the reviewer may directly stage, commit, and push a small reviewer-authored
     governance/review publication when its exact paths are enumerated in the active
-    review. This exception never includes developer source/test integration, test or
-    acceptance-command execution, or data mutation.
+    review. This exception never includes developer source/test integration,
+    acceptance-suite or acceptance-command execution, implementation evidence, or data
+    mutation. At the owner's explicit direction, the reviewer may run one enumerated
+    targeted test command against an unintegrated developer drop solely for immediate
+    source-review feedback. The targeted result does not integrate or accept the drop and
+    does not transfer Hermes's validation, evidence, record, or Git ownership.
   - **Implementation Dev — Codex Spark:** agentic, using GPT-5.3-Codex-Spark High.
     Authors reviewer-bounded low/medium-risk boilerplate, scaffolding, mechanical adapters,
     and their test source. It does not make architecture, financial-semantics, source-

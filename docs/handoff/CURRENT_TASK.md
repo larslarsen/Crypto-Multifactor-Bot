@@ -2,18 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Sol High - complete review 273 and targeted test in review 274
+Next required actor: Lead Quantitative Finance Researcher/Engineer - run review 275 targeted capacity test once
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 273 routes one exact assignment move and duplicate removal to Sol
-High in the sizing test only. At the owner's explicit direction, review 274 and the
-development-role governance authorize Sol to run the single enumerated capacity-test
-pytest command once after the edit, then stop with exact output and hashes. Production and
-CLI remain frozen. Hermes retains integration, full validation, Ruff, sizing, evidence,
-records, and Git. Receipt 258, acquisition, normalization, catalog, NautilusTrader,
-Harmonic Trader, PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not
-accepted. Next ticket remains `NONE`.
+Immediate state: Sol High completed review 273 exactly at test SHA-256
+`3b5acf85c5ee5aab891f9b9622e3cc7e86e0c2df2b630812f6f26e9bce20580a`, frozen
+production/CLI hashes, and 161 test functions. At the owner's explicit direction, review
+275 and the development-role governance authorize the reviewer to run the single
+enumerated capacity-test pytest command once for source feedback. This does not integrate
+or accept the drop. Hermes retains full validation, Ruff, sizing, evidence, records, and
+Git. Receipt 258, acquisition, normalization, catalog, NautilusTrader, Harmonic Trader,
+PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not accepted. Next ticket
+remains `NONE`.
 
 Governing documents:
 
@@ -241,6 +242,7 @@ Governing documents:
 - research/sprint_004/272_CEX002_V3_CORRECTED_SIZING_EXECUTION.md
 - research/sprint_004/273_CEX002_V3_CAPACITY_TEST_ORDERING_FAILURE.md
 - research/sprint_004/274_CEX002_TARGETED_SENIOR_TEST_AUTHORIZATION.md
+- research/sprint_004/275_CEX002_REVIEWER_TARGETED_TEST_AUTHORIZATION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

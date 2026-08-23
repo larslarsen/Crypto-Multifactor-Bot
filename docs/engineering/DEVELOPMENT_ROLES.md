@@ -10,8 +10,12 @@ no code, migrations, tickets, or acceptance state.
   engineering decisions, accepts or rejects work, selects the minimum-usage capable
   developer, and authorizes the next ticket. May directly stage, commit, and push a small
   reviewer-authored governance/review publication whose exact paths are enumerated in the
-  active review. This exception excludes developer source/test integration, test or
-  acceptance-command execution, implementation evidence, and data mutation.
+  active review. This exception excludes developer source/test integration,
+  acceptance-suite or acceptance-command execution, implementation evidence, and data
+  mutation. At the owner's explicit direction, the reviewer may run one enumerated
+  targeted test command against an unintegrated developer drop solely for immediate
+  source-review feedback. The result does not integrate or accept the drop and does not
+  transfer Hermes's validation, evidence, records, or Git ownership.
 - **Implementation Dev — Codex Spark:** agentic, using GPT-5.3-Codex-Spark High.
   Authors reviewer-bounded low/medium-risk boilerplate, scaffolding, mechanical adapters,
   schema plumbing, CLI wiring, and their test source. It does not make architecture,
