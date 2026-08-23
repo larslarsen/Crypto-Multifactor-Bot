@@ -2,17 +2,16 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete review 263 exactly
+Next required actor: Implementation Dev - Codex Spark - complete review 264 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Complete review 263 in only the sizing source and sizing test. Preserve
-Luna's four literal widths, value-only largest-lineage term, and actual product row/group
-facts. Fix empty class cardinalities; measure and publish the real one-row five-column
-shared identity/null Parquet anchor; allocate `R*14 + G*(anchor-14)` with per-column value
-and page-residual facts; reconcile shared plus derived target allocation; correct names and
-conditional ownership rules; and replace the isolated Coinalyze width test with a real
-`project_coinalyze` comparison. Do not run commands or Git. Stop with hashes and test
+Immediate state: Edit only the sizing source and sizing test. Preserve Claude's measured
+anchor and allocation. Remove the stale pre-anchor ledger assertions; assign lineage
+candidate variables before use and serialize/test its exact mapping/response inputs; rename
+the 12-byte receipt field to index bytes while keeping null 2 and total 14; make dictionary
+rule text three-way for owned nullable, externally owned nullable, and non-nullable; remove
+the stale future-validity comment. Do not run commands or Git. Stop with hashes and test
 count. Receipt 258, Hermes, integration, execution, acquisition, and later work remain
 unauthorized. Next ticket remains `NONE`.
 
@@ -231,14 +230,15 @@ Governing documents:
 - research/sprint_004/261_CEX002_V3_DISJOINT_LAYOUT_FINAL_SOURCE_REVIEW.md
 - research/sprint_004/262_CEX002_V3_LITERAL_ALLOCATION_CORRECTION.md
 - research/sprint_004/263_CEX002_V3_MEASURED_IDENTITY_ANCHOR_COMPLETION.md
+- research/sprint_004/264_CEX002_V3_MEASURED_ANCHOR_TEST_RESIDUAL.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
 
-Review 263 is the active bounded correction. Its measured-anchor equation implements the
-accepted ADR-0027 allocation and requires no architecture decision. Claude may edit only
-the two sizing source paths, runs no command or Git, leaves the CLI unchanged, and stops
-once with hashes and test count. No other actor or work is authorized.
+Review 264 is the active mechanical residual. It preserves the accepted measured-anchor
+equation and requires no architecture decision. The implementation dev may edit only the
+two sizing source paths, runs no command or Git, leaves the CLI unchanged, and stops once
+with hashes and test count. No other actor or work is authorized.
 
 The destination is the complete real data needed by the original Harmonic Trader
 geometry-plus-derivatives thesis before model development. CEX-002 acquires every
