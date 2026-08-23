@@ -1,18 +1,20 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 240 failed focused validation
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - one consolidated review-241 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Jr Dev - Hermes followed review 239 through exact-byte preproof and the
-focused sizing pytest command with the two-pass real-authority test deselected. The focused
-pytest command exited 1 with 34 failing tests, so Hermes stopped as required, ran no Ruff,
-ran no v2 sizing CLI, produced no receipt 231, and performed no acquisition, network,
-normalization, catalog, Harmonic Trader, PAPER/LIVE, or next-ticket work. Review record 240
-is published for reviewer inspection. Gate 2 remains not accepted. Next ticket remains
-`NONE`.
+Immediate bounded task for Sr Dev - Claude Build: follow review 241 once. Preserve the
+integrated sizing design. Separate verified retained-object byte length from full
+requirement-listing byte size, then correct the six enumerated stale test patterns for
+premium scope, 2/2/6 manifest mappings, exact decimal error text, shared identity fields,
+synthetic fee-gap count, and accepted alias decomposition. Edit only the sizing source and
+test paths; leave the CLI unchanged unless mechanically required. Do not run commands or
+tests, use Git, mutate data/evidence, or write repository records. Stop once with all three
+path hashes and the final test-function count. Gate 2 remains not accepted and next ticket
+remains `NONE`.
 
 Governing documents:
 
@@ -206,6 +208,7 @@ Governing documents:
 - research/sprint_004/238_CEX002_RETAINED_LINEAGE_AUTHORITY_CORRECTION.md
 - research/sprint_004/239_CEX002_V2_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/240_CEX002_V2_SIZING_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/241_CEX002_V2_SIZING_VALIDATION_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
