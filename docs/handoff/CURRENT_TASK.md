@@ -2,19 +2,21 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement review 257 and ADR-0027 exactly
+Next required actor: Sr Dev - Claude Build - complete review 259 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer accepted Hermes's record-256 integration and reproducible
-execution, but rejected receipt 231 as Gate-2 capacity authority. Its 646,431,826,972-byte
-equation is internally exact, while 438,294,498,756 bytes come from a future-reference
-per-row string allocation and a one-row quality-gap payload multiplied by every projected
-gap row. Those are not ADR-0024's partition-aware dictionary and separated-row-group
-representation. Receipt 231 and all v2 evidence remain immutable diagnostic evidence.
-ADR-0027 and review 257 authorize Claude for one consolidated two-file v3 sizing
-correction. No commands, integration, acquisition, or later work are authorized. Next
-ticket remains `NONE`.
+Immediate state: The reviewer inspected Claude's first ADR-0027 drop once at sizing source
+SHA-256 `d3f6cf5b3eaf198dc8189bc70ec2c508d8369cfc2101e36e261424c7477efd5f`
+and sizing test SHA-256
+`b452e2f1b84fc3e4ab3ccaa42f91677010d124ef396a059a9da884a864ed4cf0`.
+The v3 versioning and broad dictionary structure are correct, but the drop is rejected on
+one consolidated accounting residual: dictionary bytes overlap the one-row anchor, other
+dictionary-bearing projections retain scalar per-row averages, fixed witness rows change
+file layout without recharging anchors, and the real reference scope does not distinguish
+detailed from funding-only versions. Review 259 authorizes Claude to finish those exact
+two files. Receipt 258 is absent; no commands, integration, acquisition, or later work are
+authorized. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -226,6 +228,7 @@ Governing documents:
 - research/sprint_004/256_CEX002_V2_SIZING_TYPED_SOURCE_INTEGRATION_AND_EXECUTION.md
 - docs/adr/0027-partition-aware-dictionary-storage-sizing.md
 - research/sprint_004/257_CEX002_V2_CAPACITY_MODEL_REJECTION_AND_V3_ARCHITECTURE.md
+- research/sprint_004/259_CEX002_V3_DICTIONARY_SOURCE_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
