@@ -117,6 +117,32 @@ ACCEPTED_LARGEST_SELECTED_OBJECT_BYTES: int = 200_457_493
 ACCEPTED_COINALYZE_SUPPORTED_MAPPINGS: int = 569
 ACCEPTED_COINALYZE_TYPED_GAPS: int = 202
 ACCEPTED_COINALYZE_PROVENANCE_RECORDS: int = 5
+# The exact accepted provenance record shape. Qualification publishes sorted header
+# *names* and never a header value, so the name is safe metadata while any field outside
+# this set could carry a header value, authorization data, or another secret.
+ACCEPTED_COINALYZE_PROVENANCE_FIELDS: frozenset[str] = frozenset(
+    {
+        "byte_size",
+        "content_path",
+        "header_names",
+        "params",
+        "path",
+        "provenance_source",
+        "retrieved_at",
+        "sha256",
+        "status_code",
+        "transport",
+    }
+)
+ACCEPTED_COINALYZE_HEADER_NAMES: tuple[str, ...] = ("api_key",)
+# A query parameter may never name a credential under any spelling. Names are normalized
+# by case and by dropping "_" and "-" before this comparison.
+CREDENTIAL_PARAMETER_MARKERS: tuple[str, ...] = (
+    "apikey",
+    "authorization",
+    "secret",
+    "token",
+)
 
 # --- ADR-0021 fixed contract -----------------------------------------------------------
 
@@ -1640,6 +1666,97 @@ class CoinalyzeEvidence:
         }
 
 
+def _normalized_parameter_name(name: str) -> str:
+    return name.lower().replace("_", "").replace("-", "")
+
+
+def prove_coinalyze_request_framing(block: Mapping[str, Any]) -> dict[str, Any]:
+    """Prove the accepted report frames Coinalyze as header authentication only.
+
+    The accepted qualification sends its key as a request header and publishes only that
+    header's name. This proves the framing itself before any provenance record is read,
+    so a report that ever moved the key into a query string blocks here.
+    """
+    context = {"source": "report.coinalyze"}
+    _require(
+        str(block.get("key_location") or "") == "header",
+        "the accepted Coinalyze framing is not header authentication",
+        {**context, "field": "key_location"},
+    )
+    _require(
+        block.get("key_present") is True,
+        "the accepted Coinalyze framing does not declare a present key",
+        {**context, "field": "key_present"},
+    )
+    _require(
+        block.get("query_contains_key") is False,
+        "the accepted Coinalyze framing does not exclude query credentials",
+        {**context, "field": "query_contains_key"},
+    )
+    return {
+        "key_location": "header",
+        "key_present": True,
+        "query_contains_key": False,
+    }
+
+
+def prove_coinalyze_provenance_record(
+    record: Mapping[str, Any], *, endpoint: str, context: Mapping[str, Any]
+) -> None:
+    """Prove one provenance record carries the accepted safe shape and nothing else.
+
+    Only field names, structural types, and the endpoint reach the failure surface. No
+    rejected value and no serialized record is ever placed in a message or a context, so
+    a report that did carry a secret could not leak it through this failure path.
+    """
+    local = {**dict(context), "endpoint": endpoint}
+    fields = set(record)
+    unknown = sorted(fields - ACCEPTED_COINALYZE_PROVENANCE_FIELDS)
+    _require(
+        not unknown,
+        "a Coinalyze provenance record carries an unrecognized field",
+        {**local, "unexpected_fields": unknown[:8]},
+    )
+    missing = sorted(ACCEPTED_COINALYZE_PROVENANCE_FIELDS - fields)
+    _require(
+        not missing,
+        "a Coinalyze provenance record is missing an accepted field",
+        {**local, "missing_fields": missing[:8]},
+    )
+    header_names = record.get("header_names")
+    _require(
+        isinstance(header_names, list)
+        and all(isinstance(item, str) for item in header_names)
+        and tuple(header_names) == ACCEPTED_COINALYZE_HEADER_NAMES,
+        "a Coinalyze provenance record does not declare the accepted header names",
+        {**local, "field": "header_names"},
+    )
+    params = record.get("params")
+    _require(
+        isinstance(params, dict)
+        and all(
+            isinstance(name, str) and isinstance(value, str)
+            for name, value in params.items()
+        ),
+        "a Coinalyze provenance record has a non string-to-string parameter map",
+        {**local, "field": "params"},
+    )
+    offending = sorted(
+        name
+        for name in params
+        if any(
+            marker in _normalized_parameter_name(name)
+            for marker in CREDENTIAL_PARAMETER_MARKERS
+        )
+    )
+    _require(
+        not offending,
+        "a Coinalyze provenance record names a credential query parameter",
+        # The parameter name is structural; its value is never read or reported.
+        {**local, "field": "params", "parameter_names": offending[:8]},
+    )
+
+
 def _endpoint_role(endpoint: str) -> str:
     if endpoint == COINALYZE_MARKETS_ENDPOINT:
         return "future_market_inventory"
@@ -1658,9 +1775,15 @@ def resolve_coinalyze_evidence(
     Every identity comes from the report's own provenance. The cache is content-addressed
     and carries no file extension, so responses are found by their recorded content path
     rather than by globbing, and each endpoint keeps its own role.
+
+    The accepted key travels only as a request header, and the report publishes only that
+    header's *name*. A header name is metadata and is proved against the accepted value;
+    a header value, a credential query parameter under any spelling, and any field
+    outside the accepted shape all block before a response body is read.
     """
     context = {"cache_dir": str(cache_dir)}
     block = dict(authority.report.get("coinalyze") or {})
+    prove_coinalyze_request_framing(block)
     provenance = list(block.get("provenance") or ())
     _exact(
         len(provenance),
@@ -1683,12 +1806,7 @@ def resolve_coinalyze_evidence(
             "a Coinalyze provenance record names an unknown endpoint",
             {**context, "endpoint": endpoint},
         )
-        rendered = json.dumps(record, sort_keys=True)
-        _require(
-            "apiKey" not in rendered and "api_key" not in rendered,
-            "a Coinalyze provenance record carries a credential field",
-            {**context, "endpoint": endpoint},
-        )
+        prove_coinalyze_provenance_record(record, endpoint=endpoint, context=context)
         content_path = Path(str(record.get("content_path") or ""))
         _require(
             content_path.is_file(),

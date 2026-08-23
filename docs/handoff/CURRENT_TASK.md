@@ -1,16 +1,16 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate, validate, and execute review 225
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 226
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Jr Dev - Hermes: follow review 225. Preserve the shared dirty
-workspace; integrate the exact accepted sizing source/test, run the focused 153-case suite
-and exact-path Ruff, then only if both pass execute the corrected local sizing command and
-one conditional identical idempotence run. Publish record 226 and only the authorized
-paths, commit/push, and stop. No source repair, network, or later work is authorized.
+Immediate bounded task: reviewer inspection of record 226. Hermes integrated the exact
+accepted sizing source/test, ran the focused 153-case suite and exact-path Ruff
+successfully, then ran the first corrected local sizing command and stopped after status 1.
+Do not retry, run the second idempotence invocation, repair, substitute an artifact,
+acquire data, or perform later work unless the reviewer authorizes it.
 
 Governing documents:
 
@@ -187,6 +187,7 @@ Governing documents:
 - research/sprint_004/223_CEX002_SIZING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/224_CEX002_COINALYZE_PROVENANCE_CORRECTION.md
 - research/sprint_004/225_CEX002_COINALYZE_PROVENANCE_SOURCE_ACCEPTANCE.md
+- research/sprint_004/226_CEX002_CORRECTED_SIZING_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2665,3 +2666,27 @@ exact-path Ruff, and only on two successes run the corrected local sizing comman
 by one identical idempotence invocation. Hermes then publishes record 226 and only the
 authorized paths. No source repair, network, Gate-2 acceptance, acquisition, or later work
 is authorized. Gate 2 remains unaccepted and next ticket remains `NONE`.
+
+## Record-226 corrected sizing validation pass and execution failure published
+
+Hermes verified `HEAD == origin/main` at `a9b319898a0b162ff28dd0b5bbb55961fd9b9ac2`,
+integrated the exact accepted review-225 sizing production/test bytes, and confirmed the
+unchanged sizing CLI. The focused sizing suite passed with 153 cases, and exact-path Ruff
+passed over the sizing production, sizing tests, and frozen CLI.
+
+Hermes then ran the first exact corrected local sizing invocation without loading `.env`
+or requesting network. It exited status 1 after 160 seconds with:
+
+```text
+ERROR: the retained liquidation response covers an unsupported symbol
+```
+
+Per review 225, the nonzero status ended authorization. Hermes did not retry, run the
+second idempotence invocation, repair, substitute an artifact, acquire data, normalize,
+publish a catalog, or perform Harmonic Trader / payoff / PAPER / LIVE / next-ticket work.
+
+No valid receipt 180 was produced. The sizing command created 96 ignored envelope files
+totaling 1,890,921 bytes before failing; those data-evidence files were not staged. The
+store file count changed from 41,372 to 41,468 and the post-failure manifest SHA-256 is
+`361095f2be95d9efab91046b910f76cc514e8e2fc1a79e1d359ead2f13ddedb6`. Gate 2 remains
+unaccepted. Next ticket remains `NONE`.

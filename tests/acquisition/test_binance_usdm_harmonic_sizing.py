@@ -345,15 +345,20 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     ):
         digest = _sha256(body)
         (coinalyze_cache / digest).write_bytes(body)
+        # The exact accepted ten-field shape. `header_names` records only the name of
+        # the request header the key travelled in; no header value is ever published.
         provenance.append(
             {
-                "path": endpoint,
-                "params": {"symbols": "BTCUSDT_PERP.A", "api_key": "<redacted>"}
-                if False
-                else {"symbols": "BTCUSDT_PERP.A"},
-                "sha256": digest,
                 "byte_size": len(body),
                 "content_path": str(coinalyze_cache / digest),
+                "header_names": ["api_key"],
+                "params": {"symbols": "BTCUSDT_PERP.A"},
+                "path": endpoint,
+                "provenance_source": "raw_response_bytes",
+                "retrieved_at": "2026-08-21T00:00:00+00:00",
+                "sha256": digest,
+                "status_code": 200,
+                "transport": "network",
             }
         )
 
@@ -454,6 +459,10 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             ]
         },
         "coinalyze": {
+            # Header authentication only: the key never enters a query string.
+            "key_present": True,
+            "key_location": "header",
+            "query_contains_key": False,
             "provenance": provenance,
             "universe_support": {
                 "supported_symbols": supported,
@@ -1513,6 +1522,161 @@ def test_coinalyze_evidence_is_resolved_from_report_provenance(
         # The accepted cache is content-addressed and carries no extension.
         assert Path(item.content_path).name == item.sha256
         assert Path(item.content_path).suffix == ""
+
+
+def _provenance_record(accepted: dict[str, Any], **overrides: Any) -> dict[str, Any]:
+    """One record in the exact accepted shape, before any deliberate alteration."""
+    report = json.loads(accepted["files"]["report"].read_text())
+    record = dict(report["coinalyze"]["provenance"][0])
+    record.update(overrides)
+    return record
+
+
+def _coinalyze_report(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, mutate: Any
+) -> Any:
+    """Rewrite the pinned report's Coinalyze block and re-point only its own pins."""
+    path = accepted["files"]["report"]
+    report = json.loads(path.read_text())
+    mutate(report["coinalyze"])
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    monkeypatch.setattr(sizing, "ACCEPTED_REPORT_SHA256", _sha256(path.read_bytes()))
+    monkeypatch.setattr(sizing, "ACCEPTED_REPORT_BYTES", path.stat().st_size)
+    return load_sizing_authority(accepted["paths"])
+
+
+def test_the_accepted_header_name_provenance_resolves(accepted: dict[str, Any]) -> None:
+    """A header *name* is safe metadata; the accepted shape must not be mistaken for a
+    stored credential."""
+    authority = load_sizing_authority(accepted["paths"])
+    block = dict(authority.report["coinalyze"])
+    assert sizing.prove_coinalyze_request_framing(block) == {
+        "key_location": "header",
+        "key_present": True,
+        "query_contains_key": False,
+    }
+    for record in block["provenance"]:
+        assert record["header_names"] == ["api_key"]
+        assert set(record) == set(sizing.ACCEPTED_COINALYZE_PROVENANCE_FIELDS)
+        sizing.prove_coinalyze_provenance_record(
+            record, endpoint=str(record["path"]), context={}
+        )
+    evidence = resolve_coinalyze_evidence(
+        authority, cache_dir=accepted["coinalyze_cache"]
+    )
+    assert len(evidence) == sizing.ACCEPTED_COINALYZE_PROVENANCE_RECORDS
+
+
+@pytest.mark.parametrize(
+    "framing",
+    [
+        {"key_location": "query"},
+        {"key_location": ""},
+        {"key_present": False},
+        {"key_present": "true"},
+        {"query_contains_key": True},
+        {"query_contains_key": "false"},
+    ],
+)
+def test_altered_report_level_framing_blocks(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, framing: dict[str, Any]
+) -> None:
+    field = next(iter(framing))
+    authority = _coinalyze_report(
+        accepted, monkeypatch, lambda block: block.update(framing)
+    )
+    with pytest.raises(SizingError, match=field) as failure:
+        resolve_coinalyze_evidence(authority, cache_dir=accepted["coinalyze_cache"])
+    assert "provenance" not in failure.value.context
+
+
+@pytest.mark.parametrize(
+    "header_names",
+    [["Authorization"], ["api_key", "authorization"], [], ["API_KEY"], "api_key", [1]],
+)
+def test_wrong_missing_or_extra_header_names_block(
+    accepted: dict[str, Any], header_names: Any
+) -> None:
+    record = _provenance_record(accepted, header_names=header_names)
+    with pytest.raises(SizingError, match="header_names"):
+        sizing.prove_coinalyze_provenance_record(
+            record, endpoint="/future-markets", context={}
+        )
+
+
+def test_a_missing_header_names_field_blocks(accepted: dict[str, Any]) -> None:
+    record = _provenance_record(accepted)
+    record.pop("header_names")
+    with pytest.raises(SizingError, match="missing an accepted field") as failure:
+        sizing.prove_coinalyze_provenance_record(
+            record, endpoint="/future-markets", context={}
+        )
+    assert failure.value.context["missing_fields"] == ["header_names"]
+
+
+@pytest.mark.parametrize("name", ["api_key", "apiKey", "api-key", "API-KEY", "ApI_kEy"])
+def test_a_credential_query_parameter_blocks_even_when_redacted(
+    accepted: dict[str, Any], name: str
+) -> None:
+    record = _provenance_record(accepted)
+    record["params"] = {"symbols": "BTCUSDT_PERP.A", name: "<redacted>"}
+    with pytest.raises(SizingError, match="credential query parameter") as failure:
+        sizing.prove_coinalyze_provenance_record(
+            record, endpoint="/future-markets", context={}
+        )
+    # The offending name is structural evidence; its value is never read or reported.
+    assert failure.value.context["parameter_names"] == [name]
+    assert "<redacted>" not in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    "field", ["headers", "header_values", "authorization", "credential", "surprise"]
+)
+def test_an_unrecognized_provenance_field_blocks_without_echoing_it(
+    accepted: dict[str, Any], field: str
+) -> None:
+    secret = "Bearer never-print-this-value"
+    record = _provenance_record(accepted)
+    record[field] = {"api_key": secret} if field.startswith("header") else secret
+    with pytest.raises(SizingError, match="unrecognized field") as failure:
+        sizing.prove_coinalyze_provenance_record(
+            record, endpoint="/future-markets", context={}
+        )
+    assert failure.value.context["unexpected_fields"] == [field]
+    rendered = str(failure.value) + json.dumps(failure.value.context, sort_keys=True)
+    assert secret not in rendered
+    assert "never-print-this-value" not in rendered
+
+
+def test_a_non_string_parameter_map_blocks(accepted: dict[str, Any]) -> None:
+    record = _provenance_record(accepted)
+    record["params"] = {"symbols": ["BTCUSDT_PERP.A"]}
+    with pytest.raises(SizingError, match="string-to-string parameter map"):
+        sizing.prove_coinalyze_provenance_record(
+            record, endpoint="/future-markets", context={}
+        )
+
+
+def test_resolved_evidence_and_receipt_carry_no_request_metadata(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    authority = load_sizing_authority(accepted["paths"])
+    evidence = resolve_coinalyze_evidence(
+        authority, cache_dir=accepted["coinalyze_cache"]
+    )
+    for item in evidence:
+        # The evidence type has no field that could carry request metadata at all.
+        assert not set(item.__slots__) & {
+            "params", "header_names", "headers", "api_key"
+        }
+        assert set(item.to_dict()) == {
+            "endpoint", "role", "sha256", "byte_size", "content_path"
+        }
+    rendered = sizing.canonical_json(_run(accepted, tmp_path)["receipt"]).decode()
+    for forbidden in ("header_names", "api_key", "apiKey", "<redacted>", "params"):
+        assert forbidden not in rendered
+    # The one real request parameter value never reaches a published byte either.
+    assert "BTCUSDT_PERP.A" not in rendered
 
 
 def test_coinalyze_evidence_rejects_substituted_or_escaping_bodies(
