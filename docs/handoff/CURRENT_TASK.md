@@ -2,22 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Codex Sol High - one residual review-238 correction
+Next required actor: Jr Dev - Hermes - review-239 integration and v2 sizing execution
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Codex Sol High: follow review 238 once and edit only
-its enumerated sizing source/test paths, leaving the CLI byte-identical unless mechanically
-required. Work from the current shared drop in place; do not reset, restore, checkout,
-discard, or wholesale replace it. Preserve every accepted review-237 correction. Make
-archive retained lineage an exact fail-closed join to the 73 re-proved Gate-2 credit keys,
-never the 96-object coefficient cohort; publish and reconcile the exact retained-key count
-and digest; and replace the arbitrary-witness test with synthetic disjoint-set and real
-73-key receipt assertions. Do not run commands or tests, mutate evidence/data, use Git, or
-write repository records. Stop once with all three path hashes (mark unchanged paths) and
-the final test-function count. Claude is available again, but Sol retains the complete
-current context and is the sole authorized actor for this bounded residual; Claude and
-Grok are deauthorized. Gate 2 remains blocked.
+Immediate bounded task for Jr Dev - Hermes: follow review 239 exactly. Verify and stage the
+accepted sizing source `be877786...d7241`, test `b62775ce...a93`, and unchanged CLI
+`36740c92...b23c`; require 137 test functions. Run the focused sizing suite with only the
+two-pass real-authority test deselected, then exact-path Ruff. Only if both pass, execute
+the real v2 sizing CLI once and, only on exit 0, identically once more for idempotence.
+Publish record 240, a valid receipt 231 if produced, and the integration commit. Do not
+edit source, run network, accept Gate 2, acquire data, touch unrelated dirty work, or start
+later work. Stop for reviewer inspection with next ticket `NONE`.
 
 Governing documents:
 
@@ -209,6 +205,7 @@ Governing documents:
 - research/sprint_004/236_CEX002_CLAUDE_COMPLETE_SIZING_DROP_REVIEW.md
 - research/sprint_004/237_CEX002_SOL_FINAL_SIZING_CORRECTION.md
 - research/sprint_004/238_CEX002_RETAINED_LINEAGE_AUTHORITY_CORRECTION.md
+- research/sprint_004/239_CEX002_V2_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
