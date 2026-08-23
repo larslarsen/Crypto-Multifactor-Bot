@@ -2,18 +2,16 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - complete review 264 exactly
+Next required actor: Jr Dev - Hermes - execute review 265 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Edit only the sizing source and sizing test. Preserve Claude's measured
-anchor and allocation. Remove the stale pre-anchor ledger assertions; assign lineage
-candidate variables before use and serialize/test its exact mapping/response inputs; rename
-the 12-byte receipt field to index bytes while keeping null 2 and total 14; make dictionary
-rule text three-way for owned nullable, externally owned nullable, and non-nullable; remove
-the stale future-validity comment. Do not run commands or Git. Stop with hashes and test
-count. Receipt 258, Hermes, integration, execution, acquisition, and later work remain
-unauthorized. Next ticket remains `NONE`.
+Immediate state: Integrate the exact source/test hashes in review 265. Run its focused
+pytest and Ruff once; only on success run the real v3 sizing command once and one identical
+idempotence invocation. Publish record 266 and receipt 258 only if valid, run control and
+cached diff checks, commit/push only the enumerated paths, and stop for reviewer inspection.
+Do not repair, rerun failures, use network, acquire/normalize data, or touch unrelated dirty
+work. Gate 2 and later work remain unauthorized. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -231,14 +229,15 @@ Governing documents:
 - research/sprint_004/262_CEX002_V3_LITERAL_ALLOCATION_CORRECTION.md
 - research/sprint_004/263_CEX002_V3_MEASURED_IDENTITY_ANCHOR_COMPLETION.md
 - research/sprint_004/264_CEX002_V3_MEASURED_ANCHOR_TEST_RESIDUAL.md
+- research/sprint_004/265_CEX002_V3_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
 
-Review 264 is the active mechanical residual. It preserves the accepted measured-anchor
-equation and requires no architecture decision. The implementation dev may edit only the
-two sizing source paths, runs no command or Git, leaves the CLI unchanged, and stops once
-with hashes and test count. No other actor or work is authorized.
+Review 265 accepts the v3 source/test drop for exact Hermes integration and execution.
+Hermes runs the focused validation, then only on success one real v3 sizing invocation and
+one identical idempotence invocation, publishes record 266, commits/pushes only enumerated
+paths, and stops for reviewer inspection. No acquisition or later work is authorized.
 
 The destination is the complete real data needed by the original Harmonic Trader
 geometry-plus-derivatives thesis before model development. CEX-002 acquires every
