@@ -2,15 +2,15 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 224's provenance validation
+Next required actor: Jr Dev - Hermes - integrate, validate, and execute review 225
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 224. Correct the accepted
-sizing source and test fixture so safe header-name-only Coinalyze provenance is validated
-against its exact real shape while query credentials, header values, unknown fields, and
-secret-bearing error surfaces remain fail-closed. Edit only the two authorized paths; do
-not run commands, integrate, edit records, use Git, or execute sizing. Stop with hashes.
+Immediate bounded task for Jr Dev - Hermes: follow review 225. Preserve the shared dirty
+workspace; integrate the exact accepted sizing source/test, run the focused 153-case suite
+and exact-path Ruff, then only if both pass execute the corrected local sizing command and
+one conditional identical idempotence run. Publish record 226 and only the authorized
+paths, commit/push, and stop. No source repair, network, or later work is authorized.
 
 Governing documents:
 
@@ -186,6 +186,7 @@ Governing documents:
 - research/sprint_004/222_CEX002_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/223_CEX002_SIZING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/224_CEX002_COINALYZE_PROVENANCE_CORRECTION.md
+- research/sprint_004/225_CEX002_COINALYZE_PROVENANCE_SOURCE_ACCEPTANCE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2645,3 +2646,22 @@ safe `api_key` header name, reject query credentials/header values/unknown field
 echoing values, preserve every other sizing authority check, and stop for reviewer source
 inspection. No integration, tests, sizing execution, data mutation, or later work is
 authorized. Gate 2 remains unaccepted and next ticket remains `NONE`.
+
+## Corrected provenance source accepted and integrated execution authorized
+
+The reviewer accepted Claude's review-224 two-file correction at production SHA-256
+`bcaca1b1907a89df5020cdbd33c44f49471ff67d0c97d1a303c8225c2cabb592` and test SHA-256
+`0a9a3cf0978b596130323e36e495e4fa4d0bc018f21a6d44341e8b9e3bab8177`.
+The sizing CLI remains unchanged at SHA-256
+`78ee687c734fc94070952d290752acdbd007970fb26c616e5e6845f1de3702ad`.
+
+The correction validates the exact real Coinalyze provenance shape, permits only the safe
+header name without a value, rejects query credentials/header values/unknown fields, and
+keeps secret values out of failure surfaces and sizing outputs. The corrected test file
+has 71 test functions and an expected 153 focused cases.
+
+Review 225 authorizes Hermes to integrate those exact bytes, run the focused suite and
+exact-path Ruff, and only on two successes run the corrected local sizing command followed
+by one identical idempotence invocation. Hermes then publishes record 226 and only the
+authorized paths. No source repair, network, Gate-2 acceptance, acquisition, or later work
+is authorized. Gate 2 remains unaccepted and next ticket remains `NONE`.
