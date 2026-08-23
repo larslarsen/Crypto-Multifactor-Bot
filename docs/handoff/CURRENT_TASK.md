@@ -2,19 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - complete review 268 exact continuation
+Next required actor: Sr Dev - Claude Build - complete review 269 exact test-only correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer rejected the review-267 test-only drop at test SHA-256
-`e3fc3eab270743992edd1b91308d733543284aac33edc7f8813fb8b8542089c8`. It changed the
-fixture universe without authorization, placed the membership proof in setup, omitted the
-first Coinalyze rewrite and the second test's rejected-model assertion, and introduced one
-indentation defect. Review 268 gives Spark one exact test-file-only continuation. The new
-matrix identities and width-1 validity correction are preserved; production and CLI remain
-frozen. Commands, Git, integration, receipt 258, sizing, acquisition, normalization,
-catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain unauthorized.
-Gate 2 remains not accepted. Next ticket remains `NONE`.
+Immediate state: The reviewer rejected Spark's review-268 continuation at test SHA-256
+`aab6520df28a6a029478eec16ced15ae40012011031535ef6845344f731cb1b9`. It again left
+the first Coinalyze test untouched, removed required equations from the second, omitted the
+rejected-model assertion, and changed an unrelated capacity assertion to a nonexistent
+receipt key. Spark is deauthorized after two misses. Review 269 routes one exact sizing-
+test-only correction to Claude Build; the accepted matrix, membership proof, and width-1
+changes are preserved and production/CLI remain frozen. Commands, Git, integration,
+receipt 258, sizing, acquisition, normalization, catalog, NautilusTrader, Harmonic Trader,
+PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not accepted. Next ticket
+remains `NONE`.
 
 Governing documents:
 
@@ -236,6 +237,7 @@ Governing documents:
 - research/sprint_004/266_CEX002_V3_SIZING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/267_CEX002_V3_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/268_CEX002_V3_SPARK_TEST_RESIDUAL.md
+- research/sprint_004/269_CEX002_V3_SPARK_CONTINUATION_REJECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
