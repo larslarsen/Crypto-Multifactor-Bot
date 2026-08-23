@@ -1,16 +1,16 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 229
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - implement ADR-0024 review 230
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task: reviewer inspection of record 229 and receipt 180. Hermes
-integrated the exact accepted sizing source/test, reproduced the real identity-set
-preproof, ran the 181-case focused suite and exact-path Ruff successfully, ran sizing
-successfully, and ran one identical idempotence invocation successfully. Gate 2 remains
-unaccepted unless the reviewer accepts it.
+Immediate bounded task for Sr Dev - Claude Build: implement the typed product-real v2
+sizing and partition-atomic capacity model authorized in review 230. Edit only the exact
+three sizing source/test/CLI paths, preserve all accepted authority and all raw/cost scope,
+write no evidence, run no commands or Git, and stop once for reviewer inspection with
+hashes and the test function count. Gate 2 remains blocked and acquisition unauthorized.
 
 Governing documents:
 
@@ -191,6 +191,8 @@ Governing documents:
 - research/sprint_004/227_CEX002_COINALYZE_IDENTITY_NAMESPACE_CORRECTION.md
 - research/sprint_004/228_CEX002_IDENTITY_SOURCE_ACCEPTANCE_AND_SIZING_RETRY.md
 - research/sprint_004/229_CEX002_IDENTITY_CORRECTED_SIZING_EXECUTION.md
+- docs/adr/0024-typed-normalization-and-partition-atomic-publication.md
+- research/sprint_004/230_CEX002_STORAGE_ARCHITECTURE_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2765,3 +2767,24 @@ receipts, 29,072,901 projected new raw bytes, and 12,621,439 projected normalize
 
 Hermes did not accept Gate 2, acquire data, normalize, publish a catalog, run Harmonic
 Trader, or perform later work. Gate 2 remains unaccepted. Next ticket remains `NONE`.
+
+## Record-229 accepted and storage architecture corrected
+
+The reviewer accepted commit `2f60d5913f361c82b6960faa582d71845366b5e6` and receipt
+180 as the complete reproducible version-1 sizing execution. The complete raw footprint is
+20,387,504,203 bytes, of which 20,380,788,328 bytes is projected new allocation after
+retained credit. The 432,141,608,507-byte v1 capacity bound is blocked against
+158,559,266,533 available bytes because its generic string envelope projects
+188,932,621,323 normalized/catalog bytes and its whole-tree publication assumption adds
+191,116,312,315 temporary bytes. The exact shortfall is 273,582,341,974 bytes.
+
+ADR-0024 rejects storage purchase, scope reduction, price-only data, or a smaller cost
+sample. It preserves every selected raw object, required economic row/field, typed gap,
+and lineage fact while sizing the actual typed product schemas and replacing the complete
+second release copy with content-addressed partition-atomic publication. Gate 2 remains
+blocked until a reviewed v2 receipt proves capacity.
+
+Review 230 authorizes Claude Opus 5 for one exact three-path sizing source/test/CLI drop.
+Claude must preserve all accepted authority and v1 evidence, implement the fixed new v2
+receipt/envelope namespace and auditable projection math, run no command or Git, and stop
+once for reviewer inspection. Next ticket remains `NONE`.
