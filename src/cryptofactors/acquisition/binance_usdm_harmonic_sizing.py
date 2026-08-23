@@ -4006,8 +4006,14 @@ def measure_fixed_schema_product(
     schema: pa.Schema,
     columns: Mapping[str, Sequence[Any]],
     destination: Path,
+    component: str | None = None,
 ) -> dict[str, Any]:
-    """Measure one non-archive required product from its own real evidence rows."""
+    """Measure one non-archive required product from its own real evidence rows.
+
+    ADR-0025 keeps the parent required product and the measurement component apart. A
+    component of a required product names that product here and carries its own component
+    label; a measurement dictionary key never creates an additional required product.
+    """
     rows = len(next(iter(columns.values()), ()))
     _require(
         rows > 0,
@@ -4033,6 +4039,7 @@ def measure_fixed_schema_product(
     return {
         **measured,
         "required_product": product,
+        **({"component": component} if component else {}),
         "measured_rows": rows,
         "bytes_per_row": ceil_div(measured["payload_bytes"], rows),
         "schema": _schema_dict(schema),
@@ -4164,6 +4171,9 @@ def project_fixed_schema_product(
 ) -> dict[str, Any]:
     """Project one non-archive product from its own measured per-row and file costs."""
     context = {"required_product": str(measured.get("required_product") or "")}
+    # The component label travels with the measurement so the fixed-schema, coverage,
+    # and cost-component receipt views cannot read a component key as a product.
+    component = str(measured.get("component") or "")
     _require(rows >= 0 and partitions > 0, "a fixed-schema projection is empty", context)
     if partition_rows is not None:
         _exact(
@@ -4195,6 +4205,7 @@ def project_fixed_schema_product(
     )
     return {
         **dict(context),
+        **({"component": component} if component else {}),
         "projected_rows": rows,
         "partition_count": partitions,
         "projected_row_groups": row_groups,
@@ -6516,15 +6527,19 @@ def _measure_fixed_schema_products(
         {**native_identity(str(item["native_symbol"])), **dict(item)}
         for item in coverage["fee_gaps"]
     ]
+    # ADR-0026 component four of the cost product, not a required product of its own.
     measured_fee_gaps = measure_fixed_schema_product(
-        product="fee_authority_gap",
+        product=PRODUCT_COST_CALIBRATION,
+        component="fee_authority_gap",
         schema=_schema_of(FEE_AUTHORITY_GAP_COLUMNS),
         columns=_column_values(FEE_AUTHORITY_GAP_COLUMNS, fee_gap_rows),
         destination=staging / "product-fee-authority-gap.parquet",
     )
     scenario_rows = [dict(row) for row in fee_scenario_rows()]
+    # ADR-0026 component five of the cost product, not a required product of its own.
     measured_scenarios = measure_fixed_schema_product(
-        product="scenario_policy",
+        product=PRODUCT_COST_CALIBRATION,
+        component="scenario_policy",
         schema=_schema_of(FEE_SCENARIO_COLUMNS),
         columns=_column_values(FEE_SCENARIO_COLUMNS, scenario_rows),
         destination=staging / "product-fee-scenarios.parquet",
@@ -8228,6 +8243,11 @@ def run_storage_sizing(
         if measured_length == receipt_bytes:
             break
         receipt_bytes = measured_length
+    # One canonical boundary. The self-sized receipt is encoded and decoded exactly once
+    # here, so the document that is published, the document that is returned, and the
+    # document a later rerun revalidates from the target bytes are the same document -
+    # not merely three structures that happen to serialize to equal bytes.
+    receipt = json.loads(canonical_json(receipt).decode("utf-8"))
     _exact(
         len(canonical_json(receipt)),
         receipt_bytes,

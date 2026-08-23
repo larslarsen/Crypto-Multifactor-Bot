@@ -1,20 +1,20 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and execute review 249 exactly
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 250 failed first sizing invocation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Jr Dev - Hermes: follow review 249 exactly. Verify the accepted
-two-file drop and unchanged CLI identities, stage only the two sizing source/test paths,
-run the focused sizing pytest command and exact-path Ruff, then run the real v2 sizing CLI
-once and one identical idempotence invocation only if every prior step succeeds. Publish
-record 250 and receipt 231 only if valid; update the control plane, commit/push only the
-enumerated paths, and stop for reviewer inspection. Stop immediately on any mismatch,
-failure, timeout, or idempotence disagreement. Do not acquire, normalize, publish a
-catalog, or perform NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work.
-Gate 2 remains not accepted and next ticket remains `NONE`.
+Immediate state: Jr Dev - Hermes followed review 249 through exact-byte preproof, staged
+only the two accepted modified sizing paths, ran the focused sizing pytest command with the
+two-pass real-authority receipt test deselected, ran exact-path Ruff, and ran the first
+real v2 sizing CLI invocation. Focused pytest and Ruff passed. The first real sizing
+invocation exited 1 with `ERROR: a typed integer column is not a strict integer`, so
+Hermes stopped as required, ran no idempotence invocation, produced no receipt 231, and
+performed no acquisition, network, normalization, catalog, NautilusTrader, Harmonic
+Trader, PAPER/LIVE, or next-ticket work. Review record 250 is published for reviewer
+inspection. Gate 2 remains not accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -217,6 +217,7 @@ Governing documents:
 - research/sprint_004/247_CEX002_V2_SIZING_IDEMPOTENCE_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/248_CEX002_V2_RECEIPT_BOUNDARY_AND_COMPONENT_IDENTITY_REVIEW.md
 - research/sprint_004/249_CEX002_V2_RECEIPT_BOUNDARY_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/250_CEX002_V2_SIZING_FINAL_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

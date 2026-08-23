@@ -2899,9 +2899,13 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
     identity = result["receipt_file"]
     assert result["publication"]["rerun"] is False
     target = tmp_path / "231_receipt.json"
-    # The returned mapping and the durable bytes are the same document.
+    # The returned mapping and the durable bytes are the same document - not two
+    # structures that merely serialize to equal bytes.
     assert target.read_bytes() == sizing.canonical_json(receipt)
+    assert receipt == json.loads(target.read_text())
     assert identity["receipt_sha256"] == _sha256(target.read_bytes())
+    assert identity["receipt_bytes"] == len(target.read_bytes())
+    assert receipt["filesystem"]["durable_receipt_bytes"] == len(target.read_bytes())
     assert "receipt_sha256" not in receipt
     for section in (
         "authority",
@@ -3142,12 +3146,39 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
     named |= set(projections["fixed_schema_products"]) & set(REQUIRED_PRODUCTS)
     named.add("binance_usdm_liquidation_observed_daily")
     assert named == set(REQUIRED_PRODUCTS)
+    # ADR-0025/ADR-0026: a measurement dictionary key may name a component, but it
+    # never creates a twelfth required product. The three fixed-schema cost components
+    # name their parent product and their own component; every other block names itself.
+    cost_component_keys = {
+        "official_fee_schedule",
+        "fee_authority_gap",
+        "scenario_policy",
+    }
+    assert cost_component_keys <= set(sizing.COST_COMPONENTS)
+    assert set(projections["fixed_schema_products"]) - cost_component_keys == {
+        "binance_usdm_perpetual_membership",
+        "binance_usdm_coverage_gap",
+        "binance_usdm_harmonic_bundle",
+        "typed_gap_membership",
+        "quality_gap",
+    }
     for product, block in projections["fixed_schema_products"].items():
         assert block["schema"]
         assert block["projected_bytes"] == (
             block["projected_payload_bytes"] + block["projected_overhead_bytes"]
         )
-        assert block["required_product"] == product
+        if product in cost_component_keys:
+            assert block["required_product"] == "binance_usdm_cost_calibration"
+            assert block["component"] == product
+        else:
+            assert block["required_product"] == product
+            assert "component" not in block
+    # The five-component cost receipt carries the same parent/component identities.
+    cost_blocks = receipt["cost_calibration_components"]
+    for name in sizing.COST_COMPONENTS:
+        block = cost_blocks[name]
+        assert block["required_product"] == "binance_usdm_cost_calibration"
+        assert block["component"] == name
 
 
 @pytest.mark.parametrize(
@@ -5010,9 +5041,14 @@ def test_rerun_returns_the_identical_receipt_under_changed_observations(
     assert second["publication"]["rerun"] is True
     assert second["publication"]["envelopes_reused"] > 0
     assert second["publication"]["envelopes_published"] == 0
+    # All three facts together: the target bytes never moved, the two returned receipts
+    # are the same document, and both are the document the target actually holds.
     assert target.read_bytes() == published
     assert second["receipt"] == first["receipt"]
     assert second["receipt_file"] == first["receipt_file"]
+    durable = json.loads(published.decode("utf-8"))
+    assert first["receipt"] == durable
+    assert second["receipt"] == durable
 
 
 def test_rerun_below_the_reserve_floor_also_returns_the_identical_receipt(
@@ -5029,6 +5065,9 @@ def test_rerun_below_the_reserve_floor_also_returns_the_identical_receipt(
     assert second["publication"]["rerun"] is True
     assert (tmp_path / "231_receipt.json").read_bytes() == published
     assert second["receipt"] == first["receipt"]
+    durable = json.loads(published.decode("utf-8"))
+    assert first["receipt"] == durable
+    assert second["receipt"] == durable
 
 
 @pytest.mark.parametrize(
