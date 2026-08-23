@@ -2,19 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - run review 275 targeted capacity test once
+Next required actor: Jr Dev - Hermes - integrate review 276 and execute corrected v3 sizing gate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Sol High completed review 273 exactly at test SHA-256
-`3b5acf85c5ee5aab891f9b9622e3cc7e86e0c2df2b630812f6f26e9bce20580a`, frozen
-production/CLI hashes, and 161 test functions. At the owner's explicit direction, review
-275 and the development-role governance authorize the reviewer to run the single
-enumerated capacity-test pytest command once for source feedback. This does not integrate
-or accept the drop. Hermes retains full validation, Ruff, sizing, evidence, records, and
-Git. Receipt 258, acquisition, normalization, catalog, NautilusTrader, Harmonic Trader,
-PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not accepted. Next ticket
-remains `NONE`.
+Immediate state: The reviewer accepted Sol High's exact ordering correction at test
+SHA-256 `3b5acf85c5ee5aab891f9b9622e3cc7e86e0c2df2b630812f6f26e9bce20580a`, frozen
+production/CLI hashes, and 161 functions after the review-275 targeted capacity test
+passed once with exit 0. Review 276 authorizes Hermes for exact integration, full focused
+pytest, Ruff, one real v3 sizing invocation, one identical idempotence invocation after
+success, record 277, receipt 258 only if valid, and exact publication. Acquisition,
+normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain
+unauthorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -243,6 +242,7 @@ Governing documents:
 - research/sprint_004/273_CEX002_V3_CAPACITY_TEST_ORDERING_FAILURE.md
 - research/sprint_004/274_CEX002_TARGETED_SENIOR_TEST_AUTHORIZATION.md
 - research/sprint_004/275_CEX002_REVIEWER_TARGETED_TEST_AUTHORIZATION.md
+- research/sprint_004/276_CEX002_V3_ORDERING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
