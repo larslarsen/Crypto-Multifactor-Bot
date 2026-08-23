@@ -34,10 +34,12 @@ import pyarrow.parquet as pq
 
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     KNOWN_ARCHIVE_SCHEMAS,
+    RetainedChecksumIndex,
     compute_sha256,
     file_sha256,
     parse_s3_list_bucket,
     verify_provider_sidecar,
+    verify_retained_object,
 )
 
 TICKET_ID: str = "CEX-002"
@@ -47,37 +49,37 @@ SIZING_POLICY_IDENTITY: str = "adr0021_review181_bounded_real_sample_storage_siz
 # --- pinned accepted authority (reviews 179 and 181) -----------------------------------
 
 ACCEPTED_REPORT_SHA256: str = (
-    "bf01f88976e2ac3d224e843f340de726f5c8c337ba56a50f9e3c6f75c4d6f227"
+    "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09"
 )
-ACCEPTED_REPORT_BYTES: int = 13_559_766
+ACCEPTED_REPORT_BYTES: int = 13_745_360
 ACCEPTED_MANIFEST_DETAIL_SHA256: str = (
-    "576b3d7b03ff16fd492c5a9382e35f65e54d73ef3996c3a7fe5c6e6ba49b0fb4"
+    "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113"
 )
-ACCEPTED_MANIFEST_DETAIL_BYTES: int = 11_294_610
+ACCEPTED_MANIFEST_DETAIL_BYTES: int = 11_292_635
 ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_SHA256: str = (
-    "1d21de4d68fb0dfd330dc480a0d27ddf2216c3b7d5e93b13ff70ea26230f968d"
+    "d6c1fac650aaf16d88750da2a40d837f543d0c5fc88c73d463753a576d5bdd17"
 )
-ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_BYTES: int = 466_713_055
+ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_BYTES: int = 466_714_158
 ACCEPTED_LOCK_SHA256: str = (
-    "522271238e38a3652f9521b236981544782e02459450703f21e9ef344d476fa6"
+    "6cbd044adf4ace577ff8899b2825723e8c0ae99d1fe3c855f2783ce54d7b722e"
 )
 ACCEPTED_AMENDMENT_LEDGER_SHA256: str = (
-    "259a1bfe274f402207dbd15e6e582fb4619bed62ddca5f606ea470755084b1b0"
+    "2d41fbf009d9803ca5bda05c3a11d75dafe505a1397756e5fafefeb2d1cb90bf"
 )
 ACCEPTED_QUALIFICATION_SOURCE_SHA256: str = (
-    "068763e2359abf4fc4fe4b7e7fdea95495db5c22bf362d468fec4056775ecb7e"
+    "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74"
 )
 ACCEPTED_QUALIFICATION_CLI_SHA256: str = (
     "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f"
 )
 ACCEPTED_PROGRESS_CHECKPOINT_SHA256: str = (
-    "cc35a5c2c1fd72904d0d6a899565a763c89a38bb1295275e589e4d92be67eaff"
+    "cc8e02389d182e6d76d00b913503d95f72a352d883c50ffd81dd3c49df157b2f"
 )
 ACCEPTED_LISTING_CHECKPOINT_SHA256: str = (
     "d584e22aaaa9414b06dbe13bc24dda0b01ed48e37bdf66f5b42f90865959bf9a"
 )
 ACCEPTED_CONTRACT_METADATA_SHA256: str = (
-    "e520f0f072730f566d027342ddc7e09f7b690ab80e76acbd40756759f13add1f"
+    "7aaea96ecd4cb13c83b8b19930a6e1ef0fcf2b49de841e1fa26878d6dd7f5b42"
 )
 
 ACCEPTED_PLAN_VERSION: int = 4
@@ -98,6 +100,18 @@ ACCEPTED_COMBINED_OBJECTS: int = 736_347
 ACCEPTED_COMBINED_BYTES: int = 20_356_940_843
 ACCEPTED_RETAINED_CREDIT_OBJECTS: int = 73
 ACCEPTED_RETAINED_CREDIT_BYTES: int = 5_225_416
+# ADR-0022 separates logical keys from unique physical objects, and ADR-0023 fixes the
+# split: 68 selected retained keys plus 5 cost retained keys are the 73 valid Gate-2
+# requirement keys. The sizing consumer must reproduce this before measuring.
+ACCEPTED_RETAINED_CREDIT_KEYS: int = 73
+ACCEPTED_SELECTED_RETAINED_KEYS: int = 68
+ACCEPTED_COST_RETAINED_KEYS: int = 5
+# ADR-0023: manifest consumability is a separate publication fact with its own boundary.
+# It is never the Gate-2 credit set, and neither side of the credit split may be inferred
+# by subtracting it from the credit total.
+ACCEPTED_MANIFEST_CONSUMABLE_ROWS: int = 56
+ACCEPTED_REJECTED_RECOVERED_ROWS: int = 176
+ACCEPTED_UNVERIFIED_RETAINED_OBJECTS: int = 0
 ACCEPTED_NEW_BINANCE_RAW_BYTES: int = 20_351_715_427
 ACCEPTED_LARGEST_SELECTED_OBJECT_BYTES: int = 200_457_493
 ACCEPTED_COINALYZE_SUPPORTED_MAPPINGS: int = 569
@@ -584,8 +598,8 @@ def resolve_selected_objects(
                     symbol=str(row.get("symbol") or ""),
                     economic_interval=str(row.get("economic_interval") or ""),
                     byte_size=int(size),
-                    # The manifest's own consumable state is the acquisition-credit
-                    # authority; the sizing cohort is a different, smaller set.
+                    # The manifest's own publication fact. ADR-0023 keeps it separate
+                    # from Gate-2 retained credit, which is re-proved independently.
                     consumable=row.get("consumable") is True,
                 )
             )
@@ -611,12 +625,21 @@ def resolve_selected_objects(
     _exact(
         total, ACCEPTED_SELECTED_BYTES, field_name="selected_bytes", context=context
     )
+    consumable_rows = sum(1 for item in rows if item.consumable)
+    _exact(
+        consumable_rows,
+        ACCEPTED_MANIFEST_CONSUMABLE_ROWS,
+        field_name="manifest_consumable_rows",
+        context=context,
+    )
     return tuple(rows), {
         "record_count": records,
         "row_count": len(rows),
         "compressed_bytes": ACCEPTED_MANIFEST_DETAIL_BYTES,
         "uncompressed_bytes": uncompressed,
         "selected_bytes": total,
+        # Published separately from every Gate-2 credit quantity.
+        "manifest_consumable_rows": consumable_rows,
     }
 
 
@@ -708,80 +731,264 @@ def resolve_cost_objects(
     }
 
 
+# The report's own retained summary, and the accepted constant each field must equal.
+ACCEPTED_RETAINED_SUMMARY_FIELDS: Mapping[str, str] = {
+    "retained_valid_requirement_keys": "ACCEPTED_RETAINED_CREDIT_KEYS",
+    "retained_verified_credit_objects": "ACCEPTED_RETAINED_CREDIT_OBJECTS",
+    "retained_verified_credit_bytes": "ACCEPTED_RETAINED_CREDIT_BYTES",
+    "unverified_retained_objects": "ACCEPTED_UNVERIFIED_RETAINED_OBJECTS",
+    "rejected_retained_row_count": "ACCEPTED_REJECTED_RECOVERED_ROWS",
+}
+
+
+def prove_report_retained_summary(report: Mapping[str, Any]) -> dict[str, int]:
+    """Prove the pinned report's own retained summary against the accepted constants.
+
+    The report is hash-pinned, but the digest alone leaves the values this consumer acts
+    on invisible. Each accepted retained quantity is therefore compared field by field
+    before any retained proof or envelope publication, so an altered summary blocks on
+    its own name rather than only through a whole-artifact digest.
+    """
+    context = {"source": "report.storage.gate2_feasibility"}
+    feasibility = dict(dict(report.get("storage") or {}).get("gate2_feasibility") or {})
+    summary: dict[str, int] = {}
+    for field, constant in ACCEPTED_RETAINED_SUMMARY_FIELDS.items():
+        value = feasibility.get(field)
+        _require(
+            isinstance(value, int) and not isinstance(value, bool) and value >= 0,
+            "the report's retained summary field is not a non-negative integer",
+            {**context, "field": field, "value": value},
+        )
+        _exact(
+            int(value),
+            globals()[constant],
+            field_name=f"gate2_feasibility.{field}",
+            context=context,
+        )
+        summary[field] = int(value)
+    # Unique objects can never exceed the logical keys that bind them.
+    _require(
+        summary["retained_verified_credit_objects"]
+        <= summary["retained_valid_requirement_keys"],
+        "the report credits more retained objects than it has valid keys",
+        {**context, **summary},
+    )
+    return summary
+
+
+def report_rejected_retained_keys(report: Mapping[str, Any]) -> tuple[str, ...]:
+    """The report's declared rejected rows, proved consistent across both locations.
+
+    The corrected qualification report names the ADR-0022 rejected legacy rows in two
+    places: the resume evidence key list and the Gate-2 feasibility row records. They are
+    one fact, so a disagreement between them blocks rather than picking a winner.
+    """
+    context = {"source": "report"}
+    resume = dict(report.get("resume") or {})
+    resume_keys = tuple(
+        str(item) for item in (resume.get("rejected_ambiguous_retained_keys") or ())
+    )
+    feasibility = dict(dict(report.get("storage") or {}).get("gate2_feasibility") or {})
+    row_keys = tuple(
+        str(dict(item).get("key") or "")
+        for item in (feasibility.get("rejected_retained_rows") or ())
+    )
+    if sorted(resume_keys) != sorted(row_keys):
+        raise SizingError(
+            "the report's two rejected-retained locations disagree",
+            context={
+                **context,
+                "resume_only": sorted(set(resume_keys) - set(row_keys))[:8],
+                "rows_only": sorted(set(row_keys) - set(resume_keys))[:8],
+            },
+        )
+    _exact(
+        int(resume.get("rejected_ambiguous_retained_count") or -1),
+        len(resume_keys),
+        field_name="resume.rejected_ambiguous_retained_count",
+        context=context,
+    )
+    _exact(
+        int(feasibility.get("rejected_retained_row_count") or -1),
+        len(row_keys),
+        field_name="feasibility.rejected_retained_row_count",
+        context=context,
+    )
+    _exact(
+        len(resume_keys),
+        ACCEPTED_REJECTED_RECOVERED_ROWS,
+        field_name="rejected_retained_rows",
+        context=context,
+    )
+    return tuple(sorted(resume_keys))
+
+
 def prove_retained_acquisition_credit(
     selected: Sequence[PhysicalObject],
+    cost: Sequence[PhysicalObject],
     *,
+    report: Mapping[str, Any],
     checkpoint: Mapping[str, Any],
     sample_dir: Path,
     sidecar_dir: Path,
 ) -> dict[str, Any]:
-    """Re-prove the accepted acquisition credit from the manifest's consumable rows.
+    """Re-prove the accepted Gate-2 retained credit over the whole requirement.
 
-    This is the release's own already-acquired coverage, not the sizing cohort. Every
-    credited object is rehashed at its content address and re-proved through its provider
-    sidecar, so a checkpoint claim alone never earns credit.
+    ADR-0022 makes three quantities distinct, and this proves all three from evidence:
+    valid logical requirement keys, the unique content-addressed objects behind them, and
+    the bytes of those unique objects. ADR-0023 fixes the domain and the split. The domain
+    is every effective checkpoint row whose full key belongs to the complete selected
+    archive requirement or the complete cost requirement - never the sizing cohort, never
+    an arbitrary checkpoint row, and never the selected manifest's separate consumable
+    fact. A selected key earns credit on its own re-proved evidence even when its manifest
+    row conservatively remains unconsumable.
+
+    Path-bound authority is applied first: a persisted basename-only recovery binds a full
+    key only when the complete frozen candidate domain resolves that basename to exactly
+    that one key, and every report-declared rejected row is excluded outright. Each
+    surviving key is then credited only after its object and its provider sidecar are
+    rehashed and its declared byte size is proved equal to the size actually on disk; a
+    checkpoint claim, report count, or basename earns nothing.
+
+    Each surviving logical key is classified by actual membership in the selected or cost
+    requirement set. Neither side is ever inferred by subtraction from the other or from
+    the manifest-consumable count.
+
+    The report's own accepted retained summary is proved field by field first, so an
+    altered quantity blocks by name before any measurement or publication.
     """
-    context = {"selected": len(selected)}
-    objects = 0
-    total = 0
+    requirement = tuple(selected) + tuple(cost)
+    selected_domain = {item.key for item in selected}
+    cost_domain = {item.key for item in cost}
+    context = {"requirement": len(requirement)}
+    overlap = sorted(selected_domain & cost_domain)
+    _require(
+        not overlap,
+        "a key belongs to both the selected and the cost requirement",
+        {**context, "keys": overlap[:8]},
+    )
+    summary = prove_report_retained_summary(report)
+    rejected = set(report_rejected_retained_keys(report))
+    # The complete frozen candidate domain is every requirement key, so basename
+    # ambiguity is decided against the same universe the release itself selected.
+    domain = RetainedChecksumIndex().bind_candidate_domain(
+        [item.key for item in requirement]
+    )
+    digests: set[str] = set()
+    seen_keys: set[str] = set()
     keys: list[str] = []
-    for item in selected:
-        if not item.consumable:
-            continue
+    selected_keys: list[str] = []
+    cost_keys: list[str] = []
+    byte_total = 0
+    unverified = 0
+    for item in sorted(requirement, key=lambda row: row.key):
         entry = checkpoint.get(item.key)
-        _require(
-            isinstance(entry, dict),
-            "a consumable manifest row has no retained evidence",
-            {**context, "key": item.key},
-        )
-        assert isinstance(entry, dict)
-        digest = str(entry.get("sha256") or "")
-        blob = Path(sample_dir) / digest
-        _require(
-            blob.is_file(),
-            "a credited retained object is missing",
-            {**context, "key": item.key},
-        )
-        actual = compute_sha256(blob)
-        _require(
-            actual == digest and blob.name == actual,
-            "a credited retained object does not match its content address",
-            {**context, "key": item.key},
-        )
-        verify_provider_sidecar(
-            key=item.key,
-            object_sha256=actual,
-            sidecar_path=Path(str(entry.get("provider_checksum_path") or "")),
-            sidecar_sha256=str(entry.get("provider_checksum_sha256") or ""),
+        if not isinstance(entry, dict) or str(entry.get("status") or "") != "complete":
+            continue
+        if item.key in rejected:
+            # Preserved lineage: no key, no object, no byte.
+            continue
+        if entry.get("recovered_from_retained_bytes") is True and not domain.binds_full_key(
+            item.key
+        ):
+            # A basename-only recovery the frozen domain cannot bind, even if the report
+            # did not list it: the rule is applied, not merely trusted.
+            continue
+        if item.key in cost_domain:
+            # Membership in the complete cost requirement, not the family label.
+            bucket = cost_keys
+        elif item.key in selected_domain:
+            # Membership in the complete selected requirement. The manifest's separate
+            # consumable flag is deliberately not consulted here.
+            bucket = selected_keys
+        else:
+            continue
+        if item.key in seen_keys:
+            # The same logical key reached twice is still exactly one logical key.
+            continue
+        size = verify_retained_object(
+            item.key,
+            entry,
+            sample_dir=Path(sample_dir),
             sidecar_dir=Path(sidecar_dir),
         )
-        size = int(blob.stat().st_size)
-        _exact(
-            int(entry.get("byte_size") or -1),
-            size,
-            field_name="credit.byte_size",
-            context={**context, "key": item.key},
+        if size is None:
+            unverified += 1
+            continue
+        declared = entry.get("byte_size")
+        _require(
+            isinstance(declared, int)
+            and not isinstance(declared, bool)
+            and declared > 0
+            and declared == size,
+            "a credited retained row's declared byte size is not its actual size",
+            {**context, "key": item.key, "declared": declared, "actual": size},
         )
-        objects += 1
-        total += size
+        digest = str(entry.get("sha256") or "")
+        _require(
+            bool(digest),
+            "a credited retained row has no content digest",
+            {**context, "key": item.key},
+        )
+        seen_keys.add(item.key)
         keys.append(item.key)
+        bucket.append(item.key)
+        if digest in digests:
+            # A second valid full-key binding to the same bytes: one more logical key,
+            # no additional object and no additional byte.
+            continue
+        digests.add(digest)
+        byte_total += size
     _exact(
-        objects,
+        unverified,
+        ACCEPTED_UNVERIFIED_RETAINED_OBJECTS,
+        field_name="unverified_retained_objects",
+        context=context,
+    )
+    _exact(
+        len(selected_keys),
+        ACCEPTED_SELECTED_RETAINED_KEYS,
+        field_name="selected_retained_keys",
+        context=context,
+    )
+    _exact(
+        len(cost_keys),
+        ACCEPTED_COST_RETAINED_KEYS,
+        field_name="cost_retained_keys",
+        context=context,
+    )
+    _exact(
+        len(keys),
+        ACCEPTED_RETAINED_CREDIT_KEYS,
+        field_name="retained_credit_keys",
+        context=context,
+    )
+    _exact(
+        len(digests),
         ACCEPTED_RETAINED_CREDIT_OBJECTS,
         field_name="retained_credit_objects",
         context=context,
     )
     _exact(
-        total,
+        byte_total,
         ACCEPTED_RETAINED_CREDIT_BYTES,
         field_name="retained_credit_bytes",
         context=context,
     )
     return {
-        "objects": objects,
-        "bytes": total,
+        "valid_requirement_keys": len(keys),
+        "objects": len(digests),
+        "bytes": byte_total,
         "keys": sorted(keys),
-        "source": "accepted manifest consumable rows, rehashed with sidecar proof",
+        "selected_retained_keys": len(selected_keys),
+        "cost_retained_keys": len(cost_keys),
+        "rejected_recovered_rows": len(rejected),
+        "unverified_objects": unverified,
+        "report_summary": dict(summary),
+        "source": (
+            "effective checkpoint rows inside the complete selected-plus-cost "
+            "requirement, path-bound, rehashed, and deduplicated by content digest"
+        ),
     }
 
 
@@ -2511,10 +2718,14 @@ def run_storage_sizing(
         authority, listing_cache_dir=paths.listing_cache_dir
     )
     checkpoint = dict(authority.progress_checkpoint.get("objects") or {})
-    # The acquisition credit is the manifest's own consumable coverage, proved object by
-    # object. It is deliberately not the sizing cohort.
+    # The Gate-2 retained credit is re-proved over the complete selected-plus-cost
+    # requirement, path-bound and proved object by object. It is deliberately not the
+    # sizing cohort and not the manifest's separate consumable count, and its keys,
+    # objects, and bytes stay three separate facts.
     credit = prove_retained_acquisition_credit(
         selected,
+        cost,
+        report=authority.report,
         checkpoint=checkpoint,
         sample_dir=paths.sample_dir,
         sidecar_dir=paths.sidecar_dir,
@@ -2639,6 +2850,9 @@ def run_storage_sizing(
         },
         "physical_inputs": {
             **reconciliation,
+            # ADR-0023 keeps these two authorities separately visible: the manifest's own
+            # consumable publication fact, and the re-proved Gate-2 retained credit.
+            "manifest_consumable_rows": detail_counts["manifest_consumable_rows"],
             "retained_credit": dict(credit),
             "listing_responses_used": cost_counts["listing_responses_used"],
             "archive_families": list(ARCHIVE_FAMILIES),

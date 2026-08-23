@@ -1,15 +1,16 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and execute review 222
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 223
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Jr Dev - Hermes: follow review 222. Verify and integrate the
-exact accepted sizing production/test bytes, run the one exact local sizing invocation,
-and only after status 0 run its one identical idempotence invocation. Publish record 223,
-commit/push only authorized paths, and stop. Do not rerun pytest/Ruff or acquire data.
+Immediate bounded task: reviewer inspection of record 223. Hermes integrated the accepted
+sizing production/test bytes, ran review 222's first exact local sizing invocation, and
+stopped after status 1. Do not retry, run the second idempotence invocation, repair,
+substitute an artifact, acquire data, or perform later work unless the reviewer authorizes
+it.
 
 Governing documents:
 
@@ -183,6 +184,7 @@ Governing documents:
 - research/sprint_004/220_CEX002_SIZING_CORRECTION_FOCUSED_FAILURE.md
 - research/sprint_004/221_CEX002_REAL_AUTHORITY_DECOMPOSITION_REVIEW.md
 - research/sprint_004/222_CEX002_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/223_CEX002_SIZING_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2596,3 +2598,29 @@ no retry, second qualification, sizing, bulk acquisition, normalization, catalog
 publication, NautilusTrader, Harmonic Trader, payoff, PAPER, LIVE, paid source, reduced
 scope, pytest, Ruff, or next-ticket work. Gate 2 remains unaccepted. Next ticket remains
 `NONE`.
+
+## Record-223 sizing integration and failed execution published
+
+Hermes verified `HEAD == origin/main` at
+`656512b38bcf17b0cbe0343b675f99729cd2c7a4`, integrated the exact accepted sizing
+production/test bytes from review 222, and confirmed the frozen sizing CLI hash. Only the
+accepted sizing production and test paths differed among the three sizing paths.
+
+Hermes proved the review-222 authority pre-state, confirmed receipt 180 and the sizing
+envelope tree were absent, confirmed no sizing or qualification process was running, and
+ran the first exact local sizing invocation without loading `.env` or requesting network.
+The command exited status 1 after 155 seconds with:
+
+```text
+ERROR: a Coinalyze provenance record carries a credential field
+```
+
+Per review 222, the nonzero status ended authorization. Hermes did not retry, run the
+second idempotence invocation, repair, substitute an artifact, run pytest, run Ruff,
+acquire data, normalize, publish a catalog, or perform any Harmonic Trader / payoff /
+PAPER / LIVE / next-ticket work.
+
+No sizing receipt or envelope file was produced. The complete `data/cex002_qualify` store
+manifest remained identical before and after the failed invocation: 41,372 files and
+manifest SHA-256 `f2522d5a3f3152880d42e4e85ead2e5ae64c6d635293ad2ef35c3437025d4ead`.
+Gate 2 remains unaccepted. Next ticket remains `NONE`.

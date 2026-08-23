@@ -3,9 +3,10 @@
 The fixtures reproduce the accepted evidence *shapes*: a ten-family manifest detail, a
 separate two-family cost manifest resolved through retained listing responses, and
 report-bound Coinalyze provenance in a content-addressed cache whose files carry no
-extension. The pinned production identities and totals cannot be reproduced at fixture
-scale, so they are re-pointed per fixture; one test asserts the literal review-179/181
-values on their own.
+extension. Manifest consumability and Gate-2 retained credit are shaped as the two
+separate ADR-0023 authorities they are. The pinned production identities and totals
+cannot be reproduced at fixture scale, so they are re-pointed per fixture; one test
+asserts the literal accepted values on their own.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from cryptofactors.acquisition import binance_usdm_harmonic_sizing as sizing
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     KNOWN_ARCHIVE_SCHEMAS,
     persist_provider_sidecar,
+    verify_retained_object,
 )
 from cryptofactors.acquisition.binance_usdm_harmonic_sizing import (
     ARCHIVE_FAMILIES,
@@ -130,6 +132,22 @@ def _listing_xml(objects: list[tuple[str, int]]) -> bytes:
     ).encode("utf-8")
 
 
+def _find(
+    rows: list[dict[str, Any]], family: str, symbol: str, interval: str
+) -> dict[str, Any]:
+    return next(
+        row
+        for row in rows
+        if row["family"] == family
+        and row["symbol"] == symbol
+        and row["economic_interval"] == interval
+    )
+
+
+def _base(row: dict[str, Any]) -> str:
+    return str(row["key"]).rsplit("/", 1)[-1]
+
+
 def _liquidation_body(symbols: list[str], points: int) -> bytes:
     return json.dumps(
         [
@@ -169,9 +187,14 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                         "key": key,
                         "economic_interval": interval,
                         "byte_size": 1_000 + len(key),
-                        # Only a few manifest rows are already consumable: that set, not
-                        # the sizing cohort, is the acquisition credit.
-                        "consumable": family == "daily/klines" and interval != "2020-02-01",
+                        # Only a few manifest rows carry the consumable publication
+                        # flag. ADR-0023 keeps that fact separate from Gate-2 credit,
+                        # which is re-proved over the whole requirement. Both Kline
+                        # families are included so basenames genuinely collide.
+                        "consumable": (
+                            family in ("daily/klines", "monthly/klines")
+                            and interval != "2020-02-01"
+                        ),
                     }
                 )
     cost_rows: list[dict[str, Any]] = []
@@ -186,6 +209,9 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                         "key": key,
                         "economic_interval": interval,
                         "byte_size": 2_000 + len(key),
+                        # Cost keys never carry the manifest flag; ADR-0023 credits
+                        # them through the complete-cost side of the requirement.
+                        "consumable": False,
                     }
                 )
 
@@ -206,26 +232,63 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     plan_entries: list[dict[str, Any]] = []
     checkpoint_objects: dict[str, dict[str, Any]] = {}
     cohort_rows = [
-        next(row for row in (selected_rows + cost_rows) if row["family"] == family and not row.get("consumable"))
+        next(
+            row
+            for row in (selected_rows + cost_rows)
+            if row["family"] == family and not row.get("consumable")
+        )
         for family in PHYSICAL_FAMILIES
     ]
-    credit_rows = [row for row in selected_rows if row["consumable"]]
-    assert credit_rows and len(credit_rows) != len(cohort_rows)
-    for index, row in enumerate(cohort_rows + credit_rows):
+    consumable_rows = [row for row in selected_rows if row["consumable"]]
+    # ADR-0023: manifest consumability is a separate fact. The Gate-2 credit domain is
+    # every effective checkpoint row inside the selected-plus-cost requirement, so the
+    # non-consumable cohort rows below are credited too.
+    seeded_rows = consumable_rows + cost_rows
+    assert consumable_rows and len(seeded_rows) != len(cohort_rows)
+    # One consumable Kline row is a persisted basename-only recovery. Its stem is also
+    # the stem of the other Kline family's exact key, so the complete frozen candidate
+    # domain resolves it two ways and it is credited nothing however well it rehashes.
+    ambiguous_row = _find(consumable_rows, "daily/klines", "BTCUSDT", "2020-01-01")
+    # Its exact-key twin: identical basename, never recovered, therefore fully valid.
+    collision_twin = _find(consumable_rows, "monthly/klines", "BTCUSDT", "2020-01-01")
+    # A basename-unique recovery. The domain binds it, so recovery costs it nothing.
+    unique_recovered = _find(cost_rows, "daily/bookTicker", "BTCUSDT", "2020-01-01")
+    # Two distinct valid keys over one retained object: two logical keys, one object.
+    duplicate_source = _find(consumable_rows, "daily/klines", "ETHUSDT", "2020-01-02")
+    duplicate_row = _find(consumable_rows, "monthly/klines", "ETHUSDT", "2020-01-02")
+    domain_stems = [_base(row) for row in selected_rows + cost_rows]
+    assert _base(ambiguous_row) == _base(collision_twin)
+    assert domain_stems.count(_base(ambiguous_row)) == 2
+    assert _base(duplicate_source) == _base(duplicate_row)
+    assert domain_stems.count(_base(unique_recovered)) == 1
+
+    unique_rows: list[dict[str, Any]] = []
+    for row in cohort_rows + seeded_rows:
+        if all(str(row["key"]) != str(item["key"]) for item in unique_rows):
+            unique_rows.append(row)
+    # A distinct row count per row keeps every other retained object distinct, so the
+    # only duplicate content in the store is the one this fixture declares.
+    payloads = {
+        str(row["key"]): _zip("data.csv", _csv(str(row["family"]), 3 + index))
+        for index, row in enumerate(unique_rows)
+    }
+    payloads[str(duplicate_row["key"])] = payloads[str(duplicate_source["key"])]
+    recovered_keys = {str(ambiguous_row["key"]), str(unique_recovered["key"])}
+    for row in unique_rows:
+        key = str(row["key"])
         family = str(row["family"])
-        payload = _zip("data.csv", _csv(family, 3 + index % 4))
+        payload = payloads[key]
         digest = _sha256(payload)
         (raw / digest).write_bytes(payload)
-        sidecar_body = f"{digest}  {row['key'].rsplit('/', 1)[-1]}\n".encode()
+        sidecar_body = f"{digest}  {key.rsplit('/', 1)[-1]}\n".encode()
         sidecar_path, sidecar_digest = persist_provider_sidecar(
             sidecar_body, sidecar_dir=listing_cache
         )
-        url = f"https://data.binance.vision/{row['key']}"
-        checkpoint_objects[str(row["key"])] = {
+        entry: dict[str, Any] = {
             "status": "complete",
             "sha256": digest,
             "byte_size": len(payload),
-            "url": url,
+            "url": f"https://data.binance.vision/{key}",
             "provider_checksum": digest,
             "checksum_match": True,
             "schema_kind": "headerless",
@@ -233,17 +296,37 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             "provider_checksum_path": str(sidecar_path),
             "provider_checksum_sha256": sidecar_digest,
         }
-        if index < len(cohort_rows):
-            plan_entries.append(
-                {
-                    "family": family,
-                    "symbol": row["symbol"],
-                    "key": row["key"],
-                    "url": url,
-                    "action": "download" if index % 2 else "reuse_retained",
-                    "byte_size": len(payload),
-                }
-            )
+        if key in recovered_keys:
+            entry["recovered_from_retained_bytes"] = True
+        checkpoint_objects[key] = entry
+    for index, row in enumerate(cohort_rows):
+        plan_entries.append(
+            {
+                "family": str(row["family"]),
+                "symbol": row["symbol"],
+                "key": row["key"],
+                "url": f"https://data.binance.vision/{row['key']}",
+                "action": "download" if index % 2 else "reuse_retained",
+                "byte_size": len(payloads[str(row["key"])]),
+            }
+        )
+    rejected_keys = [str(ambiguous_row["key"])]
+    # Every effective checkpoint row in the requirement earns credit unless it is
+    # rejected lineage. This deliberately includes the non-consumable cohort rows, so a
+    # valid selected key with no manifest consumable flag still earns selected credit.
+    credited_rows = [
+        row for row in unique_rows if str(row["key"]) not in set(rejected_keys)
+    ]
+    unconsumable_credited = [
+        row
+        for row in credited_rows
+        if row["family"] in ARCHIVE_FAMILIES and not row["consumable"]
+    ]
+    assert unconsumable_credited
+    credited_objects: dict[str, int] = {}
+    for row in credited_rows:
+        payload = payloads[str(row["key"])]
+        credited_objects.setdefault(_sha256(payload), len(payload))
     aliases = [dict(plan_entries[0], action="alias"), dict(plan_entries[1], action="alias")]
     plan_entries.extend(aliases)
 
@@ -335,7 +418,27 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     report = {
         "generated_at": _CUTOFF,
         "plan_lock": {"plan_version": 4, "plan_digest": "9" * 64, "inputs": inputs},
-        "storage": {"cost_sample": {"keys": [row["key"] for row in cost_rows]}},
+        # ADR-0022 names the rejected legacy rows in two places, and they agree.
+        "resume": {
+            "rejected_ambiguous_retained_keys": list(rejected_keys),
+            "rejected_ambiguous_retained_count": len(rejected_keys),
+        },
+        "storage": {
+            "cost_sample": {"keys": [row["key"] for row in cost_rows]},
+            "gate2_feasibility": {
+                "rejected_retained_rows": [
+                    {"key": key, "reason": "ambiguous_recovered_basename"}
+                    for key in rejected_keys
+                ],
+                "rejected_retained_row_count": len(rejected_keys),
+                # The report states the retained quantities it accepted, so the sizing
+                # consumer proves them by name and not only through the report digest.
+                "retained_valid_requirement_keys": len(credited_rows),
+                "retained_verified_credit_objects": len(credited_objects),
+                "retained_verified_credit_bytes": sum(credited_objects.values()),
+                "unverified_retained_objects": 0,
+            },
+        },
         "acquisition_manifest": {
             "detail": {
                 "compressed_sha256": _sha256(detail_bytes),
@@ -409,10 +512,21 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "ACCEPTED_COMBINED_BYTES": sum(
             int(row["byte_size"]) for row in selected_rows + cost_rows
         ),
-        "ACCEPTED_RETAINED_CREDIT_OBJECTS": len(credit_rows),
-        "ACCEPTED_RETAINED_CREDIT_BYTES": sum(
-            int(checkpoint_objects[str(row["key"])]["byte_size"]) for row in credit_rows
+        # The separate ADR-0023 manifest publication fact, never a credit quantity.
+        "ACCEPTED_MANIFEST_CONSUMABLE_ROWS": len(consumable_rows),
+        # Three separate ADR-0022 quantities: valid logical keys, unique objects, bytes,
+        # split by ADR-0023 membership in the selected and cost requirement sets.
+        "ACCEPTED_RETAINED_CREDIT_KEYS": len(credited_rows),
+        "ACCEPTED_SELECTED_RETAINED_KEYS": len(
+            [row for row in credited_rows if row["family"] in ARCHIVE_FAMILIES]
         ),
+        "ACCEPTED_COST_RETAINED_KEYS": len(
+            [row for row in credited_rows if row["family"] in COST_FAMILIES]
+        ),
+        "ACCEPTED_REJECTED_RECOVERED_ROWS": len(rejected_keys),
+        "ACCEPTED_UNVERIFIED_RETAINED_OBJECTS": 0,
+        "ACCEPTED_RETAINED_CREDIT_OBJECTS": len(credited_objects),
+        "ACCEPTED_RETAINED_CREDIT_BYTES": sum(credited_objects.values()),
         "ACCEPTED_COINALYZE_SUPPORTED_MAPPINGS": len(supported),
         "ACCEPTED_COINALYZE_TYPED_GAPS": len(unmapped),
     }
@@ -438,6 +552,11 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         sample_dir=raw,
         sidecar_dir=listing_cache,
     )
+    # Every pinned artifact is addressable by name, including the three that are not
+    # written by the document loop above.
+    paths["detail"] = detail_path
+    paths["source"] = source_path
+    paths["cli"] = cli_path
     return {
         "paths": authority_paths,
         "files": paths,
@@ -451,24 +570,72 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "supported": supported,
         "unmapped": unmapped,
         "cohort_rows": cohort_rows,
-        "credit_rows": credit_rows,
+        "seeded_rows": seeded_rows,
+        "credited_rows": credited_rows,
+        "consumable_rows": consumable_rows,
+        "unconsumable_credited": unconsumable_credited,
+        "credited_objects": credited_objects,
+        "rejected_keys": rejected_keys,
+        "ambiguous_row": ambiguous_row,
+        "collision_twin": collision_twin,
+        "unique_recovered": unique_recovered,
+        "duplicate_source": duplicate_source,
+        "duplicate_row": duplicate_row,
+        "payloads": payloads,
         "pins": pins,
     }
 
 
-def test_pinned_review179_and_181_identities_are_literal() -> None:
-    assert sizing.ACCEPTED_REPORT_BYTES == 13_559_766
-    assert sizing.ACCEPTED_MANIFEST_DETAIL_BYTES == 11_294_610
-    assert sizing.ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_BYTES == 466_713_055
+def test_pinned_record218_identities_are_literal() -> None:
+    """Every authority identity is the record-218 one, written out in full."""
+    assert sizing.ACCEPTED_REPORT_SHA256 == (
+        "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09"
+    )
+    assert sizing.ACCEPTED_REPORT_BYTES == 13_745_360
+    assert sizing.ACCEPTED_MANIFEST_DETAIL_SHA256 == (
+        "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113"
+    )
+    assert sizing.ACCEPTED_MANIFEST_DETAIL_BYTES == 11_292_635
+    assert sizing.ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_SHA256 == (
+        "d6c1fac650aaf16d88750da2a40d837f543d0c5fc88c73d463753a576d5bdd17"
+    )
+    assert sizing.ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_BYTES == 466_714_158
+    assert sizing.ACCEPTED_LOCK_SHA256 == (
+        "6cbd044adf4ace577ff8899b2825723e8c0ae99d1fe3c855f2783ce54d7b722e"
+    )
+    assert sizing.ACCEPTED_AMENDMENT_LEDGER_SHA256 == (
+        "2d41fbf009d9803ca5bda05c3a11d75dafe505a1397756e5fafefeb2d1cb90bf"
+    )
+    assert sizing.ACCEPTED_QUALIFICATION_SOURCE_SHA256 == (
+        "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74"
+    )
+    assert sizing.ACCEPTED_QUALIFICATION_CLI_SHA256 == (
+        "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f"
+    )
     assert sizing.ACCEPTED_PROGRESS_CHECKPOINT_SHA256 == (
-        "cc35a5c2c1fd72904d0d6a899565a763c89a38bb1295275e589e4d92be67eaff"
+        "cc8e02389d182e6d76d00b913503d95f72a352d883c50ffd81dd3c49df157b2f"
     )
     assert sizing.ACCEPTED_LISTING_CHECKPOINT_SHA256 == (
         "d584e22aaaa9414b06dbe13bc24dda0b01ed48e37bdf66f5b42f90865959bf9a"
     )
     assert sizing.ACCEPTED_CONTRACT_METADATA_SHA256 == (
-        "e520f0f072730f566d027342ddc7e09f7b690ab80e76acbd40756759f13add1f"
+        "7aaea96ecd4cb13c83b8b19930a6e1ef0fcf2b49de841e1fa26878d6dd7f5b42"
     )
+    # No identity above may be a placeholder or a repeat of another artifact.
+    identities = (
+        sizing.ACCEPTED_REPORT_SHA256,
+        sizing.ACCEPTED_MANIFEST_DETAIL_SHA256,
+        sizing.ACCEPTED_MANIFEST_DETAIL_UNCOMPRESSED_SHA256,
+        sizing.ACCEPTED_LOCK_SHA256,
+        sizing.ACCEPTED_AMENDMENT_LEDGER_SHA256,
+        sizing.ACCEPTED_QUALIFICATION_SOURCE_SHA256,
+        sizing.ACCEPTED_QUALIFICATION_CLI_SHA256,
+        sizing.ACCEPTED_PROGRESS_CHECKPOINT_SHA256,
+        sizing.ACCEPTED_LISTING_CHECKPOINT_SHA256,
+        sizing.ACCEPTED_CONTRACT_METADATA_SHA256,
+    )
+    assert len(set(identities)) == len(identities)
+    assert all(len(item) == 64 and set(item) <= set("0123456789abcdef") for item in identities)
     # The exact accepted physical requirement, and its two separate authorities.
     assert sizing.ACCEPTED_SELECTED_OBJECTS == 733_203
     assert sizing.ACCEPTED_SELECTED_BYTES == 7_833_966_625
@@ -478,6 +645,26 @@ def test_pinned_review179_and_181_identities_are_literal() -> None:
     assert sizing.ACCEPTED_COMBINED_BYTES == 20_356_940_843
     assert sizing.ACCEPTED_RETAINED_CREDIT_OBJECTS == 73
     assert sizing.ACCEPTED_RETAINED_CREDIT_BYTES == 5_225_416
+    # ADR-0022's three distinct quantities, split by ADR-0023's proved membership.
+    assert sizing.ACCEPTED_RETAINED_CREDIT_KEYS == 73
+    assert sizing.ACCEPTED_SELECTED_RETAINED_KEYS == 68
+    assert sizing.ACCEPTED_COST_RETAINED_KEYS == 5
+    assert (
+        sizing.ACCEPTED_SELECTED_RETAINED_KEYS + sizing.ACCEPTED_COST_RETAINED_KEYS
+        == sizing.ACCEPTED_RETAINED_CREDIT_KEYS
+    )
+    # The manifest's separate publication fact. It is neither side of the credit split,
+    # and no credit quantity may be inferred by subtracting it from the credit total.
+    assert sizing.ACCEPTED_MANIFEST_CONSUMABLE_ROWS == 56
+    assert sizing.ACCEPTED_MANIFEST_CONSUMABLE_ROWS != (
+        sizing.ACCEPTED_SELECTED_RETAINED_KEYS
+    )
+    assert (
+        sizing.ACCEPTED_RETAINED_CREDIT_KEYS - sizing.ACCEPTED_MANIFEST_CONSUMABLE_ROWS
+        != sizing.ACCEPTED_COST_RETAINED_KEYS
+    )
+    assert sizing.ACCEPTED_REJECTED_RECOVERED_ROWS == 176
+    assert sizing.ACCEPTED_UNVERIFIED_RETAINED_OBJECTS == 0
     assert sizing.ACCEPTED_NEW_BINANCE_RAW_BYTES == 20_351_715_427
     assert (
         sizing.ACCEPTED_COMBINED_BYTES - sizing.ACCEPTED_RETAINED_CREDIT_BYTES
@@ -507,7 +694,9 @@ def test_accepted_authority_loads_with_every_new_pin(accepted: dict[str, Any]) -
 
 
 @pytest.mark.parametrize(
-    "target", ["report", "lock", "ledger", "progress", "listing", "metadata"]
+    "target",
+    ["report", "detail", "lock", "ledger", "source", "cli", "progress", "listing",
+     "metadata"],
 )
 def test_each_pinned_artifact_failure_blocks(
     accepted: dict[str, Any], target: str
@@ -515,6 +704,22 @@ def test_each_pinned_artifact_failure_blocks(
     path = accepted["files"][target]
     path.write_bytes(path.read_bytes() + b" ")
     with pytest.raises(SizingError):
+        load_sizing_authority(accepted["paths"])
+
+
+@pytest.mark.parametrize("target", ["report", "detail"])
+def test_a_pinned_byte_count_blocks_even_when_the_digest_is_repointed(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, target: str
+) -> None:
+    """Size is an independent pin, not a by-product of the content digest."""
+    path = accepted["files"][target]
+    path.write_bytes(path.read_bytes() + b" ")
+    pin = {
+        "report": "ACCEPTED_REPORT_SHA256",
+        "detail": "ACCEPTED_MANIFEST_DETAIL_SHA256",
+    }[target]
+    monkeypatch.setattr(sizing, pin, _sha256(path.read_bytes()))
+    with pytest.raises(SizingError, match="_bytes"):
         load_sizing_authority(accepted["paths"])
 
 
@@ -562,21 +767,56 @@ def test_a_cost_key_without_listing_evidence_blocks(
         resolve_cost_objects(authority, listing_cache_dir=accepted["listing_cache"])
 
 
+def _credit(
+    accepted: dict[str, Any],
+    selected: Any,
+    cost: Any,
+    *,
+    report: dict[str, Any] | None = None,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Re-prove the acquisition credit over the whole requirement, as sizing does."""
+    if report is None:
+        report = json.loads(accepted["files"]["report"].read_text())
+    if checkpoint is None:
+        checkpoint = json.loads(accepted["files"]["progress"].read_text())["objects"]
+    return sizing.prove_retained_acquisition_credit(
+        selected,
+        cost,
+        report=report,
+        checkpoint=checkpoint,
+        sample_dir=accepted["paths"].sample_dir,
+        sidecar_dir=accepted["paths"].sidecar_dir,
+    )
+
+
+def _requirement(accepted: dict[str, Any]) -> tuple[Any, Any]:
+    authority = load_sizing_authority(accepted["paths"])
+    selected, _ = resolve_selected_objects(accepted["detail_path"])
+    cost, _ = resolve_cost_objects(authority, listing_cache_dir=accepted["listing_cache"])
+    return selected, cost
+
+
 def test_exact_totals_reconcile_before_measurement(accepted: dict[str, Any]) -> None:
     authority = load_sizing_authority(accepted["paths"])
     selected, _ = resolve_selected_objects(accepted["detail_path"])
     cost, _ = resolve_cost_objects(authority, listing_cache_dir=accepted["listing_cache"])
     checkpoint = json.loads(accepted["files"]["progress"].read_text())["objects"]
-    credit = sizing.prove_retained_acquisition_credit(
-        selected,
-        checkpoint=checkpoint,
-        sample_dir=accepted["paths"].sample_dir,
-        sidecar_dir=accepted["paths"].sidecar_dir,
-    )
-    # The credit is the manifest's consumable coverage, not the measurement cohort.
-    assert credit["objects"] == len(accepted["credit_rows"])
+    credit = _credit(accepted, selected, cost)
+    # The credit is every re-proved effective row inside the selected-plus-cost
+    # requirement, never the measurement cohort and never the manifest's separate
+    # consumable count. Keys, objects, and bytes remain three separate facts.
+    assert credit["valid_requirement_keys"] == len(accepted["credited_rows"])
+    assert credit["objects"] == len(accepted["credited_objects"])
+    assert credit["objects"] < credit["valid_requirement_keys"]
     assert credit["objects"] != len(accepted["cohort_rows"])
     assert credit["bytes"] == sizing.ACCEPTED_RETAINED_CREDIT_BYTES
+    assert credit["selected_retained_keys"] == sizing.ACCEPTED_SELECTED_RETAINED_KEYS
+    assert credit["cost_retained_keys"] == sizing.ACCEPTED_COST_RETAINED_KEYS
+    assert credit["rejected_recovered_rows"] == len(accepted["rejected_keys"])
+    assert credit["unverified_objects"] == 0
+    assert set(credit["keys"]).isdisjoint(accepted["rejected_keys"])
+    assert checkpoint[accepted["rejected_keys"][0]]["status"] == "complete"
     reconciliation = reconcile_physical_inputs(
         selected=selected,
         cost=cost,
@@ -597,6 +837,438 @@ def test_exact_totals_reconcile_before_measurement(accepted: dict[str, Any]) -> 
             retained_credit_objects=1,
             retained_credit_bytes=sizing.ACCEPTED_RETAINED_CREDIT_BYTES,
         )
+
+
+def _rewrite_checkpoint(
+    accepted: dict[str, Any], objects: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Persist a mutated progress checkpoint and re-point only its own pin."""
+    path = accepted["files"]["progress"]
+    document = json.loads(path.read_text())
+    document["objects"] = objects
+    path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+    monkeypatch.setattr(
+        sizing, "ACCEPTED_PROGRESS_CHECKPOINT_SHA256", _sha256(path.read_bytes())
+    )
+
+
+def _checkpoint(accepted: dict[str, Any]) -> dict[str, Any]:
+    return dict(json.loads(accepted["files"]["progress"].read_text())["objects"])
+
+
+def test_an_ambiguous_recovered_row_earns_no_key_object_or_byte(
+    accepted: dict[str, Any],
+) -> None:
+    selected, cost = _requirement(accepted)
+    checkpoint = _checkpoint(accepted)
+    rejected = accepted["rejected_keys"][0]
+    entry = checkpoint[rejected]
+    # The row is not damaged evidence: its bytes and its sidecar both rehash exactly.
+    assert entry["recovered_from_retained_bytes"] is True
+    assert verify_retained_object(
+        rejected,
+        entry,
+        sample_dir=accepted["paths"].sample_dir,
+        sidecar_dir=accepted["paths"].sidecar_dir,
+    ) == int(entry["byte_size"])
+    credit = _credit(accepted, selected, cost)
+    assert rejected not in credit["keys"]
+    assert entry["sha256"] not in {
+        _sha256(accepted["payloads"][key]) for key in credit["keys"]
+    }
+    assert credit["bytes"] == sum(
+        int(checkpoint[key]["byte_size"])
+        for key in {_sha256(accepted["payloads"][k]): k for k in credit["keys"]}.values()
+    )
+
+
+def test_a_fresh_exact_key_with_the_colliding_basename_stays_valid(
+    accepted: dict[str, Any],
+) -> None:
+    selected, cost = _requirement(accepted)
+    twin = str(accepted["collision_twin"]["key"])
+    rejected = accepted["rejected_keys"][0]
+    assert _base(accepted["collision_twin"]) == _base(accepted["ambiguous_row"])
+    assert twin != rejected
+    credit = _credit(accepted, selected, cost)
+    # Ambiguity is a property of basename-only recovery, never of the basename itself.
+    assert twin in credit["keys"]
+    assert rejected not in credit["keys"]
+
+
+def test_a_basename_unique_recovery_stays_valid(accepted: dict[str, Any]) -> None:
+    selected, cost = _requirement(accepted)
+    key = str(accepted["unique_recovered"]["key"])
+    checkpoint = _checkpoint(accepted)
+    assert checkpoint[key]["recovered_from_retained_bytes"] is True
+    credit = _credit(accepted, selected, cost)
+    assert key in credit["keys"]
+    assert credit["cost_retained_keys"] == sizing.ACCEPTED_COST_RETAINED_KEYS
+
+
+def test_a_valid_duplicate_binding_adds_a_key_but_no_object_or_byte(
+    accepted: dict[str, Any],
+) -> None:
+    selected, cost = _requirement(accepted)
+    first = str(accepted["duplicate_source"]["key"])
+    second = str(accepted["duplicate_row"]["key"])
+    checkpoint = _checkpoint(accepted)
+    assert first != second
+    assert checkpoint[first]["sha256"] == checkpoint[second]["sha256"]
+    credit = _credit(accepted, selected, cost)
+    assert first in credit["keys"] and second in credit["keys"]
+    assert credit["valid_requirement_keys"] == credit["objects"] + 1
+    assert credit["valid_requirement_keys"] == len(set(credit["keys"]))
+
+
+def test_an_invalid_duplicate_binding_never_preserves_credit_on_its_own(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selected, cost = _requirement(accepted)
+    first = str(accepted["duplicate_source"]["key"])
+    second = str(accepted["duplicate_row"]["key"])
+    shared = _sha256(accepted["payloads"][first])
+    baseline = _credit(accepted, selected, cost)
+    # One binding invalidated: the other still proves the object, so the object and its
+    # bytes survive and exactly one logical key is lost.
+    checkpoint = _checkpoint(accepted)
+    checkpoint[first] = dict(checkpoint[first], sha256="0" * 64)
+    partial_report = json.loads(accepted["files"]["report"].read_text())
+    partial_summary = partial_report["storage"]["gate2_feasibility"]
+    partial_summary["retained_valid_requirement_keys"] -= 1
+    partial_summary["unverified_retained_objects"] = 1
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            sizing,
+            "ACCEPTED_RETAINED_CREDIT_KEYS",
+            sizing.ACCEPTED_RETAINED_CREDIT_KEYS - 1,
+        )
+        patch.setattr(
+            sizing,
+            "ACCEPTED_SELECTED_RETAINED_KEYS",
+            sizing.ACCEPTED_SELECTED_RETAINED_KEYS - 1,
+        )
+        patch.setattr(sizing, "ACCEPTED_UNVERIFIED_RETAINED_OBJECTS", 1)
+        partial = _credit(
+            accepted,
+            selected,
+            cost,
+            report=partial_report,
+            checkpoint=checkpoint,
+        )
+    assert first not in partial["keys"] and second in partial["keys"]
+    assert partial["objects"] == baseline["objects"]
+    assert partial["bytes"] == baseline["bytes"]
+    # Both bindings invalidated: no valid binding remains, so the object and every one
+    # of its bytes leave the credit entirely.
+    checkpoint[second] = dict(checkpoint[second], sha256="0" * 64)
+    gone_report = json.loads(accepted["files"]["report"].read_text())
+    gone_summary = gone_report["storage"]["gate2_feasibility"]
+    gone_summary["retained_valid_requirement_keys"] -= 2
+    gone_summary["retained_verified_credit_objects"] -= 1
+    gone_summary["retained_verified_credit_bytes"] -= len(
+        accepted["payloads"][first]
+    )
+    gone_summary["unverified_retained_objects"] = 2
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            sizing,
+            "ACCEPTED_RETAINED_CREDIT_KEYS",
+            sizing.ACCEPTED_RETAINED_CREDIT_KEYS - 2,
+        )
+        patch.setattr(
+            sizing,
+            "ACCEPTED_SELECTED_RETAINED_KEYS",
+            sizing.ACCEPTED_SELECTED_RETAINED_KEYS - 2,
+        )
+        patch.setattr(sizing, "ACCEPTED_UNVERIFIED_RETAINED_OBJECTS", 2)
+        patch.setattr(
+            sizing,
+            "ACCEPTED_RETAINED_CREDIT_OBJECTS",
+            sizing.ACCEPTED_RETAINED_CREDIT_OBJECTS - 1,
+        )
+        patch.setattr(
+            sizing,
+            "ACCEPTED_RETAINED_CREDIT_BYTES",
+            sizing.ACCEPTED_RETAINED_CREDIT_BYTES
+            - len(accepted["payloads"][first]),
+        )
+        gone = _credit(
+            accepted,
+            selected,
+            cost,
+            report=gone_report,
+            checkpoint=checkpoint,
+        )
+    assert first not in gone["keys"] and second not in gone["keys"]
+    assert gone["objects"] == baseline["objects"] - 1
+    assert gone["bytes"] == baseline["bytes"] - len(accepted["payloads"][first])
+    assert shared not in {_sha256(accepted["payloads"][key]) for key in gone["keys"]}
+
+
+def test_the_two_rejected_report_locations_must_agree(accepted: dict[str, Any]) -> None:
+    selected, cost = _requirement(accepted)
+    report = json.loads(accepted["files"]["report"].read_text())
+    rows = report["storage"]["gate2_feasibility"]["rejected_retained_rows"]
+    rows[0] = dict(rows[0], key=str(accepted["collision_twin"]["key"]))
+    with pytest.raises(SizingError, match="rejected-retained locations disagree"):
+        _credit(accepted, selected, cost, report=report)
+
+
+@pytest.mark.parametrize(
+    "field", ["rejected_ambiguous_retained_count", "rejected_retained_row_count"]
+)
+def test_a_rejected_count_that_disagrees_with_its_own_rows_blocks(
+    accepted: dict[str, Any], field: str
+) -> None:
+    selected, cost = _requirement(accepted)
+    report = json.loads(accepted["files"]["report"].read_text())
+    if field == "rejected_ambiguous_retained_count":
+        report["resume"][field] = int(report["resume"][field]) + 1
+    else:
+        report["storage"]["gate2_feasibility"][field] = (
+            int(report["storage"]["gate2_feasibility"][field]) + 1
+        )
+    with pytest.raises(SizingError):
+        _credit(accepted, selected, cost, report=report)
+
+
+def test_a_missing_rejected_entry_blocks(accepted: dict[str, Any]) -> None:
+    selected, cost = _requirement(accepted)
+    report = json.loads(accepted["files"]["report"].read_text())
+    report["resume"]["rejected_ambiguous_retained_keys"] = []
+    report["resume"]["rejected_ambiguous_retained_count"] = 0
+    report["storage"]["gate2_feasibility"]["rejected_retained_rows"] = []
+    report["storage"]["gate2_feasibility"]["rejected_retained_row_count"] = 0
+    # Dropping the rejected rows contradicts the report's own accepted retained counts.
+    # The blocking premise is what matters, not which fail-closed field fires first, so
+    # this asserts the block itself and that the unaltered report still proves credit.
+    with pytest.raises(SizingError):
+        _credit(accepted, selected, cost, report=report)
+    intact = _credit(accepted, selected, cost)
+    assert intact["rejected_recovered_rows"] == len(accepted["rejected_keys"])
+
+
+def test_manifest_consumability_is_a_separate_proved_authority(
+    accepted: dict[str, Any],
+) -> None:
+    """The manifest's consumable count is derived, pinned, and kept out of credit."""
+    selected, cost = _requirement(accepted)
+    objects, counts = resolve_selected_objects(accepted["detail_path"])
+    consumable = [item for item in objects if item.consumable]
+    assert counts["manifest_consumable_rows"] == len(consumable)
+    assert counts["manifest_consumable_rows"] == sizing.ACCEPTED_MANIFEST_CONSUMABLE_ROWS
+    assert counts["manifest_consumable_rows"] == len(accepted["consumable_rows"])
+    credit = _credit(accepted, selected, cost)
+    # The two authorities have different boundaries and different counts.
+    assert credit["selected_retained_keys"] != counts["manifest_consumable_rows"]
+    assert credit["valid_requirement_keys"] != counts["manifest_consumable_rows"]
+
+
+def test_a_manifest_consumable_count_that_disagrees_blocks(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        sizing,
+        "ACCEPTED_MANIFEST_CONSUMABLE_ROWS",
+        sizing.ACCEPTED_MANIFEST_CONSUMABLE_ROWS + 1,
+    )
+    with pytest.raises(SizingError, match="manifest_consumable_rows"):
+        resolve_selected_objects(accepted["detail_path"])
+
+
+def test_a_selected_key_without_the_consumable_flag_still_earns_credit(
+    accepted: dict[str, Any],
+) -> None:
+    """ADR-0023: Gate-2 credit is re-proved evidence, not manifest consumability."""
+    selected, cost = _requirement(accepted)
+    unconsumable = [str(row["key"]) for row in accepted["unconsumable_credited"]]
+    assert unconsumable
+    manifest = {item.key: item.consumable for item in selected}
+    assert all(manifest[key] is False for key in unconsumable)
+    credit = _credit(accepted, selected, cost)
+    assert set(unconsumable) <= set(credit["keys"])
+    # Those keys are selected credit, never cost credit.
+    assert credit["selected_retained_keys"] >= len(unconsumable)
+    assert credit["selected_retained_keys"] == sizing.ACCEPTED_SELECTED_RETAINED_KEYS
+    assert credit["cost_retained_keys"] == sizing.ACCEPTED_COST_RETAINED_KEYS
+
+
+def test_credit_keys_are_classified_by_requirement_membership(
+    accepted: dict[str, Any],
+) -> None:
+    """Each side of the split comes from actual membership, never from subtraction."""
+    selected, cost = _requirement(accepted)
+    selected_keys = {item.key for item in selected}
+    cost_keys = {item.key for item in cost}
+    assert not selected_keys & cost_keys
+    credit = _credit(accepted, selected, cost)
+    credited = set(credit["keys"])
+    assert credited <= selected_keys | cost_keys
+    assert len(credited & selected_keys) == credit["selected_retained_keys"]
+    assert len(credited & cost_keys) == credit["cost_retained_keys"]
+    assert (
+        credit["selected_retained_keys"] + credit["cost_retained_keys"]
+        == credit["valid_requirement_keys"]
+    )
+
+
+def test_a_key_in_both_requirement_sets_blocks(accepted: dict[str, Any]) -> None:
+    selected, cost = _requirement(accepted)
+    with pytest.raises(SizingError, match="both the selected and the cost requirement"):
+        _credit(accepted, selected, tuple(cost) + (selected[0],))
+
+
+def test_the_report_retained_summary_is_proved_field_by_field(
+    accepted: dict[str, Any],
+) -> None:
+    selected, cost = _requirement(accepted)
+    report = json.loads(accepted["files"]["report"].read_text())
+    summary = sizing.prove_report_retained_summary(report)
+    assert set(summary) == set(sizing.ACCEPTED_RETAINED_SUMMARY_FIELDS)
+    assert summary["retained_valid_requirement_keys"] == (
+        sizing.ACCEPTED_RETAINED_CREDIT_KEYS
+    )
+    assert summary["retained_verified_credit_objects"] == (
+        sizing.ACCEPTED_RETAINED_CREDIT_OBJECTS
+    )
+    assert summary["retained_verified_credit_bytes"] == (
+        sizing.ACCEPTED_RETAINED_CREDIT_BYTES
+    )
+    assert summary["unverified_retained_objects"] == 0
+    assert summary["rejected_retained_row_count"] == len(accepted["rejected_keys"])
+    # The proved summary travels with the credit the consumer acts on.
+    assert _credit(accepted, selected, cost)["report_summary"] == summary
+
+
+@pytest.mark.parametrize("field", sorted(sizing.ACCEPTED_RETAINED_SUMMARY_FIELDS))
+@pytest.mark.parametrize("replacement", ["increment", "decrement", "text", "boolean"])
+def test_each_altered_retained_summary_field_blocks(
+    accepted: dict[str, Any], field: str, replacement: str
+) -> None:
+    """Every accepted retained quantity is independently fail-closed by its own name."""
+    selected, cost = _requirement(accepted)
+    report = json.loads(accepted["files"]["report"].read_text())
+    feasibility = report["storage"]["gate2_feasibility"]
+    current = int(feasibility[field])
+    feasibility[field] = {
+        "increment": current + 1,
+        "decrement": current - 1,
+        "text": str(current),
+        "boolean": True,
+    }[replacement]
+    with pytest.raises(SizingError) as failure:
+        sizing.prove_report_retained_summary(report)
+    assert field in str(failure.value)
+    with pytest.raises(SizingError):
+        _credit(accepted, selected, cost, report=report)
+
+
+def test_an_altered_retained_summary_blocks_before_any_publication(
+    accepted: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The summary is proved before measurement, so nothing reaches publication."""
+    path = accepted["files"]["report"]
+    report = json.loads(path.read_text())
+    feasibility = report["storage"]["gate2_feasibility"]
+    feasibility["retained_verified_credit_bytes"] = (
+        int(feasibility["retained_verified_credit_bytes"]) + 1
+    )
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    monkeypatch.setattr(sizing, "ACCEPTED_REPORT_SHA256", _sha256(path.read_bytes()))
+    monkeypatch.setattr(sizing, "ACCEPTED_REPORT_BYTES", path.stat().st_size)
+    receipt_path = tmp_path / "180_receipt.json"
+    with pytest.raises(SizingError, match="retained_verified_credit_bytes"):
+        _run(accepted, tmp_path, receipt_path=receipt_path)
+    assert not receipt_path.exists()
+    assert not list(tmp_path.rglob("*.parquet"))
+
+
+@pytest.mark.parametrize(
+    "damage",
+    ["missing_object", "corrupt_object", "missing_sidecar", "corrupt_sidecar",
+     "wrong_sidecar_name", "wrong_byte_size", "missing_byte_size", "zero_byte_size",
+     "negative_byte_size", "text_byte_size", "boolean_byte_size"],
+)
+def test_damaged_retained_evidence_blocks_before_any_publication(
+    accepted: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    damage: str,
+) -> None:
+    selected, cost = _requirement(accepted)
+    key = str(accepted["collision_twin"]["key"])
+    checkpoint = _checkpoint(accepted)
+    entry = dict(checkpoint[key])
+    object_path = accepted["paths"].sample_dir / str(entry["sha256"])
+    sidecar_path = Path(str(entry["provider_checksum_path"]))
+    if damage == "missing_object":
+        object_path.unlink()
+    elif damage == "corrupt_object":
+        object_path.write_bytes(object_path.read_bytes() + b"x")
+    elif damage == "missing_sidecar":
+        sidecar_path.unlink()
+    elif damage == "corrupt_sidecar":
+        sidecar_path.write_bytes(b"0" * 64 + b"  " + _base(accepted["collision_twin"]).encode())
+    elif damage == "wrong_sidecar_name":
+        sidecar_path.write_bytes(
+            f"{entry['sha256']}  not-{_base(accepted['collision_twin'])}\n".encode()
+        )
+    elif damage == "missing_byte_size":
+        # The declared size is proved, so its absence is a block and never a default.
+        entry.pop("byte_size")
+        checkpoint[key] = entry
+        _rewrite_checkpoint(accepted, checkpoint, monkeypatch)
+    else:
+        entry["byte_size"] = {
+            "wrong_byte_size": int(entry["byte_size"]) + 1,
+            "zero_byte_size": 0,
+            "negative_byte_size": -int(entry["byte_size"]),
+            "text_byte_size": str(entry["byte_size"]),
+            "boolean_byte_size": True,
+        }[damage]
+        checkpoint[key] = entry
+        _rewrite_checkpoint(accepted, checkpoint, monkeypatch)
+    with pytest.raises(SizingError):
+        _credit(accepted, selected, cost, checkpoint=checkpoint)
+    # The same damage stops the whole sizing flow before anything is published.
+    receipt_path = tmp_path / "180_receipt.json"
+    with pytest.raises(SizingError):
+        _run(accepted, tmp_path, receipt_path=receipt_path)
+    assert not receipt_path.exists()
+    assert not list(tmp_path.rglob("*.parquet"))
+
+
+def test_the_receipt_publishes_the_adr0023_credit_decomposition(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    receipt = _run(accepted, tmp_path)["receipt"]
+    credit = receipt["physical_inputs"]["retained_credit"]
+    assert credit["valid_requirement_keys"] == sizing.ACCEPTED_RETAINED_CREDIT_KEYS
+    assert credit["objects"] == sizing.ACCEPTED_RETAINED_CREDIT_OBJECTS
+    assert credit["bytes"] == sizing.ACCEPTED_RETAINED_CREDIT_BYTES
+    assert credit["selected_retained_keys"] == sizing.ACCEPTED_SELECTED_RETAINED_KEYS
+    assert credit["cost_retained_keys"] == sizing.ACCEPTED_COST_RETAINED_KEYS
+    assert credit["rejected_recovered_rows"] == len(accepted["rejected_keys"])
+    assert credit["unverified_objects"] == 0
+    assert (
+        credit["selected_retained_keys"] + credit["cost_retained_keys"]
+        == credit["valid_requirement_keys"]
+    )
+    # The three quantities stay distinct in the published evidence.
+    assert credit["objects"] < credit["valid_requirement_keys"]
+    assert set(credit["keys"]).isdisjoint(accepted["rejected_keys"])
+    assert receipt["physical_inputs"]["retained_credit_objects"] == credit["objects"]
+    assert receipt["physical_inputs"]["retained_credit_bytes"] == credit["bytes"]
+    # The cohort is a measurement set and is never confused with acquisition credit.
+    assert receipt["cohort"]["unique_samples"] != credit["valid_requirement_keys"]
+    # The manifest's separate publication fact is published separately, and no credit
+    # quantity is recoverable by subtracting it from the credit total.
+    consumable = receipt["physical_inputs"]["manifest_consumable_rows"]
+    assert consumable == sizing.ACCEPTED_MANIFEST_CONSUMABLE_ROWS
+    assert consumable == len(accepted["consumable_rows"])
+    assert consumable != credit["selected_retained_keys"]
+    assert credit["valid_requirement_keys"] - consumable != credit["cost_retained_keys"]
 
 
 def test_plan_action_accounting_and_alias_agreement(accepted: dict[str, Any]) -> None:
