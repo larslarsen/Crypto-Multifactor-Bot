@@ -1,20 +1,20 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 256 and valid blocked receipt 231
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - implement review 257 and ADR-0027 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Jr Dev - Hermes followed review 255 exactly. Exact-byte preproof,
-focused sizing pytest, exact-path Ruff, the first real v2 sizing CLI invocation, and one
-identical idempotence invocation all passed. Receipt 231 was validly produced at SHA-256
-`d3b2e81e46ecb17ea98dee160a98a551720b4bb27f5c29497839081acabaad29` with byte length
-39,553,673. The idempotence invocation published zero new envelopes, reused all 151 v2
-envelopes, and returned the same receipt identity. The receipt state is `blocked` with
-blocker `available_capacity_insufficient`; this is measurement evidence only and does not
-accept Gate 2 or authorize acquisition. Review record 256 is published for reviewer
-inspection. Next ticket remains `NONE`.
+Immediate state: The reviewer accepted Hermes's record-256 integration and reproducible
+execution, but rejected receipt 231 as Gate-2 capacity authority. Its 646,431,826,972-byte
+equation is internally exact, while 438,294,498,756 bytes come from a future-reference
+per-row string allocation and a one-row quality-gap payload multiplied by every projected
+gap row. Those are not ADR-0024's partition-aware dictionary and separated-row-group
+representation. Receipt 231 and all v2 evidence remain immutable diagnostic evidence.
+ADR-0027 and review 257 authorize Claude for one consolidated two-file v3 sizing
+correction. No commands, integration, acquisition, or later work are authorized. Next
+ticket remains `NONE`.
 
 Governing documents:
 
@@ -224,6 +224,8 @@ Governing documents:
 - research/sprint_004/254_CEX002_CLAUDE_TYPED_SOURCE_TEST_CORRECTION.md
 - research/sprint_004/255_CEX002_REAL_TYPED_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/256_CEX002_V2_SIZING_TYPED_SOURCE_INTEGRATION_AND_EXECUTION.md
+- docs/adr/0027-partition-aware-dictionary-storage-sizing.md
+- research/sprint_004/257_CEX002_V2_CAPACITY_MODEL_REJECTION_AND_V3_ARCHITECTURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
