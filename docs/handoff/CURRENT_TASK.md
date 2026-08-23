@@ -2,20 +2,17 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete review 269 exact test-only correction
+Next required actor: Sr Dev - Sol High - complete unchanged review 269 exact test-only correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer rejected Spark's review-268 continuation at test SHA-256
-`aab6520df28a6a029478eec16ced15ae40012011031535ef6845344f731cb1b9`. It again left
-the first Coinalyze test untouched, removed required equations from the second, omitted the
-rejected-model assertion, and changed an unrelated capacity assertion to a nonexistent
-receipt key. Spark is deauthorized after two misses. Review 269 routes one exact sizing-
-test-only correction to Claude Build; the accepted matrix, membership proof, and width-1
-changes are preserved and production/CLI remain frozen. Commands, Git, integration,
-receipt 258, sizing, acquisition, normalization, catalog, NautilusTrader, Harmonic Trader,
-PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not accepted. Next ticket
-remains `NONE`.
+Immediate state: Review 269's exact sizing-test-only correction remains unchanged. Claude
+Build is unavailable until 2026-08-24 and Grok Build is temporarily unavailable, so review
+270 reroutes the bounded senior source/test drop to Sr Dev - Sol High at the owner's
+explicit direction. The accepted matrix, membership proof, and width-1 changes remain the
+base; production and CLI remain frozen. Commands, Git, integration, receipt 258, sizing,
+acquisition, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and
+later work remain unauthorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -238,6 +235,7 @@ Governing documents:
 - research/sprint_004/267_CEX002_V3_FOCUSED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/268_CEX002_V3_SPARK_TEST_RESIDUAL.md
 - research/sprint_004/269_CEX002_V3_SPARK_CONTINUATION_REJECTION.md
+- research/sprint_004/270_CEX002_V3_SENIOR_AVAILABILITY_REROUTE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
