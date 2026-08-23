@@ -2,14 +2,14 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - apply ADR-0023 review 221 correction
+Next required actor: Jr Dev - Hermes - integrate and execute review 222
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 221 and ADR-0023. Preserve
-all accepted review-219/220 work and correct the sizing credit authority from the mistaken
-56/17 inference to the proved 56 manifest-consumable, 68 selected retained, and 5 cost
-retained facts. Edit only sizing production/tests, return both hashes and test count, stop.
+Immediate bounded task for Jr Dev - Hermes: follow review 222. Verify and integrate the
+exact accepted sizing production/test bytes, run the one exact local sizing invocation,
+and only after status 0 run its one identical idempotence invocation. Publish record 223,
+commit/push only authorized paths, and stop. Do not rerun pytest/Ruff or acquire data.
 
 Governing documents:
 
@@ -182,6 +182,7 @@ Governing documents:
 - research/sprint_004/219_CEX002_CORRECTED_SIZING_AUTHORITY_SOURCE_REVIEW.md
 - research/sprint_004/220_CEX002_SIZING_CORRECTION_FOCUSED_FAILURE.md
 - research/sprint_004/221_CEX002_REAL_AUTHORITY_DECOMPOSITION_REVIEW.md
+- research/sprint_004/222_CEX002_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
