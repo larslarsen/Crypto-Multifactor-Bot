@@ -148,6 +148,19 @@ def _base(row: dict[str, Any]) -> str:
     return str(row["key"]).rsplit("/", 1)[-1]
 
 
+def _market_row(provider: str, native: str) -> dict[str, Any]:
+    """One complete future-market row, binding a provider identity to its native one."""
+    return {
+        "symbol": provider,
+        "symbol_on_exchange": native,
+        "exchange": "A",
+        "is_perpetual": True,
+        "base_asset": native[:-4] if native.endswith("USDT") else native,
+        "quote_asset": "USDT",
+        "oi_lq_vol_denominated_in": "USD",
+    }
+
+
 def _liquidation_body(symbols: list[str], points: int) -> bytes:
     return json.dumps(
         [
@@ -330,11 +343,30 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     aliases = [dict(plan_entries[0], action="alias"), dict(plan_entries[1], action="alias")]
     plan_entries.extend(aliases)
 
-    inventory_body = json.dumps(
-        [{"symbol": f"SYM{index}_PERP.A"} for index in range(4)]
-    ).encode("utf-8")
-    # The accepted shape: one retained request whose single response carries two symbols.
-    liquidation_body = _liquidation_body(["SYM0_PERP.A", "SYM1_PERP.A"], 5)
+    # The real namespaces, mirrored exactly: Binance-native identities carry the
+    # supported set, membership, and lifecycles, while the retained Coinalyze API
+    # bodies carry provider identities. The inventory is the only thing that binds them.
+    supported_natives = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT")
+    # Binance perpetuals the inventory also validates but this projection never counts.
+    extra_natives = ("DOGEUSDT", "ADAUSDT")
+    provider_of = {native: f"{native}_PERP.A" for native in supported_natives + extra_natives}
+    anchor_natives = ("BTCUSDT", "ETHUSDT")
+    inventory_rows = [
+        _market_row(provider_of[native], native)
+        for native in supported_natives + extra_natives
+    ]
+    # Real inventory noise: another venue, and a Binance non-perpetual. Neither may
+    # enter the Binance perpetual identity map or the supported projection.
+    inventory_rows.append(dict(_market_row("BTCUSD_PERP.F", "BTCUSD"), exchange="F"))
+    inventory_rows.append(
+        dict(_market_row("BTCUSDT_240628.A", "BTCUSDT_240628"), is_perpetual=False)
+    )
+    inventory_body = json.dumps(inventory_rows).encode("utf-8")
+    # The accepted shape: one retained request whose single response carries two symbols,
+    # each named by its Coinalyze provider identity.
+    liquidation_body = _liquidation_body(
+        [provider_of[native] for native in anchor_natives], 5
+    )
     provenance: list[dict[str, Any]] = []
     for endpoint, body in (
         ("/future-markets", inventory_body),
@@ -352,7 +384,12 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                 "byte_size": len(body),
                 "content_path": str(coinalyze_cache / digest),
                 "header_names": ["api_key"],
-                "params": {"symbols": "BTCUSDT_PERP.A"},
+                "params": {
+                    "symbols": ",".join(provider_of[n] for n in anchor_natives),
+                    "interval": "daily",
+                    "from": "1577836800",
+                    "to": "1585612800",
+                },
                 "path": endpoint,
                 "provenance_source": "raw_response_bytes",
                 "retrieved_at": "2026-08-21T00:00:00+00:00",
@@ -362,7 +399,7 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             }
         )
 
-    supported = [f"SYM{index}_PERP.A" for index in range(4)]
+    supported = list(supported_natives)
     unmapped = ["GAPUSDT"]
     inputs = {
         "inventory_digest": "a" * 64,
@@ -416,8 +453,10 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     }
     metadata = {
         "ticket": "CEX-002",
+        # Official contract metadata is keyed by Binance-native identity.
         "symbol_snapshot": {
-            f"SYM{index}": {"onboard_ms": _ONBOARD_MS, "close_ms": None} for index in range(4)
+            native: {"onboard_ms": _ONBOARD_MS, "close_ms": None}
+            for native in supported_natives
         },
     }
     report = {
@@ -463,6 +502,24 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             "key_present": True,
             "key_location": "header",
             "query_contains_key": False,
+            # The inventory validates every Binance perpetual, not only the supported
+            # projection, and the report declares that count both ways.
+            "binance_perpetual_market_count": len(supported_natives) + len(extra_natives),
+            "native_identity_validated_markets": (
+                len(supported_natives) + len(extra_natives)
+            ),
+            "native_identity_source": "future-markets.symbol_on_exchange",
+            "anchor_symbols": list(anchor_natives),
+            "anchor_identity": [
+                {
+                    "native_symbol": native,
+                    "symbol_on_exchange": native,
+                    "provider_symbol": provider_of[native],
+                }
+                for native in anchor_natives
+            ],
+            "requested_symbols": [provider_of[native] for native in anchor_natives],
+            "matched_markets": sorted(provider_of[native] for native in anchor_natives),
             "provenance": provenance,
             "universe_support": {
                 "supported_symbols": supported,
@@ -577,6 +634,11 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "listing_cache": listing_cache,
         "coinalyze_cache": coinalyze_cache,
         "supported": supported,
+        "supported_natives": list(supported_natives),
+        "extra_natives": list(extra_natives),
+        "anchor_natives": list(anchor_natives),
+        "provider_of": dict(provider_of),
+        "inventory_rows": inventory_rows,
         "unmapped": unmapped,
         "cohort_rows": cohort_rows,
         "seeded_rows": seeded_rows,
@@ -1675,8 +1737,14 @@ def test_resolved_evidence_and_receipt_carry_no_request_metadata(
     rendered = sizing.canonical_json(_run(accepted, tmp_path)["receipt"]).decode()
     for forbidden in ("header_names", "api_key", "apiKey", "<redacted>", "params"):
         assert forbidden not in rendered
-    # The one real request parameter value never reaches a published byte either.
-    assert "BTCUSDT_PERP.A" not in rendered
+    # Provider identities are legitimate published evidence; the *request* that carried
+    # them is not. The joined parameter value never reaches a published byte.
+    report = json.loads(accepted["files"]["report"].read_text())
+    joined = report["coinalyze"]["provenance"][0]["params"]["symbols"]
+    assert "," in joined
+    assert joined not in rendered
+    assert "provenance_source" not in rendered
+    assert "retrieved_at" not in rendered
 
 
 def test_coinalyze_evidence_rejects_substituted_or_escaping_bodies(
@@ -1695,22 +1763,402 @@ def test_coinalyze_evidence_rejects_substituted_or_escaping_bodies(
         resolve_coinalyze_evidence(authority, cache_dir=tmp_path / "elsewhere")
 
 
-def test_supported_symbol_sets_are_compared_not_counted(
-    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def _coinalyze(accepted: dict[str, Any]) -> dict[str, Any]:
+    """Resolve the accepted Coinalyze evidence and prove its identity binding once."""
     authority = load_sizing_authority(accepted["paths"])
     evidence = resolve_coinalyze_evidence(
         authority, cache_dir=accepted["coinalyze_cache"]
     )
     inventory = next(item for item in evidence if item.role == "future_market_inventory")
-    supported, unmapped = coinalyze_symbol_sets(authority, inventory=inventory)
-    assert list(supported) == sorted(accepted["supported"])
-    assert list(unmapped) == sorted(accepted["unmapped"])
+    identities = sizing.prove_coinalyze_identity_map(authority, inventory=inventory)
+    supported, unmapped = coinalyze_symbol_sets(
+        authority, inventory=inventory, identities=identities
+    )
+    lifecycles, cutoff = coinalyze_lifecycles(authority, supported=supported)
+    return {
+        "authority": authority,
+        "evidence": evidence,
+        "inventory": inventory,
+        "identities": identities,
+        "supported": supported,
+        "unmapped": unmapped,
+        "lifecycles": lifecycles,
+        "cutoff": cutoff,
+    }
+
+
+def _with_inventory(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, Any]]
+) -> Any:
+    """Re-publish the retained inventory body and re-point only the pins it moves.
+
+    The report's declared market counts follow the body that is actually published, so a
+    test breaks exactly the one binding it means to break and nothing else.
+    """
+    body = json.dumps(rows).encode("utf-8")
+    digest = _sha256(body)
+    (accepted["coinalyze_cache"] / digest).write_bytes(body)
+    declared = sum(
+        1
+        for row in rows
+        if row.get("exchange") == "A" and row.get("is_perpetual") is True
+    )
+    path = accepted["files"]["report"]
+    report = json.loads(path.read_text())
+    report["coinalyze"]["binance_perpetual_market_count"] = declared
+    report["coinalyze"]["native_identity_validated_markets"] = declared
+    for record in report["coinalyze"]["provenance"]:
+        if record["path"] == "/future-markets":
+            record["sha256"] = digest
+            record["byte_size"] = len(body)
+            record["content_path"] = str(accepted["coinalyze_cache"] / digest)
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    monkeypatch.setattr(sizing, "ACCEPTED_REPORT_SHA256", _sha256(path.read_bytes()))
+    monkeypatch.setattr(sizing, "ACCEPTED_REPORT_BYTES", path.stat().st_size)
+    authority = load_sizing_authority(accepted["paths"])
+    evidence = resolve_coinalyze_evidence(
+        authority, cache_dir=accepted["coinalyze_cache"]
+    )
+    inventory = next(item for item in evidence if item.role == "future_market_inventory")
+    return authority, inventory
+
+
+def test_the_inventory_binds_provider_and_native_identities(
+    accepted: dict[str, Any],
+) -> None:
+    """The real BTC/ETH-shaped success path, in both namespaces at once."""
+    resolved = _coinalyze(accepted)
+    identities = resolved["identities"]
+    for native in accepted["supported_natives"] + accepted["extra_natives"]:
+        provider = accepted["provider_of"][native]
+        assert identities.provider_to_native[provider] == native
+        assert identities.native_to_provider[native] == provider
+        assert provider != native
+    # Only Binance perpetuals are bound: another venue and a dated future are not.
+    assert "BTCUSD_PERP.F" not in identities.provider_to_native
+    assert "BTCUSDT_240628.A" not in identities.provider_to_native
+    assert identities.perpetual_markets == len(accepted["supported_natives"]) + len(
+        accepted["extra_natives"]
+    )
+    # The inventory validates more markets than this projection ever counts.
+    assert identities.perpetual_markets > len(resolved["supported"])
+    assert set(resolved["supported"]) < set(identities.native_to_provider)
+
+
+@pytest.mark.parametrize(
+    "field", ["binance_perpetual_market_count", "native_identity_validated_markets"]
+)
+def test_the_report_inventory_count_must_match_the_proved_map(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    resolved = _coinalyze(accepted)
+    authority = _coinalyze_report(
+        accepted, monkeypatch, lambda block: block.update({field: 99})
+    )
+    with pytest.raises(SizingError, match=field):
+        sizing.prove_coinalyze_identity_map(
+            authority, inventory=resolved["inventory"]
+        )
+
+
+def test_a_non_integer_inventory_count_blocks(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    resolved = _coinalyze(accepted)
+    authority = _coinalyze_report(
+        accepted,
+        monkeypatch,
+        lambda block: block.update({"binance_perpetual_market_count": "6"}),
+    )
+    with pytest.raises(SizingError, match="positive inventory market count"):
+        sizing.prove_coinalyze_identity_map(
+            authority, inventory=resolved["inventory"]
+        )
+
+
+@pytest.mark.parametrize("shape", ["substituted_binding", "missing_supported_mapping"])
+def test_same_count_with_a_broken_supported_binding_blocks(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, shape: str
+) -> None:
+    """The market count still agrees; the supported native no longer has a binding."""
+    native = accepted["supported_natives"][0]
+    rows = [dict(row) for row in accepted["inventory_rows"]]
+    if shape == "substituted_binding":
+        for row in rows:
+            if row.get("symbol") == accepted["provider_of"][native]:
+                row["symbol_on_exchange"] = "OTHERUSDT"
+    else:
+        rows = [
+            row for row in rows if row.get("symbol") != accepted["provider_of"][native]
+        ]
+        rows.append(_market_row("LTCUSDT_PERP.A", "LTCUSDT"))
+    authority, inventory = _with_inventory(accepted, monkeypatch, rows)
+    identities = sizing.prove_coinalyze_identity_map(authority, inventory=inventory)
+    assert identities.perpetual_markets == len(accepted["supported_natives"]) + len(
+        accepted["extra_natives"]
+    )
+    with pytest.raises(SizingError, match="no proved native inventory binding"):
+        coinalyze_symbol_sets(authority, inventory=inventory, identities=identities)
+
+
+@pytest.mark.parametrize(
+    ("shape", "message"),
+    [
+        ("repeated_row", "repeats a Binance perpetual market"),
+        ("duplicate_provider", "binds two native identities"),
+        ("duplicate_native", "binds two Coinalyze provider identities"),
+        ("missing_native", "has no symbol_on_exchange"),
+        ("missing_provider", "has no provider symbol"),
+        ("non_boolean_perpetual", "is_perpetual"),
+    ],
+)
+def test_broken_inventory_rows_block(
+    accepted: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    shape: str,
+    message: str,
+) -> None:
+    native = accepted["supported_natives"][0]
+    provider = accepted["provider_of"][native]
+    rows = [dict(row) for row in accepted["inventory_rows"]]
+    if shape == "repeated_row":
+        rows.append(_market_row(provider, native))
+    elif shape == "duplicate_provider":
+        rows.append(_market_row(provider, "OTHERUSDT"))
+    elif shape == "duplicate_native":
+        rows.append(_market_row("OTHER_PERP.A", native))
+    elif shape == "missing_native":
+        rows.append(dict(_market_row("NEW_PERP.A", "NEWUSDT"), symbol_on_exchange=""))
+    elif shape == "missing_provider":
+        rows.append(dict(_market_row("NEW_PERP.A", "NEWUSDT"), symbol=""))
+    else:
+        rows.append(dict(_market_row("NEW_PERP.A", "NEWUSDT"), is_perpetual="true"))
+    authority, inventory = _with_inventory(accepted, monkeypatch, rows)
+    with pytest.raises(SizingError, match=message):
+        sizing.prove_coinalyze_identity_map(authority, inventory=inventory)
+
+
+@pytest.mark.parametrize("shape", ["wrong_exchange", "not_perpetual"])
+def test_a_supported_native_present_only_as_an_excluded_row_blocks(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch, shape: str
+) -> None:
+    native = accepted["supported_natives"][0]
+    provider = accepted["provider_of"][native]
+    rows = []
+    for row in accepted["inventory_rows"]:
+        item = dict(row)
+        if item.get("symbol") == provider:
+            if shape == "wrong_exchange":
+                item["exchange"] = "F"
+            else:
+                item["is_perpetual"] = False
+        rows.append(item)
+    authority, inventory = _with_inventory(accepted, monkeypatch, rows)
+    identities = sizing.prove_coinalyze_identity_map(authority, inventory=inventory)
+    assert native not in identities.native_to_provider
+    with pytest.raises(SizingError, match="no proved native inventory binding"):
+        coinalyze_symbol_sets(authority, inventory=inventory, identities=identities)
+
+
+def test_a_retained_provider_maps_to_its_native_lifecycle_bounds(
+    accepted: dict[str, Any],
+) -> None:
+    resolved = _coinalyze(accepted)
+    native = accepted["anchor_natives"][0]
+    provider = accepted["provider_of"][native]
+    # The lifecycle dictionary is keyed natively and holds no provider identity.
+    assert native in resolved["lifecycles"]
+    assert provider not in resolved["lifecycles"]
+    assert resolved["identities"].native_for(provider, context={}) == native
+    measured = measure_liquidation_response(
+        _liquidation_body([provider], 3), endpoint="/liquidation-history"
+    )
+    covered = sizing.validate_retained_liquidation_coverage(
+        measured,
+        supported=resolved["supported"],
+        lifecycles=resolved["lifecycles"],
+        identities=resolved["identities"],
+        endpoint="/liquidation-history",
+    )
+    assert covered["retained_native_symbols"] == [native]
+    assert covered["points_per_native_symbol"][native] == 3
+
+
+@pytest.mark.parametrize("shape", ["native_string", "unknown_provider"])
+def test_a_retained_series_outside_the_provider_namespace_blocks(
+    accepted: dict[str, Any], shape: str
+) -> None:
+    resolved = _coinalyze(accepted)
+    symbol = (
+        accepted["anchor_natives"][0] if shape == "native_string" else "NOSUCH_PERP.A"
+    )
+    measured = measure_liquidation_response(
+        _liquidation_body([symbol], 3), endpoint="/liquidation-history"
+    )
+    with pytest.raises(SizingError, match="absent from the accepted inventory"):
+        sizing.validate_retained_liquidation_coverage(
+            measured,
+            supported=resolved["supported"],
+            lifecycles=resolved["lifecycles"],
+            identities=resolved["identities"],
+            endpoint="/liquidation-history",
+        )
+
+
+def test_a_duplicate_retained_series_blocks(accepted: dict[str, Any]) -> None:
+    resolved = _coinalyze(accepted)
+    provider = accepted["provider_of"][accepted["anchor_natives"][0]]
+    measured = measure_liquidation_response(
+        _liquidation_body([provider, provider], 3), endpoint="/liquidation-history"
+    )
+    with pytest.raises(SizingError, match="repeats a provider series"):
+        sizing.validate_retained_liquidation_coverage(
+            measured,
+            supported=resolved["supported"],
+            lifecycles=resolved["lifecycles"],
+            identities=resolved["identities"],
+            endpoint="/liquidation-history",
+        )
+
+
+def test_two_provider_identities_colliding_onto_one_native_block(
+    accepted: dict[str, Any],
+) -> None:
+    """The coverage guard holds even if a collision ever reached the mapping itself."""
+    resolved = _coinalyze(accepted)
+    native = accepted["anchor_natives"][0]
+    provider = accepted["provider_of"][native]
+    colliding = sizing.CoinalyzeIdentityMap(
+        provider_to_native={provider: native, "ALIAS_PERP.A": native},
+        native_to_provider={native: provider},
+        perpetual_markets=1,
+    )
+    measured = measure_liquidation_response(
+        _liquidation_body([provider, "ALIAS_PERP.A"], 3),
+        endpoint="/liquidation-history",
+    )
+    with pytest.raises(SizingError, match="collide onto one native symbol"):
+        sizing.validate_retained_liquidation_coverage(
+            measured,
+            supported=resolved["supported"],
+            lifecycles=resolved["lifecycles"],
+            identities=colliding,
+            endpoint="/liquidation-history",
+        )
+
+
+def test_the_accepted_anchor_identity_is_re_proved(accepted: dict[str, Any]) -> None:
+    resolved = _coinalyze(accepted)
+    providers = [accepted["provider_of"][n] for n in accepted["anchor_natives"]]
+    proved = sizing.prove_coinalyze_anchor_identity(
+        resolved["authority"],
+        identities=resolved["identities"],
+        retained_provider_symbols=providers,
+    )
+    assert proved["anchor_native_symbols"] == sorted(accepted["anchor_natives"])
+    assert proved["anchor_provider_symbols"] == sorted(providers)
+    assert proved["retained_provider_symbols"] == sorted(providers)
+
+
+@pytest.mark.parametrize(
+    ("shape", "message"),
+    [
+        ("anchor_symbols", "anchor symbols disagree"),
+        ("requested_symbols", "requested symbols disagree"),
+        ("matched_markets", "matched markets disagree"),
+        ("on_exchange", "anchor_identity.symbol_on_exchange"),
+        ("provider_symbol", "absent from the accepted inventory"),
+        ("repeated_anchor", "repeats an anchor identity"),
+    ],
+)
+def test_anchor_identity_disagreements_block(
+    accepted: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    shape: str,
+    message: str,
+) -> None:
+    resolved = _coinalyze(accepted)
+    providers = [accepted["provider_of"][n] for n in accepted["anchor_natives"]]
+
+    def _mutate(block: dict[str, Any]) -> None:
+        if shape == "anchor_symbols":
+            block["anchor_symbols"] = ["SOLUSDT"]
+        elif shape == "requested_symbols":
+            block["requested_symbols"] = ["SOLUSDT_PERP.A"]
+        elif shape == "matched_markets":
+            block["matched_markets"] = ["SOLUSDT_PERP.A"]
+        elif shape == "on_exchange":
+            block["anchor_identity"][0]["symbol_on_exchange"] = "OTHERUSDT"
+        elif shape == "provider_symbol":
+            block["anchor_identity"][0]["provider_symbol"] = "NOSUCH_PERP.A"
+        else:
+            block["anchor_identity"] = [dict(block["anchor_identity"][0])] * 2
+
+    authority = _coinalyze_report(accepted, monkeypatch, _mutate)
+    with pytest.raises(SizingError, match=message):
+        sizing.prove_coinalyze_anchor_identity(
+            authority,
+            identities=resolved["identities"],
+            retained_provider_symbols=providers,
+        )
+
+
+def test_a_retained_response_that_disagrees_with_the_anchors_blocks(
+    accepted: dict[str, Any],
+) -> None:
+    resolved = _coinalyze(accepted)
+    with pytest.raises(SizingError, match="disagrees with the accepted anchors"):
+        sizing.prove_coinalyze_anchor_identity(
+            resolved["authority"],
+            identities=resolved["identities"],
+            retained_provider_symbols=[
+                accepted["provider_of"][accepted["anchor_natives"][0]]
+            ],
+        )
+
+
+def test_the_receipt_carries_both_identity_namespaces(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    receipt = _run(accepted, tmp_path)["receipt"]
+    block = receipt["coinalyze"]
+    providers = sorted(accepted["provider_of"][n] for n in accepted["anchor_natives"])
+    assert block["retained_provider_symbols"] == providers
+    assert block["retained_native_symbols"] == sorted(accepted["anchor_natives"])
+    assert block["retained_covered_symbols"] == len(accepted["anchor_natives"])
+    assert "retained_symbols" not in block
+    # Supported sets, lifecycles, and partitions stay native and unchanged.
+    assert block["supported_native_symbols"] == sorted(accepted["supported_natives"])
+    assert not any(
+        symbol.endswith("_PERP.A") for symbol in block["supported_native_symbols"]
+    )
+    assert block["identity_map"]["binance_perpetual_markets"] == len(
+        accepted["supported_natives"]
+    ) + len(accepted["extra_natives"])
+    assert block["anchor_identity"]["anchor_provider_symbols"] == providers
+    assert block["anchor_identity"]["anchor_native_symbols"] == sorted(
+        accepted["anchor_natives"]
+    )
+    assert block["supported_mappings"] == len(accepted["supported_natives"])
+    assert block["liquidation_receipts"] == len(accepted["supported_natives"])
+    assert block["partition_count"] > 0
+
+
+def test_supported_symbol_sets_are_compared_not_counted(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    resolved = _coinalyze(accepted)
+    inventory = resolved["inventory"]
+    identities = resolved["identities"]
+    assert list(resolved["supported"]) == sorted(accepted["supported"])
+    assert list(resolved["unmapped"]) == sorted(accepted["unmapped"])
+    # The supported set is Binance-native; no provider identity belongs in it.
+    assert not any(symbol.endswith("_PERP.A") for symbol in resolved["supported"])
 
     # Same counts, different symbols: a fabricated set no longer satisfies the gate.
     report = json.loads(accepted["files"]["report"].read_text())
     report["coinalyze"]["universe_support"]["supported_symbols"] = [
-        f"FAKE{index}_PERP.A" for index in range(len(accepted["supported"]))
+        f"FAKE{index}USDT" for index in range(len(accepted["supported"]))
     ]
     accepted["files"]["report"].write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n"
@@ -1722,8 +2170,10 @@ def test_supported_symbol_sets_are_compared_not_counted(
         sizing, "ACCEPTED_REPORT_BYTES", accepted["files"]["report"].stat().st_size
     )
     substituted = load_sizing_authority(accepted["paths"])
-    with pytest.raises(SizingError, match="absent from the accepted inventory"):
-        coinalyze_symbol_sets(substituted, inventory=inventory)
+    with pytest.raises(SizingError, match="no proved native inventory binding"):
+        coinalyze_symbol_sets(
+            substituted, inventory=inventory, identities=identities
+        )
 
 
 def test_lifecycles_come_from_accepted_evidence_and_block_when_absent(
@@ -1732,12 +2182,13 @@ def test_lifecycles_come_from_accepted_evidence_and_block_when_absent(
     authority = load_sizing_authority(accepted["paths"])
     lifecycles, cutoff = coinalyze_lifecycles(authority, supported=accepted["supported"])
     assert cutoff == _CUTOFF
-    assert set(lifecycles) == set(accepted["supported"])
+    # Lifecycles are keyed by Binance-native identity, exactly as the snapshot is.
+    assert set(lifecycles) == set(accepted["supported_natives"])
     for first, last in lifecycles.values():
         assert last >= first
 
     metadata = json.loads(accepted["files"]["metadata"].read_text())
-    metadata["symbol_snapshot"].pop("SYM0")
+    metadata["symbol_snapshot"].pop(accepted["supported_natives"][0])
     accepted["files"]["metadata"].write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n"
     )
@@ -1755,19 +2206,25 @@ def test_lifecycles_come_from_accepted_evidence_and_block_when_absent(
 def test_liquidation_projection_uses_its_own_parquet_envelopes(
     accepted: dict[str, Any], tmp_path: Path
 ) -> None:
-    authority = load_sizing_authority(accepted["paths"])
-    evidence = resolve_coinalyze_evidence(
-        authority, cache_dir=accepted["coinalyze_cache"]
-    )
-    inventory = next(item for item in evidence if item.role == "future_market_inventory")
-    supported, unmapped = coinalyze_symbol_sets(authority, inventory=inventory)
-    lifecycles, _cutoff = coinalyze_lifecycles(authority, supported=supported)
+    resolved = _coinalyze(accepted)
+    supported = resolved["supported"]
+    lifecycles = resolved["lifecycles"]
     projection = project_coinalyze(
-        evidence=evidence,
+        evidence=resolved["evidence"],
         supported=supported,
-        unmapped=unmapped,
+        unmapped=resolved["unmapped"],
         lifecycles=lifecycles,
+        identities=resolved["identities"],
         staging=tmp_path,
+    )
+    # Envelopes are measured under native identity and name their provider identity.
+    for envelope in projection.envelopes:
+        assert envelope["venue_symbol"] == envelope["native_symbol"]
+        assert envelope["provider_symbol"] == accepted["provider_of"][
+            envelope["native_symbol"]
+        ]
+    assert sorted(item["native_symbol"] for item in projection.envelopes) == sorted(
+        accepted["anchor_natives"]
     )
     # The normalized ratio is a Coinalyze envelope ratio, never a Binance family ratio.
     assert projection.envelope_numerator > 0 and projection.envelope_denominator > 0
@@ -1802,13 +2259,18 @@ def test_liquidation_envelope_ratio_survives_beyond_float_precision(
     measured = measure_liquidation_response(
         _liquidation_body(["BTCUSDT_PERP.A"], 3), endpoint="/liquidation-history"
     )
-    symbol, tokens = measured["series"][0]
+    provider, tokens = measured["series"][0]
     envelope = write_liquidation_envelope(
-        symbol=symbol,
+        symbol="BTCUSDT",
+        provider_symbol=provider,
         endpoint="/liquidation-history",
         tokens=tokens,
         destination=tmp_path / "liq.parquet",
     )
+    # The envelope records the venue's native identity and the provider's separately.
+    assert envelope["venue_symbol"] == "BTCUSDT"
+    assert envelope["native_symbol"] == "BTCUSDT"
+    assert envelope["provider_symbol"] == "BTCUSDT_PERP.A"
     assert envelope["points"] == 3
     assert envelope["parquet_bytes"] > 0
     assert envelope["parquet_footer_bytes"] > 0
@@ -2198,29 +2660,20 @@ def test_coinalyze_equation_uses_exact_retained_response_identity(
 def test_retained_liquidation_coverage_is_validated_before_credit(
     accepted: dict[str, Any], tamper: str, message: str
 ) -> None:
-    authority = load_sizing_authority(accepted["paths"])
-    evidence = resolve_coinalyze_evidence(
-        authority, cache_dir=accepted["coinalyze_cache"]
-    )
-    inventory = next(item for item in evidence if item.role == "future_market_inventory")
-    supported, _unmapped = coinalyze_symbol_sets(authority, inventory=inventory)
-    lifecycles, _cutoff = coinalyze_lifecycles(authority, supported=supported)
+    resolved = _coinalyze(accepted)
+    anchor = accepted["provider_of"][accepted["anchor_natives"][0]]
     if tamper == "unsupported_symbol":
-        body = _liquidation_body(["NOTLISTED_PERP.A"], 3)
+        # A real Binance perpetual the inventory binds, but outside the supported set.
+        body = _liquidation_body([accepted["provider_of"][accepted["extra_natives"][0]]], 3)
     elif tamper == "outside_lifecycle":
         body = json.dumps(
-            [
-                {
-                    "symbol": "SYM0_PERP.A",
-                    "history": [{"t": 1_000_000, "l": "1", "s": "2"}],
-                }
-            ]
+            [{"symbol": anchor, "history": [{"t": 1_000_000, "l": "1", "s": "2"}]}]
         ).encode("utf-8")
     else:
         body = json.dumps(
             [
                 {
-                    "symbol": "SYM0_PERP.A",
+                    "symbol": anchor,
                     "history": [
                         {"t": 1577836800, "l": "1", "s": "2"},
                         {"t": 1577836800 + 2 * 86_400, "l": "1", "s": "2"},
@@ -2232,32 +2685,35 @@ def test_retained_liquidation_coverage_is_validated_before_credit(
     with pytest.raises(SizingError, match=message):
         sizing.validate_retained_liquidation_coverage(
             measured,
-            supported=supported,
-            lifecycles=lifecycles,
+            supported=resolved["supported"],
+            lifecycles=resolved["lifecycles"],
+            identities=resolved["identities"],
             endpoint="/liquidation-history",
         )
 
 
 def test_repeated_retained_days_are_credited_once(accepted: dict[str, Any]) -> None:
-    authority = load_sizing_authority(accepted["paths"])
-    evidence = resolve_coinalyze_evidence(
-        authority, cache_dir=accepted["coinalyze_cache"]
-    )
-    inventory = next(item for item in evidence if item.role == "future_market_inventory")
-    supported, _unmapped = coinalyze_symbol_sets(authority, inventory=inventory)
-    lifecycles, _cutoff = coinalyze_lifecycles(authority, supported=supported)
+    resolved = _coinalyze(accepted)
+    native = accepted["anchor_natives"][0]
+    provider = accepted["provider_of"][native]
     measured = measure_liquidation_response(
-        _liquidation_body(["SYM0_PERP.A"], 4), endpoint="/liquidation-history"
+        _liquidation_body([provider], 4), endpoint="/liquidation-history"
     )
     covered = sizing.validate_retained_liquidation_coverage(
         measured,
-        supported=supported,
-        lifecycles=lifecycles,
+        supported=resolved["supported"],
+        lifecycles=resolved["lifecycles"],
+        identities=resolved["identities"],
         endpoint="/liquidation-history",
     )
-    assert covered["symbols"] == ["SYM0_PERP.A"]
+    # Both namespaces are retained explicitly and separately named.
+    assert covered["retained_provider_symbols"] == [provider]
+    assert covered["retained_native_symbols"] == [native]
+    assert covered["identity_pairs"] == [
+        {"provider_symbol": provider, "native_symbol": native}
+    ]
     assert covered["unique_in_lifecycle_points"] == 4
-    assert covered["points_per_symbol"] == {"SYM0_PERP.A": 4}
+    assert covered["points_per_native_symbol"] == {native: 4}
 
 
 def test_largest_partition_is_one_logical_file(tmp_path: Path) -> None:

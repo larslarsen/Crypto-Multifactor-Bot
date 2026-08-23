@@ -33,6 +33,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
+    COINALYZE_EXCHANGE_CODE,
     KNOWN_ARCHIVE_SCHEMAS,
     RetainedChecksumIndex,
     compute_sha256,
@@ -1865,10 +1866,251 @@ def resolve_coinalyze_evidence(
     return tuple(evidence)
 
 
-def coinalyze_symbol_sets(
+@dataclass(frozen=True, slots=True)
+class CoinalyzeIdentityMap:
+    """The proved one-to-one Coinalyze-provider / Binance-native identity bindings.
+
+    Coinalyze names a Binance perpetual twice: its own provider identity (``symbol``,
+    for example ``BTCUSDT_PERP.A``) and the venue's native identity
+    (``symbol_on_exchange``, for example ``BTCUSDT``). The two namespaces are never
+    interchangeable and neither is ever derived from the other by editing a string. The
+    pinned future-market inventory is the only authority that binds them.
+    """
+
+    provider_to_native: Mapping[str, str]
+    native_to_provider: Mapping[str, str]
+    perpetual_markets: int
+
+    def native_for(self, provider: str, *, context: Mapping[str, Any]) -> str:
+        native = self.provider_to_native.get(provider)
+        _require(
+            native is not None,
+            "a Coinalyze provider identity is absent from the accepted inventory",
+            {**dict(context), "provider_symbol": provider},
+        )
+        assert native is not None
+        return native
+
+    def provider_for(self, native: str, *, context: Mapping[str, Any]) -> str:
+        provider = self.native_to_provider.get(native)
+        _require(
+            provider is not None,
+            "a Binance native identity is absent from the accepted inventory",
+            {**dict(context), "native_symbol": native},
+        )
+        assert provider is not None
+        return provider
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "binance_perpetual_markets": self.perpetual_markets,
+            "identity_source": "future-markets.symbol / future-markets.symbol_on_exchange",
+            "derivation": "none; the retained provider/native pair is the only authority",
+        }
+
+
+def prove_coinalyze_identity_map(
     authority: SizingAuthority, *, inventory: CoinalyzeEvidence
+) -> CoinalyzeIdentityMap:
+    """Bind every retained Binance perpetual market to its native identity, exactly once.
+
+    Only rows the inventory itself marks as Binance perpetuals participate; the other
+    retained identities are real evidence for other venues and instruments and are never
+    counted in this projection. A missing field, a wrong type, a repeated market, a
+    provider bound to two natives, or a native bound to two providers all block.
+    """
+    context = {"endpoint": inventory.endpoint}
+    try:
+        markets = json.loads(inventory.payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SizingError(
+            "the accepted future-market inventory is not JSON", context=context
+        ) from exc
+    _require(
+        isinstance(markets, list) and bool(markets),
+        "the accepted future-market inventory carries no market",
+        context,
+    )
+    provider_to_native: dict[str, str] = {}
+    native_to_provider: dict[str, str] = {}
+    for row in markets:
+        if not isinstance(row, dict):
+            continue
+        exchange = row.get("exchange")
+        if not isinstance(exchange, str) or exchange != COINALYZE_EXCHANGE_CODE:
+            continue
+        perpetual = row.get("is_perpetual")
+        _require(
+            isinstance(perpetual, bool),
+            "a Binance inventory row does not declare is_perpetual as a boolean",
+            {**context, "field": "is_perpetual"},
+        )
+        if not perpetual:
+            continue
+        provider_value = row.get("symbol")
+        native_value = row.get("symbol_on_exchange")
+        _require(
+            isinstance(provider_value, str) and bool(provider_value.strip()),
+            "a Binance perpetual inventory row has no provider symbol",
+            {**context, "field": "symbol"},
+        )
+        _require(
+            isinstance(native_value, str) and bool(native_value.strip()),
+            "a Binance perpetual inventory row has no symbol_on_exchange",
+            {**context, "field": "symbol_on_exchange"},
+        )
+        provider = str(provider_value).strip()
+        native = str(native_value).strip().upper()
+        bound_native = provider_to_native.get(provider)
+        bound_provider = native_to_provider.get(native)
+        _require(
+            bound_native is None or bound_native == native,
+            "a Coinalyze provider identity binds two native identities",
+            {**context, "provider_symbol": provider},
+        )
+        _require(
+            bound_provider is None or bound_provider == provider,
+            "a Binance native identity binds two Coinalyze provider identities",
+            {**context, "native_symbol": native},
+        )
+        _require(
+            bound_native is None and bound_provider is None,
+            "the accepted inventory repeats a Binance perpetual market",
+            {**context, "native_symbol": native},
+        )
+        provider_to_native[provider] = native
+        native_to_provider[native] = provider
+    _require(
+        bool(provider_to_native),
+        "the accepted inventory carries no Binance perpetual market",
+        context,
+    )
+    _exact(
+        len(native_to_provider),
+        len(provider_to_native),
+        field_name="coinalyze_identity_map_is_one_to_one",
+        context=context,
+    )
+    block = dict(authority.report.get("coinalyze") or {})
+    for field in ("binance_perpetual_market_count", "native_identity_validated_markets"):
+        declared = block.get(field)
+        _require(
+            isinstance(declared, int) and not isinstance(declared, bool) and declared > 0,
+            "the accepted report does not declare a positive inventory market count",
+            {**context, "field": field},
+        )
+        _exact(
+            int(declared),
+            len(provider_to_native),
+            field_name=f"coinalyze.{field}",
+            context=context,
+        )
+    return CoinalyzeIdentityMap(
+        provider_to_native=dict(provider_to_native),
+        native_to_provider=dict(native_to_provider),
+        perpetual_markets=len(provider_to_native),
+    )
+
+
+def prove_coinalyze_anchor_identity(
+    authority: SizingAuthority,
+    *,
+    identities: CoinalyzeIdentityMap,
+    retained_provider_symbols: Sequence[str],
+) -> dict[str, Any]:
+    """Re-prove every accepted anchor triple against the inventory and the real response.
+
+    The report records each anchor three ways: its native symbol, the inventory's
+    ``symbol_on_exchange``, and the Coinalyze provider symbol. All three must agree with
+    each other, with the proved inventory mapping, with the requested and matched market
+    lists, and with the provider identities the retained liquidation response carries.
+    """
+    context = {"source": "report.coinalyze.anchor_identity"}
+    block = dict(authority.report.get("coinalyze") or {})
+    rows = list(block.get("anchor_identity") or ())
+    _require(bool(rows), "the accepted report declares no anchor identity", context)
+    natives: list[str] = []
+    providers: list[str] = []
+    for row in rows:
+        _require(isinstance(row, dict), "an anchor identity row is not an object", context)
+        native = str(dict(row).get("native_symbol") or "")
+        on_exchange = str(dict(row).get("symbol_on_exchange") or "")
+        provider = str(dict(row).get("provider_symbol") or "")
+        _require(
+            bool(native) and bool(on_exchange) and bool(provider),
+            "an anchor identity row is missing one of its three identities",
+            context,
+        )
+        _exact(
+            on_exchange.strip().upper(),
+            native.strip().upper(),
+            field_name="anchor_identity.symbol_on_exchange",
+            context={**context, "native_symbol": native},
+        )
+        _exact(
+            identities.native_for(provider, context=context),
+            native.strip().upper(),
+            field_name="anchor_identity.provider_to_native",
+            context={**context, "provider_symbol": provider},
+        )
+        _exact(
+            identities.provider_for(native.strip().upper(), context=context),
+            provider,
+            field_name="anchor_identity.native_to_provider",
+            context={**context, "native_symbol": native},
+        )
+        natives.append(native.strip().upper())
+        providers.append(provider)
+    _require(
+        len(set(natives)) == len(natives) and len(set(providers)) == len(providers),
+        "the accepted report repeats an anchor identity",
+        context,
+    )
+    declared_anchors = {
+        str(item).strip().upper() for item in (block.get("anchor_symbols") or ())
+    }
+    _require(
+        declared_anchors == set(natives),
+        "the accepted anchor symbols disagree with the anchor identity rows",
+        {**context, "field": "anchor_symbols"},
+    )
+    requested = {str(item) for item in (block.get("requested_symbols") or ())}
+    _require(
+        requested == set(providers),
+        "the accepted requested symbols disagree with the anchor provider identities",
+        {**context, "field": "requested_symbols"},
+    )
+    matched = {str(item) for item in (block.get("matched_markets") or ())}
+    _require(
+        matched == set(providers),
+        "the accepted matched markets disagree with the anchor provider identities",
+        {**context, "field": "matched_markets"},
+    )
+    retained = {str(item) for item in retained_provider_symbols}
+    _require(
+        retained == set(providers),
+        "the retained liquidation response disagrees with the accepted anchors",
+        {**context, "field": "retained_provider_symbols"},
+    )
+    return {
+        "anchor_native_symbols": sorted(natives),
+        "anchor_provider_symbols": sorted(providers),
+        "retained_provider_symbols": sorted(retained),
+    }
+
+
+def coinalyze_symbol_sets(
+    authority: SizingAuthority,
+    *,
+    inventory: CoinalyzeEvidence,
+    identities: CoinalyzeIdentityMap,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """The complete accepted supported and unmapped symbol sets, compared as sets."""
+    """The complete accepted supported and unmapped symbol sets, in native identity.
+
+    Supported mappings and typed gaps are Binance-native identities. Each supported one
+    must have exactly one proved inventory binding; a provider label, a base asset, or
+    any other inventory string is never accepted as interchangeable evidence for it.
+    """
     context = {"endpoint": inventory.endpoint}
     block = dict(authority.report.get("coinalyze") or {})
     support = dict(block.get("universe_support") or {})
@@ -1903,34 +2145,34 @@ def coinalyze_symbol_sets(
         "a Coinalyze symbol is both supported and unmapped",
         context,
     )
-    # Each supported mapping must exist in the accepted future-market inventory.
-    try:
-        markets = json.loads(inventory.payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise SizingError(
-            "the accepted future-market inventory is not JSON", context=context
-        ) from exc
-    listed: set[str] = set()
-    for row in markets if isinstance(markets, list) else ():
-        if isinstance(row, dict):
-            for name in ("symbol", "base_asset", "symbol_on_exchange"):
-                value = row.get(name)
-                if isinstance(value, str) and value:
-                    listed.add(value)
+    # Each supported native mapping must have exactly one proved inventory binding.
+    missing_inventory = sorted(
+        symbol for symbol in supported if symbol not in identities.native_to_provider
+    )
+    _require(
+        not missing_inventory,
+        "a supported Coinalyze mapping has no proved native inventory binding",
+        {**context, "symbols": missing_inventory[:8]},
+    )
+    _require(
+        len({identities.native_to_provider[symbol] for symbol in supported})
+        == len(set(supported)),
+        "two supported native mappings share one Coinalyze provider identity",
+        context,
+    )
+    # The inventory legitimately carries identities outside this projection. They are
+    # never counted here and never expand the supported set.
+    _require(
+        len(set(supported)) <= identities.perpetual_markets,
+        "the supported set exceeds the proved Binance perpetual inventory",
+        {**context, "supported": len(set(supported))},
+    )
     membership = dict(authority.report.get("membership") or {})
     accepted_universe = {
         str(item.get("symbol"))
         for item in (membership.get("classifications") or ())
         if isinstance(item, dict) and item.get("accepted") is True
     }
-    missing_inventory = sorted(
-        symbol for symbol in supported if listed and symbol not in listed
-    )
-    _require(
-        not missing_inventory,
-        "a supported Coinalyze mapping is absent from the accepted inventory",
-        {**context, "symbols": missing_inventory[:8]},
-    )
     if accepted_universe:
         unknown = sorted(
             symbol
@@ -1951,8 +2193,9 @@ def coinalyze_lifecycles(
     """Authenticated lifecycle day bounds per supported mapping, through the cutoff.
 
     Bounds come only from the accepted report's membership evidence and the pinned
-    official metadata. A supported mapping without authenticated bounds blocks; it never
-    receives zero days and never accepts caller data.
+    official metadata, both keyed by Binance-native identity. A supported mapping without
+    authenticated bounds blocks; it never receives zero days and never accepts caller
+    data, and no native identity is ever reconstructed from a provider string.
     """
     cutoff = str(authority.report.get("generated_at") or "")
     _require(bool(cutoff), "the accepted report has no qualification cutoff", {})
@@ -1967,12 +2210,13 @@ def coinalyze_lifecycles(
     lifecycles: dict[str, tuple[int, int]] = {}
     unknown: list[str] = []
     for symbol in supported:
-        base = symbol.split("_", 1)[0]
-        record = snapshot.get(base) or snapshot.get(symbol) or {}
+        # `supported` is Binance-native identity, and so are the official metadata
+        # snapshot and the membership classifications. Nothing is derived from a string.
+        record = snapshot.get(symbol) or {}
         onboard = record.get("onboard_ms") if isinstance(record, dict) else None
         close = record.get("close_ms") if isinstance(record, dict) else None
         if onboard is None:
-            evidence = rows.get(base) or {}
+            evidence = rows.get(symbol) or {}
             for item in (evidence.get("evidence") or ()) if isinstance(evidence, dict) else ():
                 if isinstance(item, dict) and item.get("onboard_ms") is not None:
                     onboard = item.get("onboard_ms")
@@ -2039,7 +2283,8 @@ class CoinalyzeProjection:
     retained_inventory_bytes: int
     retained_liquidation_receipts: int
     retained_liquidation_bytes: int
-    retained_symbols: tuple[str, ...]
+    retained_provider_symbols: tuple[str, ...]
+    retained_native_symbols: tuple[str, ...]
     retained_points: int
     projected_new_raw_bytes: int
     inventory_receipts: int
@@ -2072,8 +2317,13 @@ class CoinalyzeProjection:
             "retained_inventory_bytes": self.retained_inventory_bytes,
             "retained_liquidation_receipts": self.retained_liquidation_receipts,
             "retained_liquidation_bytes": self.retained_liquidation_bytes,
-            "retained_covered_symbols": len(self.retained_symbols),
-            "retained_symbols": list(self.retained_symbols),
+            "retained_covered_symbols": len(self.retained_native_symbols),
+            "retained_provider_symbols": list(self.retained_provider_symbols),
+            "retained_native_symbols": list(self.retained_native_symbols),
+            "identity_namespaces": (
+                "supported mappings, lifecycles, projection groups, and partition keys "
+                "are Binance-native; retained API series are Coinalyze provider identity"
+            ),
             "retained_points": self.retained_points,
             "projected_new_raw_bytes": self.projected_new_raw_bytes,
             "inventory_receipts": self.inventory_receipts,
@@ -2152,10 +2402,24 @@ def measure_liquidation_response(payload: bytes, *, endpoint: str) -> dict[str, 
 
 
 def write_liquidation_envelope(
-    *, symbol: str, endpoint: str, tokens: Sequence[str], destination: Path
+    *,
+    symbol: str,
+    provider_symbol: str,
+    endpoint: str,
+    tokens: Sequence[str],
+    destination: Path,
 ) -> dict[str, Any]:
-    """One deterministic lossless liquidation envelope, measured exactly."""
-    _require(bool(tokens), "a liquidation series has no point to normalize", {"symbol": symbol})
+    """One deterministic lossless liquidation envelope, measured exactly.
+
+    ``symbol`` is the Binance-native identity written into the ``venue_symbol`` column;
+    ``provider_symbol`` is the Coinalyze identity the retained response used. Both are
+    reported, and neither is derived from the other.
+    """
+    _require(
+        bool(tokens),
+        "a liquidation series has no point to normalize",
+        {"native_symbol": symbol, "provider_symbol": provider_symbol},
+    )
     destination.parent.mkdir(parents=True, exist_ok=True)
     raw_bytes = sum(len(token.encode("utf-8")) for token in tokens)
     writer = pq.ParquetWriter(
@@ -2186,6 +2450,8 @@ def write_liquidation_envelope(
     footer_bytes, overhead = _parquet_footer_bytes(destination)
     return {
         "venue_symbol": symbol,
+        "native_symbol": symbol,
+        "provider_symbol": provider_symbol,
         "endpoint": endpoint,
         "points": len(tokens),
         "raw_point_bytes": raw_bytes,
@@ -2203,13 +2469,18 @@ def validate_retained_liquidation_coverage(
     *,
     supported: Sequence[str],
     lifecycles: Mapping[str, tuple[int, int]],
+    identities: CoinalyzeIdentityMap,
     endpoint: str,
 ) -> dict[str, Any]:
     """Prove what the retained liquidation response actually covers, before crediting it.
 
-    Every point is parsed and checked: its symbol must be a supported mapping, its
-    timestamp must be a real UTC day inside that symbol's authenticated lifecycle, the
-    query interval must be daily, and a repeated day is never counted twice.
+    A retained series names its symbol in Coinalyze provider identity. It is translated
+    through the proved inventory binding before anything native is consulted, so an
+    unknown provider string, a native string used in a provider position, a repeated
+    series, and two provider identities colliding onto one native all block. Every point
+    is then parsed: its day must fall inside that native symbol's authenticated
+    lifecycle, the query interval must be daily, and a repeated day is never counted
+    twice.
     """
     context = {"endpoint": endpoint}
     _exact(
@@ -2219,14 +2490,27 @@ def validate_retained_liquidation_coverage(
         context=context,
     )
     supported_set = set(supported)
+    providers: list[str] = []
     symbols: list[str] = []
+    pairs: list[dict[str, str]] = []
     unique_points = 0
     per_symbol: dict[str, int] = {}
-    for symbol, tokens in measured["series"]:
+    for provider, tokens in measured["series"]:
+        _require(
+            provider not in set(providers),
+            "the retained liquidation response repeats a provider series",
+            {**context, "provider_symbol": provider},
+        )
+        symbol = identities.native_for(provider, context=context)
+        _require(
+            symbol not in set(symbols),
+            "two retained provider identities collide onto one native symbol",
+            {**context, "native_symbol": symbol},
+        )
         _require(
             symbol in supported_set,
             "the retained liquidation response covers an unsupported symbol",
-            {**context, "symbol": symbol},
+            {**context, "native_symbol": symbol},
         )
         first, last = lifecycles[symbol]
         days: set[int] = set()
@@ -2237,38 +2521,43 @@ def validate_retained_liquidation_coverage(
             _require(
                 isinstance(moment, int) and not isinstance(moment, bool) and moment > 0,
                 "a retained liquidation point has no positive timestamp",
-                {**context, "symbol": symbol},
+                {**context, "native_symbol": symbol},
             )
             day = datetime.fromtimestamp(int(moment), UTC).date().toordinal()
             _require(
                 first <= day <= last,
                 "a retained liquidation point falls outside its authenticated lifecycle",
-                {**context, "symbol": symbol},
+                {**context, "native_symbol": symbol},
             )
             if previous is not None:
                 _exact(
                     day - previous,
                     1,
                     field_name="retained_liquidation_interval_days",
-                    context={**context, "symbol": symbol},
+                    context={**context, "native_symbol": symbol},
                 )
             previous = day
             days.add(day)
         _require(
             bool(days),
             "the retained liquidation response covers a symbol with no point",
-            {**context, "symbol": symbol},
+            {**context, "native_symbol": symbol},
         )
+        providers.append(provider)
         symbols.append(symbol)
+        pairs.append({"provider_symbol": provider, "native_symbol": symbol})
         per_symbol[symbol] = len(days)
         unique_points += len(days)
     _require(
         bool(symbols), "the retained liquidation response covers no supported symbol", context
     )
     return {
-        "symbols": sorted(symbols),
+        # Both namespaces stay explicit and separately named.
+        "retained_provider_symbols": sorted(providers),
+        "retained_native_symbols": sorted(symbols),
+        "identity_pairs": sorted(pairs, key=lambda item: item["native_symbol"]),
         "unique_in_lifecycle_points": unique_points,
-        "points_per_symbol": dict(sorted(per_symbol.items())),
+        "points_per_native_symbol": dict(sorted(per_symbol.items())),
         "request_shape": "one retained request covering every listed symbol",
     }
 
@@ -2279,9 +2568,15 @@ def project_coinalyze(
     supported: Sequence[str],
     unmapped: Sequence[str],
     lifecycles: Mapping[str, tuple[int, int]],
+    identities: CoinalyzeIdentityMap,
     staging: Path,
 ) -> CoinalyzeProjection:
-    """Project liquidation receipts and normalized storage from real evidence only."""
+    """Project liquidation receipts and normalized storage from real evidence only.
+
+    Projection groups, partition keys, receipts, and lifecycle bounds are all counted in
+    Binance-native identity. The retained response's Coinalyze provider identities are
+    translated once, through the proved inventory binding, and both are then reported.
+    """
     context = {"supported": len(supported)}
     witness = next(
         (item for item in evidence if item.role == "liquidation_charge_witness"), None
@@ -2291,23 +2586,30 @@ def project_coinalyze(
     measured = measure_liquidation_response(witness.payload, endpoint=witness.endpoint)
     envelopes: list[dict[str, Any]] = []
     best: tuple[int, int, str] | None = None
-    for symbol, tokens in measured["series"]:
-        destination = staging / f"coinalyze-{symbol.replace('/', '_')}.parquet"
+    for provider, tokens in measured["series"]:
+        # The envelope is measured under the venue's own native identity.
+        native = identities.native_for(provider, context=context)
+        destination = staging / f"coinalyze-{native.replace('/', '_')}.parquet"
         envelope = write_liquidation_envelope(
-            symbol=symbol,
+            symbol=native,
+            provider_symbol=provider,
             endpoint=witness.endpoint,
             tokens=tokens,
             destination=destination,
         )
         envelopes.append(envelope)
         numerator = _positive_int(
-            envelope["parquet_bytes"], field_name="parquet_bytes", context={"symbol": symbol}
+            envelope["parquet_bytes"],
+            field_name="parquet_bytes",
+            context={"native_symbol": native},
         )
         denominator = _positive_int(
-            envelope["raw_point_bytes"], field_name="raw_point_bytes", context={"symbol": symbol}
+            envelope["raw_point_bytes"],
+            field_name="raw_point_bytes",
+            context={"native_symbol": native},
         )
         if best is None or ratio_exceeds((numerator, denominator), (best[0], best[1])):
-            best = (numerator, denominator, symbol)
+            best = (numerator, denominator, native)
     _require(best is not None, "no liquidation envelope was measured", context)
     assert best is not None
     point_charge = int(measured["bytes_per_point"])
@@ -2342,9 +2644,11 @@ def project_coinalyze(
         measured,
         supported=supported,
         lifecycles=lifecycles,
+        identities=identities,
         endpoint=witness.endpoint,
     )
-    retained_symbols = tuple(covered["symbols"])
+    retained_providers = tuple(covered["retained_provider_symbols"])
+    retained_natives = tuple(covered["retained_native_symbols"])
     retained_points = int(covered["unique_in_lifecycle_points"])
     retained_liquidation_bytes = int(witness.byte_size)
     retained_raw = gross_inventory + retained_liquidation_bytes
@@ -2378,7 +2682,8 @@ def project_coinalyze(
         retained_inventory_bytes=gross_inventory,
         retained_liquidation_receipts=1,
         retained_liquidation_bytes=retained_liquidation_bytes,
-        retained_symbols=retained_symbols,
+        retained_provider_symbols=retained_providers,
+        retained_native_symbols=retained_natives,
         retained_points=retained_points,
         projected_new_raw_bytes=projected_new,
         inventory_receipts=inventory_receipts,
@@ -2860,7 +3165,12 @@ def run_storage_sizing(
     inventory = next(
         item for item in coinalyze_evidence if item.role == "future_market_inventory"
     )
-    supported, unmapped = coinalyze_symbol_sets(authority, inventory=inventory)
+    # The two Coinalyze namespaces are bound once, from the pinned inventory, and every
+    # later comparison uses that proved binding rather than a reshaped string.
+    identities = prove_coinalyze_identity_map(authority, inventory=inventory)
+    supported, unmapped = coinalyze_symbol_sets(
+        authority, inventory=inventory, identities=identities
+    )
     lifecycles, cutoff = coinalyze_lifecycles(authority, supported=supported)
 
     evidence_root = store / SIZING_EVIDENCE_ROOT
@@ -2894,7 +3204,13 @@ def run_storage_sizing(
             supported=supported,
             unmapped=unmapped,
             lifecycles=lifecycles,
+            identities=identities,
             staging=stage,
+        )
+        anchors = prove_coinalyze_anchor_identity(
+            authority,
+            identities=identities,
+            retained_provider_symbols=coinalyze.retained_provider_symbols,
         )
         for envelope in sorted(stage.glob("coinalyze-*.parquet")):
             _dest, was_reused = publish_sizing_envelope(envelope, evidence_root=evidence_root)
@@ -3004,8 +3320,11 @@ def run_storage_sizing(
         "coinalyze": {
             **coinalyze.to_dict(),
             "cutoff": cutoff,
-            "supported_symbols": list(supported),
-            "unmapped_symbols": list(unmapped),
+            # Native identity, and named as such: these are Binance symbols.
+            "supported_native_symbols": list(supported),
+            "unmapped_native_symbols": list(unmapped),
+            "identity_map": identities.to_dict(),
+            "anchor_identity": dict(anchors),
         },
         "counts": {
             "physical_raw_objects": len(objects),

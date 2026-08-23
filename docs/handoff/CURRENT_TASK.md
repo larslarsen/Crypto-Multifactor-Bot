@@ -1,16 +1,16 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate, validate, and execute review 228
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 229
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Jr Dev - Hermes: follow review 228. Preserve the dirty shared
-workspace and 96 existing envelopes; integrate the exact accepted sizing source/test,
-reproduce the real identity-set preproof, run the 181-case focused suite and exact-path
-Ruff, then only on success run sizing and one conditional identical idempotence invocation.
-Publish record 229 and only authorized paths, commit/push, and stop.
+Immediate bounded task: reviewer inspection of record 229 and receipt 180. Hermes
+integrated the exact accepted sizing source/test, reproduced the real identity-set
+preproof, ran the 181-case focused suite and exact-path Ruff successfully, ran sizing
+successfully, and ran one identical idempotence invocation successfully. Gate 2 remains
+unaccepted unless the reviewer accepts it.
 
 Governing documents:
 
@@ -190,6 +190,7 @@ Governing documents:
 - research/sprint_004/226_CEX002_CORRECTED_SIZING_EXECUTION.md
 - research/sprint_004/227_CEX002_COINALYZE_IDENTITY_NAMESPACE_CORRECTION.md
 - research/sprint_004/228_CEX002_IDENTITY_SOURCE_ACCEPTANCE_AND_SIZING_RETRY.md
+- research/sprint_004/229_CEX002_IDENTITY_CORRECTED_SIZING_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2734,3 +2735,33 @@ facts, run focused pytest and Ruff, then only on success run corrected sizing an
 identical idempotence invocation. The 96 existing envelopes must be verified and reused.
 No source repair, network, Gate-2 acceptance, acquisition, or later work is authorized.
 Gate 2 remains unaccepted and next ticket remains `NONE`.
+
+## Record-229 identity-corrected sizing measurement published
+
+Hermes verified `HEAD == origin/main` at `84824e4f23c3cc444c988f7c4d637dbd02eb3c78`,
+integrated the exact accepted review-228 sizing production/test bytes, reproduced the
+real-authority identity facts, verified the 96 existing envelopes totaling 1,890,921
+bytes, and confirmed receipt 180 was absent.
+
+Focused pytest passed with 181 cases, and exact-path Ruff passed. Hermes then ran the
+corrected local sizing command without `.env` or network. The first invocation exited 0,
+published receipt 180, reused 96 existing envelopes, and published 2 missing Coinalyze
+envelopes. The required identical second invocation exited 0, published no new envelopes,
+reused all 98 envelopes, and reproduced identical receipt bytes and evidence-store
+manifest.
+
+Receipt 180 is 141,595 bytes at SHA-256
+`f2e1fef8156e3af1abd40554e5a8393ee6566e1719cf990a2a49867e5aef185c`. It reports
+`storage_preflight_state=blocked` with blocker `available_capacity_insufficient`. Total
+future storage is 432,141,608,507 bytes, or 432.141608507 decimal GB / 402.463235433
+binary GiB, against post-publication available capacity of 158,559,266,533 bytes.
+
+The receipt preserves the ADR-0023 retained decomposition: 56 manifest-consumable rows, 68
+selected retained keys, 5 cost retained keys, 73 valid requirement keys, 73 retained credit
+objects, and 5,225,416 retained credit bytes. Coinalyze sizing records 759 inventory
+mappings, 569 supported native mappings, 202 typed gaps, retained provider/native anchors
+`BTCUSDT_PERP.A -> BTCUSDT` and `ETHUSDT_PERP.A -> ETHUSDT`, 570 projected acquisition
+receipts, 29,072,901 projected new raw bytes, and 12,621,439 projected normalized bytes.
+
+Hermes did not accept Gate 2, acquire data, normalize, publish a catalog, run Harmonic
+Trader, or perform later work. Gate 2 remains unaccepted. Next ticket remains `NONE`.
