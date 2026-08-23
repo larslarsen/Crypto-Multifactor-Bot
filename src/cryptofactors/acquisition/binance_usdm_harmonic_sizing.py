@@ -46,9 +46,9 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
 )
 
 TICKET_ID: str = "CEX-002"
-SIZING_SCHEMA_VERSION: str = "cex002_gate2_storage_sizing_v2"
+SIZING_SCHEMA_VERSION: str = "cex002_gate2_storage_sizing_v3"
 SIZING_POLICY_IDENTITY: str = (
-    "adr0024_review230_typed_product_real_partition_atomic_storage_sizing_v2"
+    "adr0027_review257_partition_aware_dictionary_storage_sizing_v3"
 )
 
 # --- pinned accepted authority (reviews 179 and 181) -----------------------------------
@@ -261,18 +261,37 @@ COINALYZE_OVERLAP_ENDPOINTS: tuple[str, ...] = (
     "/ohlcv-history",
 )
 
-SIZING_EVIDENCE_ROOT: str = "evidence/sizing/v2/envelopes/sha256"
+SIZING_EVIDENCE_ROOT: str = "evidence/sizing/v3/envelopes/sha256"
 SIZING_RECEIPT_RELATIVE_PATH: str = (
-    "research/sprint_004/231_CEX002_GATE2_STORAGE_SIZING_V2.json"
+    "research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json"
 )
 # The accepted version-1 diagnosis. It and its 98 envelopes are immutable blocked
-# evidence: version 2 reads neither and writes to neither, ever.
+# evidence: no later version reads either or writes to either, ever.
 V1_SIZING_EVIDENCE_ROOT: str = "evidence/sizing/v1/envelopes/sha256"
 V1_SIZING_RECEIPT_RELATIVE_PATH: str = (
     "research/sprint_004/180_CEX002_GATE2_STORAGE_SIZING.json"
 )
 V1_ACCEPTED_RECEIPT_SHA256: str = (
     "f2e1fef8156e3af1abd40554e5a8393ee6566e1719cf990a2a49867e5aef185c"
+)
+# ADR-0027 section 5: receipt 231 and every version-2 envelope are immutable diagnostic
+# evidence of the rejected per-row value equation. Version 3 reads neither, writes to
+# neither, and never publishes at either identity.
+V2_SIZING_SCHEMA_VERSION: str = "cex002_gate2_storage_sizing_v2"
+V2_SIZING_EVIDENCE_ROOT: str = "evidence/sizing/v2/envelopes/sha256"
+V2_SIZING_RECEIPT_RELATIVE_PATH: str = (
+    "research/sprint_004/231_CEX002_GATE2_STORAGE_SIZING_V2.json"
+)
+V2_ACCEPTED_RECEIPT_SHA256: str = (
+    "d3b2e81e46ecb17ea98dee160a98a551720b4bb27f5c29497839081acabaad29"
+)
+IMMUTABLE_SIZING_EVIDENCE_ROOTS: tuple[str, ...] = (
+    V1_SIZING_EVIDENCE_ROOT,
+    V2_SIZING_EVIDENCE_ROOT,
+)
+IMMUTABLE_SIZING_RECEIPT_PATHS: tuple[str, ...] = (
+    V1_SIZING_RECEIPT_RELATIVE_PATH,
+    V2_SIZING_RECEIPT_RELATIVE_PATH,
 )
 STATE_SUFFICIENT: str = "sufficient"
 STATE_BLOCKED: str = "blocked"
@@ -1961,6 +1980,49 @@ def final_product_columns(product: str) -> tuple[TypedColumn, ...]:
 
 def final_product_schema(product: str) -> pa.Schema:
     return _schema_of(final_product_columns(product))
+
+
+# Three partition-constant dictionary indices are shared by the current schema; the two
+# REF-001 current-null validity terms are owned by that same current allocation.
+SHARED_INSTRUMENT_IDENTITY_INDEX_BYTES_PER_ROW: int = 3 * DICTIONARY_INDEX_WIDTH
+REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW: int = 2 * NULL_VALIDITY_WIDTH
+# The complete current per-row cost: three dictionary indices plus the two current-null
+# validity terms. It is not an index-only quantity and is never named as one.
+INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW: int = (
+    SHARED_INSTRUMENT_IDENTITY_INDEX_BYTES_PER_ROW
+    + REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW
+)
+
+# ADR-0027 section 2 and review 260 finding 3: the complete declared domain of every
+# finite derived state or convention dictionary. A traversal of the retained cohorts can
+# only observe the states those cohorts happen to publish, so each domain is bound here
+# and a later partition's accepted state is never undercounted.
+DERIVED_STATE_DOMAINS: Mapping[str, tuple[str, ...]] = {
+    "gap_break_status": ("first_observation", "contiguous", "gap_break"),
+    "cashflow_sign_convention": ("long_pays_short_when_rate_positive",),
+    "indicative_rate_status": ("direct_indicative_rate_unavailable",),
+    "basis_join_status": ("causal_open_time_join",),
+}
+
+
+def instrument_identity_columns() -> tuple[TypedColumn, ...]:
+    """The shared identity columns every applicable product row carries."""
+    return _INSTRUMENT_IDENTITY
+
+
+def derived_only_columns(product: str) -> tuple[TypedColumn, ...]:
+    """Target-only fields other than the shared instrument identity.
+
+    ADR-0027 section 2: the identity columns are allocated once by one partition-aware
+    dictionary allocation for every applicable product, so they are never measured again
+    as per-product derived strings.
+    """
+    identity = {column.name for column in _INSTRUMENT_IDENTITY}
+    return tuple(
+        column
+        for column in target_only_columns(product)
+        if column.name not in identity
+    )
 
 
 def target_only_columns(product: str) -> tuple[TypedColumn, ...]:
@@ -4010,8 +4072,6 @@ def fee_scenario_rows() -> tuple[dict[str, Any], ...]:
     return tuple(rows)
 
 
-
-
 def measure_fixed_schema_product(
     *,
     product: str,
@@ -4128,47 +4188,108 @@ def measure_maximum_width_product(
     columns: Sequence[TypedColumn],
     rows: Sequence[Mapping[str, Any]],
     destination: Path,
+    partition_fields: Sequence[str] = (),
+    component: str | None = None,
+    exact_layout: bool = False,
 ) -> dict[str, Any]:
-    """Traverse every row and use a per-field maximum-width witness when it is large."""
+    """Traverse every accepted row and separate row-group anchors from later rows.
+
+    ADR-0027 section 4. A complete accepted row set does not make the witness file the
+    projected file: a 771-row witness that is published as 771 one-row partitions has a
+    different physical layout and must recharge each target row group. So unless the
+    caller states that the measured layout *is* the projected layout, one real widest row
+    anchors every projected row group, later rows carry only their own fixed widths,
+    dictionary indices, and null validity, and only accepted dictionary values beyond the
+    anchor's own are added. The three byte sets are disjoint by construction.
+    """
     _require(bool(rows), "a maximum-width product has no row", {"required_product": product})
-    if len(rows) <= SIZING_ROW_BATCH:
-        return measure_fixed_schema_product(
+    traversal = _traverse_typed_rows(
+        columns,
+        rows,
+        partition_fields=partition_fields,
+        # A known layout is split at its real deterministic row-group boundaries.
+        row_group_size=SIZING_ROW_BATCH if exact_layout else 0,
+    )
+    if exact_layout:
+        # The complete projected layout and its deterministic row order are already
+        # known, so the real file is written in its actual row groups and its payload,
+        # footer, and framing are used exactly. No model is applied at all.
+        measured = measure_fixed_schema_product(
             product=product,
+            component=component,
             schema=_schema_of(columns),
             columns=_column_values(columns, rows),
             destination=destination,
         )
+        _exact(
+            int(measured["row_groups"]),
+            len(traversal["dictionary_cardinality_by_row_group"]),
+            field_name="deterministic_row_group_boundaries",
+            context={"required_product": product},
+        )
+        return {
+            **measured,
+            "projected_layout_measured": True,
+            "projected_row_groups_measured": int(measured["row_groups"]),
+            # Every measured physical fact of the file that was actually written.
+            "exact_layout_facts": {
+                "rows": int(measured["measured_rows"]),
+                "row_groups": int(measured["row_groups"]),
+                "payload_bytes": int(measured["payload_bytes"]),
+                "footer_bytes": int(measured["footer_bytes"]),
+                "residual_bytes": int(measured["residual_bytes"]),
+                "framing_bytes": int(measured["framing_bytes"]),
+                "file_bytes": int(measured["file_bytes"]),
+                "dictionary_cardinality_by_row_group": [
+                    dict(group)
+                    for group in traversal["dictionary_cardinality_by_row_group"]
+                ],
+                "rule": (
+                    "the complete deterministic row order was written in its actual row "
+                    "groups; its measured payload, footer, residual, and framing are "
+                    "used exactly and never reprojected through a ceiling division"
+                ),
+            },
+            "width_model": {**traversal, "complete_row_set": True, "exact_layout": True},
+        }
     widest: dict[str, Any] = {}
-    maxima: dict[str, int] = {}
+    maxima = dict(traversal["per_field_maximum_encoded_widths"])
     for row in rows:
         for column in columns:
-            _require(
-                column.name in row,
-                "a maximum-width row is missing a declared column",
-                {"required_product": product, "column": column.name},
-            )
-            width = _typed_value_width(column, row[column.name])
-            if column.name not in maxima or width > maxima[column.name]:
-                maxima[column.name] = width
-                widest[column.name] = row[column.name]
+            if _typed_value_width(column, row[column.name]) == maxima[column.name]:
+                widest.setdefault(column.name, row[column.name])
+    for column in columns:
+        widest.setdefault(column.name, rows[0][column.name])
     measured = measure_fixed_schema_product(
         product=product,
+        component=component,
         schema=_schema_of(columns),
         columns=_column_values(columns, [widest]),
         destination=destination,
     )
-    row_width_bound = sum(maxima.values())
+    additional = _additional_dictionary_bytes(
+        columns, traversal, anchor_row=widest, row_groups=1
+    )
     return {
         **measured,
         "measured_rows": len(rows),
-        "bytes_per_row": max(int(measured["bytes_per_row"]), row_width_bound),
+        # One real one-row payload: page initialization, that row's own values and
+        # indices, and the first non-null dictionary value of each column it populates.
+        "row_group_anchor_bytes": int(measured["payload_bytes"]),
+        # Strictly the accepted values a row group holds beyond that anchor row's own.
+        "additional_dictionary_bytes": int(additional["bytes"]),
+        "additional_row_group_values": additional,
+        "incremental_bytes_per_row": int(traversal["incremental_bytes_per_row"]),
+        "anchor_row_dictionary_values": dict(additional["values_already_in_anchor"]),
         "width_model": {
-            "rows_traversed": len(rows),
-            "per_field_maximum_encoded_widths": maxima,
-            "maximum_row_bytes": row_width_bound,
+            **traversal,
+            "complete_row_set": len(rows) <= SIZING_ROW_BATCH,
+            "exact_layout": False,
             "rule": (
-                "every projected value was traversed; independently greatest field "
-                "widths form a conservative row that covers every omitted combination"
+                "every projected value was traversed; one real widest row anchors each "
+                "output row group, additional rows carry only their own fixed widths, "
+                "dictionary indices, and null validity, and only accepted values beyond "
+                "the anchor's own are added to a row group"
             ),
         },
     }
@@ -4203,24 +4324,173 @@ def project_fixed_schema_product(
         max(int(measured.get("row_groups") or 0), 1),
     )
     framing_per_file = int(measured["framing_bytes"])
-    row_groups = sum(
+    groups_by_partition = [
         max(1, ceil_div(max(value, 1), SIZING_ROW_BATCH))
         for value in rows_by_partition
-    )
-    payload = int(measured["bytes_per_row"]) * rows
-    overhead = row_groups * footer_per_row_group + partitions * framing_per_file
-    largest = max(
-        int(measured["bytes_per_row"]) * value
-        + max(1, ceil_div(max(value, 1), SIZING_ROW_BATCH)) * footer_per_row_group
-        + framing_per_file
-        for value in rows_by_partition
-    )
+    ]
+    row_groups = sum(groups_by_partition)
+    # ADR-0027 section 4, in three disjoint byte sets: a measured one-row anchor per
+    # projected row group, the incremental rows after it, and only the accepted
+    # dictionary values a row group holds beyond its anchor's own.
+    anchor = _optional_int(measured.get("row_group_anchor_bytes"))
+    additional_dictionary = int(measured.get("additional_dictionary_bytes") or 0)
+    incremental = int(measured.get("incremental_bytes_per_row") or 0)
+    incremental_rows = 0
+    if measured.get("projected_layout_measured") is True:
+        # The measured file is the projected file, in its actual row groups.
+        _exact(
+            int(measured["measured_rows"]),
+            rows,
+            field_name="measured_projected_layout_rows",
+            context=context,
+        )
+        _exact(
+            partitions,
+            1,
+            field_name="measured_projected_layout_partitions",
+            context=context,
+        )
+        row_groups = max(int(measured["row_groups"]), 1)
+        groups_by_partition = [row_groups]
+        exact_payload = int(measured["payload_bytes"])
+        # Review 260 finding 4: the measured footer, residual, and framing are used as
+        # measured. Reprojecting them through a ceiling division can drift by the
+        # division remainder, and an exact layout has no remainder to invent.
+        exact_overhead = (
+            int(measured["footer_bytes"])
+            + int(measured["residual_bytes"])
+            + int(measured["framing_bytes"])
+        )
+        _exact(
+            exact_payload + exact_overhead,
+            int(measured["file_bytes"]),
+            field_name="exact_layout_file_reconciliation",
+            context=context,
+        )
+
+        def _partition_payload(partition_rows_value: int, groups: int) -> int:
+            return exact_payload
+
+        payload = exact_payload
+    elif anchor is None:
+        payload = int(measured["bytes_per_row"]) * rows
+
+        def _partition_payload(partition_rows_value: int, groups: int) -> int:
+            return int(measured["bytes_per_row"]) * partition_rows_value
+
+    else:
+        anchored = anchor + additional_dictionary
+
+        def _partition_payload(partition_rows_value: int, groups: int) -> int:
+            return groups * anchored + max(partition_rows_value - groups, 0) * incremental
+
+        payload = sum(
+            _partition_payload(value, groups)
+            for value, groups in zip(rows_by_partition, groups_by_partition, strict=True)
+        )
+        incremental_rows = sum(
+            max(value - groups, 0)
+            for value, groups in zip(rows_by_partition, groups_by_partition, strict=True)
+        )
+        _exact(
+            row_groups * anchor
+            + row_groups * additional_dictionary
+            + incremental_rows * incremental,
+            payload,
+            field_name="fixed_schema_disjoint_equation",
+            context=context,
+        )
+    if measured.get("projected_layout_measured") is True:
+        overhead = exact_overhead
+        # One measured partition: its largest bytes are exactly the measured file bytes,
+        # with no ceiling-derived overhead entering a result the exact total does not use.
+        largest = int(measured["file_bytes"])
+        _exact(
+            largest,
+            payload + overhead,
+            field_name="exact_layout_largest_partition",
+            context=context,
+        )
+    else:
+        overhead = row_groups * footer_per_row_group + partitions * framing_per_file
+        largest = max(
+            _partition_payload(value, groups)
+            + groups * footer_per_row_group
+            + framing_per_file
+            for value, groups in zip(rows_by_partition, groups_by_partition, strict=True)
+        )
+    width_model = dict(measured.get("width_model") or {})
+    if measured.get("projected_layout_measured") is True:
+        facts = dict(measured.get("exact_layout_facts") or {})
+        allocation_model: dict[str, Any] = {
+            "model": "measured_projected_layout",
+            "rows": rows,
+            "row_groups": row_groups,
+            "payload_bytes": payload,
+            "footer_bytes": int(measured["footer_bytes"]),
+            "residual_bytes": int(measured["residual_bytes"]),
+            "framing_bytes": int(measured["framing_bytes"]),
+            "overhead_bytes": exact_overhead,
+            "file_bytes": int(measured["file_bytes"]),
+            "dictionary_cardinality_by_row_group": list(
+                facts.get("dictionary_cardinality_by_row_group") or []
+            ),
+            "dictionary_maximum_value_bytes": dict(
+                width_model.get("dictionary_maximum_value_bytes") or {}
+            ),
+            "cardinality_source": str(width_model.get("cardinality_source") or ""),
+            "total_payload_bytes": payload,
+            "rule": (
+                "the complete projected row order was written in its actual row groups; "
+                "its measured payload, footer, residual, and framing are used exactly, "
+                "with no ceiling division and no modelled term"
+            ),
+        }
+    elif anchor is None:
+        allocation_model = {
+            "model": "measured_complete_row_set",
+            "rows": rows,
+            "row_groups": row_groups,
+            "bytes_per_row": int(measured["bytes_per_row"]),
+        }
+    else:
+        allocation_model = {
+            "model": "row_group_anchor_plus_incremental_rows",
+            "rows": rows,
+            "row_groups": row_groups,
+            "anchor_count": row_groups,
+            "row_group_anchor_bytes": anchor,
+            "anchor_bytes": row_groups * anchor,
+            # Counted per partition, so an empty partition still anchors its own row
+            # group and never borrows an incremental row from another partition.
+            "incremental_rows": incremental_rows,
+            "incremental_bytes_per_row": incremental,
+            "incremental_bytes": incremental_rows * incremental,
+            "additional_dictionary_bytes_per_row_group": additional_dictionary,
+            "additional_dictionary_bytes": row_groups * additional_dictionary,
+            "dictionary_cardinality_per_row_group": dict(
+                width_model.get("dictionary_cardinality_per_row_group") or {}
+            ),
+            "dictionary_maximum_value_bytes": dict(
+                width_model.get("dictionary_maximum_value_bytes") or {}
+            ),
+            "values_already_in_anchor": dict(
+                measured.get("anchor_row_dictionary_values") or {}
+            ),
+            "total_payload_bytes": payload,
+            "rule": (
+                "three disjoint byte sets: one measured one-row anchor per projected row "
+                "group, the incremental rows after it, and only the accepted dictionary "
+                "values a row group holds beyond its anchor's own"
+            ),
+        }
     return {
         **dict(context),
         **({"component": component} if component else {}),
         "projected_rows": rows,
         "partition_count": partitions,
         "projected_row_groups": row_groups,
+        "allocation_model": allocation_model,
         "bytes_per_row": int(measured["bytes_per_row"]),
         "footer_per_row_group_bytes": footer_per_row_group,
         "framing_per_file_bytes": framing_per_file,
@@ -4326,6 +4596,7 @@ class ProductProjection:
     input_compressed_bytes: int
     manifest_mappings: int
     partitions: tuple[Mapping[str, Any], ...]
+    target_only_allocation: Mapping[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -4339,6 +4610,7 @@ class ProductProjection:
             "projected_overhead_bytes": self.projected_overhead_bytes,
             "projected_partition_manifest_bytes": self.projected_manifest_bytes,
             "projected_target_only_bytes": self.projected_target_only_bytes,
+            "target_only_allocation": dict(self.target_only_allocation),
             "partition_expected_rows": list(self.partition_rows),
             "projected_bytes": self.projected_bytes,
             "largest_partition_bytes": self.largest_partition_bytes,
@@ -4460,7 +4732,7 @@ def project_typed_partitions(
     measurements: Sequence[TypedEnvelopeMeasurement],
     objects: Sequence[PhysicalObject],
     lineage: LineageManifestModel,
-    target_only_bytes_per_row: Mapping[str, int] | None = None,
+    target_only_allocations: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> tuple[ProductProjection, ...]:
     """Project every archive-fed required product partition by partition."""
     coefficients = typed_coefficients(measurements)
@@ -4490,10 +4762,28 @@ def project_typed_partitions(
             int(value["footer_per_row_group"]) for value in by_family.values()
         )
         framing = max(int(value["framing"]) for value in by_family.values())
-        rates = dict(target_only_bytes_per_row or {})
-        target_rate = int(
-            rates.get(f"{product}:{projection_component}", rates.get(product, 0))
+        # ADR-0027 section 2 and review 259 C: target-only fields are charged in the same
+        # three disjoint sets as every other dictionary-bearing projection. Every row
+        # carries its own fixed widths, dictionary indices, and null validity; every row
+        # group carries the derived page initialization and the accepted dictionary
+        # values once. No scalar per-row witness average survives.
+        rates = dict(target_only_allocations or {})
+        target_terms = dict(
+            rates.get(f"{product}:{projection_component}") or rates.get(product) or {}
         )
+        target_rate = int(target_terms.get("incremental_bytes_per_row") or 0)
+        target_row_group_bytes = int(
+            target_terms.get("row_group_initialization_bytes") or 0
+        ) + int(target_terms.get("additional_dictionary_bytes") or 0)
+        target_allocation = {
+            **target_terms,
+            "row_group_bytes": target_row_group_bytes,
+            "rule": (
+                "every projected row carries its own fixed widths, dictionary indices, "
+                "and null validity; every projected row group carries the derived page "
+                "initialization and the accepted values beyond its anchor once"
+            ),
+        }
         partitions: dict[tuple[str, str], list[PhysicalObject]] = {}
         for source in objects:
             if source.family not in by_family:
@@ -4548,7 +4838,8 @@ def project_typed_partitions(
             rows = max(row_candidates)
             row_groups = max(1, ceil_div(rows, SIZING_ROW_BATCH))
             # Target-only fields are published by this product and by no contribution.
-            payload_bytes += rows * target_rate
+            target_bytes = rows * target_rate + row_groups * target_row_group_bytes
+            payload_bytes += target_bytes
             # Every contributing raw object is mapped in this partition's own lineage
             # manifest, which carries its own row-group metadata and framing.
             manifest_mappings = len(members)
@@ -4559,7 +4850,7 @@ def project_typed_partitions(
             payload_total += payload_bytes
             overhead_total += overhead
             manifest_total += manifest_charge
-            target_total += rows * target_rate
+            target_total += target_bytes
             mappings += manifest_mappings
             rows_total += rows
             partition_rows.append(rows)
@@ -4626,6 +4917,14 @@ def project_typed_partitions(
                 ),
                 manifest_mappings=mappings,
                 partitions=tuple(partition_descriptors),
+                target_only_allocation={
+                    **target_allocation,
+                    "rows": rows_total,
+                    "row_groups": row_groups_total,
+                    "row_bytes": rows_total * target_rate,
+                    "row_group_total_bytes": row_groups_total * target_row_group_bytes,
+                    "bytes": target_total,
+                },
             )
         )
         _require(
@@ -5316,6 +5615,7 @@ class CoinalyzeProjection:
     largest_partition_bytes: int
     evidence: tuple[Mapping[str, Any], ...]
     envelopes: tuple[Mapping[str, Any], ...]
+    allocation: Mapping[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -5376,6 +5676,7 @@ class CoinalyzeProjection:
             "largest_partition_bytes": self.largest_partition_bytes,
             "evidence": [dict(item) for item in self.evidence],
             "envelopes": [dict(item) for item in self.envelopes],
+            "allocation": dict(self.allocation),
         }
 
 
@@ -5538,8 +5839,37 @@ def write_liquidation_envelope(
     finally:
         writer.close()
     measured = _measure_parquet_file(destination)
+    # ADR-0027 and review 260 finding 2: the same disjoint anchor / incremental-row /
+    # additional-dictionary terms every other projected product uses. A complete
+    # per-point payload would repeat page initialization and the partition's constant
+    # identity, provider, state, and semantics values on every projected point.
+    modelled = measure_maximum_width_product(
+        product=PRODUCT_LIQUIDATION_OBSERVED_DAILY,
+        columns=columns,
+        rows=rows,
+        destination=destination.with_name(f"{destination.stem}-anchor.parquet"),
+        partition_fields=("native_symbol",),
+    )
     return {
         **measured,
+        "allocation": {
+            "row_group_anchor_bytes": int(modelled["row_group_anchor_bytes"]),
+            "additional_dictionary_bytes": int(modelled["additional_dictionary_bytes"]),
+            "incremental_bytes_per_row": int(modelled["incremental_bytes_per_row"]),
+            "dictionary_cardinality_per_row_group": dict(
+                modelled["width_model"]["dictionary_cardinality_per_row_group"]
+            ),
+            "dictionary_maximum_value_bytes": dict(
+                modelled["width_model"]["dictionary_maximum_value_bytes"]
+            ),
+            "cardinality_source": str(
+                modelled["width_model"]["cardinality_source"]
+            ),
+            "values_already_in_anchor": dict(
+                modelled["anchor_row_dictionary_values"]
+            ),
+            "rows_traversed": int(modelled["width_model"]["rows_traversed"]),
+        },
         "required_product": PRODUCT_LIQUIDATION_OBSERVED_DAILY,
         "native_symbol": symbol,
         "provider_symbol": provider_symbol,
@@ -5692,8 +6022,8 @@ def project_coinalyze(
             raw_object_ref=reference,
         )
         envelopes.append(envelope)
-        # ADR-0024: typed payload per projected point, with file overhead added once per
-        # projected partition. The v1 whole-file ratio is superseded here too.
+        # The greatest measured per-point coefficient is still published as the accepted
+        # ratio witness, but it no longer projects the typed payload.
         numerator = _positive_int(
             envelope["bytes_per_point"],
             field_name="typed_bytes_per_point",
@@ -5769,15 +6099,74 @@ def project_coinalyze(
     )
     projected_new = gross - retained_raw
     numerator, denominator, envelope_witness = best
+    # Review 260 finding 2: one disjoint ledger for the liquidation partitions too. The
+    # greatest measured anchor, additional-value, and incremental terms are used so no
+    # projected partition is understated.
+    liquidation_anchor = max(
+        int(item["allocation"]["row_group_anchor_bytes"]) for item in envelopes
+    )
+    liquidation_additional = max(
+        int(item["allocation"]["additional_dictionary_bytes"]) for item in envelopes
+    )
+    liquidation_incremental = max(
+        int(item["allocation"]["incremental_bytes_per_row"]) for item in envelopes
+    )
+    # Review 261 finding 2: the retained response covers two series, while the accepted
+    # projection contains every proved native/provider mapping. Real accepted identities
+    # are wider than either retained anchor, so the partition-constant identity widths
+    # come from the complete accepted domain and the delta beyond the widest retained
+    # anchor value is added explicitly.
+    accepted_native_width = max(
+        (len(str(symbol).encode("utf-8")) for symbol in supported), default=0
+    )
+    accepted_provider_width = max(
+        (
+            len(str(identities.provider_for(symbol, context=context)).encode("utf-8"))
+            for symbol in supported
+        ),
+        default=0,
+    )
+    retained_native_width = max(
+        (
+            int(
+                item["allocation"]["dictionary_maximum_value_bytes"].get(
+                    "native_symbol", 0
+                )
+            )
+            for item in envelopes
+        ),
+        default=0,
+    )
+    retained_provider_width = max(
+        (
+            int(
+                item["allocation"]["dictionary_maximum_value_bytes"].get(
+                    "provider_symbol", 0
+                )
+            )
+            for item in envelopes
+        ),
+        default=0,
+    )
+    identity_width_delta = max(accepted_native_width - retained_native_width, 0) + max(
+        accepted_provider_width - retained_provider_width, 0
+    )
+    liquidation_additional += identity_width_delta
     normalized = 0
     largest = 0
     typed_payload_total = 0
     typed_overhead_total = 0
     manifest_total = 0
     manifest_mappings = 0
+    anchored_rows = 0
+    incremental_rows = 0
     for group_points in groups.values():
-        payload = ceil_div(int(group_points) * numerator, denominator)
         row_groups = max(1, ceil_div(int(group_points), SIZING_ROW_BATCH))
+        payload = row_groups * (liquidation_anchor + liquidation_additional) + max(
+            int(group_points) - row_groups, 0
+        ) * liquidation_incremental
+        anchored_rows += row_groups
+        incremental_rows += max(int(group_points) - row_groups, 0)
         overhead = row_groups * typed_footer_per_row_group + typed_framing
         # ADR-0025 section 5: each Coinalyze partition carries its own lineage manifest
         # mapping its local raw reference to the retained response receipt and to the
@@ -5818,6 +6207,47 @@ def project_coinalyze(
         envelope_numerator=numerator,
         envelope_denominator=denominator,
         envelope_witness=envelope_witness,
+        allocation={
+            "model": "row_group_anchor_plus_incremental_rows",
+            "rows": points,
+            "row_groups": anchored_rows,
+            "anchor_count": anchored_rows,
+            "row_group_anchor_bytes": liquidation_anchor,
+            "anchor_bytes": anchored_rows * liquidation_anchor,
+            "additional_dictionary_bytes_per_row_group": liquidation_additional,
+            "additional_dictionary_bytes": anchored_rows * liquidation_additional,
+            "incremental_rows": incremental_rows,
+            "incremental_bytes_per_row": liquidation_incremental,
+            "incremental_bytes": incremental_rows * liquidation_incremental,
+            "total_payload_bytes": typed_payload_total,
+            "identity_domain": {
+                "accepted_mappings": len(supported),
+                "retained_series": len(envelopes),
+                "accepted_maximum_native_symbol_bytes": accepted_native_width,
+                "accepted_maximum_provider_symbol_bytes": accepted_provider_width,
+                "retained_anchor_native_symbol_bytes": retained_native_width,
+                "retained_anchor_provider_symbol_bytes": retained_provider_width,
+                "identity_width_delta_bytes": identity_width_delta,
+                "cardinality_source": (
+                    "one native and one provider identity per projected liquidation "
+                    "partition; the maximum widths come from every accepted proved "
+                    "mapping, never from the two retained series alone"
+                ),
+                "witness_envelopes": [
+                    str(item["native_symbol"]) for item in envelopes
+                ],
+            },
+            "superseded_model": (
+                "a complete measured per-point Parquet payload multiplied by every "
+                "projected point, which repeated page initialization and the "
+                "partition's constant dictionary values on every point"
+            ),
+            "rule": (
+                "three disjoint byte sets per projected liquidation partition: one "
+                "measured one-row anchor per row group, the incremental rows after it, "
+                "and only the accepted values beyond the anchor's own"
+            ),
+        },
         projected_normalized_bytes=normalized,
         projected_typed_payload_bytes=typed_payload_total,
         projected_typed_overhead_bytes=typed_overhead_total,
@@ -5987,41 +6417,609 @@ def native_identity(native_symbol: str) -> dict[str, Any]:
     }
 
 
-def future_reference_identity_bytes(rows: int) -> dict[str, Any]:
-    """The exact encoded width the not-yet-created reference identities will occupy."""
-    _require(rows >= 0, "a reference width allocation has no row count", {"rows": rows})
-    field_widths = {
-        name: width + DICTIONARY_INDEX_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH
-        for name, width in FUTURE_REFERENCE_FIELD_WIDTHS.items()
-    }
-    per_row = sum(field_widths.values())
+def dictionary_column_allocation(
+    *,
+    column: str,
+    rows: int,
+    row_groups: int,
+    cardinality: int | None,
+    cardinality_source: str,
+    maximum_value_bytes: int,
+    nullable: bool,
+    charge_validity: bool = True,
+) -> dict[str, Any]:
+    """ADR-0027 section 2: one dictionary-encoded column, in separate exact terms.
+
+    A dictionary index and its null validity are costs of every projected row. A distinct
+    value and its offset are costs of every row group the value can occur in, never of
+    every row. A cardinality with no accepted upper bound is unknown, and unknown blocks
+    rather than being invented or silently re-represented.
+    """
+    context = {"column": column, "cardinality_source": cardinality_source}
+    _require(rows >= 0, "a dictionary allocation has no row count", context)
+    _require(row_groups >= 0, "a dictionary allocation has no row-group count", context)
+    _require(
+        bool(cardinality_source),
+        "a dictionary allocation does not name its cardinality authority",
+        context,
+    )
+    _require(
+        cardinality is not None,
+        "a dictionary allocation has no accepted cardinality bound",
+        context,
+    )
+    assert cardinality is not None
+    _require(cardinality >= 0, "a dictionary cardinality is not a count", context)
+    _require(
+        maximum_value_bytes >= 0, "a dictionary value width is not a width", context
+    )
+    _require(
+        rows == 0 or row_groups > 0,
+        "a dictionary allocation projects rows into no row group",
+        context,
+    )
+    # A physically nullable column keeps its true nullability. Whether *this* allocation
+    # owns the validity term is a separate ownership fact.
+    index_bytes_per_row = DICTIONARY_INDEX_WIDTH + (
+        NULL_VALIDITY_WIDTH if nullable and charge_validity else 0
+    )
+    row_index_bytes = rows * index_bytes_per_row
+    row_group_dictionary_bytes = cardinality * (
+        maximum_value_bytes + VARIABLE_OFFSET_WIDTH
+    )
+    dictionary_value_bytes = row_groups * row_group_dictionary_bytes
     return {
+        "column": column,
         "rows": rows,
+        "row_groups": row_groups,
+        "dictionary_cardinality": cardinality,
+        "cardinality_source": cardinality_source,
+        "maximum_value_bytes": maximum_value_bytes,
+        "nullable": nullable,
+        "validity_charged_here": bool(nullable and charge_validity),
+        "index_bytes_per_row": index_bytes_per_row,
+        "row_index_bytes": row_index_bytes,
+        "row_group_dictionary_bytes": row_group_dictionary_bytes,
+        "dictionary_value_bytes": dictionary_value_bytes,
+        "bytes": row_index_bytes + dictionary_value_bytes,
+        "rule": (
+            (
+                "this nullable allocation owns the null validity: indices and null "
+                "validity are charged on every projected row; each distinct value and "
+                "its offset are charged once in every row group it can occur in"
+            )
+            if nullable and charge_validity
+            else (
+                (
+                "indices are charged on every projected row and each distinct value and "
+                "its offset once in every row group it can occur in; null validity is "
+                "excluded here and belongs to the current typed schema that already "
+                "publishes this column"
+                )
+                if nullable
+                else (
+                    "indices are charged on every projected row and each distinct value "
+                    "and its offset once in every row group it can occur in; this "
+                    "non-nullable column has no null validity term"
+                )
+            )
+        ),
+    }
+
+
+def sum_dictionary_allocations(
+    allocations: Sequence[Mapping[str, Any]], *, scope: str
+) -> dict[str, Any]:
+    """Total one named set of dictionary column allocations without hiding a term."""
+    return {
+        "scope": scope,
+        "columns": [dict(item) for item in allocations],
+        "row_index_bytes": sum(int(item["row_index_bytes"]) for item in allocations),
+        "dictionary_value_bytes": sum(
+            int(item["dictionary_value_bytes"]) for item in allocations
+        ),
+        "row_group_dictionary_bytes": sum(
+            int(item["row_group_dictionary_bytes"]) for item in allocations
+        ),
+        "bytes": sum(int(item["bytes"]) for item in allocations),
+    }
+
+
+def _traverse_typed_rows(
+    columns: Sequence[TypedColumn],
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    partition_fields: Sequence[str] = (),
+    row_group_size: int = 0,
+) -> dict[str, Any]:
+    """Traverse every accepted row once and report its exact allocation inputs.
+
+    Nothing here is a mean, a quantile, or a sample. Every row is visited, so the
+    per-field maximum encoded width, the distinct dictionary values, and the greatest
+    number of distinct values inside any one partition are all exact facts of the
+    complete accepted row set.
+    """
+    maxima: dict[str, int] = {}
+    non_null_maxima: dict[str, int] = {}
+    distinct: dict[str, set[str]] = {}
+    value_bytes: dict[str, int] = {}
+    per_partition: dict[str, dict[tuple[str, ...], set[str]]] = {}
+    dictionary_columns = [
+        column for column in columns if column.kind == KIND_DICTIONARY
+    ]
+    for column in columns:
+        maxima[column.name] = 0
+        non_null_maxima[column.name] = 0
+    for column in dictionary_columns:
+        distinct[column.name] = set()
+        value_bytes[column.name] = 0
+        per_partition[column.name] = {}
+    for row in rows:
+        key = tuple(str(row.get(name, "")) for name in partition_fields)
+        for column in columns:
+            _require(
+                column.name in row,
+                "a traversed row is missing a declared column",
+                {"column": column.name},
+            )
+            value = row[column.name]
+            width = _typed_value_width(column, value)
+            if width > maxima[column.name]:
+                maxima[column.name] = width
+            if value is not None and width > non_null_maxima[column.name]:
+                # The widest real value, with no validity byte folded into it.
+                non_null_maxima[column.name] = width
+            if column.kind != KIND_DICTIONARY or value is None:
+                continue
+            text = str(value)
+            encoded = len(text.encode("utf-8"))
+            if encoded > value_bytes[column.name]:
+                value_bytes[column.name] = encoded
+            distinct[column.name].add(text)
+            if partition_fields:
+                per_partition[column.name].setdefault(key, set()).add(text)
+    cardinality: dict[str, int] = {}
+    # Review 260 finding 4: for a known deterministic layout the accepted rows are split
+    # at the real row-group boundaries and each group's own distinct values are counted,
+    # so a global universe is never republished under a per-group label.
+    row_group_cardinality: list[dict[str, int]] = []
+    if row_group_size and row_group_size > 0:
+        for start in range(0, len(rows), row_group_size):
+            group = rows[start : start + row_group_size]
+            row_group_cardinality.append(
+                {
+                    column.name: len(
+                        {
+                            str(item[column.name])
+                            for item in group
+                            if item[column.name] is not None
+                        }
+                    )
+                    for column in dictionary_columns
+                }
+            )
+    for column in dictionary_columns:
+        name = column.name
+        if row_group_cardinality:
+            cardinality[name] = max(
+                group[name] for group in row_group_cardinality
+            )
+        elif partition_fields and per_partition[name]:
+            # The partition key proves how many distinct values can share one row group.
+            cardinality[name] = max(
+                len(values) for values in per_partition[name].values()
+            )
+        else:
+            cardinality[name] = len(distinct[name])
+    incremental: dict[str, int] = {}
+    for column in columns:
+        if column.name in FUTURE_REFERENCE_FIELD_WIDTHS:
+            # Review 261 finding 1: the column already exists in every measured anchor
+            # and exact file as a physical null, so the current typed schema owns its
+            # null validity. The future allocation owns only the index that does not
+            # exist yet and the accepted opaque values behind it.
+            incremental[column.name] = NULL_VALIDITY_WIDTH
+            continue
+        if column.kind == KIND_DICTIONARY:
+            incremental[column.name] = DICTIONARY_INDEX_WIDTH + (
+                NULL_VALIDITY_WIDTH if column.nullable else 0
+            )
+            continue
+        # A high-cardinality opaque value is never a dictionary value: it keeps the real
+        # traversed width of the widest real value the accepted rows carry, plus exactly
+        # one validity allocation when the column is nullable.
+        incremental[column.name] = non_null_maxima[column.name] + (
+            NULL_VALIDITY_WIDTH if column.nullable else 0
+        )
+    if row_group_cardinality:
+        source = (
+            "distinct values inside each deterministic row group of the complete "
+            "accepted row set"
+        )
+    elif partition_fields:
+        source = "distinct values inside one partition of the complete accepted row set"
+    else:
+        source = "distinct values of the complete accepted row set"
+    return {
+        "rows_traversed": len(rows),
+        "partition_fields": list(partition_fields),
+        "row_group_size": row_group_size,
+        "per_field_maximum_encoded_widths": dict(sorted(maxima.items())),
+        "per_field_maximum_non_null_widths": dict(sorted(non_null_maxima.items())),
+        "maximum_row_bytes": sum(maxima.values()),
+        "dictionary_cardinality_per_row_group": dict(sorted(cardinality.items())),
+        "dictionary_cardinality_by_row_group": [
+            dict(sorted(group.items())) for group in row_group_cardinality
+        ],
+        "dictionary_distinct_values": {
+            name: len(values) for name, values in sorted(distinct.items())
+        },
+        "dictionary_maximum_value_bytes": dict(sorted(value_bytes.items())),
+        "incremental_encoded_widths": dict(sorted(incremental.items())),
+        "incremental_bytes_per_row": sum(incremental.values()),
+        "cardinality_source": source,
+    }
+
+
+def _additional_dictionary_bytes(
+    columns: Sequence[TypedColumn],
+    traversal: Mapping[str, Any],
+    *,
+    anchor_row: Mapping[str, Any],
+    row_groups: int,
+) -> dict[str, Any]:
+    """Only the accepted values a row group holds beyond the one already in its anchor.
+
+    The measured one-row anchor already contains page initialization, that row's fixed
+    values and dictionary indices, and the first non-null dictionary value of each column
+    it populates. Charging a column's whole dictionary again would count those bytes
+    twice, so this term charges only `cardinality - present_in_anchor` values.
+    """
+    cardinality = dict(traversal["dictionary_cardinality_per_row_group"])
+    widths = dict(traversal["dictionary_maximum_value_bytes"])
+    allocations: list[dict[str, Any]] = []
+    present: dict[str, int] = {}
+    for column in columns:
+        if column.kind != KIND_DICTIONARY:
+            continue
+        in_anchor = int(anchor_row.get(column.name) is not None)
+        present[column.name] = in_anchor
+        allocations.append(
+            {
+                **dictionary_column_allocation(
+                    column=column.name,
+                    rows=0,
+                    row_groups=row_groups,
+                    cardinality=max(
+                        int(cardinality.get(column.name, 0)) - in_anchor, 0
+                    ),
+                    cardinality_source=str(traversal["cardinality_source"]),
+                    maximum_value_bytes=int(widths.get(column.name, 0)),
+                    nullable=column.nullable,
+                ),
+                "accepted_cardinality": int(cardinality.get(column.name, 0)),
+                "values_already_in_anchor": in_anchor,
+            }
+        )
+    summed = sum_dictionary_allocations(allocations, scope="additional_row_group_values")
+    return {
+        **summed,
+        "values_already_in_anchor": dict(sorted(present.items())),
+        "disjointness_rule": (
+            "the anchor row's own dictionary value is never charged again; only "
+            "accepted values beyond it are added to a row group"
+        ),
+    }
+
+
+# Review 261 finding 1: the future reference allocation owns two dictionary indices and
+# the accepted opaque values behind them. Null validity for those two columns belongs to
+# the current typed schema, which already publishes them as physical nulls today.
+REFERENCE_IDENTITY_INDEX_BYTES_PER_ROW: int = 2 * DICTIONARY_INDEX_WIDTH
+
+
+def split_reference_identity_scopes(
+    partitions: Sequence[Mapping[str, Any]],
+    *,
+    detailed_symbols: Sequence[str],
+    funding_only_symbols: Sequence[str],
+) -> dict[str, dict[str, int]]:
+    """Split projected identity rows and row groups by accepted membership class.
+
+    ADR-0027 section 3: a detailed identity's partitions can hold one snapshot-backed
+    version value and a funding-only identity's partitions can hold none. The split is
+    taken from the real projected partition set, never from a proportion or an average.
+
+    Review 260 finding 5: every symbol is proved to belong to exactly one accepted class.
+    A symbol in neither class, or in both, is an unknown classification and blocks; it is
+    never assumed detailed because it is absent from the funding-only set.
+    """
+    detailed_set = set(str(symbol) for symbol in detailed_symbols)
+    funding_set = set(str(symbol) for symbol in funding_only_symbols)
+    overlap = sorted(detailed_set & funding_set)
+    _require(
+        not overlap,
+        "a native identity is classified both detailed and funding-only",
+        {"native_symbols": overlap[:8]},
+    )
+    detailed = {"rows": 0, "row_groups": 0, "partitions": 0}
+    funding_only = {"rows": 0, "row_groups": 0, "partitions": 0}
+    for item in partitions:
+        symbol = str(item.get("native_symbol") or "")
+        _require(
+            bool(symbol),
+            "a projected identity partition names no native symbol",
+            {"partition": dict(item)},
+        )
+        _require(
+            symbol in detailed_set or symbol in funding_set,
+            "a projected identity partition names an unclassified native identity",
+            {"native_symbol": symbol},
+        )
+        rows = int(item.get("rows") or 0)
+        _require(
+            rows >= 0,
+            "a projected identity partition has no row count",
+            {"native_symbol": symbol},
+        )
+        bucket = funding_only if symbol in funding_set else detailed
+        bucket["rows"] += rows
+        bucket["row_groups"] += ceil_div(rows, SIZING_ROW_BATCH)
+        bucket["partitions"] += 1
+    return {"detailed": detailed, "funding_only": funding_only}
+
+
+def future_reference_identity_bytes(
+    *,
+    scopes: Sequence[Mapping[str, Any]],
+    detailed_identities: int,
+    funding_only_identities: int,
+) -> dict[str, Any]:
+    """ADR-0027 section 3: the authority-bounded future reference identity allocation.
+
+    The two REF-001 columns stay dictionary-encoded opaque strings. Their indices and
+    null validity occur on rows; their accepted opaque values occur in the row-group
+    dictionaries of the row groups they can occur in. One accepted native membership
+    identity maps to at most one canonical instrument identity, and the accepted contract
+    authority supports at most one snapshot-backed version for a detailed identity and
+    none for a funding-only identity. Nothing is backdated, no per-row fingerprint is
+    fabricated, and a cardinality beyond the accepted authority blocks.
+    """
+    context = {"allocation": "future_reference_identity"}
+    _require(
+        detailed_identities >= 0 and funding_only_identities >= 0,
+        "a reference identity allocation has no membership identity counts",
+        {**context, "detailed": detailed_identities, "funding_only": funding_only_identities},
+    )
+    accepted_identities = detailed_identities + funding_only_identities
+    # At most one snapshot-backed version per detailed identity; funding-only adds none.
+    accepted_versions = detailed_identities
+    per_scope: list[dict[str, Any]] = []
+    total_rows = 0
+    total_row_groups = 0
+    total_bytes = 0
+    for item in scopes:
+        name = str(item.get("scope") or "")
+        rows = int(item.get("rows") or 0)
+        row_groups = int(item.get("row_groups") or 0)
+        instrument = _optional_int(item.get("instrument_cardinality"))
+        version = _optional_int(item.get("version_cardinality"))
+        source = str(item.get("cardinality_source") or "")
+        _require(bool(name), "a reference identity scope has no name", context)
+        _require(
+            instrument is not None and version is not None,
+            "a reference identity scope has no accepted cardinality bound",
+            {**context, "scope": name},
+        )
+        assert instrument is not None and version is not None
+        _require(
+            version <= instrument,
+            "a reference identity scope claims more versions than instrument identities",
+            {
+                **context,
+                "scope": name,
+                "instrument_cardinality": instrument,
+                "version_cardinality": version,
+            },
+        )
+        _require(
+            (rows > 0 and row_groups > 0) or (instrument == 0 and version == 0),
+            "an empty reference identity scope publishes a nonzero cardinality",
+            {
+                **context,
+                "scope": name,
+                "rows": rows,
+                "row_groups": row_groups,
+                "instrument_cardinality": instrument,
+                "version_cardinality": version,
+            },
+        )
+        _require(
+            instrument <= accepted_identities and version <= accepted_versions,
+            "a reference identity scope exceeds the accepted authority cardinality",
+            {
+                **context,
+                "scope": name,
+                "instrument_cardinality": instrument,
+                "version_cardinality": version,
+                "accepted_identities": accepted_identities,
+                "accepted_versions": accepted_versions,
+            },
+        )
+        summed = sum_dictionary_allocations(
+            [
+                dictionary_column_allocation(
+                    column="canonical_instrument_id",
+                    rows=rows,
+                    row_groups=row_groups,
+                    cardinality=instrument,
+                    cardinality_source=source,
+                    maximum_value_bytes=REF_INSTRUMENT_ID_WIDTH,
+                    nullable=True,
+                    # Current null validity belongs to the current typed schema.
+                    charge_validity=False,
+                ),
+                dictionary_column_allocation(
+                    column="canonical_instrument_version_id",
+                    rows=rows,
+                    row_groups=row_groups,
+                    cardinality=version,
+                    cardinality_source=source,
+                    maximum_value_bytes=REF_INSTRUMENT_VERSION_ID_WIDTH,
+                    nullable=True,
+                    charge_validity=False,
+                ),
+            ],
+            scope=name,
+        )
+        per_scope.append({**summed, "rows": rows, "row_groups": row_groups})
+        total_rows += rows
+        total_row_groups += row_groups
+        total_bytes += int(summed["bytes"])
+    return {
+        "rows": total_rows,
+        "row_groups": total_row_groups,
+        "scopes": per_scope,
         "value_widths": dict(FUTURE_REFERENCE_FIELD_WIDTHS),
-        "encoded_field_widths": field_widths,
-        "bytes_per_row": per_row,
-        "bytes": per_row * rows,
+        "detailed_membership_identities": detailed_identities,
+        "funding_only_membership_identities": funding_only_identities,
+        "accepted_membership_identities": accepted_identities,
+        "accepted_version_cardinality": accepted_versions,
+        "bytes_per_row": REFERENCE_IDENTITY_INDEX_BYTES_PER_ROW,
+        "current_null_bytes_per_row": REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW,
+        "validity_owner": (
+            "the current typed target schema, which already publishes both columns as "
+            "physical nulls; this future allocation adds only indices and values"
+        ),
+        "row_group_dictionary_bytes": sum(
+            int(item["row_group_dictionary_bytes"]) for item in per_scope
+        ),
+        "bytes": total_bytes,
+        "coverage_rule": (
+            "rows outside an accepted version's effective coverage stay null with the "
+            "declared reference identity state; no current snapshot is projected "
+            "backward and no per-row fingerprint is fabricated"
+        ),
         "allocation": (
-            "schema width charge for REF-001 identities that do not exist yet; this is "
+            "schema allocation for REF-001 identities that do not exist yet; this is "
             "not an existing canonical id and no row publishes one"
         ),
     }
 
 
-def cost_identity_bytes_per_row(objects: Sequence[PhysicalObject]) -> int:
-    """Present-width allocation for identity fields on retained quote/depth rows."""
+def cost_identity_allocation(
+    objects: Sequence[PhysicalObject], *, rows: int, row_groups: int
+) -> dict[str, Any]:
+    """ADR-0027 section 2: the shared current identity allocation for a projected product.
+
+    Venue, native symbol, and reference-identity state are fixed by the
+    product/component/native-symbol/UTC-month partition, so each occurs once in a row
+    group's dictionary and contributes only an index to every row. The two REF-001
+    columns are declared nullable and are physically present as current nulls, so this
+    current allocation owns exactly one validity byte for each of them; the future
+    reference allocation owns their indices and accepted values and no validity.
+    """
     _require(bool(objects), "a cost identity allocation has no object", {})
     native = max(len(item.symbol.encode("utf-8")) for item in objects)
-    dictionary_overhead = DICTIONARY_INDEX_WIDTH + VARIABLE_OFFSET_WIDTH
-    return (
-        len(CANONICAL_VENUE.encode("utf-8"))
-        + dictionary_overhead
-        + native
-        + dictionary_overhead
-        + len(REF_IDENTITY_STATE.encode("utf-8"))
-        + dictionary_overhead
-        + 2 * NULL_VALIDITY_WIDTH
+    source = "fixed by the product/component/native-symbol/UTC-month partition key"
+    allocations = [
+        dictionary_column_allocation(
+            column="venue",
+            rows=rows,
+            row_groups=row_groups,
+            cardinality=1,
+            cardinality_source=source,
+            maximum_value_bytes=len(CANONICAL_VENUE.encode("utf-8")),
+            nullable=False,
+        ),
+        dictionary_column_allocation(
+            column="native_symbol",
+            rows=rows,
+            row_groups=row_groups,
+            cardinality=1,
+            cardinality_source=source,
+            maximum_value_bytes=native,
+            nullable=False,
+        ),
+        dictionary_column_allocation(
+            column="reference_identity_state",
+            rows=rows,
+            row_groups=row_groups,
+            cardinality=1,
+            cardinality_source=source,
+            maximum_value_bytes=len(REF_IDENTITY_STATE.encode("utf-8")),
+            nullable=False,
+        ),
+    ]
+    summed = sum_dictionary_allocations(allocations, scope="shared_current_identity")
+    # Review 261 finding 1: the archive and cost target schemas also declare the two
+    # REF-001 columns as current nulls. The contribution envelopes exclude the whole
+    # instrument identity, so this shared current allocation must carry their null
+    # validity explicitly; the future allocation adds only indices and values.
+    index_bytes_per_row = sum(int(item["index_bytes_per_row"]) for item in allocations)
+    current_null_bytes = rows * REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW
+    return {
+        **summed,
+        "rows": rows,
+        "row_groups": row_groups,
+        "dictionary_index_bytes_per_row": index_bytes_per_row,
+        "reference_current_null_bytes_per_row": (
+            REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW
+        ),
+        "reference_current_null_bytes": current_null_bytes,
+        "reference_current_null_columns": list(FUTURE_REFERENCE_FIELD_WIDTHS),
+        "bytes_per_row": index_bytes_per_row
+        + REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW,
+        "bytes": int(summed["bytes"]) + current_null_bytes,
+        "row_index_bytes": int(summed["row_index_bytes"]) + current_null_bytes,
+        "maximum_native_symbol_bytes": native,
+        "validity_owner": (
+            "this current shared identity allocation owns the two REF-001 columns' null "
+            "validity; the future reference allocation owns their indices and values"
+        ),
+    }
+
+
+def measure_shared_identity_anchor(
+    objects: Sequence[PhysicalObject], *, destination: Path
+) -> dict[str, Any]:
+    """Measure one real one-row shared instrument identity payload.
+
+    Review 263 finding 2: a formula sum of three dictionary values is not an anchor. This
+    writes the complete five-column `instrument_identity_columns()` schema for one real
+    row built by `native_identity()` over the widest accepted native symbol, so both
+    nullable REF-001 columns are physically present as nulls and the Arrow/Parquet page
+    and dictionary initialization is measured rather than asserted.
+    """
+    _require(bool(objects), "a shared identity anchor has no object", {})
+    widest = max(objects, key=lambda item: len(item.symbol.encode("utf-8"))).symbol
+    columns = instrument_identity_columns()
+    row = native_identity(widest)
+    measured = measure_fixed_schema_product(
+        product=PRODUCT_COST_CALIBRATION,
+        component="shared_current_identity",
+        schema=_schema_of(columns),
+        columns=_column_values(columns, [row]),
+        destination=destination,
     )
+    traversal = _traverse_typed_rows(columns, [row])
+    return {
+        **measured,
+        "widest_accepted_native_symbol": widest,
+        "widest_accepted_native_symbol_bytes": len(widest.encode("utf-8")),
+        "anchor_row": {
+            name: (None if value is None else str(value)) for name, value in row.items()
+        },
+        "present_null_columns": sorted(
+            name for name, value in row.items() if value is None
+        ),
+        "width_model": traversal,
+    }
+
+
+def cost_identity_bytes_per_row(objects: Sequence[PhysicalObject]) -> int:
+    """The per-row cost of the shared cost identity columns, charged once."""
+    return int(cost_identity_allocation(objects, rows=0, row_groups=0)["bytes_per_row"])
 
 
 def future_membership_term_bytes(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -6043,22 +7041,17 @@ def future_membership_term_bytes(rows: Sequence[Mapping[str, Any]]) -> dict[str,
     for row in unresolved:
         native_width = len(str(row["native_symbol"]).encode("utf-8"))
         row_string_bytes = len(string_fields) * (
-            native_width
-            + DICTIONARY_INDEX_WIDTH
-            + VARIABLE_OFFSET_WIDTH
-            + NULL_VALIDITY_WIDTH
+            native_width + DICTIONARY_INDEX_WIDTH + VARIABLE_OFFSET_WIDTH
         )
         string_bytes += row_string_bytes
         maximum_string_bytes = max(maximum_string_bytes, row_string_bytes)
-    lifecycle_bytes = len(unresolved) * len(lifecycle_fields) * (
-        INTEGER_WIDTH + NULL_VALIDITY_WIDTH
+    # The measured membership rows already publish these columns as typed nulls, so the
+    # future terms add only the value widths, never a second validity byte.
+    lifecycle_bytes = len(unresolved) * len(lifecycle_fields) * INTEGER_WIDTH
+    snapshot_bytes = len(unresolved) * (SHA256_WIDTH + VARIABLE_OFFSET_WIDTH)
+    fixed_row_bytes = (
+        len(lifecycle_fields) * INTEGER_WIDTH + SHA256_WIDTH + VARIABLE_OFFSET_WIDTH
     )
-    snapshot_bytes = len(unresolved) * (
-        SHA256_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH
-    )
-    fixed_row_bytes = len(lifecycle_fields) * (
-        INTEGER_WIDTH + NULL_VALIDITY_WIDTH
-    ) + SHA256_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH
     _exact(
         len(unresolved),
         ACCEPTED_FUNDING_ONLY_MEMBERSHIP_IDENTITIES,
@@ -6081,29 +7074,33 @@ def future_membership_term_bytes(rows: Sequence[Mapping[str, Any]]) -> dict[str,
             else 0
         ),
         "bytes": string_bytes + lifecycle_bytes + snapshot_bytes,
+        "validity_owner": "the current measured membership projection",
         "rule": (
             "each unavailable string uses its own native-symbol width plus dictionary "
-            "index, variable-value offset, and null validity; lifecycle integers and "
-            "the future contract snapshot use fixed typed widths"
+            "index and variable-value offset; lifecycle integers and the future contract "
+            "snapshot use fixed typed widths; null validity belongs to the current "
+            "typed representation and is never charged twice"
         ),
     }
 
 
 def future_bundle_field_bytes(rows: int) -> dict[str, Any]:
     """Fixed widths of bundle values that exist only after publication."""
+    # Review 260 finding 1: these columns already exist in the measured bundle rows and
+    # already carry their current null validity there, so only the future value width
+    # and its offset are added here. One physical byte has exactly one owner.
     fields = {
-        "partition_sha256": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH,
-        "lineage_manifest_sha256": (
-            SHA256_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH
-        ),
-        "partition_bytes": INTEGER_WIDTH + NULL_VALIDITY_WIDTH,
-        "row_count": INTEGER_WIDTH + NULL_VALIDITY_WIDTH,
+        "partition_sha256": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH,
+        "lineage_manifest_sha256": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH,
+        "partition_bytes": INTEGER_WIDTH,
+        "row_count": INTEGER_WIDTH,
     }
     return {
         "rows": rows,
         "encoded_field_widths": fields,
         "bytes_per_row": sum(fields.values()),
         "bytes": rows * sum(fields.values()),
+        "validity_owner": "the current typed bundle projection",
     }
 
 
@@ -6129,15 +7126,18 @@ def future_lineage_field_bytes(mappings: Iterable[Mapping[str, Any]]) -> dict[st
             continue
         projected_count += 1
         projected_responses += int(bool(item.get("provider_symbol")))
+    # These manifest columns already exist and already carry their current null validity
+    # in the measured partition manifest, so only the future value widths are added.
     fields = {
-        "source_sha256": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH,
-        "checksum_authority": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH,
-        "retrieval_time": FUTURE_TIMESTAMP_WIDTH + VARIABLE_OFFSET_WIDTH + NULL_VALIDITY_WIDTH,
-        "source_available_at": INTEGER_WIDTH + NULL_VALIDITY_WIDTH,
+        "source_sha256": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH,
+        "checksum_authority": SHA256_WIDTH + VARIABLE_OFFSET_WIDTH,
+        "retrieval_time": FUTURE_TIMESTAMP_WIDTH + VARIABLE_OFFSET_WIDTH,
+        "source_available_at": INTEGER_WIDTH,
     }
-    response_counter_bytes = projected_responses * 2 * (
-        INTEGER_WIDTH + NULL_VALIDITY_WIDTH
-    )
+    # Review 261 finding 1: these two counters already exist as null columns in the
+    # measured current manifest, which owns their validity. Only the future integer
+    # values are added here.
+    response_counter_bytes = projected_responses * 2 * INTEGER_WIDTH
     return {
         "mappings": projected_count,
         "encoded_field_widths": fields,
@@ -6145,6 +7145,7 @@ def future_lineage_field_bytes(mappings: Iterable[Mapping[str, Any]]) -> dict[st
         "projected_response_mappings": projected_responses,
         "future_response_counter_bytes": response_counter_bytes,
         "bytes": projected_count * sum(fields.values()) + response_counter_bytes,
+        "validity_owner": "the current measured partition manifest",
     }
 
 
@@ -6388,12 +7389,38 @@ def measure_target_only_columns(
     product: str, *, cohorts: Sequence[DerivationCohort], destination: Path
 ) -> dict[str, Any]:
     """Measure one product's target-only fields from real derived cohort values."""
-    columns = target_only_columns(product)
     _require(
-        bool(columns),
+        bool(target_only_columns(product)),
         "a required product declares no target-only field",
         {"required_product": product},
     )
+    # The shared instrument identity is allocated once, partition-aware, for every
+    # applicable product; only the product's own derived fields are measured here.
+    columns = derived_only_columns(product)
+    if not columns:
+        return {
+            "required_product": product,
+            "target_only_columns": [],
+            "shared_identity_columns": [
+                column.to_dict() for column in instrument_identity_columns()
+            ],
+            "witness_available": False,
+            "witness_required": False,
+            "measured_rows": 0,
+            "bytes_per_row": 0,
+            "payload_bytes": 0,
+            "footer_bytes": 0,
+            "framing_bytes": PARQUET_MAGIC_BYTES + PARQUET_TRAILER_BYTES,
+            "residual_bytes": 0,
+            "file_bytes": 0,
+            "row_groups": 0,
+            "rows": 0,
+            "schema": [],
+            "witnesses": [],
+        }
+    # Review 260 finding 3: every applicable retained cohort is traversed. The first
+    # cohort that derives rows need not contain every accepted state a later partition
+    # can publish, so stopping there would understate a derived dictionary.
     rows: list[dict[str, Any]] = []
     witnesses: list[str] = []
     for cohort in cohorts:
@@ -6402,7 +7429,6 @@ def measure_target_only_columns(
             continue
         rows.extend(derived)
         witnesses.append(f"{cohort.native_symbol}:{cohort.economic_interval}")
-        break
     if not rows:
         # No real cohort supports this product's derivation. The witness is honestly
         # unavailable; nothing is invented to obtain a coefficient.
@@ -6422,17 +7448,63 @@ def measure_target_only_columns(
             "schema": _schema_dict(_schema_of(columns)),
             "witnesses": [],
         }
-    measured = measure_fixed_schema_product(
+    measured = measure_maximum_width_product(
         product=product,
-        schema=_schema_of(columns),
-        columns=_column_values(columns, rows),
+        columns=columns,
+        rows=rows,
         destination=destination,
+    )
+    # Every finite derived state or convention dictionary is bound to its complete
+    # declared domain, so a value no traversed cohort happened to publish is still
+    # allocated. A data-dependent dictionary with no declared domain keeps its traversed
+    # cardinality, and an unknown one still blocks in the allocation itself.
+    declared = dict(measured["width_model"]["dictionary_cardinality_per_row_group"])
+    widths = dict(measured["width_model"]["dictionary_maximum_value_bytes"])
+    bound: dict[str, int] = {}
+    for column in columns:
+        domain = DERIVED_STATE_DOMAINS.get(column.name)
+        if column.kind != KIND_DICTIONARY or not domain:
+            continue
+        bound[column.name] = len(domain)
+        declared[column.name] = max(int(declared.get(column.name, 0)), len(domain))
+        widths[column.name] = max(
+            int(widths.get(column.name, 0)),
+            max(len(str(value).encode("utf-8")) for value in domain),
+        )
+    width_model = {
+        **measured["width_model"],
+        "dictionary_cardinality_per_row_group": dict(sorted(declared.items())),
+        "dictionary_maximum_value_bytes": dict(sorted(widths.items())),
+        "declared_domain_cardinality": dict(sorted(bound.items())),
+        "cardinality_source": (
+            "the complete declared domain of every finite derived state dictionary, and "
+            "the complete traversed value set of every other dictionary"
+        ),
+    }
+    additional = _additional_dictionary_bytes(
+        columns,
+        width_model,
+        anchor_row={
+            name: (None if value == 0 else name)
+            for name, value in dict(
+                measured.get("anchor_row_dictionary_values") or {}
+            ).items()
+        },
+        row_groups=1,
     )
     return {
         **measured,
+        "width_model": width_model,
+        "additional_dictionary_bytes": int(additional["bytes"]),
+        "additional_row_group_values": additional,
         "target_only_columns": [column.to_dict() for column in columns],
+        "shared_identity_columns": [
+            column.to_dict() for column in instrument_identity_columns()
+        ],
         "witness_available": True,
+        "witness_required": True,
         "witnesses": witnesses,
+        "cohorts_traversed": len(witnesses),
     }
 
 
@@ -6505,56 +7577,63 @@ def _measure_fixed_schema_products(
         field_name="funding_only_membership_identities",
         context={},
     )
-    measured_membership = measure_fixed_schema_product(
+    # One 771-row witness is published as 771 one-row partitions, so the witness layout
+    # is not the projected layout and every target row group recharges its own anchor.
+    measured_membership = measure_maximum_width_product(
         product=PRODUCT_MEMBERSHIP,
-        schema=final_product_schema(PRODUCT_MEMBERSHIP),
-        columns=_column_values(
-            final_product_columns(PRODUCT_MEMBERSHIP), membership_rows
-        ),
+        columns=final_product_columns(PRODUCT_MEMBERSHIP),
+        rows=membership_rows,
         destination=staging / "product-membership.parquet",
+        partition_fields=("native_symbol",),
     )
     gap_rows = [
         {**native_identity(str(item["native_symbol"])), **dict(item)}
         for item in coverage["source_gaps"]
     ]
     _require(bool(gap_rows), "the accepted coverage authority has no gap row", {})
-    measured_gaps = measure_fixed_schema_product(
+    measured_gaps = measure_maximum_width_product(
         product=PRODUCT_COVERAGE_GAP,
-        schema=final_product_schema(PRODUCT_COVERAGE_GAP),
-        columns=_column_values(final_product_columns(PRODUCT_COVERAGE_GAP), gap_rows),
+        columns=final_product_columns(PRODUCT_COVERAGE_GAP),
+        rows=gap_rows,
         destination=staging / "product-coverage-gap.parquet",
+        partition_fields=("required_product", "native_symbol"),
     )
     typed_rows = [
         {**native_identity(str(item["native_symbol"])), **dict(item)}
         for item in coverage["typed_gap_memberships"]
     ]
     _require(bool(typed_rows), "the accepted authority has no typed-gap membership", {})
-    measured_typed = measure_fixed_schema_product(
+    measured_typed = measure_maximum_width_product(
         product="typed_gap_membership",
-        schema=_schema_of(TYPED_GAP_MEMBERSHIP_COLUMNS),
-        columns=_column_values(TYPED_GAP_MEMBERSHIP_COLUMNS, typed_rows),
+        columns=TYPED_GAP_MEMBERSHIP_COLUMNS,
+        rows=typed_rows,
         destination=staging / "product-typed-gap-membership.parquet",
+        partition_fields=("required_product", "native_symbol"),
     )
     fee_gap_rows = [
         {**native_identity(str(item["native_symbol"])), **dict(item)}
         for item in coverage["fee_gaps"]
     ]
     # ADR-0026 component four of the cost product, not a required product of its own.
-    measured_fee_gaps = measure_fixed_schema_product(
+    measured_fee_gaps = measure_maximum_width_product(
         product=PRODUCT_COST_CALIBRATION,
         component="fee_authority_gap",
-        schema=_schema_of(FEE_AUTHORITY_GAP_COLUMNS),
-        columns=_column_values(FEE_AUTHORITY_GAP_COLUMNS, fee_gap_rows),
+        columns=FEE_AUTHORITY_GAP_COLUMNS,
+        rows=fee_gap_rows,
         destination=staging / "product-fee-authority-gap.parquet",
+        partition_fields=("native_symbol",),
     )
     scenario_rows = [dict(row) for row in fee_scenario_rows()]
     # ADR-0026 component five of the cost product, not a required product of its own.
-    measured_scenarios = measure_fixed_schema_product(
+    # One projected partition holding both policy rows: the measured layout is the
+    # projected layout, so its real payload, footer, and framing are used exactly.
+    measured_scenarios = measure_maximum_width_product(
         product=PRODUCT_COST_CALIBRATION,
         component="scenario_policy",
-        schema=_schema_of(FEE_SCENARIO_COLUMNS),
-        columns=_column_values(FEE_SCENARIO_COLUMNS, scenario_rows),
+        columns=FEE_SCENARIO_COLUMNS,
+        rows=scenario_rows,
         destination=staging / "product-fee-scenarios.parquet",
+        exact_layout=True,
     )
     quality_rows = [
         {
@@ -6570,11 +7649,14 @@ def _measure_fixed_schema_products(
         for item in quality_partitions
     ]
     _require(bool(quality_rows), "the projection has no fixed-cadence quality partition", {})
+    # Every quality-gap row of one partition shares that partition's proved product,
+    # native symbol, and UTC month, so its dictionary cardinality is a partition fact.
     measured_quality = measure_maximum_width_product(
         product="quality_gap",
         columns=QUALITY_GAP_COLUMNS,
         rows=quality_rows,
         destination=staging / "product-quality-gap.parquet",
+        partition_fields=("required_product", "native_symbol", "utc_month"),
     )
     # The official fee-schedule component has zero rows for this release, and its schema
     # is still pinned. A schema with no rows is measured as a width charge, not written.
@@ -6589,7 +7671,44 @@ def _measure_fixed_schema_products(
         "no free reproducible historical fee authority exists for this interval; the "
         "component schema is pinned with exactly zero rows and absence never becomes zero cost"
     )
+    detailed_identities = sum(
+        1
+        for row in membership_rows
+        if row["contract_metadata_state"] == MEMBERSHIP_DETAILED_STATE
+    )
+    funding_only_identities = sum(
+        1
+        for row in membership_rows
+        if row["contract_metadata_state"] == MEMBERSHIP_FUNDING_ONLY_STATE
+    )
+    _exact(
+        detailed_identities + funding_only_identities,
+        len(membership_rows),
+        field_name="membership_identity_classes",
+        context={},
+    )
     return {
+        "membership_identity_classes": {
+            "detailed": detailed_identities,
+            "funding_only": funding_only_identities,
+            "accepted": len(membership_rows),
+            "accepted_version_cardinality": detailed_identities,
+            "funding_only_native_symbols": sorted(
+                str(row["native_symbol"])
+                for row in membership_rows
+                if row["contract_metadata_state"] == MEMBERSHIP_FUNDING_ONLY_STATE
+            ),
+            "detailed_native_symbols": sorted(
+                str(row["native_symbol"])
+                for row in membership_rows
+                if row["contract_metadata_state"] == MEMBERSHIP_DETAILED_STATE
+            ),
+            "rule": (
+                "one canonical instrument identity per accepted native membership "
+                "identity; at most one snapshot-backed version for a detailed identity "
+                "and none for a funding-only identity"
+            ),
+        },
         PRODUCT_MEMBERSHIP: measured_membership,
         PRODUCT_COVERAGE_GAP: measured_gaps,
         "typed_gap_membership": measured_typed,
@@ -6609,6 +7728,7 @@ def measure_bundle_descriptor(
     sizing_source_sha256: str,
     sizing_cli_sha256: str,
     intersections: Sequence[tuple[str, str]],
+    identity_classes: Mapping[str, Any],
     staging: Path,
 ) -> dict[str, Any]:
     """Measure the final bundle descriptor from real values only.
@@ -6722,19 +7842,77 @@ def measure_bundle_descriptor(
         }
         for item in partitions
     ]
+    # Review 257 and ADR-0027 section 4: the bundle's complete projected row set and its
+    # deterministic order are already known, so it is written in its actual row groups
+    # and measured exactly rather than modelled from one synthetic widest row.
     measured = measure_maximum_width_product(
         product=PRODUCT_BUNDLE,
         columns=final_product_columns(PRODUCT_BUNDLE),
         rows=rows,
         destination=staging / "product-bundle.parquet",
+        exact_layout=True,
     )
+    # The real row-group count of the file that was actually written, not a projection.
+    bundle_row_groups = max(int(measured["row_groups"]), 1)
+    # The actual accepted identity membership of each deterministic row group, taken by
+    # splitting the written row order at its real boundaries.
+    detailed_symbols = set(
+        str(item) for item in identity_classes["detailed_native_symbols"]
+    )
+    funding_symbols = set(
+        str(item) for item in identity_classes["funding_only_native_symbols"]
+    )
+    bundle_group_membership: list[dict[str, Any]] = []
+    bundle_reference_scopes: list[dict[str, Any]] = []
+    for index in range(bundle_row_groups):
+        group = rows[index * SIZING_ROW_BATCH : (index + 1) * SIZING_ROW_BATCH]
+        symbols = {str(item["native_symbol"]) for item in group}
+        unknown = sorted(symbols - detailed_symbols - funding_symbols)
+        _require(
+            not unknown,
+            "a bundle row group names an unclassified native identity",
+            {"row_group": index, "native_symbols": unknown[:8]},
+        )
+        detailed_here = len(symbols & detailed_symbols)
+        funding_here = len(symbols & funding_symbols)
+        bundle_group_membership.append(
+            {
+                "row_group": index,
+                "rows": len(group),
+                "native_identities": len(symbols),
+                "detailed_identities": detailed_here,
+                "funding_only_identities": funding_here,
+            }
+        )
+        bundle_reference_scopes.append(
+            {
+                "scope": f"harmonic_bundle_row_group_{index}",
+                "rows": len(group),
+                "row_groups": 1,
+                # Only the identities this deterministic group actually contains.
+                "instrument_cardinality": detailed_here + funding_here,
+                "version_cardinality": detailed_here,
+                "cardinality_source": (
+                    "the accepted identity membership of this deterministic bundle row "
+                    "group, counted from its own written rows"
+                ),
+            }
+        )
     return {
         **measured,
         "scenario_policy_sha256": scenario_digest,
         "configuration_sha256": configuration_digest,
+        # ADR-0027 section 3 and review 260 finding 4: each deterministic row group is
+        # allocated its own accepted identity membership. The complete universe is never
+        # republished into a group that does not contain it.
         "future_reference_identity_allocation": future_reference_identity_bytes(
-            len(partitions)
+            scopes=bundle_reference_scopes,
+            detailed_identities=int(identity_classes["detailed"]),
+            funding_only_identities=int(identity_classes["funding_only"]),
         ),
+        "reference_identity_row_group_membership": bundle_group_membership,
+        "reference_identity_row_group_scopes": bundle_reference_scopes,
+        "row_groups_projected": bundle_row_groups,
         "future_partition_field_allocation": future_bundle_field_bytes(len(partitions)),
         "cross_product_partition_intersection": intersection_rows,
         "cross_product_intersection_sha256": intersection_digest,
@@ -7316,16 +8494,18 @@ def run_storage_sizing(
     )
 
     evidence_root = store / SIZING_EVIDENCE_ROOT
-    _require(
-        V1_SIZING_EVIDENCE_ROOT not in str(evidence_root),
-        "version-2 sizing may never write into the immutable version-1 evidence root",
-        {"evidence_root": str(evidence_root)},
-    )
-    _require(
-        not str(receipt_path).endswith(V1_SIZING_RECEIPT_RELATIVE_PATH.rsplit("/", 1)[-1]),
-        "version-2 sizing may never rewrite the accepted version-1 receipt",
-        {"receipt_path": str(receipt_path)},
-    )
+    for immutable_root in IMMUTABLE_SIZING_EVIDENCE_ROOTS:
+        _require(
+            immutable_root not in str(evidence_root),
+            "version-3 sizing may never write into an immutable prior evidence root",
+            {"evidence_root": str(evidence_root), "immutable_root": immutable_root},
+        )
+    for immutable_receipt in IMMUTABLE_SIZING_RECEIPT_PATHS:
+        _require(
+            not str(receipt_path).endswith(immutable_receipt.rsplit("/", 1)[-1]),
+            "version-3 sizing may never rewrite an accepted prior receipt",
+            {"receipt_path": str(receipt_path), "immutable_receipt": immutable_receipt},
+        )
     pre_write = measure_available_bytes(store)
     measurements: list[TypedEnvelopeMeasurement] = []
     parsed_samples: list[list[dict[str, Any]]] = []
@@ -7441,6 +8621,11 @@ def run_storage_sizing(
                 cohorts=cohorts,
                 destination=stage / f"target-{product}.parquet",
             )
+        # Review 263 finding 2: one real measured one-row shared identity payload,
+        # published through this same target envelope flow.
+        shared_identity_anchor = measure_shared_identity_anchor(
+            objects, destination=stage / "target-shared-current-identity.parquet"
+        )
         for envelope in sorted(stage.glob("target-*.parquet")):
             _dest, was_reused = publish_sizing_envelope(
                 envelope, evidence_root=evidence_root
@@ -7448,19 +8633,171 @@ def run_storage_sizing(
             envelope_digests.add(_dest.stem)
             reused += int(was_reused)
             published += int(not was_reused)
+        # First derive each product's actual row and row-group cardinality. The target
+        # rates do not affect those cardinalities, so this pass measures the real layout
+        # that the shared current identity/null anchor will be attached to.
+        unallocated_projections = project_typed_partitions(
+            measurements=measurements,
+            objects=objects,
+            lineage=lineage_model,
+            target_only_allocations={},
+        )
+        unallocated_by_key = {
+            (item.product, item.component): item for item in unallocated_projections
+        }
+        # One shared partition-aware identity allocation for every applicable product,
+        # archive target products and both retained cost components alike: an index and
+        # its null validity on every actual row, and its measured anchor per row group.
         cost_identity_rate = cost_identity_bytes_per_row(cost)
+        _exact(
+            cost_identity_rate,
+            INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW,
+            field_name="shared_instrument_identity_index_bytes_per_row",
+            context={},
+        )
+        # Review 263 findings 2 and 3: one real measured one-row payload anchors the
+        # shared identity, and the disjoint equation is literal.
+        #   A = measured one-row payload, I = 12 indices, N = 2 current-null validity,
+        #   D = logical per-group value/offset total of the three present dictionaries.
+        # The per-group page residual is A - I - N - D, so for R rows in G row groups the
+        # shared bytes are R*(I+N) + G*D + G*(A-I-N-D), equivalently R*14 + G*(A-14).
+        anchor_payload_bytes = int(shared_identity_anchor["payload_bytes"])
+        shared_index_bytes = SHARED_INSTRUMENT_IDENTITY_INDEX_BYTES_PER_ROW
+        shared_null_bytes = REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW
+        shared_logical_dictionary = int(
+            cost_identity_allocation(objects, rows=0, row_groups=1)[
+                "row_group_dictionary_bytes"
+            ]
+        )
+        _require(
+            anchor_payload_bytes
+            >= shared_index_bytes + shared_null_bytes + shared_logical_dictionary,
+            "the measured shared identity anchor is smaller than the terms it contains",
+            {
+                "anchor_payload_bytes": anchor_payload_bytes,
+                "index_bytes": shared_index_bytes,
+                "current_null_bytes": shared_null_bytes,
+                "dictionary_value_bytes": shared_logical_dictionary,
+            },
+        )
+        shared_page_residual = (
+            anchor_payload_bytes
+            - shared_index_bytes
+            - shared_null_bytes
+            - shared_logical_dictionary
+        )
+
+        def shared_identity_terms(product: str, component: str) -> dict[str, Any]:
+            projection = unallocated_by_key[(product, component)]
+            rows = int(projection.projected_rows)
+            row_groups = int(projection.projected_row_groups)
+            shared_identity = cost_identity_allocation(
+                objects, rows=rows, row_groups=row_groups
+            )
+            row_bytes = rows * INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+            group_bytes = row_groups * (
+                anchor_payload_bytes - INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+            )
+            total = row_bytes + group_bytes
+            _exact(
+                rows * (shared_index_bytes + shared_null_bytes)
+                + row_groups * shared_logical_dictionary
+                + row_groups * shared_page_residual,
+                total,
+                field_name="shared_current_identity_equation",
+                context={"required_product": product, "component": component},
+            )
+            return {
+                "rows": rows,
+                "row_groups": row_groups,
+                # R * I, R * N, and the exact per-column facts behind them.
+                "dictionary_index_bytes_per_row": shared_index_bytes,
+                "row_index_bytes": rows * shared_index_bytes,
+                "reference_current_null_bytes_per_row": shared_null_bytes,
+                "reference_current_null_bytes": rows * shared_null_bytes,
+                "reference_current_null_columns": list(
+                    shared_identity["reference_current_null_columns"]
+                ),
+                "columns": [dict(item) for item in shared_identity["columns"]],
+                "logical_dictionary_bytes_per_row_group": shared_logical_dictionary,
+                "dictionary_value_bytes": row_groups * shared_logical_dictionary,
+                # A, and the page initialization it holds beyond I + N + D.
+                "measured_anchor_bytes": anchor_payload_bytes,
+                "measured_anchor_parquet_sha256": str(
+                    shared_identity_anchor["parquet_sha256"]
+                ),
+                "page_residual_bytes_per_row_group": shared_page_residual,
+                "page_residual_bytes": row_groups * shared_page_residual,
+                "bytes_per_row": INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW,
+                "row_group_initialization_bytes": (
+                    anchor_payload_bytes - INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+                ),
+                "row_bytes": row_bytes,
+                "row_group_total_bytes": group_bytes,
+                "bytes": total,
+                "total_bytes": total,
+                "maximum_native_symbol_bytes": int(
+                    shared_identity["maximum_native_symbol_bytes"]
+                ),
+                "equation": "R*(I+N) + G*D + G*(A-I-N-D) == R*14 + G*(A-14)",
+                "validity_owner": str(shared_identity["validity_owner"]),
+            }
+
+        target_allocations: dict[str, dict[str, Any]] = {}
+        for component in ("retained_book_ticker", "retained_book_depth"):
+            shared = shared_identity_terms(PRODUCT_COST_CALIBRATION, component)
+            target_allocations[f"{PRODUCT_COST_CALIBRATION}:{component}"] = {
+                "incremental_bytes_per_row": INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW,
+                "row_group_initialization_bytes": shared[
+                    "row_group_initialization_bytes"
+                ],
+                "additional_dictionary_bytes": 0,
+                # The outer target allocation is shared current plus derived terms; a
+                # retained cost component publishes no derived-only field of its own.
+                "derived_terms": {
+                    "incremental_bytes_per_row": 0,
+                    "row_group_initialization_bytes": 0,
+                    "additional_dictionary_bytes": 0,
+                },
+                "shared_current_identity": shared,
+            }
+        for product, value in target_only.items():
+            shared = shared_identity_terms(product, "target_product")
+            incremental = int(value.get("incremental_bytes_per_row") or 0)
+            anchor_payload = int(value.get("row_group_anchor_bytes") or 0)
+            derived_terms = {
+                # Every projected row, the anchor row included.
+                "incremental_bytes_per_row": incremental,
+                # The derived anchor's page and dictionary initialization only, with
+                # that row's own incremental bytes removed so the sets stay disjoint.
+                "row_group_initialization_bytes": max(anchor_payload - incremental, 0),
+                "additional_dictionary_bytes": int(
+                    value.get("additional_dictionary_bytes") or 0
+                ),
+                "witness_anchor_payload_bytes": anchor_payload,
+            }
+            target_allocations[product] = {
+                # The outer allocation is exactly shared current plus derived target.
+                "incremental_bytes_per_row": (
+                    derived_terms["incremental_bytes_per_row"]
+                    + INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+                ),
+                "row_group_initialization_bytes": (
+                    derived_terms["row_group_initialization_bytes"]
+                    + shared["row_group_initialization_bytes"]
+                ),
+                "additional_dictionary_bytes": derived_terms[
+                    "additional_dictionary_bytes"
+                ],
+                "witness_anchor_payload_bytes": anchor_payload,
+                "derived_terms": derived_terms,
+                "shared_current_identity": shared,
+            }
         projections = project_typed_partitions(
             measurements=measurements,
             objects=objects,
             lineage=lineage_model,
-            target_only_bytes_per_row={
-                **{
-                    product: int(value["bytes_per_row"])
-                    for product, value in target_only.items()
-                },
-                f"{PRODUCT_COST_CALIBRATION}:retained_book_ticker": cost_identity_rate,
-                f"{PRODUCT_COST_CALIBRATION}:retained_book_depth": cost_identity_rate,
-            },
+            target_only_allocations=target_allocations,
         )
         coinalyze = project_coinalyze(
             evidence=coinalyze_evidence,
@@ -7501,6 +8838,7 @@ def run_storage_sizing(
         all_partitions = {**partition_mappings, **coinalyze_mappings}
         intersections = cross_product_partition_intersection(all_partitions)
         bundle_descriptor = measure_bundle_descriptor(
+            identity_classes=fixed_products["membership_identity_classes"],
             partitions=[
                 {
                     "required_product": product,
@@ -7707,18 +9045,155 @@ def run_storage_sizing(
         sum(item.projected_manifest_bytes for item in projections)
         + coinalyze.projected_manifest_bytes
     )
-    identity_rows = (
-        sum(item.projected_rows for item in projections)
-        + coinalyze.projected_points
-        + membership_rows
-        + int(gap_projection["projected_rows"])
-        + int(typed_gap_projection["projected_rows"])
-        + int(fee_gap_projection["projected_rows"])
-        + int(quality_gap_projection["projected_rows"])
-        + bundle_rows
+    identity_classes = dict(fixed_products["membership_identity_classes"])
+    funding_only_symbols = list(identity_classes["funding_only_native_symbols"])
+    # Every projected partition that a native symbol proves, taken from the real
+    # projected partition set so each row is bound to its own membership class.
+    identity_partitions: list[dict[str, Any]] = []
+    for item in projections:
+        for descriptor, partition_rows_value in zip(
+            item.partitions, item.partition_rows, strict=True
+        ):
+            identity_partitions.append(
+                {
+                    "native_symbol": str(descriptor["native_symbol"]),
+                    "rows": int(partition_rows_value),
+                }
+            )
+    # One membership row and one fee-authority gap row per accepted identity.
+    for symbol in (
+        *identity_classes["detailed_native_symbols"],
+        *funding_only_symbols,
+    ):
+        # One one-row membership partition and one one-row fee-authority gap partition.
+        identity_partitions.append({"native_symbol": str(symbol), "rows": 1})
+        identity_partitions.append({"native_symbol": str(symbol), "rows": 1})
+    source_gap_counts: dict[tuple[str, str], int] = {}
+    for item in coverage["source_gaps"]:
+        key = (str(item["required_product"]), str(item["native_symbol"]))
+        source_gap_counts[key] = source_gap_counts.get(key, 0) + 1
+    typed_gap_counts: dict[tuple[str, str], int] = {}
+    for item in coverage["typed_gap_memberships"]:
+        key = (str(item["required_product"]), str(item["native_symbol"]))
+        typed_gap_counts[key] = typed_gap_counts.get(key, 0) + 1
+    for counts in (source_gap_counts, typed_gap_counts):
+        for (_product, symbol), count in sorted(counts.items()):
+            identity_partitions.append({"native_symbol": symbol, "rows": count})
+    for item in quality_gap_partitions:
+        identity_partitions.append(
+            {
+                "native_symbol": str(item["native_symbol"]),
+                "rows": quality_gap_reservation(int(item["expected_rows"])),
+            }
+        )
+    # Coinalyze liquidation partitions are split by the same accepted classes; each is
+    # one native symbol and one UTC month, so no partition needs an assumed class.
+    coinalyze_partitions_split: list[dict[str, Any]] = []
+    for symbol in sorted(supported):
+        first_day, last_day = lifecycles[symbol]
+        months: dict[str, int] = {}
+        for day in range(first_day, last_day + 1):
+            month = _utc_month_of_day(day)
+            months[month] = months.get(month, 0) + 1
+        for _month, count in sorted(months.items()):
+            coinalyze_partitions_split.append(
+                {"native_symbol": str(symbol), "rows": count}
+            )
+    _exact(
+        sum(int(item["rows"]) for item in coinalyze_partitions_split),
+        coinalyze.projected_points,
+        field_name="coinalyze_identity_partition_points",
+        context={},
+    )
+    detailed_symbols = list(identity_classes["detailed_native_symbols"])
+    identity_split = split_reference_identity_scopes(
+        identity_partitions,
+        detailed_symbols=detailed_symbols,
+        funding_only_symbols=funding_only_symbols,
+    )
+    coinalyze_split = split_reference_identity_scopes(
+        coinalyze_partitions_split,
+        detailed_symbols=detailed_symbols,
+        funding_only_symbols=funding_only_symbols,
+    )
+    def _class_scope(
+        name: str, split: Mapping[str, int], *, detailed: bool, source: str
+    ) -> dict[str, Any]:
+        """One accepted class scope, with its cardinality derived from its own rows.
+
+        Review 263 finding 1: an empty class really projects nothing, so it publishes
+        `(0, 0)`. A nonempty detailed partition proves one instrument identity and its
+        one snapshot-backed version; a nonempty funding-only partition proves one
+        instrument identity and no version at all.
+        """
+        rows = int(split["rows"])
+        row_groups = int(split["row_groups"])
+        empty = rows == 0 or row_groups == 0
+        return {
+            "scope": name,
+            "rows": rows,
+            "row_groups": row_groups,
+            "instrument_cardinality": 0 if empty else 1,
+            "version_cardinality": 0 if empty or not detailed else 1,
+            "cardinality_source": (
+                "this accepted class projects no partition, so it holds no identity "
+                "value at all"
+                if empty
+                else source
+            ),
+        }
+
+    reference_identity_allocation = future_reference_identity_bytes(
+        scopes=[
+            _class_scope(
+                "detailed_identity_partitions",
+                identity_split["detailed"],
+                detailed=True,
+                source=(
+                    "the product/component/native-symbol/UTC-month partition key proves "
+                    "one detailed native identity, so one canonical instrument identity "
+                    "and its one snapshot-backed accepted version can occur in a row "
+                    "group"
+                ),
+            ),
+            _class_scope(
+                "funding_only_identity_partitions",
+                identity_split["funding_only"],
+                detailed=False,
+                source=(
+                    "a funding-only native identity has no snapshot-backed contract "
+                    "version in the accepted authority, so no version value can occur"
+                ),
+            ),
+            _class_scope(
+                "coinalyze_detailed_liquidation_partitions",
+                coinalyze_split["detailed"],
+                detailed=True,
+                source=(
+                    "one detailed native identity per projected liquidation partition, "
+                    "proved against the accepted membership classification"
+                ),
+            ),
+            _class_scope(
+                "coinalyze_funding_only_liquidation_partitions",
+                coinalyze_split["funding_only"],
+                detailed=False,
+                source=(
+                    "a funding-only native identity has no snapshot-backed contract "
+                    "version in the accepted authority, so no version value can occur"
+                ),
+            ),
+            # One scope per deterministic bundle row group, each carrying only the
+            # accepted identities that group actually contains.
+            *[dict(item) for item in bundle_descriptor[
+                "reference_identity_row_group_scopes"
+            ]],
+        ],
+        detailed_identities=int(identity_classes["detailed"]),
+        funding_only_identities=int(identity_classes["funding_only"]),
     )
     future_width_allocations = {
-        "reference_identity": future_reference_identity_bytes(identity_rows),
+        "reference_identity": reference_identity_allocation,
         "membership_terms": dict(fixed_products["membership_future_terms"]),
         "bundle_partition_fields": future_bundle_field_bytes(bundle_rows),
         "quality_gap_bounds": future_quality_gap_bound_bytes(quality_gap_rows),
@@ -7783,31 +9258,58 @@ def run_storage_sizing(
         ),
         1,
     )
+    # One partition's future identity charge: its rows' dictionary indices and validity
+    # plus the one row-group dictionary that holds the accepted values behind them.
+    # Review 261 finding 4: the shared current identity dictionary is already inside every
+    # applicable product's own current allocation, so it never enters the future charge.
+    # A future reference dictionary is repeated in every actual row group a candidate
+    # partition really has, and the exact bundle uses the sum of its own group scopes.
+    reference_row_group_dictionary = max(
+        int(item["row_group_dictionary_bytes"])
+        for item in reference_identity_allocation["scopes"]
+    )
+    bundle_reference_dictionary = sum(
+        int(item["row_group_dictionary_bytes"])
+        for item in bundle_descriptor["future_reference_identity_allocation"]["scopes"]
+    )
+    maximum_identity_row_groups = max(
+        1, ceil_div(max(maximum_identity_rows, 1), SIZING_ROW_BATCH)
+    )
     reference_partition_charge = (
         maximum_identity_rows
         * int(future_width_allocations["reference_identity"]["bytes_per_row"])
+        + maximum_identity_row_groups * reference_row_group_dictionary
     )
     lineage_width = future_width_allocations["lineage_receipt_fields"]
-    lineage_partition_charge = max(
-        (
-            sum(
-                1
-                for row in mappings
-                if row.get("source_state") == PROJECTED_UNACQUIRED_STATE
-            )
-            * int(lineage_width["bytes_per_mapping"])
-            + sum(
-                1
-                for row in mappings
-                if row.get("source_state") == PROJECTED_UNACQUIRED_STATE
-                and row.get("provider_symbol")
-            )
-            * 2
-            * (INTEGER_WIDTH + NULL_VALIDITY_WIDTH)
-            for mappings in (*partition_mappings.values(), *coinalyze_mappings.values())
-        ),
-        default=0,
+    lineage_partition_candidates = []
+    for mappings in (*partition_mappings.values(), *coinalyze_mappings.values()):
+        projected_mappings = sum(
+            1
+            for row in mappings
+            if row.get("source_state") == PROJECTED_UNACQUIRED_STATE
+        )
+        projected_responses = sum(
+            1
+            for row in mappings
+            if row.get("source_state") == PROJECTED_UNACQUIRED_STATE
+            and row.get("provider_symbol")
+        )
+        lineage_partition_candidates.append(
+            {
+                "mappings": projected_mappings,
+                "responses": projected_responses,
+                "bytes": (
+                    projected_mappings * int(lineage_width["bytes_per_mapping"])
+                    + projected_responses * 2 * INTEGER_WIDTH
+                ),
+            }
+        )
+    lineage_candidate = max(
+        lineage_partition_candidates,
+        key=lambda item: int(item["bytes"]),
+        default={"mappings": 0, "responses": 0, "bytes": 0},
     )
+    lineage_partition_charge = int(lineage_candidate["bytes"])
     reference_width = int(
         future_width_allocations["reference_identity"]["bytes_per_row"]
     )
@@ -7818,18 +9320,31 @@ def run_storage_sizing(
         ),
         default=0,
     )
-    largest_future_partition_charge = max(
-        reference_partition_charge,
-        reference_width
-        + int(future_width_allocations["membership_terms"]["maximum_bytes_per_row"]),
-        bundle_rows * reference_width
-        + int(future_width_allocations["bundle_partition_fields"]["bytes"]),
-        maximum_quality_rows
+    maximum_quality_row_groups = max(
+        1, ceil_div(max(maximum_quality_rows, 1), SIZING_ROW_BATCH)
+    )
+    largest_future_partition_candidates = {
+        # Every applicable row of one partition, with its dictionary repeated in every
+        # actual row group that partition has.
+        "native_symbol_partition": reference_partition_charge,
+        # One membership identity is one row in one row group.
+        "membership_identity": reference_width
+        + int(future_width_allocations["membership_terms"]["maximum_bytes_per_row"])
+        + reference_row_group_dictionary,
+        # The bundle is one measured file: its own per-row-group scopes sum exactly.
+        "harmonic_bundle": bundle_rows * reference_width
+        + int(future_width_allocations["bundle_partition_fields"]["bytes"])
+        + bundle_reference_dictionary,
+        "quality_gap_partition": maximum_quality_rows
         * (
             reference_width
             + int(future_width_allocations["quality_gap_bounds"]["bytes_per_row"])
-        ),
-        lineage_partition_charge,
+        )
+        + maximum_quality_row_groups * reference_row_group_dictionary,
+        "projected_lineage_partition": lineage_partition_charge,
+    }
+    largest_future_partition_charge = max(
+        largest_future_partition_candidates.values()
     )
     # The eventual partition contains its current typed bytes and its future fields.
     # Adding the independently greatest two terms is conservative even when they occur
@@ -8047,11 +9562,31 @@ def run_storage_sizing(
                     "columns": [
                         column.to_dict() for column in target_only_columns(product)
                     ],
+                    "derived_only_columns": [
+                        column.to_dict() for column in derived_only_columns(product)
+                    ],
+                    "shared_identity_columns": [
+                        column.to_dict() for column in instrument_identity_columns()
+                    ],
                     "bytes_per_row": int(
                         dict(target_only.get(product) or {}).get("bytes_per_row") or 0
                     ),
                     "measured_rows": int(
                         dict(target_only.get(product) or {}).get("measured_rows") or 0
+                    ),
+                    "cohorts_traversed": int(
+                        dict(target_only.get(product) or {}).get("cohorts_traversed") or 0
+                    ),
+                    # Every ADR-0027 allocation input, retained rather than collapsed.
+                    "allocation": dict(target_allocations.get(product) or {}),
+                    "width_model": dict(
+                        dict(target_only.get(product) or {}).get("width_model") or {}
+                    ),
+                    "additional_row_group_values": dict(
+                        dict(target_only.get(product) or {}).get(
+                            "additional_row_group_values"
+                        )
+                        or {}
                     ),
                 }
                 for product in REQUIRED_PRODUCTS
@@ -8080,6 +9615,89 @@ def run_storage_sizing(
                 "the version-1 greatest whole-file ratio is superseded: payload and "
                 "file overhead are projected separately, per partition"
             ),
+            # ADR-0027: everything a reader needs to recompute the representation.
+            "storage_representation": {
+                "architecture": "ADR-0027 partition-aware dictionary storage sizing",
+                "row_group_cap": SIZING_ROW_BATCH,
+                "dictionary_index_width": DICTIONARY_INDEX_WIDTH,
+                "variable_offset_width": VARIABLE_OFFSET_WIDTH,
+                "null_validity_width": NULL_VALIDITY_WIDTH,
+                # The real measured one-row shared identity envelope, retained whole.
+                "shared_current_identity_anchor": {
+                    "required_product": str(shared_identity_anchor["required_product"]),
+                    "component": str(shared_identity_anchor["component"]),
+                    "measured_rows": int(shared_identity_anchor["measured_rows"]),
+                    "row_groups": int(shared_identity_anchor["row_groups"]),
+                    "payload_bytes": int(shared_identity_anchor["payload_bytes"]),
+                    "footer_bytes": int(shared_identity_anchor["footer_bytes"]),
+                    "framing_bytes": int(shared_identity_anchor["framing_bytes"]),
+                    "residual_bytes": int(shared_identity_anchor["residual_bytes"]),
+                    "file_bytes": int(shared_identity_anchor["file_bytes"]),
+                    "parquet_sha256": str(shared_identity_anchor["parquet_sha256"]),
+                    "writer_identity": str(shared_identity_anchor["writer_identity"]),
+                    "schema": list(shared_identity_anchor["schema"]),
+                    "anchor_row": dict(shared_identity_anchor["anchor_row"]),
+                    "present_null_columns": list(
+                        shared_identity_anchor["present_null_columns"]
+                    ),
+                    "widest_accepted_native_symbol": str(
+                        shared_identity_anchor["widest_accepted_native_symbol"]
+                    ),
+                    "widest_accepted_native_symbol_bytes": int(
+                        shared_identity_anchor["widest_accepted_native_symbol_bytes"]
+                    ),
+                    "width_model": dict(shared_identity_anchor["width_model"]),
+                    "index_bytes_per_row": shared_index_bytes,
+                    "current_null_bytes_per_row": shared_null_bytes,
+                    "logical_dictionary_bytes_per_row_group": (
+                        shared_logical_dictionary
+                    ),
+                    "page_residual_bytes_per_row_group": shared_page_residual,
+                    "equation": "R*(I+N) + G*D + G*(A-I-N-D) == R*14 + G*(A-14)",
+                },
+                "shared_instrument_identity_index_bytes_per_row": (
+                    SHARED_INSTRUMENT_IDENTITY_INDEX_BYTES_PER_ROW
+                ),
+                "shared_instrument_identity_current_null_bytes_per_row": (
+                    REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW
+                ),
+                "shared_instrument_identity_total_bytes_per_row": (
+                    INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+                ),
+                "reference_identity_index_bytes_per_row": (
+                    REFERENCE_IDENTITY_INDEX_BYTES_PER_ROW
+                ),
+                "dictionary_rule": (
+                    "dictionary indices are charged on every projected row and each "
+                    "distinct value and its offset once in every row group the value "
+                    "can occur in; null validity is charged on every projected row by "
+                    "whichever allocation owns the column's current representation, and "
+                    "a future allocation over an already-published current null owns "
+                    "its indices and values but never its validity"
+                ),
+                "row_group_anchor_rule": (
+                    "a measured one-row anchor is charged only for a non-empty output "
+                    "row group, once per actual row group and never once per projected "
+                    "row"
+                ),
+                "disjointness_rule": (
+                    "anchor, incremental-row, and additional-dictionary bytes are three "
+                    "non-overlapping sets: the anchor already holds its own row and the "
+                    "first non-null value of each dictionary column it populates, so "
+                    "only accepted values beyond those are added to a row group"
+                ),
+                "layout_rule": (
+                    "a witness file is not the projected file: whenever the accepted "
+                    "rows are regrouped into a different product/component/native-symbol/"
+                    "UTC-month layout every target row group recharges its own anchor, "
+                    "and a fully known layout is written and measured exactly instead"
+                ),
+                "superseded_model": (
+                    "the version-2 equation charged every dictionary value and every "
+                    "one-row page initialization on every projected row"
+                ),
+                "superseded_receipt": V2_SIZING_RECEIPT_RELATIVE_PATH,
+            },
         },
         "coinalyze": {
             **coinalyze.to_dict(),
@@ -8177,12 +9795,42 @@ def run_storage_sizing(
             "largest_projected_partition_bytes": largest_partition,
             "largest_current_typed_partition_bytes": largest_current_partition,
             "largest_future_width_charge_bytes": largest_future_partition_charge,
+            # Every candidate term, so the selected maximum is recomputable.
+            "largest_future_width_charge_candidates": dict(
+                largest_future_partition_candidates
+            ),
+                "largest_future_width_charge_inputs": {
+                "reference_index_bytes_per_row": reference_width,
+                "reference_row_group_dictionary_bytes": reference_row_group_dictionary,
+                "bundle_reference_dictionary_bytes": bundle_reference_dictionary,
+                "maximum_identity_rows": maximum_identity_rows,
+                "maximum_identity_row_groups": maximum_identity_row_groups,
+                "maximum_quality_rows": maximum_quality_rows,
+                "maximum_quality_row_groups": maximum_quality_row_groups,
+                "bundle_rows": bundle_rows,
+                "lineage_candidate_mappings": int(lineage_candidate["mappings"]),
+                "lineage_candidate_responses": int(lineage_candidate["responses"]),
+                "shared_current_identity_excluded": (
+                    "the shared current identity dictionary is charged inside each "
+                    "product's own current allocation and never in this future charge"
+                ),
+            },
             "largest_accepted_object_bytes": ACCEPTED_LARGEST_SELECTED_OBJECT_BYTES,
             "immutable_v1_evidence": {
                 "receipt_relative_path": V1_SIZING_RECEIPT_RELATIVE_PATH,
                 "receipt_sha256": V1_ACCEPTED_RECEIPT_SHA256,
                 "evidence_root": V1_SIZING_EVIDENCE_ROOT,
-                "rule": "never read, rewritten, reused, or deleted by version 2",
+                "rule": "never read, rewritten, reused, or deleted by version 3",
+            },
+            "immutable_v2_evidence": {
+                "receipt_relative_path": V2_SIZING_RECEIPT_RELATIVE_PATH,
+                "receipt_sha256": V2_ACCEPTED_RECEIPT_SHA256,
+                "evidence_root": V2_SIZING_EVIDENCE_ROOT,
+                "schema_version": V2_SIZING_SCHEMA_VERSION,
+                "rule": (
+                    "immutable diagnostic evidence of the rejected per-row value "
+                    "equation; never read, rewritten, reused, or deleted by version 3"
+                ),
             },
         },
         "capacity": {

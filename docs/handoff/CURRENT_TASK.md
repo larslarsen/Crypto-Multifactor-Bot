@@ -1,17 +1,19 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 265 exactly
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 266 failed focused validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Integrate the exact source/test hashes in review 265. Run its focused
-pytest and Ruff once; only on success run the real v3 sizing command once and one identical
-idempotence invocation. Publish record 266 and receipt 258 only if valid, run control and
-cached diff checks, commit/push only the enumerated paths, and stop for reviewer inspection.
-Do not repair, rerun failures, use network, acquire/normalize data, or touch unrelated dirty
-work. Gate 2 and later work remain unauthorized. Next ticket remains `NONE`.
+Immediate state: Jr Dev - Hermes followed review 265 through exact-byte preproof, staged
+only the two accepted modified sizing paths, and ran the focused sizing pytest command
+with the two-pass real-authority receipt test deselected. Focused pytest exited 1 with 30
+failing tests, so Hermes stopped as required, ran no Ruff, ran no v3 sizing CLI, produced
+no receipt 258, and performed no acquisition, network, normalization, catalog,
+NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work. Review record 266 is
+published for reviewer inspection. Gate 2 remains not accepted. Next ticket remains
+`NONE`.
 
 Governing documents:
 
@@ -230,6 +232,7 @@ Governing documents:
 - research/sprint_004/263_CEX002_V3_MEASURED_IDENTITY_ANCHOR_COMPLETION.md
 - research/sprint_004/264_CEX002_V3_MEASURED_ANCHOR_TEST_RESIDUAL.md
 - research/sprint_004/265_CEX002_V3_SOURCE_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/266_CEX002_V3_SIZING_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

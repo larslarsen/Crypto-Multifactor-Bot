@@ -2927,7 +2927,7 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
         "code_identity",
     ):
         assert section in receipt
-    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v2"
+    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v3"
     assert receipt["storage_preflight_state"] in {STATE_SUFFICIENT, STATE_BLOCKED}
     assert receipt["code_identity"]["sizing_source_sha256"]
     assert receipt["physical_inputs"]["combined_objects"] == sizing.ACCEPTED_COMBINED_OBJECTS
@@ -3032,9 +3032,15 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
     immutable = receipt["partitioning"]["immutable_v1_evidence"]
     assert immutable["receipt_sha256"] == sizing.V1_ACCEPTED_RECEIPT_SHA256
     assert immutable["evidence_root"] == "evidence/sizing/v1/envelopes/sha256"
-    assert sizing.SIZING_EVIDENCE_ROOT == "evidence/sizing/v2/envelopes/sha256"
+    # ADR-0027 section 5: version 2 joins version 1 as immutable prior evidence and the
+    # corrected representation publishes at its own version-3 identities.
+    immutable_v2 = receipt["partitioning"]["immutable_v2_evidence"]
+    assert immutable_v2["receipt_sha256"] == sizing.V2_ACCEPTED_RECEIPT_SHA256
+    assert immutable_v2["evidence_root"] == "evidence/sizing/v2/envelopes/sha256"
+    assert immutable_v2["schema_version"] == "cex002_gate2_storage_sizing_v2"
+    assert sizing.SIZING_EVIDENCE_ROOT == "evidence/sizing/v3/envelopes/sha256"
     assert sizing.SIZING_RECEIPT_RELATIVE_PATH == (
-        "research/sprint_004/231_CEX002_GATE2_STORAGE_SIZING_V2.json"
+        "research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json"
     )
     filesystem = receipt["filesystem"]
     assert filesystem["durable_receipt_bytes"] > 0
@@ -4480,11 +4486,30 @@ def test_membership_fields_come_from_accepted_evidence_including_non_usdt(
     assert identity["canonical_instrument_version_id"] is None
     assert identity["reference_identity_state"] == "reference_identity_not_yet_created"
     assert "BTCUSDC" not in str(identity["reference_identity_state"])
-    # The future REF widths are allocated explicitly, as widths.
-    allocation = sizing.future_reference_identity_bytes(10)
+    # ADR-0027 section 3: indices on rows, accepted values in row-group dictionaries.
+    allocation = sizing.future_reference_identity_bytes(
+        scopes=[
+            {
+                "scope": "one_partition",
+                "rows": 10,
+                "row_groups": 1,
+                "instrument_cardinality": 1,
+                "version_cardinality": 1,
+                "cardinality_source": "the partition key proves one native identity",
+            }
+        ],
+        detailed_identities=1,
+        funding_only_identities=0,
+    )
     assert allocation["value_widths"]["canonical_instrument_id"] == 68
     assert allocation["value_widths"]["canonical_instrument_version_id"] == 67
-    assert allocation["bytes"] == 10 * ((68 + 9) + (67 + 9))
+    # Two future indices per row; the two current null validity bytes stay with the
+    # current typed schema that already publishes both columns as nulls.
+    assert allocation["bytes_per_row"] == 2 * 4
+    assert allocation["current_null_bytes_per_row"] == 2 * 1
+    assert allocation["bytes"] == 10 * (2 * 4) + 1 * ((68 + 4) + (67 + 4))
+    # The rejected per-row value equation is never the allocation again.
+    assert allocation["bytes"] != 10 * ((68 + 9) + (67 + 9))
     assert "not an existing canonical id" in allocation["allocation"]
     funding = sizing.contract_evidence(
         {
@@ -4711,7 +4736,7 @@ def test_the_real_accepted_authority_completes_the_receipt_path(
         now=datetime(2026, 8, 23, tzinfo=UTC),
     )
     receipt = result["receipt"]
-    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v2"
+    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v3"
     counts = receipt["counts"]
     assert counts["membership_classifications"] == 1_008
     assert counts["accepted_membership_identities"] == 771
@@ -4792,6 +4817,14 @@ def test_the_bundle_descriptor_invents_no_witness(
         sizing_source_sha256="b" * 64,
         sizing_cli_sha256="c" * 64,
         intersections=(("BTCUSDT", "2020-01"), ("ETHUSDT", "2020-02")),
+        identity_classes={
+            "detailed": 2,
+            "funding_only": 0,
+            "accepted": 2,
+            "accepted_version_cardinality": 2,
+            "detailed_native_symbols": ["BTCUSDT", "ETHUSDT"],
+            "funding_only_native_symbols": [],
+        },
         staging=tmp_path,
     )
     table = sizing.pq.read_table(str(tmp_path / "product-bundle.parquet"))
@@ -4836,9 +4869,35 @@ def test_the_bundle_descriptor_invents_no_witness(
     )
     assert descriptor["scenario_policy_sha256"] != both
     assert descriptor["configuration_sha256"] != both
-    assert descriptor["future_reference_identity_allocation"]["bytes"] == (
-        2 * ((68 + 9) + (67 + 9))
-    )
+    # ADR-0027 section 3: the bundle is one partition over every projected dataset
+    # identity, so its row group can hold every accepted identity value once while each
+    # row carries only an index and its validity.
+    reference = descriptor["future_reference_identity_allocation"]
+    assert reference["bytes"] == 2 * (2 * 4) + 1 * (2 * (68 + 4) + 2 * (67 + 4))
+    assert reference["detailed_membership_identities"] == 2
+    assert reference["funding_only_membership_identities"] == 0
+    assert reference["accepted_version_cardinality"] == 2
+    assert reference["bytes"] != 2 * ((68 + 9) + (67 + 9))
+    # One scope per deterministic row group, each holding only its own identities.
+    membership = descriptor["reference_identity_row_group_membership"]
+    assert len(membership) == 1
+    assert membership[0]["rows"] == 2
+    assert membership[0]["native_identities"] == 2
+    assert membership[0]["detailed_identities"] == 2
+    assert membership[0]["funding_only_identities"] == 0
+    assert [item["scope"] for item in reference["scopes"]] == [
+        "harmonic_bundle_row_group_0"
+    ]
+    # ADR-0027 section 4: the bundle's complete projected row set is traversed, and a
+    # genuinely high-cardinality dictionary value is never collapsed to a constant.
+    width = descriptor["width_model"]
+    assert width["complete_row_set"] is True
+    assert width["rows_traversed"] == 2
+    cardinality = width["dictionary_cardinality_per_row_group"]
+    assert cardinality["dataset_id"] == 2
+    assert cardinality["native_symbol"] == 2
+    assert cardinality["unit_convention"] == 1
+    assert width["dictionary_maximum_value_bytes"]["dataset_id"] > 0
     assert descriptor["future_partition_field_allocation"]["bytes"] > 0
     assert descriptor["cross_product_partition_intersection"] == [
         {"native_symbol": "BTCUSDT", "utc_month": "2020-01"},
@@ -5126,7 +5185,7 @@ def test_version_one_evidence_is_never_read_or_rewritten(
     assert v1_receipt.read_bytes().startswith(b'{"schema_version"')
     assert (store / sizing.SIZING_EVIDENCE_ROOT).is_dir()
     # Targeting the accepted v1 receipt path is refused outright.
-    with pytest.raises(SizingError, match="never rewrite the accepted version-1"):
+    with pytest.raises(SizingError, match="never rewrite an accepted prior receipt"):
         _run(accepted, tmp_path, receipt_path=v1_receipt)
 
 
@@ -5200,6 +5259,1122 @@ def test_the_blocked_and_sufficient_boundary_is_exact(
         assert isinstance(value, int) and not isinstance(value, bool) and value >= 0
     assert "component_unknown_or_non_integer" not in receipt["blockers"]
     assert "typed_normalization_incomplete" not in receipt["blockers"]
+
+
+# --- ADR-0027 partition-aware dictionary storage sizing ------------------------------
+
+_DICTIONARY_COLUMN = {
+    "column": "native_symbol",
+    "cardinality": 1,
+    "cardinality_source": "the product/native-symbol/UTC-month partition key",
+    "maximum_value_bytes": 7,
+    "nullable": False,
+}
+
+
+def test_dictionary_indices_are_row_costs_and_values_are_row_group_costs() -> None:
+    """ADR-0027 section 2: more rows repeat indices, never the dictionary value."""
+    one = sizing.dictionary_column_allocation(
+        rows=1_000, row_groups=1, **_DICTIONARY_COLUMN
+    )
+    two = sizing.dictionary_column_allocation(
+        rows=2_000, row_groups=1, **_DICTIONARY_COLUMN
+    )
+    assert one["index_bytes_per_row"] == 4
+    # Doubling the rows inside one row group doubles indices and validity only.
+    assert two["row_index_bytes"] == 2 * one["row_index_bytes"] == 8_000
+    assert one["dictionary_value_bytes"] == two["dictionary_value_bytes"] == (7 + 4)
+    assert two["bytes"] - one["bytes"] == 1_000 * 4
+    # Adding a row group recharges exactly one anchor dictionary and nothing else.
+    grouped = sizing.dictionary_column_allocation(
+        rows=2_000, row_groups=2, **_DICTIONARY_COLUMN
+    )
+    assert grouped["bytes"] - two["bytes"] == (7 + 4)
+    assert grouped["row_index_bytes"] == two["row_index_bytes"]
+    # Null validity is a row cost of a nullable column, and only of a nullable one.
+    nullable = sizing.dictionary_column_allocation(
+        rows=1_000, row_groups=1, **{**_DICTIONARY_COLUMN, "nullable": True}
+    )
+    assert nullable["index_bytes_per_row"] == 5
+    # The rejected version-2 equation charged the value itself on every row.
+    assert one["bytes"] != 1_000 * (7 + 4 + 4)
+
+
+def test_proved_cardinality_grows_with_values_and_unbounded_cardinality_blocks() -> None:
+    """A dictionary is sized by its accepted cardinality; unknown is never invented."""
+    one = sizing.dictionary_column_allocation(
+        rows=10, row_groups=3, **_DICTIONARY_COLUMN
+    )
+    many = sizing.dictionary_column_allocation(
+        rows=10, row_groups=3, **{**_DICTIONARY_COLUMN, "cardinality": 771}
+    )
+    assert many["dictionary_value_bytes"] == 771 * one["dictionary_value_bytes"]
+    assert many["row_index_bytes"] == one["row_index_bytes"]
+    wider = sizing.dictionary_column_allocation(
+        rows=10, row_groups=3, **{**_DICTIONARY_COLUMN, "maximum_value_bytes": 68}
+    )
+    assert wider["dictionary_value_bytes"] == 3 * (68 + 4)
+    with pytest.raises(SizingError, match="no accepted cardinality bound"):
+        sizing.dictionary_column_allocation(
+            rows=10, row_groups=1, **{**_DICTIONARY_COLUMN, "cardinality": None}
+        )
+    with pytest.raises(SizingError, match="does not name its cardinality authority"):
+        sizing.dictionary_column_allocation(
+            rows=10, row_groups=1, **{**_DICTIONARY_COLUMN, "cardinality_source": ""}
+        )
+    with pytest.raises(SizingError, match="projects rows into no row group"):
+        sizing.dictionary_column_allocation(
+            rows=10, row_groups=0, **_DICTIONARY_COLUMN
+        )
+
+
+def _identity_scope(**overrides: Any) -> dict[str, Any]:
+    return {
+        "scope": "one_native_symbol_partition",
+        "rows": 100,
+        "row_groups": 2,
+        "instrument_cardinality": 1,
+        "version_cardinality": 1,
+        "cardinality_source": "the partition key proves one native identity",
+        **overrides,
+    }
+
+
+def test_reference_identity_is_authority_bounded_and_never_backdated() -> None:
+    """ADR-0027 section 3: detailed and funding-only identities differ, exactly."""
+    detailed = sizing.future_reference_identity_bytes(
+        scopes=[_identity_scope()],
+        detailed_identities=1,
+        funding_only_identities=0,
+    )
+    assert detailed["accepted_version_cardinality"] == 1
+    assert detailed["detailed_membership_identities"] == 1
+    assert detailed["bytes"] == 100 * (2 * 4) + 2 * ((68 + 4) + (67 + 4))
+    # A funding-only identity has no snapshot-backed version at all.
+    funding_only = sizing.future_reference_identity_bytes(
+        scopes=[_identity_scope(version_cardinality=0)],
+        detailed_identities=0,
+        funding_only_identities=1,
+    )
+    assert funding_only["accepted_version_cardinality"] == 0
+    assert funding_only["bytes"] == 100 * (2 * 4) + 2 * (68 + 4)
+    assert funding_only["bytes"] < detailed["bytes"]
+    # Claiming a version a funding-only authority does not support blocks.
+    with pytest.raises(SizingError, match="exceeds the accepted authority cardinality"):
+        sizing.future_reference_identity_bytes(
+            scopes=[_identity_scope()],
+            detailed_identities=0,
+            funding_only_identities=1,
+        )
+    # Claiming more instrument identities than the accepted authority holds blocks.
+    with pytest.raises(SizingError, match="exceeds the accepted authority cardinality"):
+        sizing.future_reference_identity_bytes(
+            scopes=[_identity_scope(instrument_cardinality=3)],
+            detailed_identities=1,
+            funding_only_identities=1,
+        )
+    with pytest.raises(SizingError, match="no accepted cardinality bound"):
+        sizing.future_reference_identity_bytes(
+            scopes=[{**_identity_scope(), "instrument_cardinality": None}],
+            detailed_identities=1,
+            funding_only_identities=0,
+        )
+    # Nothing is backdated and no per-row fingerprint is fabricated.
+    assert "projected backward" in detailed["coverage_rule"]
+    identity = sizing.native_identity("BTCUSDT")
+    assert identity["canonical_instrument_id"] is None
+    assert identity["canonical_instrument_version_id"] is None
+    assert identity["reference_identity_state"] == "reference_identity_not_yet_created"
+
+
+def test_cost_identity_is_charged_once_and_partition_locally() -> None:
+    """One shared identity allocation covers both retained cost components."""
+    objects = _one_object_per_family()
+    allocation = sizing.cost_identity_allocation(objects, rows=1_000, row_groups=2)
+    assert {item["column"] for item in allocation["columns"]} == {
+        "venue",
+        "native_symbol",
+        "reference_identity_state",
+    }
+    # The two REF-001 columns belong to the reference allocation and are not repeated.
+    assert "canonical_instrument_id" not in {
+        item["column"] for item in allocation["columns"]
+    }
+    assert all(item["dictionary_cardinality"] == 1 for item in allocation["columns"])
+    assert allocation["bytes_per_row"] == sizing.INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+    # Three partition-constant indices plus the two current-null REF-001 validity bytes.
+    assert allocation["bytes_per_row"] == 3 * 4 + 2 * 1
+    assert allocation["dictionary_index_bytes_per_row"] == 3 * 4
+    assert allocation["row_index_bytes"] == 1_000 * (3 * 4) + 1_000 * 2
+    assert allocation["dictionary_value_bytes"] == (
+        2 * allocation["row_group_dictionary_bytes"]
+    )
+    # Both retained cost components are charged the same shared rate, exactly once.
+    assert sizing.cost_identity_bytes_per_row(objects) == 14
+    # The shared identity is separated from every other target-only derived field.
+    for product in ("binance_usdm_bar_1h", "binance_usdm_trade_flow_1h"):
+        derived = {column.name for column in sizing.derived_only_columns(product)}
+        identity = {column.name for column in sizing.instrument_identity_columns()}
+        assert not derived & identity
+        assert identity <= {
+            column.name for column in sizing.target_only_columns(product)
+        }
+    # The compact per-contribution lineage fields are not re-charged as identity.
+    assert not {"venue_symbol", "raw_object_ref", "source_row_ordinal"} & {
+        column.name for column in sizing.instrument_identity_columns()
+    }
+
+
+_ANCHORED_MEASUREMENT: dict[str, Any] = {
+    "required_product": "quality_gap",
+    "bytes_per_row": 883,
+    "payload_bytes": 900,
+    "footer_bytes": 2_794,
+    "residual_bytes": 0,
+    "row_groups": 1,
+    "rows": 1,
+    "file_bytes": 3_689,
+    "framing_bytes": 12,
+    "measured_rows": 2,
+    "schema": [],
+    # The measured one-row anchor already contains page initialization, the first row,
+    # and the first non-null dictionary value of each column that row populates.
+    "row_group_anchor_bytes": 900,
+    # Strictly the accepted values beyond the anchor's own.
+    "additional_dictionary_bytes": 100,
+    "incremental_bytes_per_row": 56,
+}
+
+
+def test_anchor_incremental_and_dictionary_bytes_are_disjoint() -> None:
+    """ADR-0027 section 4: three byte sets, each counted exactly once."""
+    projection = sizing.project_fixed_schema_product(
+        _ANCHORED_MEASUREMENT, rows=1_000, partitions=2, partition_rows=[600, 400]
+    )
+    model = projection["allocation_model"]
+    assert model["model"] == "row_group_anchor_plus_incremental_rows"
+    assert projection["projected_row_groups"] == 2
+    # The three terms are published separately and sum to the payload exactly.
+    assert model["anchor_count"] == 2
+    assert model["anchor_bytes"] == 2 * 900
+    assert model["additional_dictionary_bytes"] == 2 * 100
+    assert model["incremental_rows"] == 998
+    assert model["incremental_bytes"] == 998 * 56
+    assert (
+        model["anchor_bytes"]
+        + model["additional_dictionary_bytes"]
+        + model["incremental_bytes"]
+        == projection["projected_payload_bytes"]
+        == model["total_payload_bytes"]
+    )
+    # The anchor is no longer charged its own dictionary a second time.
+    assert model["anchor_bytes"] != 2 * (900 + 100)
+    # The rejected model multiplied one row's initialization by every projected row.
+    assert projection["projected_payload_bytes"] < 1_000 * 883
+    # Adding rows inside the same row groups adds only incremental bytes.
+    doubled = sizing.project_fixed_schema_product(
+        _ANCHORED_MEASUREMENT, rows=2_000, partitions=2, partition_rows=[1_200, 800]
+    )
+    assert doubled["allocation_model"]["anchor_bytes"] == model["anchor_bytes"]
+    assert (
+        doubled["allocation_model"]["additional_dictionary_bytes"]
+        == model["additional_dictionary_bytes"]
+    )
+    assert (
+        doubled["projected_payload_bytes"] - projection["projected_payload_bytes"]
+        == 1_000 * 56
+    )
+    # Adding a row group adds exactly one anchor plus its applicable added values.
+    regrouped = sizing.project_fixed_schema_product(
+        _ANCHORED_MEASUREMENT, rows=1_000, partitions=3, partition_rows=[600, 300, 100]
+    )
+    assert regrouped["projected_row_groups"] == 3
+    assert regrouped["allocation_model"]["anchor_bytes"] == 3 * 900
+    assert regrouped["allocation_model"]["additional_dictionary_bytes"] == 3 * 100
+    assert (
+        regrouped["projected_payload_bytes"] - projection["projected_payload_bytes"]
+        == (900 + 100) - 56
+    )
+    # The quality-gap reservation itself is exactly ceil(N / 2), unchanged.
+    assert sizing.quality_gap_reservation(744) == 372
+    assert sizing.quality_gap_reservation(745) == 373
+
+
+def test_an_anchor_never_pays_for_a_dictionary_value_it_already_holds(
+    tmp_path: Path,
+) -> None:
+    """The additional term carries only accepted values beyond the anchor's own."""
+    columns = (
+        sizing.TypedColumn("venue", sizing.KIND_DICTIONARY),
+        sizing.TypedColumn("status", sizing.KIND_DICTIONARY),
+        sizing.TypedColumn("absent", sizing.KIND_DICTIONARY, nullable=True),
+        sizing.TypedColumn("count", sizing.KIND_INTEGER),
+    )
+    rows = [
+        {"venue": "BINANCE_USDM", "status": "a", "absent": None, "count": 1},
+        {"venue": "BINANCE_USDM", "status": "bb", "absent": None, "count": 2},
+        {"venue": "BINANCE_USDM", "status": "ccc", "absent": None, "count": 3},
+    ]
+    measured = sizing.measure_maximum_width_product(
+        product="disjointness_witness",
+        columns=columns,
+        rows=rows,
+        destination=tmp_path / "disjoint.parquet",
+    )
+    width = measured["width_model"]
+    cardinality = width["dictionary_cardinality_per_row_group"]
+    assert cardinality["venue"] == 1
+    assert cardinality["status"] == 3
+    assert cardinality["absent"] == 0
+    present = measured["anchor_row_dictionary_values"]
+    # The anchor row carries a venue and a status value, and no `absent` value at all.
+    assert present["venue"] == 1
+    assert present["status"] == 1
+    assert present["absent"] == 0
+    additional = measured["additional_row_group_values"]
+    charged = {
+        item["column"]: item["dictionary_cardinality"] for item in additional["columns"]
+    }
+    # One value is already in the anchor, so only the other two are added.
+    assert charged["venue"] == 0
+    assert charged["status"] == 2
+    assert charged["absent"] == 0
+    assert measured["additional_dictionary_bytes"] == 2 * (3 + 4)
+    # A nullable column carries exactly one validity allocation per row, never two.
+    assert width["incremental_encoded_widths"]["absent"] == 4 + 1
+    assert width["incremental_encoded_widths"]["count"] == 8
+    assert width["incremental_encoded_widths"]["status"] == 4
+
+
+def test_a_complete_witness_regrouped_into_many_files_recharges_each_anchor(
+    tmp_path: Path,
+) -> None:
+    """Review 259 B: a combined witness never supplies an average to many files."""
+    columns = (
+        sizing.TypedColumn("native_symbol", sizing.KIND_DICTIONARY),
+        sizing.TypedColumn("count", sizing.KIND_INTEGER),
+    )
+    rows = [{"native_symbol": f"SYM{index}", "count": index} for index in range(4)]
+    measured = sizing.measure_maximum_width_product(
+        product="regrouped_witness",
+        columns=columns,
+        rows=rows,
+        destination=tmp_path / "regrouped.parquet",
+        partition_fields=("native_symbol",),
+    )
+    # The complete row set was traversed, yet the witness layout is not the projected
+    # layout, so the disjoint anchor terms are still produced.
+    assert measured["width_model"]["complete_row_set"] is True
+    assert measured["width_model"]["exact_layout"] is False
+    assert measured["row_group_anchor_bytes"] > 0
+    # One partition proves one native symbol, so nothing is added beyond the anchor.
+    assert measured["width_model"]["dictionary_cardinality_per_row_group"][
+        "native_symbol"
+    ] == 1
+    assert measured["additional_dictionary_bytes"] == 0
+    one_file = sizing.project_fixed_schema_product(
+        measured, rows=4, partitions=1, partition_rows=[4]
+    )
+    four_files = sizing.project_fixed_schema_product(
+        measured, rows=4, partitions=4, partition_rows=[1, 1, 1, 1]
+    )
+    assert one_file["projected_row_groups"] == 1
+    assert four_files["projected_row_groups"] == 4
+    # Each projected one-row file recharges its own anchor rather than reusing one.
+    assert four_files["allocation_model"]["anchor_count"] == 4
+    assert four_files["allocation_model"]["incremental_rows"] == 0
+    assert (
+        four_files["projected_payload_bytes"]
+        == 4 * int(measured["row_group_anchor_bytes"])
+        > one_file["projected_payload_bytes"]
+    )
+
+
+def _bundle_row(ordinal: int, schema_sha256: str) -> dict[str, Any]:
+    """One complete bundle descriptor row with a distinct dataset identity."""
+    return {
+        "required_product": "binance_usdm_bar_1h",
+        "component": "target_product",
+        "dataset_id": f"binance_usdm_bar_1h:target_product:SYM{ordinal}:2020-01",
+        "native_symbol": f"SYM{ordinal}",
+        "canonical_instrument_id": None,
+        "canonical_instrument_version_id": None,
+        "reference_identity_state": "reference_identity_not_yet_created",
+        "utc_month": "2020-01",
+        "partition_sha256": None,
+        "partition_bytes": None,
+        "row_count": None,
+        "schema_sha256": schema_sha256,
+        "lineage_manifest_sha256": None,
+        "lineage_mapping_count": 1,
+        "source_report_sha256": "a" * 64,
+        "source_manifest_detail_sha256": "b" * 64,
+        "qualification_code_sha256": "c" * 64,
+        "qualification_cli_sha256": "d" * 64,
+        "sizing_code_sha256": "e" * 64,
+        "sizing_cli_sha256": "f" * 64,
+        "configuration_sha256": "0" * 64,
+        "scenario_policy_sha256": "1" * 64,
+        "unit_convention": "base_and_quote_units_as_published_by_the_venue",
+        "censorship_semantics": "observed_and_censored_aggregate_never_complete",
+        "coverage_gap_rows": 8_317,
+        "typed_gap_membership_rows": 3_742,
+        "fee_authority_gap_rows": 771,
+        "cross_product_intersection_count": 2,
+        "cross_product_intersection_sha256": "2" * 64,
+    }
+
+
+def test_a_bundle_beyond_one_row_group_is_measured_in_its_actual_layout(
+    tmp_path: Path,
+) -> None:
+    """Review 257 and 259 B: the real 65k+ row set is written, not modelled."""
+    total = sizing.SIZING_ROW_BATCH + 1
+    rows = [_bundle_row(index, "9" * 64) for index in range(total)]
+    columns = sizing.final_product_columns("binance_usdm_harmonic_bundle")
+    measured = sizing.measure_maximum_width_product(
+        product="binance_usdm_harmonic_bundle",
+        columns=columns,
+        rows=rows,
+        destination=tmp_path / "bundle-exact.parquet",
+        exact_layout=True,
+    )
+    # The complete deterministic row order was written in its actual row groups.
+    assert measured["projected_layout_measured"] is True
+    assert measured["measured_rows"] == total
+    assert measured["row_groups"] == 2
+    assert measured["width_model"]["exact_layout"] is True
+    # No synthetic widest-row branch was taken, so no anchor model exists at all.
+    assert "row_group_anchor_bytes" not in measured
+    assert "additional_dictionary_bytes" not in measured
+    # The real per-row-group cardinalities come from the actual deterministic groups,
+    # never from one global distinct set republished under a per-group label.
+    width = measured["width_model"]
+    by_group = width["dictionary_cardinality_by_row_group"]
+    assert len(by_group) == 2
+    assert [group["dataset_id"] for group in by_group] == [sizing.SIZING_ROW_BATCH, 1]
+    assert [group["native_symbol"] for group in by_group] == [sizing.SIZING_ROW_BATCH, 1]
+    assert [group["unit_convention"] for group in by_group] == [1, 1]
+    cardinality = width["dictionary_cardinality_per_row_group"]
+    assert cardinality["dataset_id"] == sizing.SIZING_ROW_BATCH
+    assert cardinality["dataset_id"] != total
+    assert width["dictionary_distinct_values"]["dataset_id"] == total
+    assert cardinality["unit_convention"] == 1
+    # The exact measured facts reconcile with no ceiling drift.
+    facts = measured["exact_layout_facts"]
+    assert facts["rows"] == total
+    assert facts["row_groups"] == 2
+    assert (
+        facts["payload_bytes"]
+        + facts["footer_bytes"]
+        + facts["residual_bytes"]
+        + facts["framing_bytes"]
+        == facts["file_bytes"]
+        == int(measured["file_bytes"])
+    )
+    projection = sizing.project_fixed_schema_product(
+        measured, rows=total, partitions=1, partition_rows=[total]
+    )
+    model = projection["allocation_model"]
+    assert model["model"] == "measured_projected_layout"
+    assert projection["projected_row_groups"] == 2
+    assert projection["projected_payload_bytes"] == int(measured["payload_bytes"])
+    # Measured overhead is used as measured: footer plus residual plus framing exactly.
+    assert projection["projected_overhead_bytes"] == (
+        int(measured["footer_bytes"])
+        + int(measured["residual_bytes"])
+        + int(measured["framing_bytes"])
+    )
+    assert projection["projected_bytes"] == int(measured["file_bytes"])
+    assert projection["projected_bytes"] == (
+        projection["projected_payload_bytes"] + projection["projected_overhead_bytes"]
+    )
+    assert len(model["dictionary_cardinality_by_row_group"]) == 2
+
+
+def test_one_owner_per_validity_byte_across_current_and_future_fields() -> None:
+    """Review 260 finding 1: a nullable byte is allocated by exactly one model."""
+    # The future reference allocation owns its two columns' indices and values, while
+    # the current typed projection owns their null validity.
+    quality = sizing._traverse_typed_rows(
+        sizing.QUALITY_GAP_COLUMNS,
+        [
+            {
+                **sizing.native_identity("BTCUSDT"),
+                "required_product": "binance_usdm_bar_1h",
+                "utc_month": "2020-01",
+                "missing_run_start_ms": None,
+                "missing_run_end_ms": None,
+                "expected_grid_count": 744,
+                "gap_kind": "projected_quality_missing_run",
+                "reason": "reserved_disjoint_missing_run_on_causal_target_grid",
+            }
+        ],
+    )
+    widths = quality["incremental_encoded_widths"]
+    # Both columns are declared nullable and are physically present as current nulls in
+    # every measured anchor and exact file, so the current typed schema owns exactly one
+    # validity byte for each and the future allocation owns none.
+    assert widths["canonical_instrument_id"] == 1
+    assert widths["canonical_instrument_version_id"] == 1
+    reference = sizing.future_reference_identity_bytes(
+        scopes=[_identity_scope()], detailed_identities=1, funding_only_identities=0
+    )
+    # The future allocation owns two indices and the accepted values, and no validity.
+    assert reference["bytes_per_row"] == 2 * 4
+    assert reference["current_null_bytes_per_row"] == 2 * 1
+    assert all(
+        column["validity_charged_here"] is False
+        for scope in reference["scopes"]
+        for column in scope["columns"]
+    )
+    # Current plus future is one index and one validity per column, counted once.
+    assert (
+        reference["bytes_per_row"] + reference["current_null_bytes_per_row"]
+        == 2 * (4 + 1)
+    )
+    assert "current typed" in reference["validity_owner"]
+    # A nullable non-dictionary column still carries exactly one validity allocation.
+    assert widths["missing_run_start_ms"] == 8 + 1
+    assert widths["expected_grid_count"] == 8
+    # The archive and cost target-only path declares the same two current nulls, so its
+    # shared current identity allocation carries them explicitly.
+    shared = sizing.cost_identity_allocation(
+        _one_object_per_family(), rows=100, row_groups=2
+    )
+    assert shared["reference_current_null_bytes_per_row"] == 2 * 1
+    assert shared["reference_current_null_bytes"] == 100 * 2
+    assert shared["dictionary_index_bytes_per_row"] == 3 * 4
+    assert shared["bytes_per_row"] == sizing.INSTRUMENT_IDENTITY_CURRENT_BYTES_PER_ROW
+    assert shared["bytes_per_row"] == 3 * 4 + 2 * 1
+    assert set(shared["reference_current_null_columns"]) == {
+        "canonical_instrument_id",
+        "canonical_instrument_version_id",
+    }
+    # Every separately allocated future field adds only bytes its current typed or
+    # manifest representation does not already hold.
+    bundle = sizing.future_bundle_field_bytes(10)
+    assert bundle["encoded_field_widths"]["partition_bytes"] == 8
+    assert bundle["encoded_field_widths"]["partition_sha256"] == 64 + 4
+    assert bundle["validity_owner"]
+    lineage = sizing.future_lineage_field_bytes(
+        [
+            {
+                "source_state": sizing.PROJECTED_UNACQUIRED_STATE,
+                "provider_symbol": None,
+            }
+        ]
+    )
+    assert lineage["encoded_field_widths"]["source_available_at"] == 8
+    assert lineage["encoded_field_widths"]["source_sha256"] == 64 + 4
+    assert lineage["validity_owner"]
+    # The projected Coinalyze response counters add two future integers and no validity.
+    with_provider = sizing.future_lineage_field_bytes(
+        [
+            {
+                "source_state": sizing.PROJECTED_UNACQUIRED_STATE,
+                "provider_symbol": "BTCUSDT_PERP.A",
+            }
+        ]
+    )
+    assert with_provider["projected_response_mappings"] == 1
+    assert with_provider["future_response_counter_bytes"] == 2 * 8
+    assert with_provider["future_response_counter_bytes"] != 2 * (8 + 1)
+    # The quality-gap bound was already the correct pattern and is unchanged.
+    quality_bound = sizing.future_quality_gap_bound_bytes(10)
+    assert quality_bound["encoded_field_widths"]["missing_run_start_ms"] == 8
+
+
+def test_an_exact_one_partition_layout_charges_its_measured_file_bytes(
+    tmp_path: Path,
+) -> None:
+    """Review 261 finding 4: no ceiling-derived overhead enters an exact result."""
+    columns = (
+        sizing.TypedColumn("native_symbol", sizing.KIND_DICTIONARY),
+        sizing.TypedColumn("count", sizing.KIND_INTEGER),
+    )
+    rows = [{"native_symbol": f"SYM{index}", "count": index} for index in range(6)]
+    measured = sizing.measure_maximum_width_product(
+        product="exact_one_partition",
+        columns=columns,
+        rows=rows,
+        destination=tmp_path / "exact-one-partition.parquet",
+        exact_layout=True,
+    )
+    projection = sizing.project_fixed_schema_product(
+        measured, rows=6, partitions=1, partition_rows=[6]
+    )
+    assert projection["largest_partition_bytes"] == int(measured["file_bytes"])
+    assert projection["projected_bytes"] == int(measured["file_bytes"])
+    assert projection["largest_partition_bytes"] == (
+        projection["projected_payload_bytes"] + projection["projected_overhead_bytes"]
+    )
+    # The generic ceiling-derived expression is not what produced this result.
+    assert projection["projected_overhead_bytes"] == (
+        int(measured["footer_bytes"])
+        + int(measured["residual_bytes"])
+        + int(measured["framing_bytes"])
+    )
+
+
+def test_a_wider_accepted_coinalyze_mapping_raises_the_projected_identity_bound(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    """Review 263 finding 6: proved through the real `project_coinalyze` path.
+
+    The retained liquidation response covers only the two anchor series. Adding a real
+    accepted mapping wider than either retained anchor must raise the identity delta, the
+    additional allocation, the total payload, and the largest partition, while the
+    retained envelopes themselves stay exactly as measured.
+    """
+    resolved = _coinalyze(accepted)
+    baseline = project_coinalyze(
+        evidence=resolved["evidence"],
+        supported=resolved["supported"],
+        unmapped=resolved["unmapped"],
+        lifecycles=resolved["lifecycles"],
+        identities=resolved["identities"],
+        lineage=_lineage_model(),
+        staging=tmp_path / "baseline",
+    )
+    # Every fixture native is seven bytes, so the baseline delta is genuinely zero.
+    assert baseline.allocation["identity_domain"]["identity_width_delta_bytes"] == 0
+    wide_native = "1000000BOBUSDT"
+    wide_provider = f"{wide_native}_PERP.A"
+    assert len(wide_native) > max(len(item) for item in accepted["anchor_natives"])
+    identities = sizing.CoinalyzeIdentityMap(
+        provider_to_native={
+            **resolved["identities"].provider_to_native,
+            wide_provider: wide_native,
+        },
+        native_to_provider={
+            **resolved["identities"].native_to_provider,
+            wide_native: wide_provider,
+        },
+        perpetual_markets=resolved["identities"].perpetual_markets + 1,
+    )
+    first_day, last_day = next(iter(resolved["lifecycles"].values()))
+    widened = project_coinalyze(
+        evidence=resolved["evidence"],
+        supported=[*resolved["supported"], wide_native],
+        unmapped=resolved["unmapped"],
+        lifecycles={**resolved["lifecycles"], wide_native: (first_day, last_day)},
+        identities=identities,
+        lineage=_lineage_model(),
+        staging=tmp_path / "widened",
+    )
+    domain = widened.allocation["identity_domain"]
+    base_domain = baseline.allocation["identity_domain"]
+    # The accepted domain, not the two retained series, sets the maximum widths.
+    assert domain["accepted_mappings"] == base_domain["accepted_mappings"] + 1
+    assert domain["retained_series"] == base_domain["retained_series"]
+    assert domain["accepted_maximum_native_symbol_bytes"] == len(wide_native)
+    assert domain["identity_width_delta_bytes"] > 0
+    assert domain["identity_width_delta_bytes"] == (
+        len(wide_native) - domain["retained_anchor_native_symbol_bytes"]
+    ) + (len(wide_provider) - domain["retained_anchor_provider_symbol_bytes"])
+    # The delta reaches the additional allocation, the payload, and the largest bound.
+    assert (
+        widened.allocation["additional_dictionary_bytes_per_row_group"]
+        > baseline.allocation["additional_dictionary_bytes_per_row_group"]
+    )
+    assert widened.projected_typed_payload_bytes > (
+        baseline.projected_typed_payload_bytes
+    )
+    assert widened.largest_partition_bytes > baseline.largest_partition_bytes
+    # The retained envelopes are unchanged measurements of the same two series.
+    assert sorted(item["native_symbol"] for item in widened.envelopes) == sorted(
+        item["native_symbol"] for item in baseline.envelopes
+    )
+    assert [item["parquet_sha256"] for item in widened.envelopes] == [
+        item["parquet_sha256"] for item in baseline.envelopes
+    ]
+    assert widened.allocation["row_group_anchor_bytes"] == (
+        baseline.allocation["row_group_anchor_bytes"]
+    )
+
+
+def test_an_empty_class_scope_publishes_zero_rather_than_one() -> None:
+    """Review 263 finding 1: an empty accepted class holds no identity value at all."""
+    empty = sizing.future_reference_identity_bytes(
+        scopes=[
+            {
+                "scope": "funding_only_identity_partitions",
+                "rows": 0,
+                "row_groups": 0,
+                "instrument_cardinality": 0,
+                "version_cardinality": 0,
+                "cardinality_source": "this accepted class projects no partition",
+            }
+        ],
+        detailed_identities=3,
+        funding_only_identities=0,
+    )
+    assert empty["bytes"] == 0
+    assert empty["scopes"][0]["row_group_dictionary_bytes"] == 0
+    # A cardinality of one over zero rows is a contradiction and blocks.
+    with pytest.raises(SizingError, match="publishes a nonzero cardinality"):
+        sizing.future_reference_identity_bytes(
+            scopes=[
+                {
+                    "scope": "funding_only_identity_partitions",
+                    "rows": 0,
+                    "row_groups": 0,
+                    "instrument_cardinality": 1,
+                    "version_cardinality": 0,
+                    "cardinality_source": "an empty class that claims an identity",
+                }
+            ],
+            detailed_identities=3,
+            funding_only_identities=1,
+        )
+    # A version can never exceed the instrument identity that carries it.
+    with pytest.raises(SizingError, match="more versions than instrument identities"):
+        sizing.future_reference_identity_bytes(
+            scopes=[_identity_scope(instrument_cardinality=0, version_cardinality=1)],
+            detailed_identities=1,
+            funding_only_identities=0,
+        )
+
+
+def test_the_shared_identity_anchor_is_measured_not_computed(tmp_path: Path) -> None:
+    """Review 263 finding 2: a real one-row five-column Parquet payload."""
+    objects = _one_object_per_family()
+    anchor = sizing.measure_shared_identity_anchor(
+        objects, destination=tmp_path / "target-shared-current-identity.parquet"
+    )
+    assert (tmp_path / "target-shared-current-identity.parquet").is_file()
+    assert anchor["measured_rows"] == 1
+    assert anchor["parquet_sha256"]
+    assert anchor["component"] == "shared_current_identity"
+    # All five identity columns, including both nullable REF-001 columns as real nulls.
+    names = [column["name"] for column in anchor["schema"]]
+    assert names == [
+        column.name for column in sizing.instrument_identity_columns()
+    ]
+    assert anchor["present_null_columns"] == [
+        "canonical_instrument_id",
+        "canonical_instrument_version_id",
+    ]
+    assert anchor["anchor_row"]["venue"] == "BINANCE_USDM"
+    assert anchor["widest_accepted_native_symbol"] == "BTCUSDT"
+    assert anchor["widest_accepted_native_symbol_bytes"] == 7
+    # The measured payload is a real page/dictionary initialization, not a formula sum.
+    logical = int(
+        sizing.cost_identity_allocation(objects, rows=0, row_groups=1)[
+            "row_group_dictionary_bytes"
+        ]
+    )
+    index_bytes = sizing.SHARED_INSTRUMENT_IDENTITY_INDEX_BYTES_PER_ROW
+    null_bytes = sizing.REFERENCE_IDENTITY_CURRENT_NULL_BYTES_PER_ROW
+    assert int(anchor["payload_bytes"]) >= index_bytes + null_bytes + logical
+    assert int(anchor["payload_bytes"]) != logical
+    assert int(anchor["file_bytes"]) > int(anchor["payload_bytes"])
+
+
+def test_every_projected_identity_partition_is_classified_exactly_once() -> None:
+    """Review 260 finding 5: unknown or duplicate classification blocks."""
+    split = sizing.split_reference_identity_scopes(
+        [
+            {"native_symbol": "AAAUSDT", "rows": 10},
+            {"native_symbol": "BBBUSDT", "rows": 4},
+        ],
+        detailed_symbols=["AAAUSDT"],
+        funding_only_symbols=["BBBUSDT"],
+    )
+    assert split["detailed"] == {"rows": 10, "row_groups": 1, "partitions": 1}
+    assert split["funding_only"] == {"rows": 4, "row_groups": 1, "partitions": 1}
+    # A symbol in neither accepted class is unknown, never assumed detailed.
+    with pytest.raises(SizingError, match="unclassified native identity"):
+        sizing.split_reference_identity_scopes(
+            [{"native_symbol": "CCCUSDT", "rows": 1}],
+            detailed_symbols=["AAAUSDT"],
+            funding_only_symbols=["BBBUSDT"],
+        )
+    # A symbol in both accepted classes is a contradiction, and blocks.
+    with pytest.raises(SizingError, match="both detailed and funding-only"):
+        sizing.split_reference_identity_scopes(
+            [{"native_symbol": "AAAUSDT", "rows": 1}],
+            detailed_symbols=["AAAUSDT"],
+            funding_only_symbols=["AAAUSDT"],
+        )
+
+
+def test_a_derived_only_dictionary_field_uses_the_row_group_model(
+    tmp_path: Path,
+) -> None:
+    """Review 259 C: no derived status dictionary hides in a per-row scalar."""
+    columns = sizing.derived_only_columns("binance_usdm_open_interest_5m")
+    names = {column.name for column in columns}
+    assert "gap_break_status" in names
+    assert not names & {column.name for column in sizing.instrument_identity_columns()}
+    rows = [
+        {
+            "previous_sum_open_interest": Decimal("1"),
+            "open_interest_change": Decimal("2"),
+            "open_interest_value_change": Decimal("3"),
+            "change_interval_seconds": 300,
+            "gap_break_status": status,
+        }
+        for status in ("comparable", "gap_break", "first_row_of_partition")
+    ]
+    measured = sizing.measure_maximum_width_product(
+        product="binance_usdm_open_interest_5m",
+        columns=columns,
+        rows=rows,
+        destination=tmp_path / "derived-oi.parquet",
+    )
+    width = measured["width_model"]
+    # The status dictionary is sized as a dictionary, not as a per-row string average.
+    assert width["dictionary_cardinality_per_row_group"]["gap_break_status"] == 3
+    assert width["incremental_encoded_widths"]["gap_break_status"] == 4
+    assert measured["additional_dictionary_bytes"] > 0
+    assert measured["incremental_bytes_per_row"] < int(measured["bytes_per_row"])
+    # Fixed-width derived numerics stay exact and keep one validity allocation each.
+    assert width["incremental_encoded_widths"]["change_interval_seconds"] == 8 + 1
+    assert width["incremental_encoded_widths"]["open_interest_change"] == 16 + 1
+
+
+def test_the_v3_capacity_terms_reconcile_exactly(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    """The corrected representation still reconciles component by component."""
+    receipt = _run(accepted, tmp_path)["receipt"]
+    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v3"
+    projections = receipt["projections"]
+    capacity = receipt["capacity"]
+    assert (
+        projections["typed_payload_bytes"]
+        + projections["typed_overhead_bytes"]
+        + projections["typed_partition_manifest_bytes"]
+        == projections["typed_normalized_bytes"]
+    )
+    assert capacity["typed_normalized_partition_bytes"] == (
+        projections["typed_normalized_bytes"]
+    )
+    future = receipt["future_width_allocations"]
+    assert projections["future_field_payload_bytes"] == sum(
+        future[name]["bytes"]
+        for name in (
+            "reference_identity",
+            "membership_terms",
+            "bundle_partition_fields",
+            "quality_gap_bounds",
+            "lineage_receipt_fields",
+        )
+    )
+    reference = future["reference_identity"]
+    assert reference["bytes"] == sum(item["bytes"] for item in reference["scopes"])
+    assert reference["bytes_per_row"] == 2 * 4
+    assert reference["current_null_bytes_per_row"] == 2 * 1
+    assert reference["accepted_membership_identities"] == (
+        reference["detailed_membership_identities"]
+        + reference["funding_only_membership_identities"]
+    )
+    assert capacity["bounded_temporary_work_bytes"] == max(
+        sizing.ACCEPTED_LARGEST_SELECTED_OBJECT_BYTES,
+        receipt["partitioning"]["largest_projected_partition_bytes"],
+        receipt["partitioning"]["bundle_transaction_bytes"],
+    )
+    assert capacity["total_future_storage_bytes"] == sum(
+        capacity[name]
+        for name in (
+            "new_binance_raw_bytes",
+            "new_coinalyze_raw_bytes",
+            "typed_normalized_partition_bytes",
+            "catalog_manifest_bundle_bytes",
+            "bounded_temporary_work_bytes",
+            "operating_reserve_bytes",
+        )
+    )
+    # Review 259 D: the real receipt scopes apply the accepted version cardinalities.
+    scopes = {item["scope"]: item for item in reference["scopes"]}
+    assert {"detailed_identity_partitions", "funding_only_identity_partitions"} <= set(
+        scopes
+    )
+    by_column = {
+        name: {item["column"]: item for item in scope["columns"]}
+        for name, scope in scopes.items()
+    }
+    assert (
+        by_column["detailed_identity_partitions"]["canonical_instrument_version_id"][
+            "dictionary_cardinality"
+        ]
+        == 1
+    )
+    assert (
+        by_column["funding_only_identity_partitions"][
+            "canonical_instrument_version_id"
+        ]["dictionary_cardinality"]
+        == 0
+    )
+    # A native-symbol partition proves exactly one canonical instrument identity, while
+    # a deterministic bundle row group keeps the accepted cardinality it really holds.
+    for name, columns in by_column.items():
+        instrument = columns["canonical_instrument_id"]["dictionary_cardinality"]
+        version = columns["canonical_instrument_version_id"]["dictionary_cardinality"]
+        assert version <= instrument
+        if name.startswith("harmonic_bundle_row_group_"):
+            assert instrument >= 1
+        elif scopes[name]["rows"] == 0:
+            # An empty class scope publishes zero, never a cardinality of one.
+            assert instrument == 0 and version == 0
+            assert scopes[name]["row_groups"] == 0
+        else:
+            assert instrument == 1
+    assert any(
+        name.startswith("harmonic_bundle_row_group_") for name in by_column
+    )
+    assert (
+        scopes["detailed_identity_partitions"]["rows"]
+        + scopes["funding_only_identity_partitions"]["rows"]
+        > 0
+    )
+    # Review 259 D: the policy and code identity name ADR-0027 version 3.
+    assert receipt["policy_identity"] == (
+        "adr0027_review257_partition_aware_dictionary_storage_sizing_v3"
+    )
+    assert receipt["code_identity"]["policy_identity"] == receipt["policy_identity"]
+    assert sizing.SIZING_POLICY_IDENTITY == receipt["policy_identity"]
+    # Review 261 finding 3: the complete shared current identity ledger survives.
+    for item in projections["required_products"]:
+        shared = item["target_only_allocation"]["shared_current_identity"]
+        assert {column["column"] for column in shared["columns"]} == {
+            "venue",
+            "native_symbol",
+            "reference_identity_state",
+        }
+        assert all(
+            column["dictionary_cardinality"] == 1 for column in shared["columns"]
+        )
+        assert all(column["cardinality_source"] for column in shared["columns"])
+        assert all(column["maximum_value_bytes"] > 0 for column in shared["columns"])
+        assert shared["dictionary_index_bytes_per_row"] == 3 * 4
+        assert shared["reference_current_null_bytes_per_row"] == 2 * 1
+        assert shared["bytes_per_row"] == 3 * 4 + 2 * 1
+    # Review 263 findings 3 and 4: the literal shared equation, per product.
+    representation_anchor = projections["storage_representation"][
+        "shared_current_identity_anchor"
+    ]
+    measured_anchor = int(representation_anchor["payload_bytes"])
+    index_bytes = int(representation_anchor["index_bytes_per_row"])
+    null_bytes = int(representation_anchor["current_null_bytes_per_row"])
+    logical = int(representation_anchor["logical_dictionary_bytes_per_row_group"])
+    residual = int(representation_anchor["page_residual_bytes_per_row_group"])
+    assert index_bytes == 12
+    assert null_bytes == 2
+    assert index_bytes + null_bytes == 14
+    assert measured_anchor >= index_bytes + null_bytes + logical
+    assert residual == measured_anchor - index_bytes - null_bytes - logical
+    assert representation_anchor["measured_rows"] == 1
+    assert representation_anchor["present_null_columns"] == [
+        "canonical_instrument_id",
+        "canonical_instrument_version_id",
+    ]
+    for item in projections["required_products"]:
+        allocation = item["target_only_allocation"]
+        shared = allocation["shared_current_identity"]
+        rows_value = int(shared["rows"])
+        groups_value = int(shared["row_groups"])
+        assert rows_value == item["projected_rows"]
+        assert groups_value == item["projected_row_groups"]
+        # R*(I+N) + G*D + G*(A-I-N-D) == R*14 + G*(A-14), literally.
+        assert shared["row_index_bytes"] == rows_value * index_bytes
+        assert shared["reference_current_null_bytes"] == rows_value * null_bytes
+        assert shared["dictionary_value_bytes"] == groups_value * logical
+        assert shared["page_residual_bytes"] == groups_value * residual
+        assert shared["measured_anchor_bytes"] == measured_anchor
+        assert (
+            shared["row_index_bytes"]
+            + shared["reference_current_null_bytes"]
+            + shared["dictionary_value_bytes"]
+            + shared["page_residual_bytes"]
+            == shared["bytes"]
+            == rows_value * 14 + groups_value * (measured_anchor - 14)
+        )
+        # Each present dictionary column publishes its own row-index and value totals.
+        assert sum(
+            int(column["row_index_bytes"]) for column in shared["columns"]
+        ) == shared["row_index_bytes"]
+        assert sum(
+            int(column["row_group_dictionary_bytes"]) for column in shared["columns"]
+        ) == logical
+        # The outer allocation is exactly shared current plus derived target terms.
+        derived = allocation["derived_terms"]
+        assert allocation["incremental_bytes_per_row"] == (
+            derived["incremental_bytes_per_row"] + shared["bytes_per_row"]
+        )
+        assert allocation["row_group_initialization_bytes"] == (
+            derived["row_group_initialization_bytes"]
+            + shared["row_group_initialization_bytes"]
+        )
+        assert allocation["additional_dictionary_bytes"] == (
+            derived["additional_dictionary_bytes"]
+        )
+        assert allocation["bytes"] == item["projected_target_only_bytes"]
+    # The aggregate lineage total and the largest single lineage partition agree.
+    lineage_future = future["lineage_receipt_fields"]
+    assert lineage_future["bytes"] == (
+        lineage_future["mappings"] * lineage_future["bytes_per_mapping"]
+        + lineage_future["future_response_counter_bytes"]
+    )
+    partitioning = receipt["partitioning"]
+    candidates = partitioning["largest_future_width_charge_candidates"]
+    inputs = partitioning["largest_future_width_charge_inputs"]
+    assert candidates["projected_lineage_partition"] == (
+        inputs["lineage_candidate_mappings"]
+        * future["lineage_receipt_fields"]["bytes_per_mapping"]
+        + inputs["lineage_candidate_responses"] * 2 * sizing.INTEGER_WIDTH
+    )
+    assert candidates["projected_lineage_partition"] <= lineage_future["bytes"]
+    # Review 261 finding 4: the future charge excludes the shared current identity and
+    # repeats each candidate's own dictionary by that candidate's own row groups.
+    assert partitioning["largest_future_width_charge_bytes"] == max(
+        candidates.values()
+    )
+    assert candidates["native_symbol_partition"] == (
+        inputs["maximum_identity_rows"] * inputs["reference_index_bytes_per_row"]
+        + inputs["maximum_identity_row_groups"]
+        * inputs["reference_row_group_dictionary_bytes"]
+    )
+    assert candidates["harmonic_bundle"] == (
+        inputs["bundle_rows"] * inputs["reference_index_bytes_per_row"]
+        + future["bundle_partition_fields"]["bytes"]
+        + inputs["bundle_reference_dictionary_bytes"]
+    )
+    # The bundle repeats its reference dictionary by its own actual row groups.
+    assert inputs["bundle_reference_dictionary_bytes"] == sum(
+        item["row_group_dictionary_bytes"]
+        for item in reference["scopes"]
+        if str(item["scope"]).startswith("harmonic_bundle_row_group_")
+    )
+    assert "never in this future charge" in inputs["shared_current_identity_excluded"]
+    # Review 261 finding 2: the Coinalyze identity domain is every accepted mapping.
+    domain = liquidation["identity_domain"]
+    assert domain["accepted_mappings"] >= domain["retained_series"]
+    assert domain["accepted_maximum_native_symbol_bytes"] > 0
+    assert domain["identity_width_delta_bytes"] >= 0
+    assert domain["witness_envelopes"]
+    representation = projections["storage_representation"]
+    assert representation["row_group_cap"] == sizing.SIZING_ROW_BATCH
+    assert representation["shared_instrument_identity_index_bytes_per_row"] == 12
+    assert representation["shared_instrument_identity_current_null_bytes_per_row"] == 2
+    assert representation["shared_instrument_identity_total_bytes_per_row"] == 14
+    assert representation["reference_identity_index_bytes_per_row"] == 8
+    assert representation["superseded_receipt"] == (
+        sizing.V2_SIZING_RECEIPT_RELATIVE_PATH
+    )
+    # Every fixed-schema block names the model it was projected under, and each model
+    # reconciles its own published terms exactly.
+    models = set()
+    for block in projections["fixed_schema_products"].values():
+        model = block["allocation_model"]
+        models.add(model["model"])
+        assert model["model"] in {
+            "measured_complete_row_set",
+            "row_group_anchor_plus_incremental_rows",
+            "measured_projected_layout",
+        }
+        if model["model"] == "row_group_anchor_plus_incremental_rows":
+            assert (
+                model["anchor_bytes"]
+                + model["additional_dictionary_bytes"]
+                + model["incremental_bytes"]
+                == block["projected_payload_bytes"]
+            )
+        elif model["model"] == "measured_projected_layout":
+            # Exact measured facts, with no ceiling division anywhere.
+            assert model["payload_bytes"] == block["projected_payload_bytes"]
+            assert model["overhead_bytes"] == block["projected_overhead_bytes"]
+            assert (
+                model["payload_bytes"]
+                + model["footer_bytes"]
+                + model["residual_bytes"]
+                + model["framing_bytes"]
+                == model["file_bytes"]
+            )
+            assert model["overhead_bytes"] == (
+                model["footer_bytes"] + model["residual_bytes"] + model["framing_bytes"]
+            )
+            assert len(model["dictionary_cardinality_by_row_group"]) == (
+                model["row_groups"]
+            )
+    # The bundle and the scenario policy are both intentionally exact-layout products.
+    assert "measured_projected_layout" in models
+    assert "row_group_anchor_plus_incremental_rows" in models
+    # Coinalyze no longer multiplies a complete measured payload by every point.
+    liquidation = receipt["coinalyze"]["allocation"]
+    assert liquidation["model"] == "row_group_anchor_plus_incremental_rows"
+    assert (
+        liquidation["anchor_bytes"]
+        + liquidation["additional_dictionary_bytes"]
+        + liquidation["incremental_bytes"]
+        == liquidation["total_payload_bytes"]
+        == receipt["coinalyze"]["projected_typed_payload_bytes"]
+    )
+    assert liquidation["total_payload_bytes"] != (
+        receipt["coinalyze"]["projected_points"]
+        * receipt["coinalyze"]["normalized_ratio_numerator_parquet_bytes"]
+    )
+    # Every derived dictionary has complete cardinality authority, and every allocation
+    # input survives serialization instead of collapsing to one scalar.
+    targets = projections["target_only_fields"]
+    open_interest = targets["binance_usdm_open_interest_5m"]
+    assert open_interest["cohorts_traversed"] >= 1
+    assert open_interest["width_model"]["declared_domain_cardinality"][
+        "gap_break_status"
+    ] == 3
+    assert open_interest["width_model"]["dictionary_cardinality_per_row_group"][
+        "gap_break_status"
+    ] >= 3
+    for name in (
+        "incremental_bytes_per_row",
+        "row_group_initialization_bytes",
+        "additional_dictionary_bytes",
+    ):
+        assert name in open_interest["allocation"]
+    for item in projections["required_products"]:
+        allocation = item["target_only_allocation"]
+        assert allocation["bytes"] == item["projected_target_only_bytes"]
+        assert (
+            allocation["row_bytes"] + allocation["row_group_total_bytes"]
+            == allocation["bytes"]
+        )
+
+
+def test_prior_version_evidence_is_immutable_and_never_a_v3_target(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    """Receipt 231 and every v1/v2 envelope stay byte-identical and untargeted."""
+    store = accepted["paths"].store_root
+    roots = []
+    for relative in (sizing.V1_SIZING_EVIDENCE_ROOT, sizing.V2_SIZING_EVIDENCE_ROOT):
+        root = store / relative
+        root.mkdir(parents=True)
+        frozen = root / "keep.parquet"
+        frozen.write_bytes(f"immutable {relative} evidence".encode("utf-8"))
+        roots.append((root, frozen, frozen.read_bytes()))
+    _run(accepted, tmp_path)
+    for root, frozen, before in roots:
+        assert frozen.read_bytes() == before
+        assert list(root.iterdir()) == [frozen]
+    # Version 3 wrote only its own evidence root.
+    assert (store / sizing.SIZING_EVIDENCE_ROOT).is_dir()
+    assert sizing.SIZING_EVIDENCE_ROOT == "evidence/sizing/v3/envelopes/sha256"
+    assert sizing.SIZING_EVIDENCE_ROOT not in sizing.IMMUTABLE_SIZING_EVIDENCE_ROOTS
+    # Neither accepted prior receipt path may ever be a version-3 target.
+    for relative in sizing.IMMUTABLE_SIZING_RECEIPT_PATHS:
+        target = tmp_path / relative.rsplit("/", 1)[-1]
+        target.write_bytes(b'{"schema_version": "prior"}\n')
+        with pytest.raises(SizingError, match="never rewrite an accepted prior receipt"):
+            _run(accepted, tmp_path, receipt_path=target)
+        assert target.read_bytes() == b'{"schema_version": "prior"}\n'
+    assert sizing.V2_ACCEPTED_RECEIPT_SHA256 == (
+        "d3b2e81e46ecb17ea98dee160a98a551720b4bb27f5c29497839081acabaad29"
+    )
+    assert sizing.SIZING_RECEIPT_RELATIVE_PATH == (
+        "research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json"
+    )
 
 
 def test_the_stable_receipt_projection_is_the_only_reuse_boundary(
