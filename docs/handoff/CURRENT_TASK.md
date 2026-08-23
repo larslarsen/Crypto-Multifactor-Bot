@@ -2,22 +2,25 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete review 260 exactly
+Next required actor: Sr Dev - Claude Build - complete review 261 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer inspected Claude's review-259 retry once at sizing source
-SHA-256 `d2fa39fff423fab629f56048fc002a68bc5d76f5c0d3355c3b047866d2f8df71`
+Immediate state: The reviewer waited for Claude's review-260 drop to stabilize and then
+inspected it once at sizing source SHA-256
+`9c85bc1ae8bf7c79784d44b8fc3b13a3c36cb350fe1a02ea89bcd597764b99b0`
 and sizing test SHA-256
-`e896c2f0c8dca965c93714315e2ead0011d324cbc0dc1e8afcf8ec8b2e96aafb`.
-Anchor subtraction, regrouping, v3 identity, and the main detailed/funding split improved,
-but the drop is rejected on one complete-allocation residual: current-null and future
-validity overlap, Coinalyze still projects a complete payload per point, target-derived
-cardinality stops after one cohort and is not serialized, bundle cardinality/overhead are
-not row-group exact, remaining real scopes do not prove membership class, and the new
-tests contain an exact-model contradiction. Review 260 authorizes Claude to finish those
-exact two files in one correction. Receipt 258 is absent; no commands, integration,
-acquisition, or later work are authorized. Next ticket remains `NONE`.
+`6412b99a2df9b3c8eb30486ed29e1ac3f401867847d2c3e03bfa88e88106e5a7`.
+The CLI remains byte-identical and the test file has 157 functions. Review 260's
+Coinalyze scalar, derived-domain, exact-bundle, and membership-class corrections are
+accepted as the implementation base. The drop is rejected on one final disjoint-layout
+residual: reference/current-null ownership differs by layout, future Coinalyze lineage
+counters duplicate current validity, Coinalyze identity anchors cover only two retained
+identities rather than all 569 accepted mappings, shared-current identity facts disappear
+from the receipt, and exact/future largest-partition charges either re-ceil or duplicate
+and omit row-group terms. Review 261 consolidates the exact source/test correction.
+Receipt 258 is absent; no commands, integration, acquisition, or later work are
+authorized. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -231,6 +234,7 @@ Governing documents:
 - research/sprint_004/257_CEX002_V2_CAPACITY_MODEL_REJECTION_AND_V3_ARCHITECTURE.md
 - research/sprint_004/259_CEX002_V3_DICTIONARY_SOURCE_RESIDUAL_REVIEW.md
 - research/sprint_004/260_CEX002_V3_COMPLETE_ALLOCATION_RESIDUAL_REVIEW.md
+- research/sprint_004/261_CEX002_V3_DISJOINT_LAYOUT_FINAL_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
