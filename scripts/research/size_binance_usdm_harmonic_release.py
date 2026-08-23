@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""CEX-002 ADR-0021 — measure Gate-2 storage for the accepted Harmonic release.
+"""CEX-002 ADR-0021 as amended by ADR-0024 — measure version-2 Gate-2 storage.
 
 This executable is a thin fixed-policy adapter. It accepts only the locations of already
-accepted bytes: there is no cohort, family, coefficient, multiplicity, compression,
-batch-size, overhead, credit, reserve, lifecycle, Coinalyze evidence, or capacity option,
-because none of those may be chosen by an operator. The receipt destination is the fixed
-repository target from review 179. It performs no network call and needs no credential.
+accepted bytes: there is no cohort, family, schema, coefficient, multiplicity,
+compression, batch-size, overhead, credit, reserve, lifecycle, Coinalyze evidence, or
+capacity option, because none of those may be chosen by an operator. The receipt
+destination is the fixed version-2 repository target from review 230, and the accepted
+version-1 receipt and its envelopes are immutable evidence this command never touches.
+It performs no network call and needs no credential.
 
 Exit status is measurement status, never gate status: non-zero when the accepted authority
 or a measurement fails, zero when the receipt is honestly complete, whether its storage
@@ -20,6 +22,7 @@ from pathlib import Path
 
 from cryptofactors.acquisition.binance_usdm_harmonic_sizing import (
     SIZING_RECEIPT_RELATIVE_PATH,
+    SIZING_SCHEMA_VERSION,
     STATE_SUFFICIENT,
     AuthorityPaths,
     SizingError,
@@ -98,7 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     publication = result["publication"]
     action = "re-proved" if publication["rerun"] else "written"
     print(
-        f"sizing receipt {action} at {SIZING_RECEIPT_RELATIVE_PATH}", file=sys.stderr
+        f"{SIZING_SCHEMA_VERSION} receipt {action} at {SIZING_RECEIPT_RELATIVE_PATH}",
+        file=sys.stderr,
     )
     print(
         f"envelopes_published={publication['envelopes_published']} "
@@ -116,6 +120,14 @@ def main(argv: list[str] | None = None) -> int:
         f"total_future_storage_bytes={receipt['capacity']['total_future_storage_bytes']} "
         f"post_publication_available_bytes="
         f"{receipt['filesystem']['post_publication_available_bytes']}",
+        file=sys.stderr,
+    )
+    capacity = receipt["capacity"]
+    print(
+        "typed_normalized_partition_bytes="
+        f"{capacity['typed_normalized_partition_bytes']} "
+        f"catalog_manifest_bundle_bytes={capacity['catalog_manifest_bundle_bytes']} "
+        f"bounded_temporary_work_bytes={capacity['bounded_temporary_work_bytes']}",
         file=sys.stderr,
     )
     if receipt["blockers"]:

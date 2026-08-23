@@ -1,19 +1,18 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - review-239 integration and v2 sizing execution
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 240 failed focused validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Jr Dev - Hermes: follow review 239 exactly. Verify and stage the
-accepted sizing source `be877786...d7241`, test `b62775ce...a93`, and unchanged CLI
-`36740c92...b23c`; require 137 test functions. Run the focused sizing suite with only the
-two-pass real-authority test deselected, then exact-path Ruff. Only if both pass, execute
-the real v2 sizing CLI once and, only on exit 0, identically once more for idempotence.
-Publish record 240, a valid receipt 231 if produced, and the integration commit. Do not
-edit source, run network, accept Gate 2, acquire data, touch unrelated dirty work, or start
-later work. Stop for reviewer inspection with next ticket `NONE`.
+Immediate state: Jr Dev - Hermes followed review 239 through exact-byte preproof and the
+focused sizing pytest command with the two-pass real-authority test deselected. The focused
+pytest command exited 1 with 34 failing tests, so Hermes stopped as required, ran no Ruff,
+ran no v2 sizing CLI, produced no receipt 231, and performed no acquisition, network,
+normalization, catalog, Harmonic Trader, PAPER/LIVE, or next-ticket work. Review record 240
+is published for reviewer inspection. Gate 2 remains not accepted. Next ticket remains
+`NONE`.
 
 Governing documents:
 
@@ -206,6 +205,7 @@ Governing documents:
 - research/sprint_004/237_CEX002_SOL_FINAL_SIZING_CORRECTION.md
 - research/sprint_004/238_CEX002_RETAINED_LINEAGE_AUTHORITY_CORRECTION.md
 - research/sprint_004/239_CEX002_V2_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/240_CEX002_V2_SIZING_INTEGRATION_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

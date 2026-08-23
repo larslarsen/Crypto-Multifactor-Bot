@@ -17,9 +17,11 @@ import io
 import json
 import zipfile
 from datetime import UTC, datetime
+from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from cryptofactors.acquisition import binance_usdm_harmonic_sizing as sizing
@@ -45,14 +47,20 @@ from cryptofactors.acquisition.binance_usdm_harmonic_sizing import (
     coinalyze_lifecycles,
     coinalyze_symbol_sets,
     derive_sample_cohort,
-    envelope_schema,
     group_objects,
     load_sizing_authority,
     measure_liquidation_response,
-    measure_sample_envelope,
+    measure_partition_manifest,
+    measure_typed_envelope,
     operating_reserve_bytes,
     project_coinalyze,
-    project_families,
+    REQUIRED_PRODUCTS,
+    bind_sample_lineage,
+    contribution,
+    contributions_for_family,
+    contributions_for_product,
+    project_typed_partitions,
+    prove_product_contract,
     publish_sizing_envelope,
     publish_sizing_receipt,
     ratio_exceeds,
@@ -275,6 +283,8 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     assert _base(duplicate_source) == _base(duplicate_row)
     assert domain_stems.count(_base(unique_recovered)) == 1
 
+    sample_records: list[dict[str, Any]] = []
+    alias_keys: list[str] = []
     unique_rows: list[dict[str, Any]] = []
     for row in cohort_rows + seeded_rows:
         if all(str(row["key"]) != str(item["key"]) for item in unique_rows):
@@ -311,7 +321,32 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         }
         if key in recovered_keys:
             entry["recovered_from_retained_bytes"] = True
+        # Half the retained objects carry the checkpoint's real `retrieval_time`; the
+        # other half honestly have none, and must stay unknown rather than invented.
+        if len(checkpoint_objects) % 2 == 0:
+            entry["retrieval_time"] = "2026-08-21T00:00:00+00:00"
         checkpoint_objects[key] = entry
+        record = {
+            "key": key,
+            "family": family,
+            "symbol": row["symbol"],
+            "product": "binance_usdm_bar_1h",
+            "products": ["binance_usdm_bar_1h"],
+            "regime": "in_sample",
+            "sha256": digest,
+            "byte_size": len(payload),
+            "availability_semantics": "source_object_listing_time_unknown",
+            "retrieval_time": str(entry.get("retrieval_time") or ""),
+            "source_available_at": None,
+        }
+        sample_records.append(record)
+        # ADR-0025 section 4: some keys legitimately appear in a second sample regime
+        # with identical lineage. Those aliases fold; they must not be rejected.
+        if len(sample_records) % 3 == 1:
+            sample_records.append(
+                {**record, "regime": "out_of_sample", "product": "binance_usdm_bar_1h"}
+            )
+            alias_keys.append(key)
     for index, row in enumerate(cohort_rows):
         plan_entries.append(
             {
@@ -401,6 +436,81 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     supported = list(supported_natives)
     unmapped = ["GAPUSDT"]
+    accepted_membership = [
+        (native, "USDT", "USDT", native[:-4]) for native in supported_natives
+    ] + [
+        # An accepted contract whose margin and settlement are not USDT.
+        ("BTCUSDC", "USDC", "USDC", "BTC"),
+        ("GAPUSDT", "USDT", "USDT", "GAP"),
+    ]
+    classifications = [
+        {
+            "symbol": symbol,
+            "membership_class": "confirmed_perpetual",
+            "accepted": True,
+            "blocking": False,
+            "in_archive": True,
+            "in_current_exchange": True,
+            "name_pattern_hint": "",
+            "evidence": [
+                {
+                    "kind": "exchange_info",
+                    "endpoint": "/fapi/v1/exchangeInfo",
+                    "symbol": symbol,
+                    "pair": symbol,
+                    "contract_type": "PERPETUAL",
+                    "status": "TRADING",
+                    "underlying_type": "COIN",
+                    "base_asset": base,
+                    "quote_asset": quote,
+                    "margin_asset": margin,
+                    "onboard_ms": _ONBOARD_MS,
+                    "delivery_ms": None,
+                    "closed_observed_ms": None,
+                    "semantics_state": "proved",
+                }
+            ],
+        }
+        for symbol, margin, quote, base in accepted_membership
+    ] + [
+        {
+            "symbol": f"REJECT{index}USDT",
+            "membership_class": "unresolved_name",
+            "accepted": False,
+            "blocking": True,
+            "in_archive": True,
+            "in_current_exchange": False,
+            "name_pattern_hint": "",
+            "evidence": [],
+        }
+        for index in range(2)
+    ]
+    matrix_rows = [
+        {
+            "product": product,
+            "universe_coverage_gaps": [
+                {
+                    "symbol": f"GAP{index}USDT",
+                    "family_group": "klines",
+                    "families": [family],
+                    "status": "interior_month_gap",
+                    "kind": "interior_month_gap",
+                    "blocking": True,
+                    "first_observed": "2020-01",
+                    "last_observed": "2020-03",
+                    "missing_month_count": 1,
+                    "explained_by": "",
+                }
+                for index, family in enumerate(families)
+            ],
+            "typed_gap_symbols": [f"TYPED{index}USDT" for index in range(index_count)],
+        }
+        for product, families, index_count in (
+            ("binance_usdm_bar_1h", ("daily/klines", "monthly/klines"), 2),
+            ("binance_usdm_open_interest_5m", ("daily/metrics",), 1),
+            ("binance_usdm_cost_calibration", ("daily/bookTicker",), 1),
+        )
+    ]
     inputs = {
         "inventory_digest": "a" * 64,
         "listing_digest": "b" * 64,
@@ -453,15 +563,21 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     }
     metadata = {
         "ticket": "CEX-002",
-        # Official contract metadata is keyed by Binance-native identity.
+        # Official contract metadata maps a Binance-native identity to a snapshot
+        # digest, exactly as the pinned file does.
         "symbol_snapshot": {
-            native: {"onboard_ms": _ONBOARD_MS, "close_ms": None}
-            for native in supported_natives
+            native: _sha256(native.encode("utf-8")) for native in supported_natives
         },
     }
     report = {
         "generated_at": _CUTOFF,
         "plan_lock": {"plan_version": 4, "plan_digest": "9" * 64, "inputs": inputs},
+        # The accepted report's own sample records: the lineage authority for
+        # availability semantics and retrieval time.
+        "samples": sample_records,
+        # The accepted product matrix, with its own product-scoped coverage gaps and
+        # typed-gap memberships. Coverage is never inferred from Coinalyze alone.
+        "product_matrix": matrix_rows,
         # ADR-0022 names the rejected legacy rows in two places, and they agree.
         "resume": {
             "rejected_ambiguous_retained_keys": list(rejected_keys),
@@ -490,13 +606,9 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
                 "uncompressed_bytes": len(expanded),
             }
         },
-        "membership": {
-            "classifications": [
-                {"symbol": "BTCUSDT", "accepted": True},
-                {"symbol": "ETHUSDT", "accepted": True},
-                {"symbol": "GAPUSDT", "accepted": True},
-            ]
-        },
+        # A real accepted/rejected split with real contract evidence, including a
+        # non-USDT margin example. Rejected rows are exclusion evidence only.
+        "membership": {"classifications": classifications},
         "coinalyze": {
             # Header authentication only: the key never enters a query string.
             "key_present": True,
@@ -578,6 +690,31 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "ACCEPTED_COMBINED_BYTES": sum(
             int(row["byte_size"]) for row in selected_rows + cost_rows
         ),
+        # ADR-0025 section 4: this fixture's own logical/physical/alias decomposition.
+        "ACCEPTED_LOGICAL_SAMPLE_RECORDS": len(sample_records),
+        "ACCEPTED_PHYSICAL_SAMPLE_BINDINGS": len(
+            {str(item["key"]) for item in sample_records}
+        ),
+        "ACCEPTED_FOLDED_SAMPLE_ALIASES": len(alias_keys),
+        # ADR-0025 section 6 and ADR-0026 section 5: this fixture's coverage authority.
+        "ACCEPTED_SOURCE_COVERAGE_GAPS": sum(
+            len(row["universe_coverage_gaps"]) for row in matrix_rows
+        ),
+        "ACCEPTED_TYPED_GAP_MEMBERSHIPS": sum(
+            len(row["typed_gap_symbols"]) for row in matrix_rows
+        ),
+        "ACCEPTED_MEMBERSHIP_CLASSIFICATIONS": len(classifications),
+        "ACCEPTED_MEMBERSHIP_IDENTITIES": len(accepted_membership),
+        "ACCEPTED_DETAILED_MEMBERSHIP_IDENTITIES": len(accepted_membership),
+        "ACCEPTED_FUNDING_ONLY_MEMBERSHIP_IDENTITIES": 0,
+        "ACCEPTED_REJECTED_MEMBERSHIP_ROWS": (
+            len(classifications) - len(accepted_membership)
+        ),
+        "ACCEPTED_FEE_AUTHORITY_GAPS": len(accepted_membership),
+        "ACCEPTED_KNOWN_COVERAGE_ROWS": (
+            sum(len(row["universe_coverage_gaps"]) for row in matrix_rows)
+            + len(accepted_membership)
+        ),
         # The separate ADR-0023 manifest publication fact, never a credit quantity.
         "ACCEPTED_MANIFEST_CONSUMABLE_ROWS": len(consumable_rows),
         # Three separate ADR-0022 quantities: valid logical keys, unique objects, bytes,
@@ -643,6 +780,11 @@ def accepted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "cohort_rows": cohort_rows,
         "seeded_rows": seeded_rows,
         "credited_rows": credited_rows,
+        "sample_records": sample_records,
+        "alias_keys": alias_keys,
+        "matrix_rows": matrix_rows,
+        "classifications": classifications,
+        "accepted_membership": accepted_membership,
         "consumable_rows": consumable_rows,
         "unconsumable_credited": unconsumable_credited,
         "credited_objects": credited_objects,
@@ -887,6 +1029,9 @@ def test_exact_totals_reconcile_before_measurement(accepted: dict[str, Any]) -> 
     assert credit["rejected_recovered_rows"] == len(accepted["rejected_keys"])
     assert credit["unverified_objects"] == 0
     assert set(credit["keys"]).isdisjoint(accepted["rejected_keys"])
+    assert credit["key_set_sha256"] == sizing.requirement_key_set_sha256(
+        credit["keys"]
+    )
     assert checkpoint[accepted["rejected_keys"][0]]["status"] == "complete"
     reconciliation = reconcile_physical_inputs(
         selected=selected,
@@ -1248,7 +1393,7 @@ def test_an_altered_retained_summary_blocks_before_any_publication(
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     monkeypatch.setattr(sizing, "ACCEPTED_REPORT_SHA256", _sha256(path.read_bytes()))
     monkeypatch.setattr(sizing, "ACCEPTED_REPORT_BYTES", path.stat().st_size)
-    receipt_path = tmp_path / "180_receipt.json"
+    receipt_path = tmp_path / "231_receipt.json"
     with pytest.raises(SizingError, match="retained_verified_credit_bytes"):
         _run(accepted, tmp_path, receipt_path=receipt_path)
     assert not receipt_path.exists()
@@ -1303,7 +1448,7 @@ def test_damaged_retained_evidence_blocks_before_any_publication(
     with pytest.raises(SizingError):
         _credit(accepted, selected, cost, checkpoint=checkpoint)
     # The same damage stops the whole sizing flow before anything is published.
-    receipt_path = tmp_path / "180_receipt.json"
+    receipt_path = tmp_path / "231_receipt.json"
     with pytest.raises(SizingError):
         _run(accepted, tmp_path, receipt_path=receipt_path)
     assert not receipt_path.exists()
@@ -1382,79 +1527,251 @@ def _cohort_sample(family: str = "daily/klines", *, interval: str = "2020-01-01"
 
 
 @pytest.mark.parametrize("family", list(PHYSICAL_FAMILIES))
-def test_every_family_measures_exact_envelope_bytes(tmp_path: Path, family: str) -> None:
+def test_every_family_measures_typed_payload_and_overhead(
+    tmp_path: Path, family: str
+) -> None:
+    """Each required product is measured with payload separated from file overhead."""
     body = _csv(family, 7)
     payload = _zip("data.csv", body)
-    measurement = measure_sample_envelope(
-        _cohort_sample(family),
-        payload=payload,
-        destination=tmp_path / "a.parquet",
-        schema_kind="headerless",
+    outputs = contributions_for_family(family)
+    assert len(outputs) == sizing.OUTPUT_MULTIPLICITY[family]
+    for index, output in enumerate(outputs):
+        measurement = measure_typed_envelope(
+            _cohort_sample(family),
+            payload=payload,
+            output=output,
+            destination=tmp_path / f"{family.replace('/', '_')}-{index}.parquet",
+            schema_kind="headerless",
+        )
+        assert measurement.rows == 7
+        assert measurement.source_rows == 7
+        # The exact ZIP member size, not a reconstruction from parsed tokens.
+        assert measurement.extracted_member_bytes == len(body)
+        assert measurement.compressed_archive_bytes == len(payload)
+        # Payload, footer, framing, and residue account for every file byte exactly.
+        assert (
+            measurement.payload_bytes
+            + measurement.footer_bytes
+            + measurement.framing_bytes
+            + measurement.residual_bytes
+            == measurement.file_bytes
+        )
+        assert measurement.payload_bytes > 0
+        assert measurement.framing_bytes == 8 + 4
+        assert measurement.row_groups >= 1
+        assert measurement.pyarrow_version
+        # Every column is fixed-width typed or dictionary encoded; nothing is a raw
+        # per-row string copy of the source token.
+        schema = output.schema()
+        assert not any(field.type == pa.string() for field in schema)
+
+
+def test_the_required_product_contract_is_complete_and_named_by_the_ticket() -> None:
+    contract = prove_product_contract()
+    # The ticket's product names are contract; no packaging name may appear here.
+    assert contract["required_products"] == list(REQUIRED_PRODUCTS)
+    assert set(REQUIRED_PRODUCTS) == {
+        "binance_usdm_perpetual_membership",
+        "binance_usdm_bar_1h",
+        "binance_usdm_trade_flow_1h",
+        "binance_usdm_open_interest_5m",
+        "binance_usdm_funding_realized",
+        "binance_usdm_funding_indicative_1h",
+        "binance_usdm_mark_index_basis_1h",
+        "binance_usdm_liquidation_observed_daily",
+        "binance_usdm_cost_calibration",
+        "binance_usdm_coverage_gap",
+        "binance_usdm_harmonic_bundle",
+    }
+    for family in PHYSICAL_FAMILIES:
+        declared = set(_TOKENS[_hint(family)])
+        reached: set[str] = set()
+        for item in contributions_for_family(family):
+            reached |= set(item.source_fields())
+        # No declared field of any family is dropped, including both cost products.
+        assert declared <= reached
+    # Daily and monthly packaging of one product feeds one product, not two products.
+    bar = contributions_for_product("binance_usdm_bar_1h")
+    assert {item.family for item in bar} == {"daily/klines", "monthly/klines"}
+    assert {item.product for item in bar} == {"binance_usdm_bar_1h"}
+    assert {item.component for item in bar} == {"daily_klines", "monthly_klines"}
+    # Premium index klines contribute to indicative funding and to basis, never to a
+    # taker-flow product.
+    premium = [
+        item.product
+        for item in contributions_for_family("daily/premiumIndexKlines")
+    ]
+    assert set(premium) == {
+        "binance_usdm_funding_indicative_1h",
+        "binance_usdm_mark_index_basis_1h",
+    }
+    assert not any("taker_flow" in item.name for item in sizing.PRODUCT_CONTRIBUTIONS)
+    # Trade flow keeps the totals as well as the taker-buy side.
+    flow_fields = {
+        column.source_field
+        for item in contributions_for_product("binance_usdm_trade_flow_1h")
+        for column in item.columns
+    }
+    assert {"volume", "quote_volume", "taker_buy_volume", "taker_buy_quote_volume"} <= (
+        flow_fields
     )
-    assert measurement.source_rows == 7
-    # The exact ZIP member size, not a reconstruction from parsed tokens.
-    assert measurement.extracted_member_bytes == len(body)
-    assert measurement.compressed_archive_bytes == len(payload)
-    assert measurement.parquet_bytes > 0
-    # The footer is the real serialized metadata length; overhead is declared separately.
-    assert 0 < measurement.parquet_footer_bytes < measurement.parquet_bytes
-    assert measurement.parquet_file_overhead_bytes == 8 + 4
-    assert measurement.pyarrow_version
-    assert len(envelope_schema(family).names) == 5 + len(_TOKENS[_hint(family)])
+    # The cost product keeps every field of every row.
+    ticker = contribution("binance_usdm_cost_calibration:daily_book_ticker")
+    assert set(ticker.source_fields()) == set(_TOKENS["bookTicker"])
+    depth = contribution("binance_usdm_cost_calibration:daily_book_depth")
+    assert set(depth.source_fields()) == set(_TOKENS["bookDepth"])
+    # Compact lineage: a partition-local reference, never a repeated source key string.
+    assert [column.name for column in ticker.columns][:3] == [
+        "raw_object_ref", "source_row_ordinal", "venue_symbol"
+    ]
+    assert "source_key" not in {column.name for column in ticker.columns}
+
+
+def test_every_required_product_has_an_explicit_schema_and_bound() -> None:
+    contract = prove_product_contract()
+    fixed = contract["non_archive_product_schemas"]
+    for product in (
+        "binance_usdm_perpetual_membership",
+        "binance_usdm_coverage_gap",
+        "binance_usdm_liquidation_observed_daily",
+        "binance_usdm_harmonic_bundle",
+    ):
+        assert product in fixed
+        assert fixed[product]
+    archive_products = {item.product for item in sizing.PRODUCT_CONTRIBUTIONS}
+    assert archive_products | set(fixed) == set(REQUIRED_PRODUCTS)
+    assert set(contract["cost_component_schemas"]) == set(sizing.COST_COMPONENTS)
+    # The observed-liquidation product is typed, not a JSON point string.
+    liquidation = {field["name"]: field for field in fixed[
+        "binance_usdm_liquidation_observed_daily"
+    ]}
+    assert "point_token" not in liquidation
+    assert liquidation["event_time_ms"]["arrow_type"] == "int64"
+    for name in ("long_liquidation", "short_liquidation"):
+        assert liquidation[name]["arrow_type"] == "decimal128(38, 18)"
+    assert liquidation["native_symbol"]["arrow_type"].startswith("dictionary")
+    assert liquidation["provider_symbol"]["arrow_type"].startswith("dictionary")
+    # The pinned exact decimal policy, and no float anywhere in it.
+    policy = contract["decimal_policy"]
+    assert policy["arrow_type"] == "decimal128(38, 18)"
+    assert policy["precision"] == 38 and policy["scale"] == 18
+    # Every fixed cadence is declared; the two cost families are named event-driven.
+    cadence = contract["cadence"]
+    assert cadence["fixed_seconds"]["daily/metrics"] == 300
+    assert cadence["fixed_seconds"]["daily/klines"] == 3_600
+    # ADR-0025 section 7: one hour, never eight, until a stricter bound is proved.
+    assert cadence["fixed_seconds"]["monthly/fundingRate"] == 3_600
+    assert sorted(cadence["event_driven_families"]) == sorted(COST_FAMILIES)
+    assert set(cadence["fixed_seconds"]) | set(cadence["event_driven_families"]) == set(
+        PHYSICAL_FAMILIES
+    )
+
+
+def test_no_typed_column_uses_a_binary_float() -> None:
+    for item in sizing.PRODUCT_CONTRIBUTIONS:
+        for field in item.schema():
+            assert field.type not in {pa.float32(), pa.float64()}
+    for product in sizing.NON_ARCHIVE_PRODUCTS:
+        schema = sizing.final_product_schema(product)
+        for field in schema:
+            assert field.type not in {pa.float32(), pa.float64()}
+    source = Path(sizing.__file__).read_text(encoding="utf-8")
+    assert "pa.float64()" not in source
+    assert "float(" not in source
 
 
 def test_headed_input_is_measured_as_headed(tmp_path: Path) -> None:
+    output = contributions_for_family("daily/klines")[0]
     payload = _zip("data.csv", _csv("daily/klines", 5, headed=True))
-    measurement = measure_sample_envelope(
+    measurement = measure_typed_envelope(
         _cohort_sample(),
         payload=payload,
+        output=output,
         destination=tmp_path / "a.parquet",
         schema_kind="headed",
     )
     assert measurement.schema_kind == "headed"
-    assert measurement.source_rows == 5
+    assert measurement.rows == 5
     # A headed file whose checkpoint claims headerless is a disagreement, not a guess.
     with pytest.raises(SizingError, match="header form disagrees"):
-        measure_sample_envelope(
+        measure_typed_envelope(
             _cohort_sample(),
             payload=payload,
+            output=output,
             destination=tmp_path / "b.parquet",
             schema_kind="headerless",
         )
     headerless = _zip("data.csv", _csv("daily/klines", 5))
     with pytest.raises(SizingError, match="header form disagrees"):
-        measure_sample_envelope(
+        measure_typed_envelope(
             _cohort_sample(),
             payload=headerless,
+            output=output,
             destination=tmp_path / "c.parquet",
             schema_kind="headed",
         )
 
 
-def test_batching_and_determinism(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_row_grouping_and_determinism(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = contributions_for_family("daily/bookTicker")[0]
     payload = _zip("data.csv", _csv("daily/bookTicker", 10))
     monkeypatch.setattr(sizing, "SIZING_ROW_BATCH", 4)
-    batched = measure_sample_envelope(
+    batched = measure_typed_envelope(
         _cohort_sample("daily/bookTicker"),
         payload=payload,
+        output=output,
         destination=tmp_path / "a.parquet",
         schema_kind="headerless",
     )
-    assert batched.batches == 3
+    assert batched.row_groups == 3
+    # Row-group metadata is charged per row group, never once for a whole family.
+    assert batched.footer_per_row_group() >= 1
     monkeypatch.undo()
-    first = measure_sample_envelope(
+    first = measure_typed_envelope(
         _cohort_sample("daily/bookTicker"),
         payload=payload,
+        output=output,
         destination=tmp_path / "b.parquet",
         schema_kind="headerless",
     )
-    second = measure_sample_envelope(
+    second = measure_typed_envelope(
         _cohort_sample("daily/bookTicker"),
         payload=payload,
+        output=output,
         destination=tmp_path / "c.parquet",
         schema_kind="headerless",
     )
     assert first.parquet_sha256 == second.parquet_sha256
+    assert first.row_groups == 1
+
+
+def test_typed_products_never_repeat_identity_metadata_per_row(
+    tmp_path: Path,
+) -> None:
+    """The superseded surrogate stored family, symbol, interval, and key on every row."""
+    payload = _zip("data.csv", _csv("daily/bookTicker", 2_000))
+    output = contributions_for_family("daily/bookTicker")[0]
+    typed = measure_typed_envelope(
+        _cohort_sample("daily/bookTicker"),
+        payload=payload,
+        output=output,
+        destination=tmp_path / "typed.parquet",
+        schema_kind="headerless",
+    )
+    assert typed.rows == 2_000
+    names = set(output.schema().names)
+    for repeated in ("physical_family", "economic_interval", "source_key"):
+        assert repeated not in names
+    # Identity survives as one compact partition-local reference plus one dictionary.
+    assert "raw_object_ref" in names
+    assert output.schema().field("raw_object_ref").type == pa.int32()
+    assert output.schema().field("venue_symbol").type == pa.dictionary(
+        pa.int32(), pa.string()
+    )
+    # No target column stores a source token as a per-row string.
+    assert all(field.type != pa.string() for field in output.schema())
 
 
 @pytest.mark.parametrize(
@@ -1473,9 +1790,10 @@ def test_unsafe_or_corrupt_archives_block(
     tmp_path: Path, payload: bytes, message: str
 ) -> None:
     with pytest.raises(SizingError, match=message):
-        measure_sample_envelope(
+        measure_typed_envelope(
             _cohort_sample(),
             payload=payload,
+            output=contributions_for_family("daily/klines")[0],
             destination=tmp_path / "a.parquet",
             schema_kind="headerless",
         )
@@ -1499,7 +1817,83 @@ def test_rational_comparison_uses_cross_multiplication_beyond_float_precision() 
         assert "float(" not in stripped
 
 
-def test_partitions_group_by_symbol_month_and_family() -> None:
+def _typed_measurement(
+    output_name: str,
+    *,
+    payload_bytes: int = 3,
+    compressed: int = 2,
+    rows: int = 1,
+    row_groups: int = 1,
+    footer: int = 1,
+) -> Any:
+    """One synthetic typed measurement with exact, separately named components."""
+    item = contribution(output_name)
+    return sizing.TypedEnvelopeMeasurement(
+        key=f"k-{output_name}",
+        family=item.family,
+        contribution=output_name,
+        product=item.product,
+        symbol="BTCUSDT",
+        economic_interval="2020-01-01",
+        schema_kind="headerless",
+        compressed_archive_bytes=compressed,
+        extracted_member_bytes=4,
+        source_rows=rows,
+        rows=rows,
+        row_groups=row_groups,
+        payload_bytes=payload_bytes,
+        footer_bytes=footer,
+        framing_bytes=12,
+        residual_bytes=0,
+        file_bytes=payload_bytes + footer + 12,
+        parquet_sha256="0" * 64,
+        writer_identity="w",
+        pyarrow_version="x",
+    )
+
+
+def _lineage_model(
+    payload: int = 0, footer: int = 0, framing: int = 0
+) -> Any:
+    """A lineage charge whose three parts are set explicitly by each test."""
+    return sizing.LineageManifestModel(
+        payload_bytes_per_mapping=payload,
+        footer_per_row_group_bytes=footer,
+        framing_bytes=framing,
+        witness_partitions=(
+            {
+                "required_product": "binance_usdm_bar_1h",
+                "native_symbol": "BTCUSDT",
+                "utc_month": "2020-01",
+                "mappings": 1,
+                "file_bytes": payload + footer + framing,
+            },
+        ),
+    )
+
+
+def _all_measurements(**overrides: Any) -> list[Any]:
+    """One synthetic measurement per declared product contribution."""
+    return [
+        overrides.get(item.name) or _typed_measurement(item.name)
+        for item in sizing.PRODUCT_CONTRIBUTIONS
+    ]
+
+
+def _one_object_per_family(byte_size: int = 500) -> list[PhysicalObject]:
+    return [
+        PhysicalObject(
+            key=_key(family, "BTCUSDT", "2020-01-01"),
+            family=family,
+            symbol="BTCUSDT",
+            economic_interval="2020-01-01",
+            byte_size=byte_size,
+        )
+        for family in PHYSICAL_FAMILIES
+    ]
+
+
+def test_partitions_group_by_required_product_symbol_and_month() -> None:
     objects = [
         PhysicalObject(
             key=_key("daily/klines", "BTCUSDT", f"2020-01-{day:02d}"),
@@ -1511,60 +1905,177 @@ def test_partitions_group_by_symbol_month_and_family() -> None:
         for day in (1, 2, 3)
     ] + [
         PhysicalObject(
-            key=_key("daily/klines", "BTCUSDT", "2020-02-01"),
-            family="daily/klines",
+            key=_key("monthly/klines", "BTCUSDT", "2020-01"),
+            family="monthly/klines",
             symbol="BTCUSDT",
-            economic_interval="2020-02-01",
+            economic_interval="2020-01",
             byte_size=500,
         )
     ]
     groups = group_objects(objects)
-    # Three daily objects in one month are one partition, not three.
-    assert groups == {
-        ("daily/klines", "BTCUSDT", "2020-01"): 300,
-        ("daily/klines", "BTCUSDT", "2020-02"): 500,
+    # Daily and monthly packaging of one product land in the same product partition.
+    assert set(groups) == {
+        ("binance_usdm_bar_1h", "BTCUSDT", "2020-01"),
+        ("binance_usdm_trade_flow_1h", "BTCUSDT", "2020-01"),
     }
-    projections = project_families(
-        measurements=[
-            sizing.EnvelopeMeasurement(
-                key=f"k-{family}",
-                family=family,
-                symbol="BTCUSDT",
-                economic_interval="2020-01-01",
-                schema_kind="headerless",
-                compressed_archive_bytes=2,
-                extracted_member_bytes=4,
-                source_rows=1,
-                arrow_ipc_bytes=1,
-                parquet_bytes=3,
-                parquet_footer_bytes=1,
-                parquet_file_overhead_bytes=12,
-                parquet_sha256="0" * 64,
-                writer_identity="w",
-                pyarrow_version="x",
-                batches=1,
-            )
-            for family in PHYSICAL_FAMILIES
-        ],
+    assert len(groups[("binance_usdm_bar_1h", "BTCUSDT", "2020-01")]) == 4
+    projections = project_typed_partitions(
+        measurements=_all_measurements(),
         objects=objects
         + [
-            PhysicalObject(
-                key=_key(family, "BTCUSDT", "2020-01-01"),
-                family=family,
-                symbol="BTCUSDT",
-                economic_interval="2020-01-01",
-                byte_size=10,
-            )
-            for family in PHYSICAL_FAMILIES
-            if family != "daily/klines"
+            item
+            for item in _one_object_per_family(10)
+            if item.family not in {"daily/klines", "monthly/klines"}
         ],
+        lineage=_lineage_model(),
     )
-    klines = next(item for item in projections if item.family == "daily/klines")
-    # The largest partition is the greatest single group, never a family average.
-    # The high-water partition is one logical file; multiplicity stays in the total.
-    assert klines.largest_partition_bytes == ceil_div(500 * 3, 2)
-    assert klines.projected_bytes == ceil_div(300 * 3, 2) * 2 + ceil_div(500 * 3, 2) * 2
-    assert klines.partition_count == 2 * OUTPUT_MULTIPLICITY["daily/klines"]
+    bar = next(item for item in projections if item.product == "binance_usdm_bar_1h")
+    # One partition holding both packagings, and the payload of each component is
+    # ceilinged separately before they are summed.
+    assert bar.partition_count == 1
+    assert bar.projected_payload_bytes == ceil_div(300 * 3, 2) + ceil_div(500 * 3, 2)
+    assert bar.projected_overhead_bytes == 1 * 1 + 12
+    assert bar.projected_bytes == bar.projected_payload_bytes + bar.projected_overhead_bytes
+    assert bar.largest_partition_bytes == bar.projected_bytes
+    assert {item["physical_family"] for item in bar.components} == {
+        "daily/klines",
+        "monthly/klines",
+    }
+
+
+def test_partition_manifest_mappings_are_counted_per_product_partition() -> None:
+    objects = _one_object_per_family()
+    projections = project_typed_partitions(
+        measurements=_all_measurements(),
+        objects=objects,
+        lineage=_lineage_model(payload=7),
+    )
+    # A kline object feeds two required products, so it is mapped in both partitions.
+    bar = next(item for item in projections if item.product == "binance_usdm_bar_1h")
+    flow = next(
+        item for item in projections if item.product == "binance_usdm_trade_flow_1h"
+    )
+    assert bar.manifest_mappings == 1
+    assert flow.manifest_mappings == 1
+    assert bar.projected_manifest_bytes == 7
+    assert flow.projected_manifest_bytes == 7
+    # Mark/index basis is fed by three families, so its one partition maps three objects.
+    basis = next(
+        item for item in projections if item.product == "binance_usdm_mark_index_basis_1h"
+    )
+    assert basis.manifest_mappings == 3
+    assert basis.projected_manifest_bytes == 21
+    # Mark, index, and premium contribute bytes independently but publish one aligned
+    # target grid. The monthly 744-hour ceiling wins; six input components do not sum.
+    assert basis.partition_rows == (744,)
+    assert basis.projected_rows == 744
+    assert sizing.quality_gap_reservation(basis.partition_rows[0]) == 372
+    # The same aligned-grid rule applies to every multi-input target product. Daily and
+    # monthly kline packaging feed one bar grid rather than two additive row streams.
+    assert bar.partition_rows == (744,)
+    assert bar.projected_rows == 744
+    total_mappings = sum(item.manifest_mappings for item in projections)
+    # Cross-product references are counted in every product they feed, never once.
+    assert total_mappings == sum(
+        len(contributions_for_family(item.family)) for item in objects
+    )
+    assert total_mappings > len(objects)
+
+
+def test_a_tiny_file_footer_is_not_amplified_across_a_product() -> None:
+    """ADR-0024: a one-row archive charges its own overhead to its own partition."""
+    tiny = _typed_measurement(
+        "binance_usdm_cost_calibration:daily_book_depth",
+        payload_bytes=1,
+        compressed=1,
+        rows=1,
+        footer=900,
+    )
+    objects = _one_object_per_family(1_000_000)
+    projections = project_typed_partitions(
+        measurements=_all_measurements(
+            **{"binance_usdm_cost_calibration:daily_book_depth": tiny}
+        ),
+        objects=objects,
+        lineage=_lineage_model(),
+    )
+    cost = next(
+        item
+        for item in projections
+        if item.product == "binance_usdm_cost_calibration"
+        and item.component == "retained_book_depth"
+    )
+    # One partition, so the 900-byte footer bound is charged once, not against every
+    # projected byte of the product.
+    assert cost.partition_count == 1
+    assert cost.projected_overhead_bytes == cost.projected_row_groups * 900 + 12
+    assert cost.projected_overhead_bytes < cost.projected_payload_bytes
+    # The superseded whole-file ratio would have multiplied 902/1 across every byte.
+    assert cost.projected_bytes < 1_000_000 * 902
+
+
+def test_daily_metrics_uses_its_fixed_five_minute_calendar_ceiling() -> None:
+    """The metrics archive key carries no interval segment; the cadence is pinned."""
+    key = _key("daily/metrics", "BTCUSDT", "2020-01-01")
+    assert "/5m/" not in key and "/1h/" not in key
+    assert sizing.family_cadence_seconds("daily/metrics") == 300
+    member = PhysicalObject(
+        key=key,
+        family="daily/metrics",
+        symbol="BTCUSDT",
+        economic_interval="2020-01-01",
+        byte_size=1,
+    )
+    # 86,400 seconds at 300 seconds each is 288 rows for one whole day.
+    assert sizing.calendar_row_bound([member]) == 288
+    assert sizing.calendar_row_bound([member, member]) == 576
+    # An event-driven cost family has no calendar ceiling at all.
+    cost = PhysicalObject(
+        key=_key("daily/bookTicker", "BTCUSDT", "2020-01-01"),
+        family="daily/bookTicker",
+        symbol="BTCUSDT",
+        economic_interval="2020-01-01",
+        byte_size=1,
+    )
+    assert sizing.family_cadence_seconds("daily/bookTicker") == 0
+    assert sizing.calendar_row_bound([cost]) == 0
+    # An undeclared family blocks; it never silently becomes event-driven.
+    with pytest.raises(SizingError, match="no accepted cadence declaration"):
+        sizing.family_cadence_seconds("daily/unknownFamily")
+
+
+def test_the_greater_applicable_row_bound_wins_per_component() -> None:
+    # A tiny observed ratio must not defeat the pinned five-minute metrics ceiling.
+    weak = _typed_measurement(
+        "binance_usdm_open_interest_5m:daily_metrics",
+        payload_bytes=1,
+        compressed=1_000,
+        rows=1,
+    )
+    objects = _one_object_per_family(1_000)
+    projections = project_typed_partitions(
+        measurements=_all_measurements(
+            **{"binance_usdm_open_interest_5m:daily_metrics": weak}
+        ),
+        objects=objects,
+        lineage=_lineage_model(),
+    )
+    metrics = next(
+        item for item in projections if item.product == "binance_usdm_open_interest_5m"
+    )
+    # The observed ratio would have projected one row; the calendar ceiling is 288.
+    assert metrics.projected_rows == 288
+    component = metrics.components[0]
+    assert component["cadence_seconds"] == 300
+    assert component["row_bound_source"] == "declared cadence calendar maximum"
+    # An event-driven product keeps the observed exact ratio as its ceiling.
+    cost = next(
+        item for item in projections if item.product == "binance_usdm_cost_calibration"
+    )
+    assert all(
+        item["row_bound_source"] == "greatest observed exact row-to-compressed ratio"
+        for item in cost.components
+    )
 
 
 def test_coinalyze_evidence_is_resolved_from_report_provenance(
@@ -2198,8 +2709,9 @@ def test_lifecycles_come_from_accepted_evidence_and_block_when_absent(
         _sha256(accepted["files"]["metadata"].read_bytes()),
     )
     stripped = load_sizing_authority(accepted["paths"])
-    # A supported mapping without authenticated bounds blocks; it never gets zero days.
-    with pytest.raises(SizingError, match="no authenticated lifecycle"):
+    # A supported mapping without a retained contract snapshot blocks; it never gets
+    # zero days and never invents a bound.
+    with pytest.raises(SizingError, match="no retained contract snapshot"):
         coinalyze_lifecycles(stripped, supported=accepted["supported"])
 
 
@@ -2215,11 +2727,11 @@ def test_liquidation_projection_uses_its_own_parquet_envelopes(
         unmapped=resolved["unmapped"],
         lifecycles=lifecycles,
         identities=resolved["identities"],
+        lineage=_lineage_model(),
         staging=tmp_path,
     )
     # Envelopes are measured under native identity and name their provider identity.
     for envelope in projection.envelopes:
-        assert envelope["venue_symbol"] == envelope["native_symbol"]
         assert envelope["provider_symbol"] == accepted["provider_of"][
             envelope["native_symbol"]
         ]
@@ -2229,9 +2741,13 @@ def test_liquidation_projection_uses_its_own_parquet_envelopes(
     # The normalized ratio is a Coinalyze envelope ratio, never a Binance family ratio.
     assert projection.envelope_numerator > 0 and projection.envelope_denominator > 0
     assert projection.envelopes
+    footer = max(item["footer_per_row_group_bytes"] for item in projection.envelopes)
+    framing = max(item["framing_bytes"] for item in projection.envelopes)
     assert projection.projected_normalized_bytes == sum(
-        ceil_div(value * projection.envelope_numerator, projection.envelope_denominator)
-        for value in _expected_group_bytes(projection, supported, lifecycles)
+        ceil_div(points * projection.envelope_numerator, projection.envelope_denominator)
+        + max(1, ceil_div(points, sizing.SIZING_ROW_BATCH)) * footer
+        + framing
+        for points in _expected_group_bytes(projection, supported, lifecycles)
     )
     assert projection.partition_count == len(
         _expected_group_bytes(projection, supported, lifecycles)
@@ -2241,44 +2757,80 @@ def test_liquidation_projection_uses_its_own_parquet_envelopes(
     assert "apiKey" not in rendered and "api_key" not in rendered
 
 
-def _expected_group_bytes(projection: Any, supported: Any, lifecycles: Any) -> list[int]:
+def _expected_group_bytes(_projection: Any, supported: Any, lifecycles: Any) -> list[int]:
     groups: dict[tuple[str, str], int] = {}
     for symbol in supported:
         first, last = lifecycles[symbol]
         for day in range(first, last + 1):
             month = datetime.fromordinal(day).strftime("%Y-%m")
-            groups[(symbol, month)] = (
-                groups.get((symbol, month), 0) + projection.point_charge_bytes
-            )
+            groups[(symbol, month)] = groups.get((symbol, month), 0) + 1
     return list(groups.values())
 
 
-def test_liquidation_envelope_ratio_survives_beyond_float_precision(
-    tmp_path: Path
-) -> None:
-    measured = measure_liquidation_response(
-        _liquidation_body(["BTCUSDT_PERP.A"], 3), endpoint="/liquidation-history"
-    )
-    provider, tokens = measured["series"][0]
+def test_retained_liquidation_points_are_typed_and_exact(tmp_path: Path) -> None:
+    """The retained t/l/s lexemes become typed columns, never a stored JSON string."""
+    body = json.dumps(
+        [
+            {
+                "symbol": "BTCUSDT_PERP.A",
+                "history": [
+                    {"t": 1577836800, "l": "1.500000000000000001", "s": "2.5"},
+                    {"t": 1577923200, "l": "0.1", "s": "0"},
+                ],
+            }
+        ]
+    ).encode("utf-8")
+    measured = measure_liquidation_response(body, endpoint="/liquidation-history")
+    provider, points = measured["series"][0]
+    assert provider == "BTCUSDT_PERP.A"
+    # Exact decimals, straight from the retained lexemes.
+    assert points[0]["long_liquidation"] == Decimal("1.500000000000000001")
+    assert points[0]["short_liquidation"] == Decimal("2.5")
+    assert points[1]["long_liquidation"] == Decimal("0.1")
+    assert points[0]["event_time_ms"] == 1577836800 * 1000
+    assert all(isinstance(item["long_liquidation"], Decimal) for item in points)
     envelope = write_liquidation_envelope(
         symbol="BTCUSDT",
         provider_symbol=provider,
         endpoint="/liquidation-history",
-        tokens=tokens,
+        points=points,
         destination=tmp_path / "liq.parquet",
     )
     # The envelope records the venue's native identity and the provider's separately.
-    assert envelope["venue_symbol"] == "BTCUSDT"
+    assert envelope["required_product"] == "binance_usdm_liquidation_observed_daily"
     assert envelope["native_symbol"] == "BTCUSDT"
     assert envelope["provider_symbol"] == "BTCUSDT_PERP.A"
-    assert envelope["points"] == 3
-    assert envelope["parquet_bytes"] > 0
-    assert envelope["parquet_footer_bytes"] > 0
+    assert envelope["points"] == 2
+    # Payload and file overhead are separated exactly, as for every other product.
+    assert (
+        envelope["payload_bytes"]
+        + envelope["footer_bytes"]
+        + envelope["framing_bytes"]
+        + envelope["residual_bytes"]
+        == envelope["file_bytes"]
+    )
+    assert envelope["bytes_per_point"] > 0
+    names = {field["name"] for field in envelope["schema"]}
+    assert "point_token" not in names
+    assert {"event_time_ms", "long_liquidation", "short_liquidation"} <= names
     huge = 2**53
     # The same exact comparison the projection uses, past float64 resolution.
-    assert ratio_exceeds((envelope["parquet_bytes"] * huge + 1, huge), (
-        envelope["parquet_bytes"], 1
+    assert ratio_exceeds((envelope["file_bytes"] * huge + 1, huge), (
+        envelope["file_bytes"], 1
     ))
+
+
+def test_a_non_numeric_retained_liquidation_lexeme_blocks() -> None:
+    body = json.dumps(
+        [{"symbol": "BTCUSDT_PERP.A", "history": [{"t": 1577836800, "l": "x", "s": "1"}]}]
+    ).encode("utf-8")
+    with pytest.raises(SizingError, match="not a decimal lexeme"):
+        measure_liquidation_response(body, endpoint="/liquidation-history")
+    absent = json.dumps(
+        [{"symbol": "BTCUSDT_PERP.A", "history": [{"t": 1577836800, "s": "1"}]}]
+    ).encode("utf-8")
+    with pytest.raises(SizingError, match="not an exact numeric lexeme"):
+        measure_liquidation_response(absent, endpoint="/liquidation-history")
 
 
 def test_catalog_reserve_and_publication_contracts(tmp_path: Path) -> None:
@@ -2307,7 +2859,7 @@ def test_catalog_reserve_and_publication_contracts(tmp_path: Path) -> None:
 
 
 def test_receipt_publication_is_idempotent_and_race_safe(tmp_path: Path) -> None:
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     receipt = {"schema_version": sizing.SIZING_SCHEMA_VERSION, "blockers": []}
     digest, size = publish_sizing_receipt(receipt, path=target)
     assert target.is_file() and size == target.stat().st_size
@@ -2320,7 +2872,7 @@ def test_receipt_publication_is_idempotent_and_race_safe(tmp_path: Path) -> None
 
 def _run(accepted: dict[str, Any], tmp_path: Path, **overrides: Any) -> dict[str, Any]:
     arguments: dict[str, Any] = {
-        "receipt_path": tmp_path / "180_receipt.json",
+        "receipt_path": tmp_path / "231_receipt.json",
         "sizing_source_path": Path(sizing.__file__),
         "sizing_cli_path": Path("scripts/research/size_binance_usdm_harmonic_release.py"),
         "now": datetime(2026, 8, 22, tzinfo=UTC),
@@ -2336,7 +2888,7 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
     receipt = result["receipt"]
     identity = result["receipt_file"]
     assert result["publication"]["rerun"] is False
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     # The returned mapping and the durable bytes are the same document.
     assert target.read_bytes() == sizing.canonical_json(receipt)
     assert identity["receipt_sha256"] == _sha256(target.read_bytes())
@@ -2345,6 +2897,10 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
         "authority",
         "physical_inputs",
         "cohort",
+        "typed_schema_contract",
+        "lineage",
+        "coverage_authority",
+        "fee_authority",
         "measurements",
         "projections",
         "coinalyze",
@@ -2356,6 +2912,7 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
         "code_identity",
     ):
         assert section in receipt
+    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v2"
     assert receipt["storage_preflight_state"] in {STATE_SUFFICIENT, STATE_BLOCKED}
     assert receipt["code_identity"]["sizing_source_sha256"]
     assert receipt["physical_inputs"]["combined_objects"] == sizing.ACCEPTED_COMBINED_OBJECTS
@@ -2364,38 +2921,1832 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
         == sizing.ACCEPTED_NEW_BINANCE_RAW_BYTES
     )
     capacity = receipt["capacity"]
+    # ADR-0024 section 5: six components, counted once, without overlap.
     assert capacity["total_future_storage_bytes"] == (
         capacity["new_binance_raw_bytes"]
         + capacity["new_coinalyze_raw_bytes"]
-        + capacity["normalized_catalog_bytes"]
-        + capacity["temporary_high_water_bytes"]
+        + capacity["typed_normalized_partition_bytes"]
+        + capacity["catalog_manifest_bundle_bytes"]
+        + capacity["bounded_temporary_work_bytes"]
         + capacity["operating_reserve_bytes"]
     )
     assert capacity["operating_reserve_bytes"] >= MINIMUM_OPERATING_RESERVE_BYTES
+    # The normalized output is allocated exactly once: the bounded temporary work unit
+    # is a single greatest explicit unit, never a second complete normalized tree.
+    projections = receipt["projections"]
+    assert (
+        capacity["typed_normalized_partition_bytes"]
+        == projections["typed_normalized_bytes"]
+    )
+    # The observed-liquidation product is typed; no JSON point string is stored.
+    assert "point_token" not in sizing.canonical_json(receipt).decode()
+    assert capacity["bounded_temporary_work_bytes"] == max(
+        sizing.ACCEPTED_LARGEST_SELECTED_OBJECT_BYTES,
+        receipt["partitioning"]["largest_projected_partition_bytes"],
+        receipt["partitioning"]["bundle_transaction_bytes"],
+    )
+    assert (
+        capacity["bounded_temporary_work_bytes"]
+        < capacity["typed_normalized_partition_bytes"]
+        + capacity["catalog_manifest_bundle_bytes"]
+    )
+    # Payload and file overhead are projected separately, never one whole-file ratio.
+    assert (
+        projections["typed_payload_bytes"]
+        + projections["typed_overhead_bytes"]
+        + projections["typed_partition_manifest_bytes"]
+        == projections["typed_normalized_bytes"]
+    )
+    assert projections["projected_row_groups"] > 0
+    future = receipt["future_width_allocations"]
+    assert set(future) == {
+        "reference_identity",
+        "membership_terms",
+        "bundle_partition_fields",
+        "quality_gap_bounds",
+        "lineage_receipt_fields",
+        "projected_source_receipts",
+    }
+    assert projections["future_field_payload_bytes"] == sum(
+        future[name]["bytes"]
+        for name in (
+            "reference_identity",
+            "membership_terms",
+            "bundle_partition_fields",
+            "quality_gap_bounds",
+            "lineage_receipt_fields",
+        )
+    )
+    assert future["projected_source_receipts"]["receipts"] == receipt["counts"][
+        "projected_acquisition_receipts"
+    ]
+    assert receipt["partitioning"]["largest_projected_partition_bytes"] == (
+        receipt["partitioning"]["largest_current_typed_partition_bytes"]
+        + receipt["partitioning"]["largest_future_width_charge_bytes"]
+    )
+    assert receipt["partitioning"]["largest_future_width_charge_bytes"] > 0
+    archive_products = {item.product for item in sizing.PRODUCT_CONTRIBUTIONS}
+    assert {
+        item["required_product"] for item in projections["required_products"]
+    } == archive_products
+    # Version-1 evidence is named as immutable and is never a version-2 target.
+    immutable = receipt["partitioning"]["immutable_v1_evidence"]
+    assert immutable["receipt_sha256"] == sizing.V1_ACCEPTED_RECEIPT_SHA256
+    assert immutable["evidence_root"] == "evidence/sizing/v1/envelopes/sha256"
+    assert sizing.SIZING_EVIDENCE_ROOT == "evidence/sizing/v2/envelopes/sha256"
+    assert sizing.SIZING_RECEIPT_RELATIVE_PATH == (
+        "research/sprint_004/231_CEX002_GATE2_STORAGE_SIZING_V2.json"
+    )
     filesystem = receipt["filesystem"]
     assert filesystem["durable_receipt_bytes"] > 0
     assert filesystem["retained_sizing_evidence_bytes"] > 0
     counts = receipt["counts"]
+    coverage = receipt["coverage_authority"]
+    lineage = receipt["lineage"]
+    retained_credit = receipt["physical_inputs"]["retained_credit"]
+    assert lineage["retained_archive_requirement_keys"] == retained_credit[
+        "valid_requirement_keys"
+    ]
+    assert lineage["retained_archive_key_set_sha256"] == retained_credit[
+        "key_set_sha256"
+    ]
+    assert lineage["projected_unacquired_archive_requirement_keys"] == (
+        receipt["physical_inputs"]["combined_objects"]
+        - retained_credit["valid_requirement_keys"]
+    )
+    assert lineage["coefficient_only_keys_marked_retained"] == 0
     assert counts["count_sources"]["typed_gap_rows"].startswith("report coinalyze")
     assert receipt["partitioning"]["catalog_overhead_bytes"] == (
-        (
-            counts["physical_raw_objects"]
-            + counts["projected_normalized_files"]
-            + counts["typed_gap_rows"]
-            + counts["membership_rows"]
-            + counts["projected_coinalyze_receipts"]
-        )
-        * CATALOG_PAGE_BYTES
+        sum(counts["catalog_page_components"].values()) * CATALOG_PAGE_BYTES
         + sizing.ACCEPTED_REPORT_BYTES
         + sizing.ACCEPTED_MANIFEST_DETAIL_BYTES
+        + receipt["future_width_allocations"]["projected_source_receipts"]["bytes"]
     )
+    # Lineage is charged once per raw object per product partition, inside the product
+    # bytes, never once release-globally and never once per normalized row.
+    manifest = projections["partition_lineage"]
+    assert manifest["mappings"] == counts["partition_manifest_mappings"]
+    assert counts["coverage_known_coverage_rows"] == coverage["known_coverage_rows"]
+    assert counts["logical_sample_records"] == lineage["logical_records"]
+    assert counts["physical_sample_bindings"] == lineage["physical_bindings"]
+    assert counts["folded_sample_aliases"] == lineage["folded_aliases"]
+    assert counts["coverage_rows_total"] == (
+        coverage["known_coverage_rows"] + coverage["projected_quality_gap_rows"]
+    )
+    assert receipt["partitioning"]["partition_manifest_bytes"] == sum(
+        item["projected_partition_manifest_bytes"]
+        for item in projections["required_products"]
+    ) + receipt["coinalyze"]["projected_partition_manifest_bytes"]
+    assert counts["partition_manifest_projected_mappings"] >= counts[
+        "physical_raw_objects"
+    ]
+    # The complete final target schema of every required product is published.
+    schemas = projections["final_product_schemas"]
+    assert set(schemas) == set(REQUIRED_PRODUCTS)
+    assert all(schemas[product] for product in REQUIRED_PRODUCTS)
+    # Target-only fields are measured from real derived values and charged once.
+    targets = projections["target_only_fields"]
+    assert targets["binance_usdm_trade_flow_1h"]["bytes_per_row"] > 0
+    assert targets["binance_usdm_trade_flow_1h"]["measured_rows"] > 0
+    assert projections["target_only_bytes"] == sum(
+        item["projected_target_only_bytes"] for item in projections["required_products"]
+    )
+    assert projections["target_only_bytes"] > 0
+    # Lineage: the accepted alias decomposition and the partition-local charge model.
+    assert (
+        lineage["logical_records"] - lineage["physical_bindings"]
+        == lineage["folded_aliases"]
+    )
+    assert lineage["folded_aliases"] > 0
+    assert lineage["retrieval_time_known_bindings"] > 0
+    assert lineage["retrieval_time_unknown_bindings"] > 0
+    model = projections["lineage_manifest_model"]
+    assert model["payload_bytes_per_mapping"] > 0
+    assert model["footer_per_row_group_bytes"] > 0
+    assert model["framing_bytes_per_partition"] == 12
+    bundle_projection = projections["fixed_schema_products"][
+        "binance_usdm_harmonic_bundle"
+    ]
+    assert bundle_projection["projected_rows"] == (
+        projections["partition_lineage"]["partitions"]
+        + projections["partition_lineage"]["coinalyze_partitions"]
+    )
+    assert bundle_projection["projected_rows"] > counts["physical_sample_bindings"]
+    intersection = receipt["partitioning"]["cross_product_partition_intersection"]
+    assert receipt["partitioning"]["cross_product_intersection_sha256"] == _sha256(
+        sizing.canonical_json(
+            {"cross_product_partition_intersection": intersection}
+        )
+    )
+    # Coverage: known source gaps, fee gaps, typed memberships, and quality reservation
+    # are four separate published counts.
+    coverage = receipt["coverage_authority"]
+    assert coverage["known_coverage_rows"] == (
+        coverage["accepted_source_coverage_gaps"] + coverage["fee_authority_gaps"]
+    )
+    assert coverage["accepted_typed_gap_memberships"] >= 0
+    assert coverage["projected_quality_gap_rows"] > 0
+    assert coverage["official_historical_fee_rows"] == 0
+    assert coverage["source_gap_component"]["witness_measured_rows"] == coverage[
+        "accepted_source_coverage_gaps"
+    ]
+    # Fee authority: zero history, two outcome-blind policy rows, no backdating.
+    fee = receipt["fee_authority"]
+    assert fee["official_historical_rows"] == 0
+    assert fee["gap_kind"] == "historical_fee_schedule_unavailable"
+    assert fee["policy_known_at"] == "2026-08-23T03:00:00Z"
+    assert len(fee["scenario_policy_rows"]) == 2
+    assert [row["maker_rate"] for row in fee["scenario_policy_rows"]] == [
+        "0.000500000000000000",
+        "0.001000000000000000",
+    ]
+    assert all(
+        row["maker_credit_enabled"] is False for row in fee["scenario_policy_rows"]
+    )
+    # Every required product is named, with its own schema and byte bound.
+    named = {item["required_product"] for item in projections["required_products"]}
+    named |= set(projections["fixed_schema_products"]) & set(REQUIRED_PRODUCTS)
+    named.add("binance_usdm_liquidation_observed_daily")
+    assert named == set(REQUIRED_PRODUCTS)
+    for product, block in projections["fixed_schema_products"].items():
+        assert block["schema"]
+        assert block["projected_bytes"] == (
+            block["projected_payload_bytes"] + block["projected_overhead_bytes"]
+        )
+        assert block["required_product"] == product
+
+
+@pytest.mark.parametrize(
+    ("token", "message"),
+    [
+        ("", "has no value"),
+        ("12.5", "not a strict integer"),
+        ("1e3", "not a strict integer"),
+        (" 12 ", ""),
+        ("99999999999999999999999999", "overflows its declared width"),
+    ],
+)
+def test_strict_integer_conversion(token: str, message: str) -> None:
+    call = {"key": "k", "output": "o", "column": "c", "row": 3}
+    if not message:
+        assert sizing.convert_integer(token, **call) == 12
+        return
+    with pytest.raises(SizingError, match=message) as failure:
+        sizing.convert_integer(token, **call)
+    # Only structure reaches the failure surface: never the rejected source token.
+    assert token.strip() not in str(failure.value) or not token.strip()
+    assert failure.value.context["column"] == "c"
+    assert failure.value.context["source_row_ordinal"] == 3
+
+
+@pytest.mark.parametrize(
+    ("token", "message"),
+    [
+        ("", "has no value"),
+        ("nan", "not a decimal lexeme"),
+        ("NaN", "not a decimal lexeme"),
+        ("inf", "not a decimal lexeme"),
+        ("-Infinity", "not a decimal lexeme"),
+        ("1.2.3", "not a decimal lexeme"),
+        ("abc", "not a decimal lexeme"),
+        ("0x10", "not a decimal lexeme"),
+        # More fractional digits than the pinned scale can hold exactly.
+        ("0." + "1" * 19, "exceeds the pinned scale"),
+        # More significant digits than the pinned precision can hold.
+        ("1" * 21, "overflows the pinned precision"),
+    ],
+)
+def test_exact_decimal_conversion_blocks_instead_of_rounding(
+    token: str, message: str
+) -> None:
+    with pytest.raises(SizingError, match=message) as failure:
+        sizing.convert_decimal(token, key="k", output="o", column="c", row=0)
+    # Only structure reaches the failure surface: never the rejected source token.
+    stripped = token.strip()
+    assert not stripped or stripped not in str(failure.value)
+    assert failure.value.context["column"] == "c"
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "0",
+        "1.5",
+        "-0.000000000000000001",
+        "123456789012345678.999999999999999999",
+        "0.1",
+        "0.30000000000000004",
+        "1e3",
+        "-2.5E-3",
+        "99999999999999999999.000000000000000001",
+    ],
+)
+def test_adversarial_decimal_lexemes_survive_exactly(token: str) -> None:
+    """Every accepted lexeme keeps its exact value; nothing goes through a float."""
+    value = sizing.convert_decimal(token, key="k", output="o", column="c", row=0)
+    assert isinstance(value, Decimal)
+    assert value == Decimal(token)
+    # A float round trip of these lexemes is not exact, which is precisely the defect
+    # the decimal policy removes.
+    assert value.as_tuple().exponent == -sizing.DECIMAL_SCALE
+    assert Decimal(token) - value == 0
+
+
+def test_a_float_round_trip_would_have_changed_the_value() -> None:
+    token = "0.1"
+    exact = sizing.convert_decimal(token, key="k", output="o", column="c", row=0)
+    assert exact == Decimal("0.1")
+    # The rejected float64 policy could not represent this lexeme exactly.
+    assert Decimal(float(token)) != Decimal(token)
+
+
+def test_strict_timestamp_and_dictionary_conversion() -> None:
+    assert sizing.convert_timestamp_text(
+        "2020-01-01 00:00:00", key="k", output="o", column="c", row=0
+    ) == _ONBOARD_MS
+    with pytest.raises(SizingError, match="not an ISO UTC instant"):
+        sizing.convert_timestamp_text(
+            "not-a-time", key="k", output="o", column="c", row=0
+        )
+    assert sizing.convert_dictionary(
+        " BTCUSDT ", key="k", output="o", column="c", row=0
+    ) == "BTCUSDT"
+    with pytest.raises(SizingError, match="has no value"):
+        sizing.convert_dictionary("   ", key="k", output="o", column="c", row=0)
+
+
+def test_a_failed_conversion_blocks_the_whole_envelope(tmp_path: Path) -> None:
+    """A failed row is never dropped, rounded, or replaced with zero."""
+    body = b"1577836800000,1.0,2.0,0.5,not-a-number,10,1577840399999,15.0,7,4.0,6.0,0\n"
+    payload = _zip("data.csv", body)
+    destination = tmp_path / "typed.parquet"
+    with pytest.raises(SizingError, match="not a number") as failure:
+        measure_typed_envelope(
+            _cohort_sample(),
+            payload=payload,
+            output=contributions_for_family("daily/klines")[0],
+            destination=destination,
+            schema_kind="headerless",
+        )
+    assert failure.value.context["contribution"] == (
+        "binance_usdm_bar_1h:daily_klines"
+    )
+    assert "not-a-number" not in str(failure.value)
+
+
+def test_the_partition_manifest_maps_each_product_and_keeps_unknowns_unknown(
+    tmp_path: Path,
+) -> None:
+    entries = [
+        {
+            "raw_object_ref": index // 2,
+            "required_product": (
+                "binance_usdm_bar_1h" if index % 2 == 0 else "binance_usdm_trade_flow_1h"
+            ),
+            "component": "daily_klines",
+            "native_symbol": "BTCUSDT",
+            "utc_month": "2020-01",
+            "source_key": _key("daily/klines", "BTCUSDT", f"2020-01-{index // 2 + 1:02d}"),
+            "source_state": sizing.RETAINED_RECEIPT_STATE,
+            "source_sha256": f"{index:064x}",
+            "checksum_authority": f"{index:064x}",
+            # Half the mappings have a real retrieval time; half are honestly unknown.
+            "retrieval_time": "2026-08-21T00:00:00+00:00" if index % 4 == 0 else None,
+            "availability_semantics": "source_object_listing_time_unknown",
+            "source_available_at": None,
+            "requirement_byte_size": 500,
+        }
+        for index in range(8)
+    ]
+    manifest = measure_partition_manifest(
+        entries, destination=tmp_path / "manifest.parquet"
+    )
+    assert manifest["payload_bytes_per_mapping"] > 0
+    # One mapping per raw object per product partition, so a cross-product object
+    # appears in both of its product partitions.
+    assert manifest["mappings"] == 8
+    assert manifest["rows"] == 8
+    assert manifest["retrieval_time_known_mappings"] == 2
+    assert manifest["retrieval_time_unknown_mappings"] == 6
+    assert manifest["payload_bytes"] + manifest["footer_bytes"] + manifest[
+        "framing_bytes"
+    ] + manifest["residual_bytes"] == manifest["file_bytes"]
+    assert manifest["payload_bytes"] > 0
+    with pytest.raises(SizingError, match="has no raw object mapping"):
+        measure_partition_manifest([], destination=tmp_path / "empty.parquet")
+
+
+def test_no_cost_row_field_or_sample_is_reduced(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    """ADR-0024 section 1: the cost sample keeps every object, row, and field."""
+    receipt = _run(accepted, tmp_path)["receipt"]
+    assert receipt["physical_inputs"]["cost_objects"] == sizing.ACCEPTED_COST_OBJECTS
+    assert receipt["physical_inputs"]["cost_bytes"] == sizing.ACCEPTED_COST_BYTES
+    assert receipt["cohort"]["unique_samples"] == sizing.ACCEPTED_SAMPLE_COHORT
+    with pytest.raises(SizingError, match="five-component descriptor"):
+        sizing.final_product_schema("binance_usdm_cost_calibration")
+    assert sizing.target_only_columns("binance_usdm_cost_calibration") == ()
+    components = receipt["cost_calibration_components"]
+    assert components["projected_bytes"] == sum(
+        int(components[name]["projected_bytes"]) for name in sizing.COST_COMPONENTS
+    )
+    assert components["partition_count"] == sum(
+        int(components[name]["partition_count"]) for name in sizing.COST_COMPONENTS
+    )
+    assert all(
+        int(components[name]["catalog_pages"])
+        == int(components[name]["partition_count"])
+        for name in sizing.COST_COMPONENTS
+    )
+    # Every cost row of every cost sample is written typed, never sampled or summarised.
+    for family in COST_FAMILIES:
+        rows = 11
+        payload = _zip("data.csv", _csv(family, rows))
+        output = contributions_for_family(family)[0]
+        measured = measure_typed_envelope(
+            _cohort_sample(family),
+            payload=payload,
+            output=output,
+            destination=tmp_path / f"cost-{family.replace('/', '_')}.parquet",
+            schema_kind="headerless",
+        )
+        assert measured.rows == rows
+        assert measured.source_rows == rows
+        assert set(output.source_fields()) == set(_TOKENS[_hint(family)])
+    measurements = {item["contribution"] for item in receipt["measurements"]}
+    assert {
+        "binance_usdm_cost_calibration:daily_book_ticker",
+        "binance_usdm_cost_calibration:daily_book_depth",
+    } <= measurements
+
+
+def test_a_v2_envelope_collision_is_refused_not_overwritten(tmp_path: Path) -> None:
+    root = tmp_path / sizing.SIZING_EVIDENCE_ROOT
+    payload = _zip("data.csv", _csv("daily/bookDepth", 4))
+    source = tmp_path / "envelope.parquet"
+    measure_typed_envelope(
+        _cohort_sample("daily/bookDepth"),
+        payload=payload,
+        output=contributions_for_family("daily/bookDepth")[0],
+        destination=source,
+        schema_kind="headerless",
+    )
+    destination, reused = sizing.publish_sizing_envelope(source, evidence_root=root)
+    assert reused is False
+    # Republishing identical bytes reuses the existing content address.
+    _again, reused_again = sizing.publish_sizing_envelope(source, evidence_root=root)
+    assert reused_again is True
+    # A different file already occupying that content address is refused outright.
+    destination.write_bytes(b"a conflicting occupant")
+    with pytest.raises(SizingError, match="does not match its content address"):
+        sizing.publish_sizing_envelope(source, evidence_root=root)
+    assert destination.read_bytes() == b"a conflicting occupant"
+
+
+def test_accepted_logical_aliases_fold_to_physical_bindings(
+    accepted: dict[str, Any],
+) -> None:
+    """ADR-0025 section 4: a repeated key with identical lineage folds, never blocks."""
+    authority = load_sizing_authority(accepted["paths"])
+    cohort = derive_sample_cohort(authority)
+    checkpoint = dict(authority.progress_checkpoint["objects"])
+    lineage = bind_sample_lineage(
+        authority.report, checkpoint=checkpoint, cohort=cohort
+    )
+    decomposition = lineage["decomposition"]
+    records = accepted["sample_records"]
+    aliases = accepted["alias_keys"]
+    assert aliases
+    assert decomposition["logical_records"] == len(records)
+    assert decomposition["physical_bindings"] == len({r["key"] for r in records})
+    assert decomposition["folded_aliases"] == len(aliases)
+    # Logical minus physical is exactly the folded alias count.
+    assert (
+        decomposition["logical_records"] - decomposition["physical_bindings"]
+        == decomposition["folded_aliases"]
+    )
+    proved = sizing.prove_accepted_lineage_decomposition(decomposition)
+    assert proved["logical_records"] == sizing.ACCEPTED_LOGICAL_SAMPLE_RECORDS
+    assert proved["physical_bindings"] == sizing.ACCEPTED_PHYSICAL_SAMPLE_BINDINGS
+    assert proved["folded_aliases"] == sizing.ACCEPTED_FOLDED_SAMPLE_ALIASES
+    # Every logical regime label survives on the folded physical record.
+    folded = [
+        item
+        for item in lineage["bindings"].values()
+        if item["logical_records"] > 1
+    ]
+    assert folded
+    for item in folded:
+        assert set(item["logical_regimes"]) == {"in_sample", "out_of_sample"}
+        assert item["logical_roles"] == ["binance_usdm_bar_1h"]
+
+
+def test_the_accepted_lineage_decomposition_is_pinned_at_106_96_10() -> None:
+    assert sizing.ACCEPTED_LOGICAL_SAMPLE_RECORDS == 106
+    assert sizing.ACCEPTED_PHYSICAL_SAMPLE_BINDINGS == 96
+    assert sizing.ACCEPTED_FOLDED_SAMPLE_ALIASES == 10
+    assert (
+        sizing.ACCEPTED_LOGICAL_SAMPLE_RECORDS
+        - sizing.ACCEPTED_PHYSICAL_SAMPLE_BINDINGS
+        == sizing.ACCEPTED_FOLDED_SAMPLE_ALIASES
+    )
+    with pytest.raises(SizingError, match="lineage.logical_records"):
+        sizing.prove_accepted_lineage_decomposition(
+            {"logical_records": 96, "physical_bindings": 96, "folded_aliases": 0}
+        )
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "sha256",
+        "byte_size",
+        "family",
+        "retrieval_time",
+        "availability_semantics",
+        "source_available_at",
+    ],
+)
+def test_a_disagreeing_alias_blocks_even_though_the_key_repeats(
+    accepted: dict[str, Any], field: str
+) -> None:
+    authority = load_sizing_authority(accepted["paths"])
+    cohort = derive_sample_cohort(authority)
+    checkpoint = dict(authority.progress_checkpoint["objects"])
+    report = json.loads(accepted["files"]["report"].read_text())
+    key = accepted["alias_keys"][0]
+    seen = 0
+    for record in report["samples"]:
+        if record["key"] != key:
+            continue
+        seen += 1
+        if seen == 2:
+            record[field] = {
+                "sha256": "0" * 64,
+                "byte_size": 1,
+                "family": "daily/metrics",
+                "retrieval_time": "2026-08-22T00:00:00+00:00",
+                "availability_semantics": "something_else",
+                "source_available_at": 1,
+            }[field]
+    with pytest.raises(SizingError, match="disagrees about its physical lineage"):
+        bind_sample_lineage(report, checkpoint=checkpoint, cohort=cohort)
+
+
+def test_context_independent_conversion_survives_a_changed_decimal_context() -> None:
+    """ADR-0025 section 3: no result may depend on the ambient decimal context."""
+    boundary = "9" * (sizing.DECIMAL_PRECISION - sizing.DECIMAL_SCALE) + "." + "9" * (
+        sizing.DECIMAL_SCALE
+    )
+    lexemes = [boundary, "0.1", "1e3", "-2.5E-3", "123456789012345678.999999999999999999"]
+    reference: dict[str, Decimal] = {}
+    for precision in (9, 28, 60):
+        with localcontext() as context:
+            context.prec = precision
+            for token in lexemes:
+                value = sizing.convert_decimal(
+                    token, key="k", output="o", column="c", row=0
+                )
+                assert value.as_tuple().exponent == -sizing.DECIMAL_SCALE
+                reference.setdefault(token, value)
+                # Byte-identical under every context.
+                assert value == reference[token]
+                assert value.as_tuple() == reference[token].as_tuple()
+    # One more digit than the pinned precision blocks under every context too.
+    over = "9" * (sizing.DECIMAL_PRECISION - sizing.DECIMAL_SCALE + 1) + "." + "9" * (
+        sizing.DECIMAL_SCALE
+    )
+    for precision in (9, 28, 60):
+        with localcontext() as context:
+            context.prec = precision
+            with pytest.raises(SizingError, match="overflows the pinned precision"):
+                sizing.convert_decimal(over, key="k", output="o", column="c", row=0)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("1970-01-01 00:00:00", 0),
+        ("2020-01-01 00:00:00", 1_577_836_800_000),
+        ("1969-12-31 23:59:59", -1_000),
+        ("1900-01-01 00:00:00", -2_208_988_800_000),
+        ("2020-01-01T00:00:00.123456+00:00", 1_577_836_800_123),
+        ("2020-01-01T01:00:00+01:00", 1_577_836_800_000),
+    ],
+)
+def test_integer_calendar_timestamps_including_pre_epoch(
+    text: str, expected: int
+) -> None:
+    for precision in (9, 60):
+        with localcontext() as context:
+            context.prec = precision
+            value = sizing.convert_timestamp_text(
+                text, key="k", output="o", column="c", row=0
+            )
+            assert value == expected
+            assert isinstance(value, int)
+    source = Path(sizing.__file__).read_text(encoding="utf-8")
+    # The float-returning API is deliberately absent from this module.
+    assert ".timestamp()" not in source
+
+
+def test_final_product_schemas_are_complete_and_target_only_fields_are_allocated_once(
+) -> None:
+    allocated: dict[str, str] = {}
+    for product in REQUIRED_PRODUCTS:
+        if product == "binance_usdm_cost_calibration":
+            with pytest.raises(SizingError, match="five-component descriptor"):
+                sizing.final_product_columns(product)
+            assert sizing.target_only_columns(product) == ()
+            continue
+        columns = sizing.final_product_columns(product)
+        assert columns
+        names = [column.name for column in columns]
+        assert len(set(names)) == len(names)
+        for column in sizing.target_only_columns(product):
+            # A target-only field belongs to exactly one product.
+            assert column.name not in allocated or allocated[column.name] == product
+            allocated.setdefault(column.name, product)
+        for field in sizing.final_product_schema(product):
+            assert field.type not in {pa.float32(), pa.float64()}
+    # Every product row carries canonical instrument and contract-version identity.
+    for product in REQUIRED_PRODUCTS:
+        if product in {
+            "binance_usdm_harmonic_bundle",
+            "binance_usdm_cost_calibration",
+        }:
+            continue
+        names = {column.name for column in sizing.final_product_columns(product)}
+        assert {
+            "venue",
+            "native_symbol",
+            "canonical_instrument_id",
+            "canonical_instrument_version_id",
+            "reference_identity_state",
+        } <= names
+    flow = {column.name for column in sizing.final_product_columns(
+        "binance_usdm_trade_flow_1h"
+    )}
+    # Totals, taker-buy inputs, and the materialized sell/imbalance outputs.
+    assert {
+        "volume",
+        "quote_volume",
+        "taker_buy_volume",
+        "taker_buy_quote_volume",
+        "taker_sell_volume",
+        "taker_sell_quote_volume",
+        "volume_imbalance",
+        "quote_volume_imbalance",
+    } <= flow
+    oi = {column.name: column for column in sizing.final_product_columns(
+        "binance_usdm_open_interest_5m"
+    )}
+    assert {
+        "sum_open_interest",
+        "previous_sum_open_interest",
+        "open_interest_change",
+        "open_interest_value_change",
+        "change_interval_seconds",
+        "gap_break_status",
+    } <= set(oi)
+    assert oi["previous_sum_open_interest"].nullable is True
+    funding = {column.name for column in sizing.final_product_columns(
+        "binance_usdm_funding_realized"
+    )}
+    assert {"long_cashflow_rate", "short_cashflow_rate", "cashflow_sign_convention"} <= (
+        funding
+    )
+    indicative = {column.name: column for column in sizing.final_product_columns(
+        "binance_usdm_funding_indicative_1h"
+    )}
+    # No retained source publishes a direct indicative rate; it is nullable and gapped.
+    assert indicative["indicative_funding_rate"].nullable is True
+    assert "indicative_rate_status" in indicative
+    basis = {column.name for column in sizing.final_product_columns(
+        "binance_usdm_mark_index_basis_1h"
+    )}
+    assert {"mark_close", "index_close", "premium_close", "absolute_basis",
+            "relative_basis", "basis_join_status"} <= basis
+    liquidation = {column.name for column in sizing.final_product_columns(
+        "binance_usdm_liquidation_observed_daily"
+    )}
+    assert {"provider_symbol", "long_liquidation", "short_liquidation",
+            "liquidation_imbalance", "source_interval_seconds",
+            "observation_semantics", "event_complete"} <= liquidation
+    bundle = {column.name for column in sizing.final_product_columns(
+        "binance_usdm_harmonic_bundle"
+    )}
+    assert {"dataset_id", "schema_sha256", "lineage_manifest_sha256",
+            "lineage_mapping_count", "source_report_sha256",
+            "qualification_cli_sha256", "sizing_cli_sha256",
+            "configuration_sha256", "unit_convention", "censorship_semantics",
+            "scenario_policy_sha256", "coverage_gap_rows",
+            "cross_product_intersection_count",
+            "cross_product_intersection_sha256"} <= bundle
+
+
+def _cohort_of(families: dict[str, list[dict[str, Any]]], **keys: str) -> Any:
+    return sizing.DerivationCohort(
+        native_symbol="BTCUSDT",
+        economic_interval="2020-01-01",
+        families=families,
+        keys=keys or {family: "k" for family in families},
+    )
+
+
+def _kline_row(ordinal: int = 0, **overrides: str) -> dict[str, Any]:
+    row = {
+        "open_time": str(1577836800000 + ordinal * 3_600_000),
+        "open": "1.0",
+        "high": "2.0",
+        "low": "0.5",
+        "close": "1.5",
+        "volume": "10",
+        "close_time": str(1577840399999 + ordinal * 3_600_000),
+        "quote_volume": "15.0",
+        "count": "7",
+        "taker_buy_volume": "4.0",
+        "taker_buy_quote_volume": "6.0",
+        "ignore": "0",
+        "_ordinal": ordinal,
+        "_symbol": "BTCUSDT",
+        "_economic_interval": "2020-01-01",
+        "_key": "k",
+    }
+    row.update(overrides)
+    return row
+
+
+def test_derived_columns_are_computed_from_real_sample_values() -> None:
+    cohort = _cohort_of({"daily/klines": [_kline_row()]})
+    rows = sizing.derive_target_only_rows("binance_usdm_trade_flow_1h", cohort=cohort)
+    assert len(rows) == 1
+    row = rows[0]
+    # Real arithmetic on the real sample values, not a constant or a null.
+    assert row["taker_sell_volume"] == Decimal("6")
+    assert row["taker_sell_quote_volume"] == Decimal("9")
+    assert row["volume_imbalance"] == Decimal("-2")
+    assert row["quote_volume_imbalance"] == Decimal("-3")
+    # No ticker-derived canonical identity is ever published as reference truth.
+    assert row["canonical_instrument_id"] is None
+    assert row["canonical_instrument_version_id"] is None
+    assert row["reference_identity_state"] == "reference_identity_not_yet_created"
+    assert row["native_symbol"] == "BTCUSDT"
+
+
+def _basis_cohort(mark: str, index: str, *, shift: int = 0) -> Any:
+    return _cohort_of(
+        {
+            "daily/markPriceKlines": [_kline_row(close=mark, open=mark)],
+            "daily/indexPriceKlines": [
+                _kline_row(ordinal=shift, close=index, open=index)
+            ],
+            "daily/premiumIndexKlines": [_kline_row(close="0.1", open="0.1")],
+        }
+    )
+
+
+def test_relative_basis_is_deterministic_and_rejects_a_zero_denominator() -> None:
+    for precision in (9, 28, 60):
+        with localcontext() as context:
+            context.prec = precision
+            rows = sizing.derive_target_only_rows(
+                "binance_usdm_mark_index_basis_1h",
+                cohort=_basis_cohort("100.5", "100.0"),
+            )
+            assert rows[0]["absolute_basis"] == Decimal("0.5")
+            assert rows[0]["relative_basis"] == Decimal("0.005")
+            assert rows[0]["basis_join_status"] == "causal_open_time_join"
+    with pytest.raises(SizingError, match="zero index denominator"):
+        sizing.derive_target_only_rows(
+            "binance_usdm_mark_index_basis_1h", cohort=_basis_cohort("100.5", "0")
+        )
+
+
+def test_basis_never_joins_mismatched_times_or_a_missing_premium_input() -> None:
+    """Review 236 finding 3: an ordinal is not a causal join."""
+    # Same ordinal, different open/close time: no row may be produced.
+    shifted = sizing.derive_target_only_rows(
+        "binance_usdm_mark_index_basis_1h",
+        cohort=_basis_cohort("100.5", "100.0", shift=3),
+    )
+    assert shifted == []
+    # Matching times but no premium input for that instant: still no causal join.
+    families = {
+        "daily/markPriceKlines": [_kline_row(close="100.5", open="100.5")],
+        "daily/indexPriceKlines": [_kline_row(close="100.0", open="100.0")],
+        "daily/premiumIndexKlines": [_kline_row(ordinal=5, close="0.1", open="0.1")],
+    }
+    assert sizing.derive_target_only_rows(
+        "binance_usdm_mark_index_basis_1h", cohort=_cohort_of(families)
+    ) == []
+    # A cohort missing a whole family produces nothing rather than a partial join.
+    assert sizing.derive_target_only_rows(
+        "binance_usdm_mark_index_basis_1h",
+        cohort=_cohort_of({"daily/markPriceKlines": [_kline_row()]}),
+    ) == []
+
+
+def test_an_open_interest_gap_nulls_the_previous_comparable_and_changes() -> None:
+    def _metric(ordinal: int, minutes: int, level: str) -> dict[str, Any]:
+        return {
+            "create_time": f"2020-01-01 00:{minutes:02d}:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": level,
+            "sum_open_interest_value": level,
+            "count_toptrader_long_short_ratio": "1",
+            "sum_toptrader_long_short_ratio": "1",
+            "count_long_short_ratio": "1",
+            "sum_taker_long_short_vol_ratio": "1",
+            "_ordinal": ordinal,
+            "_symbol": "BTCUSDT",
+            "_economic_interval": "2020-01-01",
+            "_key": "k",
+        }
+
+    cohort = _cohort_of(
+        {
+            "daily/metrics": [
+                _metric(0, 0, "10"),
+                _metric(1, 5, "12"),
+                # A ten-minute step is a discontinuity in a five-minute grid.
+                _metric(2, 15, "20"),
+            ]
+        }
+    )
+    rows = sizing.derive_target_only_rows("binance_usdm_open_interest_5m", cohort=cohort)
+    assert [row["gap_break_status"] for row in rows] == [
+        "first_observation",
+        "contiguous",
+        "gap_break",
+    ]
+    assert rows[0]["previous_sum_open_interest"] is None
+    assert rows[1]["previous_sum_open_interest"] == Decimal("10")
+    assert rows[1]["open_interest_change"] == Decimal("2")
+    assert rows[1]["change_interval_seconds"] == 300
+    # The gap publishes the observed interval and status but no comparable or change.
+    assert rows[2]["change_interval_seconds"] == 600
+    assert rows[2]["previous_sum_open_interest"] is None
+    assert rows[2]["open_interest_change"] is None
+    assert rows[2]["open_interest_value_change"] is None
+
+
+def test_two_partitions_each_pay_their_own_full_manifest_overhead(
+    tmp_path: Path,
+) -> None:
+    """Review 236 finding 6: no cohort-global manifest divided by its own row count."""
+    def _mapping(product: str, symbol: str, month: str, index: int) -> dict[str, Any]:
+        return {
+            "raw_object_ref": index,
+            "required_product": product,
+            "component": "daily_klines",
+            "native_symbol": symbol,
+            "utc_month": month,
+            "source_key": _key("daily/klines", symbol, f"{month}-01"),
+            "source_state": sizing.RETAINED_RECEIPT_STATE,
+            "source_sha256": f"{index:064x}",
+            "checksum_authority": f"{index:064x}",
+            "retrieval_time": None,
+            "availability_semantics": "source_object_listing_time_unknown",
+            "source_available_at": None,
+            "requirement_byte_size": 500,
+        }
+
+    small = {("binance_usdm_bar_1h", "target_product", "BTCUSDT", "2020-01"): [
+        _mapping("binance_usdm_bar_1h", "BTCUSDT", "2020-01", 0)
+    ]}
+    large = {("binance_usdm_bar_1h", "target_product", "ETHUSDT", "2020-02"): [
+        _mapping("binance_usdm_bar_1h", "ETHUSDT", "2020-02", index)
+        for index in range(6)
+    ]}
+    model = sizing.model_partition_lineage({**small, **large}, staging=tmp_path)
+    assert model.payload_bytes_per_mapping > 0
+    assert model.footer_per_row_group_bytes > 0
+    assert model.framing_bytes == 12
+    # Two real, differently sized witnesses were measured, not one cohort file.
+    assert len(model.witness_partitions) == 2
+    assert {int(item["mappings"]) for item in model.witness_partitions} == {1, 6}
+    archive_row = sizing.pq.read_table(
+        str(tmp_path / "lineage-archive-partition-0.parquet")
+    ).to_pylist()[0]
+    assert archive_row["required_product"] == "binance_usdm_bar_1h"
+    assert archive_row["component"] == "daily_klines"
+    assert archive_row["native_symbol"] == "BTCUSDT"
+    assert archive_row["utc_month"] == "2020-01"
+    assert archive_row["source_state"] == sizing.RETAINED_RECEIPT_STATE
+    one = model.partition_bytes(1)
+    six = model.partition_bytes(6)
+    fixed = model.footer_per_row_group_bytes + model.framing_bytes
+    # Exact sums: each partition pays the full fixed overhead, once.
+    assert one["bytes"] == model.payload_bytes_per_mapping + fixed
+    assert six["bytes"] == 6 * model.payload_bytes_per_mapping + fixed
+    assert one["bytes"] + six["bytes"] == (
+        7 * model.payload_bytes_per_mapping + 2 * fixed
+    )
+    # The rejected model would have divided a single file by its rows and charged the
+    # fixed overhead only once across both partitions.
+    assert one["bytes"] + six["bytes"] > 7 * model.payload_bytes_per_mapping + fixed
+
+
+def test_coinalyze_partitions_carry_receipt_and_provider_native_mappings(
+    accepted: dict[str, Any], tmp_path: Path,
+) -> None:
+    resolved = _coinalyze(accepted)
+    natives = accepted["anchor_natives"]
+    mapped = sizing.coinalyze_partition_lineage(
+        partitions=[(native, "2020-01") for native in natives]
+        + [(natives[0], "2020-02")],
+        receipt_sha256="a" * 64,
+        receipt_endpoint="/liquidation-history",
+        identities=resolved["identities"],
+        availability="retained_coinalyze_response_receipt",
+        retrieval_time=None,
+        retained_partitions=[(native, "2020-01") for native in natives],
+    )
+    assert len(mapped) == len(natives) + 1
+    for (product, component, symbol, month), mappings in mapped.items():
+        assert product == "binance_usdm_liquidation_observed_daily"
+        assert component == "observed_liquidation"
+        assert month in {"2020-01", "2020-02"}
+        row = mappings[0]
+        # The local reference maps to the response receipt and the proved pair.
+        if month == "2020-01":
+            assert row["source_sha256"] == "a" * 64
+            assert row["source_state"] == sizing.RETAINED_RECEIPT_STATE
+        else:
+            assert row["source_sha256"] is None
+            assert row["checksum_authority"] is None
+            assert row["source_state"] == sizing.PROJECTED_UNACQUIRED_STATE
+        assert row["source_key"].startswith("/liquidation-history#")
+        assert row["native_symbol"] == symbol
+        assert row["provider_symbol"] == accepted["provider_of"][symbol]
+        assert row["availability_semantics"] in {
+            "retained_coinalyze_response_receipt",
+            "projected_response_receipt",
+        }
+        assert row["retrieval_time"] is None
+    measured = measure_partition_manifest(
+        next(iter(mapped.values())), destination=tmp_path / "coinalyze-manifest.parquet"
+    )
+    coinalyze_row = sizing.pq.read_table(
+        str(tmp_path / "coinalyze-manifest.parquet")
+    ).to_pylist()[0]
+    assert measured["manifest_kind"] == "coinalyze"
+    assert coinalyze_row["component"] == "observed_liquidation"
+    assert coinalyze_row["provider_symbol"]
+    assert coinalyze_row["native_symbol"]
+    assert coinalyze_row["utc_month"] == "2020-01"
+
+
+def test_archive_lineage_retention_joins_only_to_the_disjoint_credit_set() -> None:
+    objects = _one_object_per_family()
+    coefficient = objects[0]
+    credited = objects[-1]
+    assert coefficient.key != credited.key
+    checkpoint = {
+        credited.key: {
+            "status": "complete",
+            "sha256": "a" * 64,
+            "byte_size": credited.byte_size,
+            "provider_checksum_sha256": "b" * 64,
+            "retrieval_time": "2026-08-21T00:00:00+00:00",
+        }
+    }
+    credit = {
+        "keys": [credited.key],
+        "valid_requirement_keys": 1,
+        "key_set_sha256": sizing.requirement_key_set_sha256([credited.key]),
+    }
+    # The coefficient key is deliberately disjoint and supplies no retention authority.
+    bindings = sizing.build_retained_archive_bindings(
+        credit=credit,
+        checkpoint=checkpoint,
+        objects=objects,
+        sample_bindings={
+            coefficient.key: {
+                "source_key": coefficient.key,
+                "source_sha256": "c" * 64,
+            }
+        },
+    )
+    assert set(bindings) == {credited.key}
+    partitions = sizing.build_partition_lineage(
+        bindings,
+        objects=objects,
+        retained_credit_keys=credit["keys"],
+    )
+    # Every partition key is a real product / native symbol / UTC month triple.
+    for product, component, symbol, month in partitions:
+        assert product in REQUIRED_PRODUCTS
+        assert component in {
+            "target_product",
+            "retained_book_ticker",
+            "retained_book_depth",
+        }
+        assert symbol == "BTCUSDT"
+        assert month == "2020-01"
+    # A kline object feeds two products, so it is mapped in both partitions.
+    assert sum(len(value) for value in partitions.values()) == sum(
+        len(contributions_for_family(item.family)) for item in objects
+    )
+    states = {
+        str(row["source_key"]): str(row["source_state"])
+        for mappings in partitions.values()
+        for row in mappings
+    }
+    assert states[credited.key] == sizing.RETAINED_RECEIPT_STATE
+    assert states[coefficient.key] == sizing.PROJECTED_UNACQUIRED_STATE
+    assert all(
+        state == sizing.PROJECTED_UNACQUIRED_STATE
+        for key, state in states.items()
+        if key != credited.key
+    )
+    reconciliation = sizing.reconcile_archive_lineage(
+        partitions,
+        requirement_keys=[item.key for item in objects],
+        retained_credit_keys=credit["keys"],
+        coefficient_keys=[coefficient.key],
+    )
+    assert reconciliation["retained_archive_requirement_keys"] == 1
+    assert reconciliation["retained_archive_key_set_sha256"] == credit[
+        "key_set_sha256"
+    ]
+    assert reconciliation["projected_unacquired_archive_requirement_keys"] == (
+        len(objects) - 1
+    )
+    assert reconciliation["coefficient_only_keys_marked_retained"] == 0
+    assert len(partitions) == len(
+        {item.product for item in sizing.PRODUCT_CONTRIBUTIONS}
+    ) + 1  # ticker and depth are independent cost partitions
+    with pytest.raises(SizingError, match="exact checkpoint binding"):
+        sizing.build_retained_archive_bindings(
+            credit=credit,
+            checkpoint={},
+            objects=objects,
+            sample_bindings={},
+        )
+    with pytest.raises(SizingError, match="credited_sample.source_sha256"):
+        sizing.build_retained_archive_bindings(
+            credit=credit,
+            checkpoint=checkpoint,
+            objects=objects,
+            sample_bindings={
+                credited.key: {
+                    **bindings[credited.key],
+                    "source_sha256": "d" * 64,
+                    "byte_size": credited.byte_size,
+                    "family": credited.family,
+                }
+            },
+        )
+    with pytest.raises(SizingError, match="retained_lineage_credit_join"):
+        sizing.build_partition_lineage(
+            {
+                **bindings,
+                coefficient.key: {
+                    **bindings[credited.key],
+                    "source_key": coefficient.key,
+                },
+            },
+            objects=objects,
+            retained_credit_keys=credit["keys"],
+        )
+
+
+def test_lineage_overhead_is_charged_once_per_partition(tmp_path: Path) -> None:
+    """ADR-0025 section 5: never one cohort file divided by its own row count."""
+    model = _lineage_model(payload=3, footer=90, framing=12)
+    one = model.partition_bytes(1)
+    many = model.partition_bytes(4)
+    # Payload scales with mappings; the file overhead is charged once per partition.
+    assert one["payload_bytes"] == 3
+    assert many["payload_bytes"] == 12
+    assert one["overhead_bytes"] == many["overhead_bytes"] == 90 + 12
+    assert one["bytes"] == 105
+    assert many["bytes"] == 114
+    # Two real partitions each carry their own overhead, so the small one is not
+    # undercounted by the exact amount ADR-0024 required to separate.
+    objects = _one_object_per_family()
+    projections = project_typed_partitions(
+        measurements=_all_measurements(),
+        objects=objects,
+        lineage=model,
+    )
+    for item in projections:
+        expected = sum(
+            model.partition_bytes(int(partition["mappings"]))["bytes"]
+            for partition in item.partitions
+        )
+        assert item.projected_manifest_bytes == expected
+
+
+def test_the_membership_boundary_splits_accepted_from_rejected(
+    accepted: dict[str, Any],
+) -> None:
+    """Review 236 finding 1: classifications are not all accepted identities."""
+    report = json.loads(accepted["files"]["report"].read_text())
+    membership = sizing.classify_membership(report)
+    counts = membership["counts"]
+    total = len(accepted["classifications"])
+    granted = len(accepted["accepted_membership"])
+    assert counts["membership_classifications"] == total
+    assert counts["accepted_membership_identities"] == granted
+    assert counts["rejected_membership_rows"] == total - granted
+    assert counts["rejected_membership_rows"] > 0
+    # Every accepted row is affirmatively confirmed; no rejected row is admitted.
+    assert all(
+        str(row["membership_class"]) == "confirmed_perpetual"
+        for row in membership["accepted"]
+    )
+    assert all(row.get("accepted") is not True for row in membership["rejected"])
+    rejected_symbols = {str(row["symbol"]) for row in membership["rejected"]}
+    accepted_symbols = {str(row["symbol"]) for row in membership["accepted"]}
+    assert not rejected_symbols & accepted_symbols
+
+
+def test_rejected_membership_rows_create_no_fee_gap_or_membership_row(
+    accepted: dict[str, Any],
+) -> None:
+    report = json.loads(accepted["files"]["report"].read_text())
+    coverage = sizing.prove_coverage_authority(report)
+    rejected = {
+        str(row["symbol"]) for row in coverage["membership"]["rejected"]
+    }
+    assert rejected
+    fee_symbols = {str(row["native_symbol"]) for row in coverage["fee_gaps"]}
+    assert not fee_symbols & rejected
+    assert len(coverage["fee_gaps"]) == len(accepted["accepted_membership"])
+    assert coverage["counts"]["fee_authority_gaps"] == len(
+        coverage["membership"]["accepted"]
+    )
+
+
+def test_membership_fields_come_from_accepted_evidence_including_non_usdt(
+    accepted: dict[str, Any], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report = json.loads(accepted["files"]["report"].read_text())
+    membership = sizing.classify_membership(report)
+    facts = {
+        str(row["symbol"]): sizing.contract_evidence(row)
+        for row in membership["accepted"]
+    }
+    # A non-USDT margin and settlement contract survives with its real assets.
+    usdc = facts["BTCUSDC"]
+    assert usdc["margin_asset"] == "USDC"
+    assert usdc["quote_asset"] == "USDC"
+    assert usdc["base_asset"] == "BTC"
+    assert usdc["contract_type"] == "PERPETUAL"
+    # No ticker-derived canonical identity is published anywhere.
+    identity = sizing.native_identity("BTCUSDC")
+    assert identity["canonical_instrument_id"] is None
+    assert identity["canonical_instrument_version_id"] is None
+    assert identity["reference_identity_state"] == "reference_identity_not_yet_created"
+    assert "BTCUSDC" not in str(identity["reference_identity_state"])
+    # The future REF widths are allocated explicitly, as widths.
+    allocation = sizing.future_reference_identity_bytes(10)
+    assert allocation["value_widths"]["canonical_instrument_id"] == 68
+    assert allocation["value_widths"]["canonical_instrument_version_id"] == 67
+    assert allocation["bytes"] == 10 * ((68 + 9) + (67 + 9))
+    assert "not an existing canonical id" in allocation["allocation"]
+    funding = sizing.contract_evidence(
+        {
+            "symbol": "ARCHIVEONLY",
+            "membership_class": "confirmed_perpetual",
+            "in_archive": True,
+            "in_current_exchange": False,
+            "evidence": [
+                {
+                    "kind": "official_realized_funding_observation",
+                    "families": ["monthly/fundingRate"],
+                    "semantics": "only a perpetual contract realizes funding",
+                    "example_key": "data/futures/um/monthly/fundingRate/ARCHIVEONLY/x.zip",
+                }
+            ],
+        }
+    )
+    assert funding["contract_type"] == "PERPETUAL"
+    assert funding["contract_metadata_state"] == sizing.MEMBERSHIP_FUNDING_ONLY_STATE
+    assert all(
+        funding[name] is None
+        for name in (
+            "contract_status",
+            "base_asset",
+            "quote_asset",
+            "margin_asset",
+            "pair",
+            "onboard_ms",
+            "delivery_ms",
+            "closed_observed_ms",
+        )
+    )
+    monkeypatch.setattr(sizing, "ACCEPTED_FUNDING_ONLY_MEMBERSHIP_IDENTITIES", 1)
+    unresolved = sizing.future_membership_term_bytes([funding])
+    assert unresolved["rows"] == 1
+    assert unresolved["bytes"] > len("ARCHIVEONLY") * 6
+    source = Path(sizing.__file__).read_text(encoding="utf-8")
+    assert "BINANCE_USDM:{" not in source
+    assert "canonical_instrument_id(" not in source
+
+
+def test_conflicting_accepted_evidence_blocks(accepted: dict[str, Any]) -> None:
+    report = json.loads(accepted["files"]["report"].read_text())
+    row = dict(
+        next(
+            item
+            for item in report["membership"]["classifications"]
+            if item.get("accepted") is True
+        )
+    )
+    row["evidence"] = list(row["evidence"]) + [
+        {**dict(row["evidence"][0]), "margin_asset": "BUSD"}
+    ]
+    with pytest.raises(SizingError, match="disagrees about a contract fact"):
+        sizing.contract_evidence(row)
+    # An accepted identity with no evidence at all also blocks.
+    with pytest.raises(SizingError, match="has no evidence"):
+        sizing.contract_evidence({"symbol": "BTCUSDT", "evidence": []})
+
+
+def test_every_final_writer_round_trips_its_own_schema(tmp_path: Path) -> None:
+    """Review 236 finding 3 and 4: a declared schema must be constructible."""
+    points = [
+        {
+            "event_time_ms": 1577836800000,
+            "event_time_seconds": 1577836800,
+            "long_liquidation": sizing.convert_decimal(
+                "1.5", key="k", output="o", column="c", row=0
+            ),
+            "short_liquidation": sizing.convert_decimal(
+                "0.5", key="k", output="o", column="c", row=0
+            ),
+        }
+    ]
+    envelope = write_liquidation_envelope(
+        symbol="BTCUSDT",
+        provider_symbol="BTCUSDT_PERP.A",
+        endpoint="/liquidation-history",
+        points=points,
+        destination=tmp_path / "liq.parquet",
+    )
+    table = sizing.pq.read_table(str(tmp_path / "liq.parquet"))
+    schema = sizing.final_product_schema("binance_usdm_liquidation_observed_daily")
+    assert table.schema.names == schema.names
+    row = table.to_pylist()[0]
+    assert row["native_symbol"] == "BTCUSDT"
+    assert row["provider_symbol"] == "BTCUSDT_PERP.A"
+    assert row["canonical_instrument_id"] is None
+    assert row["liquidation_imbalance"] == Decimal("1.000000000000000000")
+    assert row["source_interval_seconds"] == 86_400
+    assert row["event_complete"] is False
+    assert row["observation_semantics"] == "censored_observed_daily_aggregate"
+    assert envelope["required_product"] == "binance_usdm_liquidation_observed_daily"
+    # All five cost components declare their own constructible schema.
+    assert sizing.COST_COMPONENTS == (
+        "retained_book_ticker",
+        "retained_book_depth",
+        "official_fee_schedule",
+        "fee_authority_gap",
+        "scenario_policy",
+    )
+    for component in sizing.COST_COMPONENTS:
+        columns = sizing.cost_component_columns(component)
+        assert columns
+        component_schema = sizing._schema_of(columns)
+        assert len(component_schema.names) == len(columns)
+        assert len(set(component_schema.names)) == len(columns)
+    # The heterogeneous components are not one flattened row shape.
+    ticker = {c.name for c in sizing.cost_component_columns("retained_book_ticker")}
+    scenario = {c.name for c in sizing.cost_component_columns("scenario_policy")}
+    assert not ticker & scenario
+    official = {c.name for c in sizing.cost_component_columns("official_fee_schedule")}
+    assert {
+        "valid_from_ms",
+        "available_from_ms",
+        "fee_tier",
+        "evidence_sha256",
+    } <= official
+    with pytest.raises(SizingError, match="unknown cost component"):
+        sizing.cost_component_columns("not_a_component")
+
+
+ACCEPTED_STORE = Path("data/cex002_qualify")
+ACCEPTED_REPORT = Path("research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json")
+
+
+def _accepted_authority_paths(
+    detail: Path, *, store_root: Path = ACCEPTED_STORE
+) -> AuthorityPaths:
+    """The already accepted local authority, exactly as the CLI resolves it."""
+    repository = Path.cwd()
+    return AuthorityPaths(
+        store_root=store_root,
+        report_path=ACCEPTED_REPORT,
+        manifest_detail_path=detail,
+        qualification_source_path=repository
+        / "src/cryptofactors/acquisition/binance_usdm_harmonic_qualification.py",
+        qualification_cli_path=repository
+        / "scripts/research/qualify_binance_usdm_harmonic_sources.py",
+        lock_path=ACCEPTED_STORE / "cex002_sample_plan_lock.json",
+        amendment_ledger_path=ACCEPTED_STORE / "cex002_amendment_ledger.json",
+        progress_checkpoint_path=ACCEPTED_STORE / "cex002_qualification_progress.json",
+        listing_checkpoint_path=ACCEPTED_STORE / "cex002_listing_checkpoint.json",
+        contract_metadata_path=ACCEPTED_STORE / "cex002_official_contract_metadata.json",
+        listing_cache_dir=ACCEPTED_STORE / "list_cache",
+        coinalyze_cache_dir=ACCEPTED_STORE / "coinalyze_cache",
+        sample_dir=ACCEPTED_STORE / "raw" / "sha256",
+        sidecar_dir=ACCEPTED_STORE / "list_cache",
+    )
+
+
+def _accepted_manifest_detail() -> Path | None:
+    root = ACCEPTED_STORE / "evidence" / "qualification"
+    if not root.is_dir():
+        return None
+    for candidate in sorted(root.rglob("*.jsonl.gz")):
+        if _sha256(candidate.read_bytes()) == sizing.ACCEPTED_MANIFEST_DETAIL_SHA256:
+            return candidate
+    return None
+
+
+def test_the_real_accepted_authority_passes_the_membership_boundary() -> None:
+    """The 1,008-total / 771-accepted split, read from the pinned local report."""
+    if not ACCEPTED_REPORT.is_file():
+        pytest.skip("the accepted local qualification report is not present")
+    report = json.loads(ACCEPTED_REPORT.read_text())
+    rows = list(dict(report.get("membership") or {}).get("classifications") or ())
+    granted = [item for item in rows if item.get("accepted") is True]
+    # The real split, not a constant comparison and not a synthetic fixture.
+    assert len(rows) == 1_008
+    assert len(granted) == 771
+    assert len(rows) - len(granted) == 237
+    membership = sizing.classify_membership(report)
+    assert membership["counts"] == {
+        "membership_classifications": 1_008,
+        "accepted_membership_identities": 771,
+        "rejected_membership_rows": 237,
+    }
+    coverage = sizing.prove_coverage_authority(report)
+    counts = coverage["counts"]
+    assert counts["accepted_source_coverage_gaps"] == 8_317
+    assert counts["accepted_typed_gap_memberships"] == 3_742
+    assert counts["fee_authority_gaps"] == 771
+    assert counts["known_coverage_rows"] == 9_088
+    states: dict[str, int] = {}
+    # Every one of the 771 identities is executable, including the 73 whose official
+    # realized-funding evidence proves PERPETUAL but no unavailable ticker term.
+    for row in membership["accepted"]:
+        facts = sizing.contract_evidence(row)
+        states[facts["contract_metadata_state"]] = (
+            states.get(facts["contract_metadata_state"], 0) + 1
+        )
+        assert facts["contract_type"] == "PERPETUAL"
+        assert facts["contract_evidence_class"]
+        assert facts["contract_evidence_source"]
+        if facts["contract_metadata_state"] == sizing.MEMBERSHIP_FUNDING_ONLY_STATE:
+            assert facts["base_asset"] is None
+            assert facts["quote_asset"] is None
+            assert facts["margin_asset"] is None
+            assert facts["pair"] is None
+    assert states == {
+        sizing.MEMBERSHIP_DETAILED_STATE: 698,
+        sizing.MEMBERSHIP_FUNDING_ONLY_STATE: 73,
+    }
+
+
+def test_the_real_accepted_authority_completes_the_receipt_path(
+    tmp_path: Path,
+) -> None:
+    """The full sizing path over the accepted local authority, published to a tmp root."""
+    detail = _accepted_manifest_detail()
+    if not ACCEPTED_REPORT.is_file() or detail is None:
+        pytest.skip("the accepted local qualification authority is not present")
+    temporary_store = tmp_path / "store"
+    temporary_store.mkdir()
+    paths = _accepted_authority_paths(detail, store_root=temporary_store)
+    result = run_storage_sizing(
+        paths,
+        # Both the receipt and every envelope publish only beneath tmp_path. Authority
+        # inputs remain pinned to their accepted read-only locations.
+        receipt_path=tmp_path / "231_receipt.json",
+        sizing_source_path=Path(sizing.__file__),
+        sizing_cli_path=Path("scripts/research/size_binance_usdm_harmonic_release.py"),
+        now=datetime(2026, 8, 23, tzinfo=UTC),
+    )
+    receipt = result["receipt"]
+    assert receipt["schema_version"] == "cex002_gate2_storage_sizing_v2"
+    counts = receipt["counts"]
+    assert counts["membership_classifications"] == 1_008
+    assert counts["accepted_membership_identities"] == 771
+    assert counts["rejected_membership_rows"] == 237
+    assert receipt["coverage_authority"]["known_coverage_rows"] == 9_088
+    assert receipt["lineage"]["logical_records"] == 106
+    assert receipt["lineage"]["physical_bindings"] == 96
+    assert receipt["lineage"]["folded_aliases"] == 10
+    credit = receipt["physical_inputs"]["retained_credit"]
+    archive_lineage = receipt["lineage"]
+    assert archive_lineage["retained_archive_requirement_keys"] == 73
+    assert archive_lineage["retained_archive_requirement_keys"] == credit[
+        "valid_requirement_keys"
+    ]
+    assert archive_lineage["retained_archive_key_set_sha256"] == credit[
+        "key_set_sha256"
+    ]
+    assert credit["key_set_sha256"] == sizing.requirement_key_set_sha256(
+        credit["keys"]
+    )
+    assert archive_lineage["projected_unacquired_archive_requirement_keys"] == (
+        receipt["physical_inputs"]["combined_objects"] - 73
+    )
+    assert archive_lineage["coefficient_only_archive_keys"] > 0
+    assert archive_lineage["coefficient_only_keys_marked_retained"] == 0
+    assert receipt["future_width_allocations"]["membership_terms"]["rows"] == 73
+    assert receipt["future_width_allocations"]["membership_terms"]["bytes"] > 0
+    assert receipt["capacity"]["total_future_storage_bytes"] > 0
+    assert Path(receipt["filesystem"]["destination"]) == temporary_store
+    assert (temporary_store / sizing.SIZING_EVIDENCE_ROOT).is_dir()
+    assert receipt["storage_preflight_state"] in {STATE_SUFFICIENT, STATE_BLOCKED}
+    assert (tmp_path / "231_receipt.json").is_file()
+    # A byte-identical rerun against the same authority reproduces the same receipt.
+    again = run_storage_sizing(
+        paths,
+        receipt_path=tmp_path / "231_receipt.json",
+        sizing_source_path=Path(sizing.__file__),
+        sizing_cli_path=Path("scripts/research/size_binance_usdm_harmonic_release.py"),
+        now=datetime(2026, 8, 24, tzinfo=UTC),
+    )
+    assert again["publication"]["rerun"] is True
+    assert again["receipt_file"]["receipt_sha256"] == (
+        result["receipt_file"]["receipt_sha256"]
+    )
+
+
+def test_the_bundle_descriptor_invents_no_witness(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    report = json.loads(accepted["files"]["report"].read_text())
+    coverage = sizing.prove_coverage_authority(report)
+    partitions = [
+        {
+            "required_product": "binance_usdm_bar_1h",
+            "component": "target_product",
+            "native_symbol": "BTCUSDT",
+            "utc_month": "2020-01",
+            "mappings": 3,
+        },
+        {
+            "required_product": "binance_usdm_trade_flow_1h",
+            "component": "target_product",
+            "native_symbol": "ETHUSDT",
+            "utc_month": "2020-02",
+            "mappings": 1,
+        },
+    ]
+    schemas = {
+        f"{item['required_product']}:{item['component']}": (
+            sizing.partition_schema_identity(item["required_product"], item["component"])
+        )
+        for item in partitions
+    }
+    descriptor = sizing.measure_bundle_descriptor(
+        partitions=partitions,
+        coverage=coverage,
+        schema_identities=schemas,
+        sizing_source_sha256="b" * 64,
+        sizing_cli_sha256="c" * 64,
+        intersections=(("BTCUSDT", "2020-01"), ("ETHUSDT", "2020-02")),
+        staging=tmp_path,
+    )
+    table = sizing.pq.read_table(str(tmp_path / "product-bundle.parquet"))
+    rows = table.to_pylist()
+    assert len(rows) == 2
+    for row in rows:
+        # Nothing that only exists after Gate-3 publication is invented here.
+        assert row["partition_sha256"] is None
+        assert row["partition_bytes"] is None
+        assert row["row_count"] is None
+        assert row["lineage_manifest_sha256"] is None
+        assert row["canonical_instrument_id"] is None
+        assert row["partition_sha256"] != "0" * 64
+        # Every identity that already exists is pinned exactly.
+        assert row["source_report_sha256"] == sizing.ACCEPTED_REPORT_SHA256
+        assert row["source_manifest_detail_sha256"] == (
+            sizing.ACCEPTED_MANIFEST_DETAIL_SHA256
+        )
+        assert row["qualification_code_sha256"] == (
+            sizing.ACCEPTED_QUALIFICATION_SOURCE_SHA256
+        )
+        assert row["qualification_cli_sha256"] == (
+            sizing.ACCEPTED_QUALIFICATION_CLI_SHA256
+        )
+        assert row["sizing_code_sha256"] == "b" * 64
+        assert row["sizing_cli_sha256"] == "c" * 64
+        assert row["schema_sha256"] == schemas[
+            f"{row['required_product']}:{row['component']}"
+        ]
+        assert row["lineage_mapping_count"] in {1, 3}
+        assert row["coverage_gap_rows"] == coverage["counts"][
+            "accepted_source_coverage_gaps"
+        ]
+        assert row["typed_gap_membership_rows"] == coverage["counts"][
+            "accepted_typed_gap_memberships"
+        ]
+        assert row["fee_authority_gap_rows"] == coverage["counts"]["fee_authority_gaps"]
+        assert row["cross_product_intersection_count"] == 2
+    # The scenario hash covers both complete rows, not only the policy time.
+    both = _sha256(
+        sizing.canonical_json({"policy_known_at": sizing.FEE_POLICY_KNOWN_AT})
+    )
+    assert descriptor["scenario_policy_sha256"] != both
+    assert descriptor["configuration_sha256"] != both
+    assert descriptor["future_reference_identity_allocation"]["bytes"] == (
+        2 * ((68 + 9) + (67 + 9))
+    )
+    assert descriptor["future_partition_field_allocation"]["bytes"] > 0
+    assert descriptor["cross_product_partition_intersection"] == [
+        {"native_symbol": "BTCUSDT", "utc_month": "2020-01"},
+        {"native_symbol": "ETHUSDT", "utc_month": "2020-02"},
+    ]
+    assert "partition_sha256" in descriptor["unresolved_future_fields"]
+
+
+def test_zero_official_fee_rows_stay_distinct_from_the_fee_gaps(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    receipt = _run(accepted, tmp_path)["receipt"]
+    fee = receipt["fee_authority"]
+    coverage = receipt["coverage_authority"]
+    components = receipt["cost_calibration_components"]
+    # Three structurally distinct facts: zero official rows, N gaps, two policy rows.
+    assert fee["official_historical_rows"] == 0
+    assert fee["official_component_schema"]
+    assert coverage["fee_authority_gaps"] == len(accepted["accepted_membership"])
+    assert len(fee["scenario_policy_rows"]) == 2
+    assert components["official_fee_schedule"]["projected_rows"] == 0
+    assert components["official_fee_schedule"]["projected_bytes"] > 0
+    assert components["fee_authority_gap"]["projected_rows"] == (
+        coverage["fee_authority_gaps"]
+    )
+    assert components["scenario_policy"]["projected_rows"] == 2
+    # The five components each carry their own schema.
+    for component in sizing.COST_COMPONENTS:
+        assert components[component]["schema"]
+        assert components[component]["catalog_pages"] == components[component][
+            "partition_count"
+        ]
+    assert components["projected_bytes"] == sum(
+        components[name]["projected_bytes"] for name in sizing.COST_COMPONENTS
+    )
+    assert coverage["typed_gap_membership_component"]["projected_rows"] == (
+        coverage["accepted_typed_gap_memberships"]
+    )
+    assert coverage["source_gap_component"]["projected_rows"] == (
+        coverage["accepted_source_coverage_gaps"]
+    )
+    assert coverage["quality_gap_component"]["projected_rows"] == coverage[
+        "projected_quality_gap_rows"
+    ]
+
+
+def test_the_coverage_authority_starts_from_the_full_accepted_matrix(
+    accepted: dict[str, Any],
+) -> None:
+    report = json.loads(accepted["files"]["report"].read_text())
+    coverage = sizing.prove_coverage_authority(report)
+    counts = coverage["counts"]
+    matrix = accepted["matrix_rows"]
+    assert counts["accepted_source_coverage_gaps"] == sum(
+        len(row["universe_coverage_gaps"]) for row in matrix
+    )
+    assert counts["accepted_typed_gap_memberships"] == sum(
+        len(row["typed_gap_symbols"]) for row in matrix
+    )
+    # Fee gaps are one per accepted membership identity, and are a separate count.
+    assert counts["fee_authority_gaps"] == 3
+    assert counts["known_coverage_rows"] == (
+        counts["accepted_source_coverage_gaps"] + counts["fee_authority_gaps"]
+    )
+    assert counts["accepted_typed_gap_memberships"] != counts["known_coverage_rows"]
+    # Coverage is not inferred from the Coinalyze non-mappings.
+    assert counts["accepted_source_coverage_gaps"] != len(accepted["unmapped"])
+    assert counts["official_historical_fee_rows"] == 0
+    assert counts["fee_scenario_policy_rows"] == 2
+    assert {item["gap_kind"] for item in coverage["fee_gaps"]} == {
+        "historical_fee_schedule_unavailable"
+    }
+
+
+def test_the_pinned_coverage_minimum_is_8317_3742_771_and_9088() -> None:
+    assert sizing.ACCEPTED_SOURCE_COVERAGE_GAPS == 8_317
+    assert sizing.ACCEPTED_TYPED_GAP_MEMBERSHIPS == 3_742
+    assert sizing.ACCEPTED_FEE_AUTHORITY_GAPS == 771
+    assert sizing.ACCEPTED_MEMBERSHIP_IDENTITIES == 771
+    assert sizing.ACCEPTED_KNOWN_COVERAGE_ROWS == 9_088
+    assert (
+        sizing.ACCEPTED_SOURCE_COVERAGE_GAPS + sizing.ACCEPTED_FEE_AUTHORITY_GAPS
+        == sizing.ACCEPTED_KNOWN_COVERAGE_ROWS
+    )
+    # The typed-gap memberships are a separate proved count, not a substitute.
+    assert sizing.ACCEPTED_TYPED_GAP_MEMBERSHIPS != sizing.ACCEPTED_KNOWN_COVERAGE_ROWS
+
+
+@pytest.mark.parametrize(
+    ("expected_rows", "reserved"), [(0, 0), (1, 1), (2, 1), (3, 2), (288, 144), (287, 144)]
+)
+def test_the_quality_gap_ceiling_is_half_the_expected_grid(
+    expected_rows: int, reserved: int
+) -> None:
+    assert sizing.quality_gap_reservation(expected_rows) == reserved
+
+
+def test_no_backdated_fee_row_and_exactly_two_policy_scenarios() -> None:
+    rows = sizing.fee_scenario_rows()
+    assert len(rows) == 2
+    assert sizing.ACCEPTED_OFFICIAL_FEE_ROWS == 0
+    ids = [row["scenario_id"] for row in rows]
+    assert ids == [
+        "assumed_conservative_5bps_per_side_v1",
+        "assumed_severe_10bps_per_side_v1",
+    ]
+    for row in rows:
+        assert row["authority_class"] == "ASSUMED_CONSERVATIVE"
+        assert row["policy_known_at"] == "2026-08-23T03:00:00Z"
+        assert row["charges_each_side"] is True
+        # No maker credit, rebate, discount, or referral is ever enabled.
+        assert row["maker_credit_enabled"] is False
+        assert row["rebates_enabled"] is False
+        assert row["vip_discounts_enabled"] is False
+        assert row["referral_discounts_enabled"] is False
+        assert row["bnb_discount_enabled"] is False
+        assert row["scope"] == "binance_usdm_perpetual_execution"
+    assert rows[0]["maker_rate"] == Decimal("0.0005")
+    assert rows[0]["taker_rate"] == Decimal("0.0005")
+    assert rows[1]["maker_rate"] == Decimal("0.0010")
+    assert rows[1]["taker_rate"] == Decimal("0.0010")
+    # The severe row is exactly twice the primary one, and neither is zero.
+    assert rows[1]["taker_rate"] == rows[0]["taker_rate"] * 2
+    assert all(row["taker_rate"] > 0 for row in rows)
+    # The policy time is after every historical decision in the release.
+    assert sizing.FEE_POLICY_KNOWN_AT > "2026-01-01T00:00:00Z"
+    source = Path(sizing.__file__).read_text(encoding="utf-8")
+    assert "ref_fee_schedule" not in source
+    assert "known_from" not in source
+
+
+def test_the_coinalyze_projection_applies_each_coefficient_once(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    """Finding 7: no raw-byte factor may be multiplied into the typed coefficient."""
+    resolved = _coinalyze(accepted)
+    model = _lineage_model(payload=1, footer=2, framing=12)
+    projection = project_coinalyze(
+        evidence=resolved["evidence"],
+        supported=resolved["supported"],
+        unmapped=resolved["unmapped"],
+        lifecycles=resolved["lifecycles"],
+        identities=resolved["identities"],
+        lineage=model,
+        staging=tmp_path,
+    )
+    block = projection.to_dict()
+    per_point = min(int(item["bytes_per_point"]) for item in projection.envelopes)
+    best = max(int(item["bytes_per_point"]) for item in projection.envelopes)
+    assert per_point > 0
+    # Typed payload is the projected point count times the typed per-point coefficient,
+    # with the raw point charge appearing only in the raw projection.
+    assert block["projected_typed_payload_bytes"] == (
+        projection.projected_points * best
+    )
+    assert block["projected_typed_payload_bytes"] != (
+        projection.projected_points * projection.point_charge_bytes * best
+    )
+    assert block["gross_liquidation_bytes"] == (
+        projection.projected_points * projection.point_charge_bytes
+        + projection.liquidation_receipts * projection.framing_charge_bytes
+    )
+    # Payload, overhead, lineage, and mapping counts are published separately.
+    assert block["projected_normalized_bytes"] == (
+        block["projected_typed_payload_bytes"]
+        + block["projected_typed_overhead_bytes"]
+        + block["projected_partition_manifest_bytes"]
+    )
+    assert block["partition_manifest_mappings"] == projection.partition_count
+    assert block["largest_partition_bytes"] > 0
+
+
+def test_real_lineage_is_bound_and_unknowns_stay_unknown(
+    accepted: dict[str, Any],
+) -> None:
+    """The checkpoint's own `retrieval_time` and the report's availability semantics."""
+    authority = load_sizing_authority(accepted["paths"])
+    cohort = derive_sample_cohort(authority)
+    checkpoint = dict(authority.progress_checkpoint["objects"])
+    lineage = bind_sample_lineage(
+        authority.report, checkpoint=checkpoint, cohort=cohort
+    )
+    bound = dict(lineage["bindings"])
+    assert set(bound) == {item.key for item in cohort}
+    known = [item for item in bound.values() if item["retrieval_time_known"]]
+    unknown = [item for item in bound.values() if not item["retrieval_time_known"]]
+    assert known and unknown
+    for item in known:
+        assert item["retrieval_time"] == "2026-08-21T00:00:00+00:00"
+    for item in unknown:
+        # Unknown stays unknown: no invented string, no checkpoint status stand-in.
+        assert item["retrieval_time"] is None
+        assert item["retrieval_time"] != "checkpoint_complete"
+    for item in bound.values():
+        # Availability semantics come from the report, not from checkpoint completion.
+        assert item["availability_semantics"] == "source_object_listing_time_unknown"
+        assert item["availability_semantics"] != item["checkpoint_status"]
+        assert item["checkpoint_status"] == "complete"
+        assert item["source_available_at"] is None
+
+
+@pytest.mark.parametrize(
+    ("damage", "message"),
+    [
+        ("missing_record", "no accepted report sample record"),
+        ("duplicate_record", "repeats a sample record key"),
+        ("substituted_digest", "report_sample.sha256"),
+        ("substituted_size", "report_sample.byte_size"),
+        ("substituted_family", "report_sample.family"),
+        ("missing_semantics", "no availability semantics"),
+        ("conflicting_retrieval", "retrieval_time"),
+    ],
+)
+def test_damaged_lineage_bindings_block(
+    accepted: dict[str, Any], damage: str, message: str
+) -> None:
+    authority = load_sizing_authority(accepted["paths"])
+    cohort = derive_sample_cohort(authority)
+    checkpoint = dict(authority.progress_checkpoint["objects"])
+    report = json.loads(accepted["files"]["report"].read_text())
+    keys = {item.key for item in cohort}
+    records = [dict(item) for item in report["samples"]]
+    target = next(item for item in records if item["key"] in keys)
+    if damage == "missing_record":
+        records = [item for item in records if item["key"] != target["key"]]
+    elif damage == "duplicate_record":
+        records.append(dict(target))
+    elif damage == "substituted_digest":
+        target["sha256"] = "0" * 64
+    elif damage == "substituted_size":
+        target["byte_size"] = int(target["byte_size"]) + 1
+    elif damage == "substituted_family":
+        target["family"] = "monthly/indexPriceKlines"
+    elif damage == "missing_semantics":
+        target["availability_semantics"] = ""
+    else:
+        checkpoint = dict(checkpoint)
+        entry = dict(checkpoint[target["key"]])
+        entry["retrieval_time"] = "2026-08-22T00:00:00+00:00"
+        target["retrieval_time"] = "2026-08-21T00:00:00+00:00"
+        checkpoint[target["key"]] = entry
+    report["samples"] = records
+    with pytest.raises(SizingError, match=message):
+        bind_sample_lineage(report, checkpoint=checkpoint, cohort=cohort)
+
+
+def test_version_one_evidence_is_never_read_or_rewritten(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    store = accepted["paths"].store_root
+    v1_root = store / sizing.V1_SIZING_EVIDENCE_ROOT
+    v1_root.mkdir(parents=True)
+    frozen = v1_root / "keep.parquet"
+    frozen.write_bytes(b"immutable version one evidence")
+    before = frozen.read_bytes()
+    v1_receipt = tmp_path / "180_CEX002_GATE2_STORAGE_SIZING.json"
+    v1_receipt.write_bytes(b'{"schema_version": "cex002_gate2_storage_sizing_v1"}\n')
+    _run(accepted, tmp_path)
+    # The v1 tree and receipt are byte-identical, and v2 wrote its own root only.
+    assert frozen.read_bytes() == before
+    assert list(v1_root.iterdir()) == [frozen]
+    assert v1_receipt.read_bytes().startswith(b'{"schema_version"')
+    assert (store / sizing.SIZING_EVIDENCE_ROOT).is_dir()
+    # Targeting the accepted v1 receipt path is refused outright.
+    with pytest.raises(SizingError, match="never rewrite the accepted version-1"):
+        _run(accepted, tmp_path, receipt_path=v1_receipt)
+
+
+def test_v2_envelopes_are_content_addressed_and_reused_not_rewritten(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    first = _run(accepted, tmp_path)
+    root = accepted["paths"].store_root / sizing.SIZING_EVIDENCE_ROOT
+    envelopes = sorted(path.name for path in root.glob("*.parquet"))
+    assert envelopes
+    assert all(name.split(".")[0] == _sha256((root / name).read_bytes()) for name in envelopes)
+    digests = {name: _sha256((root / name).read_bytes()) for name in envelopes}
+    second = _run(accepted, tmp_path)
+    assert second["publication"]["rerun"] is True
+    assert second["publication"]["envelopes_published"] == 0
+    assert second["publication"]["envelopes_reused"] == (
+        first["publication"]["envelopes_published"]
+    )
+    assert {
+        name: _sha256((root / name).read_bytes())
+        for name in sorted(path.name for path in root.glob("*.parquet"))
+    } == digests
+
+
+@pytest.mark.parametrize("available", ["ample", "starved"])
+def test_the_blocked_and_sufficient_boundary_is_exact(
+    accepted: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    available: str,
+) -> None:
+    """Sufficient exactly when the exact sum is no greater than available bytes."""
+    calls = {"n": 0}
+    ample = 1 << 60
+
+    def _available(_path: Path) -> int:
+        calls["n"] += 1
+        if available == "ample":
+            return ample
+        # The pre-write observation feeds the reserve; the second is the availability
+        # the exact component sum is compared against.
+        return ample if calls["n"] == 1 else 1 << 20
+
+    monkeypatch.setattr(sizing, "measure_available_bytes", _available)
+    receipt = _run(accepted, tmp_path)["receipt"]
+    capacity = receipt["capacity"]
+    total = capacity["total_future_storage_bytes"]
+    post = receipt["filesystem"]["post_publication_available_bytes"]
+    # The published numbers decide the state; the boundary is `<=`, never a margin.
+    if total <= post:
+        assert receipt["storage_preflight_state"] == STATE_SUFFICIENT
+        assert receipt["blockers"] == []
+        assert "authorizes no acquisition" in receipt["authorization"]
+    else:
+        assert receipt["storage_preflight_state"] == STATE_BLOCKED
+        assert "available_capacity_insufficient" in receipt["blockers"]
+    if available == "starved":
+        assert total > post
+    else:
+        assert total <= post
+    # Every component is a known non-negative integer, so nothing is unknown.
+    for name in (
+        "new_binance_raw_bytes",
+        "new_coinalyze_raw_bytes",
+        "typed_normalized_partition_bytes",
+        "catalog_manifest_bundle_bytes",
+        "bounded_temporary_work_bytes",
+        "operating_reserve_bytes",
+    ):
+        value = capacity[name]
+        assert isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    assert "component_unknown_or_non_integer" not in receipt["blockers"]
+    assert "typed_normalization_incomplete" not in receipt["blockers"]
 
 
 def test_rerun_returns_the_identical_receipt_under_changed_observations(
     accepted: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     first = _run(accepted, tmp_path)
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     published = target.read_bytes()
     assert first["publication"]["envelopes_published"] > 0
     assert first["publication"]["envelopes_reused"] == 0
@@ -2420,7 +4771,7 @@ def test_rerun_below_the_reserve_floor_also_returns_the_identical_receipt(
     accepted: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     first = _run(accepted, tmp_path)
-    published = (tmp_path / "180_receipt.json").read_bytes()
+    published = (tmp_path / "231_receipt.json").read_bytes()
     # Above the 80 GiB threshold the reserve is one fifth of availability, so a changed
     # observation changes the derived reserve. The frozen receipt still stands.
     high = 400 * 2**30
@@ -2428,7 +4779,7 @@ def test_rerun_below_the_reserve_floor_also_returns_the_identical_receipt(
     monkeypatch.setattr(sizing, "measure_available_bytes", lambda path: high)
     second = _run(accepted, tmp_path)
     assert second["publication"]["rerun"] is True
-    assert (tmp_path / "180_receipt.json").read_bytes() == published
+    assert (tmp_path / "231_receipt.json").read_bytes() == published
     assert second["receipt"] == first["receipt"]
 
 
@@ -2448,7 +4799,7 @@ def test_a_tampered_prior_receipt_is_never_reused(
     accepted: dict[str, Any], tmp_path: Path, section: str
 ) -> None:
     first = _run(accepted, tmp_path)
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     document = json.loads(target.read_text())
     if section == "cohort":
         document["cohort"]["unique_samples"] = int(document["cohort"]["unique_samples"]) + 1
@@ -2477,7 +4828,7 @@ def test_a_tampered_prior_receipt_is_never_reused(
 def test_a_foreign_receipt_at_the_fixed_target_is_never_overwritten(
     accepted: dict[str, Any], tmp_path: Path
 ) -> None:
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     target.write_text(json.dumps({"schema_version": "other"}, indent=2, sort_keys=True) + "\n")
     before = target.read_bytes()
     with pytest.raises(SizingError, match="already occupies"):
@@ -2586,7 +4937,7 @@ def test_receipt_accounts_for_its_own_exact_length(
 ) -> None:
     result = _run(accepted, tmp_path)
     receipt = result["receipt"]
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     exact = target.stat().st_size
     # The receipt's declared length is the published document's own length.
     assert receipt["filesystem"]["durable_receipt_bytes"] == exact
@@ -2646,6 +4997,7 @@ def test_coinalyze_equation_uses_exact_retained_response_identity(
         counts["catalog_pages"] * CATALOG_PAGE_BYTES
         + sizing.ACCEPTED_REPORT_BYTES
         + sizing.ACCEPTED_MANIFEST_DETAIL_BYTES
+        + receipt["future_width_allocations"]["projected_source_receipts"]["bytes"]
     )
 
 
@@ -2716,53 +5068,53 @@ def test_repeated_retained_days_are_credited_once(accepted: dict[str, Any]) -> N
     assert covered["points_per_native_symbol"] == {native: 4}
 
 
-def test_largest_partition_is_one_logical_file(tmp_path: Path) -> None:
-    def _measurement(family: str) -> Any:
-        return sizing.EnvelopeMeasurement(
-            key=f"k-{family}",
-            family=family,
-            symbol="BTCUSDT",
-            economic_interval="2020-01-01",
-            schema_kind="headerless",
-            compressed_archive_bytes=2,
-            extracted_member_bytes=4,
-            source_rows=1,
-            arrow_ipc_bytes=1,
-            parquet_bytes=3,
-            parquet_footer_bytes=1,
-            parquet_file_overhead_bytes=12,
-            parquet_sha256="0" * 64,
-            writer_identity="w",
-            pyarrow_version="x",
-            batches=1,
-        )
-
-    objects = [
-        PhysicalObject(
-            key=_key(family, "BTCUSDT", "2020-01-01"),
-            family=family,
-            symbol="BTCUSDT",
-            economic_interval="2020-01-01",
-            byte_size=500,
-        )
-        for family in PHYSICAL_FAMILIES
-    ]
-    projections = project_families(
-        measurements=[_measurement(family) for family in PHYSICAL_FAMILIES],
+def test_each_required_product_is_its_own_partition_set() -> None:
+    objects = _one_object_per_family()
+    projections = project_typed_partitions(
+        measurements=_all_measurements(),
         objects=objects,
+        lineage=_lineage_model(),
     )
-    single = ceil_div(500 * 3, 2)
-    fan_out = next(item for item in projections if item.family == "daily/klines")
-    plain = next(item for item in projections if item.family == "daily/bookDepth")
-    # Multiplicity two means two logical files, not one file of twice the size.
+    archive_products = {item.product for item in sizing.PRODUCT_CONTRIBUTIONS}
+    assert {item.product for item in projections} == archive_products
+    # No packaging name survives as a product name.
+    assert all(item.product in REQUIRED_PRODUCTS for item in projections)
+    single = ceil_div(500 * 3, 2) + 1 + 12
+    bar = next(item for item in projections if item.product == "binance_usdm_bar_1h")
+    flow = next(
+        item for item in projections if item.product == "binance_usdm_trade_flow_1h"
+    )
+    # The kline family feeds two required products, each its own single file.
     assert OUTPUT_MULTIPLICITY["daily/klines"] == 2
-    assert fan_out.largest_partition_bytes == single
-    assert fan_out.projected_bytes == single * 2
-    assert fan_out.partition_count == 2
-    # Multiplicity one is the same single file.
-    assert plain.largest_partition_bytes == single
-    assert plain.projected_bytes == single
-    assert plain.partition_count == 1
+    for item in (bar, flow):
+        assert item.partition_count == 1
+        assert item.largest_partition_bytes == item.projected_bytes
+    cost = [
+        item for item in projections if item.product == "binance_usdm_cost_calibration"
+    ]
+    # Ticker and depth are separate components, files, overheads, and manifests.
+    assert {item.component for item in cost} == {
+        "retained_book_ticker",
+        "retained_book_depth",
+    }
+    for item in cost:
+        assert item.partition_count == 1
+        assert item.projected_payload_bytes == ceil_div(500 * 3, 2)
+        assert item.projected_bytes == item.projected_payload_bytes + 1 + 12
+    assert single > 0
+
+
+def test_a_missing_product_contribution_measurement_blocks() -> None:
+    objects = _one_object_per_family()
+    partial = [
+        _typed_measurement(item.name)
+        for item in sizing.PRODUCT_CONTRIBUTIONS
+        if item.name != "binance_usdm_trade_flow_1h:daily_klines"
+    ]
+    with pytest.raises(SizingError, match="no measured coefficient"):
+        project_typed_partitions(
+            measurements=partial, objects=objects, lineage=_lineage_model()
+        )
 
 
 def test_lifecycle_conversion_is_integer_only() -> None:
@@ -2840,7 +5192,7 @@ def test_publication_refuses_a_symlink_swapped_after_the_check(tmp_path: Path) -
 
 
 def test_prior_receipt_reads_never_follow_a_symlink(tmp_path: Path) -> None:
-    target = tmp_path / "180_receipt.json"
+    target = tmp_path / "231_receipt.json"
     elsewhere = tmp_path / "secret.json"
     elsewhere.write_bytes(sizing.canonical_json({"schema_version": "other"}))
     target.symlink_to(elsewhere)
