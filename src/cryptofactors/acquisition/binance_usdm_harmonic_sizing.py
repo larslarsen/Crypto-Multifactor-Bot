@@ -6804,7 +6804,22 @@ def _read_no_follow(path: Path) -> bytes | None:
 
 
 # Fields whose value is a sizing-time observation rather than a stable measurement.
-VOLATILE_RECEIPT_FIELDS: tuple[str, ...] = ("generated_at", "filesystem")
+# `blockers`, `storage_preflight_state`, and `authorization` are frozen derivatives of
+# those observations and are re-proved against the prior's own recorded values by
+# `_prior_receipt_is_whole` instead of being compared with this invocation's.
+VOLATILE_RECEIPT_FIELDS: tuple[str, ...] = (
+    "generated_at",
+    "filesystem",
+    "blockers",
+    "storage_preflight_state",
+    "authorization",
+)
+VOLATILE_CAPACITY_FIELDS: tuple[str, ...] = (
+    # Derived from the free space observed at this moment. Nothing else in the capacity
+    # block is an observation, so nothing else belongs here.
+    "operating_reserve_bytes",
+    "total_future_storage_bytes",
+)
 STABLE_RECEIPT_FIELDS: tuple[str, ...] = (
     "schema_version",
     "ticket",
@@ -6832,7 +6847,61 @@ STABLE_CAPACITY_FIELDS: tuple[str, ...] = (
     "catalog_manifest_bundle_bytes",
     "bounded_temporary_work_bytes",
     "reserve_rule",
+    # Fixed receipt policy prose. It is not an observation or a derivative of one, so it
+    # is compared exactly: a prior that rewrites it is not the same receipt.
+    "equation",
 )
+
+
+def stable_receipt_projection(receipt: Mapping[str, Any]) -> dict[str, Any]:
+    """The one observation-independent projection of a sizing receipt.
+
+    This is the single comparison boundary between what an invocation just measured and
+    what a prior receipt recorded. It names every stable fact - schema, ticket, policy,
+    code identity, accepted authority, physical inputs, cohort, typed schema, lineage,
+    future widths, coverage, cost, fee, measurements, projections, Coinalyze evidence,
+    semantic counts, partitioning, and the observation-independent capacity components
+    plus the reserve rule - and nothing else.
+
+    Both sides are normalized through `canonical_json`, so a structure just measured in
+    memory and the same receipt decoded from its published JSON project to exactly the
+    same value. Without that, an equally valid tuple, mapping, or numeric container would
+    read as a difference that is a serialization artifact rather than a measurement.
+    """
+    capacity = dict(receipt.get("capacity") or {})
+    projection: dict[str, Any] = {
+        name: receipt.get(name) for name in STABLE_RECEIPT_FIELDS
+    }
+    projection["capacity"] = {
+        name: capacity.get(name) for name in STABLE_CAPACITY_FIELDS
+    }
+    return json.loads(canonical_json(projection).decode("utf-8"))
+
+
+def stable_receipt_identity(receipt: Mapping[str, Any]) -> str:
+    """The deterministic identity of one receipt's stable projection."""
+    return _sha256_bytes(canonical_json(stable_receipt_projection(receipt)))
+
+
+def stable_receipt_mismatch(
+    prior: Mapping[str, Any], expected: Mapping[str, Any]
+) -> str | None:
+    """The first stable field the two receipts disagree about, or `None`.
+
+    Naming the field is the point: a rejected reuse must be explainable as a named
+    measurement change rather than as an unexplained refusal.
+    """
+    left = stable_receipt_projection(prior)
+    right = stable_receipt_projection(expected)
+    for name in STABLE_RECEIPT_FIELDS:
+        if left.get(name) != right.get(name):
+            return name
+    left_capacity = dict(left.get("capacity") or {})
+    right_capacity = dict(right.get("capacity") or {})
+    for name in STABLE_CAPACITY_FIELDS:
+        if left_capacity.get(name) != right_capacity.get(name):
+            return f"capacity.{name}"
+    return None
 
 
 def revalidate_prior_receipt(
@@ -6863,14 +6932,9 @@ def revalidate_prior_receipt(
     # the canonical form of what they decode to.
     if canonical_json(prior) != body:
         return None
-    for field_name in STABLE_RECEIPT_FIELDS:
-        if prior.get(field_name) != expected.get(field_name):
-            return None
-    prior_capacity = dict(prior.get("capacity") or {})
-    expected_capacity = dict(expected.get("capacity") or {})
-    for field_name in STABLE_CAPACITY_FIELDS:
-        if prior_capacity.get(field_name) != expected_capacity.get(field_name):
-            return None
+    # One boundary, both directions: any named stable difference rejects reuse.
+    if stable_receipt_mismatch(prior, expected) is not None:
+        return None
     if not _prior_receipt_is_whole(prior, body=body):
         return None
     return prior
@@ -7240,6 +7304,10 @@ def run_storage_sizing(
     parsed_samples: list[list[dict[str, Any]]] = []
     published = 0
     reused = 0
+    # The evidence set is identified by content address, so it is the same set whether
+    # this invocation wrote the objects or found them already published. Publication
+    # outcomes are operational facts and never reach the durable receipt.
+    envelope_digests: set[str] = set()
     with tempfile.TemporaryDirectory(prefix="cex002-sizing-") as staging:
         stage = Path(staging)
         for sample in cohort:
@@ -7267,6 +7335,7 @@ def run_storage_sizing(
                 _dest, was_reused = publish_sizing_envelope(
                     envelope, evidence_root=evidence_root
                 )
+                envelope_digests.add(_dest.stem)
                 reused += int(was_reused)
                 published += int(not was_reused)
         # ADR-0025 section 5 and review 236 finding 6: build the projected partition
@@ -7330,6 +7399,7 @@ def run_storage_sizing(
             _dest, was_reused = publish_sizing_envelope(
                 envelope, evidence_root=evidence_root
             )
+            envelope_digests.add(_dest.stem)
             reused += int(was_reused)
             published += int(not was_reused)
         # ADR-0025 section 2: target-only fields are measured from real derived values
@@ -7348,6 +7418,7 @@ def run_storage_sizing(
             _dest, was_reused = publish_sizing_envelope(
                 envelope, evidence_root=evidence_root
             )
+            envelope_digests.add(_dest.stem)
             reused += int(was_reused)
             published += int(not was_reused)
         cost_identity_rate = cost_identity_bytes_per_row(cost)
@@ -7380,6 +7451,7 @@ def run_storage_sizing(
         )
         for envelope in sorted(stage.glob("coinalyze-*.parquet")):
             _dest, was_reused = publish_sizing_envelope(envelope, evidence_root=evidence_root)
+            envelope_digests.add(_dest.stem)
             reused += int(was_reused)
             published += int(not was_reused)
         fixed_products = _measure_fixed_schema_products(
@@ -7426,6 +7498,7 @@ def run_storage_sizing(
         )
         for envelope in sorted(stage.glob("product-*.parquet")):
             _dest, was_reused = publish_sizing_envelope(envelope, evidence_root=evidence_root)
+            envelope_digests.add(_dest.stem)
             reused += int(was_reused)
             published += int(not was_reused)
 
@@ -8000,7 +8073,9 @@ def run_storage_sizing(
             ),
             "projected_acquisition_receipts": projected_receipts,
             "retained_coinalyze_evidence_records": len(coinalyze_evidence),
-            "sizing_envelopes": published + reused,
+            # Semantic: the number of distinct content-addressed sizing envelopes this
+            # release measures, never a count of write-versus-reuse attempts.
+            "sizing_envelopes": len(envelope_digests),
             "required_products": len(REQUIRED_PRODUCTS),
             "product_contributions": len(PRODUCT_CONTRIBUTIONS),
             **{

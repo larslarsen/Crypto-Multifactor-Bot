@@ -2932,14 +2932,31 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
     )
     capacity = receipt["capacity"]
     # ADR-0024 section 5: six components, counted once, without overlap.
-    assert capacity["total_future_storage_bytes"] == (
-        capacity["new_binance_raw_bytes"]
-        + capacity["new_coinalyze_raw_bytes"]
-        + capacity["typed_normalized_partition_bytes"]
-        + capacity["catalog_manifest_bundle_bytes"]
-        + capacity["bounded_temporary_work_bytes"]
-        + capacity["operating_reserve_bytes"]
+    components = (
+        "new_binance_raw_bytes",
+        "new_coinalyze_raw_bytes",
+        "typed_normalized_partition_bytes",
+        "catalog_manifest_bundle_bytes",
+        "bounded_temporary_work_bytes",
+        "operating_reserve_bytes",
     )
+    # Exactly six components exist; the block carries nothing else that is a byte count.
+    assert set(capacity) == set(components) | {
+        "total_future_storage_bytes",
+        "reserve_rule",
+        "equation",
+    }
+    for name in components:
+        value = capacity[name]
+        assert isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    assert capacity["total_future_storage_bytes"] == sum(
+        capacity[name] for name in components
+    )
+    # No component is counted twice: removing the five non-reserve terms from the exact
+    # total leaves exactly the reserve.
+    assert capacity["total_future_storage_bytes"] - sum(
+        capacity[name] for name in components if name != "operating_reserve_bytes"
+    ) == capacity["operating_reserve_bytes"]
     assert capacity["operating_reserve_bytes"] >= MINIMUM_OPERATING_RESERVE_BYTES
     # The normalized output is allocated exactly once: the bounded temporary work unit
     # is a single greatest explicit unit, never a second complete normalized tree.
@@ -2950,15 +2967,22 @@ def test_end_to_end_receipt_is_complete_and_durably_identical(
     )
     # The observed-liquidation product is typed; no JSON point string is stored.
     assert "point_token" not in sizing.canonical_json(receipt).decode()
-    assert capacity["bounded_temporary_work_bytes"] == max(
+    explicit_work_units = {
         sizing.ACCEPTED_LARGEST_SELECTED_OBJECT_BYTES,
         receipt["partitioning"]["largest_projected_partition_bytes"],
         receipt["partitioning"]["bundle_transaction_bytes"],
-    )
+    }
+    assert capacity["bounded_temporary_work_bytes"] == max(explicit_work_units)
+    # ADR-0024 section 5 bounds temporary work by the greatest single explicit unit, so
+    # it is one of those units and never an accumulation of them. It is deliberately not
+    # required to be smaller than final normalized-plus-catalog storage: a large accepted
+    # compressed object legitimately exceeds a small projected normalized universe.
+    if len(explicit_work_units) > 1:
+        assert capacity["bounded_temporary_work_bytes"] < sum(explicit_work_units)
+    # The catalog/manifest/bundle term is the measured one, included exactly once.
     assert (
-        capacity["bounded_temporary_work_bytes"]
-        < capacity["typed_normalized_partition_bytes"]
-        + capacity["catalog_manifest_bundle_bytes"]
+        capacity["catalog_manifest_bundle_bytes"]
+        == receipt["partitioning"]["catalog_overhead_bytes"]
     )
     # Payload and file overhead are projected separately, never one whole-file ratio.
     assert (
@@ -4887,6 +4911,83 @@ def test_the_blocked_and_sufficient_boundary_is_exact(
         assert isinstance(value, int) and not isinstance(value, bool) and value >= 0
     assert "component_unknown_or_non_integer" not in receipt["blockers"]
     assert "typed_normalization_incomplete" not in receipt["blockers"]
+
+
+def test_the_stable_receipt_projection_is_the_only_reuse_boundary(
+    accepted: dict[str, Any], tmp_path: Path
+) -> None:
+    """One explicit boundary decides reuse, and it names the fact that changed."""
+    receipt = _run(accepted, tmp_path)["receipt"]
+    projection = sizing.stable_receipt_projection(receipt)
+    # The projection is exactly the named stable facts, and nothing else.
+    assert set(projection) == set(sizing.STABLE_RECEIPT_FIELDS) | {"capacity"}
+    assert set(projection["capacity"]) == set(sizing.STABLE_CAPACITY_FIELDS)
+    # Every receipt field is classified. A new field cannot silently escape comparison
+    # or silently enter it.
+    assert set(receipt) == (
+        set(sizing.STABLE_RECEIPT_FIELDS)
+        | set(sizing.VOLATILE_RECEIPT_FIELDS)
+        | {"capacity"}
+    )
+    assert not set(sizing.STABLE_RECEIPT_FIELDS) & set(sizing.VOLATILE_RECEIPT_FIELDS)
+    assert set(receipt["capacity"]) == (
+        set(sizing.STABLE_CAPACITY_FIELDS) | set(sizing.VOLATILE_CAPACITY_FIELDS)
+    )
+    assert not set(sizing.STABLE_CAPACITY_FIELDS) & set(sizing.VOLATILE_CAPACITY_FIELDS)
+    # Serialization is not a measurement difference: the structure just measured and the
+    # same receipt decoded from its published bytes project identically.
+    stored = json.loads((tmp_path / "231_receipt.json").read_text())
+    assert sizing.stable_receipt_projection(stored) == projection
+    assert sizing.stable_receipt_identity(stored) == sizing.stable_receipt_identity(
+        receipt
+    )
+    assert sizing.stable_receipt_mismatch(stored, receipt) is None
+    # Every excluded sizing-time observation and frozen derivative may change without
+    # changing the boundary.
+    observed = {
+        **receipt,
+        "generated_at": "2030-01-01T00:00:00+00:00",
+        "filesystem": {**receipt["filesystem"], "pre_write_available_bytes": 1},
+        "blockers": ["available_capacity_insufficient"],
+        "storage_preflight_state": STATE_BLOCKED,
+        "authorization": "a different observation-time sentence",
+        "capacity": {
+            **receipt["capacity"],
+            "operating_reserve_bytes": (
+                int(receipt["capacity"]["operating_reserve_bytes"]) + 1
+            ),
+            "total_future_storage_bytes": 0,
+        },
+    }
+    assert sizing.stable_receipt_mismatch(observed, receipt) is None
+    # Every stable fact is named by its own field when it changes.
+    for name in sizing.STABLE_RECEIPT_FIELDS:
+        changed = {**receipt, name: "a changed stable fact"}
+        assert sizing.stable_receipt_mismatch(changed, receipt) == name
+    for name in sizing.STABLE_CAPACITY_FIELDS:
+        changed = {
+            **receipt,
+            "capacity": {**receipt["capacity"], name: "a changed stable fact"},
+        }
+        assert sizing.stable_receipt_mismatch(changed, receipt) == f"capacity.{name}"
+    # The fixed capacity policy prose is stable, not an observation. A prior that
+    # rewrites it to arbitrary canonical text is named and rejected rather than reused.
+    assert "equation" in sizing.STABLE_CAPACITY_FIELDS
+    assert "equation" not in sizing.VOLATILE_CAPACITY_FIELDS
+    rewritten = {
+        **receipt,
+        "capacity": {
+            **receipt["capacity"],
+            "equation": "every component counted twice and with overlap",
+        },
+    }
+    assert sizing.stable_receipt_mismatch(rewritten, receipt) == "capacity.equation"
+    # The envelope count is the content-addressed evidence set, so it cannot depend on
+    # whether this invocation wrote those objects or found them already published.
+    root = accepted["paths"].store_root / sizing.SIZING_EVIDENCE_ROOT
+    assert receipt["counts"]["sizing_envelopes"] == len(
+        {path.stem for path in root.glob("*.parquet")}
+    )
 
 
 def test_rerun_returns_the_identical_receipt_under_changed_observations(
