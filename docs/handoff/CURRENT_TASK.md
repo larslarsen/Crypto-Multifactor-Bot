@@ -2,17 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Sol High - complete unchanged review 269 exact test-only correction
+Next required actor: Jr Dev - Hermes - integrate review 271 and execute corrected v3 sizing gate
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 269's exact sizing-test-only correction remains unchanged. Claude
-Build is unavailable until 2026-08-24 and Grok Build is temporarily unavailable, so review
-270 reroutes the bounded senior source/test drop to Sr Dev - Sol High at the owner's
-explicit direction. The accepted matrix, membership proof, and width-1 changes remain the
-base; production and CLI remain frozen. Commands, Git, integration, receipt 258, sizing,
-acquisition, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and
-later work remain unauthorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
+Immediate state: The reviewer accepted Sol High's review-269 test-only correction at test
+SHA-256 `f67851a952bc5fdacf5a951344f119e0efd721d47974af0f6f1424449299777c`, frozen
+production/CLI identities, and 161 test functions. Review 271 authorizes Hermes for exact
+test integration, corrected focused pytest, Ruff, one real v3 sizing invocation, one
+identical idempotence invocation after success, record 272, receipt 258 only if valid, and
+the exact commit/push scope. Acquisition, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not
+accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -236,6 +237,7 @@ Governing documents:
 - research/sprint_004/268_CEX002_V3_SPARK_TEST_RESIDUAL.md
 - research/sprint_004/269_CEX002_V3_SPARK_CONTINUATION_REJECTION.md
 - research/sprint_004/270_CEX002_V3_SENIOR_AVAILABILITY_REROUTE.md
+- research/sprint_004/271_CEX002_V3_TEST_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
