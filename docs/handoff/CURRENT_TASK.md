@@ -1,19 +1,20 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 243 failed focused validation
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - one consolidated review-244 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Jr Dev - Hermes followed review 242 through exact-byte preproof, staged
-only the two accepted modified sizing paths, and ran the focused sizing pytest command
-with the two-pass real-authority receipt test deselected. The focused pytest command
-exited 1 with four failing tests, so Hermes stopped as required, ran no Ruff, ran no v2
-sizing CLI, produced no receipt 231, and performed no acquisition, network,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work.
-Review record 243 is published for reviewer inspection. Gate 2 remains not accepted. Next
-ticket remains `NONE`.
+Immediate bounded task for Sr Dev - Claude Build: follow review 244 once. Preserve the
+ADR-0024 six-component capacity equation and replace the invalid temporary-work ordering
+assertion. Correct the single prior-receipt idempotence defect behind all three rerun
+collisions by making the stable comparison explicit and deterministic while preserving
+canonical-byte, internal-wholeness, tamper, symlink, race, and collision refusal. Edit only
+the sizing source/test paths; leave the CLI byte-identical unless mechanically required.
+Do not run commands or tests, use Git, mutate data/evidence, or write repository records.
+Stop once with all three path hashes and the final test-function count. Gate 2 remains not
+accepted and next ticket remains `NONE`.
 
 Governing documents:
 
@@ -210,6 +211,7 @@ Governing documents:
 - research/sprint_004/241_CEX002_V2_SIZING_VALIDATION_FAILURE_REVIEW.md
 - research/sprint_004/242_CEX002_V2_SIZING_CORRECTION_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/243_CEX002_V2_SIZING_CORRECTION_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/244_CEX002_V2_SIZING_IDEMPOTENCE_FAILURE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
