@@ -2,21 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete review 259 exactly
+Next required actor: Sr Dev - Claude Build - complete review 260 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer inspected Claude's first ADR-0027 drop once at sizing source
-SHA-256 `d3f6cf5b3eaf198dc8189bc70ec2c508d8369cfc2101e36e261424c7477efd5f`
+Immediate state: The reviewer inspected Claude's review-259 retry once at sizing source
+SHA-256 `d2fa39fff423fab629f56048fc002a68bc5d76f5c0d3355c3b047866d2f8df71`
 and sizing test SHA-256
-`b452e2f1b84fc3e4ab3ccaa42f91677010d124ef396a059a9da884a864ed4cf0`.
-The v3 versioning and broad dictionary structure are correct, but the drop is rejected on
-one consolidated accounting residual: dictionary bytes overlap the one-row anchor, other
-dictionary-bearing projections retain scalar per-row averages, fixed witness rows change
-file layout without recharging anchors, and the real reference scope does not distinguish
-detailed from funding-only versions. Review 259 authorizes Claude to finish those exact
-two files. Receipt 258 is absent; no commands, integration, acquisition, or later work are
-authorized. Next ticket remains `NONE`.
+`e896c2f0c8dca965c93714315e2ead0011d324cbc0dc1e8afcf8ec8b2e96aafb`.
+Anchor subtraction, regrouping, v3 identity, and the main detailed/funding split improved,
+but the drop is rejected on one complete-allocation residual: current-null and future
+validity overlap, Coinalyze still projects a complete payload per point, target-derived
+cardinality stops after one cohort and is not serialized, bundle cardinality/overhead are
+not row-group exact, remaining real scopes do not prove membership class, and the new
+tests contain an exact-model contradiction. Review 260 authorizes Claude to finish those
+exact two files in one correction. Receipt 258 is absent; no commands, integration,
+acquisition, or later work are authorized. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -229,6 +230,7 @@ Governing documents:
 - docs/adr/0027-partition-aware-dictionary-storage-sizing.md
 - research/sprint_004/257_CEX002_V2_CAPACITY_MODEL_REJECTION_AND_V3_ARCHITECTURE.md
 - research/sprint_004/259_CEX002_V3_DICTIONARY_SOURCE_RESIDUAL_REVIEW.md
+- research/sprint_004/260_CEX002_V3_COMPLETE_ALLOCATION_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
