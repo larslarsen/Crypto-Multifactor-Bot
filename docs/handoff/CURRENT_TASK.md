@@ -1,19 +1,21 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - review record 247 failed focused validation
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - one consolidated review-248 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Jr Dev - Hermes followed review 246 through exact-byte preproof, staged
-only the two accepted modified sizing paths, and ran the focused sizing pytest command
-with the two-pass real-authority receipt test deselected. The focused pytest command
-exited 1 with three failing tests, so Hermes stopped as required, ran no Ruff, ran no v2
-sizing CLI, produced no receipt 231, and performed no acquisition, network,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work.
-Review record 247 is published for reviewer inspection. Gate 2 remains not accepted. Next
-ticket remains `NONE`.
+Immediate bounded task for Sr Dev - Claude Build: follow review 248 once. Make the first
+successful publication return the exact canonical JSON-decoded receipt that was durably
+published, so first and valid rerun results are structurally identical. Correct the three
+fixed-schema fee component blocks to identify required product
+`binance_usdm_cost_calibration` and their own component names, and replace the stale blind
+key-equality assertion with explicit parent/component contract tests. Preserve every
+review-246 idempotence, wholeness, capacity, lineage, tamper, collision, no-follow, race,
+and v1 protection. Edit only the sizing source/test paths; leave the CLI byte-identical.
+Run no commands/tests/Git/data work and stop once with all three hashes plus test count.
+Gate 2 remains not accepted and next ticket remains `NONE`.
 
 Governing documents:
 
@@ -214,6 +216,7 @@ Governing documents:
 - research/sprint_004/245_CEX002_V2_STABLE_CAPACITY_RESIDUAL_REVIEW.md
 - research/sprint_004/246_CEX002_V2_SIZING_IDEMPOTENCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/247_CEX002_V2_SIZING_IDEMPOTENCE_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/248_CEX002_V2_RECEIPT_BOUNDARY_AND_COMPONENT_IDENTITY_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
