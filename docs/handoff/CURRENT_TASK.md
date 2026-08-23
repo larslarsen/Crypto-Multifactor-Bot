@@ -1,20 +1,18 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 272 and the focused validation failure
+State: IN_PROGRESS
+Next required actor: Sr Dev - Sol High - complete review 273 exact test ordering correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Hermes integrated Sol High's review-269 test-only correction at test
-SHA-256 `f67851a952bc5fdacf5a951344f119e0efd721d47974af0f6f1424449299777c`, frozen
-production/CLI identities, and 161 test functions. Review 271 authorizes Hermes for exact
-test integration, corrected focused pytest, Ruff, one real v3 sizing invocation, one
-identical idempotence invocation after success, record 272, receipt 258 only if valid, and
-the exact commit/push scope. The focused pytest failed with an `UnboundLocalError` in
-`test_the_v3_capacity_terms_reconcile_exactly`; per review 271, Hermes stopped before
-Ruff and sizing. Acquisition, normalization, catalog, NautilusTrader, Harmonic Trader,
-PAPER/LIVE, and later work remain unauthorized. Gate 2 remains not accepted. Next ticket
+Immediate state: The reviewer accepted record 272 as faithful execution. Focused pytest
+had exactly one failure: the capacity test reads its existing `liquidation` local before
+the assignment later in the same function. Review 273 routes the exact assignment move
+and duplicate removal to Sol High in the sizing test only. Production and CLI remain
+frozen. Hermes, commands, Git integration, receipt 258, sizing, acquisition,
+normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain
+unauthorized pending reviewer static acceptance. Gate 2 remains not accepted. Next ticket
 remains `NONE`.
 
 Governing documents:
@@ -240,6 +238,8 @@ Governing documents:
 - research/sprint_004/269_CEX002_V3_SPARK_CONTINUATION_REJECTION.md
 - research/sprint_004/270_CEX002_V3_SENIOR_AVAILABILITY_REROUTE.md
 - research/sprint_004/271_CEX002_V3_TEST_SOURCE_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/272_CEX002_V3_CORRECTED_SIZING_EXECUTION.md
+- research/sprint_004/273_CEX002_V3_CAPACITY_TEST_ORDERING_FAILURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
