@@ -1,16 +1,16 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 226
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - correct review 227's identity namespaces
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task: reviewer inspection of record 226. Hermes integrated the exact
-accepted sizing source/test, ran the focused 153-case suite and exact-path Ruff
-successfully, then ran the first corrected local sizing command and stopped after status 1.
-Do not retry, run the second idempotence invocation, repair, substitute an artifact,
-acquire data, or perform later work unless the reviewer authorizes it.
+Immediate bounded task for Sr Dev - Claude Build: follow review 227. Correct only the
+sizing production/test paths so retained Coinalyze provider identities are proved and
+mapped through the pinned future-market inventory to Binance-native supported/lifecycle
+identities. Make the fixture exercise both namespaces and add the bounded identity tests.
+Do not run commands, integrate, mutate data, edit records, use Git, or execute sizing.
 
 Governing documents:
 
@@ -188,6 +188,7 @@ Governing documents:
 - research/sprint_004/224_CEX002_COINALYZE_PROVENANCE_CORRECTION.md
 - research/sprint_004/225_CEX002_COINALYZE_PROVENANCE_SOURCE_ACCEPTANCE.md
 - research/sprint_004/226_CEX002_CORRECTED_SIZING_EXECUTION.md
+- research/sprint_004/227_CEX002_COINALYZE_IDENTITY_NAMESPACE_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2690,3 +2691,24 @@ totaling 1,890,921 bytes before failing; those data-evidence files were not stag
 store file count changed from 41,372 to 41,468 and the post-failure manifest SHA-256 is
 `361095f2be95d9efab91046b910f76cc514e8e2fc1a79e1d359ead2f13ddedb6`. Gate 2 remains
 unaccepted. Next ticket remains `NONE`.
+
+## Record-226 accepted and identity namespace correction authorized
+
+The reviewer accepted Hermes's record-226 integration, 153-case focused pass, Ruff pass,
+and required stop after the first sizing invocation exited 1. Commit
+`913bf4c10733fe31ed957b9a927b01db48700345` is published with exact scope. Receipt 180
+remains absent. The 96 content-addressed Binance sizing envelopes are valid ignored
+evidence and remain in place for verified reuse.
+
+The failure is an identity-namespace defect: the report's 569 supported symbols and all
+lifecycle keys are Binance-native, while the retained response correctly uses Coinalyze
+provider identities. The pinned future-market inventory and report anchor identity already
+provide the explicit provider/native mapping. The source compared the two namespaces
+directly because its fixture incorrectly used provider identities everywhere.
+
+Review 227 authorizes Claude to correct only sizing production/tests: prove the one-to-one
+inventory map, map retained provider symbols before native support/lifecycle checks, prove
+the anchor bindings, publish both identities explicitly, and make the fixture/tests model
+the real namespaces. Suffix stripping, count-only matching, integration, tests, sizing,
+network, data mutation, and later work are not authorized. Gate 2 remains unaccepted and
+next ticket remains `NONE`.
