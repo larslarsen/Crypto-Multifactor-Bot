@@ -2,15 +2,17 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - correct review 232
+Next required actor: Lead Quantitative Finance Researcher/Engineer - fee authority decision
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: correct review 232's four consolidated
-findings in the exact three sizing source/test/CLI paths. Preserve the accepted v2
-partition/capacity work, replace float/string normalization with exact typed products,
-bind real lineage, add the five-minute metrics ceiling, run no commands or Git, and stop
-once for reviewer inspection with hashes and the test count. Gate 2 remains blocked.
+Immediate bounded task for the Lead Quantitative Finance Researcher/Engineer: resolve the
+missing effective-fee source authority identified by review 233 and ADR-0025. Publish one
+evidence-backed decision: qualify a free reproducible effective-dated fee source, or prove
+the absence and amend the research contract explicitly. Do not authorize another sizing
+developer until the complete final-product/gap/lineage/cadence correction contract is
+pinned. Gate 1 is reopened only at this release-level fee boundary; all accepted
+archive/Coinalyze evidence remains valid. Gate 2 remains blocked.
 
 Governing documents:
 
@@ -194,6 +196,8 @@ Governing documents:
 - docs/adr/0024-typed-normalization-and-partition-atomic-publication.md
 - research/sprint_004/230_CEX002_STORAGE_ARCHITECTURE_CORRECTION.md
 - research/sprint_004/232_CEX002_TYPED_SIZING_SOURCE_REVIEW.md
+- docs/adr/0025-complete-product-sizing-and-fee-authority.md
+- research/sprint_004/233_CEX002_TYPED_SIZING_CORRECTION_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2810,3 +2814,28 @@ has no calendar row ceiling.
 Review 232 authorizes Claude for one consolidated correction in the same three paths.
 Claude runs no command or Git and stops once for reviewer inspection. Gate 2 remains
 blocked, acquisition unauthorized, and next ticket `NONE`.
+
+## ADR-0024 correction rejected and fee boundary reopened
+
+The reviewer inspected Claude's consolidated three-path correction once at production
+SHA-256 `a1772979f6ceb979424c865deeb00ad796377170942f1f15292cb4c4a4806866`,
+test SHA-256 `402429f7d12f76b0f818ace989a780a4b5fdfd6885027dc544a5e1a7e4a38e3e`,
+and unchanged CLI SHA-256
+`36740c926c32e4973bb31dcb570d3c69b89f9f343d52eb8aed3d33d359d7b23c`.
+The test file has 109 functions. No source, test, Ruff, sizing, qualification, or
+acceptance command was executed.
+
+Review 233 rejects integration. The source rejects the accepted report's intentional
+106-logical/96-physical sample aliases; exact-decimal conversion depends on a 28-digit
+ambient context despite its 38-digit contract; partition manifests still amortize one
+global footer and omit Coinalyze lineage; contribution schemas omit final derived and fee
+fields; gap sizing discards 8,317 accepted product-scoped gap records and counts only 202;
+funding is incorrectly capped at eight-hour cadence; and new Coinalyze test arithmetic
+contradicts the implementation.
+
+ADR-0025 preserves all accepted archive and Coinalyze evidence but reopens the
+release-level Gate-1 boundary because the required effective-fee source was never
+qualified and the FEE-001 table has zero rows. No developer is authorized. The reviewer
+must first qualify a free effective-dated fee authority or publish an explicit
+infeasibility/contract decision, then issue one complete correction contract. Gate 2 and
+bulk acquisition remain blocked. Next ticket remains `NONE`.
