@@ -2,17 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - fee authority decision
+Next required actor: Sr Dev - Grok Build - one complete ADR-0025/0026 sizing correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for the Lead Quantitative Finance Researcher/Engineer: resolve the
-missing effective-fee source authority identified by review 233 and ADR-0025. Publish one
-evidence-backed decision: qualify a free reproducible effective-dated fee source, or prove
-the absence and amend the research contract explicitly. Do not authorize another sizing
-developer until the complete final-product/gap/lineage/cadence correction contract is
-pinned. Gate 1 is reopened only at this release-level fee boundary; all accepted
-archive/Coinalyze evidence remains valid. Gate 2 remains blocked.
+Immediate bounded task for Sr Dev - Grok Build: follow review 234 once and edit only the
+sizing production, test, and CLI paths enumerated there. Deliver the complete correction
+for accepted alias folding, context-independent exact conversion, final-product schemas,
+partition-local manifests, full 9,088-row known gap authority, one-hour funding cadence,
+unit-correct Coinalyze projection, and the ADR-0026 non-backdated fee cost product. Do not
+run commands or tests, mutate evidence/data, use Git, or write repository records. Stop
+once with all three path hashes (mark an unchanged path) and the final test-function count.
+Gate 1's fee question is resolved as typed unavailable history; all accepted archive and
+Coinalyze evidence remains valid. Gate 2 remains blocked.
 
 Governing documents:
 
@@ -198,6 +200,8 @@ Governing documents:
 - research/sprint_004/232_CEX002_TYPED_SIZING_SOURCE_REVIEW.md
 - docs/adr/0025-complete-product-sizing-and-fee-authority.md
 - research/sprint_004/233_CEX002_TYPED_SIZING_CORRECTION_REVIEW.md
+- docs/adr/0026-non-backdated-fee-scenarios.md
+- research/sprint_004/234_CEX002_FEE_AUTHORITY_AND_FINAL_SIZING_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
