@@ -2,19 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - one consolidated review-244 correction
+Next required actor: Sr Dev - Claude Build - one residual review-245 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 244 once. Preserve the
-ADR-0024 six-component capacity equation and replace the invalid temporary-work ordering
-assertion. Correct the single prior-receipt idempotence defect behind all three rerun
-collisions by making the stable comparison explicit and deterministic while preserving
-canonical-byte, internal-wholeness, tamper, symlink, race, and collision refusal. Edit only
-the sizing source/test paths; leave the CLI byte-identical unless mechanically required.
-Do not run commands or tests, use Git, mutate data/evidence, or write repository records.
-Stop once with all three path hashes and the final test-function count. Gate 2 remains not
-accepted and next ticket remains `NONE`.
+Immediate bounded task for Sr Dev - Claude Build: follow review 245 once. Preserve the
+review-244 drop in place. Move only fixed `capacity.equation` from the volatile capacity
+set into the stable capacity comparison and make the focused test prove a changed value
+names `capacity.equation`; leave only the observed reserve and derived total volatile.
+Edit only the sizing source/test paths and leave the CLI byte-identical. Do not run
+commands or tests, use Git, mutate data/evidence, or write repository records. Stop once
+with all three path hashes and the final test-function count. Gate 2 remains not accepted
+and next ticket remains `NONE`.
 
 Governing documents:
 
@@ -212,6 +211,7 @@ Governing documents:
 - research/sprint_004/242_CEX002_V2_SIZING_CORRECTION_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/243_CEX002_V2_SIZING_CORRECTION_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/244_CEX002_V2_SIZING_IDEMPOTENCE_FAILURE_REVIEW.md
+- research/sprint_004/245_CEX002_V2_STABLE_CAPACITY_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
