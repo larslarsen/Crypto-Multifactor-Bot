@@ -2,25 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - complete review 261 exactly
+Next required actor: Implementation Dev - Codex Spark - complete review 262 exactly
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer waited for Claude's review-260 drop to stabilize and then
-inspected it once at sizing source SHA-256
-`9c85bc1ae8bf7c79784d44b8fc3b13a3c36cb350fe1a02ea89bcd597764b99b0`
-and sizing test SHA-256
-`6412b99a2df9b3c8eb30486ed29e1ac3f401867847d2c3e03bfa88e88106e5a7`.
-The CLI remains byte-identical and the test file has 157 functions. Review 260's
-Coinalyze scalar, derived-domain, exact-bundle, and membership-class corrections are
-accepted as the implementation base. The drop is rejected on one final disjoint-layout
-residual: reference/current-null ownership differs by layout, future Coinalyze lineage
-counters duplicate current validity, Coinalyze identity anchors cover only two retained
-identities rather than all 569 accepted mappings, shared-current identity facts disappear
-from the receipt, and exact/future largest-partition charges either re-ceil or duplicate
-and omit row-group terms. Review 261 consolidates the exact source/test correction.
-Receipt 258 is absent; no commands, integration, acquisition, or later work are
-authorized. Next ticket remains `NONE`.
+Immediate state: Edit only the sizing source and sizing test in review 262. Preserve the
+current drop. Fix six literal items: separate 12 shared index bytes, 2 current-null bytes,
+14 current total, and 8 future index bytes; make empty reference scopes cardinality zero;
+remove validity from the largest-lineage counter charge; measure and allocate the shared
+current identity/null page anchor per row group; instantiate its full ledger with each
+product's actual rows/groups/totals; and make rule text plus production-path Coinalyze and
+reconciliation tests match those equations. Do not run commands or Git. Stop with the two
+hashes, unchanged CLI hash, and test count. Receipt 258, Hermes, integration, execution,
+acquisition, and later work remain unauthorized. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -235,9 +229,15 @@ Governing documents:
 - research/sprint_004/259_CEX002_V3_DICTIONARY_SOURCE_RESIDUAL_REVIEW.md
 - research/sprint_004/260_CEX002_V3_COMPLETE_ALLOCATION_RESIDUAL_REVIEW.md
 - research/sprint_004/261_CEX002_V3_DISJOINT_LAYOUT_FINAL_SOURCE_REVIEW.md
+- research/sprint_004/262_CEX002_V3_LITERAL_ALLOCATION_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
+
+Review 262 is the active bounded correction. Its six equations are implementation of the
+accepted ADR-0027 allocation and require no architecture decision. Spark may edit only the
+two sizing source paths, runs no command or Git, leaves the CLI unchanged, and stops once
+with hashes and test count. No other actor or work is authorized.
 
 The destination is the complete real data needed by the original Harmonic Trader
 geometry-plus-derivatives thesis before model development. CEX-002 acquires every
