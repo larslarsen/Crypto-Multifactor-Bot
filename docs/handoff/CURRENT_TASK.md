@@ -2,17 +2,16 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - mechanical review-252 typed-source drop
+Next required actor: Implementation Dev - Codex Spark - test-only review-253 residual
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Implementation Dev - Codex Spark: implement review 252 once.
-Change the book-depth timestamp source dispatch to the existing exact UTC-text converter;
-make exactly the four named metrics ratios nullable; map empty tokens to `None` only for
-explicitly nullable source columns; update the realistic fixture and add the exact focused
-regression tests. All financial/source semantics are already decided in review 251; make
-no new decision. Preserve every review-249 protection. Edit only the sizing source/test
-paths, leave the CLI byte-identical, run no commands/tests/Git/data work, and stop once
+Immediate bounded task for Implementation Dev - Codex Spark: implement review 253 once in
+the sizing test file only. Preserve the accepted sizing source and CLI byte-for-byte.
+Restore the removed invalid-decimal/redaction proof, then complete the retained-style
+book-depth timestamp and mixed nullable-metrics tests, including exact types/values, row
+retention, invalid nonempty nullable-ratio rejection, and missing required OI rejection.
+Make no production or semantic change. Run no commands/tests/Git/data work and stop once
 with all three hashes plus test count. Gate 2 remains not accepted and next ticket remains
 `NONE`.
 
@@ -220,6 +219,7 @@ Governing documents:
 - research/sprint_004/250_CEX002_V2_SIZING_FINAL_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/251_CEX002_REAL_TYPED_SOURCE_SEMANTICS_REVIEW.md
 - research/sprint_004/252_CEX002_TYPED_SOURCE_IMPLEMENTATION_ROUTING.md
+- research/sprint_004/253_CEX002_TYPED_SOURCE_TEST_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
