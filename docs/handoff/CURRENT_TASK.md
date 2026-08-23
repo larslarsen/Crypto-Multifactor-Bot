@@ -2,18 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - one complete review-236 residual correction
+Next required actor: Sr Dev - Codex Sol High - one complete review-237 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Claude Build: follow review 236 once and edit only its
-three enumerated sizing production, test, and CLI paths. Work from the current shared drop
-in place; do not reset, restore, checkout, discard, or wholesale replace it. Preserve the
-accepted corrections and close all six residual findings plus all ten test requirements as
-one complete drop. Do not run commands or tests, mutate evidence/data, use Git, or write
+Immediate bounded task for Sr Dev - Codex Sol High: follow review 237 once and edit only
+its three enumerated sizing production, test, and CLI paths. Work from the current shared
+drop in place; do not reset, restore, checkout, discard, or wholesale replace it. Preserve
+the accepted corrections, make all 771 real memberships executable without invented
+terms, remove the flattened cost path, build lineage/bundles from every projected
+partition, and charge all rows and future-width fields exactly once. Repair the stale tests
+in the same drop. Do not run commands or tests, mutate evidence/data, use Git, or write
 repository records. Stop once with all three path hashes (mark an unchanged path) and the
-final test-function count. Grok Build remains unavailable and deauthorized. Gate 1's fee
-question is resolved; Gate 2 remains blocked.
+final test-function count. Claude and Grok are on cooldown and deauthorized. Gate 2 remains
+blocked.
 
 Governing documents:
 
@@ -203,6 +205,7 @@ Governing documents:
 - research/sprint_004/234_CEX002_FEE_AUTHORITY_AND_FINAL_SIZING_CORRECTION.md
 - research/sprint_004/235_CEX002_CLAUDE_SIZING_REASSIGNMENT.md
 - research/sprint_004/236_CEX002_CLAUDE_COMPLETE_SIZING_DROP_REVIEW.md
+- research/sprint_004/237_CEX002_SOL_FINAL_SIZING_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
