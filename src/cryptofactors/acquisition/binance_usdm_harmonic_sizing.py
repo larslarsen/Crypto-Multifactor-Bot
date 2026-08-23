@@ -3106,9 +3106,14 @@ def build_retained_archive_bindings(
             "a credited checkpoint binding has no hash authority",
             local,
         )
-        _exact(
+        # ADR-0023 keeps two distinct byte facts. The checkpoint value is the real
+        # retained content-addressed object length, already rehashed against the bytes
+        # on disk by prove_retained_acquisition_credit. PhysicalObject.byte_size is the
+        # complete acquisition-requirement listing size. A retained cost witness is
+        # routinely smaller than the full object it evidences, so equality here would be
+        # false authority rather than a safety check.
+        retained_byte_size = _positive_int(
             _optional_int(entry.get("byte_size")),
-            source.byte_size,
             field_name="credited_checkpoint.byte_size",
             context=local,
         )
@@ -3121,9 +3126,12 @@ def build_retained_archive_bindings(
                 field_name="credited_sample.source_sha256",
                 context=local,
             )
+            # The accepted report sample records the same retained object, so it is
+            # compared to the checkpoint's retained length, never to the requirement
+            # listing size.
             _exact(
                 _optional_int(sample.get("byte_size")),
-                source.byte_size,
+                retained_byte_size,
                 field_name="credited_sample.byte_size",
                 context=local,
             )
@@ -3158,6 +3166,9 @@ def build_retained_archive_bindings(
             "retrieval_time": retrieval_time,
             "availability_semantics": availability,
             "source_available_at": source_available_at,
+            # Both byte facts stay exact and separately named.
+            "retained_byte_size": retained_byte_size,
+            "requirement_byte_size": source.byte_size,
         }
     _exact(
         set(bindings),

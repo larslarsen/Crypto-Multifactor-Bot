@@ -1584,7 +1584,9 @@ def test_the_required_product_contract_is_complete_and_named_by_the_ticket() -> 
         "binance_usdm_harmonic_bundle",
     }
     for family in PHYSICAL_FAMILIES:
-        declared = set(_TOKENS[_hint(family)])
+        # The declared fields of a family are its known schema's field names. The
+        # fixture token tuples are row *values* and are never field names.
+        declared = set(KNOWN_ARCHIVE_SCHEMAS[_hint(family)]["headerless"])
         reached: set[str] = set()
         for item in contributions_for_family(family):
             reached |= set(item.source_fields())
@@ -1597,15 +1599,16 @@ def test_the_required_product_contract_is_complete_and_named_by_the_ticket() -> 
     assert {item.component for item in bar} == {"daily_klines", "monthly_klines"}
     # Premium index klines contribute to indicative funding and to basis, never to a
     # taker-flow product.
-    premium = [
-        item.product
-        for item in contributions_for_family("daily/premiumIndexKlines")
-    ]
+    premium_contributions = list(contributions_for_family("daily/premiumIndexKlines"))
+    premium = [item.product for item in premium_contributions]
     assert set(premium) == {
         "binance_usdm_funding_indicative_1h",
         "binance_usdm_mark_index_basis_1h",
     }
-    assert not any("taker_flow" in item.name for item in sizing.PRODUCT_CONTRIBUTIONS)
+    # Scoped to the premium-index set just built. The whole contribution table
+    # necessarily contains the required trade-flow product, so asserting over it
+    # would test the opposite of the intended statement.
+    assert not any("taker_flow" in item.name for item in premium_contributions)
     # Trade flow keeps the totals as well as the taker-buy side.
     flow_fields = {
         column.source_field
@@ -1617,9 +1620,13 @@ def test_the_required_product_contract_is_complete_and_named_by_the_ticket() -> 
     )
     # The cost product keeps every field of every row.
     ticker = contribution("binance_usdm_cost_calibration:daily_book_ticker")
-    assert set(ticker.source_fields()) == set(_TOKENS["bookTicker"])
+    assert set(ticker.source_fields()) == set(
+        KNOWN_ARCHIVE_SCHEMAS["bookTicker"]["headerless"]
+    )
     depth = contribution("binance_usdm_cost_calibration:daily_book_depth")
-    assert set(depth.source_fields()) == set(_TOKENS["bookDepth"])
+    assert set(depth.source_fields()) == set(
+        KNOWN_ARCHIVE_SCHEMAS["bookDepth"]["headerless"]
+    )
     # Compact lineage: a partition-local reference, never a repeated source key string.
     assert [column.name for column in ticker.columns][:3] == [
         "raw_object_ref", "source_row_ordinal", "venue_symbol"
@@ -1951,22 +1958,25 @@ def test_partition_manifest_mappings_are_counted_per_product_partition() -> None
         lineage=_lineage_model(payload=7),
     )
     # A kline object feeds two required products, so it is mapped in both partitions.
+    # The complete one-object-per-family fixture carries both a daily and a monthly
+    # kline object, so each kline-fed product maps two raw objects, not one.
     bar = next(item for item in projections if item.product == "binance_usdm_bar_1h")
     flow = next(
         item for item in projections if item.product == "binance_usdm_trade_flow_1h"
     )
-    assert bar.manifest_mappings == 1
-    assert flow.manifest_mappings == 1
-    assert bar.projected_manifest_bytes == 7
-    assert flow.projected_manifest_bytes == 7
-    # Mark/index basis is fed by three families, so its one partition maps three objects.
+    assert bar.manifest_mappings == 2
+    assert flow.manifest_mappings == 2
+    assert bar.projected_manifest_bytes == 14
+    assert flow.projected_manifest_bytes == 14
+    # Mark/index basis is fed by mark, index, and premium klines in both daily and
+    # monthly packaging, so its one partition maps six raw objects.
     basis = next(
         item for item in projections if item.product == "binance_usdm_mark_index_basis_1h"
     )
-    assert basis.manifest_mappings == 3
-    assert basis.projected_manifest_bytes == 21
+    assert basis.manifest_mappings == 6
+    assert basis.projected_manifest_bytes == 42
     # Mark, index, and premium contribute bytes independently but publish one aligned
-    # target grid. The monthly 744-hour ceiling wins; six input components do not sum.
+    # target grid. The monthly 744-hour ceiling wins; the input components do not sum.
     assert basis.partition_rows == (744,)
     assert basis.projected_rows == 744
     assert sizing.quality_gap_reservation(basis.partition_rows[0]) == 372
@@ -3220,7 +3230,8 @@ def test_a_failed_conversion_blocks_the_whole_envelope(tmp_path: Path) -> None:
     body = b"1577836800000,1.0,2.0,0.5,not-a-number,10,1577840399999,15.0,7,4.0,6.0,0\n"
     payload = _zip("data.csv", body)
     destination = tmp_path / "typed.parquet"
-    with pytest.raises(SizingError, match="not a number") as failure:
+    # The pinned converter contract, not the obsolete wording.
+    with pytest.raises(SizingError, match="not a decimal lexeme") as failure:
         measure_typed_envelope(
             _cohort_sample(),
             payload=payload,
@@ -3313,7 +3324,9 @@ def test_no_cost_row_field_or_sample_is_reduced(
         )
         assert measured.rows == rows
         assert measured.source_rows == rows
-        assert set(output.source_fields()) == set(_TOKENS[_hint(family)])
+        assert set(output.source_fields()) == set(
+            KNOWN_ARCHIVE_SCHEMAS[_hint(family)]["headerless"]
+        )
     measurements = {item["contribution"] for item in receipt["measurements"]}
     assert {
         "binance_usdm_cost_calibration:daily_book_ticker",
@@ -3491,6 +3504,22 @@ def test_integer_calendar_timestamps_including_pre_epoch(
     assert ".timestamp()" not in source
 
 
+# Fields every product row carries by construction, so they are charged once per
+# product row and necessarily recur across product schemas. They are identity and
+# index labels, never product-specific derived fields.
+_SHARED_SCHEMA_FIELDS: frozenset[str] = frozenset(
+    {
+        "venue",
+        "native_symbol",
+        "canonical_instrument_id",
+        "canonical_instrument_version_id",
+        "reference_identity_state",
+        # The cross-product index label declared by both index products.
+        "required_product",
+    }
+)
+
+
 def test_final_product_schemas_are_complete_and_target_only_fields_are_allocated_once(
 ) -> None:
     allocated: dict[str, str] = {}
@@ -3503,9 +3532,12 @@ def test_final_product_schemas_are_complete_and_target_only_fields_are_allocated
         columns = sizing.final_product_columns(product)
         assert columns
         names = [column.name for column in columns]
+        # Within one schema every field name is still allocated exactly once.
         assert len(set(names)) == len(names)
         for column in sizing.target_only_columns(product):
-            # A target-only field belongs to exactly one product.
+            if column.name in _SHARED_SCHEMA_FIELDS:
+                continue
+            # A product-specific target-only field belongs to exactly one product.
             assert column.name not in allocated or allocated[column.name] == product
             allocated.setdefault(column.name, product)
         for field in sizing.final_product_schema(product):
@@ -3952,6 +3984,98 @@ def test_archive_lineage_retention_joins_only_to_the_disjoint_credit_set() -> No
             objects=objects,
             retained_credit_keys=credit["keys"],
         )
+
+
+def test_a_credited_retained_object_may_be_smaller_than_its_requirement_listing() -> None:
+    """ADR-0023 keeps two byte facts apart, and both stay exact.
+
+    The credited checkpoint value is the real retained content-addressed object length
+    already rehashed against the bytes on disk. `PhysicalObject.byte_size` is the
+    complete acquisition-requirement listing size. A retained cost witness is routinely
+    the smaller of the two, so equality would be false authority rather than a check.
+    """
+    requirement_bytes = 2_072
+    retained_bytes = 145
+    objects = _one_object_per_family(requirement_bytes)
+    credited = objects[-1]
+    assert credited.byte_size == requirement_bytes != retained_bytes
+    checkpoint = {
+        credited.key: {
+            "status": "complete",
+            "sha256": "a" * 64,
+            "byte_size": retained_bytes,
+            "provider_checksum_sha256": "b" * 64,
+            "retrieval_time": "2026-08-21T00:00:00+00:00",
+        }
+    }
+    credit = {
+        "keys": [credited.key],
+        "valid_requirement_keys": 1,
+        "key_set_sha256": sizing.requirement_key_set_sha256([credited.key]),
+    }
+    sample = {
+        "source_key": credited.key,
+        "source_sha256": "a" * 64,
+        # The accepted report sample records the same retained object, so it carries
+        # the retained length, never the requirement listing size.
+        "byte_size": retained_bytes,
+        "family": credited.family,
+        "checksum_authority": "b" * 64,
+        "retrieval_time": "2026-08-21T00:00:00+00:00",
+        "availability_semantics": "source_object_listing_time_unknown",
+        "source_available_at": None,
+    }
+    bindings = sizing.build_retained_archive_bindings(
+        credit=credit,
+        checkpoint=checkpoint,
+        objects=objects,
+        sample_bindings={credited.key: sample},
+    )
+    bound = bindings[credited.key]
+    # Both facts survive, separately named and independently correct.
+    assert bound["retained_byte_size"] == retained_bytes
+    assert bound["requirement_byte_size"] == requirement_bytes
+    assert bound["source_sha256"] == "a" * 64
+    assert bound["checksum_authority"] == "b" * 64
+    # Neither value is derived from the other by subtraction or relabelling.
+    assert bound["retained_byte_size"] != bound["requirement_byte_size"]
+    # The projected manifest keeps serializing the requirement listing size.
+    partitions = sizing.build_partition_lineage(
+        bindings,
+        objects=objects,
+        retained_credit_keys=credit["keys"],
+    )
+    mapped = [
+        row
+        for mappings in partitions.values()
+        for row in mappings
+        if row["source_key"] == credited.key
+    ]
+    assert mapped
+    assert {row["requirement_byte_size"] for row in mapped} == {requirement_bytes}
+    assert {row["source_state"] for row in mapped} == {sizing.RETAINED_RECEIPT_STATE}
+    # A sample binding claiming the requirement listing size instead of the real
+    # retained length is still rejected by name.
+    with pytest.raises(SizingError, match="credited_sample.byte_size"):
+        sizing.build_retained_archive_bindings(
+            credit=credit,
+            checkpoint=checkpoint,
+            objects=objects,
+            sample_bindings={
+                credited.key: {**sample, "byte_size": requirement_bytes}
+            },
+        )
+    # A retained length that is absent or not a positive integer still blocks.
+    for damaged in (0, -1, None, "145"):
+        with pytest.raises(SizingError, match="credited_checkpoint.byte_size"):
+            sizing.build_retained_archive_bindings(
+                credit=credit,
+                checkpoint={
+                    credited.key: {**checkpoint[credited.key], "byte_size": damaged}
+                },
+                objects=objects,
+                sample_bindings={credited.key: sample},
+            )
 
 
 def test_lineage_overhead_is_charged_once_per_partition(tmp_path: Path) -> None:
@@ -4462,7 +4586,8 @@ def test_the_coverage_authority_starts_from_the_full_accepted_matrix(
         len(row["typed_gap_symbols"]) for row in matrix
     )
     # Fee gaps are one per accepted membership identity, and are a separate count.
-    assert counts["fee_authority_gaps"] == 3
+    # The fixture's complete accepted membership governs, never a stale literal.
+    assert counts["fee_authority_gaps"] == len(accepted["accepted_membership"])
     assert counts["known_coverage_rows"] == (
         counts["accepted_source_coverage_gaps"] + counts["fee_authority_gaps"]
     )
@@ -4607,7 +4732,9 @@ def test_real_lineage_is_bound_and_unknowns_stay_unknown(
     ("damage", "message"),
     [
         ("missing_record", "no accepted report sample record"),
-        ("duplicate_record", "repeats a sample record key"),
+        # An additional identical alias is legitimately folded by the binder; the
+        # accepted 106/96/10 decomposition is the authority that rejects it.
+        ("duplicate_record", "lineage.logical_records"),
         ("substituted_digest", "report_sample.sha256"),
         ("substituted_size", "report_sample.byte_size"),
         ("substituted_family", "report_sample.family"),
@@ -4624,7 +4751,18 @@ def test_damaged_lineage_bindings_block(
     report = json.loads(accepted["files"]["report"].read_text())
     keys = {item.key for item in cohort}
     records = [dict(item) for item in report["samples"]]
-    target = next(item for item in records if item["key"] in keys)
+    record_count: dict[str, int] = {}
+    for item in records:
+        record_count[str(item["key"])] = record_count.get(str(item["key"]), 0) + 1
+    # A cohort key carrying exactly one report sample record. A key that legitimately
+    # appears in two sample regimes would disagree with its own alias first, so the
+    # intended checkpoint mismatch would never be reached.
+    target = next(
+        item
+        for item in records
+        if item["key"] in keys and record_count[str(item["key"])] == 1
+    )
+    assert target["key"] not in accepted["alias_keys"]
     if damage == "missing_record":
         records = [item for item in records if item["key"] != target["key"]]
     elif damage == "duplicate_record":
@@ -4634,7 +4772,9 @@ def test_damaged_lineage_bindings_block(
     elif damage == "substituted_size":
         target["byte_size"] = int(target["byte_size"]) + 1
     elif damage == "substituted_family":
-        target["family"] = "monthly/indexPriceKlines"
+        target["family"] = next(
+            family for family in PHYSICAL_FAMILIES if family != target["family"]
+        )
     elif damage == "missing_semantics":
         target["availability_semantics"] = ""
     else:
@@ -4644,6 +4784,13 @@ def test_damaged_lineage_bindings_block(
         target["retrieval_time"] = "2026-08-21T00:00:00+00:00"
         checkpoint[target["key"]] = entry
     report["samples"] = records
+    if damage == "duplicate_record":
+        # The binder folds the identical alias; the pinned decomposition blocks the
+        # extra logical record before anything is measured or published.
+        lineage = bind_sample_lineage(report, checkpoint=checkpoint, cohort=cohort)
+        with pytest.raises(SizingError, match=message):
+            sizing.prove_accepted_lineage_decomposition(lineage["decomposition"])
+        return
     with pytest.raises(SizingError, match=message):
         bind_sample_lineage(report, checkpoint=checkpoint, cohort=cohort)
 
