@@ -1,16 +1,16 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 223
+State: IN_PROGRESS
+Next required actor: Sr Dev - Claude Build - correct review 224's provenance validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task: reviewer inspection of record 223. Hermes integrated the accepted
-sizing production/test bytes, ran review 222's first exact local sizing invocation, and
-stopped after status 1. Do not retry, run the second idempotence invocation, repair,
-substitute an artifact, acquire data, or perform later work unless the reviewer authorizes
-it.
+Immediate bounded task for Sr Dev - Claude Build: follow review 224. Correct the accepted
+sizing source and test fixture so safe header-name-only Coinalyze provenance is validated
+against its exact real shape while query credentials, header values, unknown fields, and
+secret-bearing error surfaces remain fail-closed. Edit only the two authorized paths; do
+not run commands, integrate, edit records, use Git, or execute sizing. Stop with hashes.
 
 Governing documents:
 
@@ -185,6 +185,7 @@ Governing documents:
 - research/sprint_004/221_CEX002_REAL_AUTHORITY_DECOMPOSITION_REVIEW.md
 - research/sprint_004/222_CEX002_SIZING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/223_CEX002_SIZING_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/224_CEX002_COINALYZE_PROVENANCE_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
@@ -2624,3 +2625,23 @@ No sizing receipt or envelope file was produced. The complete `data/cex002_quali
 manifest remained identical before and after the failed invocation: 41,372 files and
 manifest SHA-256 `f2522d5a3f3152880d42e4e85ead2e5ae64c6d635293ad2ef35c3437025d4ead`.
 Gate 2 remains unaccepted. Next ticket remains `NONE`.
+
+## Record-223 acceptance and focused provenance correction
+
+The reviewer accepted Hermes's record-223 integration and stop. Commit
+`005f4ee6154725ae7de0acc57e11a8acf702670b` contains exactly the authorized five paths,
+is published at `origin/main`, and left the 41,372-file evidence store unchanged. Receipt
+180 and the sizing-envelope tree remain absent.
+
+The sizing failure is a source conformance defect. The accepted report safely records
+`header_names: ["api_key"]` without a header value, proves header-only authentication, and
+contains no credential query parameter. The sizing source incorrectly rejects the mere
+presence of that header name because it searches a serialized record for the substring
+`api_key`; its synthetic success fixture omitted the real header-name field.
+
+Review 224 authorizes Sr Dev - Claude Build to correct only the sizing production and test
+paths. The correction must validate the exact real provenance schema, permit only the
+safe `api_key` header name, reject query credentials/header values/unknown fields without
+echoing values, preserve every other sizing authority check, and stop for reviewer source
+inspection. No integration, tests, sizing execution, data mutation, or later work is
+authorized. Gate 2 remains unaccepted and next ticket remains `NONE`.
