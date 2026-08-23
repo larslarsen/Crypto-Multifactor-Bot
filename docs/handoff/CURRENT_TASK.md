@@ -2,20 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Codex Sol High - one complete review-237 correction
+Next required actor: Sr Dev - Codex Sol High - one residual review-238 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Sr Dev - Codex Sol High: follow review 237 once and edit only
-its three enumerated sizing production, test, and CLI paths. Work from the current shared
-drop in place; do not reset, restore, checkout, discard, or wholesale replace it. Preserve
-the accepted corrections, make all 771 real memberships executable without invented
-terms, remove the flattened cost path, build lineage/bundles from every projected
-partition, and charge all rows and future-width fields exactly once. Repair the stale tests
-in the same drop. Do not run commands or tests, mutate evidence/data, use Git, or write
-repository records. Stop once with all three path hashes (mark an unchanged path) and the
-final test-function count. Claude and Grok are on cooldown and deauthorized. Gate 2 remains
-blocked.
+Immediate bounded task for Sr Dev - Codex Sol High: follow review 238 once and edit only
+its enumerated sizing source/test paths, leaving the CLI byte-identical unless mechanically
+required. Work from the current shared drop in place; do not reset, restore, checkout,
+discard, or wholesale replace it. Preserve every accepted review-237 correction. Make
+archive retained lineage an exact fail-closed join to the 73 re-proved Gate-2 credit keys,
+never the 96-object coefficient cohort; publish and reconcile the exact retained-key count
+and digest; and replace the arbitrary-witness test with synthetic disjoint-set and real
+73-key receipt assertions. Do not run commands or tests, mutate evidence/data, use Git, or
+write repository records. Stop once with all three path hashes (mark unchanged paths) and
+the final test-function count. Claude is available again, but Sol retains the complete
+current context and is the sole authorized actor for this bounded residual; Claude and
+Grok are deauthorized. Gate 2 remains blocked.
 
 Governing documents:
 
@@ -206,6 +208,7 @@ Governing documents:
 - research/sprint_004/235_CEX002_CLAUDE_SIZING_REASSIGNMENT.md
 - research/sprint_004/236_CEX002_CLAUDE_COMPLETE_SIZING_DROP_REVIEW.md
 - research/sprint_004/237_CEX002_SOL_FINAL_SIZING_CORRECTION.md
+- research/sprint_004/238_CEX002_RETAINED_LINEAGE_AUTHORITY_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
