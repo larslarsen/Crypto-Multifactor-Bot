@@ -2,18 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - test-only review-253 residual
+Next required actor: Sr Dev - Claude Build - final test-only review-254 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate bounded task for Implementation Dev - Codex Spark: implement review 253 once in
-the sizing test file only. Preserve the accepted sizing source and CLI byte-for-byte.
-Restore the removed invalid-decimal/redaction proof, then complete the retained-style
-book-depth timestamp and mixed nullable-metrics tests, including exact types/values, row
-retention, invalid nonempty nullable-ratio rejection, and missing required OI rejection.
-Make no production or semantic change. Run no commands/tests/Git/data work and stop once
-with all three hashes plus test count. Gate 2 remains not accepted and next ticket remains
-`NONE`.
+Immediate bounded task for Sr Dev - Claude Build: implement review 254 once in the sizing
+test file only. Preserve the accepted sizing source and CLI byte-for-byte. Repair the
+malformed metrics fixture and prove one four-row mixed present/null table with exact Arrow
+types and exact values; complete the two-row timestamp type/value/retention proof and all
+structural/redaction failure assertions. Preserve the restored invalid-decimal test and
+all unrelated tests. Make no production or semantic change. Run no commands/tests/Git/data
+work and stop once with all three hashes plus test count. Gate 2 remains not accepted and
+next ticket remains `NONE`.
 
 Governing documents:
 
@@ -220,6 +220,7 @@ Governing documents:
 - research/sprint_004/251_CEX002_REAL_TYPED_SOURCE_SEMANTICS_REVIEW.md
 - research/sprint_004/252_CEX002_TYPED_SOURCE_IMPLEMENTATION_ROUTING.md
 - research/sprint_004/253_CEX002_TYPED_SOURCE_TEST_RESIDUAL_REVIEW.md
+- research/sprint_004/254_CEX002_CLAUDE_TYPED_SOURCE_TEST_CORRECTION.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
