@@ -1,19 +1,19 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 276 and execute corrected v3 sizing gate
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 277 and receipt 258
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer accepted Sol High's exact ordering correction at test
-SHA-256 `3b5acf85c5ee5aab891f9b9622e3cc7e86e0c2df2b630812f6f26e9bce20580a`, frozen
-production/CLI hashes, and 161 functions after the review-275 targeted capacity test
-passed once with exit 0. Review 276 authorizes Hermes for exact integration, full focused
-pytest, Ruff, one real v3 sizing invocation, one identical idempotence invocation after
-success, record 277, receipt 258 only if valid, and exact publication. Acquisition,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain
-unauthorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
+Immediate state: Review 276's accepted production/test/CLI identities were integrated.
+The authorized focused pytest and Ruff gates passed. The v3 sizing command passed twice:
+the first run published 153 envelopes and the identical second run reused all 153 with
+zero new envelopes. Receipt 258 is byte-identical across both runs, with storage state
+`blocked` and blocker `available_capacity_insufficient`; Gate 2 remains not accepted.
+Record 277 is complete and awaiting reviewer inspection. Acquisition, normalization,
+catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain unauthorized.
+Next ticket remains `NONE`.
 
 Governing documents:
 

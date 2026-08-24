@@ -6269,6 +6269,7 @@ def test_the_v3_capacity_terms_reconcile_exactly(
     )
     assert "never in this future charge" in inputs["shared_current_identity_excluded"]
     # Review 261 finding 2: the Coinalyze identity domain is every accepted mapping.
+    liquidation = receipt["coinalyze"]["allocation"]
     domain = liquidation["identity_domain"]
     assert domain["accepted_mappings"] >= domain["retained_series"]
     assert domain["accepted_maximum_native_symbol_bytes"] > 0
@@ -6322,7 +6323,6 @@ def test_the_v3_capacity_terms_reconcile_exactly(
     assert "measured_projected_layout" in models
     assert "row_group_anchor_plus_incremental_rows" in models
     # Coinalyze no longer multiplies a complete measured payload by every point.
-    liquidation = receipt["coinalyze"]["allocation"]
     assert liquidation["model"] == "row_group_anchor_plus_incremental_rows"
     assert (
         liquidation["anchor_bytes"]
