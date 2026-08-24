@@ -2,20 +2,23 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Sol High - complete review 279 capacity-attestation correction
+Next required actor: Sr Dev - Sol High - complete review 280 attestation residual correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer rejected Sol High's first ADR-0028 three-path drop at source
-SHA-256 `845c495ff19b423ac40dbc192ae75babdda33b22ff301e367e5e910cec64adb9`, CLI
-SHA-256 `e5195b967d83f3f1ab336f342c512ce375e80dbc66f67cb754acc2b86244ead5`, test
-SHA-256 `529c6d1d121178323d84c5ada4c6875bec98828e899b641bd72bfccab10a5c98`,
-and 10 tests. Review 279 preserves its correct basis/arithmetic and requires complete
-durable-attestation revalidation, the full v3 stable receipt identity, actual receipt-file
-device binding, final no-replace/post-publication proof, and end-to-end tests. Sol may run
-the single targeted test file once. No integration, cleanup, real attestation,
-acquisition, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or later
-work is authorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
+Immediate state: Sol High's review-279 correction closes the five first-drop findings at
+source SHA-256 `aba19bf82d1c56960119b8fc1587585f3d951655cedd9b164f1d3504b9e6b6a6`, unchanged
+CLI SHA-256 `e5195b967d83f3f1ab336f342c512ce375e80dbc66f67cb754acc2b86244ead5`, test
+SHA-256 `46842f00517a40c96d274d2ce712a7c4a27127b2c45c8304ff75122c9bdf3516`, and 13 tests,
+but review 280 rejects two fail-closed residuals. The live sizing function defining the
+accepted projection is not authenticated, and post-publication rollback suppresses an
+`OSError` that can leave the requested evidence path behind. Sol must replace the live
+projection dependency with a byte-equivalent local accepted boundary, make rollback
+failure explicit while removing the authoritative output path before staging cleanup,
+and add the three focused proofs. Sol may run the single targeted test file once. No
+integration, cleanup, real attestation, acquisition, normalization, catalog,
+NautilusTrader, Harmonic Trader, PAPER/LIVE, or later work is authorized. Gate 2 remains
+not accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -249,6 +252,7 @@ Governing documents:
 - research/sprint_004/277_CEX002_V3_ORDERING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/278_CEX002_V3_BLOCKED_MEASUREMENT_AND_CAPACITY_ATTESTATION_ARCHITECTURE.md
 - research/sprint_004/279_CEX002_CAPACITY_ATTESTATION_SOURCE_REVIEW.md
+- research/sprint_004/280_CEX002_CAPACITY_ATTESTATION_RESIDUAL_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
