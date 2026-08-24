@@ -1,19 +1,22 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 277 and receipt 258
+State: IN_PROGRESS
+Next required actor: Sr Dev - Sol High - implement ADR-0028 capacity attestation under review 278
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 276's accepted production/test/CLI identities were integrated.
-The authorized focused pytest and Ruff gates passed. The v3 sizing command passed twice:
-the first run published 153 envelopes and the identical second run reused all 153 with
-zero new envelopes. Receipt 258 is byte-identical across both runs, with storage state
-`blocked` and blocker `available_capacity_insufficient`; Gate 2 remains not accepted.
-Record 277 is complete and awaiting reviewer inspection. Acquisition, normalization,
-catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and later work remain unauthorized.
-Next ticket remains `NONE`.
+Immediate state: The reviewer accepted record 277, commit `aba5f5d`, and receipt 258 as a
+faithful, authoritative blocked v3 sizing measurement. The exact requirement is
+169,268,681,433 bytes against 148,382,449,709 available at publication. Because reserve
+grows with free space, at least 26,107,789,655 additional bytes were required at that
+observation; the unrelated active download has since increased the requirement, so plan
+for at least 30 GB after it finishes. ADR-0028 keeps receipt 258 immutable and defines a
+small renewable capacity attestation over its stable 139,577,980,018-byte basis. Review
+278 routes the three-path implementation to Sol High. No cleanup, integration,
+attestation execution, acquisition, normalization, catalog, NautilusTrader, Harmonic
+Trader, PAPER/LIVE, or later work is authorized. Gate 2 remains not accepted. Next ticket
+remains `NONE`.
 
 Governing documents:
 
@@ -224,6 +227,7 @@ Governing documents:
 - research/sprint_004/255_CEX002_REAL_TYPED_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/256_CEX002_V2_SIZING_TYPED_SOURCE_INTEGRATION_AND_EXECUTION.md
 - docs/adr/0027-partition-aware-dictionary-storage-sizing.md
+- docs/adr/0028-immutable-sizing-basis-and-renewable-capacity-attestation.md
 - research/sprint_004/257_CEX002_V2_CAPACITY_MODEL_REJECTION_AND_V3_ARCHITECTURE.md
 - research/sprint_004/259_CEX002_V3_DICTIONARY_SOURCE_RESIDUAL_REVIEW.md
 - research/sprint_004/260_CEX002_V3_COMPLETE_ALLOCATION_RESIDUAL_REVIEW.md
@@ -243,6 +247,8 @@ Governing documents:
 - research/sprint_004/274_CEX002_TARGETED_SENIOR_TEST_AUTHORIZATION.md
 - research/sprint_004/275_CEX002_REVIEWER_TARGETED_TEST_AUTHORIZATION.md
 - research/sprint_004/276_CEX002_V3_ORDERING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
+- research/sprint_004/277_CEX002_V3_ORDERING_INTEGRATION_AND_EXECUTION.md
+- research/sprint_004/278_CEX002_V3_BLOCKED_MEASUREMENT_AND_CAPACITY_ATTESTATION_ARCHITECTURE.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
