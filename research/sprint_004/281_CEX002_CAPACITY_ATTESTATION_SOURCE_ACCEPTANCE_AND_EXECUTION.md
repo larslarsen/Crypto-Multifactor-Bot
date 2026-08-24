@@ -58,7 +58,10 @@ Harmonic Trader, payoff, PAPER, LIVE, or next-ticket work.
 
 ### 1. Exact preproof and integration
 
-Require `HEAD == origin/main == ee3f9d760466662454571081e7571b5eb33b71b7`.
+Require `HEAD == origin/main` and require
+`git merge-base --is-ancestor 15a03cbe7c1718c0d842186368dcd29c889899a8 HEAD`
+to exit 0. Do not require an exact `HEAD` value: reviewer control-plane corrections after
+review 281 legitimately advance the synchronized branch.
 Recompute all seven hashes above and the 15-function count; stop on any mismatch. Confirm
 no CEX-002 sizing or capacity-attestation process is running and this output is absent:
 

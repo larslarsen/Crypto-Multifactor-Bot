@@ -2,17 +2,16 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute review 281 under correction 284
+Next required actor: Jr Dev - Hermes - execute repaired review 281
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 284 corrects review 281's impossible exact-base preproof. The
-review publication necessarily advanced `HEAD` from required parent `ee3f9d7` to
-`15a03cb`, so Hermes correctly stopped twice without repository changes. Hermes must now
-require only synchronized `HEAD == origin/main`, review-281 commit `15a03cb` as an
-ancestor, and review 281 SHA-256
-`388f5cf3db2bf38822d729fff4cd42c7232845320da0d49b07be7e31e2f99d4a`; no exact `HEAD`
-value is authorized. Review 281 accepts Sol High's final ADR-0028 three-path drop at source
+Immediate state: Review 285 repairs review 281's literal impossible exact-base sentence
+after Hermes correctly ignored an external supersession and stopped again. Review 281
+itself now requires only synchronized `HEAD == origin/main`, review-281 commit `15a03cb`
+as an ancestor, and has corrected SHA-256
+`e6a3f5c432ec3a9a7419507168802c1f31d7a5e74adc6871f96e221b42969d5d`; it explicitly
+forbids an exact `HEAD` value. Review 281 accepts Sol High's final ADR-0028 three-path drop at source
 SHA-256 `34973e6f801ef3a16e82c3333c01fb1ee81fad357810bc28fdd5eaabf18995ec`, unchanged
 CLI SHA-256 `e5195b967d83f3f1ab336f342c512ce375e80dbc66f67cb754acc2b86244ead5`, test
 SHA-256 `09c9663613a4addf7080d5d84f0470926e4aa86915094b2c4d21d27e6ac73cf9`, and 15 tests.
@@ -260,6 +259,7 @@ Governing documents:
 - research/sprint_004/280_CEX002_CAPACITY_ATTESTATION_RESIDUAL_REVIEW.md
 - research/sprint_004/281_CEX002_CAPACITY_ATTESTATION_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/284_CEX002_REVIEW281_BASE_PREPROOF_CORRECTION.md
+- research/sprint_004/285_CEX002_REVIEW281_LITERAL_PREPROOF_REPAIR.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision

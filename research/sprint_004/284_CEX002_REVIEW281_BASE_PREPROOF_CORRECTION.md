@@ -24,7 +24,7 @@ This record supersedes only review 281 section 1's exact-HEAD sentence. Require:
 2. `git merge-base --is-ancestor 15a03cbe7c1718c0d842186368dcd29c889899a8 HEAD`
    exits 0; and
 3. `research/sprint_004/281_CEX002_CAPACITY_ATTESTATION_SOURCE_ACCEPTANCE_AND_EXECUTION.md`
-   has SHA-256 `388f5cf3db2bf38822d729fff4cd42c7232845320da0d49b07be7e31e2f99d4a`.
+   has SHA-256 `e6a3f5c432ec3a9a7419507168802c1f31d7a5e74adc6871f96e221b42969d5d`.
 
 Do not require `HEAD` to equal either `ee3f9d7` or `15a03cb`: this correction's own
 publication advances `HEAD` again. Every accepted source/test/CLI/receipt hash, the
