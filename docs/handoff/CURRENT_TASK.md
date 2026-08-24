@@ -2,21 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Sol High - implement ADR-0028 capacity attestation under review 278
+Next required actor: Sr Dev - Sol High - complete review 279 capacity-attestation correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: The reviewer accepted record 277, commit `aba5f5d`, and receipt 258 as a
-faithful, authoritative blocked v3 sizing measurement. The exact requirement is
-169,268,681,433 bytes against 148,382,449,709 available at publication. Because reserve
-grows with free space, at least 26,107,789,655 additional bytes were required at that
-observation; the unrelated active download has since increased the requirement, so plan
-for at least 30 GB after it finishes. ADR-0028 keeps receipt 258 immutable and defines a
-small renewable capacity attestation over its stable 139,577,980,018-byte basis. Review
-278 routes the three-path implementation to Sol High. No cleanup, integration,
-attestation execution, acquisition, normalization, catalog, NautilusTrader, Harmonic
-Trader, PAPER/LIVE, or later work is authorized. Gate 2 remains not accepted. Next ticket
-remains `NONE`.
+Immediate state: The reviewer rejected Sol High's first ADR-0028 three-path drop at source
+SHA-256 `845c495ff19b423ac40dbc192ae75babdda33b22ff301e367e5e910cec64adb9`, CLI
+SHA-256 `e5195b967d83f3f1ab336f342c512ce375e80dbc66f67cb754acc2b86244ead5`, test
+SHA-256 `529c6d1d121178323d84c5ada4c6875bec98828e899b641bd72bfccab10a5c98`,
+and 10 tests. Review 279 preserves its correct basis/arithmetic and requires complete
+durable-attestation revalidation, the full v3 stable receipt identity, actual receipt-file
+device binding, final no-replace/post-publication proof, and end-to-end tests. Sol may run
+the single targeted test file once. No integration, cleanup, real attestation,
+acquisition, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or later
+work is authorized. Gate 2 remains not accepted. Next ticket remains `NONE`.
 
 Governing documents:
 
@@ -249,6 +248,7 @@ Governing documents:
 - research/sprint_004/276_CEX002_V3_ORDERING_SOURCE_ACCEPTANCE_AND_EXECUTION.md
 - research/sprint_004/277_CEX002_V3_ORDERING_INTEGRATION_AND_EXECUTION.md
 - research/sprint_004/278_CEX002_V3_BLOCKED_MEASUREMENT_AND_CAPACITY_ATTESTATION_ARCHITECTURE.md
+- research/sprint_004/279_CEX002_CAPACITY_ATTESTATION_SOURCE_REVIEW.md
 - docs/engineering/DEVELOPMENT_ROLES.md
 
 ## Decision
