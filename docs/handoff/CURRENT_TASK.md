@@ -1,28 +1,18 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute repaired review 281
+State: AWAITING_REVIEW
+Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 283 and attestation 282
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 285 repairs review 281's literal impossible exact-base sentence
-after Hermes correctly ignored an external supersession and stopped again. Review 281
-itself now requires only synchronized `HEAD == origin/main`, review-281 commit `15a03cb`
-as an ancestor, and has corrected SHA-256
-`e6a3f5c432ec3a9a7419507168802c1f31d7a5e74adc6871f96e221b42969d5d`; it explicitly
-forbids an exact `HEAD` value. Review 281 accepts Sol High's final ADR-0028 three-path drop at source
-SHA-256 `34973e6f801ef3a16e82c3333c01fb1ee81fad357810bc28fdd5eaabf18995ec`, unchanged
-CLI SHA-256 `e5195b967d83f3f1ab336f342c512ce375e80dbc66f67cb754acc2b86244ead5`, test
-SHA-256 `09c9663613a4addf7080d5d84f0470926e4aa86915094b2c4d21d27e6ac73cf9`, and 15 tests.
-The accepted stable projection is now locally authenticated and rollback removes the
-authoritative name before staging cleanup with explicit failure states. Hermes must
-preprove and stage exactly the three paths, run the focused pytest and Ruff once, then on
-success run one real immutable capacity attestation at exact path 282, publish record 283
-and the exact allowed Git scope, and stop for reviewer inspection. No acquisition,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or later work is
-authorized even if the attestation is sufficient. Gate 2 remains not accepted. Next
-ticket remains `NONE`.
+Immediate state: Review 285 repaired review 281's preproof and the synchronized branch,
+accepted hashes, 15-test count, and absent output all passed. The focused pytest and Ruff
+commands passed once each. The single authorized real attestation completed with exit 0;
+attestation 282 is regular, self-identified, and reconciles to state `sufficient` with
+total requirement `197469027033` below post-publication availability `289455230976`.
+The attestation explicitly accepts no gate and authorizes no acquisition. Record 283 is
+complete and awaiting reviewer inspection. Next ticket remains `NONE`.
 
 Governing documents:
 
