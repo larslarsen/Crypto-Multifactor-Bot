@@ -2,18 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 286's exact three-path Gate-2 source drop
+Next required actor: Sr Dev - Grok Build - implement review 287's consolidated three-path Gate-2 correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 286 accepts record 283, commit `75d505b`, and attestation 282 as
-the sufficient Gate-2 storage precondition. This does not accept Gate 2. ADR-0029 fixes
-the complete content-addressed raw acquisition, SQLite progress, deterministic resume,
-Coinalyze, capacity-guard, and terminal-verification architecture. Grok Build on Grok 4.6
-High is authorized for exactly three new source/test paths and one exact synthetic
-targeted pytest command. No real plan, network, data, integration, Git, normalization,
-catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized.
-Next ticket remains `NONE`.
+Immediate state: Review 287 rejects the complete first Gate-2 source drop once and
+authorizes one consolidated correction by Grok Build on Grok 4.6 High in the same exact
+three source/test paths. The blockers are retained-credit adoption, full authority/code/
+plan revalidation on resume, bounded streaming, fail-closed monotone SQLite state,
+cumulative Coinalyze accounting and exact parsing, pooled/retried streaming transport,
+immutable publication, complete receipts/verification, and one nonterminating synthetic
+test. The accepted storage precondition and ADR-0029 architecture remain unchanged. No
+real plan, network, data, integration, Git, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized. Next ticket remains
+`NONE`.
 
 Governing documents:
 
@@ -21,6 +23,7 @@ Governing documents:
 - docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md
 - docs/adr/0029-content-addressed-gate2-acquisition-and-resume.md
 - research/sprint_004/286_CEX002_GATE2_ACQUISITION_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md
+- research/sprint_004/287_CEX002_GATE2_FIRST_SOURCE_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
