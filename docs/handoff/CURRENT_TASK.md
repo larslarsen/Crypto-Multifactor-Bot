@@ -1,23 +1,26 @@
 # CURRENT_TASK
 
 Ticket: CEX-002
-State: AWAITING_REVIEW
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect record 283 and attestation 282
+State: IN_PROGRESS
+Next required actor: Sr Dev - Grok Build - implement review 286's exact three-path Gate-2 source drop
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 285 repaired review 281's preproof and the synchronized branch,
-accepted hashes, 15-test count, and absent output all passed. The focused pytest and Ruff
-commands passed once each. The single authorized real attestation completed with exit 0;
-attestation 282 is regular, self-identified, and reconciles to state `sufficient` with
-total requirement `197469027033` below post-publication availability `289455230976`.
-The attestation explicitly accepts no gate and authorizes no acquisition. Record 283 is
-complete and awaiting reviewer inspection. Next ticket remains `NONE`.
+Immediate state: Review 286 accepts record 283, commit `75d505b`, and attestation 282 as
+the sufficient Gate-2 storage precondition. This does not accept Gate 2. ADR-0029 fixes
+the complete content-addressed raw acquisition, SQLite progress, deterministic resume,
+Coinalyze, capacity-guard, and terminal-verification architecture. Grok Build on Grok 4.6
+High is authorized for exactly three new source/test paths and one exact synthetic
+targeted pytest command. No real plan, network, data, integration, Git, normalization,
+catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized.
+Next ticket remains `NONE`.
 
 Governing documents:
 
 - tickets/CEX-002.md
 - docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md
+- docs/adr/0029-content-addressed-gate2-acquisition-and-resume.md
+- research/sprint_004/286_CEX002_GATE2_ACQUISITION_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
