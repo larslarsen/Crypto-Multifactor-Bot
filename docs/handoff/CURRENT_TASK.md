@@ -2,21 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement review 291's consolidated correction
+Next required actor: Sr Dev - Grok Build - implement reviews 291-292 complete replacement
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: the reviewer completed static inspection of Claude Build's stable
-post-review-290 snapshot at source/test hashes `6e1d8675...` / `7deabb36...` and rejected
-it as one unit in review 291. The two invalid fixtures are repaired and the generic worker
-message now names the exception class, but the underlying ordinary-acquisition defect,
-state-open cleanup, streamed retry accounting, state monotonicity, exact Coinalyze crash
-recovery, retained/inventory proof, descriptor-root containment, redirect-secret safety,
-archive/parser bounds, terminal evidence, and production boundedness remain blocking.
-Claude must implement review 291's one consolidated three-path correction before testing.
-Only then may Claude use the bounded three-run targeted pytest/repair exception. Hermes
-still owns integration, broader acceptance commands, evidence, and developer-source Git.
-No real plan, network, data, integration, Git, normalization, catalog, NautilusTrader,
+Immediate state: review 292 rejects Claude Build's claimed review-291 completion at
+source/test hashes `4807864d...` / `30e32b4c...` for material noncompliance. It added
+only local domain, cleanup, root-selection, charge-settlement, attempt-label, and three-test
+fragments while leaving literal blockers from all six review-291 invariant groups. Review
+292 adds no new source checklist. Claude is deauthorized. Grok Build must perform one clean
+complete replacement in the same three paths under ADR-0029 and review 291; the current
+5,703-line structure is not a constraint. Only after every invariant and regression is
+implemented may Grok use the inherited at-most-three-run targeted pytest/repair exception.
+Hermes still owns integration, broader acceptance commands, evidence, and developer-source
+Git. No real plan, network, data, integration, Git, normalization, catalog, NautilusTrader,
 Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
 
 Governing documents:
@@ -30,6 +29,7 @@ Governing documents:
 - research/sprint_004/289_CEX002_GROK_RESIDUAL_REJECTION_AND_CLAUDE_REASSIGNMENT.md
 - research/sprint_004/290_CEX002_CLAUDE_TARGETED_TEST_FAILURE_AND_CORRECTION.md
 - research/sprint_004/291_CEX002_CLAUDE_COMPLETE_STATIC_REVIEW_AND_CONSOLIDATED_CORRECTION.md
+- research/sprint_004/292_CEX002_CLAUDE_NONCOMPLIANCE_AND_GROK_REASSIGNMENT.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
