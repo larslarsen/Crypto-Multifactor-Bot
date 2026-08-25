@@ -2,21 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement review 289's complete three-path Gate-2 correction
+Next required actor: Sr Dev - Claude Build - implement review 290's failed-test correction continuation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 289 rejects Grok Build's review-288 correction once and
-reassigns the complete residual correction to Claude Build on Claude Opus 5 in the same
-exact three source/test paths. Preserve the working review-288 fixes, then complete the
-atomic Coinalyze budget/publication transition, exact resume-state authentication,
-coordinator-owned fatal settlement, shared provider-semantic verifier, exact terminal
-reconciliation, every-transfer capacity guard, retained replay proof, path containment,
-and required production-path regressions in one drop. Review 288 remains the full
-contract; review 289 identifies its unmet residuals. The accepted storage precondition
-and ADR-0029 architecture remain unchanged. No real plan, network, data, integration,
-Git, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket
-work is authorized. Next ticket remains `NONE`.
+Immediate state: Claude Build's one authorized review-289 pytest correctly stopped at
+49 failed / 25 passed. Review 290 treats this as one failed drop and authorizes Claude's
+one correction continuation in the same three paths. Fix the first underlying ordinary-
+acquisition worker exception instead of masking it; repair the invalid locked-replay and
+duplicate-root tests; make state-open failure release every descriptor/lock; preserve all
+74 valid regression intents and all review-288/289 architecture; then run the exact full
+test file once. The accepted storage precondition and ADR-0029 architecture remain
+unchanged. No real plan, network, data, integration, Git, normalization, catalog,
+NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized. Next
+ticket remains `NONE`.
 
 Governing documents:
 
@@ -27,6 +26,7 @@ Governing documents:
 - research/sprint_004/287_CEX002_GATE2_FIRST_SOURCE_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/288_CEX002_GATE2_CORRECTION_REVIEW_AND_COMPLETE_RESIDUAL_AUTHORIZATION.md
 - research/sprint_004/289_CEX002_GROK_RESIDUAL_REJECTION_AND_CLAUDE_REASSIGNMENT.md
+- research/sprint_004/290_CEX002_CLAUDE_TARGETED_TEST_FAILURE_AND_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
