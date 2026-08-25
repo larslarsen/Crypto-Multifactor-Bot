@@ -2,19 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 293 consolidated correction
+Next required actor: Sr Dev - Grok Build - implement review 294 complete correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 293 rejects Grok Build's review-292 replacement at source/test
-hashes `1678a11a...` / `1f98b845...` after one complete static review. The rewrite closes
-many literal review-291 defects, but mutable self-asserted state still is not authenticated
-by an immutable receipt chain; SQLite WAL/SHM and session roots are not descriptor-bound;
-attempt, charge recovery, retained-source, terminal row-equation, cleanup, and direct
-regression invariants remain incomplete. Review 293 is one consolidated correction
-contract and retains Grok on the coherent rewrite. No test may run until all findings and
-regressions are implemented together. Only then may Grok use the inherited bounded
-three-run targeted pytest/repair exception. Hermes still owns integration, broader acceptance
+Immediate state: review 294 rejects Grok Build's review-293 correction at source/test
+hashes `76476e7e...` / `a65f41ba...` after one complete static review without tests. The
+drop adds useful root, SQLite, sequence, attempt-validator, retained-inode, schema, ZIP,
+and terminal foundations, but the retained roots are not wired through operational paths;
+the receipt chain omits a trusted run field and mutates sealed charge descriptors; first-run
+receipt recovery searches the wrong directory; close failure duplicates attempts; normal
+Coinalyze completion changes its descriptor retrieval time; retained sidecar authority and
+complete inventory equality remain unproved; terminal verify permits an unsealed tail; and
+most direct regressions are absent. Review 294 is one complete correction contract and
+retains Grok on the coherent rewrite because Claude is unavailable. No test may run until
+all findings and regressions are implemented together. The original at-most-three-run
+targeted limit spans reviews 293 and 294. Hermes still owns integration, broader acceptance
 commands, evidence, and developer-source Git. No real plan, network, data, integration,
 Git, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket
 work is authorized. Next ticket is `NONE`.
@@ -32,6 +35,7 @@ Governing documents:
 - research/sprint_004/291_CEX002_CLAUDE_COMPLETE_STATIC_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/292_CEX002_CLAUDE_NONCOMPLIANCE_AND_GROK_REASSIGNMENT.md
 - research/sprint_004/293_CEX002_GROK_REPLACEMENT_COMPLETE_STATIC_REVIEW.md
+- research/sprint_004/294_CEX002_GROK_CORRECTION_COMPLETE_STATIC_REJECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
