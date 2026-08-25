@@ -2,20 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - implement review 290's failed-test correction continuation
+Next required actor: Sr Dev - Claude Build - implement review 291's consolidated correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Claude Build's one authorized review-289 pytest correctly stopped at
-49 failed / 25 passed. Review 290 treats this as one failed drop and authorizes Claude's
-one correction continuation in the same three paths. Fix the first underlying ordinary-
-acquisition worker exception instead of masking it; repair the invalid locked-replay and
-duplicate-root tests; make state-open failure release every descriptor/lock; preserve all
-74 valid regression intents and all review-288/289 architecture; then run the exact full
-test file once. The accepted storage precondition and ADR-0029 architecture remain
-unchanged. No real plan, network, data, integration, Git, normalization, catalog,
-NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized. Next
-ticket remains `NONE`.
+Immediate state: the reviewer completed static inspection of Claude Build's stable
+post-review-290 snapshot at source/test hashes `6e1d8675...` / `7deabb36...` and rejected
+it as one unit in review 291. The two invalid fixtures are repaired and the generic worker
+message now names the exception class, but the underlying ordinary-acquisition defect,
+state-open cleanup, streamed retry accounting, state monotonicity, exact Coinalyze crash
+recovery, retained/inventory proof, descriptor-root containment, redirect-secret safety,
+archive/parser bounds, terminal evidence, and production boundedness remain blocking.
+Claude must implement review 291's one consolidated three-path correction before testing.
+Only then may Claude use the bounded three-run targeted pytest/repair exception. Hermes
+still owns integration, broader acceptance commands, evidence, and developer-source Git.
+No real plan, network, data, integration, Git, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -27,6 +29,7 @@ Governing documents:
 - research/sprint_004/288_CEX002_GATE2_CORRECTION_REVIEW_AND_COMPLETE_RESIDUAL_AUTHORIZATION.md
 - research/sprint_004/289_CEX002_GROK_RESIDUAL_REJECTION_AND_CLAUDE_REASSIGNMENT.md
 - research/sprint_004/290_CEX002_CLAUDE_TARGETED_TEST_FAILURE_AND_CORRECTION.md
+- research/sprint_004/291_CEX002_CLAUDE_COMPLETE_STATIC_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
