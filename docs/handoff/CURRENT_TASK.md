@@ -2,25 +2,26 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 294 complete correction
+Next required actor: Sr Dev - Claude Build - implement reviews 294-295 when available
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 294 rejects Grok Build's review-293 correction at source/test
-hashes `76476e7e...` / `a65f41ba...` after one complete static review without tests. The
-drop adds useful root, SQLite, sequence, attempt-validator, retained-inode, schema, ZIP,
-and terminal foundations, but the retained roots are not wired through operational paths;
-the receipt chain omits a trusted run field and mutates sealed charge descriptors; first-run
-receipt recovery searches the wrong directory; close failure duplicates attempts; normal
-Coinalyze completion changes its descriptor retrieval time; retained sidecar authority and
-complete inventory equality remain unproved; terminal verify permits an unsealed tail; and
-most direct regressions are absent. Review 294 is one complete correction contract and
-retains Grok on the coherent rewrite because Claude is unavailable. No test may run until
-all findings and regressions are implemented together. The original at-most-three-run
-targeted limit spans reviews 293 and 294. Hermes still owns integration, broader acceptance
-commands, evidence, and developer-source Git. No real plan, network, data, integration,
-Git, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket
-work is authorized. Next ticket is `NONE`.
+Immediate state: review 295 rejects Grok Build's claimed review-294 correction at
+source/test hashes `eb9ab7b0...` / `78cc289b...` without tests and deauthorizes Grok after
+two partial returns against the same complete contract. The new schema cannot open because
+`DOMAIN_CHECKS` queries removed `run_metadata.receipt_sha256`. Most operational paths still
+bypass retained roots; state setup leaks local WAL/SHM descriptors on failures; `run_seal`
+is not authenticated or emitted in terminal evidence; the chain still checks only one
+predecessor; a released charge cannot be reserved again and its sealed ledger includes
+refunded bytes; terminal descriptor and inventory equality remain partial; and only six of
+the required direct tests were added. Review 294 remains the complete correction contract,
+and review 295 adds the concrete residuals introduced or retained by this drop. Claude Build
+owns the exact three-path implementation when available. No test may run until the full
+source and regression contract is present; Claude then has an at-most-three-run targeted
+pytest/repair exception. Hermes still owns integration, broader acceptance commands,
+evidence, and developer-source Git. No real plan, network, data, integration, Git,
+normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or next-ticket work is
+authorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -36,6 +37,7 @@ Governing documents:
 - research/sprint_004/292_CEX002_CLAUDE_NONCOMPLIANCE_AND_GROK_REASSIGNMENT.md
 - research/sprint_004/293_CEX002_GROK_REPLACEMENT_COMPLETE_STATIC_REVIEW.md
 - research/sprint_004/294_CEX002_GROK_CORRECTION_COMPLETE_STATIC_REJECTION.md
+- research/sprint_004/295_CEX002_GROK_REVIEW294_NONCOMPLIANCE_AND_CLAUDE_REASSIGNMENT.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
