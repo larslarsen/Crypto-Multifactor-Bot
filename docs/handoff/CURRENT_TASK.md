@@ -2,23 +2,21 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 303 with xhigh reasoning
+Next required actor: Jr Dev - Hermes - integrate and run review 304 targeted test
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 303 rejects Grok's review-302 return at source/test hashes
-`eb4f7b90...` / `7f58f75e...` after one complete static review without tests. Review 302's
-predecessor-owned deltas, original-identity interrupted finalization, no-tail new-run invariant,
-completed-intent authentication, exact recovery boundaries, and constant-memory queries are
-accepted and must be preserved. Two exact facts remain: interrupted recovery counts non-OK
-attempts while normal `error_count` counts worker failures, and it loses a prior capacity-blocked
-event when capacity later changes. Persist one identical durable run-level semantic for normal
-and interrupted completion. Capacity parsing must also compare each stable component to its
-accepted value; the current value test only adds a nonexistent key. Grok must remain at xhigh,
-edit only the exact three developer paths, and must not use Git or execute tests. Hermes owns
-test execution, integration, evidence, and developer-source Git after static acceptance. No real
-plan, network, data, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader,
-PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
+Immediate state: review 304 statically accepts the complete Gate-2 acquisition source/test return
+at hashes `308b8188...` / `bb603855...` / `e04c47f7...`. The exact predecessor-owned chain,
+interrupted-run recovery, durable worker error/capacity facts, authenticated publication intent,
+capacity-component mapping, constant-memory recovery, and direct regressions have no remaining
+static blocker. Hermes must preprove the review-304 publication base and hashes, stage/commit/push
+only the exact three developer paths as an integration checkpoint, then run the exact targeted
+acquisition pytest command once. On any failure Hermes stops without repair or rerun and reports
+the first original failure plus complete summary. On pass Hermes reports the exact result and
+stops. Ruff, full suite, control, real plan/network/data, evidence edits, Gate 3, normalization,
+catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized.
+Next ticket is `NONE`.
 
 Governing documents:
 
@@ -43,6 +41,7 @@ Governing documents:
 - research/sprint_004/301_CEX002_CLAUDE_EXHAUSTION_GROK_RESUMPTION.md
 - research/sprint_004/302_CEX002_GROK_REVIEW299_CHAIN_DELTA_STATIC_REJECTION.md
 - research/sprint_004/303_CEX002_GROK_REVIEW302_INTERRUPTED_FACT_STATIC_REJECTION.md
+- research/sprint_004/304_CEX002_GATE2_ACQUISITION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
