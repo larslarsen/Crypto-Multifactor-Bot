@@ -2,22 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build with xhigh reasoning - implement review 305
+Next required actor: Implementation Dev - Codex Spark - implement review 306 test assertions
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Hermes integrated and pushed the review-304 drop exactly at commit `1b1826d`,
-then ran the targeted acquisition pytest command once. It completed in 27.333 seconds with eight
-failures and stopped without repair or rerun. Review 305 rejects the targeted result but preserves
-the acquisition state machine: three charge tests create orphan facts without their owning run,
-two publication tests delete authenticated history instead of using crash boundaries, one test
-calls an iterator as a function, one watermark assertion omits the correct predecessor diagnostic,
-and one retained-file boundary loses its semantic error wording. Grok must make the complete
-bounded review-305 correction in only the acquisition source and its test file, without Git or
-commands. Do not weaken orphan-tail refusal, receipt ownership, publication authentication, or
-append-only generations. Ruff, tests, control, real plan/network/data, evidence edits, Gate 3,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain
-unauthorized. Next ticket is `NONE`.
+Immediate state: review 306 accepts Grok's complete review-305 production correction, legitimate
+unfinished-run fixtures, orphan-tail regression, exact publication fault-prefix setup, and
+interrupt iterator repair at source/test hashes `9476ccff...` / `9f138be6...`. Five tests have
+mechanical assertion residuals. Both publication tests incorrectly require the recovered receipt
+to stay the final head even though the resume invocation publishes a new run; they must prove it
+is the new head's predecessor. The three interrupted charge fixtures use `>=` where their exact
+initial watermarks are known. Spark must make only the exact test-file replacements in review 306 and
+must not edit source, use Git, or run commands. Ruff, tests, control, real plan/network/data,
+evidence edits, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and
+next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -44,6 +42,7 @@ Governing documents:
 - research/sprint_004/303_CEX002_GROK_REVIEW302_INTERRUPTED_FACT_STATIC_REJECTION.md
 - research/sprint_004/304_CEX002_GATE2_ACQUISITION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/305_CEX002_GATE2_TARGETED_TEST_FAILURE_REVIEW.md
+- research/sprint_004/306_CEX002_GROK_REVIEW305_TEST_ASSERTION_RESIDUAL.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
