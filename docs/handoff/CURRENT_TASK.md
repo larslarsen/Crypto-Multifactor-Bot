@@ -2,21 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate and run review 304 targeted test
+Next required actor: Sr Dev - Grok Build with xhigh reasoning - implement review 305
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 304 statically accepts the complete Gate-2 acquisition source/test return
-at hashes `308b8188...` / `bb603855...` / `e04c47f7...`. The exact predecessor-owned chain,
-interrupted-run recovery, durable worker error/capacity facts, authenticated publication intent,
-capacity-component mapping, constant-memory recovery, and direct regressions have no remaining
-static blocker. Hermes must preprove the review-304 publication base and hashes, stage/commit/push
-only the exact three developer paths as an integration checkpoint, then run the exact targeted
-acquisition pytest command once. On any failure Hermes stops without repair or rerun and reports
-the first original failure plus complete summary. On pass Hermes reports the exact result and
-stops. Ruff, full suite, control, real plan/network/data, evidence edits, Gate 3, normalization,
-catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized.
-Next ticket is `NONE`.
+Immediate state: Hermes integrated and pushed the review-304 drop exactly at commit `1b1826d`,
+then ran the targeted acquisition pytest command once. It completed in 27.333 seconds with eight
+failures and stopped without repair or rerun. Review 305 rejects the targeted result but preserves
+the acquisition state machine: three charge tests create orphan facts without their owning run,
+two publication tests delete authenticated history instead of using crash boundaries, one test
+calls an iterator as a function, one watermark assertion omits the correct predecessor diagnostic,
+and one retained-file boundary loses its semantic error wording. Grok must make the complete
+bounded review-305 correction in only the acquisition source and its test file, without Git or
+commands. Do not weaken orphan-tail refusal, receipt ownership, publication authentication, or
+append-only generations. Ruff, tests, control, real plan/network/data, evidence edits, Gate 3,
+normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain
+unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -42,6 +43,7 @@ Governing documents:
 - research/sprint_004/302_CEX002_GROK_REVIEW299_CHAIN_DELTA_STATIC_REJECTION.md
 - research/sprint_004/303_CEX002_GROK_REVIEW302_INTERRUPTED_FACT_STATIC_REJECTION.md
 - research/sprint_004/304_CEX002_GATE2_ACQUISITION_SOURCE_ACCEPTANCE.md
+- research/sprint_004/305_CEX002_GATE2_TARGETED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
