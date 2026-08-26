@@ -2,23 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 299 receipt-bound correction
+Next required actor: Sr Dev - Claude Build - finish review 299 from review 300 partial snapshot
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 299 rejects Grok Build's review-298 return at source/test hashes
-`fc636eb4...` / `0cbf5860...` after one complete static review without tests. Review 298
-groups 1, 3, 4, and 5 are accepted: descriptor-bound manifest/configured receipt roots,
-attempt/charge source, retained proof, and terminal reconstruction are no longer open source
-findings. One receipt-bound correction remains. Finalized run intent must be durable before
-publication so every crash prefix can recover; every retained receipt field and historical
-semantic digest must be authenticated exactly without coercion or self-asserted `facts_json`;
-and direct receipt-boundary/field plus attempt failure regressions must be completed. Grok may
-edit only the exact three developer paths in review 299, must preserve accepted mechanisms,
-must not use Git, and under the current role contract must not execute tests. Hermes owns test
-execution, integration, evidence, and developer-source Git after static acceptance. No real
-plan, network, data, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader,
-PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
+Immediate state: Grok exhausted its context while implementing review 299. Review 300 preserves
+the partial source at hash `70e823e0...`; CLI and tests remain unchanged at `bb603855...` /
+`0cbf5860...`. This is a continuation handoff, not a completed-return review or a test
+authorization. The partial adds durable run metadata, `run_publication`, watermark helpers, and
+a transactional `finish_run()` prototype, but the ordinary path still uses the removed
+`run_seal.facts_json`, calls finalization with empty/default facts, rebuilds the old receipt,
+retains the old publication/recovery transitions, and adds no tests. Claude must finish the
+entire review-299 contract in the exact three developer paths, remove parallel superseded paths,
+and preserve the four source groups already accepted there. Claude must not use Git or execute
+tests. Hermes owns test execution, integration, evidence, and developer-source Git after static
+acceptance. No real plan, network, data, Gate 3, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -39,6 +38,7 @@ Governing documents:
 - research/sprint_004/297_CEX002_CLAUDE_REVIEW296_NONCOMPLIANCE_AND_GROK_REASSIGNMENT.md
 - research/sprint_004/298_CEX002_GROK_REVIEW296_COMPLETE_STATIC_REJECTION.md
 - research/sprint_004/299_CEX002_GROK_REVIEW298_RECEIPT_STATIC_REJECTION.md
+- research/sprint_004/300_CEX002_GROK_TOKEN_EXHAUSTION_CLAUDE_CONTINUATION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
