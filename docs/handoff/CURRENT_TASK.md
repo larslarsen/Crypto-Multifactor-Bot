@@ -2,24 +2,23 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 298 bounded residual correction
+Next required actor: Sr Dev - Grok Build - implement review 299 receipt-bound correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 298 rejects Grok Build's review-296 implementation at source/test
-hashes `7a1b78d6...` / `5bbc14ac...` after one complete static review without tests. The
-substantial return fixes rollback-journal/session cleanup and materially advances roots,
-receipts, charges, attempts, retained proof, terminal evidence, boundedness, and tests.
-Residual blockers remain in descriptor-bound manifest and configured receipt roots; exact
-run-receipt field authentication and real publication fault boundaries; close/interruption
-attempt domains and normal charge validation; unconditional retained plan proof; and exact
-streaming terminal reconstruction. Grok retains the coherent three-path implementation for
-the bounded review-298 correction. No test may run until all residual source and direct
-regression work is present; the cumulative reviews 295-298 allowance remains at most three
-exact targeted runs, counting any unreported run. Hermes still owns integration, broader
-acceptance commands, evidence, and developer-source Git. No real plan, network, data,
-integration, Git, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or
-next-ticket work is authorized. Next ticket is `NONE`.
+Immediate state: review 299 rejects Grok Build's review-298 return at source/test hashes
+`fc636eb4...` / `0cbf5860...` after one complete static review without tests. Review 298
+groups 1, 3, 4, and 5 are accepted: descriptor-bound manifest/configured receipt roots,
+attempt/charge source, retained proof, and terminal reconstruction are no longer open source
+findings. One receipt-bound correction remains. Finalized run intent must be durable before
+publication so every crash prefix can recover; every retained receipt field and historical
+semantic digest must be authenticated exactly without coercion or self-asserted `facts_json`;
+and direct receipt-boundary/field plus attempt failure regressions must be completed. Grok may
+edit only the exact three developer paths in review 299, must preserve accepted mechanisms,
+must not use Git, and under the current role contract must not execute tests. Hermes owns test
+execution, integration, evidence, and developer-source Git after static acceptance. No real
+plan, network, data, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader,
+PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -39,6 +38,7 @@ Governing documents:
 - research/sprint_004/296_CEX002_CLAUDE_REVIEW295_COMPLETE_STATIC_REJECTION.md
 - research/sprint_004/297_CEX002_CLAUDE_REVIEW296_NONCOMPLIANCE_AND_GROK_REASSIGNMENT.md
 - research/sprint_004/298_CEX002_GROK_REVIEW296_COMPLETE_STATIC_REJECTION.md
+- research/sprint_004/299_CEX002_GROK_REVIEW298_RECEIPT_STATIC_REJECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
