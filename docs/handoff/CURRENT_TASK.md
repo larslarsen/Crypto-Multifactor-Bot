@@ -2,20 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - implement review 306 test assertions
+Next required actor: Jr Dev - Hermes - integrate and run review 307 targeted test
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 306 accepts Grok's complete review-305 production correction, legitimate
-unfinished-run fixtures, orphan-tail regression, exact publication fault-prefix setup, and
-interrupt iterator repair at source/test hashes `9476ccff...` / `9f138be6...`. Five tests have
-mechanical assertion residuals. Both publication tests incorrectly require the recovered receipt
-to stay the final head even though the resume invocation publishes a new run; they must prove it
-is the new head's predecessor. The three interrupted charge fixtures use `>=` where their exact
-initial watermarks are known. Spark must make only the exact test-file replacements in review 306 and
-must not edit source, use Git, or run commands. Ruff, tests, control, real plan/network/data,
-evidence edits, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and
-next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: review 307 statically accepts the complete Grok/Spark correction at source/test
+hashes `9476ccff...` / `6157fd1f...`; the CLI remains unchanged at `bb603855...`. Retained-source
+diagnostics, predecessor watermark validation, legitimate original-run charge-tail ownership,
+explicit orphan-tail refusal, exact charge/transition marks, real publication crash prefixes,
+recovered-to-resumed predecessor linkage, and interrupt recording have no remaining static
+blocker. Hermes must preprove the review-307 publication base and hashes, stage/commit/push only
+the exact source and test paths, then run the exact targeted acquisition pytest command once. On
+failure Hermes stops without repair or rerun; on pass Hermes reports and stops. Ruff, full suite,
+control, real plan/network/data, evidence edits, Gate 3, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -43,6 +43,7 @@ Governing documents:
 - research/sprint_004/304_CEX002_GATE2_ACQUISITION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/305_CEX002_GATE2_TARGETED_TEST_FAILURE_REVIEW.md
 - research/sprint_004/306_CEX002_GROK_REVIEW305_TEST_ASSERTION_RESIDUAL.md
+- research/sprint_004/307_CEX002_GATE2_CORRECTION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
