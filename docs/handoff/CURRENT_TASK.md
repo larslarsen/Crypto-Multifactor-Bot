@@ -2,18 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - resume review 299 under review 301
+Next required actor: Sr Dev - Grok Build - implement review 302 with xhigh reasoning
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Claude exhausted its available usage before completing the review-300
-continuation, and Grok is available again. Review 301 authorizes Grok to resume the same shared
-partial tree. This is a routing update, not a completed-return decision or test authorization.
-Review 299 remains the complete engineering contract; review 300 remains the partial-source
-assessment. Grok must finish one canonical durable-intent/publication/recovery path, exact
-authentication of every receipt field and historical semantic digest, and the complete direct
-regression matrix while preserving the four source groups accepted by review 299. Grok may edit
-only the exact three developer paths and must not use Git or execute tests. Hermes owns test
+Immediate state: review 302 rejects Grok's completed review-299/301 return at source/test hashes
+`d4d79eeb...` / `2f80e3b3...` after one complete static review without tests. The canonical
+durable intent publisher, exact publication boundaries, receipt field authentication, semantic
+calculation, and direct receipt/attempt regressions are accepted and must be preserved. One
+architecture-sensitive correction remains: receipt deltas must be derived from the exact sealed
+predecessor rather than an invocation snapshot, and real process loss before finalization must
+not leave facts which a later zero-delta run silently seals. Required publication intents must
+have an authenticated completed lifecycle, nested capacity facts need exact key/equation proof,
+and recovery must not materialize all run history. Grok must use xhigh reasoning and edit only
+the exact three developer paths. Grok must not use Git or execute tests. Hermes owns test
 execution, integration, evidence, and developer-source Git after static acceptance. No real
 plan, network, data, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader,
 PAPER/LIVE, or next-ticket work is authorized. Next ticket is `NONE`.
@@ -39,6 +41,7 @@ Governing documents:
 - research/sprint_004/299_CEX002_GROK_REVIEW298_RECEIPT_STATIC_REJECTION.md
 - research/sprint_004/300_CEX002_GROK_TOKEN_EXHAUSTION_CLAUDE_CONTINUATION.md
 - research/sprint_004/301_CEX002_CLAUDE_EXHAUSTION_GROK_RESUMPTION.md
+- research/sprint_004/302_CEX002_GROK_REVIEW299_CHAIN_DELTA_STATIC_REJECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
