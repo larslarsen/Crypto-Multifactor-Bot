@@ -2,18 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build - implement review 296 consolidated correction
+Next required actor: Sr Dev - Grok Build - implement review 298 bounded residual correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 297 rejects Claude Build's claimed review-296 correction at
-source/test hashes `70189c30...` / `d7a29a87...` after one complete static review without
-tests. Only 47 source lines and two tests were added; all seven review-296 correction groups
-remain materially incomplete. Review 296 remains the sole complete implementation contract,
-and review 297 adds no replacement architecture or second checklist. After Claude's second
-partial return, the repeated-miss routing rule deauthorizes Claude and reauthorizes Grok
-Build for one complete three-path implementation. No test may run until the full source and
-regression contract is present; the cumulative reviews 295-297 limit remains at most three
+Immediate state: review 298 rejects Grok Build's review-296 implementation at source/test
+hashes `7a1b78d6...` / `5bbc14ac...` after one complete static review without tests. The
+substantial return fixes rollback-journal/session cleanup and materially advances roots,
+receipts, charges, attempts, retained proof, terminal evidence, boundedness, and tests.
+Residual blockers remain in descriptor-bound manifest and configured receipt roots; exact
+run-receipt field authentication and real publication fault boundaries; close/interruption
+attempt domains and normal charge validation; unconditional retained plan proof; and exact
+streaming terminal reconstruction. Grok retains the coherent three-path implementation for
+the bounded review-298 correction. No test may run until all residual source and direct
+regression work is present; the cumulative reviews 295-298 allowance remains at most three
 exact targeted runs, counting any unreported run. Hermes still owns integration, broader
 acceptance commands, evidence, and developer-source Git. No real plan, network, data,
 integration, Git, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, or
@@ -36,6 +38,7 @@ Governing documents:
 - research/sprint_004/295_CEX002_GROK_REVIEW294_NONCOMPLIANCE_AND_CLAUDE_REASSIGNMENT.md
 - research/sprint_004/296_CEX002_CLAUDE_REVIEW295_COMPLETE_STATIC_REJECTION.md
 - research/sprint_004/297_CEX002_CLAUDE_REVIEW296_NONCOMPLIANCE_AND_GROK_REASSIGNMENT.md
+- research/sprint_004/298_CEX002_GROK_REVIEW296_COMPLETE_STATIC_REJECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
