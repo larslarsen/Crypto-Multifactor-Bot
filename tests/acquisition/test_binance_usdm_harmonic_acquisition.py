@@ -689,6 +689,21 @@ def _acquire(built: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
     return gate2.run_acquire(built["paths"], built["pins"], **params)
 
 
+def _begin_unfinished_run(built: dict[str, Any]) -> str:
+    """Open a bound session and leave one production run unfinished."""
+
+    _summary, state, bundle = gate2.bind_session(
+        built["paths"], built["pins"], built["filesystem"], install=True
+    )
+    try:
+        started_at = datetime.now(UTC).isoformat()
+        run_id = gate2.sha256_bytes(f"{started_at}:unfinished".encode("utf-8"))
+        state.begin_run(run_id, started_at, pre_capacity=bundle["capacity"])
+        return run_id
+    finally:
+        gate2._close_session(state, bundle)
+
+
 def _run_with_deadline(target: Any, *, seconds: float = 90.0) -> dict[str, Any]:
     """Run one call in a thread and prove it settles; a deadlock fails the test."""
 
@@ -1813,8 +1828,8 @@ def test_crash_before_publication_refunds_the_reservation(tmp_path: Path) -> Non
         )
     finally:
         state.close()
-    # Exactly the state an interrupted transition leaves behind: a durable reservation
-    # whose bytes were never published.
+    _begin_unfinished_run(built)
+    # Durable reservation owned by the unfinished run; bytes were never published.
     conn = _state_conn(built["paths"])
     conn.execute(
         "INSERT INTO coinalyze_charge(provider, identity, generation, content_sha256, "
@@ -1851,6 +1866,10 @@ def test_crash_before_publication_refunds_the_reservation(tmp_path: Path) -> Non
     conn.close()
     resumed = _acquire(built)
     assert resumed["exit_code"] == gate2.EXIT_COMPLETE_WITH_TERMINAL_GAPS
+    interrupted = _ordered_run_receipts(built["paths"])[0]
+    assert interrupted["stop_reason"] == "interrupted"
+    assert interrupted["high_watermarks"]["charge_hi"] == 1
+    assert interrupted["high_watermarks"]["transition_hi"] == 1
     state = _open_state(built["paths"])
     try:
         state.authenticate_singletons()
@@ -1875,6 +1894,57 @@ def test_crash_before_publication_refunds_the_reservation(tmp_path: Path) -> Non
         assert int(settled) == state.counts()["coinalyze_charged"]
     finally:
         state.close()
+
+
+def test_orphan_charge_tail_without_open_run_is_refused(tmp_path: Path) -> None:
+    built = build_universe(
+        tmp_path, archive_families=("daily/klines",), supported=("BTCUSDT",)
+    )
+    gate2.run_plan(built["paths"], built["pins"], filesystem=built["filesystem"])
+    state = _open_state(built["paths"])
+    try:
+        identity = next(
+            plan.identity
+            for plan in state.iter_plan_rows(kinds=(gate2.KIND_COINALYZE_LIQUIDATION,))
+        )
+    finally:
+        state.close()
+    conn = _state_conn(built["paths"])
+    conn.execute(
+        "INSERT INTO coinalyze_charge(provider, identity, generation, content_sha256, "
+        "charged_bytes, http_status, outcome, points, request_proof, retrieval_json, "
+        "revision_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            gate2.PROVIDER_COINALYZE,
+            identity,
+            1,
+            "d" * 64,
+            4096,
+            200,
+            gate2.OUTCOME_CHECKSUM_VERIFIED,
+            0,
+            "e" * 64,
+            "{}\n",
+            "{}\n",
+            "2026-08-24T00:00:00+00:00",
+        ),
+    )
+    conn.execute(
+        "INSERT INTO charge_transition(provider, identity, generation, status, at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (
+            gate2.PROVIDER_COINALYZE,
+            identity,
+            1,
+            gate2.CHARGE_RESERVED,
+            "2026-08-24T00:00:00+00:00",
+        ),
+    )
+    conn.execute("UPDATE coinalyze_ledger SET charged = charged + 4096")
+    conn.commit()
+    conn.close()
+    with pytest.raises(gate2.UnsafeStateError, match="unsealed fact tail"):
+        _acquire(built)
 
 
 def test_coinalyze_5xx_retry_limits_every_attempt_and_closes_responses(
@@ -3059,7 +3129,8 @@ def test_a_released_charge_is_retried_as_a_new_generation(tmp_path: Path) -> Non
         )
     finally:
         state.close()
-    # a crash-left reservation whose bytes were never published
+    _begin_unfinished_run(built)
+    # Durable reservation owned by the unfinished run; bytes were never published.
     conn = _state_conn(built["paths"])
     conn.execute(
         "INSERT INTO coinalyze_charge(provider, identity, generation, content_sha256, "
@@ -3096,6 +3167,10 @@ def test_a_released_charge_is_retried_as_a_new_generation(tmp_path: Path) -> Non
     conn.close()
     resumed = _acquire(built)
     assert resumed["exit_code"] == gate2.EXIT_COMPLETE_WITH_TERMINAL_GAPS
+    interrupted = _ordered_run_receipts(built["paths"])[0]
+    assert interrupted["stop_reason"] == "interrupted"
+    assert interrupted["high_watermarks"]["charge_hi"] == 1
+    assert interrupted["high_watermarks"]["transition_hi"] == 1
     conn = _state_conn(built["paths"])
     try:
         generations = conn.execute(
@@ -3336,7 +3411,9 @@ def test_a_seal_link_with_wrong_watermarks_is_refused(universe: dict[str, Any]) 
     )
     conn.commit()
     conn.close()
-    with pytest.raises(gate2.UnsafeStateError, match="seal|prefix|watermark"):
+    with pytest.raises(
+        gate2.UnsafeStateError, match="seal|prefix|watermark|predecessor"
+    ):
         gate2.verify_state(
             universe["paths"], universe["pins"], filesystem=universe["filesystem"]
         )
@@ -3483,9 +3560,22 @@ def _reset_head_to_plan_without_seals(paths: gate2.AcquisitionPaths) -> str:
 
 
 def test_published_receipt_without_seal_is_recovered(universe: dict[str, Any]) -> None:
-    result = _acquire(universe)
-    receipt_sha = str(result["run_receipt"]["sha256"])
-    _reset_head_to_plan_without_seals(universe["paths"])
+    with pytest.raises(gate2.FaultInjected, match="before_run_seal_insert"):
+        _acquire(universe, fault=gate2.NamedFault("before_run_seal_insert"))
+    conn = _state_conn(universe["paths"])
+    try:
+        intent = conn.execute(
+            "SELECT run_id, receipt_sha256 FROM run_publication"
+        ).fetchone()
+        assert intent is not None
+        run_id = str(intent[0])
+        receipt_sha = str(intent[1])
+        seals = int(conn.execute("SELECT COUNT(*) FROM run_seal").fetchone()[0])
+    finally:
+        conn.close()
+    assert seals == 0
+    assert (universe["paths"].run_receipt_dir / f"{receipt_sha}.json").is_file()
+    assert (universe["paths"].run_receipt_dir / f"{run_id}.link").is_file()
     resumed = _acquire(universe, max_objects=1)
     assert resumed["exit_code"] in {
         gate2.EXIT_COMPLETE_WITH_TERMINAL_GAPS,
@@ -3497,7 +3587,12 @@ def test_published_receipt_without_seal_is_recovered(universe: dict[str, Any]) -
             "SELECT receipt_sha256 FROM run_seal WHERE receipt_sha256 = ?",
             (receipt_sha,),
         ).fetchone()
+        head = conn.execute(
+            "SELECT receipt_sha256, predecessor_sha256 FROM seal_head WHERE id = 1"
+        ).fetchone()
         assert linked is not None
+        assert str(head[0]) == resumed["run_receipt"]["sha256"]
+        assert str(head[1]) == receipt_sha
     finally:
         conn.close()
 
@@ -3846,6 +3941,7 @@ def test_valid_released_then_retried_generation_is_handled_once(tmp_path: Path) 
         revision = gate2.compact_json({"status": 200, "points": 0}).decode("utf-8")
     finally:
         state.close()
+    _begin_unfinished_run(built)
     conn = _state_conn(built["paths"])
     conn.execute(
         "INSERT INTO coinalyze_charge(provider, identity, generation, content_sha256, "
@@ -3880,6 +3976,10 @@ def test_valid_released_then_retried_generation_is_handled_once(tmp_path: Path) 
     conn.close()
     resumed = _acquire(built)
     assert resumed["exit_code"] == gate2.EXIT_COMPLETE_WITH_TERMINAL_GAPS
+    interrupted = _ordered_run_receipts(built["paths"])[0]
+    assert interrupted["stop_reason"] == "interrupted"
+    assert interrupted["high_watermarks"]["charge_hi"] == 1
+    assert interrupted["high_watermarks"]["transition_hi"] == 2
     conn = _state_conn(built["paths"])
     try:
         generations = [
@@ -4012,16 +4112,22 @@ def _refuse_mutated_receipt(
 def test_missing_filesystem_receipt_is_republished_from_intent(
     universe: dict[str, Any],
 ) -> None:
-    result = _acquire(universe)
-    receipt_sha = str(result["run_receipt"]["sha256"])
-    path = Path(result["run_receipt"]["path"])
+    with pytest.raises(gate2.FaultInjected, match="before_run_receipt_publication"):
+        _acquire(universe, fault=gate2.NamedFault("before_run_receipt_publication"))
     conn = _state_conn(universe["paths"])
-    run_id = str(conn.execute("SELECT run_id FROM run_metadata").fetchone()[0])
-    conn.close()
-    locator = universe["paths"].run_receipt_dir / f"{run_id}.link"
-    path.unlink()
-    locator.unlink()
-    _reset_head_to_plan_without_seals(universe["paths"])
+    try:
+        intent = conn.execute(
+            "SELECT run_id, receipt_sha256 FROM run_publication"
+        ).fetchone()
+        assert intent is not None
+        run_id = str(intent[0])
+        receipt_sha = str(intent[1])
+        seals = int(conn.execute("SELECT COUNT(*) FROM run_seal").fetchone()[0])
+    finally:
+        conn.close()
+    assert seals == 0
+    assert not (universe["paths"].run_receipt_dir / f"{receipt_sha}.json").exists()
+    assert not (universe["paths"].run_receipt_dir / f"{run_id}.link").exists()
     resumed = _acquire(universe, max_objects=1)
     assert resumed["exit_code"] in {
         gate2.EXIT_COMPLETE_WITH_TERMINAL_GAPS,
@@ -4033,7 +4139,12 @@ def test_missing_filesystem_receipt_is_republished_from_intent(
             "SELECT receipt_sha256 FROM run_seal WHERE receipt_sha256 = ?",
             (receipt_sha,),
         ).fetchone()
+        head = conn.execute(
+            "SELECT receipt_sha256, predecessor_sha256 FROM seal_head WHERE id = 1"
+        ).fetchone()
         assert linked is not None
+        assert str(head[0]) == resumed["run_receipt"]["sha256"]
+        assert str(head[1]) == receipt_sha
     finally:
         conn.close()
     assert (universe["paths"].run_receipt_dir / f"{receipt_sha}.json").is_file()
@@ -4359,7 +4470,7 @@ def test_injected_interruption_records_one_interrupt_attempt(
             inner = response.iter_bytes
 
             def _chunks() -> Iterator[bytes]:
-                yield from inner()
+                yield from inner
                 raise gate2.FaultInjected("synthetic interrupt")
 
             return gate2.StreamResponse(

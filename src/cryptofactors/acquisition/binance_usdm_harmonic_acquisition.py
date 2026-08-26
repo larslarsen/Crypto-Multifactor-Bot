@@ -3046,7 +3046,13 @@ def _retained_plan_fields(
     )
     sidecar_path = Path(str(entry.get("provider_checksum_path") or ""))
     raw_path = sample_dir / digest
-    raw_fd = open_regular_file(sample_dir, raw_path, roots=roots)
+    try:
+        raw_fd = open_regular_file(sample_dir, raw_path, roots=roots)
+    except (UnsafeStateError, OSError) as exc:
+        raise AuthorityError(
+            "a retained raw source cannot be opened no-follow",
+            context={"key": key, "path": str(raw_path)},
+        ) from exc
     try:
         raw_digest, raw_size = sha256_fd(raw_fd)
         raw_stat = os.fstat(raw_fd)
@@ -5962,7 +5968,7 @@ class AcquisitionState:
         for key in WATERMARK_KEYS:
             if snapshot[key] != pred_marks[key]:
                 raise UnsafeStateError(
-                    "a run start snapshot disagrees with its predecessor",
+                    "a run start snapshot disagrees with its predecessor watermarks",
                     context={"mark": key},
                 )
         start_listed = snapshot["listed_bytes"]
@@ -6847,7 +6853,7 @@ class AcquisitionState:
                 for key in WATERMARK_KEYS:
                     if start[key] != pred_marks[key]:
                         raise UnsafeStateError(
-                            "a run start snapshot disagrees with its predecessor",
+                            "a run start snapshot disagrees with its predecessor watermarks",
                             context={"mark": key},
                         )
                 if start["listed_bytes"] != self._listed_bytes_at(
