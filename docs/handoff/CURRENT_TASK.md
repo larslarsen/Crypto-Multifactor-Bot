@@ -2,19 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - run review 308 consolidated offline validation
+Next required actor: Jr Dev - Hermes - run reviews 308-309 corrected offline validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Hermes integrated the accepted Gate-2 correction in pushed commit `cee2b8a`.
-Review 308 accepts its clean source/test/CLI identities and the one targeted pytest result: exit
-0, all 177 tests passed in 27.333 seconds. Hermes must now perform the single consolidated
-review-308 offline round: focused Gate-2 Ruff, full `tests/`, repository-wide Ruff, and the
-control check, each exactly once and stopping on the first failure. If all pass, Hermes publishes
-only evidence record 309 in one commit/push and then runs the ticket's exact `git diff --check`
-once. Source/test repair and real plan/acquire/verify, network/data mutation, Gate 3,
-normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain
-unauthorized. Next ticket is `NONE`.
+Immediate state: Hermes correctly stopped review 308 preproof because the reviewer supplied an
+invalid expanded integration SHA; no validation command or mutation ran. Review 309 corrects the
+identity to `cee2b8a3c2c3693818c2fd34ec5016465e6be9cb`, which exists and is an ancestor. Review
+308's acceptance of the clean source/test/CLI identities and the targeted 177-test pass remains
+unchanged. Hermes must begin a fresh preproof and perform the single consolidated reviews
+308-309 offline round: focused Gate-2 Ruff, full `tests/`, repository-wide Ruff, and control,
+each exactly once and stopping on the first failure. If all pass, Hermes publishes only evidence
+record 310 in one commit/push and then runs exact `git diff --check` once. Source/test repair and
+real plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -44,6 +45,7 @@ Governing documents:
 - research/sprint_004/306_CEX002_GROK_REVIEW305_TEST_ASSERTION_RESIDUAL.md
 - research/sprint_004/307_CEX002_GATE2_CORRECTION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/308_CEX002_GATE2_TARGETED_TEST_ACCEPTANCE_AND_OFFLINE_VALIDATION.md
+- research/sprint_004/309_CEX002_REVIEW308_BASE_PREPROOF_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
