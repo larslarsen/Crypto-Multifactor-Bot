@@ -2,25 +2,26 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - correct review 316 evidence under review 317
+Next required actor: Jr Dev - Hermes - execute one real offline Gate-2 plan under review 319
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: record 316 and commit `029487b` establish clean same-device repository-wide
-Ruff and control passes. Review 317 accepts those results but requires one evidence-only
-correction: record 316 misattributes the initial failed focused Ruff as a pass, omits cleanup
-integration commit `61aada4`, and does not establish the required final `git diff --check`
-result. Hermes must consult its contemporaneous transcript, never rerun completed validation,
-run final diff check once only if it was not previously run, and publish only correction record
-318. Ticket-wide pytest remains blocked by the five exact unrelated baseline defects. Real
-plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog, NautilusTrader,
-Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: corrected record 318 is accepted at pushed commit `4acbdbe7`. Focused Gate-2
+Ruff, all 177 targeted tests, clean same-device repository-wide Ruff and control, and final
+diff check passed. Ticket-wide pytest remains formally blocked by five exact unrelated baseline
+defects. Review 319 authorizes Hermes to preprove a fresh absent Gate-2 destination and execute
+exactly one two-hour-bounded, network-free `plan`, then publish only record 320 after an exit-0
+read-only reconciliation. Any preproof or plan failure stops without repair or rerun. `acquire`,
+`verify`, network access, source/test repair, validation rerun, Gate 3, normalization, catalog,
+NautilusTrader, Harmonic Trader, experiments, PAPER/LIVE, and next-ticket work remain
+unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
 - tickets/CEX-002.md
 - docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md
 - docs/adr/0029-content-addressed-gate2-acquisition-and-resume.md
+- research/sprint_004/319_CEX002_GATE2_OFFLINE_EVIDENCE_ACCEPTANCE_AND_REAL_PLAN_AUTHORIZATION.md
 - research/sprint_004/286_CEX002_GATE2_ACQUISITION_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md
 - research/sprint_004/287_CEX002_GATE2_FIRST_SOURCE_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/288_CEX002_GATE2_CORRECTION_REVIEW_AND_COMPLETE_RESIDUAL_AUTHORIZATION.md
