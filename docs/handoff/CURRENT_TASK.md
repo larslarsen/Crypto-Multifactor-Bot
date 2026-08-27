@@ -2,19 +2,21 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute one real offline Gate-2 plan under review 319
+Next required actor: Jr Dev - Hermes - execute first bounded real acquisition under review 321
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: corrected record 318 is accepted at pushed commit `4acbdbe7`. Focused Gate-2
-Ruff, all 177 targeted tests, clean same-device repository-wide Ruff and control, and final
-diff check passed. Ticket-wide pytest remains formally blocked by five exact unrelated baseline
-defects. Review 319 authorizes Hermes to preprove a fresh absent Gate-2 destination and execute
-exactly one two-hour-bounded, network-free `plan`, then publish only record 320 after an exit-0
-read-only reconciliation. Any preproof or plan failure stops without repair or rerun. `acquire`,
-`verify`, network access, source/test repair, validation rerun, Gate 3, normalization, catalog,
-NautilusTrader, Harmonic Trader, experiments, PAPER/LIVE, and next-ticket work remain
-unauthorized. Next ticket is `NONE`.
+Immediate state: real offline plan execution and record 320 are accepted when read with the
+reviewer's independent reconciliation in review 321. The immutable receipt binds plan identity
+`911ed811...f578`; SQLite contains exactly 737,119 plan rows, 202 typed gaps, zero acquisition
+facts, a zero ledger, and the plan receipt as zero-watermark head. Review 321 authorizes Hermes
+to execute exactly one six-hour-bounded real acquisition invocation over the full frozen plan.
+Its 736,274 object bound is the complete Binance count minus 73 retained objects and prevents
+Coinalyze access while `COINALYZE_API_KEY` is unset; it is not an economic-scope filter. A
+normal exit 2 publishes only evidence record 322 and stops for review. Any other disposition
+stops without repair or rerun. Second acquisition, Coinalyze, `verify`, source/test repair,
+validation rerun, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader, experiments,
+PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -22,6 +24,7 @@ Governing documents:
 - docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md
 - docs/adr/0029-content-addressed-gate2-acquisition-and-resume.md
 - research/sprint_004/319_CEX002_GATE2_OFFLINE_EVIDENCE_ACCEPTANCE_AND_REAL_PLAN_AUTHORIZATION.md
+- research/sprint_004/321_CEX002_REAL_PLAN_ACCEPTANCE_AND_FIRST_ACQUISITION_AUTHORIZATION.md
 - research/sprint_004/286_CEX002_GATE2_ACQUISITION_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md
 - research/sprint_004/287_CEX002_GATE2_FIRST_SOURCE_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/288_CEX002_GATE2_CORRECTION_REVIEW_AND_COMPLETE_RESIDUAL_AUTHORIZATION.md
