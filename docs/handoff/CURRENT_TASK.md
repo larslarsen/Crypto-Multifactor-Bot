@@ -2,18 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - integrate review 311 and run offline validation
+Next required actor: Jr Dev - Hermes - continue review 311 under correction 312
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 311 accepts Spark's exact review-310 cleanup at acquisition/CLI hashes
-`0f8bbf70...` / `6f4b56ec...`; the unchanged 177-test source remains `6157fd1f...`. Only the
-three Ruff-reported dead bindings were deleted. Hermes must integrate and push exactly the
-source and CLI, then run focused Ruff, full `tests/`, repository-wide Ruff, and control exactly
-once in order, stopping on the first failure. If all pass, Hermes publishes only evidence record
-312, commits/pushes it, and runs exact `git diff --check` once. Source/test repair and real
-plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog, NautilusTrader,
-Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: Hermes correctly stopped when an opaque compound review-311 preproof exited 1
+without diagnostics. Review 312 independently proves every required fact passed and identifies
+the likely order-sensitive two-path comparison; there is no source or prerequisite failure.
+Hermes must not rerun that compound preproof. After confirming `HEAD == origin/main`, Hermes
+must stage the exact source/CLI set without order sensitivity, integrate/push it, then run focused
+Ruff, full `tests/`, repository-wide Ruff, and control exactly once in order, stopping on the
+first failure. If all pass, Hermes publishes only evidence record 313, commits/pushes it, and
+runs exact `git diff --check` once. Source/test repair and real plan/acquire/verify, network/data
+mutation, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and
+next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -46,6 +48,7 @@ Governing documents:
 - research/sprint_004/309_CEX002_REVIEW308_BASE_PREPROOF_CORRECTION.md
 - research/sprint_004/310_CEX002_GATE2_FOCUSED_RUFF_FAILURE_AND_SPARK_CORRECTION.md
 - research/sprint_004/311_CEX002_GATE2_RUFF_CLEANUP_SOURCE_ACCEPTANCE.md
+- research/sprint_004/312_CEX002_REVIEW311_PREPROOF_FALSE_NEGATIVE_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
