@@ -2,21 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - run review 314 same-device clean validation
+Next required actor: Jr Dev - Hermes - run review 315 remaining clean checks
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review-313 setup proved clean-source imports, but the full suite exited 1 with
-5 failures and 13 errors because its `/tmp` worktree was device 47 while repository authority
-and receipt 258 require device 64513. Review 314 rejects that environment-invalid run. Hermes
-must remove only that failed temporary worktree, then repeat the remaining full suite,
-repository-wide Ruff, and control once in a new clean detached worktree under
-`/home/lars/.cache/tmp`, after proving repository, receipt, parent, worktree, and copied receipt
-are all device 64513 and binding `PYTHONPATH` to clean `src`. If all pass, Hermes publishes only
-evidence record 315 and runs exact shared-worktree `git diff --check` once. Source/test repair
-and real plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog,
-NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next
-ticket is `NONE`.
+Immediate state: the review-314 same-device clean full suite completed with exactly five
+failures and no errors. Review 315 proves all five are unrelated committed baseline defects: an
+ignored Uniswap fixture DB, a BitMEX test/source symbol-count mismatch, and three restored
+EXP-009 binding-evidence mismatches. Every other collected test, including all Gate-2 tests,
+passed; ticket-wide pytest remains formally blocked. Hermes must not rerun pytest or repair those
+paths. It must create a fresh same-device clean worktree and run only repository-wide Ruff and
+control once. If both pass, Hermes publishes evidence record 316 and runs exact shared-tree
+`git diff --check` once. Real plan/acquire/verify, network/data mutation, Gate 3, normalization,
+catalog, NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized.
+Next ticket is `NONE`.
 
 Governing documents:
 
@@ -52,6 +51,7 @@ Governing documents:
 - research/sprint_004/312_CEX002_REVIEW311_PREPROOF_FALSE_NEGATIVE_CORRECTION.md
 - research/sprint_004/313_CEX002_SHARED_WORKTREE_FAILURE_AND_CLEAN_VALIDATION.md
 - research/sprint_004/314_CEX002_CLEAN_VALIDATION_DEVICE_CORRECTION.md
+- research/sprint_004/315_CEX002_CLEAN_SUITE_BASELINE_FAILURE_REVIEW.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
