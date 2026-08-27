@@ -2,20 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute corrected full-plan acquisition under review 322
+Next required actor: Jr Dev - Hermes - continue corrected acquisition preproof under review 323
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: the real plan checkpoint remains accepted under review 321. After learning the
-free Coinalyze key is stored in protected ignored `.env`, review 322 supersedes review 321's
-Binance-only acquisition command. Hermes must securely source `.env` only inside the child
-subshell and execute exactly one six-hour-bounded acquisition over the complete immutable plan,
-with no object ceiling. Exit 2 is normal resumable progress; exit 3 is complete with the 202
-accepted typed gaps. Either accepted exit publishes only record 323 and stops for review. Any
-other disposition stops without repair or rerun. Second acquisition/replay, `verify`,
-source/test repair, validation rerun, Gate 3, normalization, catalog, NautilusTrader, Harmonic
-Trader, experiments, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is
-`NONE`.
+Immediate state: no acquisition ran. Hermes's corrected preproof wrapper falsely failed the
+Gate-2 device predicate. Review 323 directly proves every Gate-2 entry, all 41,809 store entries,
+every pinned authority, and `.env` are on device 64513; the plan-only state remains unchanged.
+Hermes must not rerun the compound wrapper or device predicate. It must perform only review
+323's short remaining preproof, run the still-unrun exact diff check once, then execute review
+322's secure six-hour-bounded full-plan acquisition exactly once. Exit 2 or 3 publishes only
+renumbered execution record 324 and stops for review. Any other disposition stops without
+repair or rerun. Second acquisition/replay, `verify`, source/test repair, validation rerun,
+Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader, experiments, PAPER/LIVE, and
+next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -25,6 +25,7 @@ Governing documents:
 - research/sprint_004/319_CEX002_GATE2_OFFLINE_EVIDENCE_ACCEPTANCE_AND_REAL_PLAN_AUTHORIZATION.md
 - research/sprint_004/321_CEX002_REAL_PLAN_ACCEPTANCE_AND_FIRST_ACQUISITION_AUTHORIZATION.md
 - research/sprint_004/322_CEX002_ENV_SECRET_BOUNDARY_AND_FULL_ACQUISITION_CORRECTION.md
+- research/sprint_004/323_CEX002_DEVICE_PREPROOF_FALSE_NEGATIVE_CORRECTION.md
 - research/sprint_004/286_CEX002_GATE2_ACQUISITION_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md
 - research/sprint_004/287_CEX002_GATE2_FIRST_SOURCE_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/288_CEX002_GATE2_CORRECTION_REVIEW_AND_COMPLETE_RESIDUAL_AUTHORIZATION.md
