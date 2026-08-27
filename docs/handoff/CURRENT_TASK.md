@@ -2,19 +2,18 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Implementation Dev - Codex Spark - apply review 310 Ruff cleanup
+Next required actor: Jr Dev - Hermes - integrate review 311 and run offline validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Hermes passed the corrected reviews 308-309 preproof and ran focused Gate-2
-Ruff once. It exited 1 in 0.091 seconds with exactly three dead-code findings, then correctly
-stopped before the other validation commands or any mutation. Review 310 authorizes Spark to
-remove only the unused CLI `EXIT_UNSAFE_STATE` import, the unused acquisition-source
-`dataclasses.replace` import, and the unused `content_inode` assignment. No test, command, Git,
-record, source refactor, or other path is authorized. Hermes integration and resumed offline
-validation await reviewer inspection of Spark's two-file return. Real plan/acquire/verify,
-network/data mutation, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader,
-PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: review 311 accepts Spark's exact review-310 cleanup at acquisition/CLI hashes
+`0f8bbf70...` / `6f4b56ec...`; the unchanged 177-test source remains `6157fd1f...`. Only the
+three Ruff-reported dead bindings were deleted. Hermes must integrate and push exactly the
+source and CLI, then run focused Ruff, full `tests/`, repository-wide Ruff, and control exactly
+once in order, stopping on the first failure. If all pass, Hermes publishes only evidence record
+312, commits/pushes it, and runs exact `git diff --check` once. Source/test repair and real
+plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog, NautilusTrader,
+Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -46,6 +45,7 @@ Governing documents:
 - research/sprint_004/308_CEX002_GATE2_TARGETED_TEST_ACCEPTANCE_AND_OFFLINE_VALIDATION.md
 - research/sprint_004/309_CEX002_REVIEW308_BASE_PREPROOF_CORRECTION.md
 - research/sprint_004/310_CEX002_GATE2_FOCUSED_RUFF_FAILURE_AND_SPARK_CORRECTION.md
+- research/sprint_004/311_CEX002_GATE2_RUFF_CLEANUP_SOURCE_ACCEPTANCE.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
