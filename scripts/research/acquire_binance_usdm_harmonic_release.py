@@ -15,7 +15,6 @@ from typing import Any
 
 from cryptofactors.acquisition.binance_usdm_harmonic_acquisition import (
     EXIT_AUTHORITY_INVALID,
-    EXIT_UNSAFE_STATE,
     AcquisitionError,
     AcquisitionPaths,
     AuthorityError,

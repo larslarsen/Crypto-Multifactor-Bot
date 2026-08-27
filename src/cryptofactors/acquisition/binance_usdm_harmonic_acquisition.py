@@ -30,7 +30,7 @@ import time
 import zipfile
 import zlib
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -7445,7 +7445,6 @@ def validate_provider_completion(
                 "completed content size does not match its recorded size",
                 context={"identity": plan.identity, "recorded": fact.listed_bytes},
             )
-        content_inode = int(os.fstat(fd).st_ino)
         if plan.kind == KIND_BINANCE:
             listed = int(plan.payload["listed_bytes"])
             if size != listed:
