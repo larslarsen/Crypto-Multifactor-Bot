@@ -2,21 +2,20 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - execute first bounded real acquisition under review 321
+Next required actor: Jr Dev - Hermes - execute corrected full-plan acquisition under review 322
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: real offline plan execution and record 320 are accepted when read with the
-reviewer's independent reconciliation in review 321. The immutable receipt binds plan identity
-`911ed811...f578`; SQLite contains exactly 737,119 plan rows, 202 typed gaps, zero acquisition
-facts, a zero ledger, and the plan receipt as zero-watermark head. Review 321 authorizes Hermes
-to execute exactly one six-hour-bounded real acquisition invocation over the full frozen plan.
-Its 736,274 object bound is the complete Binance count minus 73 retained objects and prevents
-Coinalyze access while `COINALYZE_API_KEY` is unset; it is not an economic-scope filter. A
-normal exit 2 publishes only evidence record 322 and stops for review. Any other disposition
-stops without repair or rerun. Second acquisition, Coinalyze, `verify`, source/test repair,
-validation rerun, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader, experiments,
-PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: the real plan checkpoint remains accepted under review 321. After learning the
+free Coinalyze key is stored in protected ignored `.env`, review 322 supersedes review 321's
+Binance-only acquisition command. Hermes must securely source `.env` only inside the child
+subshell and execute exactly one six-hour-bounded acquisition over the complete immutable plan,
+with no object ceiling. Exit 2 is normal resumable progress; exit 3 is complete with the 202
+accepted typed gaps. Either accepted exit publishes only record 323 and stops for review. Any
+other disposition stops without repair or rerun. Second acquisition/replay, `verify`,
+source/test repair, validation rerun, Gate 3, normalization, catalog, NautilusTrader, Harmonic
+Trader, experiments, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is
+`NONE`.
 
 Governing documents:
 
@@ -25,6 +24,7 @@ Governing documents:
 - docs/adr/0029-content-addressed-gate2-acquisition-and-resume.md
 - research/sprint_004/319_CEX002_GATE2_OFFLINE_EVIDENCE_ACCEPTANCE_AND_REAL_PLAN_AUTHORIZATION.md
 - research/sprint_004/321_CEX002_REAL_PLAN_ACCEPTANCE_AND_FIRST_ACQUISITION_AUTHORIZATION.md
+- research/sprint_004/322_CEX002_ENV_SECRET_BOUNDARY_AND_FULL_ACQUISITION_CORRECTION.md
 - research/sprint_004/286_CEX002_GATE2_ACQUISITION_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md
 - research/sprint_004/287_CEX002_GATE2_FIRST_SOURCE_REVIEW_AND_CONSOLIDATED_CORRECTION.md
 - research/sprint_004/288_CEX002_GATE2_CORRECTION_REVIEW_AND_COMPLETE_RESIDUAL_AUTHORIZATION.md
