@@ -2,20 +2,21 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - run review 313 clean offline validation
+Next required actor: Jr Dev - Hermes - run review 314 same-device clean validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Hermes integrated the exact Ruff cleanup in pushed commit `61aada4`; focused
-Gate-2 Ruff passed. Full `tests/` then failed 20 tests in the shared dirty worktree, beginning in
-Uniswap V2 receipt equivalence. Review 313 rejects that run as committed Gate-2 evidence because
-the editable environment loaded substantial unrelated uncommitted source. Hermes must preserve
-the shared worktree and run the remaining full suite, repository-wide Ruff, and control exactly
-once in a new detached clean worktree pinned to current committed `main`, with `PYTHONPATH`
-explicitly bound to its clean `src`. If all pass, Hermes publishes only evidence record 314 and
-runs exact shared-worktree `git diff --check` once. Source/test repair and real
-plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog, NautilusTrader,
-Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: review-313 setup proved clean-source imports, but the full suite exited 1 with
+5 failures and 13 errors because its `/tmp` worktree was device 47 while repository authority
+and receipt 258 require device 64513. Review 314 rejects that environment-invalid run. Hermes
+must remove only that failed temporary worktree, then repeat the remaining full suite,
+repository-wide Ruff, and control once in a new clean detached worktree under
+`/home/lars/.cache/tmp`, after proving repository, receipt, parent, worktree, and copied receipt
+are all device 64513 and binding `PYTHONPATH` to clean `src`. If all pass, Hermes publishes only
+evidence record 315 and runs exact shared-worktree `git diff --check` once. Source/test repair
+and real plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog,
+NautilusTrader, Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next
+ticket is `NONE`.
 
 Governing documents:
 
@@ -50,6 +51,7 @@ Governing documents:
 - research/sprint_004/311_CEX002_GATE2_RUFF_CLEANUP_SOURCE_ACCEPTANCE.md
 - research/sprint_004/312_CEX002_REVIEW311_PREPROOF_FALSE_NEGATIVE_CORRECTION.md
 - research/sprint_004/313_CEX002_SHARED_WORKTREE_FAILURE_AND_CLEAN_VALIDATION.md
+- research/sprint_004/314_CEX002_CLEAN_VALIDATION_DEVICE_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
