@@ -2,20 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - run reviews 308-309 corrected offline validation
+Next required actor: Implementation Dev - Codex Spark - apply review 310 Ruff cleanup
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Hermes correctly stopped review 308 preproof because the reviewer supplied an
-invalid expanded integration SHA; no validation command or mutation ran. Review 309 corrects the
-identity to `cee2b8a3c2c3693818c2fd34ec5016465e6be9cb`, which exists and is an ancestor. Review
-308's acceptance of the clean source/test/CLI identities and the targeted 177-test pass remains
-unchanged. Hermes must begin a fresh preproof and perform the single consolidated reviews
-308-309 offline round: focused Gate-2 Ruff, full `tests/`, repository-wide Ruff, and control,
-each exactly once and stopping on the first failure. If all pass, Hermes publishes only evidence
-record 310 in one commit/push and then runs exact `git diff --check` once. Source/test repair and
-real plan/acquire/verify, network/data mutation, Gate 3, normalization, catalog, NautilusTrader,
-Harmonic Trader, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Immediate state: Hermes passed the corrected reviews 308-309 preproof and ran focused Gate-2
+Ruff once. It exited 1 in 0.091 seconds with exactly three dead-code findings, then correctly
+stopped before the other validation commands or any mutation. Review 310 authorizes Spark to
+remove only the unused CLI `EXIT_UNSAFE_STATE` import, the unused acquisition-source
+`dataclasses.replace` import, and the unused `content_inode` assignment. No test, command, Git,
+record, source refactor, or other path is authorized. Hermes integration and resumed offline
+validation await reviewer inspection of Spark's two-file return. Real plan/acquire/verify,
+network/data mutation, Gate 3, normalization, catalog, NautilusTrader, Harmonic Trader,
+PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
@@ -46,6 +45,7 @@ Governing documents:
 - research/sprint_004/307_CEX002_GATE2_CORRECTION_SOURCE_ACCEPTANCE.md
 - research/sprint_004/308_CEX002_GATE2_TARGETED_TEST_ACCEPTANCE_AND_OFFLINE_VALIDATION.md
 - research/sprint_004/309_CEX002_REVIEW308_BASE_PREPROOF_CORRECTION.md
+- research/sprint_004/310_CEX002_GATE2_FOCUSED_RUFF_FAILURE_AND_SPARK_CORRECTION.md
 - research/sprint_004/59_CEX001_SOURCE_AND_PLATFORM_REVIEW.md
 - research/sprint_004/60_CEX_DATA_DESTINATION_DECISION.md
 - research/sprint_004/61_CEX002_SPARK_SOURCE_REVIEW.md
