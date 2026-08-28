@@ -2,24 +2,22 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build XHigh - review-334 descriptor correction
+Next required actor: Jr Dev - Hermes - review-335 exact integration and focused validation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Hermes integrated Review 333 and focused Ruff passed, but the targeted suite failed five
-filesystem-identity tests. Review 334 identifies one real descriptor-lifetime defect plus
-unstable inode fixtures and bounded lock-message mismatches.
+Review 335 accepts Grok's exact retirement module/test descriptor-continuity correction. Hermes
+must integrate and push only those two paths, run focused Ruff once, then run the targeted
+synthetic retirement-tool suite once on Ruff success. Stop on the first failure without repair
+or rerun; on two passes return the integration commit and exact command results without an
+evidence record.
 
-Grok Build XHigh must edit only the retirement module and test. Pin the receipt and SQLite
-descriptors before inventory and prove their names still bind those held descriptors after the
-replacement hook; make lock symlink/special diagnostics deterministic; and make all three
-replacement fixtures construct a provably distinct inode. Do not run commands/tests or use Git.
-
-Integration, validation, real inspection/retirement, corrected planning, acquisition, later
-gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Do not invoke the retirement CLI or inspect or mutate the real rejected store. Real retirement,
+corrected planning, acquisition, later gates, and next-ticket work remain unauthorized. Next
+ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `research/sprint_004/334_CEX002_RETIREMENT_TARGETED_FAILURE_AND_DESCRIPTOR_CORRECTION.md`
+- `research/sprint_004/335_CEX002_RETIREMENT_DESCRIPTOR_CORRECTION_ACCEPTANCE_AND_VALIDATION.md`
 - `research/sprint_004/330_CEX002_REJECTED_GATE2_RETIREMENT_AUTHORITY.json`
