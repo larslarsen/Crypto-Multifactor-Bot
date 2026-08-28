@@ -1,0 +1,197 @@
+{
+  "adr": "ADR-0030",
+  "database": {
+    "application_id": 1127368498,
+    "authority": {
+      "acquisition_cli_sha256": "6f4b56ecb43dcc448eb6c8cf765e38d9fa3923432459574d913582e3d9c84043",
+      "acquisition_source_sha256": "0f8bbf70db167420b5fd5e3b3d0e4d5ed441de580c886909c7bd55426a233981",
+      "created_at": "2026-08-27T18:11:33.135154+00:00",
+      "destination": "data/cex002_qualify",
+      "device": "dev:64513",
+      "plan_identity": "911ed811ba5a04008fa787ee88eb4b38a4df3718b169b5c5d914e9ac2f30f578",
+      "plan_receipt_sha256": "fb80b372080c7c59a14ecc43d89b1b2438e2b952d2ca571a10f372050f6d3bd3",
+      "policy_identity": "adr0029_content_addressed_gate2_acquisition_and_resume_v1"
+    },
+    "coinalyze_ledger_charged": 0,
+    "foreign_key_violation_count": 0,
+    "integrity_check": "ok",
+    "plan_entry_counts": {
+      "binance_vision/binance_object": 736347,
+      "coinalyze/coinalyze_inventory": 1,
+      "coinalyze/coinalyze_liquidation": 569,
+      "coinalyze/coinalyze_unsupported_gap": 202
+    },
+    "plan_entry_retained_counts": {
+      "false": 736257,
+      "not_applicable": 772,
+      "true": 90
+    },
+    "run": {
+      "attempt_delta": 0,
+      "attempt_hi": 0,
+      "byte_delta": 0,
+      "capacity_blocked": 0,
+      "completion_delta": 0,
+      "ended_at": null,
+      "error_count": 0,
+      "gap_delta": 0,
+      "network_calls": 0,
+      "open_coinalyze_charges": 0,
+      "run_id": "6528d0ff9ec26b2a9112f607d532ba4ede1126f2be5080e6f18c0a89dae7a406",
+      "seq": 1,
+      "started_at": "2026-08-27T20:24:52.741721+00:00",
+      "stop_reason": null
+    },
+    "seal_head": {
+      "attempt_hi": 0,
+      "charge_hi": 0,
+      "completion_hi": 0,
+      "plan_receipt_sha256": "fb80b372080c7c59a14ecc43d89b1b2438e2b952d2ca571a10f372050f6d3bd3",
+      "predecessor_sha256": null,
+      "prefix_digest": "c8e246b0c826041fdf9db3d69159d9f7610d65674e5d5417cc99846358d8b01a",
+      "run_hi": 0,
+      "seal_hi": 0,
+      "sidecar_hi": 0,
+      "transition_hi": 0
+    },
+    "table_counts": {
+      "attempt": 0,
+      "authority": 1,
+      "charge_transition": 0,
+      "coinalyze_charge": 0,
+      "coinalyze_ledger": 1,
+      "completion": 0,
+      "plan_entry": 737119,
+      "run_metadata": 1,
+      "run_publication": 0,
+      "run_seal": 0,
+      "seal_head": 1,
+      "sidecar_fact": 0,
+      "terminal_gap": 202
+    },
+    "terminal_gap_counts": {
+      "unsupported_mapping": 202
+    },
+    "user_version": 7
+  },
+  "execution_context": {
+    "accepted_acquisition_cli_sha256": "6f4b56ecb43dcc448eb6c8cf765e38d9fa3923432459574d913582e3d9c84043",
+    "accepted_acquisition_source_sha256": "af6ef568b9f0f30827b393efc013b13560d4fd5761ec86417c0d2cf461e1248d",
+    "accepted_acquisition_test_sha256": "40a75c4e8516f94e9d7528ec036bd7fef964219ac2203768f510364ff30d2624",
+    "integration_commit": "6e7ed863a6478a4a5a2967a23d44c5199b225a17"
+  },
+  "filesystem": {
+    "active_name": "gate2",
+    "destination_name": "fb80b372080c7c59a14ecc43d89b1b2438e2b952d2ca571a10f372050f6d3bd3",
+    "device": 64513,
+    "entries": [
+      {
+        "device": 64513,
+        "inode": 20587587,
+        "mode": 448,
+        "path": ".",
+        "sha256": null,
+        "size": 4096,
+        "type": "directory"
+      },
+      {
+        "device": 64513,
+        "inode": 20587931,
+        "mode": 384,
+        "path": "acquisition.lock",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "type": "regular_file"
+      },
+      {
+        "device": 64513,
+        "inode": 20587613,
+        "mode": 448,
+        "path": "plan_receipts",
+        "sha256": null,
+        "size": 4096,
+        "type": "directory"
+      },
+      {
+        "device": 64513,
+        "inode": 20587680,
+        "mode": 384,
+        "path": "plan_receipts/fb80b372080c7c59a14ecc43d89b1b2438e2b952d2ca571a10f372050f6d3bd3.json",
+        "sha256": "fb80b372080c7c59a14ecc43d89b1b2438e2b952d2ca571a10f372050f6d3bd3",
+        "size": 4663,
+        "type": "regular_file"
+      },
+      {
+        "device": 64513,
+        "inode": 20587438,
+        "mode": 448,
+        "path": "run_receipts",
+        "sha256": null,
+        "size": 4096,
+        "type": "directory"
+      },
+      {
+        "device": 64513,
+        "inode": 20587946,
+        "mode": 384,
+        "path": "state.sqlite",
+        "sha256": "a6179bf5d015a8b9f9cf4cb654adad90aba5bec6d8d9e645321e4ee8ae7bf6b9",
+        "size": 742342656,
+        "type": "regular_file"
+      },
+      {
+        "device": 64513,
+        "inode": 20587444,
+        "mode": 384,
+        "path": "state.sqlite-shm",
+        "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb",
+        "size": 32768,
+        "type": "regular_file"
+      },
+      {
+        "device": 64513,
+        "inode": 20587429,
+        "mode": 384,
+        "path": "state.sqlite-wal",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "type": "regular_file"
+      },
+      {
+        "device": 64513,
+        "inode": 20587440,
+        "mode": 448,
+        "path": "terminal",
+        "sha256": null,
+        "size": 4096,
+        "type": "directory"
+      },
+      {
+        "device": 64513,
+        "inode": 20587333,
+        "mode": 448,
+        "path": "tmp",
+        "sha256": null,
+        "size": 4096,
+        "type": "directory"
+      }
+    ],
+    "entry_count": 10,
+    "regular_file_bytes": 742380087,
+    "retirement_parent": "gate2_retired",
+    "store_root": "data/cex002_qualify"
+  },
+  "observed_at": "2026-08-28T00:28:47.348356379Z",
+  "plan_receipt": {
+    "coinalyze_logical_receipts": 570,
+    "declared_retained_credit_objects": 73,
+    "plan_identity": "911ed811ba5a04008fa787ee88eb4b38a4df3718b169b5c5d914e9ac2f30f578",
+    "plan_objects": 737119,
+    "policy_identity": "adr0029_content_addressed_gate2_acquisition_and_resume_v1",
+    "schema_version": "cex002_gate2_plan_receipt_v1",
+    "sha256": "fb80b372080c7c59a14ecc43d89b1b2438e2b952d2ca571a10f372050f6d3bd3",
+    "typed_gaps": 202
+  },
+  "schema_version": "cex002_rejected_gate2_retirement_authority_v1",
+  "ticket": "CEX-002"
+}

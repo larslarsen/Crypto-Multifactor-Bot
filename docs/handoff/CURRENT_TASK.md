@@ -2,26 +2,33 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - review-329 one-test integration and targeted rerun
+Next required actor: Sr Dev - Grok Build XHigh - review-330 standalone retirement tool
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: Review 329 accepts Spark's exact fixture-only correction at test SHA-256
-`40a75c4e8516f94e9d7528ec036bd7fef964219ac2203768f510364ff30d2624`, 5,676 lines,
-and 203 tests. The only diff synchronizes the report-summary retained byte value with the two
-existing tampered byte values. Production and CLI remain unchanged; no real Gate-2 data was
-touched.
+Hermes integrated the exact retained-byte fixture in pushed commit `6e7ed86`, and the one
+authorized targeted acquisition suite passed. Review 330 accepts the complete ADR-0030
+retained-authority correction.
 
-Hermes must preprove the identities and repository state, use explicit Git-write permission,
-stage/commit/push only the accepted acquisition test, then run the targeted acquisition pytest
-exactly once. Any failure stops without repair or rerun. On success, return the commit and exact
-test result; do not create a separate evidence record.
+The rejected 742,380,087-byte Gate-2 store remains untouched. Its exact ten-entry filesystem
+inventory and immutable read-only SQLite facts are bound in the review-330 authority JSON at
+SHA-256 `8c658629a8adcb4eecd46b84509221f83bb053dc916a83f546e4de8e14a4ebc1`.
+It contains 737,119 plan rows, 90 retained labels, 202 gaps, one unfinished zero-fact run, and
+no acquisition facts.
 
-Ruff rerun, production repair, full-suite/repository validation, control, old-store retirement,
-planning, acquisition, replay, `verify`, later gates, and next-ticket work remain unauthorized.
-Next ticket is `NONE`.
+Grok Build XHigh must create only the standalone retirement module, CLI, and synthetic test
+source named in Review 330. The tool imports no acquisition code, provides read-only `inspect`
+and exact-authority `retire`, and implements held-lock, no-follow inventory, immutable SQLite
+proof, `renameat2(RENAME_NOREPLACE)`, directory `fsync`/filesystem `syncfs`, and complete
+post-proof. Do not run commands/tests, use Git, or touch real data. Return the three hashes and
+line counts plus test-function count.
+
+Integration, validation, real inspection/retirement, corrected planning, acquisition, later
+gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `research/sprint_004/329_CEX002_TARGETED_FIXTURE_ACCEPTANCE_AND_INTEGRATION.md`
+- `docs/adr/0030-exact-retained-credit-and-pre-network-plan-retirement.md`
+- `research/sprint_004/330_CEX002_GATE2_RETIREMENT_TOOL_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md`
+- `research/sprint_004/330_CEX002_REJECTED_GATE2_RETIREMENT_AUTHORITY.json`
