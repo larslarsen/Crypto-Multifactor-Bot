@@ -2,30 +2,27 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - permission-corrected review-327 continuation
+Next required actor: Implementation Dev - Codex Spark - exact review-328 fixture line
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: review 326 accepted the complete ADR-0030 source/test correction. Hermes's
-first `git add` failed because its sandbox mounted `.git` read-only. No file was staged, no
-index lock remains, no commit exists, and focused Ruff/targeted pytest remain unrun. The
-accepted two dirty source/test files are intact; the rejected real Gate-2 store remains
-untouched.
+Immediate state: Hermes integrated the exact ADR-0030 source/test files in commit `72aac89`.
+The targeted suite ran once and only
+`test_wrong_retained_byte_count_is_rejected_before_plan_publication` failed. Production is
+correct: the fixture changed primary/physical bytes to `1` but did not change the newly
+authenticated report-summary byte field, so validation stopped at that earlier inconsistency.
+No real Gate-2 data was touched.
 
-Hermes must follow review 327's short continuation using explicit Git-write escalation for
-every command that writes `.git`: reconfirm head/hashes/empty index, integrate only the two
-accepted files, then run review 326's focused Ruff and targeted pytest once each in order.
-Stop on any denial or failure without repair/rerun. On two passes, publish renumbered evidence
-record 328 with approved Git writes, run final shared-tree `git diff --check` once, and stop.
+Spark must edit only `tests/acquisition/test_binance_usdm_harmonic_acquisition.py`. In that one
+test, after the two assignments to byte value `1`, set
+`document["physical_inputs"]["retained_credit"]["report_summary"]["retained_verified_credit_bytes"] = 1`
+using normal multiline formatting. Preserve everything else. Do not run commands/tests or use
+Git. Return the test hash, line count, and test-function count.
 
-Real-store access/retirement, corrected planning, acquisition, replay, `verify`, full-suite or
-repository-wide validation, control, Gate 3, normalization, catalog, NautilusTrader, Harmonic
-Trader, experiments, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is
-`NONE`.
+Hermes integration/rerun, Ruff, source repair, old-store retirement, planning, acquisition,
+replay, `verify`, later gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `docs/adr/0030-exact-retained-credit-and-pre-network-plan-retirement.md`
-- `research/sprint_004/326_CEX002_RETAINED_AUTHORITY_SOURCE_ACCEPTANCE_AND_INTEGRATION.md`
-- `research/sprint_004/327_CEX002_HERMES_GIT_SANDBOX_CORRECTION.md`
+- `research/sprint_004/328_CEX002_TARGETED_TEST_FIXTURE_FAILURE_AND_SPARK_CORRECTION.md`
