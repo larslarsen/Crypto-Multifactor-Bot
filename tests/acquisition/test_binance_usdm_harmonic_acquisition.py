@@ -5340,6 +5340,9 @@ def test_wrong_retained_byte_count_is_rejected_before_plan_publication(
     )
     document["physical_inputs"]["retained_credit"]["bytes"] = 1
     document["physical_inputs"]["retained_credit_bytes"] = 1
+    document["physical_inputs"]["retained_credit"]["report_summary"][
+        "retained_verified_credit_bytes"
+    ] = 1
     _write_sizing_receipt(built, document)
     with pytest.raises(gate2.AuthorityError, match="retained credit bytes changed"):
         _run_plan(built)
