@@ -2,26 +2,21 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build XHigh - review-330 standalone retirement tool
+Next required actor: Sr Dev - Grok Build XHigh - review-331 consolidated retirement correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Hermes integrated the exact retained-byte fixture in pushed commit `6e7ed86`, and the one
-authorized targeted acquisition suite passed. Review 330 accepts the complete ADR-0030
-retained-authority correction.
+Review 331 rejects integration of Grok's first retirement-tool drop but preserves its correct
+foundation. The real rejected Gate-2 store and review-330 authority remain unchanged.
 
-The rejected 742,380,087-byte Gate-2 store remains untouched. Its exact ten-entry filesystem
-inventory and immutable read-only SQLite facts are bound in the review-330 authority JSON at
-SHA-256 `8c658629a8adcb4eecd46b84509221f83bb053dc916a83f546e4de8e14a4ebc1`.
-It contains 737,119 plan rows, 90 retained labels, 202 gaps, one unfinished zero-fact run, and
-no acquisition facts.
-
-Grok Build XHigh must create only the standalone retirement module, CLI, and synthetic test
-source named in Review 330. The tool imports no acquisition code, provides read-only `inspect`
-and exact-authority `retire`, and implements held-lock, no-follow inventory, immutable SQLite
-proof, `renameat2(RENAME_NOREPLACE)`, directory `fsync`/filesystem `syncfs`, and complete
-post-proof. Do not run commands/tests, use Git, or touch real data. Return the three hashes and
-line counts plus test-function count.
+Grok Build XHigh must edit only the existing retirement module, CLI, and test source. In one
+consolidated return it must bind the active/lock/parent/destination names to their proved
+descriptors across the rename; open the receipt and SQLite through authority-matched file
+descriptors; make receipt write/flush failure nonzero and post-retirement indeterminate; bound
+all corrupt-SQLite failures safely; repair the foreign-key fixture; add the named replacement,
+pre-rename-fsync, output, production-authority, and descriptor-SQLite tests; and clear the
+listed ASCII/Ruff defects. Do not run commands/tests, use Git, or touch real data. Return the
+three hashes and line counts plus test-function count.
 
 Integration, validation, real inspection/retirement, corrected planning, acquisition, later
 gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
@@ -29,6 +24,5 @@ gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `docs/adr/0030-exact-retained-credit-and-pre-network-plan-retirement.md`
-- `research/sprint_004/330_CEX002_GATE2_RETIREMENT_TOOL_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md`
+- `research/sprint_004/331_CEX002_RETIREMENT_TOOL_STATIC_REVIEW_AND_CONSOLIDATED_CORRECTION.md`
 - `research/sprint_004/330_CEX002_REJECTED_GATE2_RETIREMENT_AUTHORITY.json`
