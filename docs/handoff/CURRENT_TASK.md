@@ -2,22 +2,21 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - review-341 final record-339 provenance correction
+Next required actor: Jr Dev - Hermes - review-342 first corrected acquisition and record 343
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-The corrected plan semantics remain accepted and planning must not be rerun. Review 341 rejects
-only record 339's remaining provenance claims: its "verbatim" receipt is minified rather than
-the 5,007-byte canonical body, and its listed commands cannot produce the published hashed/
-labeled inventory while the SQLite command is absent.
+Review 342 accepts the corrected v2 plan and record 339 with an explicit correction that its
+inventory/SQLite blocks are normalized summaries, not byte-verbatim command output. No further
+plan or evidence presentation round is authorized.
 
-Hermes must amend only record 339 with the canonical receipt and the actual complete inspection
-command/script text. Use minimum read-only reinspection only if command text was not retained.
-Do not invoke a repository CLI, access the retired tree, or mutate plan state. Acquisition,
-later gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Hermes must execute one six-hour-bounded full-plan acquisition session using the protected
+child-subshell `.env` boundary and publish record 343. Accepted exits are resumable exit 2 or
+complete-with-typed-gaps exit 3. Do not rerun acquisition, replay, or invoke `verify`. Later
+gates and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `research/sprint_004/341_CEX002_CORRECTED_PLAN_EVIDENCE_PROVENANCE_REJECTION.md`
+- `research/sprint_004/342_CEX002_CORRECTED_PLAN_ACCEPTANCE_AND_FIRST_ACQUISITION.md`
 - `research/sprint_004/339_CEX002_CORRECTED_GATE2_REAL_PLAN_EXECUTION.md`
