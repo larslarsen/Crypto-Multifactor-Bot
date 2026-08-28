@@ -479,6 +479,29 @@ def open_child_file(parent_fd: int, name: str, *, flags: int = os.O_RDONLY) -> i
     return fd
 
 
+def _open_relative_regular_file(root_fd: int, relative: str) -> int:
+    parts = [part for part in Path(relative).parts if part not in {".", ""}]
+    if not parts:
+        raise SafeRetirementError(
+            "unsafe path component", context={"part": relative}
+        )
+    current = os.dup(root_fd)
+    try:
+        for index, part in enumerate(parts):
+            last = index == len(parts) - 1
+            nxt = (
+                open_child_file(current, part)
+                if last
+                else open_child_dir(current, part)
+            )
+            os.close(current)
+            current = nxt
+        return current
+    except Exception:
+        os.close(current)
+        raise
+
+
 def _lookup_entry(
     entries: Sequence[Mapping[str, Any]], path: str
 ) -> dict[str, Any]:
@@ -532,7 +555,7 @@ def prove_held_name(
     opened = (
         open_child_dir(parent_fd, name)
         if directory
-        else open_child_file(parent_fd, name)
+        else _open_relative_regular_file(parent_fd, name)
     )
     try:
         opened_st = os.fstat(opened)
@@ -544,9 +567,8 @@ def prove_held_name(
             {"name": name},
         )
         if expected is not None:
-            _require_entry_identity(
-                opened_st, expected, path=str(expected.get("path") or name)
-            )
+            path = str(expected.get("path") or name)
+            _require_entry_identity(held_st, expected, path=path)
     finally:
         os.close(opened)
 
@@ -1401,16 +1423,32 @@ def _prove_sqlite_connection(
 
 def _acquire_lock(tree_fd: int, descriptors: _Descriptors) -> int:
     try:
+        st = os.stat(LOCK_NAME, dir_fd=tree_fd, follow_symlinks=False)
+    except FileNotFoundError as exc:
+        raise SafeRetirementError("acquisition lock is missing") from exc
+    except OSError as exc:
+        raise SafeRetirementError(
+            "acquisition lock cannot be inspected safely"
+        ) from exc
+    if stat.S_ISLNK(st.st_mode):
+        raise SafeRetirementError("acquisition lock is a symlink")
+    if not stat.S_ISREG(st.st_mode):
+        raise SafeRetirementError("acquisition lock is a special file")
+    try:
         lock_fd = os.open(
-            LOCK_NAME, os.O_RDWR | os.O_NOFOLLOW, dir_fd=tree_fd
+            LOCK_NAME,
+            os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK,
+            dir_fd=tree_fd,
         )
     except FileNotFoundError as exc:
         raise SafeRetirementError("acquisition lock is missing") from exc
     except OSError as exc:
-        raise SafeRetirementError("acquisition lock cannot be opened no-follow") from exc
+        raise SafeRetirementError(
+            "acquisition lock cannot be opened no-follow"
+        ) from exc
     descriptors.add(lock_fd)
     if not stat.S_ISREG(os.fstat(lock_fd).st_mode):
-        raise SafeRetirementError("acquisition lock is not a regular file")
+        raise SafeRetirementError("acquisition lock is a special file")
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as exc:
@@ -1452,26 +1490,32 @@ def _prove_tree(
     device = int(authority["filesystem"]["device"])
     tree_stat = os.fstat(tree_fd)
     _require(int(tree_stat.st_dev) == device, "active tree device changed")
+    receipt_rel = _plan_receipt_path(authority)
+    receipt_fd = descriptors.add(_open_relative_regular_file(tree_fd, receipt_rel))
+    sqlite_fd = descriptors.add(open_child_file(tree_fd, SQLITE_NAME))
     entries = collect_inventory(tree_fd, runtime=runtime, expected_device=device)
     _compare_inventory(entries, authority["filesystem"]["entries"])
     root_entry = _lookup_entry(entries, ".")
     lock_entry = _lookup_entry(entries, LOCK_NAME)
     sqlite_entry = _lookup_entry(entries, SQLITE_NAME)
-    receipt_rel = _plan_receipt_path(authority)
     receipt_entry = _lookup_entry(entries, receipt_rel)
     if runtime.hooks.after_inventory is not None:
         runtime.hooks.after_inventory()
-    receipt_fd = descriptors.add(
-        _walk_relative(tree_fd, receipt_rel, flags=os.O_RDONLY, directory=False)
+    prove_held_name(
+        tree_fd,
+        receipt_rel,
+        receipt_fd,
+        directory=False,
+        expected=receipt_entry,
     )
-    _require_entry_identity(
-        os.fstat(receipt_fd), receipt_entry, path=receipt_rel
+    prove_held_name(
+        tree_fd,
+        SQLITE_NAME,
+        sqlite_fd,
+        directory=False,
+        expected=sqlite_entry,
     )
     prove_plan_receipt(receipt_fd, authority, runtime)
-    sqlite_fd = descriptors.add(open_child_file(tree_fd, SQLITE_NAME))
-    _require_entry_identity(
-        os.fstat(sqlite_fd), sqlite_entry, path=SQLITE_NAME
-    )
     prove_sqlite(sqlite_fd, authority, runtime)
     parent = str(authority["filesystem"]["retirement_parent"])
     destination = str(authority["filesystem"]["destination_name"])

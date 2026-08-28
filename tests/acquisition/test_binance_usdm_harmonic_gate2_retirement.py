@@ -607,6 +607,19 @@ def _snapshot(path: Path) -> dict[str, tuple[int, int, str | None]]:
     return out
 
 
+def _replace_with_distinct_inode(
+    target: Path, *, payload: bytes, mode: int
+) -> None:
+    sibling = target.with_name(f"{target.name}.replacement")
+    sibling.write_bytes(b"")
+    original_inode = os.stat(target, follow_symlinks=False).st_ino
+    sibling_inode = os.stat(sibling, follow_symlinks=False).st_ino
+    assert sibling_inode != original_inode
+    sibling.write_bytes(payload)
+    os.chmod(sibling, mode)
+    os.replace(sibling, target)
+
+
 def test_inspect_succeeds_without_mutation(tmp_path: Path) -> None:
     built = build_store(tmp_path)
     before = _snapshot(built["tree"])
@@ -761,9 +774,7 @@ def test_special_file_is_rejected(tmp_path: Path) -> None:
 def test_replaced_inode_is_rejected(tmp_path: Path) -> None:
     built = build_store(tmp_path)
     lock = built["tree"] / "acquisition.lock"
-    os.unlink(lock)
-    lock.write_bytes(b"")
-    os.chmod(lock, 0o600)
+    _replace_with_distinct_inode(lock, payload=b"", mode=0o600)
     with pytest.raises(retire.SafeRetirementError, match="inventory entry changed"):
         _run_inspect(built)
 
@@ -1269,10 +1280,9 @@ def test_receipt_inode_replacement_after_inventory_is_rejected(
     receipt = next((built["tree"] / "plan_receipts").iterdir())
 
     def _replace() -> None:
-        payload = receipt.read_bytes()
-        receipt.unlink()
-        receipt.write_bytes(payload)
-        os.chmod(receipt, 0o600)
+        _replace_with_distinct_inode(
+            receipt, payload=receipt.read_bytes(), mode=0o600
+        )
 
     with pytest.raises(
         retire.SafeRetirementError, match="inventory identity|held descriptor"
@@ -1287,10 +1297,9 @@ def test_sqlite_inode_replacement_after_inventory_is_rejected(
     state = built["tree"] / "state.sqlite"
 
     def _replace() -> None:
-        payload = state.read_bytes()
-        state.unlink()
-        state.write_bytes(payload)
-        os.chmod(state, 0o600)
+        _replace_with_distinct_inode(
+            state, payload=state.read_bytes(), mode=0o600
+        )
 
     with pytest.raises(
         retire.SafeRetirementError, match="inventory identity|held descriptor"
