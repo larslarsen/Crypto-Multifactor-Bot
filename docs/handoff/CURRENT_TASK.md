@@ -2,21 +2,19 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Grok Build XHigh - review-331 consolidated retirement correction
+Next required actor: Implementation Dev - Codex Spark High - review-332 output/test residual
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 331 rejects integration of Grok's first retirement-tool drop but preserves its correct
-foundation. The real rejected Gate-2 store and review-330 authority remain unchanged.
+Review 332 accepts Grok's corrected retirement module unchanged at SHA-256
+`8e74a6f984ea2ec61a7e2b459e8e8f6c61c199ef5f9233208ac6ea92599bc344`.
+The real rejected store and review-330 authority remain untouched.
 
-Grok Build XHigh must edit only the existing retirement module, CLI, and test source. In one
-consolidated return it must bind the active/lock/parent/destination names to their proved
-descriptors across the rename; open the receipt and SQLite through authority-matched file
-descriptors; make receipt write/flush failure nonzero and post-retirement indeterminate; bound
-all corrupt-SQLite failures safely; repair the foreign-key fixture; add the named replacement,
-pre-rename-fsync, output, production-authority, and descriptor-SQLite tests; and clear the
-listed ASCII/Ruff defects. Do not run commands/tests, use Git, or touch real data. Return the
-three hashes and line counts plus test-function count.
+Spark must edit only the retirement CLI and test. Add `ValueError` to `_emit`'s stdout
+write/flush failure catch; broaden the corrupt-SQLite test match to bounded `SQLite`; and add a
+retirement flush-failure test mirroring the write-failure test, asserting indeterminate exit,
+error text, source absence, and destination presence. Preserve everything else. Do not run
+commands/tests or use Git. Return CLI/test hashes and line counts plus test-function count.
 
 Integration, validation, real inspection/retirement, corrected planning, acquisition, later
 gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
@@ -24,5 +22,5 @@ gates, and next-ticket work remain unauthorized. Next ticket is `NONE`.
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `research/sprint_004/331_CEX002_RETIREMENT_TOOL_STATIC_REVIEW_AND_CONSOLIDATED_CORRECTION.md`
+- `research/sprint_004/332_CEX002_RETIREMENT_CORRECTION_ACCEPTANCE_AND_SPARK_RESIDUAL.md`
 - `research/sprint_004/330_CEX002_REJECTED_GATE2_RETIREMENT_AUTHORITY.json`
