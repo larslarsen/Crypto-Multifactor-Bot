@@ -1,4 +1,5 @@
-"""CEX-002 Gate 2 — synthetic proof of ADR-0029 as corrected by reviews 287-289.
+"""CEX-002 Gate 2 — synthetic proof of ADR-0029 as corrected by reviews 287-289
+and ADR-0030 exact retained credit.
 
 Every test is synthetic, deterministic, zero-network, temporary-rooted, and free of real
 sleep. The production engine, CLI, and offline verifier are exercised on their real paths.
@@ -17,7 +18,7 @@ import zipfile
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable, Iterator, Mapping
+from typing import Any, Callable, Iterator, Mapping, Sequence
 from urllib.parse import urlencode, urlparse
 
 import pytest
@@ -295,6 +296,124 @@ def _seed_retained(
         "byte_size": len(payload),
         "retrieval_time": "2026-08-21T00:00:00+00:00",
     }
+
+
+def _costish(key: str) -> bool:
+    return "/daily/bookTicker/" in key or "/daily/bookDepth/" in key
+
+
+def _sizing_receipt_document(
+    keys: Sequence[str],
+    *,
+    objects: int,
+    unique_bytes: int,
+    selected_keys: int,
+    cost_keys: int,
+    unverified: int = 0,
+    rejected_recovered_rows: int = 0,
+    valid_requirement_keys: int | None = None,
+    key_set_sha256: str | None = None,
+    lineage_key_set_sha256: str | None = None,
+    lineage_requirement_keys: int | None = None,
+    coefficient_only_keys_marked_retained: int = 0,
+    physical_objects: int | None = None,
+    physical_bytes: int | None = None,
+    source: str | None = None,
+    schema_version: str = "cex002_gate2_storage_sizing_v3",
+    ticket: str = "CEX-002",
+) -> dict[str, Any]:
+    ordered = list(keys)
+    digest = (
+        key_set_sha256
+        if key_set_sha256 is not None
+        else gate2.requirement_key_set_sha256(sorted(str(item) for item in ordered))
+    )
+    key_count = len(ordered) if valid_requirement_keys is None else valid_requirement_keys
+    return {
+        "schema_version": schema_version,
+        "ticket": ticket,
+        "physical_inputs": {
+            "retained_credit": {
+                "bytes": unique_bytes,
+                "cost_retained_keys": cost_keys,
+                "key_set_sha256": digest,
+                "keys": ordered,
+                "objects": objects,
+                "rejected_recovered_rows": rejected_recovered_rows,
+                "report_summary": {
+                    "rejected_retained_row_count": rejected_recovered_rows,
+                    "retained_valid_requirement_keys": key_count,
+                    "retained_verified_credit_bytes": unique_bytes,
+                    "retained_verified_credit_objects": objects,
+                    "unverified_retained_objects": unverified,
+                },
+                "selected_retained_keys": selected_keys,
+                "source": gate2.RETAINED_CREDIT_SOURCE if source is None else source,
+                "unverified_objects": unverified,
+                "valid_requirement_keys": key_count,
+            },
+            "retained_credit_bytes": (
+                unique_bytes if physical_bytes is None else physical_bytes
+            ),
+            "retained_credit_objects": (
+                objects if physical_objects is None else physical_objects
+            ),
+        },
+        "lineage": {
+            "coefficient_only_keys_marked_retained": (
+                coefficient_only_keys_marked_retained
+            ),
+            "retained_archive_key_set_sha256": (
+                digest if lineage_key_set_sha256 is None else lineage_key_set_sha256
+            ),
+            "retained_archive_requirement_keys": (
+                key_count if lineage_requirement_keys is None else lineage_requirement_keys
+            ),
+        },
+    }
+
+
+def _write_sizing_receipt(built: dict[str, Any], document: Mapping[str, Any]) -> None:
+    body = _canonical(document)
+    built["paths"].receipt_258_path.write_bytes(body)
+    built["pins"] = replace(
+        built["pins"],
+        receipt_258_sha256=_sha(body),
+        receipt_258_bytes=len(body),
+    )
+
+
+def _rewrite_progress(
+    built: dict[str, Any], mutate: Callable[[dict[str, Any]], None]
+) -> None:
+    path = built["paths"].progress_path
+    document = json.loads(path.read_text(encoding="utf-8"))
+    mutate(document)
+    body = _canonical(document)
+    path.write_bytes(body)
+    built["pins"] = replace(built["pins"], progress_sha256=_sha(body))
+
+
+def _plan_receipt(built: dict[str, Any]) -> dict[str, Any]:
+    conn = _state_conn(built["paths"])
+    try:
+        row = conn.execute(
+            "SELECT plan_receipt_sha256 FROM authority WHERE id=1"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row is not None
+    path = built["paths"].plan_receipt_dir / f"{row[0]}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _assert_no_installed_plan(built: dict[str, Any]) -> None:
+    assert not built["paths"].state_path.exists()
+    plan_dir = built["paths"].plan_receipt_dir
+    if plan_dir.exists():
+        assert list(plan_dir.glob("*.json")) == []
+
+
 def build_universe(
     tmp_path: Path,
     *,
@@ -306,6 +425,7 @@ def build_universe(
     unavailable: frozenset[str] = frozenset(),
     retain_all: bool = False,
     retain_keys: set[str] | None = None,
+    credit_keys: set[str] | None = None,
     archive_intervals: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     repo = tmp_path / "repo"
@@ -419,19 +539,35 @@ def build_universe(
 
     retain_set = set(zips) if retain_all else set(retain_keys or ())
     checkpoint_objects: dict[str, Any] = {}
-    retained_bytes = 0
-    retained_digests: set[str] = set()
     for key in sorted(retain_set):
-        entry = _seed_retained(
+        checkpoint_objects[key] = _seed_retained(
             sample_dir=sample_dir,
             sidecar_dir=listing_cache,
             key=key,
             payload=zips[key],
         )
-        checkpoint_objects[key] = entry
-        if entry["sha256"] not in retained_digests:
-            retained_digests.add(entry["sha256"])
+    authorized = set(credit_keys) if credit_keys is not None else set(retain_set)
+    missing_credit = authorized - retain_set
+    if missing_credit:
+        raise AssertionError("credit_keys must be seeded in qualification progress")
+    retained_digests: set[str] = set()
+    retained_bytes = 0
+    for key in sorted(authorized):
+        entry = checkpoint_objects[key]
+        digest = str(entry["sha256"])
+        if digest not in retained_digests:
+            retained_digests.add(digest)
             retained_bytes += int(entry["byte_size"])
+    cost_retained = sum(1 for key in authorized if _costish(key))
+    selected_retained = len(authorized) - cost_retained
+    receipt_document = _sizing_receipt_document(
+        sorted(authorized),
+        objects=len(retained_digests),
+        unique_bytes=retained_bytes,
+        selected_keys=selected_retained,
+        cost_keys=cost_retained,
+    )
+    receipt_bytes = _canonical(receipt_document)
 
     provenance = [
         {
@@ -487,7 +623,6 @@ def build_universe(
     }
     report_bytes = _canonical(report)
     report_path = repo / "research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json"
-    receipt_bytes = _canonical({"schema_version": "cex002_gate2_storage_sizing_v3", "ticket": "CEX-002"})
     receipt_path = repo / "research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json"
     holdout_path = store / "cex002_holdout_boundary.json"
     lock_path = store / "cex002_sample_plan_lock.json"
@@ -627,6 +762,10 @@ def build_universe(
         "cost_rows": cost_rows,
         "supported": supported,
         "retain_set": retain_set,
+        "credit_set": authorized,
+        "retained_credit_key_set_sha256": str(
+            receipt_document["physical_inputs"]["retained_credit"]["key_set_sha256"]
+        ),
     }
 
 
@@ -1490,6 +1629,16 @@ def test_retained_credit_adopts_cost_keys_without_network(tmp_path: Path) -> Non
         assert published.stat().st_ino == source.stat().st_ino
     replay = _acquire(built)
     assert replay["network_call_count"] == 0
+    plan = _plan_receipt(built)
+    credit = plan["retained_credit"]
+    assert credit["valid_requirement_keys"] == 73
+    assert credit["objects"] == 73
+    assert credit["selected_retained_keys"] == 68
+    assert credit["cost_retained_keys"] == 5
+    assert credit["unverified_objects"] == 0
+    assert credit["bytes"] == built["pins"].retained_credit_bytes
+    assert credit["key_set_sha256"] == built["retained_credit_key_set_sha256"]
+    assert "keys" not in credit
 
 
 def test_retained_tamper_is_fail_closed(tmp_path: Path) -> None:
@@ -2161,7 +2310,7 @@ def test_a_changed_accepted_count_cannot_attach_to_an_installed_plan(
 ) -> None:
     _acquire(universe)
     tampered = replace(universe["pins"], retained_credit_objects=99)
-    with pytest.raises(gate2.UnsafeStateError, match="plan receipt identity changed"):
+    with pytest.raises(gate2.AuthorityError, match="retained credit object count"):
         gate2.verify_state(
             universe["paths"], tampered, filesystem=universe["filesystem"]
         )
@@ -4568,6 +4717,8 @@ def _ordered_run_receipts(paths: gate2.AcquisitionPaths) -> list[dict[str, Any]]
 def test_process_loss_after_run_begin_finalizes_that_run(
     universe: dict[str, Any],
 ) -> None:
+    # Synthetic zero-fact recovery only. Corrected code is never used to finalize
+    # the retired real Gate-2 store under review 324 / ADR-0030.
     with pytest.raises(gate2.FaultInjected, match="after_run_begin"):
         _acquire(universe, fault=gate2.NamedFault("after_run_begin"))
     conn = _state_conn(universe["paths"])
@@ -4895,3 +5046,628 @@ def test_process_loss_after_capacity_stop_keeps_blocked(
     gate2.verify_state(
         universe["paths"], universe["pins"], filesystem=universe["filesystem"]
     )
+
+
+def _tiny_retained_universe(
+    tmp_path: Path,
+    *,
+    intervals: tuple[str, ...] = ("2020-01-01", "2020-01-02"),
+    credit_keys: set[str] | None = None,
+) -> dict[str, Any]:
+    return build_universe(
+        tmp_path,
+        archive_families=("daily/klines",),
+        archive_intervals=intervals,
+        retain_all=True,
+        credit_keys=credit_keys,
+        supported=("BTCUSDT",),
+        unsupported=(),
+        extra_inventory=(),
+    )
+
+
+def _run_plan(built: dict[str, Any]) -> dict[str, Any]:
+    return gate2.run_plan(
+        built["paths"], built["pins"], filesystem=built["filesystem"]
+    )
+
+
+def test_ninety_complete_progress_objects_credit_only_receipt_authorized_keys(
+    tmp_path: Path,
+) -> None:
+    days = tuple(
+        (datetime(2020, 1, 1) + timedelta(days=index)).strftime("%Y-%m-%d")
+        for index in range(85)
+    )
+    credit_keys = {_key("daily/klines", "BTCUSDT", day) for day in days[:68]} | {
+        _key("daily/bookTicker", "BTCUSDT", "2020-01-01"),
+        _key("daily/bookTicker", "BTCUSDT", "2020-01-02"),
+        _key("daily/bookTicker", "BTCUSDT", "2020-01-03"),
+        _key("daily/bookDepth", "BTCUSDT", "2020-01-01"),
+        _key("daily/bookDepth", "BTCUSDT", "2020-01-02"),
+    }
+    assert len(credit_keys) == 73
+    built = build_universe(
+        tmp_path,
+        archive_families=("daily/klines",),
+        archive_intervals=days,
+        supported=("BTCUSDT",),
+        unsupported=(),
+        extra_inventory=(),
+        retain_all=True,
+        credit_keys=credit_keys,
+    )
+    assert len(built["retain_set"]) == 90
+    assert built["credit_set"] == credit_keys
+    assert built["pins"].retained_credit_objects == 73
+    result = _acquire(built)
+    assert result["exit_code"] == gate2.EXIT_COMPLETE
+    state = _open_state(built["paths"])
+    try:
+        binance = [
+            item
+            for item in state.iter_completions()
+            if item["provider"] == gate2.PROVIDER_BINANCE
+        ]
+        retained = [
+            item
+            for item in binance
+            if item["validation_state"] == gate2.OUTCOME_RETAINED
+        ]
+        verified = [
+            item
+            for item in binance
+            if item["validation_state"] == gate2.OUTCOME_CHECKSUM_VERIFIED
+        ]
+        labeled: set[str] = set()
+        unretained: set[str] = set()
+        for item in binance:
+            payload = state.plan_payload(gate2.PROVIDER_BINANCE, item["identity"])
+            assert payload is not None
+            if payload.get("retained") is True:
+                labeled.add(item["identity"])
+            else:
+                unretained.add(item["identity"])
+    finally:
+        state.close()
+    assert len(binance) == 90
+    assert {item["identity"] for item in retained} == credit_keys
+    assert len(verified) == 17
+    assert labeled == credit_keys
+    assert len(unretained) == 17
+    assert credit_keys.isdisjoint({item["identity"] for item in verified})
+    vision = [
+        url
+        for url, _headers in built["transport"].calls
+        if "data.binance.vision" in url
+    ]
+    assert len(vision) == 34
+    plan = _plan_receipt(built)
+    credit = plan["retained_credit"]
+    assert credit["valid_requirement_keys"] == 73
+    assert credit["objects"] == 73
+    assert credit["selected_retained_keys"] == 68
+    assert credit["cost_retained_keys"] == 5
+    assert credit["unverified_objects"] == 0
+    assert credit["key_set_sha256"] == built["retained_credit_key_set_sha256"]
+    assert "keys" not in credit
+
+
+def test_unsorted_retained_keys_are_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    built = _tiny_retained_universe(tmp_path)
+    keys = sorted(built["credit_set"])
+    document = _sizing_receipt_document(
+        list(reversed(keys)),
+        objects=len(keys),
+        unique_bytes=built["pins"].retained_credit_bytes,
+        selected_keys=sum(1 for key in keys if not _costish(key)),
+        cost_keys=sum(1 for key in keys if _costish(key)),
+    )
+    _write_sizing_receipt(built, document)
+    with pytest.raises(
+        gate2.AuthorityError,
+        match="retained credit keys are not strictly unique and ordered",
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_duplicate_retained_keys_are_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = _sizing_receipt_document(
+        [key, key],
+        objects=1,
+        unique_bytes=built["pins"].retained_credit_bytes,
+        selected_keys=1,
+        cost_keys=0,
+        valid_requirement_keys=2,
+    )
+    _write_sizing_receipt(built, document)
+    built["pins"] = replace(built["pins"], retained_credit_objects=2)
+    with pytest.raises(
+        gate2.AuthorityError,
+        match="retained credit keys are not strictly unique and ordered",
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_missing_retained_progress_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    _rewrite_progress(built, lambda document: document["objects"].pop(key))
+    with pytest.raises(
+        gate2.AuthorityError,
+        match="not complete in qualification progress",
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_extra_retained_keys_are_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key1 = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    key2 = _key("daily/klines", "BTCUSDT", "2020-01-02")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key1})
+    document = _sizing_receipt_document(
+        sorted([key1, key2]),
+        objects=1,
+        unique_bytes=built["pins"].retained_credit_bytes,
+        selected_keys=1,
+        cost_keys=0,
+        valid_requirement_keys=1,
+    )
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="retained credit key count"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_outside_plan_retained_key_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    outside = _key("daily/klines", "FAKEUSDT", "1999-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = _sizing_receipt_document(
+        sorted([key, outside]),
+        objects=2,
+        unique_bytes=built["pins"].retained_credit_bytes,
+        selected_keys=2,
+        cost_keys=0,
+    )
+    _write_sizing_receipt(built, document)
+    built["pins"] = replace(built["pins"], retained_credit_objects=2)
+    with pytest.raises(
+        gate2.AuthorityError,
+        match="not in the selected-plus-cost plan",
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_incomplete_retained_progress_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+
+    def _mark_incomplete(document: dict[str, Any]) -> None:
+        document["objects"][key]["status"] = "partial"
+
+    _rewrite_progress(built, _mark_incomplete)
+    with pytest.raises(
+        gate2.AuthorityError,
+        match="not complete in qualification progress",
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_unproved_retained_bytes_are_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    progress = json.loads(built["paths"].progress_path.read_text(encoding="utf-8"))
+    digest = str(progress["objects"][key]["sha256"])
+    (built["paths"].sample_dir / digest).write_bytes(b"tampered-retained-bytes")
+    with pytest.raises(gate2.AuthorityError, match="retained"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_wrong_retained_digest_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(
+        built["paths"].receipt_258_path.read_text(encoding="utf-8")
+    )
+    document["physical_inputs"]["retained_credit"]["key_set_sha256"] = "a" * 64
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="key-set digest changed"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_wrong_retained_lineage_digest_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(
+        built["paths"].receipt_258_path.read_text(encoding="utf-8")
+    )
+    document["lineage"]["retained_archive_key_set_sha256"] = "b" * 64
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="lineage key-set digest changed"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_wrong_retained_object_count_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(
+        built["paths"].receipt_258_path.read_text(encoding="utf-8")
+    )
+    document["physical_inputs"]["retained_credit_objects"] = 99
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="retained credit object count"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_wrong_retained_byte_count_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(
+        built["paths"].receipt_258_path.read_text(encoding="utf-8")
+    )
+    document["physical_inputs"]["retained_credit"]["bytes"] = 1
+    document["physical_inputs"]["retained_credit_bytes"] = 1
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="retained credit bytes changed"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_wrong_selected_cost_decomposition_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    built = _tiny_retained_universe(tmp_path)
+    keys = sorted(built["credit_set"])
+    document = _sizing_receipt_document(
+        keys,
+        objects=len(keys),
+        unique_bytes=built["pins"].retained_credit_bytes,
+        selected_keys=0,
+        cost_keys=len(keys),
+    )
+    _write_sizing_receipt(built, document)
+    with pytest.raises(
+        gate2.AuthorityError,
+        match="retained credit selected key count|retained credit cost key count",
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_changing_authorized_key_set_cannot_attach_to_installed_plan(
+    tmp_path: Path,
+) -> None:
+    key1 = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    key2 = _key("daily/klines", "BTCUSDT", "2020-01-02")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key1})
+    first_pins = built["pins"]
+    first_receipt = built["paths"].receipt_258_path.read_bytes()
+    first_summary = gate2.build_plan(
+        built["paths"], built["pins"], filesystem=built["filesystem"]
+    )
+    progress = json.loads(built["paths"].progress_path.read_text(encoding="utf-8"))
+    entry = progress["objects"][key2]
+    second_document = _sizing_receipt_document(
+        [key2],
+        objects=1,
+        unique_bytes=int(entry["byte_size"]),
+        selected_keys=1,
+        cost_keys=0,
+    )
+    _write_sizing_receipt(built, second_document)
+    built["pins"] = replace(
+        built["pins"],
+        retained_credit_objects=1,
+        retained_credit_bytes=int(entry["byte_size"]),
+    )
+    second_summary = gate2.build_plan(
+        built["paths"], built["pins"], filesystem=built["filesystem"]
+    )
+    assert first_summary.identity != second_summary.identity
+    assert (
+        first_summary.retained_credit.key_set_sha256
+        != second_summary.retained_credit.key_set_sha256
+    )
+    built["paths"].receipt_258_path.write_bytes(first_receipt)
+    built["pins"] = first_pins
+    installed = _run_plan(built)
+    assert installed["plan_identity"] == first_summary.identity
+    _write_sizing_receipt(built, second_document)
+    built["pins"] = replace(
+        built["pins"],
+        retained_credit_objects=1,
+        retained_credit_bytes=int(entry["byte_size"]),
+    )
+    with pytest.raises(gate2.UnsafeStateError, match="different plan"):
+        _run_plan(built)
+    conn = _state_conn(built["paths"])
+    try:
+        identity = conn.execute(
+            "SELECT plan_identity FROM authority WHERE id=1"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert identity is not None
+    assert str(identity[0]) == first_summary.identity
+
+
+def _rewrite_installed_plan_receipt(
+    built: dict[str, Any], mutate: Callable[[dict[str, Any]], None]
+) -> None:
+    conn = _state_conn(built["paths"])
+    try:
+        row = conn.execute(
+            "SELECT plan_receipt_sha256 FROM authority WHERE id=1"
+        ).fetchone()
+        assert row is not None
+        old_sha = str(row[0])
+        path = built["paths"].plan_receipt_dir / f"{old_sha}.json"
+        document = json.loads(path.read_text(encoding="utf-8"))
+        mutate(document)
+        body = gate2.canonical_json(document)
+        digest = gate2.sha256_bytes(body)
+        new_path = built["paths"].plan_receipt_dir / f"{digest}.json"
+        new_path.write_bytes(body)
+        conn.execute(
+            "UPDATE authority SET plan_receipt_sha256=? WHERE id=1", (digest,)
+        )
+        conn.execute(
+            "UPDATE seal_head SET receipt_sha256=?, receipt_path=? WHERE id=1",
+            (digest, str(new_path)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_extra_retained_credit_field_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["physical_inputs"]["retained_credit"]["extra"] = True
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="extra or missing fields"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_missing_retained_credit_field_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    del document["physical_inputs"]["retained_credit"]["source"]
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="extra or missing fields"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_altered_report_summary_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["physical_inputs"]["retained_credit"]["report_summary"][
+        "retained_verified_credit_objects"
+    ] = 99
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="report summary object count"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_altered_rejected_row_fact_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["physical_inputs"]["retained_credit"]["rejected_recovered_rows"] = 1
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="rejected row count"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_nonzero_coefficient_only_lineage_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["lineage"]["coefficient_only_keys_marked_retained"] = 1
+    _write_sizing_receipt(built, document)
+    with pytest.raises(
+        gate2.AuthorityError, match="coefficient-only keys are marked retained"
+    ):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_receipt_258_schema_mismatch_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["schema_version"] = "cex002_gate2_storage_sizing_v2"
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="schema version changed"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_receipt_258_ticket_mismatch_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["ticket"] = "OTHER"
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="ticket changed"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_lineage_key_count_mismatch_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    document["lineage"]["retained_archive_requirement_keys"] = 99
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="lineage key count changed"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_nonzero_unverified_count_is_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    document = json.loads(built["paths"].receipt_258_path.read_text(encoding="utf-8"))
+    credit = document["physical_inputs"]["retained_credit"]
+    credit["unverified_objects"] = 1
+    credit["report_summary"]["unverified_retained_objects"] = 1
+    _write_sizing_receipt(built, document)
+    with pytest.raises(gate2.AuthorityError, match="unverified object count"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+def test_aliased_retained_digests_are_rejected_before_plan_publication(
+    tmp_path: Path,
+) -> None:
+    key1 = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    key2 = _key("daily/klines", "BTCUSDT", "2020-01-02")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key1, key2})
+
+    def _alias(document: dict[str, Any]) -> None:
+        first = document["objects"][key1]
+        digest = str(first["sha256"])
+        sidecar_body = f"{digest} {key2.rsplit('/', 1)[-1]}\n".encode()
+        sidecar_path, sidecar_digest = persist_provider_sidecar(
+            sidecar_body, sidecar_dir=built["paths"].listing_cache_dir
+        )
+        document["objects"][key2]["sha256"] = digest
+        document["objects"][key2]["provider_checksum"] = digest
+        document["objects"][key2]["byte_size"] = first["byte_size"]
+        document["objects"][key2]["provider_checksum_path"] = str(sidecar_path)
+        document["objects"][key2]["provider_checksum_sha256"] = sidecar_digest
+
+    _rewrite_progress(built, _alias)
+    with pytest.raises(gate2.AuthorityError, match="retained credit objects are aliased"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+@pytest.mark.parametrize("value", ["12", True])
+def test_retained_progress_byte_size_must_be_an_exact_positive_integer(
+    tmp_path: Path, value: Any
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+
+    def _coerce(document: dict[str, Any]) -> None:
+        document["objects"][key]["byte_size"] = value
+
+    _rewrite_progress(built, _coerce)
+    with pytest.raises(gate2.AuthorityError, match="retained progress byte size"):
+        _run_plan(built)
+    _assert_no_installed_plan(built)
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    (
+        (
+            lambda doc: doc["retained_credit"].__setitem__("extra", True),
+            "extra or missing fields",
+        ),
+        (
+            lambda doc: doc["retained_credit"].pop("unverified_objects"),
+            "extra or missing fields",
+        ),
+        (
+            lambda doc: doc["retained_credit"].__setitem__(
+                "key_set_sha256", "A" * 64
+            ),
+            "key-set digest is not sha256",
+        ),
+        (
+            lambda doc: doc["retained_credit"].__setitem__("objects", 99),
+            "aliased|object count",
+        ),
+        (
+            lambda doc: doc["retained_credit"].__setitem__("bytes", 1),
+            "retained credit bytes changed",
+        ),
+        (
+            lambda doc: doc["retained_credit"].__setitem__("unverified_objects", 1),
+            "unverified object count",
+        ),
+        (
+            lambda doc: (
+                doc["retained_credit"].__setitem__("selected_retained_keys", 0),
+                doc["retained_credit"].__setitem__("cost_retained_keys", 0),
+            ),
+            "selected and cost keys do not sum",
+        ),
+    ),
+)
+def test_compact_plan_receipt_values_are_authenticated_on_replay(
+    tmp_path: Path,
+    mutate: Callable[[dict[str, Any]], None],
+    match: str,
+) -> None:
+    key = _key("daily/klines", "BTCUSDT", "2020-01-01")
+    built = _tiny_retained_universe(tmp_path, credit_keys={key})
+    _run_plan(built)
+    _rewrite_installed_plan_receipt(built, mutate)
+    state = _open_state(built["paths"])
+    try:
+        with pytest.raises(gate2.UnsafeStateError, match=match):
+            state.authenticate_prefix()
+    finally:
+        state.close()

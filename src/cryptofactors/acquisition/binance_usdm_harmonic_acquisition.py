@@ -1,14 +1,15 @@
 """CEX-002 Gate 2 — content-addressed acquisition and deterministic resume.
 
-Implements ADR-0029 as corrected by reviews 287, 288, and 289: a hash-bound
-immutable plan, descriptor-bound no-follow sharded publication, an exactly
-authenticated fail-closed SQLite state, a crash-recoverable Coinalyze
-budget/publication/completion transition, one coordinator that owns every
-database write and terminal transition, one shared streaming provider-semantic
-validator used by resume and offline verification, a prospective capacity guard
-at every transfer boundary, storage-neutral retained adoption, and exact
-terminal reconciliation. Planning and verification perform no network call and
-no production path holds a universe-proportional Python collection.
+Implements ADR-0029 as corrected by reviews 287, 288, and 289, and ADR-0030
+exact retained credit: a hash-bound immutable plan, descriptor-bound no-follow
+sharded publication, an exactly authenticated fail-closed SQLite state, a
+crash-recoverable Coinalyze budget/publication/completion transition, one
+coordinator that owns every database write and terminal transition, one shared
+streaming provider-semantic validator used by resume and offline verification,
+a prospective capacity guard at every transfer boundary, storage-neutral
+retained adoption from receipt 258's exact key set, and exact terminal
+reconciliation. Planning and verification perform no network call and no
+production path holds a universe-proportional Python collection.
 """
 
 from __future__ import annotations
@@ -55,8 +56,40 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
 )
 
 TICKET_ID = "CEX-002"
-POLICY_IDENTITY = "adr0029_content_addressed_gate2_acquisition_and_resume_v1"
-PLAN_SCHEMA = "cex002_gate2_plan_receipt_v1"
+POLICY_IDENTITY = (
+    "adr0029_content_addressed_gate2_acquisition_and_resume_"
+    "adr0030_exact_retained_credit_v2"
+)
+PLAN_SCHEMA = "cex002_gate2_plan_receipt_v2"
+SIZING_RECEIPT_SCHEMA = "cex002_gate2_storage_sizing_v3"
+RECEIPT_258_RETAINED_CREDIT_KEYS: frozenset[str] = frozenset(
+    {
+        "bytes",
+        "cost_retained_keys",
+        "key_set_sha256",
+        "keys",
+        "objects",
+        "rejected_recovered_rows",
+        "report_summary",
+        "selected_retained_keys",
+        "source",
+        "unverified_objects",
+        "valid_requirement_keys",
+    }
+)
+RECEIPT_258_REPORT_SUMMARY_KEYS: frozenset[str] = frozenset(
+    {
+        "rejected_retained_row_count",
+        "retained_valid_requirement_keys",
+        "retained_verified_credit_bytes",
+        "retained_verified_credit_objects",
+        "unverified_retained_objects",
+    }
+)
+RETAINED_CREDIT_SOURCE = (
+    "effective checkpoint rows inside the complete selected-plus-cost "
+    "requirement, path-bound, rehashed, and deduplicated by content digest"
+)
 RUN_SCHEMA = "cex002_gate2_run_receipt_v1"
 TERMINAL_SCHEMA = "cex002_gate2_terminal_receipt_v1"
 STATE_SCHEMA = "cex002_gate2_acquisition_state_v1"
@@ -228,6 +261,18 @@ PLAN_RECEIPT_KEYS: frozenset[str] = frozenset(
         "holdout_boundary_id",
         "storage",
         "prohibitions",
+        "retained_credit",
+    }
+)
+PLAN_RETAINED_CREDIT_KEYS: frozenset[str] = frozenset(
+    {
+        "key_set_sha256",
+        "valid_requirement_keys",
+        "objects",
+        "bytes",
+        "selected_retained_keys",
+        "cost_retained_keys",
+        "unverified_objects",
     }
 )
 CADENCE_RULE = "monthly_preferred_daily_gap_tail_v1"
@@ -404,6 +449,23 @@ PRODUCTION_PINS = AuthorityPins(
     receipt_258_bytes=39_727_059,
     attestation_282_bytes=3_794,
 )
+PRODUCTION_RETAINED_SELECTED_KEYS = 68
+PRODUCTION_RETAINED_COST_KEYS = 5
+PRODUCTION_RETAINED_UNVERIFIED_OBJECTS = 0
+PRODUCTION_RETAINED_REJECTED_ROWS = 176
+
+
+@dataclass(frozen=True, slots=True)
+class RetainedCredit:
+    keys: tuple[str, ...]
+    key_set: frozenset[str]
+    key_set_sha256: str
+    valid_requirement_keys: int
+    objects: int
+    unique_bytes: int
+    selected_retained_keys: int
+    cost_retained_keys: int
+    unverified_objects: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -680,6 +742,14 @@ def compact_json(payload: Any) -> bytes:
 
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def requirement_key_set_sha256(keys: Sequence[str]) -> str:
+    """SHA-256 of canonical JSON ``{"requirement_keys": sorted_keys}``."""
+
+    return sha256_bytes(
+        canonical_json({"requirement_keys": sorted(str(key) for key in keys)})
+    )
 
 
 def _exact_int(value: Any, *, label: str, minimum: int = 0) -> int:
@@ -2521,6 +2591,7 @@ class PlanSummary:
     code_identity: Mapping[str, str]
     object_count: int
     lifecycles: Mapping[str, tuple[int, int]]
+    retained_credit: RetainedCredit
 
 
 def authenticate_helpers(paths: AcquisitionPaths, pins: AuthorityPins,
@@ -3028,17 +3099,393 @@ def iter_selected_binance(
         )
 
 
+def _authority_int(value: Any, *, label: str, minimum: int = 0) -> int:
+    if isinstance(value, bool) or type(value) is not int:
+        raise AuthorityError(f"{label} is not an exact integer")
+    if value < minimum:
+        raise AuthorityError(f"{label} is below its bound")
+    return value
+
+
+def _authority_str(value: Any, *, label: str) -> str:
+    if type(value) is not str or value == "":
+        raise AuthorityError(f"{label} is not a non-empty string")
+    return value
+
+
+def _require_authority(
+    condition: bool, message: str, context: Mapping[str, Any] | None = None
+) -> None:
+    if not condition:
+        raise AuthorityError(message, context=dict(context or {}))
+
+
+def _authority_object(
+    value: Any, *, label: str, keys: frozenset[str]
+) -> dict[str, Any]:
+    if type(value) is not dict:
+        raise AuthorityError(f"{label} is not an exact object")
+    observed = frozenset(value)
+    extra = sorted(observed - keys)
+    missing = sorted(keys - observed)
+    if extra or missing:
+        raise AuthorityError(
+            f"{label} has extra or missing fields",
+            context={"extra": extra, "missing": missing},
+        )
+    return value
+
+
+def authenticate_retained_credit_receipt(
+    document: Mapping[str, Any], pins: AuthorityPins
+) -> RetainedCredit:
+    """Decode receipt 258's exact retained-credit contract. Never a count-only set."""
+
+    schema = document.get("schema_version")
+    _require_authority(
+        schema == SIZING_RECEIPT_SCHEMA,
+        "receipt 258 schema version changed",
+        {"expected": SIZING_RECEIPT_SCHEMA, "actual": schema},
+    )
+    ticket = document.get("ticket")
+    _require_authority(
+        ticket == TICKET_ID,
+        "receipt 258 ticket changed",
+        {"expected": TICKET_ID, "actual": ticket},
+    )
+    physical = document.get("physical_inputs")
+    if type(physical) is not dict:
+        raise AuthorityError("receipt 258 physical inputs are missing")
+    credit_block = _authority_object(
+        physical.get("retained_credit"),
+        label="retained credit",
+        keys=RECEIPT_258_RETAINED_CREDIT_KEYS,
+    )
+    summary = _authority_object(
+        credit_block.get("report_summary"),
+        label="retained credit report summary",
+        keys=RECEIPT_258_REPORT_SUMMARY_KEYS,
+    )
+    lineage = document.get("lineage")
+    if type(lineage) is not dict:
+        raise AuthorityError("receipt 258 lineage is missing")
+    raw_keys = credit_block.get("keys")
+    if type(raw_keys) is not list:
+        raise AuthorityError("retained credit keys are not a list")
+    keys: list[str] = []
+    previous: str | None = None
+    for item in raw_keys:
+        if type(item) is not str or item == "":
+            raise AuthorityError(
+                "a retained credit key is not a non-empty string",
+                context={"key": item},
+            )
+        if previous is not None and item <= previous:
+            raise AuthorityError(
+                "retained credit keys are not strictly unique and ordered",
+                context={"previous": previous, "key": item},
+            )
+        previous = item
+        keys.append(item)
+    digest = requirement_key_set_sha256(keys)
+    declared_digest = _authority_str(
+        credit_block.get("key_set_sha256"), label="retained credit key-set digest"
+    )
+    if not HEX64.match(declared_digest):
+        raise AuthorityError("retained credit key-set digest is not sha256")
+    _require_authority(
+        digest == declared_digest,
+        "retained credit key-set digest changed",
+        {"expected": digest, "actual": declared_digest},
+    )
+    lineage_digest = _authority_str(
+        lineage.get("retained_archive_key_set_sha256"),
+        label="retained credit lineage key-set digest",
+    )
+    _require_authority(
+        digest == lineage_digest,
+        "retained credit lineage key-set digest changed",
+        {"expected": digest, "actual": lineage_digest},
+    )
+    valid_keys = _authority_int(
+        credit_block.get("valid_requirement_keys"),
+        label="retained credit valid requirement keys",
+    )
+    objects = _authority_int(credit_block.get("objects"), label="retained credit objects")
+    unique_bytes = _authority_int(credit_block.get("bytes"), label="retained credit bytes")
+    selected_keys = _authority_int(
+        credit_block.get("selected_retained_keys"),
+        label="retained credit selected keys",
+    )
+    cost_keys = _authority_int(
+        credit_block.get("cost_retained_keys"), label="retained credit cost keys"
+    )
+    unverified = _authority_int(
+        credit_block.get("unverified_objects"),
+        label="retained credit unverified objects",
+    )
+    rejected = _authority_int(
+        credit_block.get("rejected_recovered_rows"),
+        label="retained credit rejected recovered rows",
+    )
+    source = _authority_str(credit_block.get("source"), label="retained credit source")
+    _require_authority(
+        valid_keys == len(keys),
+        "retained credit key count changed",
+        {"expected": valid_keys, "actual": len(keys)},
+    )
+    lineage_keys = _authority_int(
+        lineage.get("retained_archive_requirement_keys"),
+        label="retained credit lineage key count",
+    )
+    _require_authority(
+        lineage_keys == valid_keys,
+        "retained credit lineage key count changed",
+        {"expected": valid_keys, "actual": lineage_keys},
+    )
+    coefficient_only = _authority_int(
+        lineage.get("coefficient_only_keys_marked_retained"),
+        label="coefficient-only retained lineage count",
+    )
+    _require_authority(
+        coefficient_only == 0,
+        "coefficient-only keys are marked retained",
+        {"actual": coefficient_only},
+    )
+    physical_objects = _authority_int(
+        physical.get("retained_credit_objects"),
+        label="physical retained credit objects",
+    )
+    physical_bytes = _authority_int(
+        physical.get("retained_credit_bytes"),
+        label="physical retained credit bytes",
+    )
+    _require_authority(
+        physical_objects == objects,
+        "retained credit object count changed",
+        {"expected": objects, "actual": physical_objects},
+    )
+    _require_authority(
+        physical_bytes == unique_bytes,
+        "retained credit bytes changed",
+        {"expected": unique_bytes, "actual": physical_bytes},
+    )
+    _require_authority(
+        objects == valid_keys,
+        "retained credit objects are aliased",
+        {"keys": valid_keys, "objects": objects},
+    )
+    _require_authority(
+        selected_keys + cost_keys == valid_keys,
+        "retained credit selected and cost keys do not sum to the key count",
+        {
+            "selected_retained_keys": selected_keys,
+            "cost_retained_keys": cost_keys,
+            "valid_requirement_keys": valid_keys,
+        },
+    )
+    _require_authority(
+        unverified == 0,
+        "retained credit unverified object count changed",
+        {"expected": 0, "actual": unverified},
+    )
+    _require_authority(
+        _authority_int(
+            summary.get("rejected_retained_row_count"),
+            label="report summary rejected retained row count",
+        )
+        == rejected,
+        "retained credit rejected row count changed",
+        {"expected": rejected, "actual": summary.get("rejected_retained_row_count")},
+    )
+    _require_authority(
+        _authority_int(
+            summary.get("retained_valid_requirement_keys"),
+            label="report summary valid requirement keys",
+        )
+        == valid_keys,
+        "retained credit report summary key count changed",
+        {"expected": valid_keys, "actual": summary.get("retained_valid_requirement_keys")},
+    )
+    _require_authority(
+        _authority_int(
+            summary.get("retained_verified_credit_objects"),
+            label="report summary retained objects",
+        )
+        == objects,
+        "retained credit report summary object count changed",
+        {"expected": objects, "actual": summary.get("retained_verified_credit_objects")},
+    )
+    _require_authority(
+        _authority_int(
+            summary.get("retained_verified_credit_bytes"),
+            label="report summary retained bytes",
+        )
+        == unique_bytes,
+        "retained credit report summary bytes changed",
+        {"expected": unique_bytes, "actual": summary.get("retained_verified_credit_bytes")},
+    )
+    _require_authority(
+        _authority_int(
+            summary.get("unverified_retained_objects"),
+            label="report summary unverified objects",
+        )
+        == unverified,
+        "retained credit report summary unverified count changed",
+        {"expected": unverified, "actual": summary.get("unverified_retained_objects")},
+    )
+    _require_authority(
+        objects == pins.retained_credit_objects,
+        "retained credit object count changed",
+        {"expected": pins.retained_credit_objects, "actual": objects},
+    )
+    _require_authority(
+        unique_bytes == pins.retained_credit_bytes,
+        "retained credit bytes changed",
+        {"expected": pins.retained_credit_bytes, "actual": unique_bytes},
+    )
+    if pins.receipt_258_sha256 == PRODUCTION_PINS.receipt_258_sha256:
+        _require_authority(
+            valid_keys == PRODUCTION_PINS.retained_credit_objects
+            and objects == PRODUCTION_PINS.retained_credit_objects
+            and unique_bytes == PRODUCTION_PINS.retained_credit_bytes
+            and selected_keys == PRODUCTION_RETAINED_SELECTED_KEYS
+            and cost_keys == PRODUCTION_RETAINED_COST_KEYS
+            and unverified == PRODUCTION_RETAINED_UNVERIFIED_OBJECTS
+            and rejected == PRODUCTION_RETAINED_REJECTED_ROWS
+            and source == RETAINED_CREDIT_SOURCE,
+            "production retained credit decomposition changed",
+            {
+                "keys": valid_keys,
+                "objects": objects,
+                "bytes": unique_bytes,
+                "selected_retained_keys": selected_keys,
+                "cost_retained_keys": cost_keys,
+                "unverified_objects": unverified,
+                "rejected_recovered_rows": rejected,
+            },
+        )
+    return RetainedCredit(
+        keys=tuple(keys),
+        key_set=frozenset(keys),
+        key_set_sha256=digest,
+        valid_requirement_keys=valid_keys,
+        objects=objects,
+        unique_bytes=unique_bytes,
+        selected_retained_keys=selected_keys,
+        cost_retained_keys=cost_keys,
+        unverified_objects=unverified,
+    )
+
+
+def _compact_retained_credit(credit: RetainedCredit) -> dict[str, Any]:
+    return {
+        "key_set_sha256": credit.key_set_sha256,
+        "valid_requirement_keys": credit.valid_requirement_keys,
+        "objects": credit.objects,
+        "bytes": credit.unique_bytes,
+        "selected_retained_keys": credit.selected_retained_keys,
+        "cost_retained_keys": credit.cost_retained_keys,
+        "unverified_objects": credit.unverified_objects,
+    }
+
+
+def authenticate_compact_retained_credit(
+    block: Mapping[str, Any], *, pins: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Prove the compact v2 retained block on every chain replay."""
+
+    credit = _exact_object(
+        block, label="retained_credit", keys=PLAN_RETAINED_CREDIT_KEYS
+    )
+    digest = _exact_str(credit["key_set_sha256"], label="retained credit key-set digest")
+    if HEX64.fullmatch(digest) is None:
+        raise UnsafeStateError("retained credit key-set digest is not sha256")
+    valid_keys = _exact_int(
+        credit["valid_requirement_keys"],
+        label="retained credit valid requirement keys",
+    )
+    objects = _exact_int(credit["objects"], label="retained credit objects")
+    unique_bytes = _exact_int(credit["bytes"], label="retained credit bytes")
+    selected = _exact_int(
+        credit["selected_retained_keys"], label="retained credit selected keys"
+    )
+    cost = _exact_int(credit["cost_retained_keys"], label="retained credit cost keys")
+    unverified = _exact_int(
+        credit["unverified_objects"], label="retained credit unverified objects"
+    )
+    if objects != valid_keys:
+        raise UnsafeStateError(
+            "retained credit objects are aliased",
+            context={"keys": valid_keys, "objects": objects},
+        )
+    if selected + cost != valid_keys:
+        raise UnsafeStateError(
+            "retained credit selected and cost keys do not sum to the key count",
+            context={
+                "selected_retained_keys": selected,
+                "cost_retained_keys": cost,
+                "valid_requirement_keys": valid_keys,
+            },
+        )
+    if unverified != 0:
+        raise UnsafeStateError(
+            "retained credit unverified object count changed",
+            context={"expected": 0, "actual": unverified},
+        )
+    expected_objects = _exact_int(
+        pins.get("retained_credit_objects"),
+        label="persisted retained credit objects",
+    )
+    expected_bytes = _exact_int(
+        pins.get("retained_credit_bytes"),
+        label="persisted retained credit bytes",
+    )
+    if objects != expected_objects:
+        raise UnsafeStateError(
+            "retained credit object count changed",
+            context={"expected": expected_objects, "actual": objects},
+        )
+    if unique_bytes != expected_bytes:
+        raise UnsafeStateError(
+            "retained credit bytes changed",
+            context={"expected": expected_bytes, "actual": unique_bytes},
+        )
+    if pins.get("receipt_258_sha256") == PRODUCTION_PINS.receipt_258_sha256 and (
+        selected != PRODUCTION_RETAINED_SELECTED_KEYS
+        or cost != PRODUCTION_RETAINED_COST_KEYS
+        or valid_keys != PRODUCTION_PINS.retained_credit_objects
+        or unique_bytes != PRODUCTION_PINS.retained_credit_bytes
+    ):
+        raise UnsafeStateError(
+            "production retained credit decomposition changed",
+            context={
+                "selected_retained_keys": selected,
+                "cost_retained_keys": cost,
+                "valid_requirement_keys": valid_keys,
+                "bytes": unique_bytes,
+            },
+        )
+    return credit
+
+
 def _retained_plan_fields(
     key: str,
     retained_objects: Mapping[str, Any],
     *,
+    authorized_keys: frozenset[str],
     sample_dir: Path,
     sidecar_dir: Path,
     roots: BoundRoots | None = None,
 ) -> dict[str, Any]:
+    if key not in authorized_keys:
+        return {"retained": False}
     entry = retained_objects.get(key)
     if not isinstance(entry, dict) or str(entry.get("status") or "") != "complete":
-        return {"retained": False}
+        raise AuthorityError(
+            "a retained credit key is not complete in qualification progress",
+            context={"key": key},
+        )
     digest = _hex_digest(entry.get("sha256"), label="retained digest")
     sidecar_digest = _hex_digest(
         entry.get("provider_checksum_sha256") or entry.get("provider_checksum"),
@@ -3060,8 +3507,12 @@ def _retained_plan_fields(
         os.close(raw_fd)
     if raw_digest != digest:
         raise AuthorityError("a retained raw source digest changed", context={"key": key})
-    declared_bytes = int(entry.get("byte_size") or 0)
-    if declared_bytes and declared_bytes != raw_size:
+    declared_bytes = _authority_int(
+        entry.get("byte_size"),
+        label="retained progress byte size",
+        minimum=1,
+    )
+    if declared_bytes != raw_size:
         raise AuthorityError("a retained raw source size changed", context={"key": key})
     sidecar_body = read_authority_file(
         sidecar_path, label="retained sidecar source", root=sidecar_dir, roots=roots
@@ -3101,6 +3552,7 @@ def iter_plan_objects(
     lifecycles: Mapping[str, tuple[int, int]],
     cost_objects: Sequence[Mapping[str, Any]],
     inventory_set: Mapping[str, Any],
+    retained_credit: RetainedCredit,
     progress: Mapping[str, Any] | None = None,
     roots: BoundRoots | None = None,
     fault: FaultInjector | None = None,
@@ -3108,6 +3560,57 @@ def iter_plan_objects(
     detail = dict(dict(report.get("acquisition_manifest") or {}).get("detail") or {})
     retained_objects = dict((progress or {}).get("objects") or {})
     cost_keys = {str(item["key"]) for item in cost_objects}
+    authorized_keys = retained_credit.key_set
+    seen_authorized: set[str] = set()
+    unique_digests: set[str] = set()
+    retained_bytes = 0
+    selected_retained = 0
+    cost_retained = 0
+
+    def _with_retained(
+        key: str, payload: dict[str, Any], *, cost: bool
+    ) -> dict[str, Any]:
+        nonlocal retained_bytes, selected_retained, cost_retained
+        fields = _retained_plan_fields(
+            key,
+            retained_objects,
+            authorized_keys=authorized_keys,
+            sample_dir=paths.sample_dir,
+            sidecar_dir=paths.listing_cache_dir,
+            roots=roots,
+        )
+        if key in authorized_keys:
+            if key in seen_authorized:
+                raise AuthorityError(
+                    "a retained credit key is duplicated in the plan",
+                    context={"key": key},
+                )
+            seen_authorized.add(key)
+            if fields.get("retained") is not True:
+                raise AuthorityError(
+                    "a retained credit key was not labeled retained",
+                    context={"key": key},
+                )
+            digest = str(fields["retained_digest"])
+            if digest in unique_digests:
+                raise AuthorityError(
+                    "retained credit objects are aliased",
+                    context={"key": key, "digest": digest},
+                )
+            unique_digests.add(digest)
+            retained_bytes += int(fields["retained_bytes"])
+            if cost:
+                cost_retained += 1
+            else:
+                selected_retained += 1
+        elif fields.get("retained") is True:
+            raise AuthorityError(
+                "a plan row is labeled retained without receipt authority",
+                context={"key": key},
+            )
+        payload.update(fields)
+        return payload
+
     last_key: str | None = None
     main_count = 0
     for payload in iter_selected_binance(
@@ -3120,17 +3623,12 @@ def iter_plan_objects(
             raise AuthorityError("main manifest and cost keys are not disjoint")
         last_key = key
         main_count += 1
-        payload = {
-            **payload,
-            **_retained_plan_fields(
-                key,
-                retained_objects,
-                sample_dir=paths.sample_dir,
-                sidecar_dir=paths.listing_cache_dir,
-                roots=roots,
-            ),
-        }
-        yield PlanObject(PROVIDER_BINANCE, key, KIND_BINANCE, payload)
+        yield PlanObject(
+            PROVIDER_BINANCE,
+            key,
+            KIND_BINANCE,
+            _with_retained(key, dict(payload), cost=False),
+        )
     if main_count + len(cost_keys) != pins.combined_objects:
         raise AuthorityError(
             "combined object count changed",
@@ -3152,16 +3650,67 @@ def iter_plan_objects(
             "url": f"{VISION_OBJECT_BASE}/{key}",
             "sidecar_url": f"{VISION_OBJECT_BASE}/{key}.CHECKSUM",
         }
-        payload.update(
-            _retained_plan_fields(
-                key,
-                retained_objects,
-                sample_dir=paths.sample_dir,
-                sidecar_dir=paths.listing_cache_dir,
-                roots=roots,
-            )
+        yield PlanObject(
+            PROVIDER_BINANCE,
+            key,
+            KIND_BINANCE,
+            _with_retained(key, payload, cost=True),
         )
-        yield PlanObject(PROVIDER_BINANCE, key, KIND_BINANCE, payload)
+    missing = authorized_keys - seen_authorized
+    if missing:
+        raise AuthorityError(
+            "a retained credit key is not in the selected-plus-cost plan",
+            context={"missing": sorted(missing)[:8], "missing_count": len(missing)},
+        )
+    _require_authority(
+        len(seen_authorized) == retained_credit.valid_requirement_keys,
+        "retained credit key count changed",
+        {
+            "expected": retained_credit.valid_requirement_keys,
+            "actual": len(seen_authorized),
+        },
+    )
+    _require_authority(
+        len(unique_digests) == retained_credit.objects,
+        "retained credit object count changed",
+        {"expected": retained_credit.objects, "actual": len(unique_digests)},
+    )
+    _require_authority(
+        retained_bytes == retained_credit.unique_bytes,
+        "retained credit bytes changed",
+        {"expected": retained_credit.unique_bytes, "actual": retained_bytes},
+    )
+    _require_authority(
+        selected_retained == retained_credit.selected_retained_keys,
+        "retained credit selected key count changed",
+        {
+            "expected": retained_credit.selected_retained_keys,
+            "actual": selected_retained,
+        },
+    )
+    _require_authority(
+        cost_retained == retained_credit.cost_retained_keys,
+        "retained credit cost key count changed",
+        {"expected": retained_credit.cost_retained_keys, "actual": cost_retained},
+    )
+    if pins.receipt_258_sha256 == PRODUCTION_PINS.receipt_258_sha256:
+        _require_authority(
+            len(seen_authorized) == PRODUCTION_PINS.retained_credit_objects
+            and len(unique_digests) == PRODUCTION_PINS.retained_credit_objects
+            and retained_bytes == PRODUCTION_PINS.retained_credit_bytes
+            and selected_retained == PRODUCTION_RETAINED_SELECTED_KEYS
+            and cost_retained == PRODUCTION_RETAINED_COST_KEYS
+            and retained_credit.unverified_objects
+            == PRODUCTION_RETAINED_UNVERIFIED_OBJECTS,
+            "production retained credit decomposition changed",
+            {
+                "keys": len(seen_authorized),
+                "objects": len(unique_digests),
+                "bytes": retained_bytes,
+                "selected_retained_keys": selected_retained,
+                "cost_retained_keys": cost_retained,
+            },
+        )
     inventory_digest = ""
     inventory_bytes = 0
     inventory_path = ""
@@ -6185,6 +6734,10 @@ class AcquisitionState:
         ):
             raise UnsafeStateError("a chain receipt names a different plan identity")
         if schema == PLAN_SCHEMA:
+            authenticate_compact_retained_credit(
+                document["retained_credit"],
+                pins=dict(authority.get("pins") or {}),
+            )
             return schema
         pins = dict(authority.get("pins") or {})
         expected_authority = {
@@ -7794,12 +8347,16 @@ def load_authority_bundle(
         paths.report_path, pins.report_sha256, pins.report_bytes, "report 62"
     )
     report = _decode_json(report_payload, label="report 62")
-    _pin(
-        paths.receipt_258_path,
-        pins.receipt_258_sha256,
-        pins.receipt_258_bytes,
-        "receipt 258",
+    receipt_258 = _decode_json(
+        _pin(
+            paths.receipt_258_path,
+            pins.receipt_258_sha256,
+            pins.receipt_258_bytes,
+            "receipt 258",
+        ),
+        label="receipt 258",
     )
+    retained_credit = authenticate_retained_credit_receipt(receipt_258, pins)
     load_attestation(
         paths.attestation_path, pins, root=accepted_root_for(paths, paths.attestation_path),
         roots=roots,
@@ -7870,6 +8427,7 @@ def load_authority_bundle(
         lifecycles=lifecycles,
         cost_objects=cost_objects,
         inventory_set=inventory_set,
+        retained_credit=retained_credit,
         progress=progress,
         roots=roots,
         fault=fault,
@@ -7894,6 +8452,7 @@ def load_authority_bundle(
         code_identity=code,
         object_count=object_count,
         lifecycles=lifecycles,
+        retained_credit=retained_credit,
     )
     return {
         "summary": summary,
@@ -7905,6 +8464,7 @@ def load_authority_bundle(
         "capacity": capacity,
         "device": device,
         "code": code,
+        "retained_credit": retained_credit,
     }
 
 
@@ -7968,6 +8528,7 @@ def plan_receipt_document(
             "store_root": str(paths.store_root),
         },
         "prohibitions": list(PROHIBITIONS),
+        "retained_credit": _compact_retained_credit(summary.retained_credit),
     }
 
 
@@ -8015,6 +8576,7 @@ def bind_session(
                 lifecycles=summary.lifecycles,
                 cost_objects=bundle["cost_objects"],
                 inventory_set=bundle["inventory_set"],
+                retained_credit=bundle["retained_credit"],
                 progress=bundle["progress"],
                 roots=roots,
                 fault=fault,
@@ -8547,6 +9109,7 @@ def adopt_retained(
     state: AcquisitionState,
     *,
     progress: Mapping[str, Any],
+    retained_credit: RetainedCredit,
     filesystem: Filesystem,
     device: str,
     fault: FaultInjector,
@@ -8556,15 +9119,13 @@ def adopt_retained(
 
     The already-authenticated raw and sidecar bytes are re-referenced by a no-follow,
     no-replace hard link on the same device, so the accepted new-raw equation is never
-    charged again for bytes it already credited as retained.
+    charged again for bytes it already credited as retained. Authority is the receipt
+    258 key set, never the intersection of qualification progress and the plan.
     """
     roots = _require_bound(roots, operation="adopt_retained")
 
     objects = dict(progress.get("objects") or {})
-    requirement_keys: list[str] = []
-    for key in sorted(objects):
-        if coordinator.call("plan_payload", PROVIDER_BINANCE, key) is not None:
-            requirement_keys.append(key)
+    requirement_keys = list(retained_credit.keys)
     decomposition = retained_credit_decomposition(
         objects,
         requirement_keys=requirement_keys,
@@ -8572,14 +9133,30 @@ def adopt_retained(
         sidecar_dir=paths.listing_cache_dir,
         roots=roots,
     )
-    if int(decomposition["unverified_objects"]) != 0:
+    if int(decomposition["unverified_objects"]) != retained_credit.unverified_objects:
         raise AuthorityError("a retained requirement object cannot be re-proved")
-    if int(decomposition["valid_requirement_keys"]) != pins.retained_credit_objects:
+    if set(decomposition["keys"]) != retained_credit.key_set:
+        raise AuthorityError(
+            "retained credit key set changed",
+            context={
+                "expected": retained_credit.valid_requirement_keys,
+                "actual": len(decomposition["keys"]),
+            },
+        )
+    if int(decomposition["valid_requirement_keys"]) != retained_credit.valid_requirement_keys:
         raise AuthorityError(
             "retained credit key count changed",
             context={
-                "expected": pins.retained_credit_objects,
+                "expected": retained_credit.valid_requirement_keys,
                 "actual": decomposition["valid_requirement_keys"],
+            },
+        )
+    if int(decomposition["unique_objects"]) != retained_credit.objects:
+        raise AuthorityError(
+            "retained credit object count changed",
+            context={
+                "expected": retained_credit.objects,
+                "actual": decomposition["unique_objects"],
             },
         )
     if int(decomposition["unique_objects"]) != pins.retained_credit_objects:
@@ -8588,6 +9165,14 @@ def adopt_retained(
             context={
                 "expected": pins.retained_credit_objects,
                 "actual": decomposition["unique_objects"],
+            },
+        )
+    if int(decomposition["unique_bytes"]) != retained_credit.unique_bytes:
+        raise AuthorityError(
+            "retained credit bytes changed",
+            context={
+                "expected": retained_credit.unique_bytes,
+                "actual": decomposition["unique_bytes"],
             },
         )
     if int(decomposition["unique_bytes"]) != pins.retained_credit_bytes:
@@ -8600,12 +9185,30 @@ def adopt_retained(
         )
     keys = list(decomposition["keys"])
     cost_retained = sum(1 for key in keys if _family_of(key) in COST_FAMILIES)
-    if pins.retained_credit_objects == PRODUCTION_PINS.retained_credit_objects and (
-        cost_retained != 5
+    selected_retained = len(keys) - cost_retained
+    if cost_retained != retained_credit.cost_retained_keys:
+        raise AuthorityError(
+            "retained credit cost key count changed",
+            context={
+                "expected": retained_credit.cost_retained_keys,
+                "actual": cost_retained,
+            },
+        )
+    if selected_retained != retained_credit.selected_retained_keys:
+        raise AuthorityError(
+            "retained credit selected key count changed",
+            context={
+                "expected": retained_credit.selected_retained_keys,
+                "actual": selected_retained,
+            },
+        )
+    if pins.receipt_258_sha256 == PRODUCTION_PINS.receipt_258_sha256 and (
+        cost_retained != PRODUCTION_RETAINED_COST_KEYS
+        or selected_retained != PRODUCTION_RETAINED_SELECTED_KEYS
     ):
         raise AuthorityError(
-            "retained credit does not include five cost keys",
-            context={"actual": cost_retained},
+            "production retained credit decomposition changed",
+            context={"selected": selected_retained, "cost": cost_retained},
         )
     adopted = 0
     reproved = 0
@@ -9480,6 +10083,7 @@ def run_acquire(
                 coordinator,
                 state,
                 progress=bundle["progress"],
+                retained_credit=bundle["retained_credit"],
                 filesystem=filesystem,
                 device=device,
                 fault=fault,
