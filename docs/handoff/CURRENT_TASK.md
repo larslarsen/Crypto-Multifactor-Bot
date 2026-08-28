@@ -2,31 +2,30 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - review-326 exact integration and focused validation
+Next required actor: Jr Dev - Hermes - permission-corrected review-327 continuation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Immediate state: the first acquisition wrote no network or raw fact. The rejected old plan and
-its unfinished zero-fact run remain untouched. Review 326 accepts Grok's complete ADR-0030
-source/test correction at exact hashes for Hermes integration. Corrected code must not open or
-mutate the real old store; retirement and replanning remain unauthorized until integrated
-validation is accepted.
+Immediate state: review 326 accepted the complete ADR-0030 source/test correction. Hermes's
+first `git add` failed because its sandbox mounted `.git` read-only. No file was staged, no
+index lock remains, no commit exists, and focused Ruff/targeted pytest remain unrun. The
+accepted two dirty source/test files are intact; the rejected real Gate-2 store remains
+untouched.
 
-Hermes must perform review 326's single exact round: preprove the two accepted dirty paths,
-stage/commit/push only them, run focused Gate-2 Ruff once, then run the targeted acquisition
-pytest once only if Ruff passes. Stop on the first failure without repair or rerun. On two
-passes publish only evidence record 327 in a second commit/push, run final shared-tree
-`git diff --check` once, and stop.
+Hermes must follow review 327's short continuation using explicit Git-write escalation for
+every command that writes `.git`: reconfirm head/hashes/empty index, integrate only the two
+accepted files, then run review 326's focused Ruff and targeted pytest once each in order.
+Stop on any denial or failure without repair/rerun. On two passes, publish renumbered evidence
+record 328 with approved Git writes, run final shared-tree `git diff --check` once, and stop.
 
-Full-suite pytest, repository-wide Ruff, control, old-store retirement, corrected real
-planning, acquisition, replay, `verify`, Gate 3, normalization, catalog, NautilusTrader,
-Harmonic Trader, experiments, PAPER/LIVE, and next-ticket work remain unauthorized. Next
-ticket is `NONE`.
+Real-store access/retirement, corrected planning, acquisition, replay, `verify`, full-suite or
+repository-wide validation, control, Gate 3, normalization, catalog, NautilusTrader, Harmonic
+Trader, experiments, PAPER/LIVE, and next-ticket work remain unauthorized. Next ticket is
+`NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
 - `docs/adr/0030-exact-retained-credit-and-pre-network-plan-retirement.md`
-- `research/sprint_004/324_CEX002_RETAINED_AUTHORITY_FAILURE_AND_PLAN_RETIREMENT_ARCHITECTURE.md`
-- `research/sprint_004/325_CEX002_GROK_RETAINED_AUTHORITY_COMPLETE_STATIC_REJECTION.md`
 - `research/sprint_004/326_CEX002_RETAINED_AUTHORITY_SOURCE_ACCEPTANCE_AND_INTEGRATION.md`
+- `research/sprint_004/327_CEX002_HERMES_GIT_SANDBOX_CORRECTION.md`
