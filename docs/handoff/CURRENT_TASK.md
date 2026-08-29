@@ -2,24 +2,24 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - review-344 network-enabled canary and conditional acquisition
+Next required actor: Jr Dev - Hermes - review-346 bounded acquisition campaign
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 344 accepts Review 342's bounded exit-2 execution only as a safely closed failure record.
-All 27,125 attempts were five DNS-resolution failures across 5,425 Binance identities; the 73
-completions and 5,225,416 bytes are retained credit, so the session downloaded zero new raw
-objects. No source defect or slow transfer is established, and a sandboxed rerun is prohibited.
+Review 346 accepts the network-enabled canary and 66,910 real new Binance completions. The
+continuation added 331,728,893 bytes and closed safely. Its 2,608 failures are isolated
+`daily/metrics` archive revisions whose current sizes differ from the frozen listing; they
+remain pending and unclaimed. No other attempted family has a terminal validation failure.
 
-Hermes must follow Review 344 exactly: after repository/query-only preproof, request explicit
-external-network escalation and run one eight-object engine canary. Only its exact clean HTTP
-200, eight-completion predicates authorize the already-specified six-hour continuation in the
-same round, also with external-network escalation. Publish only record 345 and stop. Do not run
-a separate connectivity probe, rerun either acquisition, replay, or invoke `verify`. Later gates
-and next-ticket work remain unauthorized. Next ticket is `NONE`.
+Hermes must follow Review 346 exactly: with external-network escalation, run up to three
+sequential 84,600-second engine sessions, applying the exact receipt, error-family, progress,
+capacity, and secret stop predicates after each. Exit 3, exit-2 `partial`, any new blocker, or
+the third invocation ends the campaign. Publish only record 347 and stop. Do not repair or
+dispose the revised metrics objects, run a fourth acquisition, replay, or invoke `verify`.
+Later gates and next-ticket work remain unauthorized. Next ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
-- `research/sprint_004/344_CEX002_DNS_FAILURE_REVIEW_AND_NETWORK_ENABLED_RESUME.md`
-- `research/sprint_004/343_CEX002_FIRST_CORRECTED_REAL_ACQUISITION_EXECUTION.md`
+- `research/sprint_004/346_CEX002_NETWORK_PROGRESS_ACCEPTANCE_AND_BOUNDED_CAMPAIGN.md`
+- `research/sprint_004/345_CEX002_NETWORK_ENABLED_CANARY_AND_ACQUISITION.md`
