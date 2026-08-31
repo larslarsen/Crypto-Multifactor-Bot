@@ -2,25 +2,27 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Codex Sol - review-360 manifest-iterator lifecycle correction
+Next required actor: Jr Dev - Hermes - integrate exact review-361 source/test drop
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 360 rejects the Review-359 correction before integration despite 109 passing cases. The
-completed-recovery named-tree reauthentication and manifest stream ceilings are materially
-correct and preserved. Three creation-ceiling cases emit `PytestUnraisableExceptionWarning`
-because an early manifest refusal leaves the pending-row generator alive until after its SQLite
-connection closes; delayed cursor cleanup then raises `sqlite3.ProgrammingError`.
+Review 361 accepts Sol High's exact six-path revision-candidate planner source/test/fixture drop
+for bounded Hermes integration. The Review-360 lifecycle correction explicitly closes manifest
+iterators while SQLite is live, and the one authorized targeted run passes all 109 cases with no
+warning output. Static review confirms the complete generation/listing/checkpoint/publication/
+recovery authority and boundedness contract.
 
-Codex Sol High remains the sole senior actor for a lifecycle-only source/test correction. It must
-explicitly close owned manifest iterators on all paths while SQLite is live and may run exactly
-one new enumerated targeted pytest command. The result must be zero with no warning output. No
-network/data action, real-state access, standalone planner, integration, records, or Git is
-authorized. Hermes and all further acquisition remain unauthorized. Next ticket is `NONE`.
+Hermes must rehash and stage only the accepted paths, run Review 361's targeted pytest, targeted
+ruff, repository-control, and scoped diff checks, publish record 362 with complete outputs, update
+this handoff and the ticket, commit, push, prove `HEAD == origin/main`, and stop. It may not patch
+developer bytes or disturb unrelated dirty paths. Real planner/network/data/acquisition/
+generation-transition work remains unauthorized. Gate 2 remains `IN_PROGRESS`; next ticket is
+`NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
+- `research/sprint_004/361_CEX002_SOL_REVISION_CANDIDATE_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/360_CEX002_SOL_RECOVERY_CORRECTION_WARNING_STATIC_REJECTION.md`
 - `research/sprint_004/359_CEX002_SOL_CORRECTED_REVISION_CANDIDATE_RECOVERY_STATIC_REJECTION.md`
 - `research/sprint_004/358_CEX002_SOL_REVISION_CANDIDATE_SOURCE_STATIC_REJECTION.md`
