@@ -2,37 +2,32 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Codex Sol - review-356 revision-candidate correction via review 357
+Next required actor: Sr Dev - Codex Sol - review-358 bounded revision-candidate correction
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 356 rejects Grok's second revision-candidate source/test drop before integration or
-execution. The correction now has exact diagnostics, held immutable SQLite access, stronger
-generation binding, an on-disk listing index, resumable transport handling, deterministic gzip,
-and a locator commit direction. Those corrections are preserved.
+Review 358 rejects Sol High's Review-357 source/test drop before integration. It materially
+closes Review 356's independent-listing, response-authority, checkpoint-reconstruction,
+generation-binding, completed-asset authentication, bounded-streaming, and publication-test
+defects. The one authorized targeted pytest run stopped nonzero at 70 of 74 cases because four
+new tests incorrectly mixed ETH objects into a BTC child-prefix response.
 
-Residual authority blockers remain. The claimed stable second pass merely reparses the first
-pass's retained bytes and makes no independent listing request. Exact final response URLs,
-headers, retrieval clocks, and mandatory single-part sidecar ETags are not bound. Checkpoint
-completion/reachability can still be forged, unsafe checkpoint/locator leaves can be treated as
-absent, and live page bounds are not enforced. Generation proof lacks the explicit read
-transaction and exact pending/charge predicates; root binding remains exposed before held opens.
-Completed-locator recovery does not authenticate the manifest or lineage, and publication tests
-do not reach the asset-to-locator boundaries.
-
-After two Grok authority misses, Review 356 selected Claude Build, but the owner reports Claude
-unavailable and explicitly authorizes Sol High. Review 357 therefore routes the unchanged
-bounded correction to Sr Dev - Codex Sol using GPT-5.6-sol High. Sol may edit only Review 356's
-same planner, mechanically necessary CLI, test source, and bounded fixtures. It may use static
-read-only inspection commands and run exactly one enumerated temporary-rooted targeted pytest
-command after editing, then stops with its output and exact identities for reviewer inspection.
-It performs no network/data action, real-state access, standalone production planner,
-integration, records, or Git. Hermes and all further acquisition remain unauthorized. Next
-ticket is `NONE`.
+Static inspection also finds completed-receipt claims that are hashed but not recomputed,
+nested publication directories and state/code identities not rebound after the final race hook,
+leaf stats not bound to the opened descriptor, checkpoint/lineage byte ceilings not enforced
+before durable publication, unsafe named-winner collisions leaking raw errors, incomplete
+pending-key grammar, and a deferred SQLite snapshot plus non-exact schema-object set. Review 358
+keeps Codex Sol High as the sole senior actor for one bounded correction in the same planner,
+mechanically necessary CLI, test, and fixture paths. It may run exactly one new enumerated
+synthetic targeted pytest command after editing and then stops with complete output and exact
+identities. No network/data action, real-state access, standalone planner, integration, records,
+or Git is authorized. Hermes and all further acquisition remain unauthorized. Next ticket is
+`NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
+- `research/sprint_004/358_CEX002_SOL_REVISION_CANDIDATE_SOURCE_STATIC_REJECTION.md`
 - `research/sprint_004/357_CEX002_SOL_HIGH_REVISION_CANDIDATE_REROUTE.md`
 - `research/sprint_004/356_CEX002_GROK_SECOND_REVISION_CANDIDATE_SOURCE_STATIC_REJECTION.md`
 - `research/sprint_004/355_CEX002_GROK_REVISION_CANDIDATE_SOURCE_STATIC_REJECTION.md`
