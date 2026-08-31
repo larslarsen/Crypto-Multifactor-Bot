@@ -2,27 +2,31 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - review-352 interrupted-run recovery and one acquisition continuation
+Next required actor: Sr Dev - Grok Build - review-354 Gate-2 revision-candidate planner source
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 352 accepts Hermes's safe outage stop, corrects record 351's omitted closed run, and
-proves the current unsealed tail is the exact ADR-0029 interrupted-run recovery state. Run 5
-closed normally at `max_wall_seconds`, adding 238,964 completions and 2,430,507,042 bytes. The
-outage then left exactly one unfinished run 6 with 235,359 attempts, 92,215 completions,
-92,219 sidecars, and 1,459,224,114 listed bytes beyond the sealed head. Reviewer read-only
-path/type/size/SHA-256 reconciliation found zero defects. No source or ADR change is required.
+Review 354 accepts Hermes's exact run-6 recovery and run-7 bounded progress. Run 7 sealed at
+exit 2 `partial`, added 19,035 completions and 4,095,285,686 bytes, fully completed Coinalyze,
+and left exactly 50,921 provider-revised `daily/metrics` plus 354 `daily/bookTicker` ZIP-work
+identities pending. Review 354 corrects record 353's stale final family table and retry
+presentation. Reviewer read-only hashing found zero run-7 physical defects.
 
-Hermes must follow Review 352's exact preproof and run one externally network-enabled standard
-84,600-second acquisition invocation. Its binding phase must first finalize and seal run 6
-under its original identity with stop reason `interrupted`; only then may run 7 continue the
-frozen plan. Any recovery discrepancy or command result ends the one-invocation campaign.
-Publish only record 353 and stop. Do not run a second acquisition, manual recovery, plan,
-replay, `verify`, revision disposal, later gate, or next-ticket work. Next ticket is `NONE`.
+ADR-0031 closes the current Gate-2 generation at receipt `8875338d...f7ab`, forbids further
+old-source acquisition, and requires an immutable listing-only revision candidate before a
+linked replacement generation. It replaces the unproved global ZIP expansion cap with a
+measured ratio/absolute streaming-work bound while retaining every safety check.
+
+Sr Dev - Grok Build must author only Review 354's standalone revision-candidate planner module,
+CLI, test source, and bounded fixtures. It performs no command, network/data run, active-state
+edit, migration, Git operation, or existing acquisition-source change, and stops for reviewer
+static inspection. Hermes and all further acquisition remain unauthorized. Next ticket is
+`NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
+- `docs/adr/0031-post-plan-revision-authority-and-bounded-zip-validation.md`
+- `research/sprint_004/354_CEX002_GATE2_END_OF_PLAN_REVIEW_AND_REVISION_ARCHITECTURE.md`
+- `research/sprint_004/353_CEX002_INTERRUPTED_RECOVERY_AND_ACQUISITION_CONTINUATION.md`
 - `research/sprint_004/352_CEX002_POWER_INTERRUPTION_RECOVERY_AND_CONTINUATION.md`
-- `research/sprint_004/351_CEX002_BOUNDED_ACQUISITION_CONTINUATION.md`
-- `research/sprint_004/350_CEX002_PREPROOF_FALSE_NEGATIVE_AND_CONTINUATION.md`
