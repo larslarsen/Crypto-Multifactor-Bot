@@ -2,7 +2,7 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Claude Build - review-356 revision-candidate correction
+Next required actor: Sr Dev - Codex Sol - review-356 revision-candidate correction via review 357
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
@@ -20,17 +20,20 @@ transaction and exact pending/charge predicates; root binding remains exposed be
 Completed-locator recovery does not authenticate the manifest or lineage, and publication tests
 do not reach the asset-to-locator boundaries.
 
-After two Grok authority misses, the repository routing policy rotates this bounded correction
-to Sr Dev - Claude Build using Claude Opus 5. Claude may edit only Review 356's same planner,
-mechanically necessary CLI, test source, and bounded fixtures. It may run exactly one enumerated
-temporary-rooted targeted pytest command after editing, then stops with its output and exact
-identities for reviewer static inspection. It performs no other command, network/data action,
-real-state access, planner, integration, records, or Git. Hermes and all further acquisition
-remain unauthorized. Next ticket is `NONE`.
+After two Grok authority misses, Review 356 selected Claude Build, but the owner reports Claude
+unavailable and explicitly authorizes Sol High. Review 357 therefore routes the unchanged
+bounded correction to Sr Dev - Codex Sol using GPT-5.6-sol High. Sol may edit only Review 356's
+same planner, mechanically necessary CLI, test source, and bounded fixtures. It may use static
+read-only inspection commands and run exactly one enumerated temporary-rooted targeted pytest
+command after editing, then stops with its output and exact identities for reviewer inspection.
+It performs no network/data action, real-state access, standalone production planner,
+integration, records, or Git. Hermes and all further acquisition remain unauthorized. Next
+ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
+- `research/sprint_004/357_CEX002_SOL_HIGH_REVISION_CANDIDATE_REROUTE.md`
 - `research/sprint_004/356_CEX002_GROK_SECOND_REVISION_CANDIDATE_SOURCE_STATIC_REJECTION.md`
 - `research/sprint_004/355_CEX002_GROK_REVISION_CANDIDATE_SOURCE_STATIC_REJECTION.md`
 - `docs/adr/0031-post-plan-revision-authority-and-bounded-zip-validation.md`

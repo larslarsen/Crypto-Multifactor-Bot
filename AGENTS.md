@@ -55,6 +55,11 @@ This file governs how AI agents (and humans acting as agents) work in this repos
     production-code actor with the same source/test-source scope and prohibitions as Grok
     Build. The reviewer authorizes exactly one senior actor for a bounded drop based on
     accepted-result evidence, remaining usage, and task fit; the roles are not concurrent.
+  - **Sr Dev — Codex Sol:** agentic, using GPT-5.6-sol High. An alternate formal senior
+    production-code actor with the same source/test-source scope and prohibitions as Grok
+    Build and Claude Build. The reviewer may select it when task fit, repeated rejection,
+    availability, or remaining usage justifies the route. Exactly one senior actor is
+    authorized for a bounded drop; the senior roles are not concurrent.
   - **Targeted senior test exception:** for a bounded corrective drop, the reviewer may
     explicitly authorize the selected senior actor to run one enumerated targeted test
     command against the actor's edited

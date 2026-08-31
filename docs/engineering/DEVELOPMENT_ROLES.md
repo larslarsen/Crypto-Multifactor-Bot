@@ -31,6 +31,11 @@ no code, migrations, tickets, or acceptance state.
   production-code actor with the same senior source/test-source ownership and the same
   prohibition on test execution, integration, records, and Git. Only one senior actor is
   authorized for each bounded drop.
+- **Sr Dev — Codex Sol:** agentic, using GPT-5.6-sol High. An alternate formal senior
+  production-code actor with the same senior source/test-source ownership and the same
+  prohibition on test execution, integration, records, and Git. The reviewer may select it
+  when task fit, repeated rejection, actor availability, or remaining usage justifies the
+  route. Only one senior actor is authorized for each bounded drop.
 - **Targeted senior test exception:** for a bounded corrective drop, the reviewer may
   explicitly authorize the selected senior actor to run one enumerated targeted test
   command against the actor's edited path
@@ -53,9 +58,9 @@ no code, migrations, tickets, or acceptance state.
    and their Git duties.
 2. **Implementation Dev — Codex Spark** for bounded boilerplate and mechanical source
    work where the reviewer has already fixed the design and semantics.
-3. **Sr Dev — Grok Build or Sr Dev — Claude Build**, selected explicitly by the reviewer,
-   for senior design-sensitive work, correction after semantic or authority failure, and
-   review-hard source where accepted-result risk dominates usage.
+3. **Sr Dev — Grok Build, Sr Dev — Claude Build, or Sr Dev — Codex Sol**, selected
+   explicitly by the reviewer, for senior design-sensitive work, correction after semantic
+   or authority failure, and review-hard source where accepted-result risk dominates usage.
 4. A higher reasoning tier or alternate senior is used only when task difficulty, repeated
    rejection, availability, or remaining usage justifies it.
 
@@ -68,13 +73,15 @@ integration usage than it saves. Do not hard-code a specific promotional Nous mo
 free availability may rotate. Ordinary Grok chat is an external reasoning surface, not a
 formal development role in this policy.
 
-Grok and Claude are not routed by a permanent brand preference or by exhausting one quota
-before using the other. The reviewer uses repository-specific evidence: first-pass source
-acceptance, number and severity of review corrections, control-plane adherence, total
-usage through accepted integration, remaining quota, and fit to the bounded task. When a
-senior actor repeats a semantic miss, the next bounded correction should normally rotate
-to the other senior so the project gains comparative evidence instead of paying for the
-same failure mode again. CEX-002 review 64 is the first such Claude Build authorization.
+Grok, Claude, and Codex Sol are not routed by a permanent brand preference or by exhausting
+one quota before using another. The reviewer uses repository-specific evidence: first-pass
+source acceptance, number and severity of review corrections, control-plane adherence,
+total usage through accepted integration, availability, remaining quota, and fit to the
+bounded task. When a senior actor repeats a semantic miss, the next bounded correction
+should normally rotate when another senior is available so the project gains comparative
+evidence instead of paying for the same failure mode again. CEX-002 review 64 is the first
+such Claude Build authorization; Review 357 adds the first availability-driven Codex Sol
+authorization.
 
 ## Removed roles
 
