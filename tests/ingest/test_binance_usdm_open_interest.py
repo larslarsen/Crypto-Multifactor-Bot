@@ -97,6 +97,42 @@ def test_exact_decimal_stock_and_contiguous_change(tmp_path: Path) -> None:
     assert table.column("count_toptrader_long_short_ratio").to_pylist()[0] is None
 
 
+def test_shuffled_daily_rows_follow_economic_time_and_preserve_ordinals(tmp_path: Path) -> None:
+    rows = [
+        _line("2026-07-01T00:10:00Z", level="104", value="208"),
+        _line("2026-07-01T00:00:00Z", level="100", value="200"),
+        _line("2026-07-01T00:05:00Z", level="101", value="202"),
+    ]
+    table = _table(
+        oi.normalize_open_interest(
+            [_source(tmp_path, "2026-07-01", rows)],
+            tmp_path / ".normalized",
+        )
+    )
+
+    assert table.column("create_time").to_pylist() == [
+        1_782_864_000_000,
+        1_782_864_300_000,
+        1_782_864_600_000,
+    ]
+    assert table.column("source_row_ordinal").to_pylist() == [1, 2, 0]
+    assert table.column("sum_open_interest").to_pylist() == [
+        Decimal("100.000000000000000000"),
+        Decimal("101.000000000000000000"),
+        Decimal("104.000000000000000000"),
+    ]
+    assert table.column("previous_sum_open_interest").to_pylist() == [
+        None,
+        Decimal("100.000000000000000000"),
+        Decimal("101.000000000000000000"),
+    ]
+    assert table.column("open_interest_change").to_pylist() == [
+        None,
+        Decimal("1.000000000000000000"),
+        Decimal("3.000000000000000000"),
+    ]
+
+
 def test_missing_cadence_breaks_change_without_bridging(tmp_path: Path) -> None:
     rows = [
         _line("2026-07-01T00:00:00Z", level="100", value="200"),

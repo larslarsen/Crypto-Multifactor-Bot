@@ -81,7 +81,7 @@ HBAR_ETAG = "d7f563900c0c2c99b7fd066e02d404c4"
 # both decompression work and row cardinality.
 MAX_COMPRESSED_OBJECT_BYTES = 256 * 2**20
 MAX_DECOMPRESSED_MEMBER_BYTES = 512 * 2**20
-MAX_ROWS_PER_OBJECT = 2_000_000
+MAX_DAILY_GRID_POINTS = 288
 MAX_CSV_FIELD_BYTES = 1 * 2**20
 RENAME_NOREPLACE = 1
 ACCEPTED_GENERATION0_BINANCE_COMPLETIONS = 685_072
@@ -767,7 +767,10 @@ def _iter_metric_rows(source: RawMetricObject) -> Iterator[tuple[int, list[str]]
                             continue
                     _require(bool(physical_row), "metrics CSV contains an empty row")
                     _require(len(physical_row) == len(METRICS_FIELDS), "metrics CSV row width is invalid")
-                    _require(ordinal < MAX_ROWS_PER_OBJECT, "metrics CSV exceeds its row bound")
+                    _require(
+                        ordinal < MAX_DAILY_GRID_POINTS,
+                        "metrics CSV exceeds the 288-point daily grid bound",
+                    )
                     yield ordinal, [str(cell) for cell in physical_row]
                     ordinal += 1
                 _require(ordinal > 0, "metrics CSV contains no data rows")
@@ -1202,8 +1205,12 @@ def _normalize_open_interest_tree(
                 current_month = source_month
             raw_ref = len(month_sources)
             source_added = False
-            for ordinal, raw_row in _iter_metric_rows(source):
-                values = _row_values(source, raw_ref, ordinal, raw_row)
+            parsed_rows = [
+                _row_values(source, raw_ref, ordinal, raw_row)
+                for ordinal, raw_row in _iter_metric_rows(source)
+            ]
+            parsed_rows.sort(key=lambda values: int(values["create_time"]))
+            for values in parsed_rows:
                 moment = int(values["create_time"])
                 month = datetime.fromtimestamp(moment // 1000, tz=UTC).strftime("%Y-%m")
                 _require(month == current_month, "metrics row UTC month conflicts with source identity")
