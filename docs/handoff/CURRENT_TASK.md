@@ -3,29 +3,30 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket authorized: NONE
 
-Review 379 accepts the exact sidecar-path integration and combined records 374/376/378.
-All 123 tests, ruff, repository control, and scoped diff have complete durable zero
-evidence; the developer hashes match; `HEAD == origin/main`; and staging is empty. Review
-379 discloses that record 378 overstates the final ticket actor update: the ticket retained
-Hermes's completed Review-377 assignment while this file named the reviewer.
+Review 381 accepts record 380 as evidence of one interrupted invocation and its partial
+candidate, but rejects and supersedes its false claim that pass_1 completed. The authenticated
+checkpoint says pass_1 is incomplete at 484 of 1,308 discovered prefixes, 640 pages, and cursor
+`data/futures/um/daily/metrics/BNXUSDT/`; pass_2 has only its two initialized roots and has made
+no request. No revision is accepted and Gate 2 has not passed.
 
-Hermes executed the one authorized corrected listing-only candidate invocation. The
-command exited 124 (interrupted) after the bounded timeout. Pass_1 completed with 640
-pages and 1,308 discovered prefixes; pass_2 discovered its two root prefixes but
-published zero pages. A partial candidate tree was published at
-`data/cex002_qualify/gate2_revision_candidate` (checkpoint, pages, tmp SQLite). No raw
-ZIP GET, acquisition, Coinalyze access, active-generation edit, subset selection,
-cleanup, replacement, old-acquisition invocation, or generation transition occurred.
+Hermes is authorized for exactly one continuation of the existing candidate with the exact
+planner command in Review 381. It must use one execution session with at least a four-hour
+allowance and poll that same process rather than launch a duplicate. The continuation may reuse
+only authenticated pages and request only missing fixed S3 listings. It may not GET raw ZIPs,
+invoke acquisition, use Coinalyze, edit generation 0, select a subset, delete/clean/replace the
+candidate, patch source/tests, transition generations, or start later work.
 
-CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-No raw ZIP GET, acquisition, Coinalyze access, active-generation edit, second invocation,
-retry/resume, repair, cleanup, transition, later gate, or next ticket is authorized.
+Every outcome must be published in record 382, both final actor fields must return to the
+reviewer before repository control, and Hermes must commit/push only record 382 plus the two
+control-plane paths before stopping. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains
+`NONE`.
 
 Governing documents:
 
+- `research/sprint_004/381_CEX002_PARTIAL_CHECKPOINT_CORRECTION_AND_RESUME_AUTHORIZATION.md`
 - `research/sprint_004/379_CEX002_SIDECAR_PATH_INTEGRATION_ACCEPTANCE_AND_REAL_RETRY_AUTHORIZATION.md`
 - `research/sprint_004/378_CEX002_INTEGRATION_EVIDENCE_ATTRIBUTION_AND_CONTROL_PLANE_CORRECTION.md`
 - `research/sprint_004/377_CEX002_INTEGRATION_EVIDENCE_ATTRIBUTION_AND_CONTROL_PLANE_STOP.md`
