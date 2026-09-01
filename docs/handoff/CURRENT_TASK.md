@@ -3,28 +3,33 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 413 accepts record 412 and its completed v3 candidate as the fixed authority for the exact
-51,275 pending Binance objects and 9,207,379,061 listed bytes. Gate 2 remains in progress.
+Review 415 accepts Hermes record 414 and commit
+`01c5c769d0272372ea9a17297ba55c0fa052f5be`. The terminal reconciliation is 685,072
+generation-0 Binance completions, 51,274 provider-checksum-verified recovery objects, one
+separately accepted honest Binance checksum-conflict source outcome, 570 accepted Coinalyze
+completions, and 202 existing typed Coinalyze gaps. All 736,347 planned Binance identities are
+closed without relisting, replacing the manifest, or building another acquisition system.
 
-ADR-0034 supersedes ADR-0031's unimplemented corrected-source, transition-tool, and linked-
-generation prerequisites. Generation 0 and all accepted content remain unchanged. The remaining
-provider-checksummed files are recovered into a separate root with standard resumable download
-and checksum tools; no new downloader, planner, transition program, state database, source edit,
-or test edit is authorized.
+Gate 2 is `ACCEPTED`. The HBARUSDC metrics object for 2026-07-09 is non-consumable evidence and
+must become one typed open-interest coverage gap; it does not erase membership or block other
+contracts and intervals.
 
-Hermes is authorized for the one resumable direct-recovery session defined in Review 413. The
-1,815 files left by the interrupted unauthorized standard download are staging evidence only and
-may be reused only after exact size and provider SHA-256 validation. Hermes stops after publishing
-the terminal recovery result as record 414. Normalization and later work remain unauthorized.
+Sr Dev — Codex Sol on GPT-5.6-sol High is authorized only for Review 415's three-path production
+and test-source drop implementing the complete `binance_usdm_open_interest_5m` product from the
+accepted real raw inputs. This is a concrete table normalizer, not another acquisition framework.
+Sol may run the one enumerated targeted test command once and then stops for reviewer inspection.
+No real-data run, integration, Git, record, data mutation, other product, bundle, experiment,
+backtest, model, trading engine, or next ticket is authorized.
 
-CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+CEX-002 and Gate 3 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/415_CEX002_RECORD414_ACCEPTANCE_GATE2_AND_OPEN_INTEREST_AUTHORIZATION.md`
 - `research/sprint_004/414_CEX002_DIRECT_RECOVERY_TERMINAL_BLOCKER_RECORD.md`
 - `research/sprint_004/413_CEX002_RECORD412_ACCEPTANCE_AND_DIRECT_RECOVERY_AUTHORIZATION.md`
 - `docs/adr/0034-direct-pending-raw-recovery.md`
