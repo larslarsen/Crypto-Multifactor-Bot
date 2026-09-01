@@ -6,15 +6,24 @@ Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harne
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 369 integrates Sol High's exact two-path payload-schema correction. The four-command validation chain exited zero: targeted pytest 119 cases passed, ruff `All checks passed!`, repository control `PASS`, scoped diff check empty. Both developer hashes exactly match Review 368.
+Review 370 accepts Hermes integration commit `ad081ac4a5a999bb538ce8ba81c948c85712ebfd`.
+The two developer identities match Review 368 exactly, the commit contains the exact five
+authorized paths, and all four validation commands exited zero. Review 370 also discloses
+that record 369 overstates its final actor-field update: this file retained the completed
+Hermes integration assignment while the ticket named the reviewer.
 
-Hermes staged exactly the two developer paths plus record 369, CURRENT_TASK.md, and CEX-002.md; committed; pushed `main`; and proved `HEAD == origin/main`.
+Hermes is now authorized for exactly one corrected real listing-only candidate invocation.
+Regardless of outcome it must publish record 371 and final reviewer actor fields before
+running repository control, commit/push exactly those three repository paths, and stop.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-All real planner retry/resume, listing, real-state/data access, repair, deletion, cleanup, acquisition, transition, later-gate, and next-ticket work remains unauthorized pending reviewer inspection of Hermes's bounded integration.
+No raw ZIP GET, acquisition, Coinalyze access, active-generation edit, second invocation,
+resume, repair, cleanup, transition, later gate, or next ticket is authorized.
 
 Governing documents:
 
+- `research/sprint_004/370_CEX002_PAYLOAD_SCHEMA_INTEGRATION_ACCEPTANCE_AND_REAL_RETRY_AUTHORIZATION.md`
+- `research/sprint_004/369_CEX002_PAYLOAD_SCHEMA_INTEGRATION_RECORD.md`
 - `research/sprint_004/368_CEX002_PAYLOAD_SCHEMA_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/367_CEX002_BLOCKED_CANDIDATE_PAYLOAD_SCHEMA_CORRECTION_AUTHORIZATION.md`
 - `tickets/CEX-002.md`
