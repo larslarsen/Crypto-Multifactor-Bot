@@ -3,18 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
 Review 405 accepts record 404's safe no-launch facts and exact three-path publication but rejects its mismatch diagnosis. Hermes compared Review 403's acquisition source/CLI hashes against two different qualification files. The five path-explicit v3/test/planner-CLI/acquisition-source/acquisition-CLI rows in Review 405 all match exactly; qualification paths are excluded. No planner, runner, network request, SQLite open, or v3 tree occurred, so no invocation was consumed. Record 404 also left the ticket actor field stale; Review 405 records and supersedes that defect. No candidate, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-Hermes was reauthorized for exactly one fresh v3 listing-only invocation after the literal full-path preflight in Review 405. The preflight passed exactly. One durable mktemp runner was created and launched exactly once. The planner completed pass 1 (1468 pages, 953 prefixes, null cursor) but was externally interrupted after ~34.7 minutes before pass 2 could start. The v3 tree is partial: no cross-pass reachability comparison, no semantic identity, no locator, no receipt, no manifest, no lineage. Record 406 documents the terminal outcome. No candidate is accepted. No acquisition, transition, later gate, or next ticket is authorized.
+Review 407 accepts record 406's exact three-path publication and bounded safe preflight/one-launch/external-kill/no-publication facts, but rejects its checkpoint and runner-compliance claims. The checkpoint proves pass 1 is incomplete, not complete: 1,468 pages, 1,308 discovered prefixes, 953 completed prefixes, `listing_complete=false`, and a non-null continuation at `data/futures/um/daily/metrics/NTRNUSDT/`. Pass 2 is initialized but incomplete with zero pages. Hermes killed the live runner after ~34.7 minutes despite Review 405's four-hour allowance; the runner also omitted a planner PID/start ticks, used wall-clock nanoseconds instead of Linux shell start ticks, and captured no terminal trailer. Record 406 is rejected as an exact execution record. No candidate is accepted.
 
-CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, resume, acquisition, transition, later gate, or next-ticket action is authorized.
+Hermes is authorized for exactly one durable continuation of the existing fixed v3 tree under Review 407. It must preflight the exact code, immutable v1/v2, and partial-v3 identities; launch the same planner command once through a detached runner with real shell/planner PID/start ticks and at least four hours allowance; never kill it merely because the one-shot harness turn ends; and publish every terminal outcome as record 408. No duplicate/replacement invocation, raw ZIP GET, source/test edit, acquisition, transition, later gate, or next-ticket action is authorized.
+
+CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/407_CEX002_RECORD406_REJECTION_AND_DURABLE_V3_CONTINUATION_AUTHORIZATION.md`
 - `research/sprint_004/406_CEX002_FRESH_V3_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/405_CEX002_RECORD404_PREFLIGHT_DIAGNOSIS_CORRECTION_AND_V3_REAUTHORIZATION.md`
 - `research/sprint_004/404_CEX002_FRESH_V3_REVISION_CANDIDATE_RUN_RECORD.md`
