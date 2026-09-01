@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -17,10 +17,13 @@ Review 411 accepts record 410's exact three-path publication and safe preflight/
 
 Hermes is authorized for exactly one continuation from Review 411's exact state. It must use literal `mktemp -d /tmp/runner_411_XXXXXX`, copy the accepted runner script only between `/tmp` directories, launch one detached planner with real process identities and at least four hours allowance, never signal it merely because the harness turn ends, and publish every terminal outcome as record 412. Record 412 must use exact dirty-path accounting, both pre-launch and terminal checkpoint hashes, actual schema fields, and no future-commit placeholder. No duplicate/replacement invocation, raw ZIP GET, source/test edit, acquisition, transition, later gate, or next-ticket action is authorized.
 
+Record 412 publishes the terminal facts: the runner `/tmp/runner_411_hVWK2w` launched one planner child, shell `614789@7040685` and planner `614870@7040697`, operated from `2026-09-01T12:09:30Z` through `2026-09-01T12:15:52Z`, reached natural exit 0 after 382 seconds, and published a complete v3 candidate with locator/receipt/manifest/lineage. Both listing passes completed at 2094 pages and 1308/1308 prefixes with null cursors. The candidate remains evidence only: `candidate_accepted=false`, `gate_2_accepted=false`, `acquisition_authorized=false`.
+
 CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/412_CEX002_DURABLE_V3_CONTINUATION_RECORD.md`
 - `research/sprint_004/411_CEX002_RECORD410_EVIDENCE_CORRECTION_AND_V3_CONTINUATION_AUTHORIZATION.md`
 - `research/sprint_004/410_CEX002_DURABLE_V3_CONTINUATION_RECORD.md`
 - `research/sprint_004/409_CEX002_RECORD408_CORRECTION_AND_DURABLE_V3_CONTINUATION_AUTHORIZATION.md`
