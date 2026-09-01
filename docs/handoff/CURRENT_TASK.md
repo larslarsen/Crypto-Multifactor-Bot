@@ -7,23 +7,28 @@ Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 383 rejects record 382's four corrupted/substituted code hashes while accepting its
-independently reverified partial-state facts and abnormal unobserved terminal classification.
-Both complete passes contain 1,308 prefixes and 2,093 graph pages; the candidate has 3,342 unique
-page files, an authenticated checkpoint and private index, and no manifest, receipt, lineage, or
-locator. No candidate is accepted and Gate 2 has not passed.
+Review 384 rejects Review-383 execution because Hermes launched the offline planner twice after
+authorization for exactly one invocation. The first captured run exited 1 with
+`listing reachability or pagination authority drifted across independent passes`; the second
+launch overwrote part of the shared runner evidence. Both wrapper identities and every planner
+process are now absent. The candidate checkpoint, private index, complete-pass graph, and physical
+page-set identities remain unchanged; no manifest, receipt, lineage, or locator exists.
 
-Hermes is authorized for exactly one offline continuation through Review 383's detached,
-four-hour-bounded status-capture wrapper. Because both listing passes are complete, it may rebuild
-and compare only retained evidence and may make no network request. The wrapper must durably
-capture exit code, stdout, stderr, timestamps, PID/start identity, and hashes in a fresh `/tmp`
-runner directory. Every outcome must be published in record 384, both final actor fields returned
-to the reviewer, and exactly record 384 plus the two control-plane paths committed/pushed before
-Hermes stops. No second invocation, raw acquisition, cleanup, source/test patch, transition, or
-later work is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Read-only diagnosis finds the first pass difference at graph index 319: identical request key,
+prefix, child-prefix facts, and truncation flag, but different opaque provider continuation-token
+bytes. The source incorrectly requires those cursors to be equal across independent passes. No
+source correction or further run is authorized yet.
+
+Hermes is authorized only to publish record 385 and the two final reviewer summaries with exact
+first-run, duplicate-launch, runner-overwrite, no-live-process, unchanged-candidate, corrected-code,
+and graph-difference evidence. It may run only repository control and the scoped diff, then
+commit/push exactly those three paths and stop. No planner, data/runner mutation, network, test,
+source edit, acquisition, cleanup, transition, or later work is authorized. CEX-002 and Gate 2
+remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/384_CEX002_HERMES_DUPLICATE_INVOCATION_CONTROL_STOP.md`
 - `research/sprint_004/383_CEX002_RECORD382_HASH_REJECTION_AND_OFFLINE_CAPTURE_RETRY_AUTHORIZATION.md`
 - `research/sprint_004/382_CEX002_REVISION_CANDIDATE_RESUME_RECORD.md`
 - `research/sprint_004/381_CEX002_PARTIAL_CHECKPOINT_CORRECTION_AND_RESUME_AUTHORIZATION.md`
