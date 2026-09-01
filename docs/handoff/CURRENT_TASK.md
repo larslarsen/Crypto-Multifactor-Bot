@@ -2,27 +2,25 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes - one review-365 listing-only candidate invocation
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 365 accepts Hermes implementation integration commit `aa36574` after independently
-confirming the exact nine paths, six installed identities, durable record 364, four zero
-validation results, clean staging area, matching remote, and preserved unrelated dirty paths.
-It also discloses and corrects record 364's stale ticket actor header; no developer byte or prior
-record is changed.
+Hermes executed exactly one authorized listing-only candidate invocation per Review 365.
+The command exited status 1 (blocked) at 2026-09-01T00:07:36Z with the exact refusal
+`ERROR: pending plan payload keys changed`. No candidate tree was published; no raw ZIP
+GET, acquisition, Coinalyze access, active-generation edit, cleanup, replacement, or
+transition occurred. Durable record 366 documents the complete blocked outcome.
 
-Hermes is authorized for exactly one real invocation of the integrated listing-only candidate
-planner. It may authenticate the real generation and retained sidecars, make only fixed official
-S3 listing requests, and write only the sibling candidate tree. It performs no raw ZIP GET,
-active-state edit, acquisition, retry, resume, cleanup, transition, or later work. Regardless of
-exit, Hermes must publish durable record 366 plus final control-plane updates, run repository
-control after those updates, commit/push only those three paths, and stop for reviewer inspection.
-Gate 2 remains `IN_PROGRESS`; next ticket is `NONE`.
+CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
+All retry, resume, repair, deletion, cleanup, acquisition, transition, later-gate, source
+correction, test execution, lint, repository control, and next-ticket work remains
+unauthorized pending reviewer inspection of record 366.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
+- `research/sprint_004/366_CEX002_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/365_CEX002_REVISION_CANDIDATE_INTEGRATION_ACCEPTANCE_AND_RUN_AUTHORIZATION.md`
 - `research/sprint_004/364_CEX002_REVISION_CANDIDATE_INTEGRATION_RECORD.md`
 - `research/sprint_004/363_CEX002_CORRECTED_REVISION_CANDIDATE_INTEGRATION_REAUTHORIZATION.md`
