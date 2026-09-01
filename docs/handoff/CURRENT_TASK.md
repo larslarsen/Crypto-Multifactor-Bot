@@ -36,8 +36,20 @@ completion descriptor. Record 433 is published. Both actor fields return to the
 reviewer. No source/test/CLI patch, cleanup, reproduction, retry, or next ticket is
 authorized.
 
+Review 434 accepts those terminal facts and rejects the blocker diagnosis. The accepted database
+stores repository-relative `data/cex002_qualify/gate2/run_receipts`; Review 432 changed the state
+argument to an absolute path, causing the authenticator to derive a different absolute directory.
+The earlier relative command passed this check and published the existing months. No database,
+receipt, source, data, or acquisition repair is needed.
+
+Hermes is authorized for one supervisor with an explicit repository `cd`, absolute Python and CLI
+paths, and the original repository-relative authority/output arguments. It performs no code edit,
+test, redownload, or cleanup. There is no retry or second runner. Later continuations inspect only
+that runner and publish record 435 at terminal; next ticket remains `NONE`.
+
 Governing documents:
 
+- `research/sprint_004/434_CEX002_RECORD433_ACCEPTANCE_AND_PATH_IDENTITY_RESUME.md`
 - `research/sprint_004/433_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/432_CEX002_RECORD431_ACCEPTANCE_AND_ABSOLUTE_PATH_RESUME.md`
 - `research/sprint_004/431_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
