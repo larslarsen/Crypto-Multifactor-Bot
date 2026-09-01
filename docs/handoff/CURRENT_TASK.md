@@ -3,30 +3,29 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 393 accepts Hermes's exact three-path record-392 evidence/control-plane completion and
-corrects one runner-table transcription: `exit_code.txt` SHA-256 is
-`53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3`. The v2 partial checkpoint
-remains unchanged at pass 1 1,164/1,308 prefixes and 1,838 pages, pass 2 zero pages, with no
-locator; v1 is unchanged. No candidate or Gate-2 result is accepted.
+Review 395 accepts the exact Review-393 terminal/run facts but rejects record 394's diagnosis. Both
+passes are complete with null cursors. The first normalized difference is `BANKUSDT`: pass 1 ended
+in one non-truncated page through 2026-08-30; pass 2 observed the newly published 2026-08-31 ZIP
+and checksum, crossed the 1,000-object boundary, and required a second page. ADR-0032 correctly
+blocked real live-listing growth. No manifest, receipt, lineage, locator, candidate, or Gate-2
+result is accepted.
 
-Hermes polled the single authorized runner `/tmp/cex002_v2_runner_c5Yg65` (shell PID `516793`
-start ticks `5000073`, planner PID `516870` start ticks `5000086`, start UTC
-`2026-09-01T06:29:24Z`) to terminal at `2026-09-01T07:23:10Z`, 53 minutes 46 seconds elapsed.
-The planner exited 1 with stop `blocked` and the exact error `listing reachability or pagination
-authority drifted across independent passes`. The v2 listing progressed from 1,838 to 4,187 pages
-(pass 1: 1,308/1,308 prefixes, 2,093 pages; pass 2: 1,308/1,308 prefixes, 2,094 pages) but the
-final page of each pass remains truncated with a continuation token, so the listing is not stable
-and not complete. No manifest, receipt, lineage, or locator was published. No candidate is
-accepted. No raw acquisition, candidate acceptance, Gate-2 acceptance, transition, or later work
-is authorized by the result. CEX-002 and Gate 2 remain `IN_PROGRESS`. The next ticket remains
-`NONE`. No retry, resume, repair, cleanup, replacement, or second invocation is authorized.
+Record 394 also omits both required publication-command results and incorrectly denies the one
+authorized planner resume. Hermes is authorized only to publish record 396 with the corrected
+diagnosis and fresh repository-control/scoped-diff evidence, update both final reviewer actor
+fields and summaries, commit/push exactly three paths, and stop. No planner, retry/resume, network,
+data/candidate/runner mutation, SQLite, source/architecture change, acquisition, cleanup,
+transition, or later work is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket
+remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/395_CEX002_RECORD394_DIAGNOSIS_CORRECTION_AND_EVIDENCE_STOP.md`
+- `research/sprint_004/394_CEX002_V2_REVISION_CANDIDATE_CONTINUATION_RECORD.md`
 - `research/sprint_004/393_CEX002_RECORD392_ACCEPTANCE_AND_V2_CONTINUATION_AUTHORIZATION.md`
 - `research/sprint_004/392_CEX002_V2_PARTIAL_RUN_EVIDENCE_AND_CONTROL_PLANE_COMPLETION.md`
 - `research/sprint_004/391_CEX002_RECORD390_PARTIAL_RUN_ACCEPTANCE_AND_CONTROL_PLANE_EVIDENCE_STOP.md`
