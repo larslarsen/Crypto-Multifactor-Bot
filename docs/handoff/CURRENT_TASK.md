@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -42,13 +42,33 @@ argument to an absolute path, causing the authenticator to derive a different ab
 The earlier relative command passed this check and published the existing months. No database,
 receipt, source, data, or acquisition repair is needed.
 
-Hermes is authorized for one supervisor with an explicit repository `cd`, absolute Python and CLI
-paths, and the original repository-relative authority/output arguments. It performs no code edit,
-test, redownload, or cleanup. There is no retry or second runner. Later continuations inspect only
-that runner and publish record 435 at terminal; next ticket remains `NONE`.
+Hermes executed the Review-434 terminal evidence workflow. The sole runner
+`/tmp/cex002_oi_434_DmfuB0` exited 1 at 2026-09-01T20:31:10Z (6 minutes 16 seconds after start)
+with `OpenInterestNormalizationError: metrics create_time is off the five-minute grid` at
+`src/cryptofactors/ingest/binance_usdm_open_interest.py:801` inside `_timestamp`, called from
+`_row_values` line 830. The normalizer passed the generation-0 receipt-authentication stage that
+failed in Review 432, loaded generation-0 sources, descended the open-interest tree into per-row
+timestamp validation, and reached the five-minute-grid check. The path-identity resume is
+successful: the accepted relative arguments authenticate and run deep into the normalizer. This is
+a bounded normalizer defect in per-row five-minute-grid validation, not an authority or launch
+defect.
+
+The lead reviewer interrupted only the still-waiting Hermes harness after the runner was already
+terminal; no live runner was signaled. No retry or cleanup occurred.
+
+The hidden root now contains 181 Parquets plus 181 matching lineages, empty staging, and no
+completion descriptor. This is 173 new pairs beyond the prior eight 0GUSDT months. The last
+published partition is `1000FLOKIUSDT/2024-03`. The prior eight 0GUSDT months are unchanged. No
+mutation occurred.
+
+Record 435 is published at commit `9db8583ed39a0a4bf96fe4eb56cbbf58830b265c`. Both actor fields
+return to the Lead Quantitative Finance Researcher/Engineer. Next ticket remains `NONE`. Gate 2
+remains accepted; CEX-002 and Gate 3 remain `IN_PROGRESS`. No source/test/CLI patch, retry, or
+reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/435_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/434_CEX002_RECORD433_ACCEPTANCE_AND_PATH_IDENTITY_RESUME.md`
 - `research/sprint_004/433_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/432_CEX002_RECORD431_ACCEPTANCE_AND_ABSOLUTE_PATH_RESUME.md`
