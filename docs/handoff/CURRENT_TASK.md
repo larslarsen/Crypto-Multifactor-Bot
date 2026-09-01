@@ -3,16 +3,17 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol using GPT-5.6-sol High
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 398 rejects the unintegrated Review-397 Sol drop because its sole authorized targeted run exited 1 at `_semantic_receipt_payload` with `KeyError: 'capacity_projection'`; Sol correctly stopped without a patch or rerun. The stopped source/test hashes, line counts, scoped diff, truncated-output limitation, and empty staging state are durable in Review 398. No source/test is accepted or integrated, and no v2/v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
+Review 399 accepts the exact final ADR-0033 Sol source/test drop for bounded Hermes integration. Production SHA-256 is `1ac17e902ea3b8aa6967ad3cb4e89d2b2b746f147eb1f83322fba2776e107e32` at 5,147 lines; test SHA-256 is `a715023e8e8c43ef908097c4bb7332cfcc4798d08929d433223f4e149599b905` at 3,342 lines and 70 test functions. The one Review-398 targeted run passed all 147 cases. The drop remains unintegrated and unstaged; no v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-ADR-0033 is clarified: deterministic pending byte facts remain semantic, while the volatile fresh local `capacity_projection` remains exact locator-bound physical receipt evidence and is excluded from `semantic_sha256`, preserving v2's boundary. Sol High is authorized only to remove the added semantic key, invert the corresponding new test assertion, run the one exact targeted command once, and stop. No other source/test edit, integration, Git, real data/candidate access, network, acquisition, cleanup, transition, later gate, or next ticket is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes is authorized only to verify the exact accepted hashes, run Review 399's four ordered integration/publication commands, publish record 400 with final reviewer actor fields, commit/push exactly the five authorized paths, prove remote equality, and stop. It may not patch source/tests or access real candidate/data, network, planner, SQLite, acquisition, cleanup, transition, later gate, or next ticket. All unrelated dirty paths remain unstaged. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/399_CEX002_SOL_V3_REACHABILITY_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/398_CEX002_SOL_V3_STOPPED_DROP_REJECTION_AND_CAPACITY_SEMANTIC_CORRECTION_AUTHORIZATION.md`
 - `research/sprint_004/397_CEX002_RECORD396_ACCEPTANCE_AND_SOL_V3_REACHABILITY_AUTHORIZATION.md`
 - `docs/adr/0033-aggregate-prefix-reachability-and-v3-candidate.md`
