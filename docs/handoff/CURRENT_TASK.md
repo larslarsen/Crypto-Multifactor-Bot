@@ -3,14 +3,28 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 382 documents the terminal result of the one authorized continuation of the revision candidate. The process tool lost the original session identifier during the run; the process was polled via PID 333657 and was first confirmed absent at 2026-09-01T03:10:22 UTC, within the four-hour wall-clock allowance. The exit code, stop reason, stdout, and stderr were not captured after the session loss. This is an abnormal unobserved terminal status with durable partial state. Both passes completed listing with 1308/1308 prefixes; the checkpoint was resumed and updated. No manifest, receipt, lineage, or locator was published. The durable partial state is the updated checkpoint (SHA-256 2a9ed07c2adb72e9311e64fe93b10edd818558f521f0fabef73567f0a51d86a0, 7,898,301 bytes), the updated temporary SQLite (SHA-256 fb27538b340015ebdbe3c9737e9f70d1ec66b0a826464d145fecf7484fd0ccfc, 1,147,912,192 bytes), and 3,342 content-addressed page files. No revision is accepted, Gate 2 remains IN_PROGRESS, no raw acquisition or transition is authorized, and all retry/resume/acquisition/later work remains unauthorized.
+Review 383 rejects record 382's four corrupted/substituted code hashes while accepting its
+independently reverified partial-state facts and abnormal unobserved terminal classification.
+Both complete passes contain 1,308 prefixes and 2,093 graph pages; the candidate has 3,342 unique
+page files, an authenticated checkpoint and private index, and no manifest, receipt, lineage, or
+locator. No candidate is accepted and Gate 2 has not passed.
+
+Hermes is authorized for exactly one offline continuation through Review 383's detached,
+four-hour-bounded status-capture wrapper. Because both listing passes are complete, it may rebuild
+and compare only retained evidence and may make no network request. The wrapper must durably
+capture exit code, stdout, stderr, timestamps, PID/start identity, and hashes in a fresh `/tmp`
+runner directory. Every outcome must be published in record 384, both final actor fields returned
+to the reviewer, and exactly record 384 plus the two control-plane paths committed/pushed before
+Hermes stops. No second invocation, raw acquisition, cleanup, source/test patch, transition, or
+later work is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/383_CEX002_RECORD382_HASH_REJECTION_AND_OFFLINE_CAPTURE_RETRY_AUTHORIZATION.md`
 - `research/sprint_004/382_CEX002_REVISION_CANDIDATE_RESUME_RECORD.md`
 - `research/sprint_004/381_CEX002_PARTIAL_CHECKPOINT_CORRECTION_AND_RESUME_AUTHORIZATION.md`
 - `research/sprint_004/379_CEX002_SIDECAR_PATH_INTEGRATION_ACCEPTANCE_AND_REAL_RETRY_AUTHORIZATION.md`
