@@ -7,23 +7,23 @@ Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 389 accepts Hermes integration commit `9eb6b39c1a61d989a78f262fa91715329715ce8a`:
-exactly five authorized paths, unchanged Review-387 developer hashes, 139 targeted cases passing,
-clean targeted ruff, repository-control PASS, empty scoped diff, empty staging, and remote
-equality. It corrects record 388's unrelated-path count (11 unrelated modified, not 13) and
-supersedes both final summaries' stale future integration prose. This accepts integration only;
-no candidate or Gate-2 result is accepted.
+Review 391 accepts the exact durable facts from Review 389's one fresh v2 invocation: exit 2 with
+`resumable_partial` after a transient listing failure; pass 1 stopped at 1,164/1,308 prefixes and
+1,838 pages; pass 2 has zero pages; no locator/publication exists; v1 is unchanged. No candidate,
+raw acquisition, or Gate-2 result is accepted.
 
-The v2 root is absent and v1 retains its accepted checkpoint/private-index identities. Jr Dev -
-Hermes is authorized for exactly one durably captured invocation of the integrated listing-only
-planner against the fresh fixed v2 sibling. It may perform only generation authentication and the
-two fixed S3 listing passes; no raw ZIP GET, v1 mutation, acquisition, cleanup, duplicate/resume,
-transition, or later work is authorized. Every terminal outcome must be published as record 390
-with both final reviewer actor fields before repository control. CEX-002 and Gate 2 remain
-`IN_PROGRESS`; next ticket remains `NONE`.
+Record 390's runner-completeness and publication-completeness claims are rejected. Linux start
+ticks were not retained, record 390 omits the two publication-command results, commit
+`0ddb59f5ced7784aec97dc7cb740c9a8870c2562` contains only record 390, and both summaries remained
+stale. Hermes is authorized only to publish record 392 and exact final reviewer control-plane
+fields with fresh repository-control/scoped-diff evidence. No planner, resume, network, data or
+candidate mutation, source edit, acquisition, cleanup, transition, or later work is authorized.
+CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/391_CEX002_RECORD390_PARTIAL_RUN_ACCEPTANCE_AND_CONTROL_PLANE_EVIDENCE_STOP.md`
+- `research/sprint_004/390_CEX002_FRESH_V2_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/389_CEX002_V2_CURSOR_CORRECTION_INTEGRATION_ACCEPTANCE_AND_FRESH_RUN_AUTHORIZATION.md`
 - `research/sprint_004/388_CEX002_V2_CURSOR_CORRECTION_INTEGRATION_RECORD.md`
 - `research/sprint_004/387_CEX002_SOL_V2_CURSOR_CORRECTION_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
