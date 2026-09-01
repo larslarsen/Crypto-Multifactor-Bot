@@ -7,6 +7,13 @@ Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
+Review 441 delegates the terminal watch to Jr Dev — Hermes at the owner's explicit request. The
+paid reviewer has stopped manual polling, and Sol is not used. Hermes performs one persistent
+read-only continuation against the exact existing Review-437 process and does not return while it
+is live. No launch, retry, signal, cleanup, patch, test, acquisition, or second runner is
+authorized. At terminal Hermes reconciles success or records complete failure evidence and
+publishes record 442, returning both actor fields to the reviewer.
+
 Review 440 accepts Hermes's Review-439 preflight stop and supersedes the cross-namespace process
 diagnosis. Hermes created no Review-439 directory and launched no second process. Within Hermes's
 execution environment, the exact Review-437 shell/Python identities remained live. After Hermes
@@ -138,6 +145,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/441_CEX002_HERMES_TERMINAL_WATCH_AUTHORIZATION.md`
 - `research/sprint_004/440_CEX002_REVIEW439_PREFLIGHT_ACCEPTANCE_AND_EXISTING_RUN_MONITORING.md`
 - `research/sprint_004/439_CEX002_RECORD438_ACCEPTANCE_AND_EXACT_OUTER_DETACHED_RESUME.md`
 - `research/sprint_004/438_CEX002_OPEN_INTEREST_NATIVE_TIMESTAMP_RESUME_RECORD.md`
