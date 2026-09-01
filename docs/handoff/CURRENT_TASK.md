@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -32,8 +32,23 @@ eight lineage JSONs (2025-09 through 2026-04), empty `.staging`, and no completi
 Record 428 is published. Both actor fields return to the reviewer. No source/test/CLI patch,
 cleanup, reproduction, retry, or next ticket is authorized.
 
+Review 429 accepts record 428 and identifies the exact first failing source row. The accepted
+generation-0 0GUSDT metrics object for 2026-05-03 contains 287 owned points from 00:05 through
+23:55 plus one next-day 00:00 spillover. The separate accepted 2026-05-04 object owns a different
+00:00 value. This is a bounded normalizer defect, not an acquisition blocker: Gate 2 remains
+accepted and all raw data remains preserved.
+
+Sr Dev — Codex Sol is authorized only for Review 429's two-path correction. The filename day
+remains authority; exactly one fully validated adjacent-next-midnight spillover may be excluded
+from product rows and recorded durably by source hash and original ordinal. The missing owned-day
+grid point remains an explicit typed gap, and the next-day-owned value wins without imputation or
+rewriting. Sol may run one targeted pytest command, then stops for reviewer inspection. No real
+run, data mutation, integration, cleanup, retry, acquisition, other product, model, experiment,
+trading-engine work, or next ticket is authorized.
+
 Governing documents:
 
+- `research/sprint_004/429_CEX002_RECORD428_ACCEPTANCE_AND_MIDNIGHT_SPILLOVER_CORRECTION.md`
 - `research/sprint_004/428_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/427_CEX002_DAILY_ORDER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/426_CEX002_RECORD425_ACCEPTANCE_AND_DAILY_ROW_ORDER_CORRECTION.md`
