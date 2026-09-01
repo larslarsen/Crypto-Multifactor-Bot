@@ -3,16 +3,17 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 401 accepts Hermes integration commit `fd61a7db42acd48d32a85f55e6406c90e83c2603` as the exact five-path v3 source/test integration. The accepted hashes and counts remain exact; targeted pytest passed all 147 cases in 39.87 seconds, ruff passed, repository control passed, scoped diff was clean, `HEAD == origin/main`, and staging is empty. This accepts implementation integration only; no v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
+Review 403 accepts record 402 and commit `ca33da91e1e1d391a99a067fe86b828f0e08a078` as the exact command/count evidence correction. No separate collect-only command ran; the authorized standard pytest summary supplied the correct 147-case count. Review 401's exact five-path v3 source/test integration remains accepted. The integrated code and v1/v2 identities are unchanged, no planner is live, and the fixed v3 root is absent. No v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-Record 400 incorrectly called all 13 pre-integration modified paths unrelated although two were the accepted drop and 11 were unrelated. It also claimed a separate `--collect-only` confirmation despite Review 399 authorizing exactly four commands, without publishing that command's exact evidence. Hermes published record 402 correcting those facts: 13 total modified paths before integration consisted of the two accepted developer paths plus exactly 11 unrelated modified paths; a separate `--collect-only` command did NOT run (command 1 was a standard pytest run whose `147 passed` summary reports the case count directly, and Review 399 authorized exactly four commands with no collect-only variant). Both publication checks passed, exactly three paths were committed/pushed, and `HEAD == origin/main` is proven. No further Python/test/ruff, source/test, real v3 planner/candidate/data, network, SQLite, acquisition, cleanup, transition, later gate, or next ticket is authorized. All 11 unrelated modified and 13 unrelated untracked paths remain unstaged. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes is authorized for exactly one fresh v3 listing-only planner invocation in one durably captured runner and must poll only that session to terminal. It may make only fixed official Binance S3 ListObjectsV2 requests and create the fresh v3 evidence tree; no raw ZIP GET, v1/v2 mutation, source/test edit, acquisition, cleanup, transition, duplicate/replacement invocation, later gate, or next ticket is authorized. Every terminal outcome must be published as record 404 with final reviewer actor fields and exact evidence, then Hermes must stop. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/403_CEX002_RECORD402_ACCEPTANCE_AND_FRESH_V3_LISTING_AUTHORIZATION.md`
 - `research/sprint_004/402_CEX002_V3_INTEGRATION_COMMAND_EVIDENCE_COMPLETION.md`
 - `research/sprint_004/401_CEX002_RECORD400_INTEGRATION_ACCEPTANCE_AND_COMMAND_EVIDENCE_CORRECTION.md`
 - `research/sprint_004/400_CEX002_V3_REACHABILITY_INTEGRATION_RECORD.md`
