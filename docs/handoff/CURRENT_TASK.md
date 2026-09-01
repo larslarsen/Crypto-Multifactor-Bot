@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -13,12 +13,16 @@ Review 407 accepts record 406's exact three-path publication and bounded safe pr
 
 Review 409 accepts record 408's exact three-path publication and bounded safe natural-exit facts but rejects its false/missing v3 preflight and invented `cursor_state` claims. The v3 root existed before the continuation as Review 407's anchored partial tree; it was not absent or freshly created. Record 408 also omitted the required pre-launch v3 checkpoint/private-index evidence. The accepted runner reached natural exit 2 after 966 seconds with `stop=resumable_partial` and exact transient listing failure, without any signal. Current checkpoint SHA-256 is `54fcc69362b763bc53998adb0de944285ab3b6f799e7219d17d5f1c3c8c6dbf7`: pass 1 has 2,001 pages, 1,308 discovered prefixes, 1,257 completed prefixes, `listing_complete=false`, and the actual cursor object is at `data/futures/um/daily/metrics/XAGUSDT/` with null continuation token. Pass 2 has zero pages and is incomplete. No locator/receipt/manifest/lineage or candidate exists.
 
-Hermes is authorized for exactly one further durable continuation from Review 409's exact terminal state. It must preflight all code, immutable v1/v2, and partial-v3 identities; copy the accepted prior runner script directly between `/tmp` directories without creating or touching any repository-root runner file; launch the planner once detached; preserve real process identities and at least four hours allowance; never signal it merely because the harness turn ends; and publish every terminal outcome as record 410. No duplicate/replacement invocation, raw ZIP GET, source/test edit, acquisition, transition, later gate, or next-ticket action is authorized.
+Review 411 accepts record 410's exact three-path publication and safe preflight/runner/natural-exit facts but rejects four evidence defects: the ticket contains a literal `xxxxxxxx...` self-commit placeholder; record 410 miscounts 14 untracked paths as unrelated instead of 13 unrelated plus one runner-evidence copy; the terminal checkpoint SHA-256 is omitted; and CURRENT_TASK was not advanced to record 410. The accepted runner reached natural exit 2 after 2,923 seconds with the exact transient listing failure and no signal. Current checkpoint SHA-256 is `c82186e09d560e0f209872e0c21055e137a259f46b088f3e5f2360a473ef1451`: pass 1 is complete at 2,094 pages and 1,308/1,308 prefixes; pass 2 is partial at 1,870 pages and 1,182/1,308 prefixes with the actual cursor at `data/futures/um/daily/metrics/TQQQUSDT/` and null continuation token. No publication or candidate exists.
+
+Hermes is authorized for exactly one continuation from Review 411's exact state. It must use literal `mktemp -d /tmp/runner_411_XXXXXX`, copy the accepted runner script only between `/tmp` directories, launch one detached planner with real process identities and at least four hours allowance, never signal it merely because the harness turn ends, and publish every terminal outcome as record 412. Record 412 must use exact dirty-path accounting, both pre-launch and terminal checkpoint hashes, actual schema fields, and no future-commit placeholder. No duplicate/replacement invocation, raw ZIP GET, source/test edit, acquisition, transition, later gate, or next-ticket action is authorized.
 
 CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/411_CEX002_RECORD410_EVIDENCE_CORRECTION_AND_V3_CONTINUATION_AUTHORIZATION.md`
+- `research/sprint_004/410_CEX002_DURABLE_V3_CONTINUATION_RECORD.md`
 - `research/sprint_004/409_CEX002_RECORD408_CORRECTION_AND_DURABLE_V3_CONTINUATION_AUTHORIZATION.md`
 - `research/sprint_004/408_CEX002_DURABLE_V3_CONTINUATION_RECORD.md`
 - `research/sprint_004/407_CEX002_RECORD406_REJECTION_AND_DURABLE_V3_CONTINUATION_AUTHORIZATION.md`
