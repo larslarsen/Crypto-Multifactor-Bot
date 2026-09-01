@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -58,8 +58,17 @@ against the same hidden root. There is no acquisition or redownload. Every termi
 record 431; a live runner is only monitored by its exact identity. No patch, cleanup, duplicate
 run, other product, experiment, model, trading-engine work, or next ticket is authorized.
 
+Record 431 states the exact failed Review-430 launch outcome. Hermes integrated and pushed the
+accepted source/test correction at commit `a243932d266b9a0ba88266af705febe9eaf91359`, but then
+created two wrapper attempts instead of one. Both exited 127 before Python executed because the
+relative `.venv/bin/python` path was resolved from the wrong working directory; both Python start
+ticks are empty. The reviewer interrupted the harness to prevent a third attempt. The hidden root
+is unchanged at eight Parquets plus eight lineages, empty staging, and no completion descriptor.
+Both actor fields return to the reviewer. No retry or launch is authorized.
+
 Governing documents:
 
+- `research/sprint_004/431_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/430_CEX002_MIDNIGHT_SPILLOVER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/429_CEX002_RECORD428_ACCEPTANCE_AND_MIDNIGHT_SPILLOVER_CORRECTION.md`
 - `research/sprint_004/428_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
