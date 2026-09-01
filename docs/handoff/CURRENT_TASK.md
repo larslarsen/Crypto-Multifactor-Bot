@@ -3,29 +3,15 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 381 accepts record 380 as evidence of one interrupted invocation and its partial
-candidate, but rejects and supersedes its false claim that pass_1 completed. The authenticated
-checkpoint says pass_1 is incomplete at 484 of 1,308 discovered prefixes, 640 pages, and cursor
-`data/futures/um/daily/metrics/BNXUSDT/`; pass_2 has only its two initialized roots and has made
-no request. No revision is accepted and Gate 2 has not passed.
-
-Hermes is authorized for exactly one continuation of the existing candidate with the exact
-planner command in Review 381. It must use one execution session with at least a four-hour
-allowance and poll that same process rather than launch a duplicate. The continuation may reuse
-only authenticated pages and request only missing fixed S3 listings. It may not GET raw ZIPs,
-invoke acquisition, use Coinalyze, edit generation 0, select a subset, delete/clean/replace the
-candidate, patch source/tests, transition generations, or start later work.
-
-Every outcome must be published in record 382, both final actor fields must return to the
-reviewer before repository control, and Hermes must commit/push only record 382 plus the two
-control-plane paths before stopping. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains
-`NONE`.
+Review 382 documents the terminal result of the one authorized continuation of the revision candidate. The process tool lost the original session identifier during the run; the process was polled via PID 333657 and was first confirmed absent at 2026-09-01T03:10:22 UTC, within the four-hour wall-clock allowance. The exit code, stop reason, stdout, and stderr were not captured after the session loss. This is an abnormal unobserved terminal status with durable partial state. Both passes completed listing with 1308/1308 prefixes; the checkpoint was resumed and updated. No manifest, receipt, lineage, or locator was published. The durable partial state is the updated checkpoint (SHA-256 2a9ed07c2adb72e9311e64fe93b10edd818558f521f0fabef73567f0a51d86a0, 7,898,301 bytes), the updated temporary SQLite (SHA-256 fb27538b340015ebdbe3c9737e9f70d1ec66b0a826464d145fecf7484fd0ccfc, 1,147,912,192 bytes), and 3,342 content-addressed page files. No revision is accepted, Gate 2 remains IN_PROGRESS, no raw acquisition or transition is authorized, and all retry/resume/acquisition/later work remains unauthorized.
 
 Governing documents:
 
+- `research/sprint_004/382_CEX002_REVISION_CANDIDATE_RESUME_RECORD.md`
 - `research/sprint_004/381_CEX002_PARTIAL_CHECKPOINT_CORRECTION_AND_RESUME_AUTHORIZATION.md`
 - `research/sprint_004/379_CEX002_SIDECAR_PATH_INTEGRATION_ACCEPTANCE_AND_REAL_RETRY_AUTHORIZATION.md`
 - `research/sprint_004/378_CEX002_INTEGRATION_EVIDENCE_ATTRIBUTION_AND_CONTROL_PLANE_CORRECTION.md`
