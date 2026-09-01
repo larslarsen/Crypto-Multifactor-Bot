@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
 Review 379 accepts the exact sidecar-path integration and combined records 374/376/378.
@@ -12,9 +12,13 @@ evidence; the developer hashes match; `HEAD == origin/main`; and staging is empt
 379 discloses that record 378 overstates the final ticket actor update: the ticket retained
 Hermes's completed Review-377 assignment while this file named the reviewer.
 
-Hermes is now authorized for exactly one corrected real listing-only candidate invocation.
-It must publish record 380 and both literal final reviewer actor fields before repository
-control, commit/push exactly those three paths, prove remote equality, and stop.
+Hermes executed the one authorized corrected listing-only candidate invocation. The
+command exited 124 (interrupted) after the bounded timeout. Pass_1 completed with 640
+pages and 1,308 discovered prefixes; pass_2 discovered its two root prefixes but
+published zero pages. A partial candidate tree was published at
+`data/cex002_qualify/gate2_revision_candidate` (checkpoint, pages, tmp SQLite). No raw
+ZIP GET, acquisition, Coinalyze access, active-generation edit, subset selection,
+cleanup, replacement, old-acquisition invocation, or generation transition occurred.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
 No raw ZIP GET, acquisition, Coinalyze access, active-generation edit, second invocation,
