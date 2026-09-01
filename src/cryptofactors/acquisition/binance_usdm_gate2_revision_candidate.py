@@ -1,4 +1,4 @@
-"""CEX-002 Gate-2 listing-only post-plan revision candidate - ADR-0032.
+"""CEX-002 Gate-2 listing-only post-plan revision candidate - ADR-0033.
 
 Standalone planner. It holds the generation-0 acquisition lock nonblocking, opens
 an actually immutable held-descriptor SQLite snapshot, derives the exact pending
@@ -37,15 +37,13 @@ from typing import Any, Protocol
 from xml.etree import ElementTree
 
 TICKET_ID = "CEX-002"
-ADR_ID = "0032"
-CANDIDATE_SCHEMA = "cex002_gate2_revision_candidate_v2"
-CHECKPOINT_SCHEMA = "cex002_gate2_revision_candidate_checkpoint_v2"
-LINEAGE_SCHEMA = "cex002_gate2_revision_candidate_lineage_v2"
-LOCATOR_SCHEMA = "cex002_gate2_revision_candidate_locator_v2"
+ADR_ID = "0033"
+CANDIDATE_SCHEMA = "cex002_gate2_revision_candidate_v3"
+CHECKPOINT_SCHEMA = "cex002_gate2_revision_candidate_checkpoint_v3"
+LINEAGE_SCHEMA = "cex002_gate2_revision_candidate_lineage_v3"
+LOCATOR_SCHEMA = "cex002_gate2_revision_candidate_locator_v3"
 MANIFEST_FORMAT = "gzip_jsonl"
-POLICY_IDENTITY = (
-    "adr0032_opaque_listing_cursor_normalization_and_v2_candidate_v2"
-)
+POLICY_IDENTITY = "adr0033_aggregate_prefix_reachability_and_v3_candidate_v3"
 GENERATION0_POLICY_IDENTITY = (
     "adr0029_content_addressed_gate2_acquisition_and_resume_"
     "adr0030_exact_retained_credit_v2"
@@ -63,7 +61,7 @@ ACQUISITION_CLI_RELATIVE = Path(
 
 FIXED_STORE_ROOT = "data/cex002_qualify"
 FIXED_ACTIVE_NAME = "gate2"
-FIXED_CANDIDATE_NAME = "gate2_revision_candidate_v2"
+FIXED_CANDIDATE_NAME = "gate2_revision_candidate_v3"
 LOCK_NAME = "acquisition.lock"
 SQLITE_NAME = "state.sqlite"
 SQLITE_WAL_NAME = "state.sqlite-wal"
@@ -3129,25 +3127,28 @@ def _lookup_listing(
     return int(row[0]), None if row[1] is None else str(row[1]), str(row[2]), str(row[3])
 
 
-def _stable_pass_graph(state: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _stable_reachability(state: Mapping[str, Any]) -> dict[str, Any]:
     pages = state["pages"]
-    ordinals: dict[str, int] = {}
-    normalized: list[dict[str, Any]] = []
+    discovered = sorted(set(state["discovered_prefixes"]))
+    completed = sorted(set(state["completed_prefixes"]))
+    prefixes = sorted(set(discovered) | set(completed))
+    child_prefixes: dict[str, set[str]] = {prefix: set() for prefix in prefixes}
     for key in state["graph"]:
         record = pages[key]
-        request = record["request"]
-        prefix = request["prefix"]
-        ordinal = ordinals.get(prefix, 0)
-        ordinals[prefix] = ordinal + 1
-        normalized.append(
+        prefix = record["request"]["prefix"]
+        child_prefixes[prefix].update(record["child_prefixes"])
+    return {
+        "completed_prefixes": completed,
+        "discovered_prefixes": discovered,
+        "prefixes": [
             {
-                "child_prefixes": sorted(record["child_prefixes"]),
-                "is_truncated": record["is_truncated"],
-                "page_ordinal": ordinal,
+                "child_prefixes": sorted(child_prefixes[prefix]),
                 "prefix": prefix,
             }
-        )
-    return sorted(normalized, key=lambda item: (item["prefix"], item["page_ordinal"]))
+            for prefix in prefixes
+        ],
+        "roots": sorted(set(state["roots"])),
+    }
 
 
 def _compare_listing_passes(
@@ -3161,23 +3162,13 @@ def _compare_listing_passes(
 ) -> dict[str, Any]:
     first_state = checkpoint["passes"][PASS_IDS[0]]
     second_state = checkpoint["passes"][PASS_IDS[1]]
+    first_reachability = _stable_reachability(first_state)
+    second_reachability = _stable_reachability(second_state)
+    first_reachability_body = canonical_json(first_reachability)
+    second_reachability_body = canonical_json(second_reachability)
     _require(
-        first_state["roots"] == second_state["roots"],
-        "listing roots drifted across independent passes",
-    )
-    _require(
-        first_state["discovered_prefixes"] == second_state["discovered_prefixes"],
-        "listing discovered-prefix reachability drifted across independent passes",
-    )
-    _require(
-        first_state["completed_prefixes"] == second_state["completed_prefixes"],
-        "listing completed-prefix reachability drifted across independent passes",
-    )
-    first_graph = _stable_pass_graph(first_state)
-    second_graph = _stable_pass_graph(second_state)
-    _require(
-        first_graph == second_graph,
-        "listing reachability or pagination authority drifted across independent passes",
+        first_reachability_body == second_reachability_body,
+        "aggregate listing prefix reachability drifted across independent passes",
     )
     digest = hashlib.sha256()
     count = 0
@@ -3218,9 +3209,9 @@ def _compare_listing_passes(
     expected = pins.expected_pending_metrics + pins.expected_pending_book_ticker
     _require(count == expected, "stable listing comparison count changed")
     return {
-        "graph_sha256": sha256_bytes(canonical_json(first_graph)),
         "pending_fact_count": count,
         "pending_facts_sha256": digest.hexdigest(),
+        "reachability_sha256": sha256_bytes(first_reachability_body),
     }
 
 
@@ -3530,9 +3521,13 @@ def _lineage_document(checkpoint: Mapping[str, Any]) -> dict[str, Any]:
 def _semantic_receipt_payload(receipt: Mapping[str, Any]) -> dict[str, Any]:
     payload = {key: receipt[key] for key in SEMANTIC_RECEIPT_KEYS}
     lineage = dict(payload["lineage"])
-    for key in ("asset_bytes", "asset_name", "asset_sha256"):
+    for key in ("asset_bytes", "asset_name", "asset_sha256", "pass_page_counts"):
         lineage.pop(key, None)
     payload["lineage"] = lineage
+    listing = dict(payload["listing"])
+    for key in ("page_count", "pass_page_counts"):
+        listing.pop(key, None)
+    payload["listing"] = listing
     manifest = payload["manifest"]
     payload["manifest"] = {
         "format": manifest["format"],
@@ -3927,7 +3922,7 @@ def _authenticate_completed_candidate(
             "asset_sha256",
             "pass_page_counts",
             "schema_version",
-            "stable_graph_sha256",
+            "stable_reachability_sha256",
             "stable_pending_fact_count",
             "stable_pending_facts_sha256",
         },
@@ -3941,7 +3936,7 @@ def _authenticate_completed_candidate(
             "independent_passes",
             "page_count",
             "pass_page_counts",
-            "stable_graph_sha256",
+            "stable_reachability_sha256",
             "stable_pending_facts_sha256",
         },
         label="candidate listing proof",
@@ -4033,8 +4028,9 @@ def _authenticate_completed_candidate(
     _require(receipt["manifest"]["name"] == locator["manifest_name"], "receipt manifest name changed")
     _require(receipt["manifest"]["compressed_sha256"] == locator["manifest_sha256"], "receipt manifest digest changed")
     _require(
-        receipt["listing"]["stable_graph_sha256"] == stable_listing["graph_sha256"],
-        "receipt stable graph identity changed",
+        receipt["listing"]["stable_reachability_sha256"]
+        == stable_listing["reachability_sha256"],
+        "receipt stable reachability identity changed",
     )
     _require(
         receipt["listing"]["stable_pending_facts_sha256"]
@@ -4042,7 +4038,8 @@ def _authenticate_completed_candidate(
         "receipt stable pending facts changed",
     )
     _require(
-        receipt["lineage"]["stable_graph_sha256"] == stable_listing["graph_sha256"]
+        receipt["lineage"]["stable_reachability_sha256"]
+        == stable_listing["reachability_sha256"]
         and receipt["lineage"]["stable_pending_facts_sha256"]
         == stable_listing["pending_facts_sha256"]
         and receipt["lineage"]["stable_pending_fact_count"]
@@ -4119,7 +4116,7 @@ def _authenticate_completed_candidate(
         "independent_passes": list(PASS_IDS),
         "page_count": sum(pass_page_counts.values()),
         "pass_page_counts": pass_page_counts,
-        "stable_graph_sha256": stable_listing["graph_sha256"],
+        "stable_reachability_sha256": stable_listing["reachability_sha256"],
         "stable_pending_facts_sha256": stable_listing["pending_facts_sha256"],
     }
     _exact_int(
@@ -4139,7 +4136,7 @@ def _authenticate_completed_candidate(
         "asset_sha256": locator["lineage_sha256"],
         "pass_page_counts": pass_page_counts,
         "schema_version": LINEAGE_SCHEMA,
-        "stable_graph_sha256": stable_listing["graph_sha256"],
+        "stable_reachability_sha256": stable_listing["reachability_sha256"],
         "stable_pending_fact_count": stable_listing["pending_fact_count"],
         "stable_pending_facts_sha256": stable_listing["pending_facts_sha256"],
     }
@@ -4769,7 +4766,7 @@ def _plan_revision_candidate(
                 "asset_sha256": lineage_sha256,
                 "pass_page_counts": pass_page_counts,
                 "schema_version": LINEAGE_SCHEMA,
-                "stable_graph_sha256": stable_listing["graph_sha256"],
+                "stable_reachability_sha256": stable_listing["reachability_sha256"],
                 "stable_pending_fact_count": stable_listing["pending_fact_count"],
                 "stable_pending_facts_sha256": stable_listing["pending_facts_sha256"],
             },
@@ -4779,7 +4776,7 @@ def _plan_revision_candidate(
                 "independent_passes": list(PASS_IDS),
                 "page_count": sum(pass_page_counts.values()),
                 "pass_page_counts": pass_page_counts,
-                "stable_graph_sha256": stable_listing["graph_sha256"],
+                "stable_reachability_sha256": stable_listing["reachability_sha256"],
                 "stable_pending_facts_sha256": stable_listing["pending_facts_sha256"],
             },
             "manifest": {
