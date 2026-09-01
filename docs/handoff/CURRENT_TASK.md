@@ -2,8 +2,8 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
 Review 373 accepts Sol High's exact two-path sidecar-path serialization correction for

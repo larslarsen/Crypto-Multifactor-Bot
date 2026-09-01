@@ -2200,10 +2200,12 @@ def _rehash_sidecar(
     item: PendingIdentity,
     content_fd: int,
     *,
-    content_root: Path,
+    pinned_destination: str,
 ) -> PendingIdentity:
     shard, name = content_path_parts(item.sidecar_sha256)
-    expected_path = str(Path(content_root).absolute() / shard / name)
+    expected_path = (
+        f"{pinned_destination}/{FIXED_ACTIVE_NAME}/{CONTENT_NAME}/{shard}/{name}"
+    )
     _require(
         item.sidecar_path == expected_path,
         "a retained sidecar path is not the canonical content-addressed leaf",
@@ -3373,14 +3375,16 @@ def _iter_manifest_lines(
     *,
     attempt_hi: int,
     content_fd: int,
-    content_root: Path,
+    pinned_destination: str,
     index: sqlite3.Connection,
     checkpoint: Mapping[str, Any],
 ) -> Iterator[bytes]:
     pass_id = PASS_IDS[1]
     pages = checkpoint["passes"][pass_id]["pages"]
     for item in iter_pending(conn, pins, hooks, attempt_hi=attempt_hi):
-        filled = _rehash_sidecar(item, content_fd, content_root=content_root)
+        filled = _rehash_sidecar(
+            item, content_fd, pinned_destination=pinned_destination
+        )
         raw = _lookup_listing(index, pass_id, filled.identity)
         sidecar_listing = _lookup_listing(index, pass_id, filled.sidecar_key)
         if raw is None:
@@ -3715,7 +3719,6 @@ def _authenticate_completed_candidate(
     attempt_hi: int,
     index: sqlite3.Connection,
     content_fd: int,
-    content_root: Path,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     try:
         locator = json.loads(locator_body.decode("utf-8"))
@@ -4015,7 +4018,7 @@ def _authenticate_completed_candidate(
                 hooks,
                 attempt_hi=attempt_hi,
                 content_fd=content_fd,
-                content_root=content_root,
+                pinned_destination=str(generation["authority_destination"]),
                 index=index,
                 checkpoint=checkpoint,
             ),
@@ -4389,7 +4392,7 @@ def _plan_revision_candidate(
             _rehash_sidecar(
                 item,
                 content_fd,
-                content_root=Path(paths.gate2_root) / CONTENT_NAME,
+                pinned_destination=str(generation["authority_destination"]),
             )
         candidate_fd = held.add(
             open_child_dir(store_fd, FIXED_CANDIDATE_NAME, create=True)
@@ -4438,7 +4441,6 @@ def _plan_revision_candidate(
                 attempt_hi=int(generation["watermarks"]["attempt_hi"]),
                 index=listing_index,
                 content_fd=content_fd,
-                content_root=Path(paths.gate2_root) / CONTENT_NAME,
             )
             authenticated_tree = _completed_tree_identity(
                 locator=locator,
@@ -4506,7 +4508,6 @@ def _plan_revision_candidate(
                 attempt_hi=int(generation["watermarks"]["attempt_hi"]),
                 index=listing_index,
                 content_fd=content_fd,
-                content_root=Path(paths.gate2_root) / CONTENT_NAME,
             )
             current_tree = _completed_tree_identity(
                 locator=locator,
@@ -4601,7 +4602,7 @@ def _plan_revision_candidate(
                 hooks,
                 attempt_hi=int(generation["watermarks"]["attempt_hi"]),
                 content_fd=content_fd,
-                content_root=Path(paths.gate2_root) / CONTENT_NAME,
+                pinned_destination=str(generation["authority_destination"]),
                 index=listing_index,
                 checkpoint=checkpoint,
             ),

@@ -133,7 +133,11 @@ def _write_sidecar(content_root: Path, basename: str, checksum: str) -> tuple[st
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(body)
     os.chmod(path, 0o600)
-    return digest, str(path), len(body), body
+    serialized = (
+        f"{planner.FIXED_STORE_ROOT}/{planner.FIXED_ACTIVE_NAME}/"
+        f"{planner.CONTENT_NAME}/{digest[:2]}/{digest}"
+    )
+    return digest, serialized, len(body), body
 
 
 def _fact(identity: str, message: str) -> str:
@@ -1573,12 +1577,61 @@ def test_pending_key_grammar_binds_family_symbol_and_date(
     )
 
 
-def test_pending_sidecar_path_must_name_the_held_content_leaf(tmp_path: Path) -> None:
+def test_pending_sidecar_path_uses_pinned_destination_relative_serialization(
+    tmp_path: Path,
+) -> None:
     built = build_store(tmp_path, wal_mode=False)
+    digest = hashlib.sha256(built["sidecar_bodies"][METRICS_A]).hexdigest()
+    expected = (
+        f"{planner.FIXED_STORE_ROOT}/{planner.FIXED_ACTIVE_NAME}/"
+        f"{planner.CONTENT_NAME}/{digest[:2]}/{digest}"
+    )
+    conn = sqlite3.connect(built["gate2"] / planner.SQLITE_NAME)
+    try:
+        row = conn.execute(
+            "SELECT sidecar_path FROM sidecar_fact WHERE provider=? AND identity=?",
+            (planner.PROVIDER_BINANCE, METRICS_A),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row == (expected,)
+
+    result = _run(
+        _without_physical_pins(built),
+        ScriptedTransport(
+            _nested_pages(built["metrics"], built["book"], built["sidecar_bodies"])
+        ),
+    )
+    assert result["exit_code"] == planner.EXIT_COMPLETE
+
+
+@pytest.mark.parametrize(
+    "spelling",
+    ["absolute", "dot_traversal", "wrong_shard", "wrong_digest"],
+)
+def test_pending_sidecar_path_rejects_noncanonical_spelling(
+    tmp_path: Path, spelling: str
+) -> None:
+    built = build_store(tmp_path, wal_mode=False)
+    digest = hashlib.sha256(built["sidecar_bodies"][METRICS_A]).hexdigest()
+    shard = digest[:2]
+    canonical_root = (
+        f"{planner.FIXED_STORE_ROOT}/{planner.FIXED_ACTIVE_NAME}/{planner.CONTENT_NAME}"
+    )
+    if spelling == "absolute":
+        serialized = str(built["content"] / shard / digest)
+    elif spelling == "dot_traversal":
+        serialized = f"{canonical_root}/{shard}/../{shard}/{digest}"
+    elif spelling == "wrong_shard":
+        wrong_shard = "00" if shard != "00" else "01"
+        serialized = f"{canonical_root}/{wrong_shard}/{digest}"
+    else:
+        wrong_digest = "0" * 64 if digest != "0" * 64 else "1" * 64
+        serialized = f"{canonical_root}/{shard}/{wrong_digest}"
     _mutate_state(
         built,
         "UPDATE sidecar_fact SET sidecar_path=? WHERE provider=? AND identity=?",
-        (str(tmp_path / "lookalike-sidecar"), planner.PROVIDER_BINANCE, METRICS_A),
+        (serialized, planner.PROVIDER_BINANCE, METRICS_A),
     )
     result = _run(
         _without_physical_pins(built),
