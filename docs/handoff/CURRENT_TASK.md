@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -66,8 +66,21 @@ ticks are empty. The reviewer interrupted the harness to prevent a third attempt
 is unchanged at eight Parquets plus eight lineages, empty staging, and no completion descriptor.
 Both actor fields return to the reviewer. No retry or launch is authorized.
 
+Review 432 accepts record 431 and the integrated correction. Both failed wrappers used a relative
+Python path from the wrong working directory and exited before Python ran; this is an operational
+launch defect, not a normalizer, data, or acquisition defect. The untracked repository wrapper is
+not authority and is forbidden.
+
+Hermes is authorized for one absolute-path detached resume using Review 432's fixed `/tmp`
+supervisor contract. It performs no source edit or repeated test and does not download anything.
+The launch harness must return immediately with one exact runner identity; any launch uncertainty
+is terminal and cannot be retried. Later continuations only monitor that runner and publish record
+433 at terminal. No cleanup, duplicate run, other product, experiment, model, trading-engine work,
+or next ticket is authorized.
+
 Governing documents:
 
+- `research/sprint_004/432_CEX002_RECORD431_ACCEPTANCE_AND_ABSOLUTE_PATH_RESUME.md`
 - `research/sprint_004/431_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/430_CEX002_MIDNIGHT_SPILLOVER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/429_CEX002_RECORD428_ACCEPTANCE_AND_MIDNIGHT_SPILLOVER_CORRECTION.md`
