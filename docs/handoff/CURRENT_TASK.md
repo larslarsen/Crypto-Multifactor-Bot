@@ -3,9 +3,11 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Record 438 states the Review-437 resume outcome. Hermes integrated the accepted source/test correction at commit `4a65179e6cd0938a86a556eb0c7f755ab3e283be` and ran Review 437's four ordered checks: pytest passed 55, ruff passed, check_repo_control.py passed, git diff --check clean. The sole runner `/tmp/cex002_oi_437_XAHLxl` started at 2026-09-01T21:26:20Z with shell PID 1088968 (start tick 10381675) and Python PID 1089049 (start tick 10381691). Hermes observed it live at about 25 seconds. Immediately after the harness returned both exact PIDs were independently absent; stdout.log is 0 bytes with mtime at launch; no exit code, end timestamp, or terminal status was written. The hidden root is unchanged at 181 Parquets plus 181 lineages, empty staging, no completion descriptor. This is an unobserved terminal launch failure with zero output mutation. Both actor fields return to the reviewer. Next ticket remains NONE. Gate 2 remains accepted; CEX-002 and Gate 3 remain IN_PROGRESS. No retry, reproduction, cleanup, or source/test patch is authorized.
 
 Review 437 accepts Sol's exact Review-436 correction at source SHA-256 `c0de316b…` (1,577
 lines) and test SHA-256 `aff38de6…` (800 lines). Sol's one targeted command passed all 55 cases.
@@ -109,6 +111,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/438_CEX002_OPEN_INTEREST_NATIVE_TIMESTAMP_RESUME_RECORD.md`
 - `research/sprint_004/437_CEX002_NATIVE_TIMESTAMP_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/436_CEX002_RECORD435_ACCEPTANCE_AND_NATIVE_TIMESTAMP_CORRECTION.md`
 - `research/sprint_004/435_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
