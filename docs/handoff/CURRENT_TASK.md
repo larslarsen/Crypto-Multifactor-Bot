@@ -3,27 +3,27 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 386 accepts record 385's exact duplicate-invocation, runner, no-live-process,
-unchanged-candidate, corrected-code, graph-difference, repository-control, scoped-diff, and Git
-evidence. It discloses and supersedes the final summaries' stale completed-Hermes assignment.
+Review 387 accepts Sol High's exact two-path ADR-0032 source/test drop for bounded Hermes
+integration. The fresh v2 candidate excludes opaque cursor/request/page transport identity from
+cross-pass and candidate semantic identity while retaining exact physical lineage; real
+reachability, pagination shape, pending key/size/ETag, recovery, and security checks remain
+fail-closed. Sol's sole authorized targeted pytest passed all 139 cases. This is source acceptance
+only, not integration, candidate acceptance, real-run authorization, or Gate-2 acceptance.
 
-ADR-0032 preserves the blocked v1 candidate immutably and defines a fresh v2 candidate whose
-cross-pass stability and semantic identity exclude opaque transport cursor/request/page identity
-while exact physical lineage retains it. Real reachability, pagination-shape, key, size, and ETag
-drift still fail closed.
-
-Sr Dev - Codex Sol using GPT-5.6-sol High is authorized to edit exactly the integrated planner
-source and test source for ADR-0032, then optionally run the one exact targeted pytest command.
-It may not use Git, touch records/CLI/fixtures/real data, access network, invoke planner/acquisition,
-or authorize later work. It stops with a two-path source drop for reviewer inspection. CEX-002 and
-Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Jr Dev - Hermes must rehash and stage only the two Review-387 developer identities, run the exact
+targeted pytest, targeted ruff, repository-control, and final scoped-diff commands, publish record
+388 and both final reviewer actor fields before repository control, commit/push exactly five paths,
+prove remote equality, and stop for reviewer inspection. It may not patch accepted bytes or invoke
+the planner, network, real data/SQLite, acquisition, cleanup, transition, or later work. CEX-002
+and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/387_CEX002_SOL_V2_CURSOR_CORRECTION_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/386_CEX002_RECORD385_ACCEPTANCE_AND_SOL_V2_CURSOR_CORRECTION_AUTHORIZATION.md`
 - `docs/adr/0032-opaque-listing-cursor-normalization-and-v2-candidate.md`
 - `research/sprint_004/385_CEX002_DUPLICATE_INVOCATION_AND_DRIFT_BLOCKER_RECORD.md`
