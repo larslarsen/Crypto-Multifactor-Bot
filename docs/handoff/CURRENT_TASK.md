@@ -3,25 +3,27 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 391 accepts the exact durable facts from Review 389's one fresh v2 invocation: exit 2 with
-`resumable_partial` after a transient listing failure; pass 1 stopped at 1,164/1,308 prefixes and
-1,838 pages; pass 2 has zero pages; no locator/publication exists; v1 is unchanged. No candidate,
-raw acquisition, or Gate-2 result is accepted.
+Review 393 accepts Hermes's exact three-path record-392 evidence/control-plane completion and
+corrects one runner-table transcription: `exit_code.txt` SHA-256 is
+`53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3`. The v2 partial checkpoint
+remains unchanged at pass 1 1,164/1,308 prefixes and 1,838 pages, pass 2 zero pages, with no
+locator; v1 is unchanged. No candidate or Gate-2 result is accepted.
 
-Record 390's runner-completeness and publication-completeness claims are rejected. Linux start
-ticks were not retained, record 390 omits the two publication-command results, commit
-`0ddb59f5ced7784aec97dc7cb740c9a8870c2562` contains only record 390, and both summaries remained
-stale. Hermes is authorized only to publish record 392 and exact final reviewer control-plane
-fields with fresh repository-control/scoped-diff evidence. No planner, resume, network, data or
-candidate mutation, source edit, acquisition, cleanup, transition, or later work is authorized.
-CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes is authorized for exactly one durably captured continuation of the integrated listing-only
+planner against that authenticated v2 checkpoint. It may fetch only missing fixed S3 listing pages
+and publish normal v2 outputs. No raw ZIP GET, v1 mutation, cleanup/replacement, duplicate or second
+continuation, acquisition, transition, or later work is authorized. Every outcome must be
+published as record 394 with exact final reviewer actor fields and summaries before repository
+control. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/393_CEX002_RECORD392_ACCEPTANCE_AND_V2_CONTINUATION_AUTHORIZATION.md`
+- `research/sprint_004/392_CEX002_V2_PARTIAL_RUN_EVIDENCE_AND_CONTROL_PLANE_COMPLETION.md`
 - `research/sprint_004/391_CEX002_RECORD390_PARTIAL_RUN_ACCEPTANCE_AND_CONTROL_PLANE_EVIDENCE_STOP.md`
 - `research/sprint_004/390_CEX002_FRESH_V2_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/389_CEX002_V2_CURSOR_CORRECTION_INTEGRATION_ACCEPTANCE_AND_FRESH_RUN_AUTHORIZATION.md`
