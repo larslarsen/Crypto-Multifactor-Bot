@@ -2,17 +2,28 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer - inspect Hermes integration commit
+Next required actor: Jr Dev - Hermes - one review-365 listing-only candidate invocation
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Hermes integrated the exact Review-363 corrected drop. All six Review-363 SHA-256 identities matched, only those six paths were staged, the exact four validation commands exited zero (targeted pytest 109 passed / no warnings, targeted ruff `All checks passed!`, repository-control `PASS`, scoped diff check empty), durable record 364 was published, the exact nine-path integration commit was pushed, and `HEAD == origin/main`. No developer byte was patched and all unrelated dirty paths remain present and unstaged.
+Review 365 accepts Hermes implementation integration commit `aa36574` after independently
+confirming the exact nine paths, six installed identities, durable record 364, four zero
+validation results, clean staging area, matching remote, and preserved unrelated dirty paths.
+It also discloses and corrects record 364's stale ticket actor header; no developer byte or prior
+record is changed.
 
-Real planner/acquisition/listing/data/cleanup/migration/generation-transition/later-gate/next-ticket work remains unauthorized. Gate 2 stays `IN_PROGRESS`; next ticket is `NONE`.
+Hermes is authorized for exactly one real invocation of the integrated listing-only candidate
+planner. It may authenticate the real generation and retained sidecars, make only fixed official
+S3 listing requests, and write only the sibling candidate tree. It performs no raw ZIP GET,
+active-state edit, acquisition, retry, resume, cleanup, transition, or later work. Regardless of
+exit, Hermes must publish durable record 366 plus final control-plane updates, run repository
+control after those updates, commit/push only those three paths, and stop for reviewer inspection.
+Gate 2 remains `IN_PROGRESS`; next ticket is `NONE`.
 
 Governing documents:
 
 - `tickets/CEX-002.md`
+- `research/sprint_004/365_CEX002_REVISION_CANDIDATE_INTEGRATION_ACCEPTANCE_AND_RUN_AUTHORIZATION.md`
 - `research/sprint_004/364_CEX002_REVISION_CANDIDATE_INTEGRATION_RECORD.md`
 - `research/sprint_004/363_CEX002_CORRECTED_REVISION_CANDIDATE_INTEGRATION_REAUTHORIZATION.md`
 - `research/sprint_004/362_CEX002_HERMES_INTEGRATION_VALIDATION_STOP.md`
