@@ -2,23 +2,28 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Codex Sol using GPT-5.6-sol High
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Hermes executed exactly one authorized listing-only candidate invocation per Review 365.
-The command exited status 1 (blocked) at 2026-09-01T00:07:36Z with the exact refusal
-`ERROR: pending plan payload keys changed`. No candidate tree was published; no raw ZIP
-GET, acquisition, Coinalyze access, active-generation edit, cleanup, replacement, or
-transition occurred. Durable record 366 documents the complete blocked outcome.
+Review 367 accepts record 366 as faithful blocked execution evidence and identifies a
+repository-native reader/writer mismatch. Generation 0 legitimately stores `consumable`
+on selected-manifest `daily/metrics` payloads and `etag` on cost-sample
+`daily/bookTicker` payloads; the integrated planner and its synthetic helper omitted both.
+
+Sol High is authorized for Review 367's exact two-path source/test correction and one
+targeted synthetic pytest invocation. The correction must accept only the two exact
+family-specific production shapes and keep missing, cross-family, additional, and
+wrong-type fields fail-closed. It may not touch the CLI or fixtures.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-All retry, resume, repair, deletion, cleanup, acquisition, transition, later-gate, source
-correction, test execution, lint, repository control, and next-ticket work remains
-unauthorized pending reviewer inspection of record 366.
+All real planner retry/resume, repair, deletion, cleanup, acquisition, transition,
+Hermes integration, lint, repository control, later-gate, and next-ticket work remains
+unauthorized pending reviewer inspection of Sol's bounded result.
 
 Governing documents:
 
+- `research/sprint_004/367_CEX002_BLOCKED_CANDIDATE_PAYLOAD_SCHEMA_CORRECTION_AUTHORIZATION.md`
 - `tickets/CEX-002.md`
 - `research/sprint_004/366_CEX002_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/365_CEX002_REVISION_CANDIDATE_INTEGRATION_ACCEPTANCE_AND_RUN_AUTHORIZATION.md`
