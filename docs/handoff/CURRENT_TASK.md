@@ -3,24 +3,13 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 395 accepts the exact Review-393 terminal/run facts but rejects record 394's diagnosis. Both
-passes are complete with null cursors. The first normalized difference is `BANKUSDT`: pass 1 ended
-in one non-truncated page through 2026-08-30; pass 2 observed the newly published 2026-08-31 ZIP
-and checksum, crossed the 1,000-object boundary, and required a second page. ADR-0032 correctly
-blocked real live-listing growth. No manifest, receipt, lineage, locator, candidate, or Gate-2
-result is accepted.
+Review 395 accepts the exact Review-393 terminal/run facts and rejects record 394's diagnosis. Both passes are complete with null cursors. The first normalized difference is `BANKUSDT`: pass 1 ended in one non-truncated page through 2026-08-30; pass 2 observed the newly published 2026-08-31 ZIP and checksum, crossed the 1,000-object boundary, and required a second page. ADR-0032 correctly blocked real live-listing growth. No manifest, receipt, lineage, locator, candidate, or Gate-2 result is accepted.
 
-Record 394 also omits both required publication-command results and incorrectly denies the one
-authorized planner resume. Hermes is authorized only to publish record 396 with the corrected
-diagnosis and fresh repository-control/scoped-diff evidence, update both final reviewer actor
-fields and summaries, commit/push exactly three paths, and stop. No planner, retry/resume, network,
-data/candidate/runner mutation, SQLite, source/architecture change, acquisition, cleanup,
-transition, or later work is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket
-remains `NONE`.
+Hermes has published record 396 with the corrected complete-pass BANKUSDT page-boundary diagnosis, the distinction between the one authorized continuation and no additional publication invocation, the disclosure that record 394 omitted both publication-command results, and exact fresh repository-control/scoped-diff evidence. Both final reviewer actor fields and summaries are set to the reviewer. No planner, retry/resume, network, SQLite, v1/v2/runner mutation, source/architecture edit, acquisition, cleanup, transition, later gate, or next ticket is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
