@@ -3,9 +3,31 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 436 accepts Hermes record 435 at commit
+`119f72bcb808e7e2d603c961d7b3b3de4edf7c56` and the preserved hidden resume state: 181
+Parquets plus 181 matching lineages, empty staging, and no completion descriptor. Gate 2 remains
+`ACCEPTED`; Gate 3 remains `IN_PROGRESS`; no open-interest product is accepted.
+
+The reviewer completed a read-only scan of all 573,785 accepted usable metrics ZIPs and all
+160,226,578 physical rows. All timestamps parse, none has subsecond precision, and 62,191 valid
+source timestamps are not exact UTC five-minute clock-grid points. The archive also contains
+75,255 byte-identical repeated-row groups with zero conflicting groups, a proven 576-row maximum,
+and 2,818 next-day spillovers: exactly one per affected file and always next midnight plus 0 through
+59 seconds. No data was changed.
+
+This supersedes only the normalizer's sample-derived exact-grid, 288-physical-row, and
+exact-midnight-only assumptions. It restores ADR-0024 and Review 415: retain the original source
+timestamp and every valid value, compute changes only across an actual 300-second interval,
+collapse only byte-identical same-source repeats with both ordinals in lineage, preserve filename
+day authority, and fail every conflicting or unobserved shape.
+
+Sr Dev — Codex Sol is authorized only for Review 436's exact two-path correction and one targeted
+pytest command. No real run, data mutation, integration, Git, acquisition, cleanup, other product,
+model, experiment, trading-engine work, or next ticket is authorized.
 
 Review 424 accepts Sol's exact two-path retained-credit correction. The generation-0 loader now
 accepts exactly the acquisition module's `checksum_verified` and `retained_credit` states through
@@ -61,13 +83,14 @@ completion descriptor. This is 173 new pairs beyond the prior eight 0GUSDT month
 published partition is `1000FLOKIUSDT/2024-03`. The prior eight 0GUSDT months are unchanged. No
 mutation occurred.
 
-Record 435 is published at commit `9db8583ed39a0a4bf96fe4eb56cbbf58830b265c`. Both actor fields
+Record 435 is published at commit `119f72bcb808e7e2d603c961d7b3b3de4edf7c56`. Both actor fields
 return to the Lead Quantitative Finance Researcher/Engineer. Next ticket remains `NONE`. Gate 2
 remains accepted; CEX-002 and Gate 3 remain `IN_PROGRESS`. No source/test/CLI patch, retry, or
 reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/436_CEX002_RECORD435_ACCEPTANCE_AND_NATIVE_TIMESTAMP_CORRECTION.md`
 - `research/sprint_004/435_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/434_CEX002_RECORD433_ACCEPTANCE_AND_PATH_IDENTITY_RESUME.md`
 - `research/sprint_004/433_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
