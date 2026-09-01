@@ -3,29 +3,31 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 416 rejects the unintegrated Review-415 open-interest source/test drop despite its one
-targeted command passing all 24 cases. The code does not pin the accepted v3 manifest digest or
-authenticate generation 0's sealed prefix, writes no final product-completion descriptor or
-durable typed gap artifact, can follow output-child symlinks, and accepts negative OI/ratio values.
+Review 417 accepts the corrected three-path `binance_usdm_open_interest_5m` production/test drop
+for Hermes integration and one real run. Sol's one targeted command passed all 35 cases. The
+accepted source pins and authenticates both raw authorities, publishes durable typed gaps and one
+final hidden completion descriptor, prevents output symlink traversal, and rejects impossible
+negative values.
 
 Gate 2 remains `ACCEPTED`. No download, relisting, or acquisition work is reopened.
 
-Sr Dev — Codex Sol on GPT-5.6-sol High is authorized only to correct Review 416's four findings in
-the same three unintegrated paths. It must reuse the existing read-only acquisition authentication,
-pin both accepted authorities and exact metrics counts, publish typed missing-run gaps and one
-final hidden content-addressed product descriptor, make all output traversal no-follow, and reject
-impossible negative values. Sol may run the one new enumerated targeted test command once and then
-stops for reviewer inspection. No real-data run, integration, Git, record, data mutation, other
-product, bundle, experiment, backtest, model, trading engine, or next ticket is authorized.
+Hermes must reprove the exact accepted hashes, run Review 417's three ordered integration checks,
+then launch and poll the one exact real normalization command in a durable `/tmp` runner with at
+least 48 hours allowance. The fixed input is 522,865 generation-0 metrics files plus 50,920 usable
+v3 recovery metrics files and the one typed HBAR conflict. No duplicate, patch, cleanup, second
+replay, acquisition, network, other product, bundle, experiment, backtest, model, trading engine,
+or next ticket is authorized. Every terminal result is published as record 418 and stops for
+reviewer acceptance.
 
 CEX-002 and Gate 3 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/417_CEX002_OPEN_INTEREST_SOURCE_ACCEPTANCE_INTEGRATION_AND_REAL_RUN.md`
 - `research/sprint_004/416_CEX002_OPEN_INTEREST_SOURCE_STATIC_REJECTION_AND_CORRECTION.md`
 - `research/sprint_004/415_CEX002_RECORD414_ACCEPTANCE_GATE2_AND_OPEN_INTEREST_AUTHORIZATION.md`
 - `research/sprint_004/414_CEX002_DIRECT_RECOVERY_TERMINAL_BLOCKER_RECORD.md`
