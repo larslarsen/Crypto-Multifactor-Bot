@@ -23,14 +23,24 @@ The eight existing 0GUSDT month partitions and lineage files remain hidden, unac
 without a completion descriptor. They are content-addressed and will be verified/reused without
 cleanup. Gate 2 remains `ACCEPTED`; Gate 3 remains `IN_PROGRESS`; no product is accepted.
 
-Jr Dev — Hermes executed the Review-427 terminal evidence workflow. The sole runner
-`/tmp/cex002_oi_427_yZ3DpH` exited 1 at 2026-09-01T19:35:40Z with
-`OpenInterestNormalizationError: metrics row lies outside its source contract-day` at
-`src/cryptofactors/ingest/binance_usdm_open_interest.py:831` inside `_row_values`, called from
-`_normalize_open_interest_tree` line 1209. The hidden root now holds eight 0GUSDT Parquets plus
-eight lineage JSONs (2025-09 through 2026-04), empty `.staging`, and no completion descriptor.
-Record 428 is published. Both actor fields return to the reviewer. No source/test/CLI patch,
-cleanup, reproduction, retry, or next ticket is authorized.
+Jr Dev — Hermes executed the Review-432 terminal evidence workflow. The sole runner
+`/tmp/cex002_oi_432_f07dUK` exited 1 at 2026-09-01T20:15:03Z with
+`UnsafeStateError: a receipt intent names a different run receipt directory` at
+`src/cryptofactors/acquisition/binance_usdm_harmonic_acquisition.py:6682` inside
+`_authenticate_run_publication`, called from `_validate_receipt_document`,
+`_authenticate_prefix`, `_require_fixed_generation0_terminal`,
+`load_generation0_sources`, and `normalize_from_authorities`. The launch harness
+reported live at about 31 seconds; the process terminated at 42 seconds. The hidden
+root is unchanged at eight Parquets plus eight lineages, empty staging, and no
+completion descriptor. Record 433 is published. Both actor fields return to the
+reviewer. No source/test/CLI patch, cleanup, reproduction, retry, or next ticket is
+authorized.
+
+Governing documents:
+
+- `research/sprint_004/433_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
+- `research/sprint_004/432_CEX002_RECORD431_ACCEPTANCE_AND_ABSOLUTE_PATH_RESUME.md`
+- `research/sprint_004/431_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 
 Review 429 accepts record 428 and identifies the exact first failing source row. The accepted
 generation-0 0GUSDT metrics object for 2026-05-03 contains 287 owned points from 00:05 through
