@@ -1,4 +1,4 @@
-"""CEX-002 Gate-2 listing-only post-plan revision candidate - ADR-0031.
+"""CEX-002 Gate-2 listing-only post-plan revision candidate - ADR-0032.
 
 Standalone planner. It holds the generation-0 acquisition lock nonblocking, opens
 an actually immutable held-descriptor SQLite snapshot, derives the exact pending
@@ -37,14 +37,14 @@ from typing import Any, Protocol
 from xml.etree import ElementTree
 
 TICKET_ID = "CEX-002"
-ADR_ID = "0031"
-CANDIDATE_SCHEMA = "cex002_gate2_revision_candidate_v1"
-CHECKPOINT_SCHEMA = "cex002_gate2_revision_candidate_checkpoint_v1"
-LINEAGE_SCHEMA = "cex002_gate2_revision_candidate_lineage_v1"
-LOCATOR_SCHEMA = "cex002_gate2_revision_candidate_locator_v1"
+ADR_ID = "0032"
+CANDIDATE_SCHEMA = "cex002_gate2_revision_candidate_v2"
+CHECKPOINT_SCHEMA = "cex002_gate2_revision_candidate_checkpoint_v2"
+LINEAGE_SCHEMA = "cex002_gate2_revision_candidate_lineage_v2"
+LOCATOR_SCHEMA = "cex002_gate2_revision_candidate_locator_v2"
 MANIFEST_FORMAT = "gzip_jsonl"
 POLICY_IDENTITY = (
-    "adr0031_post_plan_revision_authority_and_bounded_zip_validation_v1"
+    "adr0032_opaque_listing_cursor_normalization_and_v2_candidate_v2"
 )
 GENERATION0_POLICY_IDENTITY = (
     "adr0029_content_addressed_gate2_acquisition_and_resume_"
@@ -63,7 +63,7 @@ ACQUISITION_CLI_RELATIVE = Path(
 
 FIXED_STORE_ROOT = "data/cex002_qualify"
 FIXED_ACTIVE_NAME = "gate2"
-FIXED_CANDIDATE_NAME = "gate2_revision_candidate"
+FIXED_CANDIDATE_NAME = "gate2_revision_candidate_v2"
 LOCK_NAME = "acquisition.lock"
 SQLITE_NAME = "state.sqlite"
 SQLITE_WAL_NAME = "state.sqlite-wal"
@@ -3131,16 +3131,23 @@ def _lookup_listing(
 
 def _stable_pass_graph(state: Mapping[str, Any]) -> list[dict[str, Any]]:
     pages = state["pages"]
-    return [
-        {
-            "child_prefixes": list(pages[key]["child_prefixes"]),
-            "is_truncated": pages[key]["is_truncated"],
-            "next_continuation_token": pages[key]["next_continuation_token"],
-            "request": dict(pages[key]["request"]),
-            "request_key": key,
-        }
-        for key in state["graph"]
-    ]
+    ordinals: dict[str, int] = {}
+    normalized: list[dict[str, Any]] = []
+    for key in state["graph"]:
+        record = pages[key]
+        request = record["request"]
+        prefix = request["prefix"]
+        ordinal = ordinals.get(prefix, 0)
+        ordinals[prefix] = ordinal + 1
+        normalized.append(
+            {
+                "child_prefixes": sorted(record["child_prefixes"]),
+                "is_truncated": record["is_truncated"],
+                "page_ordinal": ordinal,
+                "prefix": prefix,
+            }
+        )
+    return sorted(normalized, key=lambda item: (item["prefix"], item["page_ordinal"]))
 
 
 def _compare_listing_passes(
@@ -3154,6 +3161,18 @@ def _compare_listing_passes(
 ) -> dict[str, Any]:
     first_state = checkpoint["passes"][PASS_IDS[0]]
     second_state = checkpoint["passes"][PASS_IDS[1]]
+    _require(
+        first_state["roots"] == second_state["roots"],
+        "listing roots drifted across independent passes",
+    )
+    _require(
+        first_state["discovered_prefixes"] == second_state["discovered_prefixes"],
+        "listing discovered-prefix reachability drifted across independent passes",
+    )
+    _require(
+        first_state["completed_prefixes"] == second_state["completed_prefixes"],
+        "listing completed-prefix reachability drifted across independent passes",
+    )
     first_graph = _stable_pass_graph(first_state)
     second_graph = _stable_pass_graph(second_state)
     _require(
@@ -3179,12 +3198,12 @@ def _compare_listing_passes(
                 {
                     "raw": {
                         "etag": raw[1],
-                        "request_key": raw[3],
+                        "key": item.identity,
                         "size": raw[0],
                     },
                     "sidecar": {
                         "etag": sidecar_etag,
-                        "request_key": sidecar[3],
+                        "key": item.sidecar_key,
                         "size": sidecar[0],
                     },
                 }
@@ -3514,7 +3533,26 @@ def _semantic_receipt_payload(receipt: Mapping[str, Any]) -> dict[str, Any]:
     for key in ("asset_bytes", "asset_name", "asset_sha256"):
         lineage.pop(key, None)
     payload["lineage"] = lineage
+    manifest = payload["manifest"]
+    payload["manifest"] = {
+        "format": manifest["format"],
+        "row_count": manifest["row_count"],
+        "semantic_rows_sha256": manifest["semantic_rows_sha256"],
+    }
     return payload
+
+
+def _semantic_manifest_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    record = dict(row["record"])
+    current_listing = dict(record["current_listing"])
+    current_sidecar_listing = dict(record["current_sidecar_listing"])
+    for locator in (current_listing, current_sidecar_listing):
+        locator.pop("page_sha256")
+        locator.pop("request_key")
+    record["current_listing"] = current_listing
+    record["current_sidecar_listing"] = current_sidecar_listing
+    record.pop("listing_page_lineage")
+    return {"record": record, "record_type": row["record_type"]}
 
 
 def _read_json_asset(
@@ -3591,6 +3629,7 @@ def _authenticate_manifest_asset_from_iterators(
     _require(digest == manifest["compressed_sha256"], "manifest digest changed")
     _require(size == manifest["compressed_bytes"], "manifest byte size changed")
     uncompressed = hashlib.sha256()
+    semantic_rows = hashlib.sha256()
     pending_digest = hashlib.sha256()
     row_count = 0
     old_total = 0
@@ -3622,6 +3661,7 @@ def _authenticate_manifest_asset_from_iterators(
                 raise BlockedCandidateError("manifest contains invalid JSON") from exc
             _exact_keys(row, {"record", "record_type"}, label="manifest row")
             _require(row["record_type"] == "row", "manifest record type changed")
+            semantic_rows.update(compact_json(_semantic_manifest_row(row)))
             record = row["record"]
             if type(record) is not dict:
                 raise BlockedCandidateError("manifest record is not an object")
@@ -3680,6 +3720,10 @@ def _authenticate_manifest_asset_from_iterators(
         "manifest uncompressed digest changed",
     )
     _require(
+        semantic_rows.hexdigest() == manifest["semantic_rows_sha256"],
+        "manifest semantic-row digest changed",
+    )
+    _require(
         pending_digest.hexdigest() == receipt["pending"]["identity_sha256"],
         "manifest pending identity changed",
     )
@@ -3698,6 +3742,7 @@ def _authenticate_manifest_asset_from_iterators(
         "metrics_old": metrics_old,
         "old_total": old_total,
         "row_count": row_count,
+        "semantic_rows_sha256": semantic_rows.hexdigest(),
         "uncompressed_sha256": uncompressed.hexdigest(),
     }
 
@@ -3909,6 +3954,7 @@ def _authenticate_completed_candidate(
             "format",
             "name",
             "row_count",
+            "semantic_rows_sha256",
             "uncompressed_sha256",
         },
         label="candidate manifest reference",
@@ -3940,6 +3986,10 @@ def _authenticate_completed_candidate(
     _require(receipt["authorization"] == AUTHORIZATION, "candidate authorization changed")
     _require(receipt["manifest"]["format"] == MANIFEST_FORMAT, "candidate manifest format changed")
     _hex_digest(receipt["manifest"]["compressed_sha256"], label="receipt manifest digest")
+    _hex_digest(
+        receipt["manifest"]["semantic_rows_sha256"],
+        label="receipt semantic-row digest",
+    )
     _hex_digest(receipt["manifest"]["uncompressed_sha256"], label="receipt uncompressed manifest digest")
     _exact_int(receipt["manifest"]["compressed_bytes"], label="receipt manifest bytes", minimum=1)
     _exact_int(receipt["manifest"]["row_count"], label="receipt manifest rows", minimum=0)
@@ -4109,6 +4159,7 @@ def _authenticate_completed_candidate(
         "format": MANIFEST_FORMAT,
         "name": manifest_name,
         "row_count": manifest_facts["row_count"],
+        "semantic_rows_sha256": manifest_facts["semantic_rows_sha256"],
         "uncompressed_sha256": manifest_facts["uncompressed_sha256"],
     }
     _require(receipt["manifest"] == expected_manifest, "candidate manifest claims changed")
@@ -4614,6 +4665,7 @@ def _plan_revision_candidate(
         try:
             manifest_sha, manifest_bytes = hash_fd(manifest_file)
             uncompressed = hashlib.sha256()
+            semantic_rows = hashlib.sha256()
             row_count = 0
             old_total = 0
             current_total = 0
@@ -4633,6 +4685,7 @@ def _plan_revision_candidate(
                         "private manifest contains invalid JSON"
                     ) from exc
                 record = row["record"]
+                semantic_rows.update(compact_json(_semantic_manifest_row(row)))
                 row_count += 1
                 old_total += int(record["old_listed_bytes"])
                 current_total += int(record["current_listed_bytes"])
@@ -4735,6 +4788,7 @@ def _plan_revision_candidate(
                 "format": MANIFEST_FORMAT,
                 "name": manifest_name,
                 "row_count": row_count,
+                "semantic_rows_sha256": semantic_rows.hexdigest(),
                 "uncompressed_sha256": uncompressed.hexdigest(),
             },
             "pending": pending_summary,

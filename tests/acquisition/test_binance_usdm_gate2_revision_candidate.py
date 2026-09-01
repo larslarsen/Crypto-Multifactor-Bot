@@ -1,4 +1,4 @@
-"""Synthetic proof of the ADR-0031 Gate-2 revision-candidate planner.
+"""Synthetic proof of the ADR-0032 Gate-2 revision-candidate planner.
 
 Every test is temporary-rooted, offline, and free of the live Gate-2 store and the
 acquisition engine.
@@ -622,6 +622,68 @@ class SecondPassDriftTransport(ScriptedTransport):
         return super().fetch(url, max_bytes=max_bytes)
 
 
+class OpaqueCursorTransport(ScriptedTransport):
+    def __init__(
+        self,
+        pages: Mapping[tuple[str, str | None], str],
+        *,
+        parent: str,
+        objects: Sequence[planner.ListingObject],
+        tokens: tuple[str, str],
+        header_tag: str,
+    ) -> None:
+        super().__init__(pages)
+        assert len(objects) == 2
+        self.parent = parent
+        self.objects = tuple(objects)
+        self.tokens = tokens
+        self.header_tag = header_tag
+        self.initial_requests = 0
+
+    def fetch(self, url: str, *, max_bytes: int) -> planner.ListingResponse:
+        parsed = urllib.parse.urlsplit(url)
+        query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+        prefix = query["prefix"][0]
+        token = query.get("continuation-token", [None])[0]
+        if prefix != self.parent:
+            response = super().fetch(url, max_bytes=max_bytes)
+            return replace(
+                response,
+                headers={"etag": f"{self.header_tag}-ordinary"},
+            )
+        self.urls.append(url)
+        if token is None:
+            self.initial_requests += 1
+            cursor = self.tokens[self.initial_requests - 1]
+            body = planner.write_s3_list_bucket(
+                prefix=prefix,
+                delimiter="/",
+                objects=self.objects[:1],
+                truncated=True,
+                continuation=cursor,
+            )
+        elif token in self.tokens:
+            body = planner.write_s3_list_bucket(
+                prefix=prefix,
+                delimiter="/",
+                objects=self.objects[1:],
+                continuation_token=token,
+            )
+        else:
+            raise planner.BlockedCandidateError("unexpected opaque cursor")
+        encoded = body.encode("utf-8")
+        if len(encoded) > max_bytes:
+            raise planner.BlockedCandidateError(
+                "listing page exceeded the accepted byte ceiling"
+            )
+        return planner.ListingResponse(
+            status_code=200,
+            url=url,
+            headers={"etag": f"{self.header_tag}-{token or self.initial_requests}"},
+            body=encoded,
+        )
+
+
 class ResponseOverrideTransport(ScriptedTransport):
     def __init__(
         self,
@@ -742,6 +804,33 @@ def _nested_pages(
     return pages
 
 
+def _opaque_transport(
+    built: Mapping[str, Any],
+    *,
+    tokens: tuple[str, str],
+    header_tag: str,
+) -> OpaqueCursorTransport:
+    pages = _nested_pages(
+        built["metrics"], built["book"], built["sidecar_bodies"]
+    )
+    identity, size, _checksum, _message = built["metrics"][0]
+    sidecar = built["sidecar_bodies"][identity]
+    return OpaqueCursorTransport(
+        pages,
+        parent=_parent(identity),
+        objects=(
+            planner.ListingObject(key=identity, size=size, etag="zip"),
+            planner.ListingObject(
+                key=f"{identity}.CHECKSUM",
+                size=len(sidecar),
+                etag=planner.md5_hex(sidecar),
+            ),
+        ),
+        tokens=tokens,
+        header_tag=header_tag,
+    )
+
+
 def _run(built: Mapping[str, Any], transport: Any, **hook_fields: Any) -> dict[str, Any]:
     hook_fields.setdefault("retrieval_clock", lambda: "2026-08-31T20:00:00+00:00")
     hooks = planner.PlannerHooks(
@@ -855,6 +944,120 @@ def test_complete_candidate_and_immutable_sqlite_leaves(tmp_path: Path) -> None:
     assert book["terminal_message"] == planner.MSG_ZIP
     assert book["old_plan_facts"]["url"].startswith(planner.VISION_OBJECT_BASE)
     assert "id" in book["terminal_attempt"]
+
+
+def test_v1_tree_is_untouched_and_v2_identities_are_exact(tmp_path: Path) -> None:
+    built = build_store(tmp_path)
+    v1 = built["store"] / "gate2_revision_candidate"
+    v1.mkdir()
+    sentinel = v1 / "blocked-v1-sentinel"
+    sentinel.write_bytes(b"immutable blocked v1\n")
+    before = (sentinel.read_bytes(), sentinel.stat().st_ino, sentinel.stat().st_mtime_ns)
+
+    result = _run(
+        built,
+        ScriptedTransport(
+            _nested_pages(
+                built["metrics"], built["book"], built["sidecar_bodies"]
+            )
+        ),
+    )
+
+    assert result["exit_code"] == planner.EXIT_COMPLETE
+    assert built["paths"].candidate_root.name == "gate2_revision_candidate_v2"
+    assert before == (
+        sentinel.read_bytes(),
+        sentinel.stat().st_ino,
+        sentinel.stat().st_mtime_ns,
+    )
+    checkpoint = json.loads(
+        (built["paths"].candidate_root / planner.CHECKPOINT_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    locator = json.loads(Path(result["locator_path"]).read_text(encoding="utf-8"))
+    lineage = json.loads(_asset_bytes(result)["lineage"])
+    receipt = result["receipt"]
+    assert planner.ADR_ID == "0032"
+    assert checkpoint["schema_version"] == "cex002_gate2_revision_candidate_checkpoint_v2"
+    assert locator["schema_version"] == "cex002_gate2_revision_candidate_locator_v2"
+    assert lineage["schema_version"] == "cex002_gate2_revision_candidate_lineage_v2"
+    assert receipt["schema_version"] == "cex002_gate2_revision_candidate_v2"
+    assert receipt["adr"] == "0032"
+    assert receipt["policy_identity"] == (
+        "adr0032_opaque_listing_cursor_normalization_and_v2_candidate_v2"
+    )
+    assert len(receipt["manifest"]["semantic_rows_sha256"]) == 64
+
+
+@pytest.mark.parametrize(
+    "cross_version",
+    [
+        "checkpoint_schema",
+        "locator_schema",
+        "lineage_schema",
+        "receipt_schema",
+        "receipt_adr",
+        "receipt_policy",
+    ],
+)
+def test_completed_recovery_rejects_cross_version_assets(
+    tmp_path: Path, cross_version: str
+) -> None:
+    built = build_store(tmp_path)
+    pages = _nested_pages(built["metrics"], built["book"], built["sidecar_bodies"])
+    complete = _run(built, ScriptedTransport(pages))
+    assert complete["exit_code"] == planner.EXIT_COMPLETE
+    candidate = built["paths"].candidate_root
+    locator_path = candidate / planner.LOCATOR_NAME
+    locator = json.loads(locator_path.read_text(encoding="utf-8"))
+
+    if cross_version == "checkpoint_schema":
+        _rewrite_checkpoint(
+            built,
+            lambda checkpoint: checkpoint.__setitem__(
+                "schema_version", "cex002_gate2_revision_candidate_checkpoint_v1"
+            ),
+        )
+    elif cross_version == "locator_schema":
+        locator["schema_version"] = "cex002_gate2_revision_candidate_locator_v1"
+        locator_path.write_bytes(planner.canonical_json(locator))
+    elif cross_version == "lineage_schema":
+        lineage_path = candidate / planner.LINEAGE_NAME / locator["lineage_name"]
+        lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
+        lineage["schema_version"] = "cex002_gate2_revision_candidate_lineage_v1"
+        lineage_body = planner.canonical_json(lineage)
+        lineage_sha256 = planner.sha256_bytes(lineage_body)
+        lineage_name = f"{lineage_sha256}.json"
+        (candidate / planner.LINEAGE_NAME / lineage_name).write_bytes(lineage_body)
+        locator["lineage_name"] = lineage_name
+        locator["lineage_sha256"] = lineage_sha256
+        locator_path.write_bytes(planner.canonical_json(locator))
+    else:
+        receipt_path = candidate / planner.RECEIPT_NAME / locator["receipt_name"]
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        if cross_version == "receipt_schema":
+            receipt["schema_version"] = "cex002_gate2_revision_candidate_v1"
+        elif cross_version == "receipt_adr":
+            receipt["adr"] = "0031"
+        else:
+            receipt["policy_identity"] = (
+                "adr0031_post_plan_revision_authority_and_bounded_zip_validation_v1"
+            )
+        receipt["semantic_sha256"] = planner.sha256_bytes(
+            planner.canonical_json(planner._semantic_receipt_payload(receipt))
+        )
+        receipt_body = planner.canonical_json(receipt)
+        receipt_sha256 = planner.sha256_bytes(receipt_body)
+        receipt_name = f"{receipt_sha256}.json"
+        (candidate / planner.RECEIPT_NAME / receipt_name).write_bytes(receipt_body)
+        locator["receipt_name"] = receipt_name
+        locator["receipt_sha256"] = receipt_sha256
+        locator["semantic_sha256"] = receipt["semantic_sha256"]
+        locator_path.write_bytes(planner.canonical_json(locator))
+
+    recovered = _run(built, ScriptedTransport(pages))
+    assert recovered["exit_code"] in {planner.EXIT_BLOCKED, planner.EXIT_UNSAFE}
 
 
 def test_lock_nonblocking_writer_refused(tmp_path: Path) -> None:
@@ -1073,6 +1276,146 @@ def test_nonsemantic_retrieval_clocks_and_exact_lineage_metadata(tmp_path: Path)
     assert second_assets["lineage"] != first_assets["lineage"]
 
 
+def test_opaque_cursors_normalize_graph_and_preserve_exact_physical_lineage(
+    tmp_path: Path,
+) -> None:
+    built = build_store(
+        tmp_path,
+        pending_metrics=((METRICS_A, 100, CHECKSUM_A, planner.MSG_SIZE),),
+    )
+    transport = _opaque_transport(
+        built,
+        tokens=("opaque-pass-one", "opaque-pass-two"),
+        header_tag="physical",
+    )
+    result = _run(built, transport)
+    assert result["exit_code"] == planner.EXIT_COMPLETE
+    checkpoint = json.loads(
+        (built["paths"].candidate_root / planner.CHECKPOINT_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    parent = _parent(METRICS_A)
+    pass_pages: dict[str, list[dict[str, Any]]] = {}
+    for pass_id, cursor in zip(
+        planner.PASS_IDS, ("opaque-pass-one", "opaque-pass-two"), strict=True
+    ):
+        state = checkpoint["passes"][pass_id]
+        pass_pages[pass_id] = [
+            state["pages"][key]
+            for key in state["graph"]
+            if state["pages"][key]["request"]["prefix"] == parent
+        ]
+        assert [page["request"]["continuation_token"] for page in pass_pages[pass_id]] == [
+            None,
+            cursor,
+        ]
+        assert pass_pages[pass_id][0]["next_continuation_token"] == cursor
+        assert pass_pages[pass_id][1]["request_key"] != pass_pages[pass_id][0]["request_key"]
+    assert pass_pages["pass_1"] != pass_pages["pass_2"]
+    normalized_1 = planner._stable_pass_graph(checkpoint["passes"]["pass_1"])
+    normalized_2 = planner._stable_pass_graph(checkpoint["passes"]["pass_2"])
+    assert normalized_1 == normalized_2
+    for page in normalized_1:
+        assert set(page) == {
+            "child_prefixes",
+            "is_truncated",
+            "page_ordinal",
+            "prefix",
+        }
+    assets = _asset_bytes(result)
+    lineage = json.loads(assets["lineage"])
+    lineage_pass_1 = [
+        page
+        for page in lineage["passes"]["pass_1"]["pages"]
+        if page["request"]["prefix"] == parent
+    ]
+    lineage_pass_2 = [
+        page
+        for page in lineage["passes"]["pass_2"]["pages"]
+        if page["request"]["prefix"] == parent
+    ]
+    assert lineage_pass_1 == pass_pages["pass_1"]
+    assert lineage_pass_2 == pass_pages["pass_2"]
+    assert lineage_pass_1 != lineage_pass_2
+    with gzip.GzipFile(fileobj=io.BytesIO(assets["manifest"]), mode="rb") as handle:
+        rows = [json.loads(line)["record"] for line in handle]
+    metrics = next(row for row in rows if row["identity"] == METRICS_A)
+    assert metrics["listing_page_lineage"] == {
+        "final_url": lineage_pass_2[0]["final_url"],
+        "prefix": parent,
+        "request": lineage_pass_2[0]["request"],
+        "response_sha256": lineage_pass_2[0]["response_sha256"],
+        "status_code": lineage_pass_2[0]["status_code"],
+    }
+    assert metrics["current_listing"]["request_key"] == lineage_pass_2[0][
+        "request_key"
+    ]
+    assert metrics["current_sidecar_listing"]["request_key"] == lineage_pass_2[1][
+        "request_key"
+    ]
+    assert result["receipt"]["listing"]["stable_graph_sha256"] == planner.sha256_bytes(
+        planner.canonical_json(normalized_1)
+    )
+
+
+def test_fresh_opaque_cursor_candidates_share_only_semantic_identity(
+    tmp_path: Path,
+) -> None:
+    built = build_store(
+        tmp_path,
+        pending_metrics=((METRICS_A, 100, CHECKSUM_A, planner.MSG_SIZE),),
+    )
+    first = _run(
+        built,
+        _opaque_transport(
+            built,
+            tokens=("first-a", "first-b"),
+            header_tag="first-headers",
+        ),
+        retrieval_clock=lambda: "2026-08-31T20:00:00+00:00",
+    )
+    assert first["exit_code"] == planner.EXIT_COMPLETE
+    first_assets = _asset_bytes(first)
+    first_lineage = json.loads(first_assets["lineage"])
+    shutil.rmtree(built["paths"].candidate_root)
+    second = _run(
+        built,
+        _opaque_transport(
+            built,
+            tokens=("second-a", "second-b"),
+            header_tag="second-headers",
+        ),
+        retrieval_clock=lambda: "2026-08-31T20:00:01+00:00",
+    )
+    assert second["exit_code"] == planner.EXIT_COMPLETE
+    second_assets = _asset_bytes(second)
+    second_lineage = json.loads(second_assets["lineage"])
+    assert first["semantic_sha256"] == second["semantic_sha256"]
+    assert first["receipt"]["manifest"]["semantic_rows_sha256"] == second["receipt"][
+        "manifest"
+    ]["semantic_rows_sha256"]
+    assert first["receipt"]["listing"]["stable_graph_sha256"] == second["receipt"][
+        "listing"
+    ]["stable_graph_sha256"]
+    assert first["receipt"]["listing"]["stable_pending_facts_sha256"] == second[
+        "receipt"
+    ]["listing"]["stable_pending_facts_sha256"]
+    assert first_assets["lineage"] != second_assets["lineage"]
+    assert first_assets["manifest"] != second_assets["manifest"]
+    first_pages = first_lineage["passes"]["pass_2"]["pages"]
+    second_pages = second_lineage["passes"]["pass_2"]["pages"]
+    assert {page["final_url"] for page in first_pages} != {
+        page["final_url"] for page in second_pages
+    }
+    assert {tuple(page["headers"].items()) for page in first_pages} != {
+        tuple(page["headers"].items()) for page in second_pages
+    }
+    assert {page["retrieved_at"] for page in first_pages} != {
+        page["retrieved_at"] for page in second_pages
+    }
+
+
 @pytest.mark.parametrize("asset", ["manifest", "lineage", "receipt"])
 @pytest.mark.parametrize("damage", ["missing", "tampered"])
 def test_locator_recovery_authenticates_every_immutable_asset(
@@ -1121,6 +1464,33 @@ def test_locator_recovery_recomputes_canonical_receipt_claims(tmp_path: Path) ->
     recovered = _run(built, ScriptedTransport(pages))
     assert recovered["exit_code"] == planner.EXIT_BLOCKED
     assert "byte claims" in recovered["message"]
+
+
+def test_locator_recovery_recomputes_semantic_manifest_rows(tmp_path: Path) -> None:
+    built = build_store(tmp_path)
+    pages = _nested_pages(built["metrics"], built["book"], built["sidecar_bodies"])
+    complete = _run(built, ScriptedTransport(pages))
+    assert complete["exit_code"] == planner.EXIT_COMPLETE
+    candidate = built["paths"].candidate_root
+    locator_path = candidate / planner.LOCATOR_NAME
+    locator = json.loads(locator_path.read_text(encoding="utf-8"))
+    receipt_path = candidate / planner.RECEIPT_NAME / locator["receipt_name"]
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["manifest"]["semantic_rows_sha256"] = "0" * 64
+    receipt["semantic_sha256"] = planner.sha256_bytes(
+        planner.canonical_json(planner._semantic_receipt_payload(receipt))
+    )
+    forged_body = planner.canonical_json(receipt)
+    forged_sha256 = planner.sha256_bytes(forged_body)
+    forged_name = f"{forged_sha256}.json"
+    (candidate / planner.RECEIPT_NAME / forged_name).write_bytes(forged_body)
+    locator["receipt_name"] = forged_name
+    locator["receipt_sha256"] = forged_sha256
+    locator["semantic_sha256"] = receipt["semantic_sha256"]
+    locator_path.write_bytes(planner.canonical_json(locator))
+    recovered = _run(built, ScriptedTransport(pages))
+    assert recovered["exit_code"] == planner.EXIT_BLOCKED
+    assert "semantic-row digest" in recovered["message"]
 
 
 @pytest.mark.parametrize("kind", ["malformed", "symlink", "directory"])
@@ -1873,6 +2243,130 @@ def test_two_independently_retrieved_passes_detect_pending_drift(tmp_path: Path)
     assert result["exit_code"] == planner.EXIT_BLOCKED
     assert "independent passes" in result["message"]
     assert transport.request_counts[(parent, None)] == 2
+
+
+@pytest.mark.parametrize("drift", ["child_prefix", "page_count_and_truncation"])
+def test_normalized_pass_graph_rejects_reachability_or_page_sequence_drift(
+    tmp_path: Path, drift: str
+) -> None:
+    built = build_store(tmp_path)
+    pages = _nested_pages(built["metrics"], built["book"], built["sidecar_bodies"])
+    if drift == "child_prefix":
+        prefix = planner.FAMILY_PREFIXES[0]
+        extra = f"{prefix}UNEXPECTED/"
+        children = sorted({_parent(item[0]) for item in built["metrics"]} | {extra})
+        pages[(extra, None)] = planner.write_s3_list_bucket(
+            prefix=extra, delimiter="/"
+        )
+        drift_request = (prefix, None)
+        drift_body = planner.write_s3_list_bucket(
+            prefix=prefix, delimiter="/", prefixes=children
+        )
+    else:
+        identity, size, _checksum, _message = built["metrics"][0]
+        parent = _parent(identity)
+        sidecar = built["sidecar_bodies"][identity]
+        cursor = "second-pass-extra-page"
+        pages[(parent, cursor)] = planner.write_s3_list_bucket(
+            prefix=parent,
+            delimiter="/",
+            continuation_token=cursor,
+        )
+        drift_request = (parent, None)
+        drift_body = planner.write_s3_list_bucket(
+            prefix=parent,
+            delimiter="/",
+            objects=(
+                planner.ListingObject(key=identity, size=size, etag="zip"),
+                planner.ListingObject(
+                    key=f"{identity}.CHECKSUM",
+                    size=len(sidecar),
+                    etag=planner.md5_hex(sidecar),
+                ),
+            ),
+            truncated=True,
+            continuation=cursor,
+        )
+    result = _run(
+        built,
+        SecondPassDriftTransport(
+            pages,
+            drift_request=drift_request,
+            drift_body=drift_body,
+        ),
+    )
+    assert result["exit_code"] == planner.EXIT_BLOCKED
+    assert "drifted" in result["message"]
+
+
+@pytest.mark.parametrize("missing", ["raw", "sidecar"])
+def test_independent_passes_reject_pending_raw_or_sidecar_absence(
+    tmp_path: Path, missing: str
+) -> None:
+    built = build_store(tmp_path)
+    pages = _nested_pages(built["metrics"], built["book"], built["sidecar_bodies"])
+    identity, size, _checksum, _message = built["metrics"][0]
+    sidecar = built["sidecar_bodies"][identity]
+    objects = []
+    if missing != "raw":
+        objects.append(planner.ListingObject(key=identity, size=size, etag="zip"))
+    if missing != "sidecar":
+        objects.append(
+            planner.ListingObject(
+                key=f"{identity}.CHECKSUM",
+                size=len(sidecar),
+                etag=planner.md5_hex(sidecar),
+            )
+        )
+    parent = _parent(identity)
+    result = _run(
+        built,
+        SecondPassDriftTransport(
+            pages,
+            drift_request=(parent, None),
+            drift_body=planner.write_s3_list_bucket(
+                prefix=parent, delimiter="/", objects=objects
+            ),
+        ),
+    )
+    assert result["exit_code"] == planner.EXIT_BLOCKED
+    assert "absent from an independent pass" in result["message"]
+
+
+@pytest.mark.parametrize("drift", ["raw_etag", "sidecar_size"])
+def test_independent_passes_reject_every_pending_fact_dimension_drift(
+    tmp_path: Path, drift: str
+) -> None:
+    built = build_store(tmp_path)
+    pages = _nested_pages(built["metrics"], built["book"], built["sidecar_bodies"])
+    identity, size, _checksum, _message = built["metrics"][0]
+    sidecar = built["sidecar_bodies"][identity]
+    parent = _parent(identity)
+    result = _run(
+        built,
+        SecondPassDriftTransport(
+            pages,
+            drift_request=(parent, None),
+            drift_body=planner.write_s3_list_bucket(
+                prefix=parent,
+                delimiter="/",
+                objects=(
+                    planner.ListingObject(
+                        key=identity,
+                        size=size,
+                        etag="pass-two-zip" if drift == "raw_etag" else "zip",
+                    ),
+                    planner.ListingObject(
+                        key=f"{identity}.CHECKSUM",
+                        size=len(sidecar) + (1 if drift == "sidecar_size" else 0),
+                        etag=planner.md5_hex(sidecar),
+                    ),
+                ),
+            ),
+        ),
+    )
+    assert result["exit_code"] == planner.EXIT_BLOCKED
+    assert "pending listing facts drifted" in result["message"]
 
 
 def test_independent_passes_detect_checksum_version_drift(tmp_path: Path) -> None:
