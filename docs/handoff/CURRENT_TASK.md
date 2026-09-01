@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -11,7 +11,7 @@ Review 405 accepts record 404's safe no-launch facts and exact three-path public
 
 Review 407 accepts record 406's exact three-path publication and bounded safe preflight/one-launch/external-kill/no-publication facts, but rejects its checkpoint and runner-compliance claims. The checkpoint proves pass 1 is incomplete, not complete: 1,468 pages, 1,308 discovered prefixes, 953 completed prefixes, `listing_complete=false`, and a non-null continuation at `data/futures/um/daily/metrics/NTRNUSDT/`. Pass 2 is initialized but incomplete with zero pages. Hermes killed the live runner after ~34.7 minutes despite Review 405's four-hour allowance; the runner also omitted a planner PID/start ticks, used wall-clock nanoseconds instead of Linux shell start ticks, and captured no terminal trailer. Record 406 is rejected as an exact execution record. No candidate is accepted.
 
-Hermes is authorized for exactly one durable continuation of the existing fixed v3 tree under Review 407. It must preflight the exact code, immutable v1/v2, and partial-v3 identities; launch the same planner command once through a detached runner with real shell/planner PID/start ticks and at least four hours allowance; never kill it merely because the one-shot harness turn ends; and publish every terminal outcome as record 408. No duplicate/replacement invocation, raw ZIP GET, source/test edit, acquisition, transition, later gate, or next-ticket action is authorized.
+Review 408 (record 408) publishes the mandatory durable v3 continuation evidence under Review 407. Preflight passed: HEAD == origin/main == 2491226e260d711cedf1868f4a2b6ce9da07153e, staging empty, five literal code paths and immutable v1/v2 checkpoint/private-index hashes all match exactly. The runner /tmp/runner_407_KyKikU captured real shell PID 589947/start tick 6458981 and planner PID 589954/start tick 6458983 from /proc/<pid>/stat field 22. The planner reached natural terminal exit 2 after 966 seconds (16m06s) due to a transient listing request failure — NOT killed by process.kill or any signal. The runner wrote an atomic terminal trailer with EXIT_STATUS=2. Checkpoint: pass 1 partial at 2,001 pages, 1,308 discovered prefixes, 1,257 completed prefixes, listing_complete=false, cursor at data/futures/um/daily/metrics/XAGUSDT/. Pass 2: 0 pages, listing_complete=false. No locator/receipt/manifest/lineage was published. No duplicate invocation. No source/test edit, acquisition, transition, or next ticket. Untracked root file run_continuation_runner.sh is byte-identical to /tmp/runner_407_KyKikU/run.sh (SHA-256 d5c4a6b07531b52a95414b9d2a8178de11135e5f4f0b5b09e538ce20748ee820, 2922 bytes) and is an unstaged runner-evidence copy created during launch, not one of the 13 unrelated untracked paths. The prior handoff claim that a stale intermediate was removed is INCORRECT. No candidate is accepted. No acquisition or transition is authorized.
 
 CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
