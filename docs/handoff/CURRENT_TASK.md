@@ -3,22 +3,27 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
 Next ticket authorized: NONE
 
-Review 377 accepted record 376's exact repository-control and scoped-diff results. Record 378
-supersedes record 376's reviewer attribution with the correct Jr Dev - Hermes actor, preserves
-record 376's accepted command facts without claiming a rerun, and confirms records 374/376/378
-combined complete Review 373's integration evidence. Both control-plane summaries now name the
-reviewer as the next actor.
+Review 379 accepts the exact sidecar-path integration and combined records 374/376/378.
+All 123 tests, ruff, repository control, and scoped diff have complete durable zero
+evidence; the developer hashes match; `HEAD == origin/main`; and staging is empty. Review
+379 discloses that record 378 overstates the final ticket actor update: the ticket retained
+Hermes's completed Review-377 assignment while this file named the reviewer.
+
+Hermes is now authorized for exactly one corrected real listing-only candidate invocation.
+It must publish record 380 and both literal final reviewer actor fields before repository
+control, commit/push exactly those three paths, prove remote equality, and stop.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-No source/test/record-376 edit, pytest, lint, real planner, listing, real-state/data access,
-raw ZIP GET, acquisition, retry/resume, cleanup, transition, later gate, or next ticket is
-authorized.
+No raw ZIP GET, acquisition, Coinalyze access, active-generation edit, second invocation,
+retry/resume, repair, cleanup, transition, later gate, or next ticket is authorized.
 
 Governing documents:
 
+- `research/sprint_004/379_CEX002_SIDECAR_PATH_INTEGRATION_ACCEPTANCE_AND_REAL_RETRY_AUTHORIZATION.md`
+- `research/sprint_004/378_CEX002_INTEGRATION_EVIDENCE_ATTRIBUTION_AND_CONTROL_PLANE_CORRECTION.md`
 - `research/sprint_004/377_CEX002_INTEGRATION_EVIDENCE_ATTRIBUTION_AND_CONTROL_PLANE_STOP.md`
 - `research/sprint_004/376_CEX002_SIDECAR_PATH_INTEGRATION_EVIDENCE_COMPLETION.md`
 - `research/sprint_004/375_CEX002_SIDECAR_PATH_INTEGRATION_EVIDENCE_STOP.md`
