@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -46,8 +46,21 @@ rewriting. Sol may run one targeted pytest command, then stops for reviewer insp
 run, data mutation, integration, cleanup, retry, acquisition, other product, model, experiment,
 trading-engine work, or next ticket is authorized.
 
+Review 430 accepts Sol's exact two-path correction at source SHA-256 `bf6c5c44…` (1,493 lines)
+and test SHA-256 `3cd77872…` (576 lines). Every physical row remains fully validated. Only one
+adjacent-next-midnight spillover may be excluded when owned rows remain; it is omitted from product
+economics, recorded by exact source/ordinal lineage, and counted in final completion. The focused
+suite passed all 42 cases. Unaffected lineages omit the new field and remain byte-identical.
+
+Hermes is authorized to reprove and integrate the two accepted paths, run the three ordered
+checks, recompute Review 430's exact capacity equation, then launch one durable detached resume
+against the same hidden root. There is no acquisition or redownload. Every terminal outcome is
+record 431; a live runner is only monitored by its exact identity. No patch, cleanup, duplicate
+run, other product, experiment, model, trading-engine work, or next ticket is authorized.
+
 Governing documents:
 
+- `research/sprint_004/430_CEX002_MIDNIGHT_SPILLOVER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/429_CEX002_RECORD428_ACCEPTANCE_AND_MIDNIGHT_SPILLOVER_CORRECTION.md`
 - `research/sprint_004/428_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/427_CEX002_DAILY_ORDER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
