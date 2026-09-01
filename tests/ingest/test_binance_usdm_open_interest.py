@@ -372,6 +372,22 @@ def test_self_addressed_but_nonaccepted_v3_manifest_is_rejected(tmp_path: Path) 
         oi.load_v3_recovery_sources(manifest, recovery)
 
 
+@pytest.mark.parametrize(
+    "state",
+    [oi.OUTCOME_CHECKSUM_VERIFIED, oi.OUTCOME_RETAINED],
+)
+def test_generation0_accepted_completion_states_pass(state: str) -> None:
+    oi._require_accepted_generation0_validation_state(state)
+
+
+def test_generation0_unknown_completion_state_is_rejected() -> None:
+    with pytest.raises(
+        oi.OpenInterestNormalizationError,
+        match="validation state is not accepted",
+    ):
+        oi._require_accepted_generation0_validation_state("unknown")
+
+
 def test_minimal_substitute_generation0_database_is_rejected(tmp_path: Path) -> None:
     key = "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-07-01.zip"
     body = _zip_bytes(key, [_line("2026-07-01T00:00:00Z")])

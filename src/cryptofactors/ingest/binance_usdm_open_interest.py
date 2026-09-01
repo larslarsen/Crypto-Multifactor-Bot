@@ -35,6 +35,8 @@ from cryptofactors.acquisition.binance_usdm_harmonic_qualification import (
     KNOWN_ARCHIVE_SCHEMAS,
 )
 from cryptofactors.acquisition.binance_usdm_harmonic_acquisition import (
+    OUTCOME_CHECKSUM_VERIFIED,
+    OUTCOME_RETAINED,
     STATE_APPLICATION_ID,
     STATE_USER_VERSION,
     AcquisitionState,
@@ -500,6 +502,13 @@ def _require_fixed_generation0_terminal(state: AcquisitionState) -> dict[str, An
     return head
 
 
+def _require_accepted_generation0_validation_state(state: object) -> None:
+    _require(
+        type(state) is str and state in (OUTCOME_CHECKSUM_VERIFIED, OUTCOME_RETAINED),
+        "generation-0 metrics completion validation state is not accepted",
+    )
+
+
 def load_generation0_sources(
     state_path: Path,
     content_root: Path,
@@ -606,7 +615,7 @@ def load_generation0_sources(
             digest = str(content_sha)
             _require(_HEX_RE.fullmatch(digest) is not None, "generation-0 content digest is invalid")
             _require(str(provider_sha) == digest, "generation-0 provider/content digest conflict")
-            _require(str(state) == "checksum_verified", "generation-0 metrics completion is not checksum verified")
+            _require_accepted_generation0_validation_state(state)
             path = _safe_authority_file(content_root, PurePosixPath(digest[:2], digest))
             accepted.append(
                 RawMetricObject(
