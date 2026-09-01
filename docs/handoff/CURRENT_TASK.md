@@ -2,27 +2,28 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Codex Sol using GPT-5.6-sol High
+Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 367 accepts record 366 as faithful blocked execution evidence and identifies a
-repository-native reader/writer mismatch. Generation 0 legitimately stores `consumable`
-on selected-manifest `daily/metrics` payloads and `etag` on cost-sample
-`daily/bookTicker` payloads; the integrated planner and its synthetic helper omitted both.
+Review 368 accepts Sol High's exact two-path payload-schema correction for Hermes
+integration. The planner now requires the writer-authoritative `consumable` field on
+`daily/metrics` and `etag` on `daily/bookTicker`, with exact family-specific shapes and
+types. Missing, cross-family, additional, and wrong-type fields remain fail-closed.
+Sol's one authorized targeted run exited zero with all 119 cases passing.
 
-Sol High is authorized for Review 367's exact two-path source/test correction and one
-targeted synthetic pytest invocation. The correction must accept only the two exact
-family-specific production shapes and keep missing, cross-family, additional, and
-wrong-type fields fail-closed. It may not touch the CLI or fixtures.
+Hermes is authorized only to integrate the two accepted hashes, execute Review 368's
+four-command validation chain, publish durable record 369 and matching control-plane
+updates, commit/push exactly five paths, prove `HEAD == origin/main`, and stop.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-All real planner retry/resume, repair, deletion, cleanup, acquisition, transition,
-Hermes integration, lint, repository control, later-gate, and next-ticket work remains
-unauthorized pending reviewer inspection of Sol's bounded result.
+All real planner retry/resume, listing, real-state/data access, repair, deletion, cleanup,
+acquisition, transition, later-gate, and next-ticket work remains unauthorized pending
+reviewer inspection of Hermes's bounded integration.
 
 Governing documents:
 
+- `research/sprint_004/368_CEX002_PAYLOAD_SCHEMA_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/367_CEX002_BLOCKED_CANDIDATE_PAYLOAD_SCHEMA_CORRECTION_AUTHORIZATION.md`
 - `tickets/CEX-002.md`
 - `research/sprint_004/366_CEX002_REVISION_CANDIDATE_RUN_RECORD.md`
