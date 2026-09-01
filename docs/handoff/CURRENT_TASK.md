@@ -3,9 +3,28 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 437 accepts Sol's exact Review-436 correction at source SHA-256 `c0de316b…` (1,577
+lines) and test SHA-256 `aff38de6…` (800 lines). Sol's one targeted command passed all 55 cases.
+The original source timestamps and economic values remain unchanged; only byte-identical
+same-source repeats collapse, with both physical ordinals in lineage. Actual 300-second continuity,
+phase-aligned missing cadences, the 576-physical/288-economic bounds, and the proven one-row
+next-midnight-plus-0-through-59-second spillover domain are enforced fail-closed.
+
+The 181 preserved hidden partition/lineage pairs remain unaffected and reusable. The complete
+expected row equation is 160,226,578 physical minus 75,255 identical repeats minus 2,818
+spillovers, yielding 160,148,505 product rows if every economic field validates. Current available
+space is 99,645,513,728 bytes against the unchanged conservative 55,415,363,427-byte requirement.
+
+Hermes is authorized only to reprove and integrate the exact two paths, run Review 437's four
+ordered checks, commit/push only those two paths, and launch one Review-434-shaped durable resume
+beneath `/tmp/cex002_oi_437_XXXXXX`. The command uses an explicit repository `cd`, absolute
+interpreter/CLI, and accepted relative authority/output arguments. It downloads nothing. Every
+terminal outcome becomes record 438; there is no retry, reproduction, cleanup, duplicate runner,
+other product, model, experiment, trading-engine work, or next ticket.
 
 Review 436 accepts Hermes record 435 at commit
 `119f72bcb808e7e2d603c961d7b3b3de4edf7c56` and the preserved hidden resume state: 181
@@ -90,6 +109,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/437_CEX002_NATIVE_TIMESTAMP_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/436_CEX002_RECORD435_ACCEPTANCE_AND_NATIVE_TIMESTAMP_CORRECTION.md`
 - `research/sprint_004/435_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/434_CEX002_RECORD433_ACCEPTANCE_AND_PATH_IDENTITY_RESUME.md`
