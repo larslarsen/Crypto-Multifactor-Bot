@@ -3,27 +3,29 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 420 accepts Sol's Review-419 attempt as a safe lint stop. The deletion instruction was
-ambiguous because the same assignment occurred in two neighboring functions: the used occurrence
-was removed, leaving F821 at line 213 and the original F841 at line 221. No real run, runner,
-output, integration, or other source mutation occurred.
+Review 421 accepts Sol's function-scoped correction. The required test-local `key` is restored,
+the unused neighboring copy is removed, and Sol's sole targeted ruff command passed. The accepted
+production source and CLI remain unchanged; the accepted test is now 439 lines at SHA-256
+`4c6d796ee1e7ec8e1b5b0b2ffe1ac1ad581aee6777e661401e086cc02ac9f8b5`.
 
 Gate 2 remains `ACCEPTED`. Gate 3 remains `IN_PROGRESS`. The three developer paths remain
 unintegrated and unstaged.
 
-Sr Dev — Codex Sol High is authorized only for Review 420's two function-scoped test edits: restore
-`key` inside `test_unsafe_zip_member_paths_are_rejected` immediately before `payload`, and remove
-the unused `key` inside `test_symlink_and_multi_member_zips_are_rejected`. It may then run the one
-enumerated targeted ruff command once and stop for reviewer inspection. No other edit, pytest,
-real data/state, runner, integration, Git, network, acquisition, cleanup, other product, or next
-ticket is authorized.
+Jr Dev — Hermes is authorized under Review 421 to reprove the three accepted paths, run the three
+ordered integration checks, verify output absence and at least 100 GiB available, then launch and
+poll exactly one durable real open-interest normalization runner. A live runner survives harness
+exit and is continued only by exact identity. Every terminal outcome is published as record 422
+with the three developer paths and exact control records. No patch, duplicate run, acquisition,
+network, cleanup, other product, experiment, model, trading-engine work, or next ticket is
+authorized.
 
 Governing documents:
 
+- `research/sprint_004/421_CEX002_LINT_CORRECTION_ACCEPTANCE_AND_REAL_RUN_REAUTHORIZATION.md`
 - `research/sprint_004/420_CEX002_REVIEW419_LINT_STOP_AND_FUNCTION_SCOPED_CORRECTION.md`
 - `research/sprint_004/419_CEX002_RECORD418_ACCEPTANCE_AND_ONE_LINE_LINT_CORRECTION.md`
 - `research/sprint_004/418_CEX002_OPEN_INTEREST_INTEGRATION_LINT_STOP_RECORD.md`
