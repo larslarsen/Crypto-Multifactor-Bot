@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Prefix>data/futures/um/daily/bookTicker/BTCUSDT/</Prefix>
+<Delimiter>/</Delimiter>
+<IsTruncated>false</IsTruncated>
+<Contents>
+<Key>data/futures/um/daily/bookTicker/BTCUSDT/BTCUSDT-bookTicker-2024-01-01.zip</Key>
+<Size>8932817</Size>
+<ETag>&quot;ghi&quot;</ETag>
+</Contents>
+<Contents>
+<Key>data/futures/um/daily/bookTicker/BTCUSDT/BTCUSDT-bookTicker-2024-01-01.zip.CHECKSUM</Key>
+<Size>66</Size>
+<ETag>&quot;jkl&quot;</ETag>
+</Contents>
+</ListBucketResult>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Prefix>data/futures/um/daily/metrics/BTCUSDT/</Prefix>
+<Delimiter>/</Delimiter>
+<IsTruncated>false</IsTruncated>
+<Contents>
+<Key>data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2024-01-01.zip</Key>
+<Size>100</Size>
+<ETag>&quot;abc&quot;</ETag>
+</Contents>
+<Contents>
+<Key>data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2024-01-01.zip.CHECKSUM</Key>
+<Size>66</Size>
+<ETag>&quot;def&quot;</ETag>
+</Contents>
+</ListBucketResult>
