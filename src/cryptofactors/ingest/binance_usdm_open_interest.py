@@ -68,6 +68,7 @@ SCHEMA_SHA256 = product_schema_identity(PRODUCT)
 
 PROVIDER_CONFLICT_UNAVAILABLE = "PROVIDER_CHECKSUM_CONFLICT_UNAVAILABLE"
 ADJACENT_MIDNIGHT_SPILLOVER = "adjacent_next_midnight_spillover"
+IDENTICAL_SOURCE_REPEAT = "byte_identical_same_source_repeat"
 HBAR_CONFLICT_KEY = (
     "data/futures/um/daily/metrics/HBARUSDC/"
     "HBARUSDC-metrics-2026-07-09.zip"
@@ -82,7 +83,8 @@ HBAR_ETAG = "d7f563900c0c2c99b7fd066e02d404c4"
 # both decompression work and row cardinality.
 MAX_COMPRESSED_OBJECT_BYTES = 256 * 2**20
 MAX_DECOMPRESSED_MEMBER_BYTES = 512 * 2**20
-MAX_DAILY_GRID_POINTS = 288
+MAX_PHYSICAL_ROWS_PER_OBJECT = 576
+MAX_ECONOMIC_ROWS_PER_DAY = 288
 MAX_CSV_FIELD_BYTES = 1 * 2**20
 RENAME_NOREPLACE = 1
 ACCEPTED_GENERATION0_BINANCE_COMPLETIONS = 685_072
@@ -748,18 +750,31 @@ def _safe_zip_member(archive: zipfile.ZipFile, *, source_key: str) -> zipfile.Zi
     return member
 
 
-def _iter_metric_rows(source: RawMetricObject) -> Iterator[tuple[int, list[str]]]:
+def _iter_metric_rows(source: RawMetricObject) -> Iterator[tuple[int, list[str], bytes]]:
     try:
         with zipfile.ZipFile(source.path) as archive:
             member = _safe_zip_member(archive, source_key=source.source_key)
             with archive.open(member, "r") as raw:
                 stream = io.TextIOWrapper(raw, encoding="utf-8", newline="")
-                reader = csv.reader(stream, strict=True)
+                consumed_lines: list[str] = []
+
+                def captured_lines() -> Iterator[str]:
+                    for line in stream:
+                        consumed_lines.append(line)
+                        yield line
+
+                reader = csv.reader(captured_lines(), strict=True)
                 decompressed = 0
                 ordinal = 0
                 first = True
-                for physical_row in reader:
-                    decompressed += sum(len(cell.encode("utf-8")) for cell in physical_row) + len(physical_row)
+                while True:
+                    consumed_lines.clear()
+                    try:
+                        physical_row = next(reader)
+                    except StopIteration:
+                        break
+                    raw_record = "".join(consumed_lines).encode("utf-8")
+                    decompressed += len(raw_record)
                     _require(decompressed <= MAX_DECOMPRESSED_MEMBER_BYTES, "metrics ZIP expanded beyond its parser bound")
                     _require(all(len(cell.encode("utf-8")) <= MAX_CSV_FIELD_BYTES for cell in physical_row), "metrics CSV field exceeds its bound")
                     if first:
@@ -769,10 +784,14 @@ def _iter_metric_rows(source: RawMetricObject) -> Iterator[tuple[int, list[str]]
                     _require(bool(physical_row), "metrics CSV contains an empty row")
                     _require(len(physical_row) == len(METRICS_FIELDS), "metrics CSV row width is invalid")
                     _require(
-                        ordinal < MAX_DAILY_GRID_POINTS,
-                        "metrics CSV exceeds the 288-point daily grid bound",
+                        ordinal < MAX_PHYSICAL_ROWS_PER_OBJECT,
+                        "metrics CSV exceeds the 576-row physical bound",
                     )
-                    yield ordinal, [str(cell) for cell in physical_row]
+                    if raw_record.endswith(b"\r\n"):
+                        raw_record = raw_record[:-2]
+                    elif raw_record.endswith((b"\r", b"\n")):
+                        raw_record = raw_record[:-1]
+                    yield ordinal, [str(cell) for cell in physical_row], raw_record
                     ordinal += 1
                 _require(ordinal > 0, "metrics CSV contains no data rows")
     except (OSError, UnicodeError, csv.Error, zipfile.BadZipFile, RuntimeError) as exc:
@@ -798,7 +817,6 @@ def _timestamp(token: str, source: RawMetricObject, ordinal: int) -> int:
     except Exception as exc:
         raise OpenInterestNormalizationError("metrics create_time is invalid") from exc
     _require(value % 1000 == 0, "metrics create_time has subsecond precision")
-    _require(value % (EXPECTED_CADENCE_SECONDS * 1000) == 0, "metrics create_time is off the five-minute grid")
     return value
 
 
@@ -823,6 +841,7 @@ def _row_values(
     raw_ref: int,
     ordinal: int,
     row: Sequence[str],
+    raw_record: bytes,
 ) -> dict[str, Any]:
     symbol, _economic_date = _identity_parts(source.source_key)
     values = dict(zip(METRICS_FIELDS, row, strict=True))
@@ -840,6 +859,7 @@ def _row_values(
         "sum_toptrader_long_short_ratio": _decimal(values["sum_toptrader_long_short_ratio"], source, "sum_toptrader_long_short_ratio", ordinal, nullable=True),
         "count_long_short_ratio": _decimal(values["count_long_short_ratio"], source, "count_long_short_ratio", ordinal, nullable=True),
         "sum_taker_long_short_vol_ratio": _decimal(values["sum_taker_long_short_vol_ratio"], source, "sum_taker_long_short_vol_ratio", ordinal, nullable=True),
+        "_source_token_bytes": raw_record,
     }
 
 
@@ -863,7 +883,7 @@ def _classify_contract_day_rows(
             owned.append(values)
             continue
         _require(
-            moment == next_midnight_ms and not excluded,
+            next_midnight_ms <= moment < next_midnight_ms + 60_000 and not excluded,
             "metrics row lies outside its source contract-day",
         )
         excluded.append(
@@ -872,12 +892,51 @@ def _classify_contract_day_rows(
                 "source_sha256": source.source_sha256,
                 "source_row_ordinal": int(values["source_row_ordinal"]),
                 "expected_contract_day": economic_date,
-                "observed_create_time_utc": next_midnight.isoformat().replace("+00:00", "Z"),
+                "observed_create_time_utc": datetime.fromtimestamp(
+                    moment // 1000,
+                    tz=UTC,
+                ).isoformat().replace("+00:00", "Z"),
                 "reason": ADJACENT_MIDNIGHT_SPILLOVER,
             }
         )
     _require(bool(owned), "metrics source contains no in-contract-day rows")
     return owned, excluded
+
+
+def _collapse_identical_source_repeats(
+    source: RawMetricObject,
+    parsed_rows: Sequence[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ordered = sorted(parsed_rows, key=lambda values: int(values["create_time"]))
+    kept: list[dict[str, Any]] = []
+    collapsed: list[dict[str, Any]] = []
+    for values in ordered:
+        if kept and int(values["create_time"]) == int(kept[-1]["create_time"]):
+            _require(
+                values["_source_token_bytes"] == kept[-1]["_source_token_bytes"],
+                "duplicate metrics timestamp has conflicting source tokens",
+            )
+            moment = int(values["create_time"])
+            collapsed.append(
+                {
+                    "source_key": source.source_key,
+                    "source_sha256": source.source_sha256,
+                    "kept_source_row_ordinal": int(kept[-1]["source_row_ordinal"]),
+                    "collapsed_source_row_ordinal": int(values["source_row_ordinal"]),
+                    "observed_create_time_utc": datetime.fromtimestamp(
+                        moment // 1000,
+                        tz=UTC,
+                    ).isoformat().replace("+00:00", "Z"),
+                    "reason": IDENTICAL_SOURCE_REPEAT,
+                }
+            )
+            continue
+        kept.append(values)
+    _require(
+        len(kept) <= MAX_ECONOMIC_ROWS_PER_DAY,
+        "metrics source exceeds its economic-row bound",
+    )
+    return kept, collapsed
 
 
 def _fsync_directory(path: Path) -> None:
@@ -944,6 +1003,7 @@ HBAR_GAP_START_MS = convert_timestamp_text(
 )
 HBAR_GAP_POINTS = 288
 HBAR_GAP_END_MS = HBAR_GAP_START_MS + (HBAR_GAP_POINTS - 1) * EXPECTED_CADENCE_SECONDS * 1000
+HBAR_GAP_STOP_MS = HBAR_GAP_START_MS + 86_400_000
 
 
 def _quality_gap_row(
@@ -956,7 +1016,7 @@ def _quality_gap_row(
 ) -> dict[str, Any]:
     _require(start_ms <= end_ms, "quality gap interval is reversed")
     step = EXPECTED_CADENCE_SECONDS * 1000
-    _require(start_ms % step == 0 and end_ms % step == 0, "quality gap is off grid")
+    _require((end_ms - start_ms) % step == 0, "quality gap cadence phase changed")
     start_month = datetime.fromtimestamp(start_ms // 1000, tz=UTC).strftime("%Y-%m")
     end_month = datetime.fromtimestamp(end_ms // 1000, tz=UTC).strftime("%Y-%m")
     _require(start_month == end_month, "quality gap row crosses a UTC month")
@@ -990,7 +1050,8 @@ def _split_quality_gap(
         else:
             boundary = datetime(moment.year, moment.month + 1, 1, tzinfo=UTC)
         boundary_ms = (boundary.toordinal() - datetime(1970, 1, 1, tzinfo=UTC).toordinal()) * 86_400_000
-        segment_end = min(end_ms, boundary_ms - step)
+        last_before_boundary = cursor + ((boundary_ms - 1 - cursor) // step) * step
+        segment_end = min(end_ms, last_before_boundary)
         rows.append(
             _quality_gap_row(
                 symbol,
@@ -1005,14 +1066,17 @@ def _split_quality_gap(
 
 
 def _inferred_quality_rows(symbol: str, start_ms: int, end_ms: int) -> list[dict[str, Any]]:
-    if symbol != "HBARUSDC" or end_ms < HBAR_GAP_START_MS or start_ms > HBAR_GAP_END_MS:
+    if symbol != "HBARUSDC" or end_ms < HBAR_GAP_START_MS or start_ms >= HBAR_GAP_STOP_MS:
         return _split_quality_gap(symbol, start_ms, end_ms)
     rows: list[dict[str, Any]] = []
     step = EXPECTED_CADENCE_SECONDS * 1000
     if start_ms < HBAR_GAP_START_MS:
-        rows.extend(_split_quality_gap(symbol, start_ms, HBAR_GAP_START_MS - step))
-    if end_ms > HBAR_GAP_END_MS:
-        rows.extend(_split_quality_gap(symbol, HBAR_GAP_END_MS + step, end_ms))
+        before_end = start_ms + ((HBAR_GAP_START_MS - 1 - start_ms) // step) * step
+        rows.extend(_split_quality_gap(symbol, start_ms, before_end))
+    if end_ms >= HBAR_GAP_STOP_MS:
+        after_start = start_ms + ((HBAR_GAP_STOP_MS - 1 - start_ms) // step + 1) * step
+        if after_start <= end_ms:
+            rows.extend(_split_quality_gap(symbol, after_start, end_ms))
     return rows
 
 
@@ -1171,7 +1235,9 @@ def _normalize_open_interest_tree(
         )
     ]
     published: list[PublishedPartition] = []
+    physical_source_row_count = 0
     excluded_source_row_count = 0
+    collapsed_source_row_count = 0
     for symbol, symbol_sources in sorted(by_symbol.items()):
         previous_time: int | None = None
         previous_level: Decimal | None = None
@@ -1181,9 +1247,10 @@ def _normalize_open_interest_tree(
         month_rows: list[dict[str, Any]] = []
         month_sources: list[RawMetricObject] = []
         month_excluded_rows: list[dict[str, Any]] = []
+        month_collapsed_rows: list[dict[str, Any]] = []
 
         def publish_month() -> None:
-            nonlocal month_rows, month_sources, month_excluded_rows
+            nonlocal month_rows, month_sources, month_excluded_rows, month_collapsed_rows
             if current_month is None:
                 return
             _require(bool(month_rows), "a partition has no rows")
@@ -1212,6 +1279,8 @@ def _normalize_open_interest_tree(
             }
             if month_excluded_rows:
                 manifest["excluded_source_rows"] = list(month_excluded_rows)
+            if month_collapsed_rows:
+                manifest["collapsed_identical_source_rows"] = list(month_collapsed_rows)
             lineage_path, lineage_sha, reused_lineage = _publish_json_artifact(
                 tree,
                 manifest,
@@ -1235,6 +1304,7 @@ def _normalize_open_interest_tree(
             month_rows = []
             month_sources = []
             month_excluded_rows = []
+            month_collapsed_rows = []
 
         for source in symbol_sources:
             _source_symbol, source_date = _identity_parts(source.source_key)
@@ -1247,34 +1317,40 @@ def _normalize_open_interest_tree(
             raw_ref = len(month_sources)
             source_added = False
             parsed_rows = [
-                _row_values(source, raw_ref, ordinal, raw_row)
-                for ordinal, raw_row in _iter_metric_rows(source)
+                _row_values(source, raw_ref, ordinal, raw_row, raw_record)
+                for ordinal, raw_row, raw_record in _iter_metric_rows(source)
             ]
+            physical_source_row_count += len(parsed_rows)
             parsed_rows, excluded_rows = _classify_contract_day_rows(source, parsed_rows)
+            parsed_rows, collapsed_rows = _collapse_identical_source_repeats(source, parsed_rows)
             month_excluded_rows.extend(excluded_rows)
+            month_collapsed_rows.extend(collapsed_rows)
             excluded_source_row_count += len(excluded_rows)
-            parsed_rows.sort(key=lambda values: int(values["create_time"]))
+            collapsed_source_row_count += len(collapsed_rows)
             for values in parsed_rows:
                 moment = int(values["create_time"])
                 month = datetime.fromtimestamp(moment // 1000, tz=UTC).strftime("%Y-%m")
                 _require(month == current_month, "metrics row UTC month conflicts with source identity")
                 fingerprint = tuple(values[name] for name in METRICS_FIELDS if name != "symbol")
+                values.pop("_source_token_bytes")
                 if moment == previous_time:
                     if previous_fingerprint != fingerprint:
                         raise OpenInterestNormalizationError("duplicate metrics timestamp has conflicting values")
                     raise OpenInterestNormalizationError("duplicate metrics timestamp is ambiguous")
                 interval = None if previous_time is None else (moment - previous_time) // 1000
                 _require(previous_time is None or moment > previous_time, "metrics timestamps are not strictly increasing")
-                if (
-                    previous_time is not None
-                    and interval is not None
-                    and interval > EXPECTED_CADENCE_SECONDS
-                ):
+                missing_count = (
+                    max(0, interval // EXPECTED_CADENCE_SECONDS - 1)
+                    if interval is not None
+                    else 0
+                )
+                if previous_time is not None and missing_count:
                     quality_rows.extend(
                         _inferred_quality_rows(
                             symbol,
                             previous_time + EXPECTED_CADENCE_SECONDS * 1000,
-                            moment - EXPECTED_CADENCE_SECONDS * 1000,
+                            previous_time
+                            + missing_count * EXPECTED_CADENCE_SECONDS * 1000,
                         )
                     )
                 crossed_declared_gap = False
@@ -1379,6 +1455,12 @@ def _normalize_open_interest_tree(
         }
         for part in published
     ]
+    product_row_count = sum(part.row_count for part in published)
+    _require(
+        physical_source_row_count
+        == product_row_count + excluded_source_row_count + collapsed_source_row_count,
+        "physical source rows do not reconcile with normalized outcomes",
+    )
     completion = {
         "document_type": "binance_usdm_open_interest_5m_product_completion",
         "schema_version": 1,
@@ -1415,9 +1497,11 @@ def _normalize_open_interest_tree(
         },
         "totals": {
             "partition_count": len(published),
-            "product_rows": sum(part.row_count for part in published),
+            "physical_source_rows": physical_source_row_count,
+            "product_rows": product_row_count,
             "quality_gap_rows": len(quality_rows),
             "excluded_source_rows": excluded_source_row_count,
+            "collapsed_identical_source_rows": collapsed_source_row_count,
         },
     }
     expected_completion_sha = hashlib.sha256(_canonical_json(completion)).hexdigest()

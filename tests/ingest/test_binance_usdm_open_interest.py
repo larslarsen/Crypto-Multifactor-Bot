@@ -8,6 +8,7 @@ import json
 import sqlite3
 import stat
 import zipfile
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -18,6 +19,13 @@ from cryptofactors.ingest import binance_usdm_open_interest as oi
 
 
 HEADER = ",".join(oi.METRICS_FIELDS)
+
+
+def _utc_ms(token: str) -> int:
+    moment = datetime.fromisoformat(token.replace("Z", "+00:00"))
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return int(moment.timestamp()) * 1000
 
 
 def _line(
@@ -77,6 +85,7 @@ def test_real_format_headed_and_headerless_metrics(tmp_path: Path, headed: bool)
     assert lineage["raw_objects"][0]["source_key"] == source.source_key
     assert lineage["raw_objects"][0]["source_sha256"] == source.source_sha256
     assert "excluded_source_rows" not in lineage
+    assert "collapsed_identical_source_rows" not in lineage
 
 
 def test_exact_decimal_stock_and_contiguous_change(tmp_path: Path) -> None:
@@ -100,9 +109,9 @@ def test_exact_decimal_stock_and_contiguous_change(tmp_path: Path) -> None:
 
 def test_shuffled_daily_rows_follow_economic_time_and_preserve_ordinals(tmp_path: Path) -> None:
     rows = [
-        _line("2026-07-01T00:10:00Z", level="104", value="208"),
-        _line("2026-07-01T00:00:00Z", level="100", value="200"),
-        _line("2026-07-01T00:05:00Z", level="101", value="202"),
+        _line("2026-07-01T00:10:17Z", level="104", value="208"),
+        _line("2026-07-01T00:00:17Z", level="100", value="200"),
+        _line("2026-07-01T00:05:17Z", level="101", value="202"),
     ]
     table = _table(
         oi.normalize_open_interest(
@@ -112,9 +121,9 @@ def test_shuffled_daily_rows_follow_economic_time_and_preserve_ordinals(tmp_path
     )
 
     assert table.column("create_time").to_pylist() == [
-        1_782_864_000_000,
-        1_782_864_300_000,
-        1_782_864_600_000,
+        _utc_ms("2026-07-01T00:00:17Z"),
+        _utc_ms("2026-07-01T00:05:17Z"),
+        _utc_ms("2026-07-01T00:10:17Z"),
     ]
     assert table.column("source_row_ordinal").to_pylist() == [1, 2, 0]
     assert table.column("sum_open_interest").to_pylist() == [
@@ -132,10 +141,21 @@ def test_shuffled_daily_rows_follow_economic_time_and_preserve_ordinals(tmp_path
         Decimal("1.000000000000000000"),
         Decimal("3.000000000000000000"),
     ]
+    assert table.column("change_interval_seconds").to_pylist() == [None, 300, 300]
+    assert table.column("gap_break_status").to_pylist() == [
+        "first_observation",
+        "contiguous",
+        "contiguous",
+    ]
 
 
+@pytest.mark.parametrize(
+    "spill_timestamp",
+    ["2026-05-04T00:00:00Z", "2026-05-04T00:00:59Z"],
+)
 def test_adjacent_midnight_spillover_is_excluded_without_replacing_owned_value(
     tmp_path: Path,
+    spill_timestamp: str,
 ) -> None:
     prior = _source(
         tmp_path,
@@ -147,7 +167,7 @@ def test_adjacent_midnight_spillover_is_excluded_without_replacing_owned_value(
         "2026-05-03",
         [
             _line("2026-05-03T00:05:00Z", level="101", value="202"),
-            _line("2026-05-04T00:00:00Z", level="999", value="1998"),
+            _line(spill_timestamp, level="999", value="1998"),
         ],
     )
     next_day = _source(
@@ -178,7 +198,7 @@ def test_adjacent_midnight_spillover_is_excluded_without_replacing_owned_value(
             "source_sha256": source_day.source_sha256,
             "source_row_ordinal": 1,
             "expected_contract_day": "2026-05-03",
-            "observed_create_time_utc": "2026-05-04T00:00:00Z",
+            "observed_create_time_utc": spill_timestamp,
             "reason": oi.ADJACENT_MIDNIGHT_SPILLOVER,
         }
     ]
@@ -192,12 +212,19 @@ def test_adjacent_midnight_spillover_is_excluded_without_replacing_owned_value(
         for row in gaps
     )
     descriptor = json.loads(result.completion_path.read_text())
-    assert descriptor["totals"]["excluded_source_rows"] == 1
+    assert descriptor["totals"] == {
+        "partition_count": 1,
+        "physical_source_rows": 4,
+        "product_rows": 3,
+        "quality_gap_rows": result.gap_artifact.row_count,
+        "excluded_source_rows": 1,
+        "collapsed_identical_source_rows": 0,
+    }
 
 
 @pytest.mark.parametrize(
     "out_of_day_timestamp",
-    ["2026-05-04T00:05:00Z", "2026-05-05T00:00:00Z"],
+    ["2026-05-04T00:01:00Z", "2026-05-05T00:00:00Z"],
 )
 def test_non_midnight_or_nonadjacent_spillover_is_rejected(
     tmp_path: Path,
@@ -209,6 +236,23 @@ def test_non_midnight_or_nonadjacent_spillover_is_rejected(
         [
             _line("2026-05-03T00:05:00Z"),
             _line(out_of_day_timestamp),
+        ],
+    )
+    with pytest.raises(
+        oi.OpenInterestNormalizationError,
+        match="outside its source contract-day",
+    ):
+        oi.normalize_open_interest([source], tmp_path / ".normalized")
+
+
+def test_second_adjacent_midnight_spillover_is_rejected(tmp_path: Path) -> None:
+    source = _source(
+        tmp_path,
+        "2026-05-03",
+        [
+            _line("2026-05-03T23:55:00Z"),
+            _line("2026-05-04T00:00:00Z"),
+            _line("2026-05-04T00:00:59Z"),
         ],
     )
     with pytest.raises(
@@ -243,6 +287,124 @@ def test_missing_cadence_breaks_change_without_bridging(tmp_path: Path) -> None:
     assert len(btc) == 1
     assert btc[0]["expected_grid_count"] == 1
     assert btc[0]["gap_kind"] == "missing_five_minute_run"
+
+
+@pytest.mark.parametrize("seconds", [301, 599])
+def test_short_delayed_interval_breaks_change_without_inventing_gap(
+    tmp_path: Path,
+    seconds: int,
+) -> None:
+    start = datetime(2026, 7, 1, 0, 0, 17, tzinfo=UTC)
+    delayed = start + timedelta(seconds=seconds)
+    rows = [
+        _line(start.isoformat().replace("+00:00", "Z"), level="100", value="200"),
+        _line(delayed.isoformat().replace("+00:00", "Z"), level="101", value="202"),
+    ]
+    result = oi.normalize_open_interest(
+        [_source(tmp_path, "2026-07-01", rows)],
+        tmp_path / ".normalized",
+    )
+    table = _table(result)
+
+    assert table.column("create_time").to_pylist() == [
+        int(start.timestamp()) * 1000,
+        int(delayed.timestamp()) * 1000,
+    ]
+    assert table.column("change_interval_seconds").to_pylist() == [None, seconds]
+    assert table.column("gap_break_status").to_pylist() == [
+        "first_observation",
+        "gap_break",
+    ]
+    assert table.column("previous_sum_open_interest").to_pylist() == [None, None]
+    assert table.column("open_interest_change").to_pylist() == [None, None]
+    gaps = pq.read_table(result.gap_artifact.parquet_path).to_pylist()
+    assert not [row for row in gaps if row["native_symbol"] == "BTCUSDT"]
+
+
+def test_off_grid_phase_missing_run_uses_previous_observation_phase(tmp_path: Path) -> None:
+    rows = [
+        _line("2026-07-01T00:00:17Z"),
+        _line("2026-07-01T00:10:17Z", level="101", value="202"),
+    ]
+    result = oi.normalize_open_interest(
+        [_source(tmp_path, "2026-07-01", rows)],
+        tmp_path / ".normalized",
+    )
+    btc = [
+        row
+        for row in pq.read_table(result.gap_artifact.parquet_path).to_pylist()
+        if row["native_symbol"] == "BTCUSDT"
+    ]
+
+    assert btc == [
+        {
+            **oi.native_identity("BTCUSDT"),
+            "required_product": oi.PRODUCT,
+            "utc_month": "2026-07",
+            "missing_run_start_ms": _utc_ms("2026-07-01T00:05:17Z"),
+            "missing_run_end_ms": _utc_ms("2026-07-01T00:05:17Z"),
+            "expected_grid_count": 1,
+            "gap_kind": "missing_five_minute_run",
+            "reason": "missing_expected_cadence_between_observations",
+        }
+    ]
+
+
+def test_off_grid_phase_gap_is_split_at_utc_month_boundary(tmp_path: Path) -> None:
+    january = _source(
+        tmp_path,
+        "2026-01-31",
+        [_line("2026-01-31T23:50:17Z")],
+    )
+    february = _source(
+        tmp_path,
+        "2026-02-01",
+        [_line("2026-02-01T00:10:17Z", level="101", value="202")],
+    )
+    result = oi.normalize_open_interest(
+        [february, january],
+        tmp_path / ".normalized",
+    )
+    btc = [
+        row
+        for row in pq.read_table(result.gap_artifact.parquet_path).to_pylist()
+        if row["native_symbol"] == "BTCUSDT"
+    ]
+
+    assert [
+        (
+            row["utc_month"],
+            row["missing_run_start_ms"],
+            row["missing_run_end_ms"],
+            row["expected_grid_count"],
+        )
+        for row in btc
+    ] == [
+        (
+            "2026-01",
+            _utc_ms("2026-01-31T23:55:17Z"),
+            _utc_ms("2026-01-31T23:55:17Z"),
+            1,
+        ),
+        (
+            "2026-02",
+            _utc_ms("2026-02-01T00:00:17Z"),
+            _utc_ms("2026-02-01T00:05:17Z"),
+            2,
+        ),
+    ]
+
+
+@pytest.mark.parametrize("date_token", ["2020-09-01", "2021-01-01", "2026-07-01"])
+def test_date_only_timestamp_is_preserved_as_utc_midnight(
+    tmp_path: Path,
+    date_token: str,
+) -> None:
+    result = oi.normalize_open_interest(
+        [_source(tmp_path, date_token, [_line(date_token)])],
+        tmp_path / ".normalized",
+    )
+    assert _table(result).column("create_time").to_pylist() == [_utc_ms(date_token)]
 
 
 def test_native_symbol_utc_month_partition_preserves_boundary_continuity(tmp_path: Path) -> None:
@@ -296,16 +458,78 @@ def test_accepted_hbar_conflict_is_typed_gap_and_breaks_continuity(tmp_path: Pat
     assert gap_lineage["hbar_checksum_conflict"]["expected_provider_sha256"] == oi.HBAR_EXPECTED_SHA256
 
 
-@pytest.mark.parametrize(
-    "rows,match",
-    [
-        ([_line("2026-07-01T00:00:00Z"), _line("2026-07-01T00:00:00Z", level="101")], "conflicting"),
-        ([_line("2026-07-01T00:00:00Z"), _line("2026-07-01T00:00:00Z")], "ambiguous"),
-    ],
-)
-def test_duplicate_timestamp_is_rejected(tmp_path: Path, rows: list[str], match: str) -> None:
-    with pytest.raises(oi.OpenInterestNormalizationError, match=match):
+@pytest.mark.parametrize("second_level", ["101", "100.0", '"100"'])
+def test_conflicting_duplicate_timestamp_tokens_are_rejected(
+    tmp_path: Path,
+    second_level: str,
+) -> None:
+    rows = [
+        _line("2026-07-01T00:00:00Z", level="100"),
+        _line("2026-07-01T00:00:00Z", level=second_level),
+    ]
+    with pytest.raises(oi.OpenInterestNormalizationError, match="conflicting source tokens"):
         oi.normalize_open_interest([_source(tmp_path, "2026-07-01", rows)], tmp_path / ".normalized")
+
+
+def test_cross_source_duplicate_authority_is_rejected(tmp_path: Path) -> None:
+    source = _source(tmp_path, "2026-07-01", [_line("2026-07-01T00:00:00Z")])
+    with pytest.raises(oi.OpenInterestNormalizationError, match="repeats an identity"):
+        oi.normalize_open_interest([source, source], tmp_path / ".normalized")
+
+
+def test_576_identical_pair_rows_collapse_to_288_with_exact_lineage(
+    tmp_path: Path,
+) -> None:
+    start = datetime(2020, 9, 1, tzinfo=UTC)
+    rows: list[str] = []
+    for index in range(288):
+        timestamp = (start + timedelta(minutes=5 * index)).isoformat().replace(
+            "+00:00",
+            "Z",
+        )
+        row = _line(timestamp, level=str(index + 1), value=str(2 * (index + 1)))
+        rows.extend((row, row))
+    result = oi.normalize_open_interest(
+        [_source(tmp_path, "2020-09-01", rows)],
+        tmp_path / ".normalized",
+    )
+    table = _table(result)
+    lineage = json.loads(result.partitions[0].lineage_path.read_text())
+    collapsed = lineage["collapsed_identical_source_rows"]
+
+    assert table.num_rows == 288
+    assert table.column("source_row_ordinal").to_pylist() == list(range(0, 576, 2))
+    assert len(collapsed) == 288
+    assert collapsed[0] == {
+        "source_key": (
+            "data/futures/um/daily/metrics/BTCUSDT/"
+            "BTCUSDT-metrics-2020-09-01.zip"
+        ),
+        "source_sha256": lineage["raw_objects"][0]["source_sha256"],
+        "kept_source_row_ordinal": 0,
+        "collapsed_source_row_ordinal": 1,
+        "observed_create_time_utc": "2020-09-01T00:00:00Z",
+        "reason": oi.IDENTICAL_SOURCE_REPEAT,
+    }
+    assert collapsed[-1]["kept_source_row_ordinal"] == 574
+    assert collapsed[-1]["collapsed_source_row_ordinal"] == 575
+    assert collapsed[-1]["observed_create_time_utc"] == "2020-09-01T23:55:00Z"
+    descriptor = json.loads(result.completion_path.read_text())
+    assert descriptor["totals"]["physical_source_rows"] == 576
+    assert descriptor["totals"]["product_rows"] == 288
+    assert descriptor["totals"]["excluded_source_rows"] == 0
+    assert descriptor["totals"]["collapsed_identical_source_rows"] == 288
+
+
+def test_577th_physical_row_is_rejected_before_publication(tmp_path: Path) -> None:
+    row = _line("2026-07-01T00:00:00Z")
+    output = tmp_path / ".normalized"
+    with pytest.raises(oi.OpenInterestNormalizationError, match="576-row physical bound"):
+        oi.normalize_open_interest(
+            [_source(tmp_path, "2026-07-01", [row] * 577)],
+            output,
+        )
+    assert not output.exists() or not list(output.rglob("*.parquet"))
 
 
 @pytest.mark.parametrize(
