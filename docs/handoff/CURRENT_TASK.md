@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
 Review 375 confirms Hermes commit `291d066322cc3368c34552a6f5257ee4059cd8f6`
