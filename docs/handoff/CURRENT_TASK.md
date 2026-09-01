@@ -3,13 +3,13 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
 Review 403 accepts record 402 and commit `ca33da91e1e1d391a99a067fe86b828f0e08a078` as the exact command/count evidence correction. No separate collect-only command ran; the authorized standard pytest summary supplied the correct 147-case count. Review 401's exact five-path v3 source/test integration remains accepted. The integrated code and v1/v2 identities are unchanged, no planner is live, and the fixed v3 root is absent. No v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-Hermes is authorized for exactly one fresh v3 listing-only planner invocation in one durably captured runner and must poll only that session to terminal. It may make only fixed official Binance S3 ListObjectsV2 requests and create the fresh v3 evidence tree; no raw ZIP GET, v1/v2 mutation, source/test edit, acquisition, cleanup, transition, duplicate/replacement invocation, later gate, or next ticket is authorized. Every terminal outcome must be published as record 404 with final reviewer actor fields and exact evidence, then Hermes must stop. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes performed the Review 403 preflight at publication commit `0ff212d590ea23bd275d963da755f81d44809a6a` and found a mismatch: the acquisition source (`binance_usdm_harmonic_qualification.py`) and CLI (`qualify_binance_usdm_harmonic_sources.py`) hashes do not match the Review 403 expected values. The planner was NOT invoked, no runner was created, no network request was issued, and no v3 evidence tree was created. Record 404 documents the preflight mismatch and stop. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
