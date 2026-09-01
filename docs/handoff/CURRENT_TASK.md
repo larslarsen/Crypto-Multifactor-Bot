@@ -7,21 +7,24 @@ Next required actor: Sr Dev — Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 419 accepts Hermes commit `a25268cbf9e9d1a45ec0a3dfda1a3a603533987a` and record 418
-as the exact safe integration lint stop. The targeted pytest passed all 35 cases; targeted ruff
-found one unused local assignment at test line 222. No real run, runner, output, integration, or
-source mutation occurred.
+Review 420 accepts Sol's Review-419 attempt as a safe lint stop. The deletion instruction was
+ambiguous because the same assignment occurred in two neighboring functions: the used occurrence
+was removed, leaving F821 at line 213 and the original F841 at line 221. No real run, runner,
+output, integration, or other source mutation occurred.
 
 Gate 2 remains `ACCEPTED`. Gate 3 remains `IN_PROGRESS`. The three developer paths remain
 unintegrated and unstaged.
 
-Sr Dev — Codex Sol High is authorized only to delete Review 419's exact one unused assignment from
-the test path, run the one enumerated targeted ruff command once, and stop for reviewer inspection.
-No other edit, pytest, real data/state, runner, integration, Git, network, acquisition, cleanup,
-other product, or next ticket is authorized.
+Sr Dev — Codex Sol High is authorized only for Review 420's two function-scoped test edits: restore
+`key` inside `test_unsafe_zip_member_paths_are_rejected` immediately before `payload`, and remove
+the unused `key` inside `test_symlink_and_multi_member_zips_are_rejected`. It may then run the one
+enumerated targeted ruff command once and stop for reviewer inspection. No other edit, pytest,
+real data/state, runner, integration, Git, network, acquisition, cleanup, other product, or next
+ticket is authorized.
 
 Governing documents:
 
+- `research/sprint_004/420_CEX002_REVIEW419_LINT_STOP_AND_FUNCTION_SCOPED_CORRECTION.md`
 - `research/sprint_004/419_CEX002_RECORD418_ACCEPTANCE_AND_ONE_LINE_LINT_CORRECTION.md`
 - `research/sprint_004/418_CEX002_OPEN_INTEREST_INTEGRATION_LINT_STOP_RECORD.md`
 - `research/sprint_004/417_CEX002_OPEN_INTEREST_SOURCE_ACCEPTANCE_INTEGRATION_AND_REAL_RUN.md`
