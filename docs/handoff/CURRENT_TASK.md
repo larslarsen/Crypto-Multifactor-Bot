@@ -3,16 +3,18 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 403 accepts record 402 and commit `ca33da91e1e1d391a99a067fe86b828f0e08a078` as the exact command/count evidence correction. No separate collect-only command ran; the authorized standard pytest summary supplied the correct 147-case count. Review 401's exact five-path v3 source/test integration remains accepted. The integrated code and v1/v2 identities are unchanged, no planner is live, and the fixed v3 root is absent. No v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
+Review 405 accepts record 404's safe no-launch facts and exact three-path publication but rejects its mismatch diagnosis. Hermes compared Review 403's acquisition source/CLI hashes against two different qualification files. The five path-explicit v3/test/planner-CLI/acquisition-source/acquisition-CLI rows in Review 405 all match exactly; qualification paths are excluded. No planner, runner, network request, SQLite open, or v3 tree occurred, so no invocation was consumed. Record 404 also left the ticket actor field stale; Review 405 records and supersedes that defect. No candidate, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-Hermes performed the Review 403 preflight at publication commit `0ff212d590ea23bd275d963da755f81d44809a6a` and found a mismatch: the acquisition source (`binance_usdm_harmonic_qualification.py`) and CLI (`qualify_binance_usdm_harmonic_sources.py`) hashes do not match the Review 403 expected values. The planner was NOT invoked, no runner was created, no network request was issued, and no v3 evidence tree was created. Record 404 documents the preflight mismatch and stop. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes is reauthorized for exactly one fresh v3 listing-only invocation after the literal full-path preflight in Review 405. If launched, it must use one durable runner and poll only that process to terminal. No raw ZIP GET, v1/v2 mutation, source/test edit, acquisition, cleanup, transition, duplicate/replacement invocation, later gate, or next ticket is authorized. Every preflight or terminal outcome must be published as record 406 with final reviewer actor fields, then Hermes stops. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/405_CEX002_RECORD404_PREFLIGHT_DIAGNOSIS_CORRECTION_AND_V3_REAUTHORIZATION.md`
+- `research/sprint_004/404_CEX002_FRESH_V3_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/403_CEX002_RECORD402_ACCEPTANCE_AND_FRESH_V3_LISTING_AUTHORIZATION.md`
 - `research/sprint_004/402_CEX002_V3_INTEGRATION_COMMAND_EVIDENCE_COMPLETION.md`
 - `research/sprint_004/401_CEX002_RECORD400_INTEGRATION_ACCEPTANCE_AND_COMMAND_EVIDENCE_CORRECTION.md`
