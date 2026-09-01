@@ -1987,7 +1987,7 @@ def _payload_envelope(payload_json: str) -> tuple[dict[str, Any], dict[str, Any]
     inner = document.get("payload")
     if type(inner) is not dict:
         raise BlockedCandidateError("plan payload envelope is missing payload")
-    if set(inner) != {
+    common_fields = {
         "economic_interval",
         "family",
         "key",
@@ -1997,8 +1997,19 @@ def _payload_envelope(payload_json: str) -> tuple[dict[str, Any], dict[str, Any]
         "sidecar_url",
         "symbol",
         "url",
-    }:
+    }
+    family = inner.get("family")
+    family_fields: set[str] = set()
+    if family == FAMILY_METRICS:
+        family_fields = {"consumable"}
+    elif family == FAMILY_BOOK_TICKER:
+        family_fields = {"etag"}
+    if set(inner) != common_fields | family_fields:
         raise BlockedCandidateError("pending plan payload keys changed")
+    if family == FAMILY_METRICS and type(inner.get("consumable")) is not bool:
+        raise BlockedCandidateError("pending metrics consumable is not an exact bool")
+    if family == FAMILY_BOOK_TICKER and type(inner.get("etag")) is not str:
+        raise BlockedCandidateError("pending bookTicker etag is not exact text")
     return dict(document), dict(inner)
 
 

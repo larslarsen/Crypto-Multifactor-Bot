@@ -101,6 +101,10 @@ def _payload(identity: str, *, family: str, symbol: str, listed_bytes: int) -> s
         "symbol": symbol,
         "url": f"{planner.VISION_OBJECT_BASE}/{identity}",
     }
+    if family == planner.FAMILY_METRICS:
+        body["consumable"] = False
+    elif family == planner.FAMILY_BOOK_TICKER:
+        body["etag"] = "zip"
     return planner.compact_json(
         {
             "identity": identity,
@@ -1470,6 +1474,76 @@ def test_pending_payload_requires_exact_canonical_facts(
         ),
     )
     assert result["exit_code"] == planner.EXIT_BLOCKED
+
+
+@pytest.mark.parametrize(
+    ("identity", "family", "specific_field", "specific_value"),
+    [
+        (METRICS_A, planner.FAMILY_METRICS, "consumable", False),
+        (BOOK_A, planner.FAMILY_BOOK_TICKER, "etag", "zip"),
+    ],
+)
+def test_pending_payload_accepts_exact_production_family_shape(
+    identity: str,
+    family: str,
+    specific_field: str,
+    specific_value: Any,
+) -> None:
+    envelope, body = planner._payload_envelope(
+        _payload(identity, family=family, symbol="BTCUSDT", listed_bytes=100)
+    )
+    assert set(envelope) == {"identity", "kind", "payload", "provider"}
+    assert set(body) == {
+        "economic_interval",
+        "family",
+        "key",
+        "listed_bytes",
+        "retained",
+        "sidecar_key",
+        "sidecar_url",
+        "symbol",
+        "url",
+        specific_field,
+    }
+    assert body[specific_field] == specific_value
+    assert type(body[specific_field]) is type(specific_value)
+
+
+@pytest.mark.parametrize(
+    ("identity", "family", "refusal"),
+    [
+        (METRICS_A, planner.FAMILY_METRICS, "missing"),
+        (METRICS_A, planner.FAMILY_METRICS, "cross_family"),
+        (METRICS_A, planner.FAMILY_METRICS, "additional"),
+        (METRICS_A, planner.FAMILY_METRICS, "wrong_type"),
+        (BOOK_A, planner.FAMILY_BOOK_TICKER, "missing"),
+        (BOOK_A, planner.FAMILY_BOOK_TICKER, "cross_family"),
+        (BOOK_A, planner.FAMILY_BOOK_TICKER, "additional"),
+        (BOOK_A, planner.FAMILY_BOOK_TICKER, "wrong_type"),
+    ],
+)
+def test_pending_payload_rejects_invalid_family_specific_shape(
+    identity: str, family: str, refusal: str
+) -> None:
+    document = json.loads(
+        _payload(identity, family=family, symbol="BTCUSDT", listed_bytes=100)
+    )
+    body = document["payload"]
+    specific_field = "consumable" if family == planner.FAMILY_METRICS else "etag"
+    cross_field = "etag" if family == planner.FAMILY_METRICS else "consumable"
+    cross_value: Any = "zip" if cross_field == "etag" else False
+    if refusal == "missing":
+        del body[specific_field]
+    elif refusal == "cross_family":
+        del body[specific_field]
+        body[cross_field] = cross_value
+    elif refusal == "additional":
+        body["unexpected"] = "value"
+    else:
+        body[specific_field] = 1 if specific_field == "consumable" else False
+
+    with pytest.raises(planner.BlockedCandidateError):
+        planner._payload_envelope(planner.compact_json(document).decode("utf-8"))
 
 
 @pytest.mark.parametrize(

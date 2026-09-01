@@ -6,20 +6,12 @@ Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harne
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 368 accepts Sol High's exact two-path payload-schema correction for Hermes
-integration. The planner now requires the writer-authoritative `consumable` field on
-`daily/metrics` and `etag` on `daily/bookTicker`, with exact family-specific shapes and
-types. Missing, cross-family, additional, and wrong-type fields remain fail-closed.
-Sol's one authorized targeted run exited zero with all 119 cases passing.
+Review 369 integrates Sol High's exact two-path payload-schema correction. The four-command validation chain exited zero: targeted pytest 119 cases passed, ruff `All checks passed!`, repository control `PASS`, scoped diff check empty. Both developer hashes exactly match Review 368.
 
-Hermes is authorized only to integrate the two accepted hashes, execute Review 368's
-four-command validation chain, publish durable record 369 and matching control-plane
-updates, commit/push exactly five paths, prove `HEAD == origin/main`, and stop.
+Hermes staged exactly the two developer paths plus record 369, CURRENT_TASK.md, and CEX-002.md; committed; pushed `main`; and proved `HEAD == origin/main`.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-All real planner retry/resume, listing, real-state/data access, repair, deletion, cleanup,
-acquisition, transition, later-gate, and next-ticket work remains unauthorized pending
-reviewer inspection of Hermes's bounded integration.
+All real planner retry/resume, listing, real-state/data access, repair, deletion, cleanup, acquisition, transition, later-gate, and next-ticket work remains unauthorized pending reviewer inspection of Hermes's bounded integration.
 
 Governing documents:
 
