@@ -2,28 +2,29 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Sr Dev - Codex Sol using GPT-5.6-sol High
+Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 372 accepts record 371 as faithful blocked execution evidence and identifies the
-repository-native cause. Generation 0 was written with relative
-`--store-root data/cex002_qualify`, so sidecar facts store exact relative content-addressed
-paths. The planner incorrectly converted its reader root to absolute before comparing, and
-the synthetic tests reproduced absolute temporary paths.
+Review 373 accepts Sol High's exact two-path sidecar-path serialization correction for
+Hermes integration. The durable string now derives from the authenticated generation
+destination, while physical bytes remain opened and proved only through the held/rebound
+content descriptor. Production-relative success and four alternate-spelling refusals are
+covered. Sol's one authorized targeted run exited zero with all 123 cases passing and no
+warnings.
 
-Sol High is authorized for Review 372's exact two-path source/test correction and one
-targeted synthetic pytest invocation. It must bind the stored relative serialization to
-the already held/rebound content descriptor, reject every alternate spelling, and preserve
-the physical no-follow hash/size/checksum proof.
+Hermes is authorized only to integrate the two accepted hashes, run Review 373's four
+validation commands, publish record 374 and final reviewer actor fields before repository
+control, commit/push exactly five paths, prove remote equality, and stop.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-No real planner invocation, raw ZIP GET, acquisition, Coinalyze access, active-generation
-edit, retry/resume, repair, cleanup, transition, Hermes integration, lint, repository
-control, later gate, or next ticket is authorized pending reviewer inspection.
+No real planner invocation, listing, real-state/data access, raw ZIP GET, acquisition,
+Coinalyze access, active-generation edit, retry/resume, repair, cleanup, transition,
+later gate, or next ticket is authorized pending reviewer inspection of integration.
 
 Governing documents:
 
+- `research/sprint_004/373_CEX002_SIDECAR_PATH_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/372_CEX002_BLOCKED_SIDECAR_PATH_SERIALIZATION_CORRECTION_AUTHORIZATION.md`
 - `research/sprint_004/371_CEX002_CORRECTED_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/370_CEX002_PAYLOAD_SCHEMA_INTEGRATION_ACCEPTANCE_AND_REAL_RETRY_AUTHORIZATION.md`
