@@ -3,27 +3,26 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
 Review 417 accepts the corrected three-path `binance_usdm_open_interest_5m` production/test drop
-for Hermes integration and one real run. Sol's one targeted command passed all 35 cases. The
-accepted source pins and authenticates both raw authorities, publishes durable typed gaps and one
-final hidden completion descriptor, prevents output symlink traversal, and rejects impossible
-negative values.
+for Hermes integration and one real run. Hermes reproved HEAD and origin/main at 1c565f8 and
+reproved all three accepted hashes and line counts. The exact targeted pytest passed all 35 cases.
+The exact targeted ruff then failed at tests/ingest/test_binance_usdm_open_interest.py line 222
+with F841 because local variable `key` is assigned but unused. Hermes correctly stopped there:
+the repository-control check was not run and the real normalization was not launched.
 
-Gate 2 remains `ACCEPTED`. No download, relisting, or acquisition work is reopened.
+Gate 2 remains `ACCEPTED`. Gate 3 remains `IN_PROGRESS`. The three accepted developer paths
+remain unintegrated and unstaged. No real runner/output exists. The next required actor is the
+Lead Quantitative Finance Researcher/Engineer. Next ticket remains `NONE`.
 
-Hermes must reprove the exact accepted hashes, run Review 417's three ordered integration checks,
-then launch and poll the one exact real normalization command in a durable `/tmp` runner with at
-least 48 hours allowance. The fixed input is 522,865 generation-0 metrics files plus 50,920 usable
-v3 recovery metrics files and the one typed HBAR conflict. No duplicate, patch, cleanup, second
-replay, acquisition, network, other product, bundle, experiment, backtest, model, trading engine,
-or next ticket is authorized. Every terminal result is published as record 418 and stops for
-reviewer acceptance.
-
-CEX-002 and Gate 3 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes must publish this exact outcome as record 418, update CURRENT_TASK and CEX-002, run
+`python3 scripts/check_repo_control.py` as the publication control, stage exactly the record,
+CURRENT_TASK, and ticket, commit, push, prove HEAD equals origin/main, and stop. No test or
+ruff rerun, no patch, source edit, data, network, acquisition, cleanup, other product, or real
+run is authorized. All unrelated dirty paths are preserved.
 
 Governing documents:
 
