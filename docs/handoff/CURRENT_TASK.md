@@ -3,16 +3,19 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
 Review 405 accepts record 404's safe no-launch facts and exact three-path publication but rejects its mismatch diagnosis. Hermes compared Review 403's acquisition source/CLI hashes against two different qualification files. The five path-explicit v3/test/planner-CLI/acquisition-source/acquisition-CLI rows in Review 405 all match exactly; qualification paths are excluded. No planner, runner, network request, SQLite open, or v3 tree occurred, so no invocation was consumed. Record 404 also left the ticket actor field stale; Review 405 records and supersedes that defect. No candidate, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-Hermes is reauthorized for exactly one fresh v3 listing-only invocation after the literal full-path preflight in Review 405. If launched, it must use one durable runner and poll only that process to terminal. No raw ZIP GET, v1/v2 mutation, source/test edit, acquisition, cleanup, transition, duplicate/replacement invocation, later gate, or next ticket is authorized. Every preflight or terminal outcome must be published as record 406 with final reviewer actor fields, then Hermes stops. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes was reauthorized for exactly one fresh v3 listing-only invocation after the literal full-path preflight in Review 405. The preflight passed exactly. One durable mktemp runner was created and launched exactly once. The planner completed pass 1 (1468 pages, 953 prefixes, null cursor) but was externally interrupted after ~34.7 minutes before pass 2 could start. The v3 tree is partial: no cross-pass reachability comparison, no semantic identity, no locator, no receipt, no manifest, no lineage. Record 406 documents the terminal outcome. No candidate is accepted. No acquisition, transition, later gate, or next ticket is authorized.
+
+CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, resume, acquisition, transition, later gate, or next-ticket action is authorized.
 
 Governing documents:
 
+- `research/sprint_004/406_CEX002_FRESH_V3_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/405_CEX002_RECORD404_PREFLIGHT_DIAGNOSIS_CORRECTION_AND_V3_REAUTHORIZATION.md`
 - `research/sprint_004/404_CEX002_FRESH_V3_REVISION_CANDIDATE_RUN_RECORD.md`
 - `research/sprint_004/403_CEX002_RECORD402_ACCEPTANCE_AND_FRESH_V3_LISTING_AUTHORIZATION.md`
