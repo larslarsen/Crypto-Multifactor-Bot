@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -13,12 +13,17 @@ corrects one runner-table transcription: `exit_code.txt` SHA-256 is
 remains unchanged at pass 1 1,164/1,308 prefixes and 1,838 pages, pass 2 zero pages, with no
 locator; v1 is unchanged. No candidate or Gate-2 result is accepted.
 
-Hermes is authorized for exactly one durably captured continuation of the integrated listing-only
-planner against that authenticated v2 checkpoint. It may fetch only missing fixed S3 listing pages
-and publish normal v2 outputs. No raw ZIP GET, v1 mutation, cleanup/replacement, duplicate or second
-continuation, acquisition, transition, or later work is authorized. Every outcome must be
-published as record 394 with exact final reviewer actor fields and summaries before repository
-control. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes polled the single authorized runner `/tmp/cex002_v2_runner_c5Yg65` (shell PID `516793`
+start ticks `5000073`, planner PID `516870` start ticks `5000086`, start UTC
+`2026-09-01T06:29:24Z`) to terminal at `2026-09-01T07:23:10Z`, 53 minutes 46 seconds elapsed.
+The planner exited 1 with stop `blocked` and the exact error `listing reachability or pagination
+authority drifted across independent passes`. The v2 listing progressed from 1,838 to 4,187 pages
+(pass 1: 1,308/1,308 prefixes, 2,093 pages; pass 2: 1,308/1,308 prefixes, 2,094 pages) but the
+final page of each pass remains truncated with a continuation token, so the listing is not stable
+and not complete. No manifest, receipt, lineage, or locator was published. No candidate is
+accepted. No raw acquisition, candidate acceptance, Gate-2 acceptance, transition, or later work
+is authorized by the result. CEX-002 and Gate 2 remain `IN_PROGRESS`. The next ticket remains
+`NONE`. No retry, resume, repair, cleanup, replacement, or second invocation is authorized.
 
 Governing documents:
 
