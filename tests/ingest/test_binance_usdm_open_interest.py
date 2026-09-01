@@ -76,6 +76,7 @@ def test_real_format_headed_and_headerless_metrics(tmp_path: Path, headed: bool)
     assert lineage["raw_objects"][0]["raw_object_ref"] == 0
     assert lineage["raw_objects"][0]["source_key"] == source.source_key
     assert lineage["raw_objects"][0]["source_sha256"] == source.source_sha256
+    assert "excluded_source_rows" not in lineage
 
 
 def test_exact_decimal_stock_and_contiguous_change(tmp_path: Path) -> None:
@@ -131,6 +132,90 @@ def test_shuffled_daily_rows_follow_economic_time_and_preserve_ordinals(tmp_path
         Decimal("1.000000000000000000"),
         Decimal("3.000000000000000000"),
     ]
+
+
+def test_adjacent_midnight_spillover_is_excluded_without_replacing_owned_value(
+    tmp_path: Path,
+) -> None:
+    prior = _source(
+        tmp_path,
+        "2026-05-02",
+        [_line("2026-05-02T23:55:00Z", level="99", value="198")],
+    )
+    source_day = _source(
+        tmp_path,
+        "2026-05-03",
+        [
+            _line("2026-05-03T00:05:00Z", level="101", value="202"),
+            _line("2026-05-04T00:00:00Z", level="999", value="1998"),
+        ],
+    )
+    next_day = _source(
+        tmp_path,
+        "2026-05-04",
+        [_line("2026-05-04T00:00:00Z", level="107", value="214")],
+    )
+    result = oi.normalize_open_interest(
+        [next_day, source_day, prior],
+        tmp_path / ".normalized",
+    )
+    table = _table(result)
+
+    assert table.column("sum_open_interest").to_pylist() == [
+        Decimal("99.000000000000000000"),
+        Decimal("101.000000000000000000"),
+        Decimal("107.000000000000000000"),
+    ]
+    assert Decimal("999.000000000000000000") not in table.column(
+        "sum_open_interest"
+    ).to_pylist()
+    assert table.column("source_row_ordinal").to_pylist() == [0, 0, 0]
+    assert table.column("open_interest_change").to_pylist() == [None, None, None]
+    lineage = json.loads(result.partitions[0].lineage_path.read_text())
+    assert lineage["excluded_source_rows"] == [
+        {
+            "source_key": source_day.source_key,
+            "source_sha256": source_day.source_sha256,
+            "source_row_ordinal": 1,
+            "expected_contract_day": "2026-05-03",
+            "observed_create_time_utc": "2026-05-04T00:00:00Z",
+            "reason": oi.ADJACENT_MIDNIGHT_SPILLOVER,
+        }
+    ]
+    gaps = pq.read_table(result.gap_artifact.parquet_path).to_pylist()
+    prior_time = table.column("create_time").to_pylist()[0]
+    assert any(
+        row["native_symbol"] == "BTCUSDT"
+        and row["missing_run_start_ms"] == prior_time + 300_000
+        and row["missing_run_end_ms"] == prior_time + 300_000
+        and row["gap_kind"] == "missing_five_minute_run"
+        for row in gaps
+    )
+    descriptor = json.loads(result.completion_path.read_text())
+    assert descriptor["totals"]["excluded_source_rows"] == 1
+
+
+@pytest.mark.parametrize(
+    "out_of_day_timestamp",
+    ["2026-05-04T00:05:00Z", "2026-05-05T00:00:00Z"],
+)
+def test_non_midnight_or_nonadjacent_spillover_is_rejected(
+    tmp_path: Path,
+    out_of_day_timestamp: str,
+) -> None:
+    source = _source(
+        tmp_path,
+        "2026-05-03",
+        [
+            _line("2026-05-03T00:05:00Z"),
+            _line(out_of_day_timestamp),
+        ],
+    )
+    with pytest.raises(
+        oi.OpenInterestNormalizationError,
+        match="outside its source contract-day",
+    ):
+        oi.normalize_open_interest([source], tmp_path / ".normalized")
 
 
 def test_missing_cadence_breaks_change_without_bridging(tmp_path: Path) -> None:

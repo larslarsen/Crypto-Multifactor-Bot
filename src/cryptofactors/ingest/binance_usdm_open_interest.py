@@ -23,7 +23,7 @@ import uuid
 import zipfile
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -67,6 +67,7 @@ SCHEMA = final_product_schema(PRODUCT)
 SCHEMA_SHA256 = product_schema_identity(PRODUCT)
 
 PROVIDER_CONFLICT_UNAVAILABLE = "PROVIDER_CHECKSUM_CONFLICT_UNAVAILABLE"
+ADJACENT_MIDNIGHT_SPILLOVER = "adjacent_next_midnight_spillover"
 HBAR_CONFLICT_KEY = (
     "data/futures/um/daily/metrics/HBARUSDC/"
     "HBARUSDC-metrics-2026-07-09.zip"
@@ -823,12 +824,10 @@ def _row_values(
     ordinal: int,
     row: Sequence[str],
 ) -> dict[str, Any]:
-    symbol, economic_date = _identity_parts(source.source_key)
+    symbol, _economic_date = _identity_parts(source.source_key)
     values = dict(zip(METRICS_FIELDS, row, strict=True))
     _require(values["symbol"].strip() == symbol, "metrics row symbol conflicts with source identity")
     moment = _timestamp(values["create_time"], source, ordinal)
-    row_date = datetime.fromtimestamp(moment // 1000, tz=UTC).date().isoformat()
-    _require(row_date == economic_date, "metrics row lies outside its source contract-day")
     return {
         "raw_object_ref": raw_ref,
         "source_row_ordinal": ordinal,
@@ -842,6 +841,43 @@ def _row_values(
         "count_long_short_ratio": _decimal(values["count_long_short_ratio"], source, "count_long_short_ratio", ordinal, nullable=True),
         "sum_taker_long_short_vol_ratio": _decimal(values["sum_taker_long_short_vol_ratio"], source, "sum_taker_long_short_vol_ratio", ordinal, nullable=True),
     }
+
+
+def _classify_contract_day_rows(
+    source: RawMetricObject,
+    parsed_rows: Sequence[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    _symbol, economic_date = _identity_parts(source.source_key)
+    try:
+        day_start = datetime.strptime(economic_date, "%Y-%m-%d").replace(tzinfo=UTC)
+    except ValueError as exc:
+        raise OpenInterestNormalizationError("metrics source contract-day is invalid") from exc
+    next_midnight = day_start + timedelta(days=1)
+    day_start_ms = int(day_start.timestamp()) * 1000
+    next_midnight_ms = int(next_midnight.timestamp()) * 1000
+    owned: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    for values in parsed_rows:
+        moment = int(values["create_time"])
+        if day_start_ms <= moment < next_midnight_ms:
+            owned.append(values)
+            continue
+        _require(
+            moment == next_midnight_ms and not excluded,
+            "metrics row lies outside its source contract-day",
+        )
+        excluded.append(
+            {
+                "source_key": source.source_key,
+                "source_sha256": source.source_sha256,
+                "source_row_ordinal": int(values["source_row_ordinal"]),
+                "expected_contract_day": economic_date,
+                "observed_create_time_utc": next_midnight.isoformat().replace("+00:00", "Z"),
+                "reason": ADJACENT_MIDNIGHT_SPILLOVER,
+            }
+        )
+    _require(bool(owned), "metrics source contains no in-contract-day rows")
+    return owned, excluded
 
 
 def _fsync_directory(path: Path) -> None:
@@ -1135,6 +1171,7 @@ def _normalize_open_interest_tree(
         )
     ]
     published: list[PublishedPartition] = []
+    excluded_source_row_count = 0
     for symbol, symbol_sources in sorted(by_symbol.items()):
         previous_time: int | None = None
         previous_level: Decimal | None = None
@@ -1143,9 +1180,10 @@ def _normalize_open_interest_tree(
         current_month: str | None = None
         month_rows: list[dict[str, Any]] = []
         month_sources: list[RawMetricObject] = []
+        month_excluded_rows: list[dict[str, Any]] = []
 
         def publish_month() -> None:
-            nonlocal month_rows, month_sources
+            nonlocal month_rows, month_sources, month_excluded_rows
             if current_month is None:
                 return
             _require(bool(month_rows), "a partition has no rows")
@@ -1172,6 +1210,8 @@ def _normalize_open_interest_tree(
                 "raw_objects": [_lineage_source(item, index) for index, item in enumerate(month_sources)],
                 "coverage_gaps": [asdict(gap) for gap in gaps if gap.native_symbol == symbol and gap.economic_interval.startswith(current_month)],
             }
+            if month_excluded_rows:
+                manifest["excluded_source_rows"] = list(month_excluded_rows)
             lineage_path, lineage_sha, reused_lineage = _publish_json_artifact(
                 tree,
                 manifest,
@@ -1194,6 +1234,7 @@ def _normalize_open_interest_tree(
             )
             month_rows = []
             month_sources = []
+            month_excluded_rows = []
 
         for source in symbol_sources:
             _source_symbol, source_date = _identity_parts(source.source_key)
@@ -1209,6 +1250,9 @@ def _normalize_open_interest_tree(
                 _row_values(source, raw_ref, ordinal, raw_row)
                 for ordinal, raw_row in _iter_metric_rows(source)
             ]
+            parsed_rows, excluded_rows = _classify_contract_day_rows(source, parsed_rows)
+            month_excluded_rows.extend(excluded_rows)
+            excluded_source_row_count += len(excluded_rows)
             parsed_rows.sort(key=lambda values: int(values["create_time"]))
             for values in parsed_rows:
                 moment = int(values["create_time"])
@@ -1373,6 +1417,7 @@ def _normalize_open_interest_tree(
             "partition_count": len(published),
             "product_rows": sum(part.row_count for part in published),
             "quality_gap_rows": len(quality_rows),
+            "excluded_source_rows": excluded_source_row_count,
         },
     }
     expected_completion_sha = hashlib.sha256(_canonical_json(completion)).hexdigest()
