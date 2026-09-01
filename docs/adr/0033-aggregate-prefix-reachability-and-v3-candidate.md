@@ -4,6 +4,7 @@
 - **Date:** 2026-09-01
 - **Amends:** ADR-0032 cross-pass listing stability, semantic identity, and blocked-candidate preservation
 - **Evidence:** `research/sprint_004/396_CEX002_V2_DRIFT_DIAGNOSIS_AND_PUBLICATION_EVIDENCE_COMPLETION.md`
+- **Clarified by:** `research/sprint_004/398_CEX002_SOL_V3_STOPPED_DROP_REJECTION_AND_CAPACITY_SEMANTIC_CORRECTION_AUTHORIZATION.md`
 
 ## Context
 
@@ -106,9 +107,14 @@ every page's pagination metadata. Manifest rows retain their exact selected pass
 The v3 `semantic_sha256` projection excludes total/per-pass page counts and all physical
 pagination shape from both listing and lineage claims. It retains the v3 schema/policy/code and
 generation identities, family roots/pass identities, `stable_reachability_sha256`, exact stable
-pending-facts digest/count, semantic manifest-row digest, classification, byte/capacity facts, ZIP
-policy, and no-authorization state. The existing semantic manifest-row projection continues to
-exclude pass-specific request/page locators and listing-page lineage.
+pending-facts digest/count, semantic manifest-row digest, classification, deterministic pending
+byte facts, ZIP policy, and no-authorization state. The existing semantic manifest-row projection
+continues to exclude pass-specific request/page locators and listing-page lineage.
+
+The volatile local `capacity_projection` object is not added to semantic identity. The fresh
+filesystem-capacity projection remains exact ordinary receipt and locator-bound physical evidence,
+as in v2, and is excluded from `semantic_sha256`. ADR-0033 changes pagination-shape semantics only
+and does not expand the accepted v2 semantic-receipt key set to capacity.
 
 Two fresh candidates produced by the same v3 code with identical aggregate reachability and
 pending economic/provider facts therefore have the same semantic identity even if unrelated live

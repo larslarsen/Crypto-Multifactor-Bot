@@ -7,12 +7,13 @@ Next required actor: Sr Dev - Codex Sol using GPT-5.6-sol High
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 397 accepts Hermes record 396 and commit `bf200e88274d77b4d4b66467072a2ae66cda3891` as the exact evidence-only completion. Both v2 passes are complete at the same 1,308 prefixes with null cursors. The `BANKUSDT` difference is genuine live publication outside the frozen pending set: pass 2 crossed a 1,000-object page boundary and required one extra page. No v2 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
+Review 398 rejects the unintegrated Review-397 Sol drop because its sole authorized targeted run exited 1 at `_semantic_receipt_payload` with `KeyError: 'capacity_projection'`; Sol correctly stopped without a patch or rerun. The stopped source/test hashes, line counts, scoped diff, truncated-output limitation, and empty staging state are durable in Review 398. No source/test is accepted or integrated, and no v2/v3 candidate, manifest, receipt, lineage, locator, acquisition, Gate-2 result, transition, or later ticket is accepted.
 
-ADR-0033 adopts exact aggregate prefix reachability plus exact frozen pending raw/sidecar key, size, and ETag facts as cross-pass semantic authority. Page count and truncation sequence remain exact authenticated physical lineage but no longer define semantic equality. V1 and v2 remain immutable; corrected code must use a fresh v3 sibling and distinct v3 identities. Sol High is authorized only for the two exact source/test paths and one exact targeted test command in Review 397, then must stop for reviewer inspection. No integration, Git, real data/candidate access, network, acquisition, cleanup, transition, later gate, or next ticket is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+ADR-0033 is clarified: deterministic pending byte facts remain semantic, while the volatile fresh local `capacity_projection` remains exact locator-bound physical receipt evidence and is excluded from `semantic_sha256`, preserving v2's boundary. Sol High is authorized only to remove the added semantic key, invert the corresponding new test assertion, run the one exact targeted command once, and stop. No other source/test edit, integration, Git, real data/candidate access, network, acquisition, cleanup, transition, later gate, or next ticket is authorized. CEX-002 and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/398_CEX002_SOL_V3_STOPPED_DROP_REJECTION_AND_CAPACITY_SEMANTIC_CORRECTION_AUTHORIZATION.md`
 - `research/sprint_004/397_CEX002_RECORD396_ACCEPTANCE_AND_SOL_V3_REACHABILITY_AUTHORIZATION.md`
 - `docs/adr/0033-aggregate-prefix-reachability-and-v3-candidate.md`
 - `research/sprint_004/396_CEX002_V2_DRIFT_DIAGNOSIS_AND_PUBLICATION_EVIDENCE_COMPLETION.md`
