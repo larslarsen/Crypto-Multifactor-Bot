@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -19,19 +19,22 @@ is validated, bounded to the 288 possible five-minute grid points, then stable-s
 while preserving original row ordinal and every raw value. Duplicate/conflict and all downstream
 economic checks remain. The focused suite passed all 39 cases.
 
-The seven existing 0GUSDT month partitions and lineage files remain hidden, unaccepted evidence
+The eight existing 0GUSDT month partitions and lineage files remain hidden, unaccepted evidence
 without a completion descriptor. They are content-addressed and will be verified/reused without
 cleanup. Gate 2 remains `ACCEPTED`; Gate 3 remains `IN_PROGRESS`; no product is accepted.
 
-Jr Dev — Hermes is authorized under Review 427 to reprove the correction and preserved partial
-root, run the three ordered checks, commit/push exactly the source/test correction, then launch one
-logged detached resume of the production command against the same hidden root. It may not run
-foreground, reproduce, replace, retry, signal, clean, or delete. Every terminal outcome is record
-428. No acquisition, network, other product, experiment, model, trading-engine work, or next
-ticket is authorized.
+Jr Dev — Hermes executed the Review-427 terminal evidence workflow. The sole runner
+`/tmp/cex002_oi_427_yZ3DpH` exited 1 at 2026-09-01T19:35:40Z with
+`OpenInterestNormalizationError: metrics row lies outside its source contract-day` at
+`src/cryptofactors/ingest/binance_usdm_open_interest.py:831` inside `_row_values`, called from
+`_normalize_open_interest_tree` line 1209. The hidden root now holds eight 0GUSDT Parquets plus
+eight lineage JSONs (2025-09 through 2026-04), empty `.staging`, and no completion descriptor.
+Record 428 is published. Both actor fields return to the reviewer. No source/test/CLI patch,
+cleanup, reproduction, retry, or next ticket is authorized.
 
 Governing documents:
 
+- `research/sprint_004/428_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/427_CEX002_DAILY_ORDER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
 - `research/sprint_004/426_CEX002_RECORD425_ACCEPTANCE_AND_DAILY_ROW_ORDER_CORRECTION.md`
 - `research/sprint_004/425_CEX002_OPEN_INTEREST_REAL_RUN_RECORD.md`
