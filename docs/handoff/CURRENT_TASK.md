@@ -3,26 +3,29 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 387 accepts Sol High's exact two-path ADR-0032 source/test drop for bounded Hermes
-integration. The fresh v2 candidate excludes opaque cursor/request/page transport identity from
-cross-pass and candidate semantic identity while retaining exact physical lineage; real
-reachability, pagination shape, pending key/size/ETag, recovery, and security checks remain
-fail-closed. Sol's sole authorized targeted pytest passed all 139 cases. This is source acceptance
-only, not integration, candidate acceptance, real-run authorization, or Gate-2 acceptance.
+Review 389 accepts Hermes integration commit `9eb6b39c1a61d989a78f262fa91715329715ce8a`:
+exactly five authorized paths, unchanged Review-387 developer hashes, 139 targeted cases passing,
+clean targeted ruff, repository-control PASS, empty scoped diff, empty staging, and remote
+equality. It corrects record 388's unrelated-path count (11 unrelated modified, not 13) and
+supersedes both final summaries' stale future integration prose. This accepts integration only;
+no candidate or Gate-2 result is accepted.
 
-Jr Dev - Hermes must rehash and stage only the two Review-387 developer identities, run the exact
-targeted pytest, targeted ruff, repository-control, and final scoped-diff commands, publish record
-388 and both final reviewer actor fields before repository control, commit/push exactly five paths,
-prove remote equality, and stop for reviewer inspection. It may not patch accepted bytes or invoke
-the planner, network, real data/SQLite, acquisition, cleanup, transition, or later work. CEX-002
-and Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
+The v2 root is absent and v1 retains its accepted checkpoint/private-index identities. Jr Dev -
+Hermes is authorized for exactly one durably captured invocation of the integrated listing-only
+planner against the fresh fixed v2 sibling. It may perform only generation authentication and the
+two fixed S3 listing passes; no raw ZIP GET, v1 mutation, acquisition, cleanup, duplicate/resume,
+transition, or later work is authorized. Every terminal outcome must be published as record 390
+with both final reviewer actor fields before repository control. CEX-002 and Gate 2 remain
+`IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/389_CEX002_V2_CURSOR_CORRECTION_INTEGRATION_ACCEPTANCE_AND_FRESH_RUN_AUTHORIZATION.md`
+- `research/sprint_004/388_CEX002_V2_CURSOR_CORRECTION_INTEGRATION_RECORD.md`
 - `research/sprint_004/387_CEX002_SOL_V2_CURSOR_CORRECTION_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/386_CEX002_RECORD385_ACCEPTANCE_AND_SOL_V2_CURSOR_CORRECTION_AUTHORIZATION.md`
 - `docs/adr/0032-opaque-listing-cursor-normalization-and-v2-candidate.md`
