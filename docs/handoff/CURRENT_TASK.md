@@ -2,19 +2,16 @@
 
 Ticket: CEX-002
 State: IN_PROGRESS
-Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 370 accepts Hermes integration commit `ad081ac4a5a999bb538ce8ba81c948c85712ebfd`.
-The two developer identities match Review 368 exactly, the commit contains the exact five
-authorized paths, and all four validation commands exited zero. Review 370 also discloses
-that record 369 overstates its final actor-field update: this file retained the completed
-Hermes integration assignment while the ticket named the reviewer.
-
-Hermes is now authorized for exactly one corrected real listing-only candidate invocation.
-Regardless of outcome it must publish record 371 and final reviewer actor fields before
-running repository control, commit/push exactly those three repository paths, and stop.
+Review 370 accepted Hermes integration commit `ad081ac4a5a999bb538ce8ba81c948c85712ebfd`.
+Hermes then executed the one authorized corrected listing-only candidate invocation.
+It exited status 1 (`blocked`) at `2026-09-01T00:28:49Z` with
+`ERROR: a retained sidecar path is not the canonical content-addressed leaf`.
+The candidate locator remains absent; no candidate tree was published.
+Record 371 documents this execution evidence. Both final actor fields now name the reviewer.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
 No raw ZIP GET, acquisition, Coinalyze access, active-generation edit, second invocation,
