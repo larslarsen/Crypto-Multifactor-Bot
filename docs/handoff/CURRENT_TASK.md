@@ -3,31 +3,30 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 384 rejects Review-383 execution because Hermes launched the offline planner twice after
-authorization for exactly one invocation. The first captured run exited 1 with
-`listing reachability or pagination authority drifted across independent passes`; the second
-launch overwrote part of the shared runner evidence. Both wrapper identities and every planner
-process are now absent. The candidate checkpoint, private index, complete-pass graph, and physical
-page-set identities remain unchanged; no manifest, receipt, lineage, or locator exists.
+Review 386 accepts record 385's exact duplicate-invocation, runner, no-live-process,
+unchanged-candidate, corrected-code, graph-difference, repository-control, scoped-diff, and Git
+evidence. It discloses and supersedes the final summaries' stale completed-Hermes assignment.
 
-Read-only diagnosis finds the first pass difference at graph index 319: identical request key,
-prefix, child-prefix facts, and truncation flag, but different opaque provider continuation-token
-bytes. The source incorrectly requires those cursors to be equal across independent passes. No
-source correction or further run is authorized yet.
+ADR-0032 preserves the blocked v1 candidate immutably and defines a fresh v2 candidate whose
+cross-pass stability and semantic identity exclude opaque transport cursor/request/page identity
+while exact physical lineage retains it. Real reachability, pagination-shape, key, size, and ETag
+drift still fail closed.
 
-Hermes is authorized only to publish record 385 and the two final reviewer summaries with exact
-first-run, duplicate-launch, runner-overwrite, no-live-process, unchanged-candidate, corrected-code,
-and graph-difference evidence. It may run only repository control and the scoped diff, then
-commit/push exactly those three paths and stop. No planner, data/runner mutation, network, test,
-source edit, acquisition, cleanup, transition, or later work is authorized. CEX-002 and Gate 2
-remain `IN_PROGRESS`; next ticket remains `NONE`.
+Sr Dev - Codex Sol using GPT-5.6-sol High is authorized to edit exactly the integrated planner
+source and test source for ADR-0032, then optionally run the one exact targeted pytest command.
+It may not use Git, touch records/CLI/fixtures/real data, access network, invoke planner/acquisition,
+or authorize later work. It stops with a two-path source drop for reviewer inspection. CEX-002 and
+Gate 2 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Governing documents:
 
+- `research/sprint_004/386_CEX002_RECORD385_ACCEPTANCE_AND_SOL_V2_CURSOR_CORRECTION_AUTHORIZATION.md`
+- `docs/adr/0032-opaque-listing-cursor-normalization-and-v2-candidate.md`
+- `research/sprint_004/385_CEX002_DUPLICATE_INVOCATION_AND_DRIFT_BLOCKER_RECORD.md`
 - `research/sprint_004/384_CEX002_HERMES_DUPLICATE_INVOCATION_CONTROL_STOP.md`
 - `research/sprint_004/383_CEX002_RECORD382_HASH_REJECTION_AND_OFFLINE_CAPTURE_RETRY_AUTHORIZATION.md`
 - `research/sprint_004/382_CEX002_REVISION_CANDIDATE_RESUME_RECORD.md`
