@@ -3,17 +3,14 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket authorized: NONE
 
-Review 377 accepts record 376's exact repository-control and scoped-diff results, but
-rejects its final publication because it attributes Hermes's execution to the reviewer and
-the control-plane summaries still say evidence is incomplete. Record 376 remains immutable
-historical evidence and must be superseded append-only.
-
-Hermes is authorized only to publish record 378 with the correct actor attribution and
-final evidence-complete summaries, run repository control and scoped diff against those
-final paths, commit/push exactly three paths, prove remote equality, and stop.
+Review 377 accepted record 376's exact repository-control and scoped-diff results. Record 378
+supersedes record 376's reviewer attribution with the correct Jr Dev - Hermes actor, preserves
+record 376's accepted command facts without claiming a rerun, and confirms records 374/376/378
+combined complete Review 373's integration evidence. Both control-plane summaries now name the
+reviewer as the next actor.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
 No source/test/record-376 edit, pytest, lint, real planner, listing, real-state/data access,
