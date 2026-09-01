@@ -3,27 +3,28 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes through the installed Hermes one-shot harness
 Next ticket authorized: NONE
 
-Review 373 accepts Sol High's exact two-path sidecar-path serialization correction for
-Hermes integration. The durable string now derives from the authenticated generation
-destination, while physical bytes remain opened and proved only through the held/rebound
-content descriptor. Production-relative success and four alternate-spelling refusals are
-covered. Sol's one authorized targeted run exited zero with all 123 cases passing and no
-warnings.
+Review 375 confirms Hermes commit `291d066322cc3368c34552a6f5257ee4059cd8f6`
+contains the exact five authorized paths and accepts the exact developer integration,
+123-case pytest result, and ruff result. Record 374 omits the required exact output and
+exit code for repository control and scoped diff, so full integration evidence remains
+incomplete; harness chat cannot supply it.
 
-Hermes is authorized only to integrate the two accepted hashes, run Review 373's four
-validation commands, publish record 374 and final reviewer actor fields before repository
-control, commit/push exactly five paths, prove remote equality, and stop.
+Hermes is authorized only to publish record 376 and final reviewer actor fields, run the
+two missing commands against those final fields, commit/push exactly the three governance/
+evidence paths if their results match Review 375 exactly, prove remote equality, and stop.
 
 CEX-002 remains `IN_PROGRESS`. Gate 2 remains `IN_PROGRESS`. Next ticket remains `NONE`.
-No real planner invocation, listing, real-state/data access, raw ZIP GET, acquisition,
-Coinalyze access, active-generation edit, retry/resume, repair, cleanup, transition,
-later gate, or next ticket is authorized pending reviewer inspection of integration.
+No source/test edit, pytest, lint, real planner invocation, listing, real-state/data access,
+raw ZIP GET, acquisition, Coinalyze access, retry/resume, cleanup, transition, later gate,
+or next ticket is authorized.
 
 Governing documents:
 
+- `research/sprint_004/375_CEX002_SIDECAR_PATH_INTEGRATION_EVIDENCE_STOP.md`
+- `research/sprint_004/374_CEX002_SIDECAR_PATH_INTEGRATION_RECORD.md`
 - `research/sprint_004/373_CEX002_SIDECAR_PATH_SOURCE_ACCEPTANCE_FOR_HERMES_INTEGRATION.md`
 - `research/sprint_004/372_CEX002_BLOCKED_SIDECAR_PATH_SERIALIZATION_CORRECTION_AUTHORIZATION.md`
 - `research/sprint_004/371_CEX002_CORRECTED_REVISION_CANDIDATE_RUN_RECORD.md`
