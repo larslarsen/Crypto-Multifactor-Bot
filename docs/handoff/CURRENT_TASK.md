@@ -3,9 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol on GPT-5.6-sol High
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 463 accepts the corrected membership source/test/CLI drop at the exact hashes and line counts
+listed in that review. Sol's one targeted test passed all 27 cases. The false digest equality is
+removed while both independent identities remain strictly validated; the frozen membership
+semantics, schema, lineage, no-clobber publication, completion-last visibility, and replay boundary
+pass static inspection.
+
+Hermes is authorized only for Review 463's exact integration checks, exact three-path source commit
+and push, capacity/root preproof, one foreground real membership command, terminal inventory, and
+Record 464 publication. No patch, retry, replay, wrapper, detach, polling loop, acquisition,
+cleanup, other product, catalog, experiment, model, Harmonic Trader, or next-ticket work is
+authorized. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains
+`NONE`.
 
 Review 462 closes the capacity blocker after the owner's cleanup: 568,669,851,648 bytes are now
 available, above the frozen 110,648,021,942-byte remaining release requirement. No storage
