@@ -3,9 +3,19 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Grok Build on Grok 4.6 High
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 471 accepts Grok's exact two-line test-fixture correction. The test now removes and proves
+absence of the sidecar that its earlier cases created; production and CLI remain byte-identical.
+No Grok test output was relayed, so Hermes independently runs the focused suite, Ruff, and control
+before integrating the exact three files.
+
+If those checks pass, Hermes commits/pushes the three files and performs exactly one foreground,
+local realized-funding conversion using the 21,035 files already downloaded. There is no download,
+retry, wrapper, polling loop, or source patch. Hermes publishes terminal Record 472 and stops for
+review. Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Review 470 accepts Hermes's Record-469 stop. The first 64 focused cases passed; the last case failed
 because its own first two setup calls had already created the sidecar it later claimed was missing.
