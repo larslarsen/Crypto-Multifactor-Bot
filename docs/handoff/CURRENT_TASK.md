@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -18,6 +18,45 @@ temporary untracked verifier, and publish Record 459 plus the matching control f
 test, production code, data change, download, retry, cleanup, catalog, experiment, model, Harmonic
 Trader, other-product, or next-ticket work is authorized. Gate 2 remains accepted; Gate 3 and
 CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Record 459 — Corrected Full Kline Audit Record
+
+Hermes executed Review 458's exact ordered workflow. All preproof checks passed: `HEAD == origin/main
+== d23de932ce78135c8b320d56dde3494d476c76ad`, temporary verifier SHA-256
+`0bfae90a2a5c76be1ef1b8389cabda1ca17793eba1d6cc520c94f18ed5464da6` at exactly 730 lines, both
+accepted completion files sole in their `.complete/` directories. Hermes ran exactly one foreground
+command with bytecode writes disabled and remained attached to the unified execution session until
+terminal.
+
+The command exited 0. The verifier performed every predicate required by Review 455 and corrected
+every defect identified in Review 457: actual per-Parquet schema comparison against accepted
+BAR_SCHEMA/TRADE_FLOW_SCHEMA, bounded quality-gap schema/row/missing-grid recomputation, exact
+one-to-one provider-invalid gap/exclusion key equality with duplicate rejection, canonical relative
+descriptor path enforcement with symlink-free resolution beneath the fixed root, direct /proc/*/cmdline
+inspection rejecting a live kline normalizer, and fail-first nonzero exit on the first mismatch. All
+22,633 partitions per product verified. Bar: 16,033,469 product rows (40 excluded), 154 quality-gap
+rows, 8,043 missing grid points; completion SHA-256
+`3b803d3e84e5d0bf87064626cc0504e9ff92e225a53ba83cdd4e09c38a2e9fd7`; schema SHA-256
+`12af135c756ae5046961c7dc2eb4177506801b6b42ffe9f0f7a5c970fdd644eb`. Trade flow: 16,033,442
+product rows (67 excluded), 181 quality-gap rows, 8,070 missing grid points; completion SHA-256
+`a165f9e57065514cadc95620c280a82dbad5032d17c19e1caf012c9d12a84d0a`; schema SHA-256
+`0e0903f5a79396f80f879ee33ea898d2008bace08271c2e0151295a18e83a68f`. Exclusion sets: bar 40
+identities, trade-flow 67, bar subset of trade-flow, 27 trade-flow-only. Physical inventories
+explicitly separate descriptor-referenced files from older unreferenced content-addressed files
+(bar: 20,366 unreferenced = 31 Parquets + 20,335 lineages; trade-flow: 20,382 unreferenced = 47
+Parquets + 20,335 lineages). Both `.staging/` directories empty; no live kline normalizer found.
+
+Post-audit exact capacity observation: `df -B1 --output=avail data` = **22,741,000,192** bytes.
+
+Hermes removed exactly the untracked temporary verifier
+`scripts/research/audit_cex002_record456.py`; path proven absent and unstaged. No other file or
+directory was removed or cleaned.
+
+Record 459 is published. Both actor fields return to the Lead Quantitative Finance
+Researcher/Engineer. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket
+remains `NONE`. No normalizer, test, production code, data change, download, retry, cleanup,
+catalog, NautilusTrader, experiment, model, Harmonic Trader, other product, PAPER, LIVE, or
+next-ticket work is authorized.
 
 Review 457 accepts Record 456's full-file hash and row-count evidence but rejects its claim of a
 complete audit. The temporary verifier did not inspect actual Parquet schemas, gap rows or their
