@@ -7,6 +7,19 @@ Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
+Review 465 accepts integration commit `d2753e7e5996fbe1acc2825d3399c5f64d529573`, publication
+commit `1567d14403cd0ecb0e1b89b358f2ad43b550e730`, and the real
+`binance_usdm_perpetual_membership` product. Completion identity
+`01d054b34c3a92cc349f9484296031e8cbb67ae7e62eb0a8b38c6d3928d977a3` binds 771 rows and
+lineages, split 698 detailed plus 73 funding-only, from 1,008 classifications minus 237 exclusions.
+All content-address checks passed, staging is empty, and the completion is sole.
+
+Review 465 supersedes Record 464's one-character CLI-hash typo with the correct accepted hash
+`cd762f2b673bc2beca322da61a8ae6358d51f99cfe819ebf6313f330414140bd`. It also clarifies that
+Hermes reported the outcome and the reviewer exclusively accepts this fourth product. Gate 3 and
+CEX-002 remain `IN_PROGRESS`; both actor fields remain with the reviewer; next ticket remains
+`NONE`. No rerun, next product, catalog, experiment, model, or Harmonic Trader work is authorized.
+
 Record 464 states the Review-463 integration and real-run outcome. Hermes reproved `HEAD == origin/main == 98909b60a4880bc83f6a895fd8614b631779064a` and all three accepted hashes/line counts. The three ordered integration commands passed (pytest 27/27, ruff clean, check_repo_control.py PASS). Hermes integrated the three paths at commit `d2753e7e5996fbe1acc2825d3399c5f64d529573` and pushed; `HEAD == origin/main == d2753e7e5996fbe1acc2825d3399c5f64d529573`. Preproof: output root absent, 568,390,352,896 available bytes (above 110,648,021,942 floor). Hermes ran exactly one foreground command and remained attached until terminal.
 
 The command exited 0 at ~5 seconds. Completion SHA-256 `01d054b34c3a92cc349f9484296031e8cbb67ae7e62eb0a8b38c6d3928d977a3`, schema SHA-256 `35c7101271c80c3c6faa222b57e5ff7a48930a470aebbc2cf330dee43c39fafb`, 771 membership rows (698 detailed + 73 funding-only), 1008 classifications − 237 excluded = 771, 771 partitions + 771 lineages, all content-addressed, staging empty, sole completion. Post-run available bytes: 568,289,509,376.
