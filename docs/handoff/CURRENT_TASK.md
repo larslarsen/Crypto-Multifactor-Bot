@@ -3,9 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Grok Build on Grok 4.6 High
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 470 accepts Hermes's Record-469 stop. The first 64 focused cases passed; the last case failed
+because its own first two setup calls had already created the sidecar it later claimed was missing.
+This is a test-fixture defect, not a production or data defect. No integration or real run occurred,
+and the output root remains absent.
+
+Grok 4.6 High may change only the funding test path: unlink and prove absence of that exact fixture
+sidecar immediately before the existing missing-file assertion, then run the one targeted pytest
+command once. Production and CLI hashes are frozen; no other path or activity is authorized. Hermes
+remains unauthorized pending reviewer inspection. Gate 3 and CEX-002 remain `IN_PROGRESS`; next
+ticket remains `NONE`.
 
 Review 468 accepts the corrected realized-funding production, CLI, and test-source drop at its
 three exact hashes for Hermes integration and one real local conversion. Review 467's two defects
