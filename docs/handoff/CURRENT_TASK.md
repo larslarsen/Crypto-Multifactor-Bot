@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -115,6 +115,39 @@ temporary untracked verifier, and publish Record 459 plus the matching control f
 test, production code, data change, download, retry, cleanup, catalog, experiment, model, Harmonic
 Trader, other-product, or next-ticket work is authorized. Gate 2 remains accepted; Gate 3 and
 CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
+
+## Record 469 — Funding Integration Stopped at pytest
+
+Hermes executed Review 468's exact ordered integration workflow. All preproof checks passed:
+`HEAD == origin/main == 93636067a7ab4aabcbc5d9708654c75cd4012718`, all three accepted hashes and line counts
+reproved exactly (source `4e38658f…` 1,404 lines, CLI `05e30c87…` 50 lines, test `f7cdb6c4…` 905 lines).
+
+The first ordered command
+`PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_funding_realized.py -q --tb=short`
+exited 1. Exact terminal evidence:
+
+```
+................................................................F.       [100%]
+=================================== FAILURES ===================================
+________________ test_missing_or_nonpositive_sidecar_bytes_fail ________________
+tests/ingest/test_binance_usdm_funding_realized.py:887: in test_missing_or_nonpositive_sidecar_bytes_fail
+    with pytest.raises(funding.FundingNormalizationError, match="reachable|missing"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE FundingNormalizationError
+=========================== short test summary info ============================
+FAILED tests/ingest/test_binance_usdm_funding_realized.py::test_missing_or_nonpositive_sidecar_bytes_fail
+```
+
+The test `test_missing_or_nonpositive_sidecar_bytes_fail` at `tests/ingest/test_binance_usdm_funding_realized.py:887`
+expects `_authenticate` to raise `FundingNormalizationError` matching `reachable|missing` when called with
+`write=False` (sidecar file absent from disk). It did not raise.
+
+Per Review 468, Hermes stops on the first nonzero result. The second (ruff) and third (check_repo_control.py)
+commands were NOT executed. No integration commit, push, staging, or real run occurred. The three developer
+paths remain untracked and untouched. No data was downloaded or mutated. No partial artifacts exist.
+
+Record 469 is published. Both actor fields return to the Lead Quantitative Finance Researcher/Engineer for
+disposition of the pytest failure. Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 ## Record 459 — Corrected Full Kline Audit Record
 
