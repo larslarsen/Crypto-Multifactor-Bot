@@ -3,9 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 449 accepts Record 448's exact integration and partial-output facts. The command reached
+6,787 of 22,633 partitions per product before the Hermes execution mechanism imposed its
+600-second limit. Both roots have matching Parquet/lineage counts, empty staging, no gap artifact,
+and no completion descriptor. No process remains; generation 0 is unchanged; nothing downloaded.
+
+Hermes is authorized only for Review 449's exact preproof and one identical unified foreground
+resume with a 3,600-second execution allowance, followed by terminal Record 450. A 600-second-capped
+mechanism must stop before launch. There is no wrapper, detach, PID polling loop, retry, cleanup,
+test, code edit, other product, catalog, experiment, or model work. Gate 2 remains accepted; Gate 3
+and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 ## Record 448 — Hourly Kline Integration and Real Run Record
 
@@ -202,6 +213,8 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/449_CEX002_RECORD448_ACCEPTANCE_AND_HOURLY_KLINE_RESUME.md`
+- `research/sprint_004/448_CEX002_HOURLY_KLINE_INTEGRATION_AND_REAL_RUN_RECORD.md`
 - `research/sprint_004/447_CEX002_HOURLY_KLINE_SOURCE_ACCEPTANCE_AND_REAL_RUN.md`
 - `research/sprint_004/446_CEX002_HOURLY_KLINE_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md`
 - `research/sprint_004/445_CEX002_OPEN_INTEREST_PRODUCT_ACCEPTANCE.md`
