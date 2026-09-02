@@ -3,28 +3,45 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 441 delegates the terminal watch to Jr Dev — Hermes at the owner's explicit request. The
-paid reviewer has stopped manual polling, and Sol is not used. Hermes performs one persistent
-read-only continuation against the exact existing Review-437 process and does not return while it
-is live. No launch, retry, signal, cleanup, patch, test, acquisition, or second runner is
-authorized. At terminal Hermes reconciles success or records complete failure evidence and
-publishes record 442, returning both actor fields to the reviewer.
+Record 442 states the Review-437 success reconciliation. The sole runner
+`/tmp/cex002_oi_437_XAHLxl` (shell PID 1088968, Python PID 1089049) reached
+terminal state with a completion descriptor at 2026-09-01 17:48:46Z. The
+descriptor SHA-256 matches its file content. The row equation
+160,226,578 − 75,255 − 2,818 = 160,148,505 is verified. All 19,744 parquet
+SHA-256 hashes and all 19,744 lineage SHA-256 hashes match the descriptor. The
+quality-gap lineage and parquet SHA-256 hashes match. The one typed gap is the
+HBARUSDC 2026-07-09 provider checksum conflict. Staging is empty. Both actor
+fields return to the reviewer. Gate 2 remains accepted; CEX-002 and Gate 3
+remain IN_PROGRESS. No other product, bundle, catalog transaction,
+NautilusTrader check, experiment, backtest, model, trading engine, or next
+ticket is authorized.
 
-Review 440 accepts Hermes's Review-439 preflight stop and supersedes the cross-namespace process
-diagnosis. Hermes created no Review-439 directory and launched no second process. Within Hermes's
-execution environment, the exact Review-437 shell/Python identities remained live. After Hermes
-returned, complete Parquet/lineage pairs independently increased from 1,973 to 2,017 in 20 seconds,
-with empty staging and no descriptor. The sole Review-437 conversion is therefore alive outside
-the reviewer's PID namespace and making durable progress.
+Record 441 delegates the terminal watch to Jr Dev — Hermes at the owner's
+explicit request. The paid reviewer has stopped manual polling, and Sol is not
+used. Hermes performs one persistent read-only continuation against the exact
+existing Review-437 process and does not return while it is live. No launch,
+retry, signal, cleanup, patch, test, acquisition, or second runner is
+authorized. At terminal Hermes reconciles success or records complete failure
+evidence and publishes record 442, returning both actor fields to the reviewer.
 
-No launch, retry, replacement, signal, cleanup, patch, test, or acquisition is authorized. The
-reviewer monitors only read-only shared-output facts. At apparent terminal state, one Hermes
-continuation inspects the exact Review-437 runner, reconciles success or records failure, and
-publishes terminal record 441. Gate 2 remains accepted; CEX-002 and Gate 3 remain `IN_PROGRESS`.
+Review 440 accepts Hermes's Review-439 preflight stop and supersedes the
+cross-namespace process diagnosis. Hermes created no Review-439 directory and
+launched no second process. Within Hermes's execution environment, the exact
+Review-437 shell/Python identities remained live. After Hermes returned,
+complete Parquet/lineage pairs independently increased from 1,973 to 2,017 in
+20 seconds, with empty staging and no descriptor. The sole Review-437 conversion
+is therefore alive outside the reviewer's PID namespace and making durable
+progress.
+
+No launch, retry, replacement, signal, cleanup, patch, test, or acquisition is
+authorized. The reviewer monitors only read-only shared-output facts. At
+apparent terminal state, one Hermes continuation inspects the exact Review-437
+runner, reconciles success or records failure, and publishes terminal record
+441. Gate 2 remains accepted; CEX-002 and Gate 3 remain `IN_PROGRESS`.
 
 Review 439 accepts record 438 at publication commit `e5016ef1cf6a0a6ffd8d1fae2641eee8a00515eb`
 and the integrated native-timestamp correction at `4a65179e6cd0938a86a556eb0c7f755ab3e283be`.
@@ -145,6 +162,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/442_CEX002_OPEN_INTEREST_TERMINAL_RECORD.md`
 - `research/sprint_004/441_CEX002_HERMES_TERMINAL_WATCH_AUTHORIZATION.md`
 - `research/sprint_004/440_CEX002_REVIEW439_PREFLIGHT_ACCEPTANCE_AND_EXISTING_RUN_MONITORING.md`
 - `research/sprint_004/439_CEX002_RECORD438_ACCEPTANCE_AND_EXACT_OUTER_DETACHED_RESUME.md`
@@ -156,6 +174,41 @@ Governing documents:
 - `research/sprint_004/433_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
 - `research/sprint_004/432_CEX002_RECORD431_ACCEPTANCE_AND_ABSOLUTE_PATH_RESUME.md`
 - `research/sprint_004/431_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
+- `research/sprint_004/430_CEX002_MIDNIGHT_SPILLOVER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
+- `research/sprint_004/429_CEX002_RECORD428_ACCEPTANCE_AND_MIDNIGHT_SPILLOVER_CORRECTION.md`
+- `research/sprint_004/428_CEX002_OPEN_INTEREST_RESUME_RECORD.md`
+- `research/sprint_004/427_CEX002_DAILY_ORDER_CORRECTION_ACCEPTANCE_AND_RESUME.md`
+- `research/sprint_004/426_CEX002_RECORD425_ACCEPTANCE_AND_DAILY_ROW_ORDER_CORRECTION.md`
+- `research/sprint_004/425_CEX002_OPEN_INTEREST_REAL_RUN_RECORD.md`
+- `research/sprint_004/424_CEX002_RETAINED_CREDIT_CORRECTION_ACCEPTANCE_AND_REAL_RUN.md`
+- `research/sprint_004/423_CEX002_RECORD422_REVIEW_AND_RETAINED_CREDIT_CORRECTION.md`
+- `research/sprint_004/422_CEX002_OPEN_INTEREST_INTEGRATION_AND_REAL_RUN_RECORD.md`
+- `research/sprint_004/421_CEX002_LINT_CORRECTION_ACCEPTANCE_AND_REAL_RUN_REAUTHORIZATION.md`
+- `research/sprint_004/420_CEX002_REVIEW419_LINT_STOP_AND_FUNCTION_SCOPED_CORRECTION.md`
+- `research/sprint_004/419_CEX002_RECORD418_ACCEPTANCE_AND_ONE_LINE_LINT_CORRECTION.md`
+- `research/sprint_004/418_CEX002_OPEN_INTEREST_INTEGRATION_LINT_STOP_RECORD.md`
+- `research/sprint_004/417_CEX002_OPEN_INTEREST_SOURCE_ACCEPTANCE_INTEGRATION_AND_REAL_RUN.md`
+- `research/sprint_004/416_CEX002_OPEN_INTEREST_SOURCE_STATIC_REJECTION_AND_CORRECTION.md`
+- `research/sprint_004/415_CEX002_RECORD414_ACCEPTANCE_GATE2_AND_OPEN_INTEREST_AUTHORIZATION.md`
+- `research/sprint_004/414_CEX002_DIRECT_RECOVERY_TERMINAL_BLOCKER_RECORD.md`
+- `research/sprint_004/413_CEX002_RECORD412_ACCEPTANCE_AND_DIRECT_RECOVERY_AUTHORIZATION.md`
+- `docs/adr/0034-direct-pending-raw-recovery.md`
+- `docs/adr/0033-aggregate-prefix-reachability-and-v3-candidate.md`
+- `docs/adr/0031-post-plan-revision-authority-and-bounded-zip-validation.md`
+- `docs/adr/0030-exact-retained-credit-and-pre-network-plan-retirement.md`
+- `docs/adr/0029-content-addressed-gate2-acquisition-and-resume.md`
+- `docs/adr/0028-immutable-sizing-basis-and-renewable-capacity-attestation.md`
+- `docs/adr/0027-partition-aware-dictionary-storage-sizing.md`
+- `docs/adr/0025-complete-product-sizing-and-fee-authority.md`
+- `docs/adr/0024-typed-normalization-and-partition-atomic-publication.md`
+- `docs/adr/0023-retained-credit-separate-from-manifest-consumability.md`
+- `docs/adr/0022-path-bound-retained-checksum-recovery.md`
+- `docs/adr/0021-bounded-real-sample-storage-sizing.md`
+- `docs/adr/0020-historical-contract-authority-and-qualification-budget.md`
+- `docs/adr/0019-scalable-qualification-evidence-publication.md`
+- `docs/adr/0018-resumable-bounded-listing-execution.md`
+- `docs/adr/0017-free-harmonic-ready-binance-derivatives-data.md`
+- `tickets/CEX-002.md`
 
 Review 429 accepts record 428 and identifies the exact first failing source row. The accepted
 generation-0 0GUSDT metrics object for 2026-05-03 contains 287 owned points from 00:05 through
@@ -225,8 +278,3 @@ Governing documents:
 - `research/sprint_004/415_CEX002_RECORD414_ACCEPTANCE_GATE2_AND_OPEN_INTEREST_AUTHORIZATION.md`
 - `research/sprint_004/414_CEX002_DIRECT_RECOVERY_TERMINAL_BLOCKER_RECORD.md`
 - `research/sprint_004/413_CEX002_RECORD412_ACCEPTANCE_AND_DIRECT_RECOVERY_AUTHORIZATION.md`
-- `docs/adr/0034-direct-pending-raw-recovery.md`
-- `docs/adr/0033-aggregate-prefix-reachability-and-v3-candidate.md`
-- `docs/adr/0031-post-plan-revision-authority-and-bounded-zip-validation.md`
-- `docs/adr/0030-exact-retained-credit-and-pre-network-plan-retirement.md`
-- `tickets/CEX-002.md`
