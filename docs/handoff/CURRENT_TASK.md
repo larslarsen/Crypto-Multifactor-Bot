@@ -3,9 +3,23 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Codex Sol on GPT-5.6-sol High
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 461 records the current release-capacity shortfall and authorizes the smallest remaining
+Gate-3 source drop: `binance_usdm_perpetual_membership`. Three products are accepted; Gate 2 is
+complete and no further download is required. The frozen remaining normalized allocation is
+69,844,584,521 bytes, while the full remaining capacity envelope including bundle, temporary work,
+and reserve is 110,648,021,942 bytes against 14,583,615,488 bytes presently free. Large-product
+execution remains blocked; no cleanup or storage change is authorized.
+
+Sol High may author exactly the membership production, CLI, and test paths named in Review 461 and
+run the one enumerated targeted test once. The drop must publish exactly 771 accepted identities
+(698 detailed plus 73 funding-only) from the pinned qualification and contract-metadata authority,
+using the frozen typed schema, fail-closed evidence rules, hidden content-addressed publication,
+and no-clobber deterministic replay. No real-data run, integration, Git, data mutation, cleanup,
+other product, catalog, experiment, model, Harmonic Trader, or next-ticket work is authorized.
 
 Review 460 accepts Record 459 and the two completed hourly products. Every one of the 22,633
 descriptor-referenced partitions per product passed full hash, actual-schema, row-count,
