@@ -3,21 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Codex Sol, High
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 445 accepts corrected Records 442/444 and the completed
-`binance_usdm_open_interest_5m` product as a real Gate-3 component. The accepted product contains
-160,148,505 rows in 19,744 descriptor-verified Parquet partitions with matching lineage, exact
-duplicate/spillover reconciliation, 57,441 quality-gap rows, and the explicit HBARUSDC provider
-checksum conflict. All 181 pre-existing pairs are preserved and digest-valid. Record 444 was
-authored by Jr Dev — Hermes; its reviewer actor label is superseded as a clerical error.
+Review 446 proves that the 35,642 selected hourly kline ZIPs are already complete in accepted
+generation 0 and freezes the one-pass, two-separate-product conversion contract. The clean corpus
+contains 16,033,509 rows in 22,633 native-symbol/month partitions. It has zero corrupt rows,
+duplicates, overlaps, or exclusions and 114 honest missing-hour runs totaling 8,003 hours. No
+redownload is needed.
 
-Gate 3 as a whole remains `IN_PROGRESS` because the other required products and later gates are
-not accepted here. No next product, code, data command, acquisition, catalog transaction,
-NautilusTrader check, experiment, model, trading-engine work, or next ticket is authorized. The
-next required actor remains the reviewer and next ticket remains `NONE`.
+Sr Dev — Codex Sol using High reasoning is authorized only for Review 446's exact three-path
+hourly-kline production/CLI/test drop and one enumerated targeted pytest command. Sol performs no
+real-data run, integration, Git, repository records, acquisition, network, catalog, experiment,
+model, or Harmonic Trader work and stops for reviewer inspection. Hermes remains unauthorized.
+Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 ## Record 444 — Open Interest Terminal Evidence Correction
 
@@ -191,6 +191,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/446_CEX002_HOURLY_KLINE_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md`
 - `research/sprint_004/445_CEX002_OPEN_INTEREST_PRODUCT_ACCEPTANCE.md`
 - `research/sprint_004/444_CEX002_OPEN_INTEREST_TERMINAL_EVIDENCE_CORRECTION.md`
 - `research/sprint_004/443_CEX002_RECORD442_REVIEW_AND_EVIDENCE_CORRECTION.md`
