@@ -3,9 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 443 rejects Record 442 as written but identifies no completed-data defect. Record 442
+mislabeled descriptor mtime `2026-09-01 17:48:46 -0700` as UTC; the correct value is
+`2026-09-02T00:48:46.152177890Z`, giving about 3 hours 22 minutes 26 seconds after the recorded
+start, not about 65 minutes. It also omitted Review 437's explicit per-lineage
+duplicate/spillover reconciliation and preservation proof for all 181 pre-existing artifact pairs.
+Record 442 also left the ticket actor at Hermes while CURRENT_TASK claimed both fields returned to
+the reviewer.
+
+Hermes is authorized only for the read-only evidence correction in Review 443 and publication of
+record 444. No data, source, test, descriptor, runner, acquisition, replay, cleanup, other product,
+experiment, model, trading-engine work, or next ticket is authorized. Gate 2 remains accepted;
+CEX-002 and Gate 3 remain `IN_PROGRESS`.
 
 Record 442 states the Review-437 success reconciliation. The sole runner
 `/tmp/cex002_oi_437_XAHLxl` (shell PID 1088968, Python PID 1089049) reached
@@ -162,6 +175,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/443_CEX002_RECORD442_REVIEW_AND_EVIDENCE_CORRECTION.md`
 - `research/sprint_004/442_CEX002_OPEN_INTEREST_TERMINAL_RECORD.md`
 - `research/sprint_004/441_CEX002_HERMES_TERMINAL_WATCH_AUTHORIZATION.md`
 - `research/sprint_004/440_CEX002_REVIEW439_PREFLIGHT_ACCEPTANCE_AND_EXISTING_RUN_MONITORING.md`
