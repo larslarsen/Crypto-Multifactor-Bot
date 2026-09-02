@@ -3,9 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Grok Build on Grok 4.6 High
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 466 accepts ADR-0036 and authorizes one bounded Grok 4.6 High production/CLI/test-source
+drop for `binance_usdm_funding_realized`. The 21,035 authenticated monthly funding ZIPs totaling
+21,351,804 bytes are already present; no download is authorized or required. Each source row is an
+observed settlement event. Its exact timestamp, declared positive interval, and exact rate are
+preserved; no hourly expansion, gap filling, rescaling, annualization, or invented zero is allowed.
+
+Grok may author only the three new paths enumerated in Review 466 and run the one targeted pytest
+command once. It performs no real-data run, integration, Git, records, data mutation, acquisition,
+network, cleanup, catalog, experiment, model, or Harmonic Trader work and stops for reviewer static
+inspection. Hermes remains unauthorized. Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket
+remains `NONE`.
 
 Review 465 accepts integration commit `d2753e7e5996fbe1acc2825d3399c5f64d529573`, publication
 commit `1567d14403cd0ecb0e1b89b358f2ad43b550e730`, and the real
