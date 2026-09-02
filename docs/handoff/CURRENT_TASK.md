@@ -3,9 +3,13 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
+
+## Record 444 — Open Interest Terminal Evidence Correction
+
+Hermes executed the Review 443 read-only evidence correction and published record 444. The corrected timestamp and runtime are: exact local mtime `2026-09-01 17:48:46.152177890 -0700`, exact UTC conversion `2026-09-02T00:48:46.152177890Z`, recorded start `2026-09-01T21:26:20Z`, correct elapsed wall time approximately 3 hours 22 minutes 26 seconds. The precise absence of terminal status is distinguished from descriptor publication plus absent process identities. The lineage aggregate proof confirms collapsed_identical_source_rows = 75,255 and excluded_source_rows = 2,818 across all 19,744 descriptor-referenced lineage documents. All 181 pre-existing partition/lineage pairs are verified: each path remains descriptor-referenced and each current content digest equals its content-addressed filename, with aggregate digest `c88a346d3118b54006217ba1dcf422ad0f836b6ab18ddf4de1d11fff8665f57b`. Both actor fields return to the reviewer. Gate 2 remains accepted; CEX-002 and Gate 3 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Review 443 rejects Record 442 as written but identifies no completed-data defect. Record 442
 mislabeled descriptor mtime `2026-09-01 17:48:46 -0700` as UTC; the correct value is
