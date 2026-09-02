@@ -7,6 +7,19 @@ Next required actor: Sr Dev - Codex Sol on GPT-5.6-sol High
 Next ticket: NONE
 Next ticket authorized: NONE
 
+Review 462 closes the capacity blocker after the owner's cleanup: 568,669,851,648 bytes are now
+available, above the frozen 110,648,021,942-byte remaining release requirement. No storage
+architecture change or agent cleanup is required.
+
+Static review rejects the unintegrated membership drop because it equates the whole exchange-info
+response digest with the distinct per-contract snapshot digest. The first real accepted identity
+already proves those two legitimate hashes differ, so production would fail before publishing its
+first detailed row. Sol High is authorized only to remove that false equality while retaining both
+independent validations and to replace the corresponding test with distinct-hash preservation plus
+missing/malformed refusal. Exactly the production and test paths may change; one targeted pytest
+command is authorized once. No real-data run, integration, Git, data mutation, other product,
+catalog, experiment, model, Harmonic Trader, or next-ticket work is authorized.
+
 Review 461 records the current release-capacity shortfall and authorizes the smallest remaining
 Gate-3 source drop: `binance_usdm_perpetual_membership`. Three products are accepted; Gate 2 is
 complete and no further download is required. The frozen remaining normalized allocation is
