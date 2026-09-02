@@ -3,9 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Grok Build on Grok 4.6 High
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 468 accepts the corrected realized-funding production, CLI, and test-source drop at its
+three exact hashes for Hermes integration and one real local conversion. Review 467's two defects
+are closed: summary ranges are accumulated without retaining all product rows, and every selected
+checksum sidecar plus top-level plan identity is physically authenticated before parsing. The CLI
+is unchanged. No Grok test output was relayed, so Hermes must run the accepted focused suite, Ruff,
+and repository control before integration.
+
+After exact three-path commit/push and capacity/absent-root preproof, Hermes runs the funding
+normalizer once in the foreground with at least a 3,600-second mechanism allowance. It downloads
+nothing and reads the accepted generation-0 authority without mutation. Success or failure is
+published as Record 469 with full descriptor reconciliation; there is no retry or second launch.
+Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Review 467 rejects the first Grok realized-funding drop before integration or real-data execution.
 The source retains every normalized event dictionary across all 21,035 partitions solely for final
