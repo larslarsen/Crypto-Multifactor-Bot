@@ -3,9 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, High
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 458 accepts Sol's corrected temporary verifier at SHA-256 `0bfae90a2...`, 730 lines. Static
+inspection confirms it now performs the actual per-Parquet schema, bounded gap-row, exact
+gap/lineage equality, canonical contained-path, process, and fail-first checks missing from Record
+456. Sol did not execute it or touch any other path.
+
+Hermes is authorized only to reprove and execute that temporary read-only verifier exactly once
+with bytecode writes disabled, obtain one exact post-audit capacity observation, remove exactly the
+temporary untracked verifier, and publish Record 459 plus the matching control files. No normalizer,
+test, production code, data change, download, retry, cleanup, catalog, experiment, model, Harmonic
+Trader, other-product, or next-ticket work is authorized. Gate 2 remains accepted; Gate 3 and
+CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 Review 457 accepts Record 456's full-file hash and row-count evidence but rejects its claim of a
 complete audit. The temporary verifier did not inspect actual Parquet schemas, gap rows or their
