@@ -7,6 +7,18 @@ Next required actor: Sr Dev - Grok Build on Grok 4.6 High
 Next ticket: NONE
 Next ticket authorized: NONE
 
+Review 467 rejects the first Grok realized-funding drop before integration or real-data execution.
+The source retains every normalized event dictionary across all 21,035 partitions solely for final
+summary statistics, violating bounded partition publication and risking a late memory failure. Its
+generation-0 loader also omits the required top-level plan-envelope and complete checksum-sidecar
+path/hash/size/content proof. No test result was relayed or accepted; static rejection is decisive.
+
+Grok 4.6 High may correct only the existing production and test paths, replacing whole-corpus row
+retention with incremental deterministic statistics and adding complete no-follow sidecar/plan
+binding plus focused tests. The CLI and every other path are frozen. One targeted pytest command is
+authorized once; on nonzero Grok stops without patch or rerun. Hermes remains unauthorized. Gate 3
+and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
+
 Review 466 accepts ADR-0036 and authorizes one bounded Grok 4.6 High production/CLI/test-source
 drop for `binance_usdm_funding_realized`. The 21,035 authenticated monthly funding ZIPs totaling
 21,351,804 bytes are already present; no download is authorized or required. Each source row is an
