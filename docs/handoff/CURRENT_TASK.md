@@ -3,9 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, High
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 453 accepts the corrected ADR-0035 source/test drop at exact source SHA-256 `cfefdd2694...`
+and test SHA-256 `ee42242d2...`; the unchanged CLI remains `f1a4df5065...`. Sol changed only the
+authorized test token and its sole focused command passed all 54 cases.
+
+Hermes is authorized only to reprove the exact drop and preserved 20,335-partition-per-product
+resume state, run the three enumerated focused checks, integrate/commit/push exactly the source and
+test, and execute one foreground corrected resume with a 3,600-second allowance. It then publishes
+terminal Record 454 and returns both actor fields to the reviewer. There is no new code, download,
+wrapper, detach, polling loop, retry, cleanup, catalog, experiment, model, Harmonic Trader, other
+product, or next-ticket work. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`;
+next ticket remains `NONE`.
 
 Review 452 accepts Sol's ADR-0035 production correction at source SHA-256 `cfefdd2694...`.
 The exact arithmetic, product-scoped exclusions, typed gaps, raw lineage, corrected equations,
