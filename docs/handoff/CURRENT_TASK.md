@@ -3,22 +3,15 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 463 accepts the corrected membership source/test/CLI drop at the exact hashes and line counts
-listed in that review. Sol's one targeted test passed all 27 cases. The false digest equality is
-removed while both independent identities remain strictly validated; the frozen membership
-semantics, schema, lineage, no-clobber publication, completion-last visibility, and replay boundary
-pass static inspection.
+Record 464 states the Review-463 integration and real-run outcome. Hermes reproved `HEAD == origin/main == 98909b60a4880bc83f6a895fd8614b631779064a` and all three accepted hashes/line counts. The three ordered integration commands passed (pytest 27/27, ruff clean, check_repo_control.py PASS). Hermes integrated the three paths at commit `d2753e7e5996fbe1acc2825d3399c5f64d529573` and pushed; `HEAD == origin/main == d2753e7e5996fbe1acc2825d3399c5f64d529573`. Preproof: output root absent, 568,390,352,896 available bytes (above 110,648,021,942 floor). Hermes ran exactly one foreground command and remained attached until terminal.
 
-Hermes is authorized only for Review 463's exact integration checks, exact three-path source commit
-and push, capacity/root preproof, one foreground real membership command, terminal inventory, and
-Record 464 publication. No patch, retry, replay, wrapper, detach, polling loop, acquisition,
-cleanup, other product, catalog, experiment, model, Harmonic Trader, or next-ticket work is
-authorized. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains
-`NONE`.
+The command exited 0 at ~5 seconds. Completion SHA-256 `01d054b34c3a92cc349f9484296031e8cbb67ae7e62eb0a8b38c6d3928d977a3`, schema SHA-256 `35c7101271c80c3c6faa222b57e5ff7a48930a470aebbc2cf330dee43c39fafb`, 771 membership rows (698 detailed + 73 funding-only), 1008 classifications − 237 excluded = 771, 771 partitions + 771 lineages, all content-addressed, staging empty, sole completion. Post-run available bytes: 568,289,509,376.
+
+Record 464 is published. Both actor fields return to the Lead Quantitative Finance Researcher/Engineer. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, wrapper, detach, polling loop, cleanup, second invocation, source correction, other product, catalog transaction, NautilusTrader work, experiment, model, Harmonic Trader repository work, PAPER, LIVE, or next-ticket work is authorized.
 
 Review 462 closes the capacity blocker after the owner's cleanup: 568,669,851,648 bytes are now
 available, above the frozen 110,648,021,942-byte remaining release requirement. No storage
