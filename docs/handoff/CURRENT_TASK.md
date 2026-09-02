@@ -3,9 +3,19 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 473 accepts the realized-funding product. The single local run completed in about 6 minutes
+46 seconds and produced 2,683,024 observed funding events across 21,035 partitions. Hermes's tests,
+lint, and repository control passed. The reviewer independently reproved every partition and
+lineage hash, the completion hash, file counts, and row totals.
+
+This is the fifth of eleven accepted Gate-3 products. Record 472's stale actor headers and its
+two-byte abbreviated capacity typo are corrected; neither affected code or data. Control returns to
+the reviewer. CEX-002 remains `IN_PROGRESS`; no next product, experiment, model, Harmonic Trader
+work, or next ticket is authorized yet.
 
 Review 471 accepts Grok's exact two-line test-fixture correction. The test now removes and proves
 absence of the sidecar that its earlier cases created; production and CLI remain byte-identical.
@@ -145,7 +155,7 @@ counts reproved exactly (source `4e38658f…` 1,404 lines, CLI `05e30c87…` 50 
 
 The three ordered checks passed: pytest 66/66 exit 0, ruff All checks passed, check_repo_control.py PASS.
 Hermes integrated the three paths at commit `e8a4443852606786d3f14ab533bbf671786c4c5e` and pushed;
-`HEAD == origin/main == e8a4443852606786d3f14ab533bbf671786c4c5e`. Preproof: output root absent, 556,026,527,742
+`HEAD == origin/main == e8a4443852606786d3f14ab533bbf671786c4c5e`. Preproof: output root absent, 556,026,527,744
 available bytes (above 110,648,021,942 floor), no live funding normalizer.
 
 Hermes ran exactly one foreground command and remained attached to the unified execution session until
