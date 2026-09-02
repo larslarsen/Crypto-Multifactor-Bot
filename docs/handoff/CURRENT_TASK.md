@@ -18,6 +18,14 @@ mechanism must stop before launch. There is no wrapper, detach, PID polling loop
 test, code edit, other product, catalog, experiment, or model work. Gate 2 remains accepted; Gate 3
 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
+## Record 450 — Hourly Kline Resume Record
+
+Hermes executed Review 449's exact ordered workflow. All preproof checks passed: HEAD == origin/main (0c90866), both integrated hashes at exact line counts, 6,787 Parquets + 6,787 lineages per product, empty staging, no completion/gap artifacts, no running normalizer, available bytes above floor. Hermes ran exactly one identical foreground command and remained attached to the unified execution session until terminal.
+
+The command exited 1 at ~1,500 seconds with `KlineNormalizationError: taker-buy base volume exceeds total` at `src/cryptofactors/ingest/binance_usdm_klines.py:656` in `_parse_kline_row`. The process was absent from `ps aux` at observation. Partial artifacts preserved untouched: 20,335 bar partitions + 20,335 bar lineages, 20,335 trade-flow partitions + 20,335 trade-flow lineages, both `.staging/` directories empty, no completion descriptors, no gap artifacts. Output byte totals: bar 919,836,209, trade-flow 1,435,638,751. Available bytes at observation: 37,658,760. The accepted generation-0 authority was not altered; nothing was downloaded.
+
+Record 450 is published. Both actor fields return to the reviewer. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, wrapper, detach, polling loop, cleanup, second invocation, source correction, other product, catalog transaction, NautilusTrader work, experiment, model, Harmonic Trader repository work, PAPER, LIVE, or next-ticket work is authorized.
+
 ## Record 448 — Hourly Kline Integration and Real Run Record
 
 Hermes executed Review 447's exact ordered workflow. The three accepted paths were reproved at
