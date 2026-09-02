@@ -3,9 +3,29 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Sr Dev — Codex Sol, High
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 451 accepts Record 450's terminal run facts, corrects its mislabeled `df` capacity units,
+and supersedes Review 446's false zero-corrupt-row conclusion. A complete read-only scan of all
+16,033,509 hourly kline rows found 40 rows with invalid total-volume pairs, 29 with invalid
+taker-buy pairs, and 67 unique affected rows. The defects span 43 symbols and five exact UTC hours;
+the official daily package checked for the stopping UNFIUSDT row contains the same corruption.
+Nothing was downloaded into the repository or accepted store.
+
+ADR-0035 preserves the non-null product schemas and applies product-scoped validity. The bar
+product excludes only the 40 rows whose required total volume is inconsistent, yielding
+16,033,469 rows, 154 gap rows, and 8,043 unavailable hours. Trade flow excludes all 67, yielding
+16,033,442 rows, 181 gap rows, and 8,070 unavailable hours. Every exclusion is an explicit typed
+one-hour gap with raw lineage; no value is repaired or guessed. Existing hidden artifacts remain
+untouched and unaccepted.
+
+Sol High is authorized only for Review 451's exact two-path normalizer/test correction and one
+enumerated targeted pytest command. No real-data run, integration, Git, acquisition, redownload,
+cleanup, catalog, NautilusTrader, experiment, model, Harmonic Trader repository, other-product, or
+next-ticket work is authorized. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`;
+next ticket remains `NONE`.
 
 Review 449 accepts Record 448's exact integration and partial-output facts. The command reached
 6,787 of 22,633 partitions per product before the Hermes execution mechanism imposed its
@@ -221,6 +241,8 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/451_CEX002_RECORD450_REVIEW_AND_KLINE_QUALITY_CORRECTION.md`
+- `docs/adr/0035-product-scoped-provider-inconsistent-kline-exclusions.md`
 - `research/sprint_004/449_CEX002_RECORD448_ACCEPTANCE_AND_HOURLY_KLINE_RESUME.md`
 - `research/sprint_004/448_CEX002_HOURLY_KLINE_INTEGRATION_AND_REAL_RUN_RECORD.md`
 - `research/sprint_004/447_CEX002_HOURLY_KLINE_SOURCE_ACCEPTANCE_AND_REAL_RUN.md`
