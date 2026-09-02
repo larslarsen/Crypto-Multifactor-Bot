@@ -3,21 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, High
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 446 proves that the 35,642 selected hourly kline ZIPs are already complete in accepted
-generation 0 and freezes the one-pass, two-separate-product conversion contract. The clean corpus
-contains 16,033,509 rows in 22,633 native-symbol/month partitions. It has zero corrupt rows,
-duplicates, overlaps, or exclusions and 114 honest missing-hour runs totaling 8,003 hours. No
-redownload is needed.
+Review 447 accepts Sol's exact three-path hourly-kline source/test drop. The targeted suite passed
+all 43 cases. Static review confirms exact generation-0 authentication, one-pass dual-product
+typing, flow derivations, gap detection, separate hidden roots, lineage, content-addressed atomic
+publication, deterministic replay, and full-corpus completion equations.
 
-Sr Dev — Codex Sol using High reasoning is authorized only for Review 446's exact three-path
-hourly-kline production/CLI/test drop and one enumerated targeted pytest command. Sol performs no
-real-data run, integration, Git, repository records, acquisition, network, catalog, experiment,
-model, or Harmonic Trader work and stops for reviewer inspection. Hermes remains unauthorized.
-Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Jr Dev — Hermes is authorized only for Review 447's exact integration checks, three-path commit and
+push, capacity/destination preproof, one attached local conversion, and terminal record 448. The
+conversion downloads nothing. There is no wrapper, detach, polling loop, retry, cleanup, second
+invocation, other product, catalog, experiment, model, or Harmonic Trader work. Gate 2 remains
+accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
 ## Record 444 — Open Interest Terminal Evidence Correction
 
@@ -191,6 +190,7 @@ reproduction is authorized.
 
 Governing documents:
 
+- `research/sprint_004/447_CEX002_HOURLY_KLINE_SOURCE_ACCEPTANCE_AND_REAL_RUN.md`
 - `research/sprint_004/446_CEX002_HOURLY_KLINE_ARCHITECTURE_AND_SOURCE_AUTHORIZATION.md`
 - `research/sprint_004/445_CEX002_OPEN_INTEREST_PRODUCT_ACCEPTANCE.md`
 - `research/sprint_004/444_CEX002_OPEN_INTEREST_TERMINAL_EVIDENCE_CORRECTION.md`
