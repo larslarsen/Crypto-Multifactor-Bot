@@ -3,9 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Sr Dev — Codex Sol, High
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 457 accepts Record 456's full-file hash and row-count evidence but rejects its claim of a
+complete audit. The temporary verifier did not inspect actual Parquet schemas, gap rows or their
+one-to-one lineage mapping, path containment, or live processes, and it did not stop at the first
+mismatch. Hermes also left that temporary program untracked and did not return the actor fields as
+claimed.
+
+The completed datasets are not being rerun, redownloaded, cleaned, or changed. Sol High is
+authorized only to correct the existing temporary read-only verifier at Review 457's exact path and
+starting hash. Sol does not execute, delete, stage, commit, or push it. No production/test/CLI/data,
+normalizer, network, catalog, experiment, model, Harmonic Trader, other-product, or next-ticket work
+is authorized. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains
+`NONE`.
 
 Review 455 provisionally accepts the corrected conversion's terminal success but rejects Record
 454's claim of complete artifact reconciliation. Hermes executed Review 455's authorized
