@@ -7,6 +7,18 @@ Next required actor: Sr Dev — Codex Sol, High
 Next ticket: NONE
 Next ticket authorized: NONE
 
+Review 452 accepts Sol's ADR-0035 production correction at source SHA-256 `cfefdd2694...`.
+The exact arithmetic, product-scoped exclusions, typed gaps, raw lineage, corrected equations,
+versioned publication, unchanged schemas, and no-clobber resume behavior match Review 451. The CLI
+remains byte-identical.
+
+The two-path drop is not yet accepted because the sole authorized focused command passed 53 cases
+and failed one test whose input contradicts its intended expected flags. Sol High is authorized only
+to change that test row's `buy_quote_volume` from `990` to `1000` and run the same enumerated focused
+pytest command once. No production edit, real-data run, integration, Git, data mutation, or other
+work is authorized. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket
+remains `NONE`.
+
 Review 451 accepts Record 450's terminal run facts, corrects its mislabeled `df` capacity units,
 and supersedes Review 446's false zero-corrupt-row conclusion. A complete read-only scan of all
 16,033,509 hourly kline rows found 40 rows with invalid total-volume pairs, 29 with invalid
