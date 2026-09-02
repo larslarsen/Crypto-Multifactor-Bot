@@ -137,7 +137,35 @@ test, production code, data change, download, retry, cleanup, catalog, experimen
 Trader, other-product, or next-ticket work is authorized. Gate 2 remains accepted; Gate 3 and
 CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
 
-## Record 469 — Funding Integration Stopped at pytest
+## Record 472 — Funding Integration and Real Run
+
+Hermes executed Review 471's exact ordered integration workflow. All preproof checks passed:
+`HEAD == origin/main == 1a5b646df19434b006e8f511e2067480bc0bc8a6`, all three accepted hashes and line
+counts reproved exactly (source `4e38658f…` 1,404 lines, CLI `05e30c87…` 50 lines, test `b7b9add7…` 907 lines).
+
+The three ordered checks passed: pytest 66/66 exit 0, ruff All checks passed, check_repo_control.py PASS.
+Hermes integrated the three paths at commit `e8a4443852606786d3f14ab533bbf671786c4c5e` and pushed;
+`HEAD == origin/main == e8a4443852606786d3f14ab533bbf671786c4c5e`. Preproof: output root absent, 556,026,527,742
+available bytes (above 110,648,021,942 floor), no live funding normalizer.
+
+Hermes ran exactly one foreground command and remained attached to the unified execution session until
+terminal.
+
+The command exited 0 at ~6m46s. Completion SHA-256 `57628164f19d182164b6058d9e51f794430cc918706c088f430e1c01d2898522`,
+schema SHA-256 `02c7ba85ad5a8fc701d97f2b9fffc307c2aa88e4374772c6c1156e55fc7b5202`,
+21,035 partitions, 21,035 lineages, 2,683,024 physical rows, 2,683,024 product rows (0 collapsed, 0 excluded),
+sole completion, empty staging, 0 extra unreferenced files. Post-run available bytes: 555,347,001,344.
+
+Every descriptor-referenced partition Parquet hash, lineage hash, and the completion file hash
+was read back and verified against the descriptor. Summed Parquet row count = 2,683,024 = product_rows.
+A spot-check confirmed `schema_arrow == SCHEMA` on a representative partition; the normalizer's
+publish-time check (`parquet.schema_arrow == SCHEMA`) validates every partition.
+
+Record 472 is published. Both actor fields return to the Lead Quantitative Finance Researcher/Engineer.
+Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, wrapper, detach,
+polling loop, cleanup, second invocation, source correction, other product, catalog transaction,
+NautilusTrader work, experiment, model, Harmonic Trader repository work, PAPER, LIVE, or
+next-ticket work is authorized.
 
 Hermes executed Review 468's exact ordered integration workflow. All preproof checks passed:
 `HEAD == origin/main == 93636067a7ab4aabcbc5d9708654c75cd4012718`, all three accepted hashes and line counts
