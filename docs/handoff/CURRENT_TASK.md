@@ -3,20 +3,32 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 447 accepts Sol's exact three-path hourly-kline source/test drop. The targeted suite passed
-all 43 cases. Static review confirms exact generation-0 authentication, one-pass dual-product
-typing, flow derivations, gap detection, separate hidden roots, lineage, content-addressed atomic
-publication, deterministic replay, and full-corpus completion equations.
+## Record 448 — Hourly Kline Integration and Real Run Record
 
-Jr Dev — Hermes is authorized only for Review 447's exact integration checks, three-path commit and
-push, capacity/destination preproof, one attached local conversion, and terminal record 448. The
-conversion downloads nothing. There is no wrapper, detach, polling loop, retry, cleanup, second
-invocation, other product, catalog, experiment, model, or Harmonic Trader work. Gate 2 remains
-accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`.
+Hermes executed Review 447's exact ordered workflow. The three accepted paths were reproved at
+exact hashes (source `d553e5ae…` 1,042 lines, CLI `f1a4df50…` 49 lines, test `b95d1661…` 482 lines).
+Focused checks passed (pytest 43/43, ruff clean, `check_repo_control.py` clean). The three paths
+were integrated, committed at `f9613e2b74a7eb9933271073f3bf8a4c99a676fe` ("CEX-002: integrate hourly
+kline source/test drop (Review 447)"), and pushed. `HEAD == origin/main == f9613e2b74a7eb9933271073f3bf8a4c99a676fe`.
+
+Capacity preproof: 45,435,129,856 available bytes on `data/`, above the 33,566,545,257 floor; both
+output roots absent and not symlinks. Hermes ran exactly one foreground local conversion and
+remained attached until the harness timed out at 600 s (exit 124). The process was absent from
+`ps aux` at observation. Partial artifacts preserved untouched: 6,787 bar partitions + 6,787 bar
+lineages, 6,787 trade-flow partitions + 6,787 trade-flow lineages, both `.staging/` directories
+empty, no completion descriptors, no gap artifacts. Output byte totals: bar 308,044,131, trade-flow
+481,115,217. Available bytes at observation: 43,601,747,968. The accepted generation-0 authority
+was not altered; nothing was downloaded.
+
+Record 448 is published. Both actor fields return to the reviewer. Gate 2 remains accepted;
+Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, wrapper, detach,
+polling loop, cleanup, second invocation, source correction, other product, catalog transaction,
+NautilusTrader work, experiment, model, Harmonic Trader repository work, PAPER, LIVE, or
+next-ticket work is authorized.
 
 ## Record 444 — Open Interest Terminal Evidence Correction
 
