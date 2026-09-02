@@ -8,7 +8,7 @@ import sqlite3
 import stat
 import zipfile
 from dataclasses import replace
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from io import BytesIO
 from pathlib import Path
 
@@ -151,6 +151,330 @@ def test_exact_values_and_four_trade_flow_derivations(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
+    "quote_volume,expected",
+    [
+        ("180", True),
+        ("220", True),
+        ("179.999999999999999999", False),
+        ("220.000000000000000001", False),
+    ],
+)
+def test_total_volume_pair_enforces_both_exact_candle_boundaries(
+    quote_volume: str,
+    expected: bool,
+) -> None:
+    with localcontext() as context:
+        context.prec = 6
+        valid = kl._volume_pair_is_valid(
+            Decimal("90"),
+            Decimal("110"),
+            Decimal("2"),
+            Decimal(quote_volume),
+        )
+    assert valid is expected
+
+
+@pytest.mark.parametrize(
+    "base_volume,quote_volume,expected",
+    [("0", "0", True), ("0", "1", False), ("1", "0", False)],
+)
+def test_volume_pair_zero_identity_is_exact(
+    base_volume: str,
+    quote_volume: str,
+    expected: bool,
+) -> None:
+    assert kl._volume_pair_is_valid(
+        Decimal("90"),
+        Decimal("110"),
+        Decimal(base_volume),
+        Decimal(quote_volume),
+    ) is expected
+
+
+def test_zero_total_and_taker_pairs_remain_valid_product_rows(tmp_path: Path) -> None:
+    source = _source(
+        tmp_path,
+        "2026-07-01",
+        [
+            _line(
+                1_782_864_000_000,
+                volume="0",
+                quote_volume="0",
+                buy_volume="0",
+                buy_quote_volume="0",
+            )
+        ],
+    )
+    result = _normalize(tmp_path, [source])
+    bars, flow = _tables(result)
+
+    assert bars.column("volume").to_pylist() == [Decimal("0E-18")]
+    assert flow.column("taker_sell_volume").to_pylist() == [Decimal("0E-18")]
+    assert result.bar.gap_artifact.row_count == 0
+    assert result.trade_flow.gap_artifact.row_count == 0
+
+
+@pytest.mark.parametrize(
+    "volume,quote_volume,buy_volume,buy_quote_volume",
+    [
+        ("10", "1000", "11", "990"),
+        ("10", "900", "9", "990"),
+    ],
+)
+def test_each_taker_buy_within_total_failure_is_product_scoped(
+    volume: str,
+    quote_volume: str,
+    buy_volume: str,
+    buy_quote_volume: str,
+) -> None:
+    flags = kl._volume_invariant_flags(
+        {
+            "low": Decimal("90"),
+            "high": Decimal("110"),
+            "volume": Decimal(volume),
+            "quote_volume": Decimal(quote_volume),
+            "taker_buy_volume": Decimal(buy_volume),
+            "taker_buy_quote_volume": Decimal(buy_quote_volume),
+        }
+    )
+    assert flags == {
+        "total_volume_pair_inconsistent": False,
+        "taker_buy_volume_pair_inconsistent": False,
+        "taker_buy_within_total_failure": True,
+    }
+
+
+def test_product_scoped_volume_exclusions_have_exact_gaps_lineage_and_equations(
+    tmp_path: Path,
+) -> None:
+    start = 1_782_864_000_000
+    source = _source(
+        tmp_path,
+        "2026-07-01",
+        [
+            _line(start),
+            _line(start + HOUR, quote_volume="3000"),
+            _line(
+                start + 2 * HOUR,
+                volume="20",
+                quote_volume="2000",
+                buy_volume="10",
+                buy_quote_volume="1500",
+            ),
+            _line(
+                start + 3 * HOUR,
+                volume="10",
+                quote_volume="1000",
+                buy_volume="11",
+                buy_quote_volume="1000",
+            ),
+        ],
+    )
+    result = _normalize(tmp_path, [source])
+    bars, flow = _tables(result)
+
+    assert bars.column("open_time").to_pylist() == [
+        start,
+        start + 2 * HOUR,
+        start + 3 * HOUR,
+    ]
+    assert flow.column("open_time").to_pylist() == [start]
+    bar_gaps = pq.read_table(result.bar.gap_artifact.parquet_path).to_pylist()
+    flow_gaps = pq.read_table(result.trade_flow.gap_artifact.parquet_path).to_pylist()
+    assert [
+        (
+            row["missing_run_start_ms"],
+            row["missing_run_end_ms"],
+            row["expected_grid_count"],
+            row["gap_kind"],
+            row["reason"],
+        )
+        for row in bar_gaps
+    ] == [
+        (
+            start + HOUR,
+            start + HOUR,
+            1,
+            kl.PROVIDER_INVALID_GAP_KIND,
+            kl.TOTAL_VOLUME_GAP_REASON,
+        )
+    ]
+    assert [
+        (
+            row["missing_run_start_ms"],
+            row["missing_run_end_ms"],
+            row["expected_grid_count"],
+            row["gap_kind"],
+            row["reason"],
+        )
+        for row in flow_gaps
+    ] == [
+        (
+            start + offset * HOUR,
+            start + offset * HOUR,
+            1,
+            kl.PROVIDER_INVALID_GAP_KIND,
+            kl.TRADE_FLOW_VOLUME_GAP_REASON,
+        )
+        for offset in (1, 2, 3)
+    ]
+    bar_lineage = json.loads(result.bar.gap_artifact.lineage_path.read_text())
+    flow_lineage = json.loads(result.trade_flow.gap_artifact.lineage_path.read_text())
+    assert bar_lineage["schema_version"] == 2
+    assert bar_lineage["provider_invalid_exclusion_count"] == 1
+    assert flow_lineage["provider_invalid_exclusion_count"] == 3
+    exclusion_hasher = hashlib.sha256()
+    for exclusion in flow_lineage["provider_invalid_exclusions"]:
+        exclusion_hasher.update(kl._canonical_json(exclusion))
+    assert (
+        flow_lineage["provider_invalid_exclusions_sha256"]
+        == exclusion_hasher.hexdigest()
+    )
+    expected_flags = [
+        {
+            "taker_buy_volume_pair_inconsistent": False,
+            "taker_buy_within_total_failure": False,
+            "total_volume_pair_inconsistent": True,
+        },
+        {
+            "taker_buy_volume_pair_inconsistent": True,
+            "taker_buy_within_total_failure": False,
+            "total_volume_pair_inconsistent": False,
+        },
+        {
+            "taker_buy_volume_pair_inconsistent": False,
+            "taker_buy_within_total_failure": True,
+            "total_volume_pair_inconsistent": False,
+        },
+    ]
+    assert [
+        row["failed_invariant_flags"]
+        for row in flow_lineage["provider_invalid_exclusions"]
+    ] == expected_flags
+    for ordinal, row in enumerate(flow_lineage["provider_invalid_exclusions"], 1):
+        assert row["required_product"] == kl.TRADE_FLOW_PRODUCT
+        assert row["native_symbol"] == "BTCUSDT"
+        assert row["utc_month"] == "2026-07"
+        assert row["source_key"] == source.source_key
+        assert row["source_sha256"] == source.source_sha256
+        assert row["source_row_ordinal"] == ordinal
+        assert row["open_time"] == start + ordinal * HOUR
+    bar_partition_lineage = json.loads(result.bar.partitions[0].lineage_path.read_text())
+    flow_partition_lineage = json.loads(
+        result.trade_flow.partitions[0].lineage_path.read_text()
+    )
+    assert (
+        bar_partition_lineage["schema_version"],
+        bar_partition_lineage["physical_row_count"],
+        bar_partition_lineage["provider_invalid_excluded_rows"],
+    ) == (2, 4, 1)
+    assert (
+        flow_partition_lineage["schema_version"],
+        flow_partition_lineage["physical_row_count"],
+        flow_partition_lineage["provider_invalid_excluded_rows"],
+    ) == (2, 4, 3)
+    bar_completion = json.loads(result.bar.completion_path.read_text())
+    flow_completion = json.loads(result.trade_flow.completion_path.read_text())
+    assert bar_completion["schema_version"] == flow_completion["schema_version"] == 2
+    assert bar_completion["volume_invariant_failures"] == flow_completion[
+        "volume_invariant_failures"
+    ] == {
+        "total_volume_pair_inconsistent": 1,
+        "taker_buy_volume_pair_inconsistent": 1,
+        "both_volume_pairs_inconsistent": 0,
+        "taker_buy_within_total_failure": 1,
+    }
+    assert bar_completion["row_equation"] == {
+        "physical_rows": 4,
+        "duplicate_rows": 0,
+        "overlap_rows": 0,
+        "collapsed_rows": 0,
+        "excluded_rows": 1,
+        "product_rows": 3,
+    }
+    assert flow_completion["row_equation"] == {
+        "physical_rows": 4,
+        "duplicate_rows": 0,
+        "overlap_rows": 0,
+        "collapsed_rows": 0,
+        "excluded_rows": 3,
+        "product_rows": 1,
+    }
+
+
+def test_record450_unfi_row_is_excluded_with_its_original_data_ordinal(
+    tmp_path: Path,
+) -> None:
+    first = 1_698_796_800_000  # 2023-11-01T00:00:00Z
+    stopping = 1_701_345_600_000  # 2023-11-30T12:00:00Z
+    rows = [_line(first + ordinal * HOUR) for ordinal in range(708)]
+    rows.append(
+        _line(
+            stopping,
+            open_price="11.724",
+            high="11.737",
+            low="11.593",
+            close="11.633",
+            volume="41538",
+            quote_volume="1430601.9399",
+            count="11127",
+            buy_volume="51617.3",
+            buy_quote_volume="601711.7884",
+        )
+    )
+    source = _source(
+        tmp_path,
+        "2023-11",
+        rows,
+        symbol="UNFIUSDT",
+        family="monthly/klines",
+    )
+    result = _normalize(tmp_path, [source])
+
+    assert result.bar.partitions[0].row_count == 708
+    assert result.trade_flow.partitions[0].row_count == 708
+    for product_result in (result.bar, result.trade_flow):
+        lineage = json.loads(product_result.gap_artifact.lineage_path.read_text())
+        exclusion = lineage["provider_invalid_exclusions"]
+        assert len(exclusion) == 1
+        assert exclusion[0]["source_key"] == source.source_key
+        assert exclusion[0]["source_sha256"] == source.source_sha256
+        assert exclusion[0]["source_row_ordinal"] == 708
+        assert exclusion[0]["open_time"] == stopping
+        assert exclusion[0]["failed_invariant_flags"] == {
+            "taker_buy_volume_pair_inconsistent": False,
+            "taker_buy_within_total_failure": True,
+            "total_volume_pair_inconsistent": True,
+        }
+
+
+def test_corrected_full_corpus_constants_are_product_specific() -> None:
+    assert kl.ACCEPTED_PHYSICAL_ROWS == 16_033_509
+    assert kl.ACCEPTED_EXCLUDED_ROWS == {
+        kl.BAR_PRODUCT: 40,
+        kl.TRADE_FLOW_PRODUCT: 67,
+    }
+    assert kl.ACCEPTED_PRODUCT_ROWS == {
+        kl.BAR_PRODUCT: 16_033_469,
+        kl.TRADE_FLOW_PRODUCT: 16_033_442,
+    }
+    assert kl.ACCEPTED_GAP_ROWS == {
+        kl.BAR_PRODUCT: 154,
+        kl.TRADE_FLOW_PRODUCT: 181,
+    }
+    assert kl.ACCEPTED_MISSING_HOURS == {
+        kl.BAR_PRODUCT: 8_043,
+        kl.TRADE_FLOW_PRODUCT: 8_070,
+    }
+    assert kl.ACCEPTED_VOLUME_INVARIANT_FAILURES == {
+        "total_volume_pair_inconsistent": 40,
+        "taker_buy_volume_pair_inconsistent": 29,
+        "both_volume_pairs_inconsistent": 2,
+        "taker_buy_within_total_failure": 1,
+    }
+
+
+@pytest.mark.parametrize(
     "row,match",
     [
         (_line(1_782_864_000_001), "hourly epoch"),
@@ -161,11 +485,6 @@ def test_exact_values_and_four_trade_flow_derivations(tmp_path: Path) -> None:
         (_line(1_782_864_000_000, volume="-1"), "negative"),
         (_line(1_782_864_000_000, count="-1"), "negative"),
         (_line(1_782_864_000_000, reserved="-1"), "negative"),
-        (_line(1_782_864_000_000, volume="10", buy_volume="11"), "exceeds total"),
-        (
-            _line(1_782_864_000_000, quote_volume="10", buy_quote_volume="11"),
-            "exceeds total",
-        ),
         (_line(1_782_864_000_000, open_price="nan"), "exact decimal"),
     ],
 )
@@ -333,6 +652,15 @@ def test_byte_identical_replay_reuses_every_product_artifact(tmp_path: Path) -> 
 
 def test_interruption_leaves_no_product_completion(tmp_path: Path) -> None:
     source = _source(tmp_path, "2026-07-01", [_line(1_782_864_000_000)])
+    old_body = b"old content-addressed artifact remains unreferenced"
+    old_digest = hashlib.sha256(old_body).hexdigest()
+    old_paths = []
+    for root_name in (".bars", ".flow"):
+        old_directory = tmp_path / root_name / ".partitions" / "BTCUSDT" / "2026-07"
+        old_directory.mkdir(parents=True)
+        old_path = old_directory / f"{old_digest}.parquet"
+        old_path.write_bytes(old_body)
+        old_paths.append(old_path)
 
     def interrupt(product: str, kind: str, _stage: Path, _destination: Path) -> None:
         if product == kl.TRADE_FLOW_PRODUCT and kind == "partition":
@@ -347,6 +675,13 @@ def test_interruption_leaves_no_product_completion(tmp_path: Path) -> None:
         )
     assert not list((tmp_path / ".bars" / ".complete").glob("*.json"))
     assert not list((tmp_path / ".flow" / ".complete").glob("*.json"))
+    assert [path.read_bytes() for path in old_paths] == [old_body, old_body]
+
+    resumed = _normalize(tmp_path, [source])
+    assert resumed.bar.partitions[0].reused is True
+    assert resumed.bar.completion_path.is_file()
+    assert resumed.trade_flow.completion_path.is_file()
+    assert [path.read_bytes() for path in old_paths] == [old_body, old_body]
 
 
 def test_content_address_collision_with_different_bytes_fails(tmp_path: Path) -> None:

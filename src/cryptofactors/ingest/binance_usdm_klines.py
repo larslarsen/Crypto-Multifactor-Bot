@@ -84,9 +84,33 @@ ACCEPTED_MONTHLY_SOURCES = 21_932
 ACCEPTED_SOURCE_COUNT = 35_642
 ACCEPTED_SOURCE_BYTES = 661_676_054
 ACCEPTED_PARTITIONS = 22_633
-ACCEPTED_PRODUCT_ROWS = 16_033_509
-ACCEPTED_GAP_ROWS = 114
-ACCEPTED_MISSING_HOURS = 8_003
+ACCEPTED_PHYSICAL_ROWS = 16_033_509
+ACCEPTED_EXCLUDED_ROWS = {
+    BAR_PRODUCT: 40,
+    TRADE_FLOW_PRODUCT: 67,
+}
+ACCEPTED_PRODUCT_ROWS = {
+    BAR_PRODUCT: 16_033_469,
+    TRADE_FLOW_PRODUCT: 16_033_442,
+}
+ACCEPTED_GAP_ROWS = {
+    BAR_PRODUCT: 154,
+    TRADE_FLOW_PRODUCT: 181,
+}
+ACCEPTED_MISSING_HOURS = {
+    BAR_PRODUCT: 8_043,
+    TRADE_FLOW_PRODUCT: 8_070,
+}
+ACCEPTED_VOLUME_INVARIANT_FAILURES = {
+    "total_volume_pair_inconsistent": 40,
+    "taker_buy_volume_pair_inconsistent": 29,
+    "both_volume_pairs_inconsistent": 2,
+    "taker_buy_within_total_failure": 1,
+}
+
+TOTAL_VOLUME_GAP_REASON = "provider_inconsistent_total_volume_pair"
+TRADE_FLOW_VOLUME_GAP_REASON = "provider_inconsistent_trade_flow_required_volume"
+PROVIDER_INVALID_GAP_KIND = "provider_invalid_required_fields"
 
 _HEX_RE = re.compile(r"[0-9a-f]{64}")
 _DAILY_RE = re.compile(
@@ -628,6 +652,52 @@ def _scaled(value: int) -> Decimal:
     return Decimal((1 if value < 0 else 0, digits, -DECIMAL_SCALE))
 
 
+def _volume_pair_is_valid(
+    low: Decimal,
+    high: Decimal,
+    base_volume: Decimal,
+    quote_volume: Decimal,
+) -> bool:
+    """Apply ADR-0035 without Decimal-context multiplication or division."""
+    low_unscaled = _unscaled(low)
+    high_unscaled = _unscaled(high)
+    base_unscaled = _unscaled(base_volume)
+    quote_unscaled = _unscaled(quote_volume)
+    if base_unscaled == 0:
+        return quote_unscaled == 0
+    scale = 10**DECIMAL_SCALE
+    return (
+        base_unscaled > 0
+        and low_unscaled * base_unscaled <= quote_unscaled * scale
+        and quote_unscaled * scale <= high_unscaled * base_unscaled
+    )
+
+
+def _volume_invariant_flags(values: Mapping[str, Decimal]) -> dict[str, bool]:
+    total_pair_inconsistent = not _volume_pair_is_valid(
+        values["low"],
+        values["high"],
+        values["volume"],
+        values["quote_volume"],
+    )
+    taker_buy_pair_inconsistent = not _volume_pair_is_valid(
+        values["low"],
+        values["high"],
+        values["taker_buy_volume"],
+        values["taker_buy_quote_volume"],
+    )
+    taker_buy_within_total_failure = (
+        _unscaled(values["taker_buy_volume"]) > _unscaled(values["volume"])
+        or _unscaled(values["taker_buy_quote_volume"])
+        > _unscaled(values["quote_volume"])
+    )
+    return {
+        "total_volume_pair_inconsistent": total_pair_inconsistent,
+        "taker_buy_volume_pair_inconsistent": taker_buy_pair_inconsistent,
+        "taker_buy_within_total_failure": taker_buy_within_total_failure,
+    }
+
+
 def _period_contains(source: RawKlineObject, open_time: int) -> bool:
     moment = datetime.fromtimestamp(open_time // 1000, tz=UTC)
     if source.family == "daily/klines":
@@ -653,11 +723,10 @@ def _parse_kline_row(source: RawKlineObject, ordinal: int, row: Sequence[str]) -
     _require(trade_count >= 0 and reserved >= 0, "kline count and reserved integer cannot be negative")
     _require(values["high"] >= max(values["open"], values["close"], values["low"]), "kline high violates OHLC bounds")
     _require(values["low"] <= min(values["open"], values["close"], values["high"]), "kline low violates OHLC bounds")
-    _require(values["taker_buy_volume"] <= values["volume"], "taker-buy base volume exceeds total")
-    _require(values["taker_buy_quote_volume"] <= values["quote_volume"], "taker-buy quote volume exceeds total")
     return {
         "source_row_ordinal": ordinal, "open_time": open_time, "close_time": close_time,
         **values, "trade_count": trade_count, "source_reserved": reserved,
+        "volume_invariant_flags": _volume_invariant_flags(values),
     }
 
 
@@ -769,6 +838,43 @@ def _quality_gap_row(product: str, symbol: str, start: int, end: int, reason: st
     }
 
 
+def _provider_invalid_gap_row(
+    product: str,
+    symbol: str,
+    open_time: int,
+    reason: str,
+) -> dict[str, Any]:
+    row = _quality_gap_row(product, symbol, open_time, open_time, reason)
+    row["gap_kind"] = PROVIDER_INVALID_GAP_KIND
+    return row
+
+
+def _provider_invalid_lineage(
+    product: str,
+    source: RawKlineObject,
+    record: Mapping[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    flags = record["volume_invariant_flags"]
+    _require(type(flags) is dict, "volume invariant flags are not canonical")
+    assert isinstance(flags, dict)
+    return {
+        "required_product": product,
+        "native_symbol": source.native_symbol,
+        "utc_month": datetime.fromtimestamp(int(record["open_time"]) // 1000, tz=UTC).strftime("%Y-%m"),
+        "source_key": source.source_key,
+        "source_sha256": source.source_sha256,
+        "source_row_ordinal": int(record["source_row_ordinal"]),
+        "open_time": int(record["open_time"]),
+        "reason": reason,
+        "failed_invariant_flags": {
+            "total_volume_pair_inconsistent": flags["total_volume_pair_inconsistent"],
+            "taker_buy_volume_pair_inconsistent": flags["taker_buy_volume_pair_inconsistent"],
+            "taker_buy_within_total_failure": flags["taker_buy_within_total_failure"],
+        },
+    }
+
+
 def _split_gap(product: str, symbol: str, start: int, end: int, reason: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     cursor = start
@@ -868,6 +974,13 @@ def _normalize_sources(
     trees = {BAR_PRODUCT: bar_tree, TRADE_FLOW_PRODUCT: flow_tree}
     partitions: dict[str, list[PublishedPartition]] = {product: [] for product in PRODUCTS}
     gaps: dict[str, list[dict[str, Any]]] = {product: [] for product in PRODUCTS}
+    exclusions: dict[str, list[dict[str, Any]]] = {product: [] for product in PRODUCTS}
+    invariant_failures = {
+        "total_volume_pair_inconsistent": 0,
+        "taker_buy_volume_pair_inconsistent": 0,
+        "both_volume_pairs_inconsistent": 0,
+        "taker_buy_within_total_failure": 0,
+    }
     physical_rows = 0
     previous: dict[str, tuple[int, str] | None] = {}
     for (symbol, month), month_sources in sorted(groups.items()):
@@ -880,6 +993,7 @@ def _normalize_sources(
         parsed.sort(key=lambda item: int(item[2]["open_time"]))
         bar_rows: list[dict[str, Any]] = []
         flow_rows: list[dict[str, Any]] = []
+        month_exclusions = {product: 0 for product in PRODUCTS}
         prior = previous.get(symbol)
         for raw_ref, source_key, record in parsed:
             moment = int(record["open_time"])
@@ -891,13 +1005,70 @@ def _normalize_sources(
                     reason = "within_object_missing_hour" if source_key == prior[1] else "between_object_missing_hour"
                     for product in PRODUCTS:
                         gaps[product].extend(_split_gap(product, symbol, prior[0] + EXPECTED_CADENCE_MS, moment - EXPECTED_CADENCE_MS, reason))
-            bar_rows.append(_bar_row(record, raw_ref, symbol))
-            flow_rows.append(_flow_row(record, raw_ref, symbol))
+            source = raw_objects[raw_ref]
+            _require(source.source_key == source_key, "partition-local raw reference changed")
+            flags = record["volume_invariant_flags"]
+            _require(type(flags) is dict, "volume invariant flags are not canonical")
+            assert isinstance(flags, dict)
+            total_invalid = bool(flags["total_volume_pair_inconsistent"])
+            taker_pair_invalid = bool(flags["taker_buy_volume_pair_inconsistent"])
+            taker_within_failure = bool(flags["taker_buy_within_total_failure"])
+            invariant_failures["total_volume_pair_inconsistent"] += int(total_invalid)
+            invariant_failures["taker_buy_volume_pair_inconsistent"] += int(
+                taker_pair_invalid
+            )
+            invariant_failures["both_volume_pairs_inconsistent"] += int(
+                total_invalid and taker_pair_invalid
+            )
+            invariant_failures["taker_buy_within_total_failure"] += int(
+                taker_within_failure
+            )
+            trade_flow_invalid = (
+                total_invalid or taker_pair_invalid or taker_within_failure
+            )
+            if total_invalid:
+                gaps[BAR_PRODUCT].append(
+                    _provider_invalid_gap_row(
+                        BAR_PRODUCT, symbol, moment, TOTAL_VOLUME_GAP_REASON
+                    )
+                )
+                exclusions[BAR_PRODUCT].append(
+                    _provider_invalid_lineage(
+                        BAR_PRODUCT, source, record, TOTAL_VOLUME_GAP_REASON
+                    )
+                )
+                month_exclusions[BAR_PRODUCT] += 1
+            else:
+                bar_rows.append(_bar_row(record, raw_ref, symbol))
+            if trade_flow_invalid:
+                gaps[TRADE_FLOW_PRODUCT].append(
+                    _provider_invalid_gap_row(
+                        TRADE_FLOW_PRODUCT,
+                        symbol,
+                        moment,
+                        TRADE_FLOW_VOLUME_GAP_REASON,
+                    )
+                )
+                exclusions[TRADE_FLOW_PRODUCT].append(
+                    _provider_invalid_lineage(
+                        TRADE_FLOW_PRODUCT,
+                        source,
+                        record,
+                        TRADE_FLOW_VOLUME_GAP_REASON,
+                    )
+                )
+                month_exclusions[TRADE_FLOW_PRODUCT] += 1
+            else:
+                flow_rows.append(_flow_row(record, raw_ref, symbol))
             prior = (moment, source_key)
-        _require(bool(bar_rows), "kline partition has no rows")
+        _require(bool(parsed), "kline partition has no physical rows")
         previous[symbol] = prior
         product_rows = {BAR_PRODUCT: bar_rows, TRADE_FLOW_PRODUCT: flow_rows}
         for product in PRODUCTS:
+            _require(
+                len(product_rows[product]) + month_exclusions[product] == len(parsed),
+                "partition product/exclusion equation failed",
+            )
             tree = trees[product]
             table = pa.Table.from_pylist(product_rows[product], schema=SCHEMAS[product])
             parquet_path, parquet_sha, parquet_reused = _publish_parquet(
@@ -905,8 +1076,10 @@ def _normalize_sources(
                 prefix=f"partition-{symbol}-{month}", kind="partition", hooks=hooks,
             )
             lineage = {
-                "document_type": f"{product}_partition_lineage", "schema_version": 1,
+                "document_type": f"{product}_partition_lineage", "schema_version": 2,
                 "required_product": product, "native_symbol": symbol, "utc_month": month,
+                "physical_row_count": len(parsed),
+                "provider_invalid_excluded_rows": month_exclusions[product],
                 "row_count": len(product_rows[product]), "schema_sha256": SCHEMA_SHA256[product],
                 "writer_identity": writer_identity(), "parquet_sha256": parquet_sha,
                 "parquet_name": parquet_path.name,
@@ -932,30 +1105,52 @@ def _normalize_sources(
     normalizer_sha, _size = _digest_path(Path(__file__).resolve(strict=True))
     results: dict[str, ProductResult] = {}
     for product in PRODUCTS:
-        gap_rows = sorted(gaps[product], key=lambda row: (str(row["native_symbol"]), int(row["missing_run_start_ms"])))
+        gap_rows = sorted(
+            gaps[product],
+            key=lambda row: (
+                str(row["native_symbol"]),
+                int(row["missing_run_start_ms"]),
+                int(row["missing_run_end_ms"]),
+                str(row["reason"]),
+            ),
+        )
         missing_points = sum(int(row["expected_grid_count"]) for row in gap_rows)
         gap_table = pa.Table.from_pylist(gap_rows, schema=QUALITY_GAP_SCHEMA)
         gap_path, gap_sha, gap_reused = _publish_parquet(
             trees[product], gap_table, product=product, parts=(".quality-gaps",),
             prefix="quality-gaps", kind="quality_gap", hooks=hooks,
         )
+        exclusion_rows = sorted(
+            exclusions[product],
+            key=lambda row: (str(row["source_key"]), int(row["source_row_ordinal"])),
+        )
+        exclusion_hasher = hashlib.sha256()
+        for row in exclusion_rows:
+            exclusion_hasher.update(_canonical_json(row))
         gap_lineage = {
-            "document_type": f"{product}_quality_gap_lineage", "schema_version": 1,
+            "document_type": f"{product}_quality_gap_lineage", "schema_version": 2,
             "required_product": product, "row_count": len(gap_rows),
             "missing_grid_points": missing_points, "quality_gap_parquet_sha256": gap_sha,
             "quality_gap_schema": [{"name": field.name, "type": str(field.type), "nullable": field.nullable} for field in QUALITY_GAP_SCHEMA],
+            "provider_invalid_exclusion_count": len(exclusion_rows),
+            "provider_invalid_exclusions_sha256": exclusion_hasher.hexdigest(),
+            "provider_invalid_exclusions": exclusion_rows,
         }
         gap_lineage_path, gap_lineage_sha, gap_lineage_reused = _publish_json(
             trees[product], gap_lineage, product=product, parts=(".quality-gap-lineage",),
             prefix="quality-gap-lineage", kind="quality_gap_lineage", hooks=hooks,
         )
         product_rows = sum(part.row_count for part in partitions[product])
+        excluded_rows = len(exclusion_rows)
         if enforce_full_corpus:
             _require(len(ordered) == ACCEPTED_SOURCE_COUNT and source_bytes == ACCEPTED_SOURCE_BYTES, "full-corpus source totals changed")
             _require(len(partitions[product]) == ACCEPTED_PARTITIONS, "full-corpus partition total changed")
-            _require(physical_rows == ACCEPTED_PRODUCT_ROWS and product_rows == ACCEPTED_PRODUCT_ROWS, "full-corpus row totals changed")
-            _require(len(gap_rows) == ACCEPTED_GAP_ROWS and missing_points == ACCEPTED_MISSING_HOURS, "full-corpus gap totals changed")
-        _require(product_rows == physical_rows, "kline physical/product row equation failed")
+            _require(physical_rows == ACCEPTED_PHYSICAL_ROWS, "full-corpus physical row total changed")
+            _require(invariant_failures == ACCEPTED_VOLUME_INVARIANT_FAILURES, "full-corpus volume-invariant totals changed")
+            _require(excluded_rows == ACCEPTED_EXCLUDED_ROWS[product], "full-corpus excluded row total changed")
+            _require(product_rows == ACCEPTED_PRODUCT_ROWS[product], "full-corpus product row total changed")
+            _require(len(gap_rows) == ACCEPTED_GAP_ROWS[product] and missing_points == ACCEPTED_MISSING_HOURS[product], "full-corpus gap totals changed")
+        _require(product_rows + excluded_rows == physical_rows, "kline physical/excluded/product row equation failed")
         partition_facts = [{
             "native_symbol": part.native_symbol, "utc_month": part.utc_month,
             "row_count": part.row_count, "parquet_sha256": part.parquet_sha256,
@@ -964,11 +1159,12 @@ def _normalize_sources(
             "lineage_path": str(part.lineage_path.relative_to(trees[product].root)),
         } for part in partitions[product]]
         completion = {
-            "document_type": f"{product}_product_completion", "schema_version": 1,
+            "document_type": f"{product}_product_completion", "schema_version": 2,
             "required_product": product, "schema_sha256": SCHEMA_SHA256[product],
             "writer_identity": writer_identity(), "normalizer_source_sha256": normalizer_sha,
             "authorities_authenticated": enforce_full_corpus, "source_count": len(ordered),
             "source_bytes": source_bytes, "sources_sha256": sources_sha,
+            "volume_invariant_failures": dict(invariant_failures),
             "partitions": partition_facts,
             "quality_gap_artifact": {
                 "parquet_sha256": gap_sha, "parquet_path": str(gap_path.relative_to(trees[product].root)),
@@ -977,7 +1173,8 @@ def _normalize_sources(
             },
             "row_equation": {
                 "physical_rows": physical_rows, "duplicate_rows": 0, "overlap_rows": 0,
-                "collapsed_rows": 0, "excluded_rows": 0, "product_rows": product_rows,
+                "collapsed_rows": 0, "excluded_rows": excluded_rows,
+                "product_rows": product_rows,
             },
         }
         expected = hashlib.sha256(_canonical_json(completion)).hexdigest()
