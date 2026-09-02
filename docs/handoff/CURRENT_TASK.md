@@ -3,21 +3,15 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 453 accepts the corrected ADR-0035 source/test drop at exact source SHA-256 `cfefdd2694...`
-and test SHA-256 `ee42242d2...`; the unchanged CLI remains `f1a4df5065...`. Sol changed only the
-authorized test token and its sole focused command passed all 54 cases.
+Record 454 publishes the corrected kline resume terminal outcome. Hermes executed Review 453's exact ordered workflow. All three exact hashes and line counts were reproved (source `cfefdd2694...` 1,239 lines, test `ee42242d2...` 817 lines, CLI `f1a4df5065...` 49 lines). The focused checks passed: pytest 32 functions / 54 cases exit 0, ruff All checks passed, check_repo_control.py PASS. Hermes integrated the two authorized paths at commit `5a3bd73e10fc208bdb43b5334b097a264d2dbb9b` and pushed; `HEAD == origin/main == 5a3bd73e10fc208bdb43b5334b097a264d2dbb9b`. Resume preconditions reproved: 20,335/20,335 Parquet/lineage counts in both roots, empty staging, absent completion and gap artifacts, no live real kline normalizer, available bytes above the 33,566,545,257 floor. Hermes ran exactly one foreground command and remained attached to the unified execution session until terminal.
 
-Hermes is authorized only to reprove the exact drop and preserved 20,335-partition-per-product
-resume state, run the three enumerated focused checks, integrate/commit/push exactly the source and
-test, and execute one foreground corrected resume with a 3,600-second allowance. It then publishes
-terminal Record 454 and returns both actor fields to the reviewer. There is no new code, download,
-wrapper, detach, polling loop, retry, cleanup, catalog, experiment, model, Harmonic Trader, other
-product, or next-ticket work. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`;
-next ticket remains `NONE`.
+The command exited 0 at ~1,855 seconds. Both product completion descriptors were published. Bar 1h: 22,633 partitions, 16,033,509 physical rows, 16,033,469 product rows, 40 excluded rows, 154 quality-gap rows, 8,043 missing grid points; completion SHA-256 `3b803d3e84e5d0bf87064626cc0504e9ff92e225a53ba83cdd4e09c38a2e9fd7`; schema SHA-256 `12af135c756ae5046961c7dc2eb4177506801b6b42ffe9f0f7a5c970fdd644eb`. Trade flow 1h: 22,633 partitions, 16,033,509 physical rows, 16,033,442 product rows, 67 excluded rows, 181 quality-gap rows, 8,070 missing grid points; completion SHA-256 `a165f9e57065514cadc95620c280a82dbad5032d17c19e1caf012c9d12a84d0a`; schema SHA-256 `0e0903f5a79396f80f879ee33ea898d2008bace08271c2e0151295a18e83a68f`. Both product row equations verified: 16,033,509 - 40 = 16,033,469 and 16,033,509 - 67 = 16,033,442. Output bytes: bar 1,063,124,261, trade flow 1,641,430,367. Both `.staging/` directories empty. Available bytes at observation ~34,425,076,?. Descriptor-referenced Parquet/lineage/digest hashes reconciled (content-addressed filenames match content hashes). The accepted generation-0 authority was not altered; nothing was downloaded.
+
+Record 454 is published. Both actor fields return to the reviewer. Gate 2 remains accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`. No retry, wrapper, detach, polling loop, cleanup, second invocation, source correction, other product, catalog transaction, NautilusTrader work, experiment, model, Harmonic Trader repository work, PAPER, LIVE, or next-ticket work is authorized.
 
 Review 452 accepts Sol's ADR-0035 production correction at source SHA-256 `cfefdd2694...`.
 The exact arithmetic, product-scoped exclusions, typed gaps, raw lineage, corrected equations,
