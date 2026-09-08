@@ -21,8 +21,9 @@ remain. Gate 2 stays accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`.
 
 ## Current action
 
-The owner relays Review 476's complete Batch B source prompt to Sol High. Only these new paths
-are authorized:
+The owner explicitly authorizes direct prompting on 2026-09-08. The reviewer launches and
+supervises Sol High for Review 476's Batch B source assignment. Only these new paths are
+authorized:
 
 - `src/cryptofactors/ingest/binance_usdm_liquidation_observed.py`;
 - `scripts/research/normalize_binance_usdm_liquidation_observed.py`; and

@@ -88,8 +88,11 @@ D coverage/intersection/reconciliation/bundle/catalog/readback and final release
 
 The reviewer selects Sol High again for this source-author role: its complete Batch A drop is
 accepted and the related exact-decimal, authority and immutable-publication work fits the same
-senior. Only this senior is authorized. The owner relays this one-way source prompt under
-AGENTS.md; the previous direct-delegation approval applied to Batch A.
+senior. Only this senior is authorized. On 2026-09-08 the owner explicitly directs the reviewer
+to prompt Sol directly for Batch B. The reviewer may launch and supervise Sol High, receive the
+three-file drop, and return consolidated source feedback directly for this assignment. This
+supersedes manual owner relay for Batch B and preserves all source-author restrictions and
+Hermes's integration/validation/evidence/Git ownership.
 
 Sol may author exactly these three new files:
 
