@@ -3,7 +3,7 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept both Batch A products; require the bounded Batch B source correction below
+- **Decision:** accept both Batch A products; freeze corrected Batch B production/CLI and require the single test-fixture correction below
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - seven of eleven required products accepted
 - **Next required actor:** Sr Dev - Codex Sol on GPT-5.6-sol High
@@ -327,6 +327,61 @@ stop without patching or rerunning. No other runtime check, normalizer, real-dat
 network, linter/compiler, integration, record, Git operation or later batch is authorized.
 Hermes remains unauthorized pending reviewer source acceptance. Batch A remains accepted;
 CEX-002 stays `IN_PROGRESS`, with seven accepted products and next ticket `NONE`.
+
+## Corrective result and single fixture correction
+
+The reviewer accepts the six production/source corrections after static inspection and confirms
+the returned hashes. The production and CLI are now frozen:
+
+- Production: `2e001f2d63c6f127d58e7db0c071a2971ecb6a769d5bd1d85b322d085a1ee257`,
+  1,491 lines.
+- CLI: `8d97b52138c1ff27a39ddcc5b3fbb99f7db774ba5d0c948103d9d9b95830cfee`, 54 lines.
+- Test source at the nonzero result:
+  `16ab11c890c7cd884836b52322408ec48987cf99e83625d46f6690e77f465c03`, 1,025 lines.
+
+Sol ran the one authorized targeted command once. Exit code was `1`: 45 cases passed and one
+failed. The complete reported output was:
+
+```text
+...................F..........................                           [100%]
+=================================== FAILURES ===================================
+______________ test_raw_path_hash_size_and_query_binding_refusal _______________
+
+tmp_path = PosixPath('/home/lars/.cache/tmp/pytest-of-lars/pytest-419/test_raw_path_hash_size_and_qu0')
+
+    def test_raw_path_hash_size_and_query_binding_refusal(tmp_path: Path) -> None:
+        raw = _raw(tmp_path)
+        for changed, message in (
+            (replace(raw, source_sha256="0" * 64), "digest"),
+            (replace(raw, byte_size=raw.byte_size + 1), "size"),
+            (replace(raw, identity=raw.identity + "x"), "identity"),
+            (replace(raw, request_to_s=raw.request_to_s + 1), "daily grid"),
+            (replace(raw, point_count=raw.point_count + 1), "point count"),
+        ):
+>           with pytest.raises(subject.LiquidationNormalizationError, match=message):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'daily grid'
+E             Actual message: 'liquidation query identity changed'
+
+tests/ingest/test_binance_usdm_liquidation_observed.py:591: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ingest/test_binance_usdm_liquidation_observed.py::test_raw_path_hash_size_and_query_binding_refusal
+```
+
+The off-grid fixture changes `request_to_s` without updating its query identity, so production
+correctly rejects the inconsistent identity before reaching the intended grid check. This is a
+fixture defect, not a reason to change validation order or weaken either check. Sol correctly
+stopped without patching or rerunning after the nonzero result.
+
+The same Sol High actor may now edit only
+`tests/ingest/test_binance_usdm_liquidation_observed.py`, only to make that off-grid fixture's
+query identity agree with its intentionally off-grid bound. Retain the `daily grid` refusal
+assertion and the separate identity refusal case. All other tests, production and CLI remain
+frozen. After this bounded fixture correction, Sol may run the exact targeted pytest command
+enumerated above once under the same senior-test exception, report complete output/exit code and
+all three hashes/line counts, and stop. On nonzero, do not patch or rerun. No other command or
+ownership exception is added. Hermes remains unauthorized until the full source drop is accepted.
 
 ## Reviewer publication scope
 
