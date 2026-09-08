@@ -98,8 +98,11 @@ is source-selection evidence, not a normalization run or full raw-file authentic
 
 All 102,740 objects totaling 1,038,628,891 bytes are already local. The indicative product uses
 the 32,371 premium objects totaling 299,148,485 bytes. The accepted retained-credit counts are
-one daily and nine monthly index objects, zero mark objects, and one daily and nine monthly
-premium objects; all other selected completions are `checksum_verified`.
+one daily and nine monthly index objects, nine monthly mark objects, and one daily and nine
+monthly premium objects: 29 retained-credit completions and 102,711 `checksum_verified`
+completions in total. The reviewer reproved these state counts and both pinned authority hashes
+read-only on 2026-09-08 before source implementation, correcting this review's earlier erroneous
+zero-mark statement. Object counts, compressed bytes, schemas and product scope are unchanged.
 
 Use the accepted generation-0 state `data/cex002_qualify/gate2/state.sqlite` and its stored content
 paths. Preserve repository-relative authority arguments: Reviews 432-434 already established
