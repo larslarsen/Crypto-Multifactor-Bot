@@ -3,7 +3,7 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept both Batch A products; authorize the bounded Batch B source drop
+- **Decision:** accept both Batch A products; require the bounded Batch B source correction below
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - seven of eleven required products accepted
 - **Next required actor:** Sr Dev - Codex Sol on GPT-5.6-sol High
@@ -124,6 +124,11 @@ The reviewer authenticated all 570 completed Coinalyze response files read-only:
   all long/short amounts are nonnegative and exactly representable at scale 18. No row has both
   sides zero. These counts are reviewer cross-checks; execution must derive them.
 
+The exact inclusive request ranges contain 486,056 daily slots: 479,340 observed and 6,716
+missing. Their 16,419 native-symbol/month union contains 46 wholly gap-only months. The reviewer
+counted 4,566 maximal missing runs before month splitting. These source-review facts explain the
+observed-versus-projected difference without changing any bound or inventing output rows.
+
 All 569 selected mappings have `oi_lq_vol_denominated_in=BASE_ASSET`, `exchange=A`, perpetual
 identity and exact `symbol_on_exchange` binding. Preserve each inventory base/quote asset and
 provider symbol in lineage. Native symbols can contain Unicode, including `币安人生USDT`;
@@ -155,9 +160,11 @@ projected partitions and 187,270,569 normalized bytes; those are bounds, not fab
    rule in product metadata without asserting completeness earlier. A daily event label is not
    an availability timestamp; unknown availability stays unknown, and daily aggregates are
    close-derived observations. Attribute Coinalyze and retain units once per source mapping.
-4. Record missing daily runs as typed gaps and the 202 unmapped identities as explicit authority
-   gaps. Reconcile every response, physical/output/duplicate row and original point ordinal.
-   Never publish an empty successful data partition or turn missing history into zero amounts.
+4. Derive missing daily runs over each authenticated inclusive request range, including leading,
+   trailing and whole-month absences, and publish typed gaps. Keep the 202 unmapped identities as
+   separate authority gaps. Reconcile every response, physical/output/duplicate row and original
+   point ordinal. Never publish an empty successful data partition or turn missing history into
+   zero amounts.
 5. Reuse content-addressed partition/lineage/gap publication, no-clobber, same-filesystem
    fsync/rename, deterministic replay and last-written sole completion under a caller-selected
    hidden root. Include comparison evidence and authority gaps in its pinned descriptor. No
@@ -238,6 +245,88 @@ Return the complete three files with SHA-256 and line counts for one consolidate
 Sol performs no tests, linters, compilers, real-data execution, network/acquisition, integration,
 repository records, Git, commits, pushes or other-path changes. No additional senior or later
 batch is authorized. Hermes integration and execution await reviewer source acceptance.
+
+## Consolidated Batch B source review and corrective authorization
+
+The reviewer inspected the complete frozen drop, including the final static amendments, and
+does not yet accept it for integration. The returned identities are:
+
+| Path | SHA-256 | Lines |
+|---|---|---:|
+| `src/cryptofactors/ingest/binance_usdm_liquidation_observed.py` | `0974dc6750f4e3211af44402ea29febc818f2e1371b63b93ad34f255cf7c27cd` | 1,039 |
+| `scripts/research/normalize_binance_usdm_liquidation_observed.py` | `8d97b52138c1ff27a39ddcc5b3fbb99f7db774ba5d0c948103d9d9b95830cfee` | 54 |
+| `tests/ingest/test_binance_usdm_liquidation_observed.py` | `f1f7919f85a4f42b64a135e7455d2f186d3a03212cbc737cba6ba827ee33d20e` | 423 |
+
+Sol's final static amendments fixed the receipt field names, context-independent scale-18
+construction, exact OI extrema, SQLite sidecar checks, official schema/lineage checks and
+comparison timestamps. Those are not outstanding findings. No runtime result is claimed.
+
+The same Sol High actor is authorized to correct only the production and test paths above.
+The CLI is frozen at its returned hash. This is one consolidated correction against the existing
+contract, with no new product, schema, authority, architecture or acceptance gate:
+
+1. **Match the retained inventory.** `_inventory_mappings` requires every Binance perpetual to
+   equal `native + "_PERP.A"` and use base units. The real inventory contains 759 Binance
+   perpetual mappings, including 20 already-suffixed coin-margined native identities using quote
+   units. For example, `AAVEUSD_PERP` maps to `AAVEUSD_PERP.A`. Reproduce the existing
+   `coinalyze_perp_symbol` mapping rule and all 759 mappings for digest
+   `915b643adb226699d9b8fd4607e727470114ccf44b9bb9665a9035acdfc1565c`.
+   Apply the required base-unit and selected-product checks to the 569 selected mappings. Do not
+   reject or remove unrelated inventory entries, nor add them to the liquidation universe.
+2. **Match the acquired request identities.** Both `_validate_raw_descriptor` and
+   `load_generation0_authority` invent a `coinalyze:` prefix on liquidation identities; only the
+   inventory identity has that prefix. The actual first liquidation identity begins
+   `/liquidation-history?symbols=0GUSDT_PERP.A&interval=daily&from=1758067200&to=1787356800&convert_to_usd=false`.
+   Its payload URL is `https://api.coinalyze.net/v1/liquidation-history`, with query and params in
+   separate fields. The current `url + "?" + query` check rejects every actual plan. Bind the
+   exact existing forms and retain strict parameter/revision types, path containment and the
+   terminal seal. Complete the inventory accepted-path, retained revision and retrieval binding
+   against its pinned report receipt. Correct fixtures must exercise these real shapes.
+3. **Verify the bytes consumed and published.** `_official_rows` hashes one opened file and
+   then reopens its pathname for Parquet consumption. Read the authenticated bytes or retain
+   the authenticated descriptor. `_OutputTree.publish` does not verify the final file after a
+   successful rename, and the stored root identity is never checked. A staged-file replacement
+   or root rename can therefore return a digest/path that does not identify the published data.
+   Restore held-root/path verification and final regular-file/hash/schema/row verification for
+   Parquets and final byte verification for JSON, including comparison and completion. Preserve
+   no-clobber, fsync, replay and completion-last behavior; an altered stage, winner or held root
+   must not produce a successful completion. The accepted funding publisher is a read-only
+   reference for these existing requirements.
+4. **Keep one month's typed rows.** The `by_month` dictionary constructs all typed output rows
+   for every month in a response before publishing its first partition. Iterate the bounded raw
+   response in month order, build/publish/release one month's typed rows and gaps, and preserve
+   global point ordinals. Do not retain all monthly typed buffers. Replace the current GC-count
+   assertion with a meaningful buffer-lifetime test; ordinary atomic dictionaries need not appear
+   in `gc.get_objects()`, and its two-point fixture does not prove the required monthly bound.
+5. **Repair and complete the focused tests.** `_raw` has an unescaped JSON object brace in its
+   f-string and cannot build its intended raw response. The interruption test calls `iterdir()`
+   on `.complete` before that directory is created. Correct both fixture failures. Cover the
+   actual report/inventory/plan/completion shapes and their refusal cases, including the full
+   mapping versus selected-unit distinction; the present suite never calls the authority loader
+   or report parser. Add focused regressions for item 3's byte/root substitutions, item 4's
+   monthly retention, and low-context/max-precision signed imbalance. A test named decoder-float
+   refusal must actually pass a decoder float and assert refusal. Preserve the existing gap,
+   exact comparison, absent-overlap and immutable replay cases.
+6. **Meet the existing Ruff gate.** The production/test files contain many inline suites and
+   semicolon-separated statements rejected by the repository's existing E701/E702 defaults,
+   plus the unused test `os` import. Expand these into reviewable statements and remove unused
+   imports. This is required check compliance, not a new formatting policy. Sol does not run
+   Ruff; Hermes retains that check.
+
+After completing this bounded correction and its static pass, the reviewer explicitly authorizes
+Sol to run exactly one targeted command, once, from the repository root:
+
+```bash
+PYTHONPATH=src /home/lars/Crypto_Multifactor_Bot/.venv/bin/python -m pytest tests/ingest/test_binance_usdm_liquidation_observed.py -q
+```
+
+This uses AGENTS.md's targeted senior test exception for immediate corrective source feedback.
+Fixture writes belong only to pytest temporary storage. Sol reports the exact command, complete
+output, exit code, three final hashes and line counts, then stops. On the first nonzero result,
+stop without patching or rerunning. No other runtime check, normalizer, real-data mutation,
+network, linter/compiler, integration, record, Git operation or later batch is authorized.
+Hermes remains unauthorized pending reviewer source acceptance. Batch A remains accepted;
+CEX-002 stays `IN_PROGRESS`, with seven accepted products and next ticket `NONE`.
 
 ## Reviewer publication scope
 

@@ -36,10 +36,15 @@ comparison evidence from the three retained Coinalyze overlap responses and acce
 bar/OI/funding products. Review 476 fixes dates, fields, unit conversion and explicit missing
 ETH OI overlap. No source substitution or new acquisition is needed for this source assignment.
 
-Sol returns the complete three-file drop with hashes and line counts for one consolidated
-review. Sol performs no tests, runtime verification, real-data run, network, integration,
-records, Git, data mutation or other-path edits. Hermes remains unauthorized pending reviewer
-source acceptance. Later batches and the next ticket remain unauthorized.
+The complete first drop has received one consolidated source review in Review 476. Sol High
+now corrects only the production and test paths for the enumerated inventory/request binding,
+publication verification, monthly buffering and test/check defects. The CLI is frozen at SHA-256
+`8d97b52138c1ff27a39ddcc5b3fbb99f7db774ba5d0c948103d9d9b95830cfee`.
+After the correction, Sol may run Review 476's one exact targeted pytest command once under
+AGENTS.md's senior test exception, report complete output and hashes, and stop. A nonzero result
+requires an immediate stop without patch/rerun. All other runtime checks, real-data execution,
+network, integration, records, Git and other-path edits remain unauthorized. Hermes awaits
+reviewer source acceptance. Later batches and the next ticket remain unauthorized.
 
 Governing documents:
 
