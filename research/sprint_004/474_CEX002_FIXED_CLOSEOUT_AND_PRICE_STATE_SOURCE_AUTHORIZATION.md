@@ -69,6 +69,12 @@ latitude in `docs/engineering/DEVELOPMENT_ROLES.md`; named Spark/Sol defaults do
 the available choices. Selection remains based on task fit, reliability and end-to-end usage,
 with existing role boundaries preserved. Batch A remains assigned to Sol High.
 
+On 2026-09-08 the owner explicitly authorizes the reviewer to launch and supervise Sol High
+directly as a sub-agent for this three-path assignment. This replaces manual owner prompt relay
+for Batch A, including reviewer feedback on the same drop. Source-author restrictions and Hermes
+integration/validation ownership remain unchanged. The reviewer may receive the drop and return
+one consolidated correction directly without another owner relay.
+
 ## Batch A authority and scope
 
 Sol High is selected for the related hourly-source and exact-decimal work based on its accepted
@@ -184,7 +190,8 @@ replay. Include differing source ordinals across a join and negative non-termina
 Sol returns the complete three-path drop with SHA-256 and line counts for reviewer static
 inspection. Sol performs no tests, real-data execution, integration, repository-record edit, Git,
 commit, push, data mutation, acquisition, network, cleanup, other product, experiment or model
-work. Hermes is not authorized until reviewer source acceptance. The owner relays the assignment.
+work. Hermes is not authorized until reviewer source acceptance. The reviewer delegates this
+assignment directly under the owner's explicit approval above.
 
 ## Reviewer publication scope
 
@@ -193,7 +200,7 @@ Under the AGENTS.md reviewer governance-publication exception this review publis
 - `research/sprint_004/474_CEX002_FIXED_CLOSEOUT_AND_PRICE_STATE_SOURCE_AUTHORIZATION.md`;
 - `docs/handoff/CURRENT_TASK.md`;
 - `tickets/CEX-002.md`; and
-- `docs/engineering/DEVELOPMENT_ROLES.md` (owner model-selection clarification only).
+- `docs/engineering/DEVELOPMENT_ROLES.md` (owner model-selection and direct-delegation clarification only).
 
 The reviewer changes only these governance paths. This decision executes no acceptance commands,
 integrates no developer source and changes no data or prior product acceptance.

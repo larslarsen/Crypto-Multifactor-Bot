@@ -73,6 +73,11 @@ the selected model, reasoning level where supported, and bounded role. This lati
 preserves reviewer acceptance, source-author restrictions, Hermes integration ownership,
 and the one-authorized-senior rule. It does not automatically change an active assignment.
 
+At the owner's explicit direction, the reviewer may replace manual owner prompt relay with
+direct developer sub-agent delegation and feedback for the bounded assignment recorded in
+the active review. Review 474 records this approval for CEX-002 Batch A. Delegation preserves
+the developer's source-only scope and Hermes's integration and validation ownership.
+
 Model and developer selection are based on **end-to-end usage per accepted result**,
 engineering risk, and reliability — not nominal per-token price. A cheaper source author
 is not selected when ambiguity or correction risk is likely to consume more review and

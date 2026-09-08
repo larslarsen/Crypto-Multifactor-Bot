@@ -20,7 +20,8 @@ review narratives remain in the ticket, research records and Git history.
 
 ## Current action
 
-The owner relays Review 474 to Sr Dev - Codex Sol using GPT-5.6-sol High. Sol may author only:
+The owner explicitly authorized direct delegation on 2026-09-08. The reviewer launches and
+supervises Sr Dev - Codex Sol using GPT-5.6-sol High for Review 474. Sol may author only:
 
 - `src/cryptofactors/ingest/binance_usdm_price_state.py`;
 - `scripts/research/normalize_binance_usdm_price_state.py`; and
