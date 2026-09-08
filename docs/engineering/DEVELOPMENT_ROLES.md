@@ -66,6 +66,13 @@ no code, migrations, tickets, or acceptance state.
 
 ## Routing principle
 
+The owner's 2026-09-08 clarification permits the reviewer to select **any available OpenAI
+model**, based on task fit, reliability, and end-to-end usage. The named Spark and Sol
+model assignments are defaults, not an exclusive model list. Each assignment must name
+the selected model, reasoning level where supported, and bounded role. This latitude
+preserves reviewer acceptance, source-author restrictions, Hermes integration ownership,
+and the one-authorized-senior rule. It does not automatically change an active assignment.
+
 Model and developer selection are based on **end-to-end usage per accepted result**,
 engineering risk, and reliability — not nominal per-token price. A cheaper source author
 is not selected when ambiguity or correction risk is likely to consume more review and

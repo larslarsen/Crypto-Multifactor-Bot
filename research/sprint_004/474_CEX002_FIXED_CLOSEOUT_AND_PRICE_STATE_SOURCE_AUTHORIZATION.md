@@ -62,6 +62,13 @@ acceptance is exclusive. No partial release is relabeled complete.
   including an adequate execution duration and the exact existing path spellings. Do not add
   ceremonial handoffs between successful steps. Existing failure-stop and role boundaries remain.
 
+## Owner model-selection clarification - 2026-09-08
+
+The owner confirms that the reviewer may select any available OpenAI model. Record this
+latitude in `docs/engineering/DEVELOPMENT_ROLES.md`; named Spark/Sol defaults do not restrict
+the available choices. Selection remains based on task fit, reliability and end-to-end usage,
+with existing role boundaries preserved. Batch A remains assigned to Sol High.
+
 ## Batch A authority and scope
 
 Sol High is selected for the related hourly-source and exact-decimal work based on its accepted
@@ -181,8 +188,9 @@ work. Hermes is not authorized until reviewer source acceptance. The owner relay
 Under the AGENTS.md reviewer governance-publication exception this review publishes exactly:
 
 - `research/sprint_004/474_CEX002_FIXED_CLOSEOUT_AND_PRICE_STATE_SOURCE_AUTHORIZATION.md`;
-- `docs/handoff/CURRENT_TASK.md`; and
-- `tickets/CEX-002.md`.
+- `docs/handoff/CURRENT_TASK.md`;
+- `tickets/CEX-002.md`; and
+- `docs/engineering/DEVELOPMENT_ROLES.md` (owner model-selection clarification only).
 
 The reviewer changes only these governance paths. This decision executes no acceptance commands,
 integrates no developer source and changes no data or prior product acceptance.
