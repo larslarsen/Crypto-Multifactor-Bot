@@ -3,10 +3,10 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** freeze the existing completion checklist and authorize the next two related products
+- **Decision:** accept Batch A source and authorize Hermes integration, validation and one local run
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - five of eleven required products accepted
-- **Next required actor:** Sr Dev - Codex Sol on GPT-5.6-sol High
+- **Next required actor:** Jr Dev - Hermes
 - **Next ticket:** `NONE`
 
 ## Fixed completion boundary
@@ -30,9 +30,10 @@ The remaining delivery sequence is fixed:
 | C | `binance_usdm_cost_calibration` | Frozen book-ticker/depth sample, fee gaps and the two already accepted ADR-0026 scenarios |
 | D | `binance_usdm_coverage_gap`; `binance_usdm_harmonic_bundle`; final Gates 4-5 | Full coverage/daily intersection, bounded one-minute/hourly reconciliation, remaining independent economic checks, pinned bundle/catalog transaction, clean NautilusTrader readback, resume/replay evidence and final acceptance results |
 
-These batches are a work order for the same ticket. Only Batch A's source paths below are
-authorized now. Each subsequent batch requires reviewer disposition of the preceding result and
-an exact-path assignment; it does not reopen the deliverable list. Batch D must also cite the
+These batches are a work order for the same ticket. Only Batch A's source paths and its complete
+Hermes workflow below are authorized now. Each subsequent batch requires reviewer disposition
+of the preceding result and an exact-path assignment; it does not reopen the deliverable list.
+Batch D must also cite the
 existing Gate-0 five-artifact quarantine acceptance/evidence and pinned holdout boundary. Missing
 evidence for either remains an explicit existing requirement, never an assumed PASS. The unrelated
 dirty BitMEX source paths do not prove Gate-0 completion.
@@ -192,6 +193,151 @@ inspection. Sol performs no tests, real-data execution, integration, repository-
 commit, push, data mutation, acquisition, network, cleanup, other product, experiment or model
 work. Hermes is not authorized until reviewer source acceptance. The reviewer delegates this
 assignment directly under the owner's explicit approval above.
+
+## Batch A source disposition and targeted test - 2026-09-08
+
+The reviewer accepts the complete drop after inspecting it and the in-scope corrections together.
+Static inspection finds no remaining source blocker under the existing Batch A contract. The same
+Sol actor corrected duplicate-field comparison, compacted exact source/ordinal lineage, coalesced
+missing causal-join runs, declared the derived floor arithmetic honestly, and completed the
+sidecar, retention and replay test cases. This is one bounded drop under this review.
+
+The frozen identities, independently reproved by the reviewer, are:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/binance_usdm_price_state.py` | 2,118 | `05a59b9b5ad89ef08f2d8bdd3ec254ad01714bff559e78ca15278e72d0dbbb26` |
+| `scripts/research/normalize_binance_usdm_price_state.py` | 54 | `ea423f382ca842d0a0f197ed7cdf1a337010df6354b95cc441ef35aa7ed62445` |
+| `tests/ingest/test_binance_usdm_price_state.py` | 801 | `921eb3ebb7d05de9b0d24e1c17abe661e631908922ff774871c684473ad69263` |
+
+For immediate source feedback on these corrections, the reviewer invokes the AGENTS.md
+**Targeted senior test exception**. Sol is authorized to run exactly this command once from
+the repository root, against the frozen files:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_price_state.py -q --tb=short
+```
+
+Sol reported the exact command and complete terminal output after its one invocation:
+
+```text
+..................................................                       [100%]
+```
+
+Exit code: `0`; all 50 cases passed. Sol stopped and reported no file modification. The reviewer
+reproved the frozen hashes after the result. This test was the sole exception to the source-only
+restriction above; no acceptance-suite, integration, implementation-record, Git, real-data,
+acquisition or publication ownership transferred. Hermes must perform its own integration
+checks below. Source acceptance does not accept an unexecuted data product: five products
+remain accepted, with Gate 3 and CEX-002 still `IN_PROGRESS`.
+
+The reviewer also inspected the selected local archives read-only to ground the source decision.
+All 102,740 selected ZIP sizes and hashes matched their completion identities; the scan counted
+47,279,134 physical rows and found no ZIP/member, CRC, row-width, period, hourly-grid, OHLC,
+positive mark/index, ordering or repeated-open-time violations in its enumerated checks.
+An independent timestamp intersection counted 15,153,756 premium observations in 21,507 months,
+15,125,823 causal triples in 21,491 months, 1,777 basis gap-only months and 1,901,665 unmatched
+source observations. These are source-review cross-checks, not executed product output, full
+sidecar authentication, or acceptance evidence. Hermes must derive and reconcile real results.
+
+## Complete Hermes integration and execution authorization
+
+The next actor is Jr Dev - Hermes, using the best reliable free Nous Portal model currently
+available. The owner relays this review's workflow to Hermes under the existing AGENTS.md relay
+rule; the direct-delegation exception above applied to Sol's bounded assignment. Hermes executes
+the following successful sequence without intermediate owner approval or reviewer handoffs.
+Stop on the first nonzero command or failed proof, preserve exact output and partial artifacts,
+publish the terminal record, and return to the reviewer. No source/test patch, retry, deletion,
+cleanup, acquisition or next batch is authorized.
+
+### Preproof and integration
+
+Prove `HEAD == origin/main` at this review's latest publication commit, an empty index, and all
+three frozen hashes and line counts in the table above. Preserve every unrelated dirty path.
+Run these commands in order, stopping at the first nonzero result:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_price_state.py -q --tb=short
+PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/ingest/binance_usdm_price_state.py scripts/research/normalize_binance_usdm_price_state.py tests/ingest/test_binance_usdm_price_state.py
+python3 scripts/check_repo_control.py
+git diff --check
+```
+
+If all pass, stage exactly the three accepted developer paths, prove the staged paths and
+identities, run `git diff --cached --check`, commit with message
+`CEX-002: integrate paired price-state normalizer`, push, and prove `HEAD == origin/main`.
+Do not stage unrelated changes or introduce a source correction during integration.
+
+### One real local run
+
+Prove `data/.cex002_price_state` is absent and not a symlink, no price-state normalizer is running,
+the report and sizing hashes still match, and `df -B1 --output=avail data` is at least the existing
+110,648,021,942-byte capacity floor. Use an execution mechanism allowing at least 7,200 seconds;
+remain attached to the foreground execution session until terminal. Do not impose a short
+600-second command timeout on this 47-million-row conversion. Execute exactly once:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/research/normalize_binance_usdm_price_state.py \
+  --generation0-state data/cex002_qualify/gate2/state.sqlite \
+  --generation0-content-root data/cex002_qualify/gate2/content \
+  --report research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json \
+  --sizing research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json \
+  --output-root data/.cex002_price_state
+```
+
+Preserve these relative authority path spellings. This command reads already downloaded local
+data and publishes the two separate hidden products; it changes no generation-0 authority.
+Normal tool-session output retrieval is permitted while the one foreground command runs. No
+detach, background launcher, second invocation or real-data replay is authorized by this step.
+
+### Terminal evidence and independent reconciliation
+
+Record exact commands/stdout/exit codes, start/end times and wall duration, pre/post available
+bytes, integration commit, both product completion paths/hashes, schema/source/writer identities,
+source counts/bytes/states per family, premium ZIP reads, all row equations, observed ranges,
+partition/gap-only counts, typed gaps, artifact counts/bytes, sole completion and staging state.
+
+On success independently read every descriptor-referenced data/gap Parquet and lineage file:
+prove contained regular-file paths, hashes, every actual frozen Arrow schema, row counts, all
+descriptor sums, exact source-reference/ordinal bindings, and no unreferenced artifact or staging
+file. Check the lineages' run counts and ordinal/time ranges, all gap equations and the physical
+row reconciliation. Compare observed artifact bytes with the pinned product allocation and
+report any excess as a discrepancy; do not change sizing or remove evidence.
+
+The reviewer source scan provides these cross-checks, which Hermes must derive from the products
+and reconcile rather than substitute for output evidence:
+
+| Check | Source-review observation |
+|---|---:|
+| Selected price-state objects / bytes | 102,740 / 1,038,628,891 |
+| Verified / retained-credit completions | 102,711 / 29 |
+| Premium objects / bytes / reads | 32,371 / 299,148,485 / 32,371 |
+| Premium physical and product rows | 15,153,756 |
+| Indicative nonempty partitions | 21,507 |
+| All-family physical rows | 47,279,134 |
+| Basis product rows / joined input rows | 15,125,823 / 45,377,469 |
+| Basis unjoinable source rows | 1,901,665 |
+| Basis nonempty / gap-only / source-union partitions | 21,491 / 1,777 / 23,268 |
+| Collapsed / excluded / fabricated source rows | 0 / 0 / 0 |
+
+Check all indicative rate values are null with the declared unavailable status, native identity
+and canonical-null state remain exact, signed/zero premium is preserved, and basis values bind
+the proper mark/index/premium sources. Independently recompute basis arithmetic for bounded
+source-backed examples including a negative ratio and the differing-coverage `0GUSDT` September
+2025 month. Reprove the signed floor rule and close-time availability semantics. These are
+read-only evidence checks, not permission to design tests or alter source/data.
+
+Hermes publishes `research/sprint_004/475_CEX002_PRICE_STATE_INTEGRATION_AND_REAL_RUN_RECORD.md`,
+updates only the current checklist/action in `tickets/CEX-002.md` and
+`docs/handoff/CURRENT_TASK.md`, returns both actor fields to the reviewer, and leaves CEX-002
+`IN_PROGRESS` with next ticket `NONE`. Stage exactly those three implementation-record paths,
+run repository control and staged whitespace checks, commit, push, prove `HEAD == origin/main`,
+and stop for reviewer product acceptance. On failure the record must identify the exact first
+failed step, whether integration occurred, and whether any real command/output was created.
+
+No later batch, coverage/bundle/catalog transaction, NautilusTrader check, experiment, model,
+Harmonic Trader work, PAPER, LIVE or next ticket is authorized by this workflow. The ticket's
+original full-suite and release acceptance commands remain required for Batch D.
 
 ## Reviewer publication scope
 

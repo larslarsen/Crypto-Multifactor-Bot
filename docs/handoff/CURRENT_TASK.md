@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol on GPT-5.6-sol High
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -20,23 +20,25 @@ review narratives remain in the ticket, research records and Git history.
 
 ## Current action
 
-The owner explicitly authorized direct delegation on 2026-09-08. The reviewer launches and
-supervises Sr Dev - Codex Sol using GPT-5.6-sol High for Review 474. Sol may author only:
+Review 474 accepts Sol's complete three-file Batch A source drop. Its one authorized targeted
+pytest invocation passed all 50 cases (exit 0), and the reviewer reproved the frozen hashes.
+Hermes now owns the complete integration, validation, one local run and evidence workflow for:
 
 - `src/cryptofactors/ingest/binance_usdm_price_state.py`;
 - `scripts/research/normalize_binance_usdm_price_state.py`; and
 - `tests/ingest/test_binance_usdm_price_state.py`.
 
-The drop consumes the already downloaded generation-0 mark/index/premium authority and uses
-its frozen schemas to produce two separate products. It preserves signed premium inputs,
-explicitly unavailable indicative rates, causal joins, declared exact-decimal basis arithmetic,
-full lineage and typed gaps. Publication remains partition-bounded, immutable and replayable.
-Review 474 contains the complete authority, economic, publication and test-source contract.
+The drop consumes the already downloaded generation-0 mark/index/premium authority and produces
+two separate products with the frozen schemas. Review 474 contains the exact accepted hashes,
+ordered checks, integration steps, one foreground command, 7,200-second execution allowance,
+source-count cross-checks and complete terminal-record requirements. Preserve the enumerated
+relative authority paths and use `data/.cex002_price_state` as the new hidden output root.
 
-Sol returns the three paths with SHA-256 and line counts for reviewer static inspection.
-Sol performs no tests, real-data run, integration, records, Git, acquisition or data mutation.
-Hermes integration and execution require reviewer source acceptance. No later batch, model,
-experiment, Harmonic Trader work or next ticket is authorized.
+The owner relays Review 474's complete workflow to Hermes. Successful steps need no intermediate
+approval or review. Hermes stops on the first nonzero result or failed proof, preserves output,
+and publishes Record 475 plus these control records, returning both actor fields to the reviewer.
+No source patch, retry, acquisition, next batch or next ticket is authorized. Sol's assignment
+is complete. Source acceptance does not accept unexecuted products; five remain accepted.
 
 Governing documents:
 
