@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol on GPT-5.6-sol High
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -21,13 +21,18 @@ remain. Gate 2 stays accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`.
 
 ## Current action
 
-The owner explicitly authorizes direct prompting on 2026-09-08. The reviewer launches and
-supervises Sol High for Review 476's Batch B source assignment. Only these new paths are
-authorized:
+Review 476 accepts the complete Batch B source drop after consolidated correction and a
+fixture-only repair. All 46 focused tests passed under the targeted senior exception. The
+reviewer independently reproved these final source identities:
 
 - `src/cryptofactors/ingest/binance_usdm_liquidation_observed.py`;
 - `scripts/research/normalize_binance_usdm_liquidation_observed.py`; and
 - `tests/ingest/test_binance_usdm_liquidation_observed.py`.
+
+Production SHA-256: `2e001f2d63c6f127d58e7db0c071a2971ecb6a769d5bd1d85b322d085a1ee257`
+(1,491 lines); CLI: `8d97b52138c1ff27a39ddcc5b3fbb99f7db774ba5d0c948103d9d9b95830cfee`
+(54 lines); tests: `e4949ec6d654cac65f29c976ec13429fa225843545c21571f2725dd1f08d0024`
+(1,033 lines). Sol is finished and all three paths are frozen.
 
 All 569 liquidation responses and their inventory are already local. The drop preserves the
 existing 15-column observed/censored schema, exact base-asset amounts and imbalance, full native
@@ -36,16 +41,15 @@ comparison evidence from the three retained Coinalyze overlap responses and acce
 bar/OI/funding products. Review 476 fixes dates, fields, unit conversion and explicit missing
 ETH OI overlap. No source substitution or new acquisition is needed for this source assignment.
 
-Review 476 accepts the consolidated production corrections and freezes production at SHA-256
-`2e001f2d63c6f127d58e7db0c071a2971ecb6a769d5bd1d85b322d085a1ee257` and CLI at
-`8d97b52138c1ff27a39ddcc5b3fbb99f7db774ba5d0c948103d9d9b95830cfee`.
-The one targeted run had 45 passes and one inconsistent off-grid fixture. Sol correctly stopped.
-Sol High now corrects only that test fixture so its query identity matches the intentionally
-off-grid bound, retaining both the grid and separate identity refusal assertions. It then runs
-Review 476's exact targeted pytest command once under the senior-test exception, reports complete
-output/hashes and stops; on nonzero, no patch or rerun. All other tests/paths, runtime checks,
-real-data execution, network, integration, records and Git remain unauthorized. Hermes awaits
-full source acceptance. Later batches and the next ticket remain unauthorized.
+The next actor is Hermes. The owner relays Review 476's complete Hermes workflow: exact
+preproof and ordered checks, three-path integration commit/push, capacity and authority preproof,
+one foreground local run into `data/.cex002_liquidation_observed_daily` with at least 7,200 seconds
+available, independent artifact/row/gap/18-comparison reconciliation, and terminal Record 477
+publication with both actor fields returned to the reviewer. Execute the successful sequence
+without intermediate approval handoffs. Stop at the first nonzero command or failed proof and
+publish the exact terminal evidence without patch/retry/cleanup. No acquisition, accepted-product
+rerun, catalog publication or later batch is authorized. Source acceptance leaves seven data
+products accepted; liquidation data and Gate 4 still await the reviewer.
 
 Governing documents:
 

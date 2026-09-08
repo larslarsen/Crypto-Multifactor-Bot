@@ -3,10 +3,10 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept both Batch A products; freeze corrected Batch B production/CLI and require the single test-fixture correction below
+- **Decision:** accept both Batch A products and the complete Batch B source drop; authorize Hermes integration, validation and one local run
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - seven of eleven required products accepted
-- **Next required actor:** Sr Dev - Codex Sol on GPT-5.6-sol High
+- **Next required actor:** Jr Dev - Hermes
 - **Next ticket:** `NONE`
 
 ## Batch A acceptance
@@ -382,6 +382,146 @@ frozen. After this bounded fixture correction, Sol may run the exact targeted py
 enumerated above once under the same senior-test exception, report complete output/exit code and
 all three hashes/line counts, and stop. On nonzero, do not patch or rerun. No other command or
 ownership exception is added. Hermes remains unauthorized until the full source drop is accepted.
+
+## Final Batch B source acceptance
+
+The reviewer accepts the complete corrected three-file drop for Hermes integration. The final
+fixture changes its off-grid bound and bound query together, preserving both refusal assertions.
+Reversing only that fixture change in memory reproduces the exact prior test hash above;
+production and CLI hashes are unchanged. Static review finds no remaining source blocker within
+the frozen Batch B contract. Sol ran the newly authorized targeted command exactly once:
+
+```bash
+PYTHONPATH=src /home/lars/Crypto_Multifactor_Bot/.venv/bin/python -m pytest tests/ingest/test_binance_usdm_liquidation_observed.py -q
+```
+
+Complete reported output:
+
+```text
+..............................................                           [100%]
+```
+
+Exit code `0`; all 46 cases passed. The reviewer independently reproved the final manifest:
+
+| Path | SHA-256 | Lines |
+|---|---|---:|
+| `src/cryptofactors/ingest/binance_usdm_liquidation_observed.py` | `2e001f2d63c6f127d58e7db0c071a2971ecb6a769d5bd1d85b322d085a1ee257` | 1,491 |
+| `scripts/research/normalize_binance_usdm_liquidation_observed.py` | `8d97b52138c1ff27a39ddcc5b3fbb99f7db774ba5d0c948103d9d9b95830cfee` | 54 |
+| `tests/ingest/test_binance_usdm_liquidation_observed.py` | `e4949ec6d654cac65f29c976ec13429fa225843545c21571f2725dd1f08d0024` | 1,033 |
+
+Sol is finished. No source author or reviewer has integrated these files or executed a real-data
+conversion. Source acceptance does not accept the liquidation data or Gate 4. Seven data products
+remain accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`, with next ticket `NONE`.
+
+## Complete Hermes integration and execution authorization
+
+The next actor is Jr Dev - Hermes on the best reliable free Nous Portal model currently available.
+The owner relays this complete workflow under the existing AGENTS.md relay rule; the direct Sol
+delegation above did not transfer Hermes's ownership. Hermes executes the successful sequence
+below without intermediate owner approvals or reviewer handoffs. Stop at the first nonzero
+command or failed proof, preserve exact evidence and partial artifacts, publish the terminal
+record, and return to the reviewer. No source/test patch, retry, cleanup or later batch is authorized.
+
+### Preproof and integration
+
+Prove `HEAD == origin/main` at this review's latest publication commit, an empty index, and all
+three final hashes/line counts in the final acceptance table. Preserve every unrelated dirty path.
+Run in order, stopping at the first nonzero result:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_liquidation_observed.py -q
+PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/ingest/binance_usdm_liquidation_observed.py scripts/research/normalize_binance_usdm_liquidation_observed.py tests/ingest/test_binance_usdm_liquidation_observed.py
+python3 scripts/check_repo_control.py
+git diff --check
+```
+
+If all pass, stage exactly the three accepted developer paths, prove the staged paths and
+identities, run `git diff --cached --check`, commit with message
+`CEX-002: integrate observed liquidation normalizer`, push, and prove `HEAD == origin/main`.
+Do not stage unrelated work or introduce an integration-time correction.
+
+### One real local run
+
+Prove `data/.cex002_liquidation_observed_daily` is absent and not a symlink; no liquidation
+normalizer is already running; the report, sizing and three accepted official completion hashes
+above still match; and available space from `df -B1 --output=avail data` is at least the existing
+110,648,021,942-byte floor. Use a foreground execution mechanism allowing at least 7,200 seconds
+and remain attached until terminal. A mechanism capped at 600 seconds must stop before launch.
+Execute exactly once:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/research/normalize_binance_usdm_liquidation_observed.py \
+  --generation0-state data/cex002_qualify/gate2/state.sqlite \
+  --generation0-content-root data/cex002_qualify/gate2/content \
+  --report research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json \
+  --sizing research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json \
+  --bar-product-root data/.cex002_bar_1h \
+  --open-interest-product-root data/.cex002_open_interest_5m \
+  --funding-product-root data/.cex002_funding_realized \
+  --output-root data/.cex002_liquidation_observed_daily
+```
+
+Preserve these relative authority path spellings. This reads only the existing local authorities
+and accepted products and writes the new hidden liquidation product. Ordinary output retrieval
+from the one running foreground session is permitted. No acquisition, wrapper, detached runner,
+second invocation, real-data replay, accepted-product rerun or catalog transaction is authorized.
+
+### Terminal evidence and independent reconciliation
+
+Record exact commands, stdout/stderr and exit codes; start/end times with explicit timezone and
+wall duration; integration commit; pre/post available bytes; completion/schema/source/writer
+identities; every row equation; partition and gap counts; and logical artifact bytes. Distinguish
+logical output bytes from shared-filesystem free-space changes. Record failed or unavailable
+evidence honestly instead of inferring success from a partial artifact or absent process.
+
+On success, independently read every descriptor-referenced data/gap Parquet and lineage, plus
+comparison and completion JSON. Verify contained regular-file paths, all hashes, every actual
+Arrow schema, row counts, descriptor sums, native/canonical-null identity, source-reference and
+original-ordinal binding, exact base-asset values and signed scale-18 imbalance, daily ownership,
+typed gaps and row reconciliation. Reconcile the complete filesystem inventory with referenced
+artifacts, sole completion and staging state. Compare actual artifact bytes with the unchanged
+187,270,569-byte liquidation allocation and report any discrepancy without changing sizing.
+
+The following independent raw-source observations are cross-checks, not substitutes for output
+evidence. Hermes must derive the actual results:
+
+| Check | Source-review observation |
+|---|---:|
+| Liquidation responses / bytes | 569 / 20,126,995 |
+| Retained inventory responses / bytes | 1 / 1,449,633 |
+| Full Binance perpetual mappings / selected mappings / unmapped native identities | 759 / 569 / 202 |
+| Physical observations / collapsed duplicates / expected product rows | 479,340 / 0 / 479,340 |
+| Inclusive requested days / missing days | 486,056 / 6,716 |
+| Requested symbol/months / nonempty data partitions / gap-only months | 16,419 / 16,373 / 46 |
+| Maximal missing runs before month splitting / typed daily gap rows | 4,566 / 4,626 |
+| Daily-gap symbol/month partitions / authority-gap partitions | 2,570 / 1 |
+| Unmapped authority-gap rows | 202 |
+| Requested bounded comparison entries | 18 |
+| Expected referenced files with the accepted grouping | 37,890 |
+
+The file equation is `2 * 16,373 + 2 * 2,570 + 2 + 1 + 1 = 37,890`: data pairs, daily-gap
+pairs, the authority-gap pair, comparison JSON and completion JSON. The daily-gap and authority-gap
+rows are different evidence and must not be double-counted as files or manufactured market rows.
+Reprove censorship/unknown-availability metadata and `event_complete=false` for every product row.
+
+Independently reconstruct the 18 comparisons from the three authenticated retained overlap
+responses and only the used partitions/lineages of the accepted official products. Record both
+values and original timestamps/ordinals/hashes, the percentage-to-fraction funding convention,
+unaltered settlement milliseconds/intervals, and BTC same-day OI min/max. The expected inventory
+is 12 exact price/funding pairs, three measured BTC OI differences (`122.388`, `0.012`, `-95.819`
+base units), and three explicit ETH OI overlap absences. Derive these; do not copy the expected
+outcomes or introduce a tolerance/PASS for OI differences. Final secondary-source and Gate-4
+disposition remains reviewer-owned.
+
+Every terminal outcome is published as
+`research/sprint_004/477_CEX002_LIQUIDATION_INTEGRATION_AND_REAL_RUN_RECORD.md` by Hermes,
+with the actual integration identity, exact command results and the reconciliation or failure
+evidence. It reports observations and validation, not reviewer acceptance. Hermes updates
+CURRENT_TASK and the ticket's current fields/checklist in place, returns both actor fields to
+the Lead Quantitative Finance Researcher/Engineer, keeps CEX-002 `IN_PROGRESS` and next ticket
+`NONE`, and commits/pushes exactly that record plus CURRENT_TASK and the ticket. It does not edit
+this reviewer-authored Review 476 or append a duplicate ticket narrative. Return the publication
+commit and completion identity, or precise terminal blocker, then stop for reviewer acceptance.
 
 ## Reviewer publication scope
 
