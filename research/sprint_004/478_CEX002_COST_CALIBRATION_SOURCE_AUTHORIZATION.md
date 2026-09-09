@@ -3,15 +3,16 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** preserve the failed run; authorize bounded finalizer source for the verified Batch C artifacts
+- **Decision:** accept finalizer source; authorize Hermes integration and exact preserved-output finalization
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - eight products accepted
-- **Next required actor:** Sr Dev — Codex Sol
+- **Next required actor:** Jr Dev — Hermes
 - **Next ticket:** `NONE`
 
 ## Current disposition - preserved-output finalization
 
-This section supersedes all execution assignments below. Record 479 is published at
+The finalizer acceptance and Hermes workflow immediately below is the sole current
+execution authority; earlier assignments are history. Record 479 is published at
 `ca2d42027b676072bab3f115dc2aa1b38e816c1b`; the producer integration is
 `e092d17afa3d229135d89fa144ddc2b120e8e2f7`. The sole conversion exited 1 after writing
 all components and passing its source-row reconciliation, at the ticker projected-row
@@ -73,8 +74,8 @@ reviewed inventory. Receipt 258, its coefficients/projections, the ordinary norm
 schemas, economic semantics and all byte allocations remain immutable. This is a bounded
 recovery of the existing product, not a new sizing version or a general row-limit waiver.
 The reviewer permits the observed ticker-row variance only for the exact inventory and
-component facts above. Real-product acceptance and a finalizer run remain unauthorized
-until the complete source and independent review evidence are accepted.
+component facts above. The finalizer source and reviewer evidence are accepted below;
+real-product acceptance remains pending Hermes's execution and reviewer disposition.
 
 The preserved inventory SHA-256 is
 `482cda93ba68c93d46a17207bbb6b01764dd5b66d72d936860eba67d2f399b98`.
@@ -193,6 +194,110 @@ isolates the existing semantic check; a byte-limit refusal is not evidence of th
 After this sole correction, Sol may run the exact targeted pytest command above once.
 Stop on the first nonzero result without patching or retrying, and return complete
 output and SHA-256 values. All other prohibitions remain in force.
+
+## Finalizer source acceptance and current Hermes workflow
+
+The reviewer accepts the complete finalizer drop after static review and the fixture-only
+correction. Sol's sole newly authorized targeted command exited 0, with exact output
+`..............................                                           [100%]`: all 30
+cases passed. The earlier 29-pass/one-failure result remains recorded above. The accepted
+source identities were independently obtained with `sha256sum`, not reconstructed from
+abbreviations in the developer's message:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/binance_usdm_cost_finalization.py` | 867 | `b9dda86e6e0bbe046bec05ba402aca0c642e102114b5e737d4dc2ad92d010528` |
+| `scripts/research/finalize_binance_usdm_cost_calibration.py` | 55 | `6e9609c4fa781c32e2044e31338e0d03f68f401cc0445f8e8bd5c09b30bcdf18` |
+| `tests/ingest/test_binance_usdm_cost_finalization.py` | 592 | `51f3ce4b4d4fa6e764558ee2f86b22a8e8bbb9f94065173333a20ad31161cc1f` |
+
+The reviewer also independently checked all 771 encoded fee-gap identities and both
+unchanged policy rows; ten raw-to-encoded ticker/depth observations across LTCBUSD,
+STPTUSDT, XRPUSDC and XCNUSDT; and all 9,670 rows of 0GUSDT depth on 2025-09-17. Exact
+decimals, signed bands, timestamps, ordinals and one-sided/empty ticker states agreed.
+These bounded value comparisons complement the complete hash/count/ordinal audits above;
+they do not claim complete independent raw-value equality. No accepted data is reopened.
+
+Hermes alone now owns this complete workflow, using `meituan/longcat-2.0:free`, verified
+on the current live Nous Portal free list. Its prior integration and six-hour operation
+completed correctly; its record arithmetic and timing require the exact corrections above.
+Preserve the unrelated dirty baseline. Stop at the first nonzero command or failed proof:
+no source patch, automatic retry, deletion or repeated conversion. Read-only failure
+inventory and the terminal record are authorized after a stop. Ordinary success proceeds
+to the next enumerated step without a new handoff.
+
+1. Read this current section, prove `HEAD == origin/main` includes this publication,
+   capture the full commit, and require empty `git diff --cached --name-only` output.
+   Reprove the three accepted file SHA-256 values and line counts above. Do not substitute
+   working-tree cleanliness or Git blob SHA-1 for these proofs.
+2. Execute each command separately, in this order, inspecting its exit before continuing:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_cost_finalization.py -q --tb=short
+   PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/ingest/binance_usdm_cost_finalization.py scripts/research/finalize_binance_usdm_cost_calibration.py tests/ingest/test_binance_usdm_cost_finalization.py
+   python3 scripts/check_repo_control.py
+   git diff --check
+   ```
+
+3. Stage exactly the three accepted finalizer paths, inspect the staged path set,
+   run `git diff --cached --check`, commit and push, prove `HEAD == origin/main`, and
+   reprove the source hashes. No other developer files are integrated.
+4. Reprove the original producer SHA, report/sizing/v3 hashes and membership completion
+   pinned in this review. Confirm PyArrow 25.0.0 and the accepted writer identity.
+   Prove the preserved root and empty `.staging` are safe directories, no completion
+   exists, and no cost normalizer/finalizer process is live. Hash all preserved files
+   using the exact inventory encoding above, require 7,731 files / 17,940,823,719 bytes /
+   the pinned digest, and retain their inode/mtime/hash facts for post-run comparison.
+   Record available bytes with `statvfs.f_bavail * f_frsize`; require the unchanged
+   73,204,546,497-byte floor. Read-only temporary evidence helpers are authorized.
+5. Invoke this exact finalizer once in the foreground with `timeout=7200`, under
+   `TERMINAL_MAX_FOREGROUND_TIMEOUT=43200`. This is a ceiling, not a runtime estimate.
+   Remain attached until terminal; no detached process or polling loop. Preserve the
+   relative authority spellings:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python scripts/research/finalize_binance_usdm_cost_calibration.py \
+     --report research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json \
+     --sizing research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json \
+     --generation0-state data/cex002_qualify/gate2/state.sqlite \
+     --generation0-content-root data/cex002_qualify/gate2/content \
+     --v3-manifest data/cex002_qualify/gate2_revision_candidate_v3/manifest/4dacaba97c17ad9c4a9724f5db74dfab7ee98760cdb3df6dea46ab37c0684c2d.json.gz \
+     --recovery-root data/cex002_recovery \
+     --membership-root data/.cex002_perpetual_membership \
+     --output-root data/.cex002_cost_calibration
+   ```
+
+   Record observed UTC before/after times separately from tool-call timestamps/elapsed
+   duration. Capture exact terminal output, exit and immediate post-run available bytes.
+   Success must report `completion_reused=false`, 3,865 partitions and 939,130,319 source
+   rows. No ZIP expansion, CSV parsing or Parquet rewriting is authorized.
+6. After success, authenticate the sole completion and all referenced artifacts. Require
+   exactly 7,732 files, empty staging, unchanged inode/mtime/hash facts for all 7,731
+   preserved files, and only one new completion. Reconcile actual component rows/bytes,
+   quote counts, source equations and gaps against this review. Completion must preserve
+   the original producer/integration identity, bind the finalizer/inventory hashes, and
+   explicitly report the exceeded ticker projection with `ordinary_sizing_check_passed`
+   false. All byte limits including completion must pass. Report logical output bytes
+   separately from available filesystem bytes.
+7. Only after steps 5 and 6 succeed, invoke the same exact finalizer command once more
+   with the same timeout as the ticket's explicit deterministic replay proof. This
+   authorized successful replay is not a retry after failure. Require exit 0,
+   `completion_reused=true`, identical completion digest/bytes and unchanged entire
+   artifact inventory, inodes and mtimes. Record its actual timing and terminal output.
+8. Update existing Record 479 in place with finalizer validation, integration, finalization,
+   replay and reconciliation evidence. Preserve the original failed conversion history;
+   explicitly correct its depth/total rows and distinguish workflow observation times
+   from the exact tool-call interval recorded above. Cite reviewer audits as reviewer
+   evidence, never as Hermes-executed checks. Do not create a replacement record/version.
+   Update only the current-action/checklist portions of `docs/handoff/CURRENT_TASK.md`
+   and `tickets/CEX-002.md`, returning both actor fields to the reviewer. Keep eight
+   products accepted pending product review, Gate 3/CEX-002 `IN_PROGRESS`, next `NONE`.
+   Run repository control and whitespace separately; stage exactly Record 479 and those
+   two control paths, inspect the staged set, run staged whitespace, commit, push, prove
+   `HEAD == origin/main`, and stop for review.
+
+No full-ticket acceptance suite is due until the existing Batch D closeout. No source
+edits, original normalizer invocation, acquisition, other-product rerun, Batch D, catalog,
+NautilusTrader, experiment, model or next-ticket work is authorized by this assignment.
 
 ## Historical corrected source acceptance and Hermes workflow
 

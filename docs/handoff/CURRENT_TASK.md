@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -39,10 +39,12 @@ with exit 1: `retained_book_ticker measured allocation exceeded`. Measured ticke
 882,076,090 exceed the bound 745,543,507 by 136,532,583 rows. All other components are within
 bounds. No completion descriptor was published. Record 479 preserves the failed run;
 Review 478 corrects its row-total/timing details and pins the verified preserved output.
-Sol High now owns exactly the three new finalizer source/test paths enumerated there.
-The finalizer must reuse the existing 7,731 files, preserve the exceeded projection and
-every byte limit, and publish only a verified completion. No repeated conversion,
-senior test execution or real finalization is authorized before source review.
+Review 478 accepts the finalizer source after Sol's fixture correction and 30 passing
+focused cases. Hermes now owns its complete integration, preserved-output finalization,
+one successful replay proof and in-place Record 479 update. Reuse all 7,731 existing
+files and publish only the verified completion, preserving the exceeded projection and
+every byte limit. Follow the current finalizer workflow in Review 478; earlier producer
+assignments are history. No repeated conversion is authorized.
 
 Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
 bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and
