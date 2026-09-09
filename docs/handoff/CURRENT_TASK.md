@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -21,17 +21,24 @@ remain. Gate 2 stays accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`.
 
 ## Current action
 
-Batch B integration and the single local run are now complete: integration
+Batch B integration and the single local run are complete: integration
 `f83653c8747e627d9e8ceb2b88973e16556602f3`, completion
-`dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`, exit 0 in 297.4 seconds.
-Reviewer inspection of every output file/schema/hash/raw value/ordinal and the complete daily
-gap calendar passed; logical output is 136,197,937 bytes. Review 476 records the exact scope.
-Hermes's internal approval timeout subsequently blocked its read-only Python inspection;
-the reviewer stopped it and requested permission to resume reconciliation/publication.
-The owner has now renewed that permission by replying `continue`. Resume the same Hermes
-session with interactive approval handling. Remaining work is read-only evidence reconciliation, all 18
-comparisons, and Record 477/current-field publication. Do not rerun tests, integration or
-the normalizer. Liquidation-data acceptance remains pending; seven products are accepted.
+`dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`, exit 0. The normalizer ran
+once in the foreground starting 2026-09-09T02:48:55Z UTC (2026-09-08T19:48:55 PDT) for 297.4 seconds.
+Reviewer audit of every output file/schema/hash/raw value/ordinal/gap and all 18 comparisons
+passed (two reviewer-authored read-only scripts executed by Hermes, exit 0). Logical output is
+136,197,937 bytes; actual allocation ceiling is 187,270,569 bytes. A file equation of
+2*16,373 + 2*2,570 + 2 + 1 + 1 = 37,890 files was verified; staging is empty; sole completion.
+
+During read-only exploration after the run, an invented `data/.cex002_liquidation_observed_daily/d/`
+listing exited 2 (directory does not exist). This evidence-workflow error was recorded honestly
+without patch, retry, or cleanup. Hermes's interactive approval timeout subsequently blocked a
+read-only Python inspection command; the reviewer stopped the session and the owner renewed
+permission via `continue`. Resume was read-only only: no tests, integration, or normalizer rerun.
+Record 477 published with full reconciliation evidence; both actor fields return to the reviewer.
+Liquidation-data acceptance remains pending with the reviewer; CEX-002 stays IN_PROGRESS,
+seven products accepted. Record 477 completion hash:
+`dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`.
 
 The source acceptance and original integration/run contract below remain the audit trail.
 
