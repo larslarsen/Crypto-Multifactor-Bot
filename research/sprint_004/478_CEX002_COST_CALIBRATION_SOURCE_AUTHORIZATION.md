@@ -173,6 +173,27 @@ Stop on the first nonzero result and report exact output without patching or rer
 On success return final hashes and the observed result for reviewer inspection. No Ruff,
 full suite, integration, Git, records, network, real finalizer or data mutation is authorized.
 
+### Targeted result and fixture-only disposition
+
+The authorized corrected-drop check exited 1: 29 cases passed and
+`test_scenario_policy_cannot_be_backdated_or_reclassified` failed because its mutated
+Parquet exceeded the fixture's scenario byte allocation before reaching the intended
+policy-semantic assertion. The observed error was
+`scenario_policy immutable byte or partition allocation exceeded`. Sol correctly stopped
+without patching or retrying. Production is frozen at
+`b9dda86e6e0bbe046bec05ba402aca0c642e102114b5e737d4dc2ad92d010528` (867 lines);
+the CLI remains unchanged. The pre-correction test hash is
+`d87d9ce5fef92c3448c3820a9a850cd0e41490d1f75cbf47bb3b5469ac4d7240` (585 lines).
+
+Sol may edit only `tests/ingest/test_binance_usdm_cost_finalization.py` to give this
+mutated scenario fixture its actual measured byte and largest-file allowances through
+a fixture-local copy of `producer.COMPONENT_LIMITS`. Preserve the intended
+`match="scenario policy"` assertion, all production limits, and all other tests. This
+isolates the existing semantic check; a byte-limit refusal is not evidence of that check.
+After this sole correction, Sol may run the exact targeted pytest command above once.
+Stop on the first nonzero result without patching or retrying, and return complete
+output and SHA-256 values. All other prohibitions remain in force.
+
 ## Historical corrected source acceptance and Hermes workflow
 
 This section records the completed authorization. The initial assignment and consolidated
