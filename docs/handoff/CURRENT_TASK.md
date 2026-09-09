@@ -42,7 +42,7 @@ bar/OI/funding products. Review 476 fixes dates, fields, unit conversion and exp
 ETH OI overlap. No source substitution or new acquisition is needed for this source assignment.
 
 The next actor is Hermes, directly prompted by the reviewer under the owner's instruction,
-using the currently free Nous Portal model `upstage/solar-pro4:free` for this bounded assignment.
+using the currently free Nous Portal model `poolside/laguna-s-2.1:free` for this bounded assignment.
 Review 476's complete Hermes workflow governs: exact
 preproof and ordered checks, three-path integration commit/push, capacity and authority preproof,
 one foreground local run into `data/.cex002_liquidation_observed_daily` with at least 7,200 seconds

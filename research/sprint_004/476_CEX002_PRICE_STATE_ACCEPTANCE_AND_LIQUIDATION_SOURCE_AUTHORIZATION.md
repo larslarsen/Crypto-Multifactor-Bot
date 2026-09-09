@@ -417,10 +417,13 @@ remain accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`, with next ticket `NONE
 
 The next actor is Jr Dev - Hermes. Under the owner's instruction to prompt developers directly
 and continue, the reviewer directly launches this bounded Hermes assignment. Select
-`upstage/solar-pro4:free` through Nous Portal for this invocation: the live Portal recommended-models
-endpoint on 2026-09-08 lists it first among free recommendations at $0.00 per million tokens.
-This is an availability-based selection for the fixed integration workflow, not a new benchmark
-claim or permanent model default; no explicit reasoning override is selected. Hermes retains all
+`poolside/laguna-s-2.1:free` through Nous Portal for this invocation: the live Portal recommended-models
+endpoint on 2026-09-08 lists it among free recommendations at $0.00 per million tokens, and it is
+Hermes's configured model. The initial Solar Pro 4 session `20260908_194430_25fc3e` repeatedly
+truncated its first tool call and was interrupted before executing any workflow command; its
+process exited 1. Resume the bounded Hermes assignment on Laguna S; this is not a normalizer
+retry. This selection responds to observed tool-call failure, not a new benchmark claim or
+permanent model default; no explicit reasoning override is selected. Hermes retains all
 integration, validation, evidence and corresponding Git ownership. The reviewer only relays the
 prompt and inspects the result. Hermes executes the successful sequence
 below without intermediate owner approvals or reviewer handoffs. Stop at the first nonzero
