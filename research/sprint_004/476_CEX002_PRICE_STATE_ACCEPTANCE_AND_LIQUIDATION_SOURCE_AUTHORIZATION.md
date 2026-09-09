@@ -415,9 +415,14 @@ remain accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`, with next ticket `NONE
 
 ## Complete Hermes integration and execution authorization
 
-The next actor is Jr Dev - Hermes on the best reliable free Nous Portal model currently available.
-The owner relays this complete workflow under the existing AGENTS.md relay rule; the direct Sol
-delegation above did not transfer Hermes's ownership. Hermes executes the successful sequence
+The next actor is Jr Dev - Hermes. Under the owner's instruction to prompt developers directly
+and continue, the reviewer directly launches this bounded Hermes assignment. Select
+`upstage/solar-pro4:free` through Nous Portal for this invocation: the live Portal recommended-models
+endpoint on 2026-09-08 lists it first among free recommendations at $0.00 per million tokens.
+This is an availability-based selection for the fixed integration workflow, not a new benchmark
+claim or permanent model default; no explicit reasoning override is selected. Hermes retains all
+integration, validation, evidence and corresponding Git ownership. The reviewer only relays the
+prompt and inspects the result. Hermes executes the successful sequence
 below without intermediate owner approvals or reviewer handoffs. Stop at the first nonzero
 command or failed proof, preserve exact evidence and partial artifacts, publish the terminal
 record, and return to the reviewer. No source/test patch, retry, cleanup or later batch is authorized.

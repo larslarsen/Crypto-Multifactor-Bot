@@ -41,7 +41,9 @@ comparison evidence from the three retained Coinalyze overlap responses and acce
 bar/OI/funding products. Review 476 fixes dates, fields, unit conversion and explicit missing
 ETH OI overlap. No source substitution or new acquisition is needed for this source assignment.
 
-The next actor is Hermes. The owner relays Review 476's complete Hermes workflow: exact
+The next actor is Hermes, directly prompted by the reviewer under the owner's instruction,
+using the currently free Nous Portal model `upstage/solar-pro4:free` for this bounded assignment.
+Review 476's complete Hermes workflow governs: exact
 preproof and ordered checks, three-path integration commit/push, capacity and authority preproof,
 one foreground local run into `data/.cex002_liquidation_observed_daily` with at least 7,200 seconds
 available, independent artifact/row/gap/18-comparison reconciliation, and terminal Record 477
