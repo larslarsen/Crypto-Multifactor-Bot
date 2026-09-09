@@ -1,13 +1,77 @@
-# CEX-002 Review 476 - Price-State Acceptance and Liquidation Source Authorization
+# CEX-002 Review 476 - Price-State and Observed Liquidation Acceptance
 
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept both Batch A products and the complete Batch B source drop; authorize Hermes integration, validation and one local run
+- **Decision:** accept both Batch A products and the real Batch B observed-liquidation product with its bounded secondary-source reconciliation
 - **Gate 2:** `ACCEPTED`
-- **Gate 3:** `IN_PROGRESS` - seven of eleven required products accepted
-- **Next required actor:** Jr Dev - Hermes
+- **Gate 3:** `IN_PROGRESS` - eight of eleven required products accepted
+- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
 - **Next ticket:** `NONE`
+
+## Final Batch B acceptance and reviewer disposition
+
+The reviewer accepts integration `f83653c8747e627d9e8ceb2b88973e16556602f3`, Hermes's
+terminal publication `8a589baf0d298724fc753ff4d26c22a8dba7f8bc` (Record 477), and the real
+`binance_usdm_liquidation_observed_daily` product. Both commits contain exactly their
+authorized paths. Hermes's 46 focused tests, Ruff and repository-control/whitespace checks
+passed, as did its final documentation publication checks. The single foreground conversion
+exited 0 in 297.4 seconds. The reviewer executed no normalizer or acceptance command.
+
+- Completion: `dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`.
+- Comparison: `bd76dd2069e658ce11a00b7685e0008d4d5be0bec682acdf5640552a31af3391`.
+- Independently inspected: all 37,890 files, all actual Arrow schemas and hashes, all
+  479,340 source-bound values/ordinals and signed imbalances, and the complete gap calendar.
+- Logical output: 136,197,937 bytes against the unchanged 187,270,569-byte allocation.
+
+The 569 mapped and 202 unmapped native identities exactly match the pinned report. All three
+comparison receipts' paths, hashes, byte sizes, request parameters, status and retrieval times
+also match it. The reviewer rehashed the report and sizing and independently reconstructed
+all 18 entries from the retained secondary responses and 15 accepted official partitions and
+lineages. The two read-only audit sources embedded in Record 477 exactly reproduce their
+recorded hashes. Hermes executed those reviewer-authored helpers itself and records that
+authorship correctly; they do not invoke the normalizer.
+
+**Bounded secondary-source disposition:** the six price and six funding pairs match exactly.
+Price uses the last complete hourly trade bar. Funding divides the secondary daily percentage
+by 100 and compares the last actual settlement, retaining original millisecond timestamps and
+eight-hour intervals. BTC OI remains three measured differences:
+
+| UTC day | Secondary OI | Official 23:55 OI | Difference | Official daily min | Official daily max |
+|---|---:|---:|---:|---:|---:|
+| 2020-10-01 | 35,775.357 | 35,652.969 | 122.388 | 35,077.284 | 37,045.394 |
+| 2020-11-15 | 42,107.616 | 42,107.604 | 0.012 | 41,354.417 | 43,272.982 |
+| 2020-12-31 | 34,788.484 | 34,884.303 | -95.819 | 34,190.387 | 36,510.771 |
+
+These base-unit observations fall within their corresponding official daily ranges. That is
+descriptive evidence, not an equality tolerance or proof of why the samples differ. Their
+sampling difference remains explicit and its cause unproven. ETH's three unavailable OI
+comparisons remain explicit because the accepted official series begins in 2021-12.
+
+This completes the declared bounded identity/unit/observation reconciliation required before
+accepting the observed-liquidation series. It does not establish interchangeable OI series or
+complete liquidation-event coverage. Acceptance is for the existing daily, base-asset,
+observed/censored contract: `event_complete=false`, unknown availability, post-2021-04-27
+censorship metadata and no earlier completeness claim. Missing days and unmapped identities
+remain typed gaps. No equality requirement, tolerance or additional acquisition is invented.
+Whole Gate 4 remains unfinished for the other existing release checks.
+
+**Record 477 clarifications:** its workflow-error prose overstates compliance with the first-
+nonzero stop rule. Hermes continued read-only inspection after helper errors; the null-
+`official` error concerned the comparison JSON, not the completion JSON. The earlier approval
+timeout, renewed owner permission and later helper error were distinct events, as recorded
+in this review's chronology below. These errors and report transcription corrections did not
+change source, tests or product data. Separate prelaunch authority-file SHA commands were not
+executed; pinned authority authentication occurred inside the accepted normalizer before
+publication, with independent post-run hashes and artifact inspection. No retrospective
+claim that the omitted command ran is accepted. The preserved command/output evidence and
+independent checks support data acceptance without repeating the run.
+
+Batch B is complete. The integration/run/reconciliation authorizations below are now historical
+and must not be replayed. Eight products are accepted. CEX-002 and Gate 3 remain `IN_PROGRESS`;
+the next ticket remains `NONE`. The fixed remaining order is Batch C cost calibration under
+ADR-0026, then Batch D coverage/intersection and release publication/readback. Neither later
+batch's implementation is authorized by this acceptance; the reviewer retains that next action.
 
 ## Batch A acceptance
 
@@ -575,6 +639,15 @@ with interactive approval handling for individually inspected commands; no appro
 or global configuration change is authorized. The normalizer remains completed;
 do not rerun it. Record 477 and independent 18-comparison reconciliation remain unfinished.
 No liquidation-data acceptance, Batch C authorization or next-ticket authorization is made.
+
+During the renewed interactive session, Hermes successfully executed the reviewer-authored
+read-only file audit. Its subsequent comparison-print helper exited 1 on an explicit
+`official=null` ETH absence. The reviewer authorizes read-only evidence continuation using
+the inspected `/tmp/cex002_reviewer_comparisons.py` helper, which independently derives all
+18 entries from retained raw overlap responses and 15 accepted official partitions/lineages.
+Hermes must attribute reviewer authorship, execute the helper itself and record actual output
+along with its failed helper command. This is evidence inspection, not a production/test
+change, normalizer retry or acceptance transfer. No further helper design is required.
 
 ## Reviewer publication scope
 
