@@ -31,11 +31,14 @@ Do not rerun completed source checks, integration, conversion or accepted-produc
 without specific evidence of an invalidating defect.
 
 Review 474's fixed completion checklist remains governing. Review 478 authorizes Sol High
-as the sole senior to author the three-path Batch C cost-calibration drop, with direct
-reviewer delegation. It covers all 3,144 frozen book objects across generation 0 and the
+as the sole senior for the bounded Batch C cost-calibration drop, with direct reviewer
+delegation. The initial three-path source review is complete; Review 478 returns one
+consolidated production/test correction for inventory verification, measured row/storage
+reconciliation and direct publication of the held staged partition. The CLI remains frozen. It covers all 3,144 frozen book objects across generation 0 and the
 accepted recovery archive, the explicit historical-fee component absence, 771 fee gaps and
-the two ADR-0026 policy rows. Sol stops after source/test-source authoring; test execution,
-Hermes integration and the real run await source disposition.
+the two ADR-0026 policy rows. Sol may run only the one enumerated targeted pytest command after the full correction,
+then stops with its exact output and hashes. Hermes integration and the real run remain
+unauthorized pending source disposition.
 
 Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
 bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and

@@ -3,11 +3,89 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** authorize Batch C source under the existing contracts
+- **Decision:** return the initial source drop for one consolidated bounded correction
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - eight products accepted
 - **Next required actor:** Sr Dev — Codex Sol
 - **Next ticket:** `NONE`
+
+## Consolidated source disposition
+
+The reviewer inspected the complete initial three-path drop, including Sol's final static
+corrections, at these frozen identities:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/binance_usdm_cost_calibration.py` | 1,179 | `9d17395e6dc3eae39839a1099e497f140821cecc7922e2b55c743da59dc30aec` |
+| `scripts/research/normalize_binance_usdm_cost_calibration.py` | 57 | `196bbd5efec2465ca17a62b728eed754c85096c71409e8a35f47ba68a1b4162d` |
+| `tests/ingest/test_binance_usdm_cost_calibration.py` | 702 | `66c3206cc22a3450ab9c2b19deff28e06cc8e6d36a22cdfd9402ca85cebb64f8` |
+
+The full manifest selection, five component schemas, fee semantics, exact conversions,
+quote/depth states and authenticated generation-0/recovery binding are retained. No source
+or data acceptance is granted yet. No tests or normalizer commands were executed by the
+reviewer or Sol for this initial drop.
+
+The following is the consolidated blocking list, tied to the already authorized contract:
+
+1. **Completion must prove the actual output inventory.** `only_completion` inspects only
+   `.complete`; the normalizer never reconciles the rest of the tree to its descriptor.
+   A pre-existing unreferenced file or symlink can remain while completion succeeds. An
+   exception in `before_publish` leaves a JSON staging file; the existing interrupted-run
+   test resumes successfully without checking that leftover. Reprove every referenced
+   Parquet and lineage hash, schema/row/byte facts and the exact tree inventory before
+   exposing completion. Reject foreign, incompatible, missing or unreferenced artifacts
+   and unsafe paths. Keep staging handling ownership-bounded: clean a failed invocation's
+   own temporary files in its failure path, retain verified partitions for replay, and
+   never silently delete arbitrary pre-existing data. Test foreign files/symlinks,
+   corruption or disappearance after a partition was published, interruption cleanup,
+   and successful byte-identical replay with the required final inventory.
+
+2. **Reconcile measured rows and enforce the accepted sizing bounds.** The descriptor's
+   `physical_rows` is assigned the sum of output rows, so physical-versus-retained equality
+   is asserted rather than independently counted during source parsing. Count each raw
+   object's complete ordinal domain once and prove its rows are retained exactly once
+   across partition ownership, including the adjacent-month case. Retain those per-source
+   counts/ranges in lineage and the completion reconciliation. `NORMALIZED_ALLOCATION_BYTES`
+   is currently metadata only, and `_validate_sizing` checks schema/batch size but not the
+   component allocation contract. Bind the existing component row, byte and largest-file
+   bounds; measure actual Parquet, lineage, gap and completion bytes and refuse an exceeded
+   allocation before completion. Keep the zero-row official schema and all existing source
+   rows; do not shrink data to meet the bound. Test measured row reconciliation across
+   multiple objects/month boundaries and a deliberately reduced fixture allocation that
+   must refuse completion. No new sizing version or arbitrary tolerance is authorized.
+
+3. **Use the existing partition-atomic staging contract.** `_write_partition` closes its
+   authenticated staged file, then `_publish_parquet_file` reopens its path and copies the
+   whole partition into a second temporary file before renaming. ADR-0024 specifies that
+   the verified staged partition itself becomes the final file. Publish that held,
+   verified file directly with no-clobber rename or verify an identical existing winner.
+   Keep creation, publication and cleanup under held no-follow directory descriptors for
+   every component. Preserve bounded row-group streaming, fsync and final verification;
+   test stage/path replacement and conflicting existing content without clobbering it.
+
+Sol High remains the sole source author for this first consolidated correction. Edit only
+the production and test paths above; the CLI is frozen. Preserve the accepted design and
+address this list in place. Under the AGENTS.md targeted senior test exception, after the
+complete correction Sol may execute this command **once**:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_cost_calibration.py -q --tb=short
+```
+
+Stop on its first nonzero result and report exact output without patching or rerunning.
+On success report the exact result and frozen two-path hashes, then stop for reviewer
+inspection. No Ruff, full acceptance suite, real-data conversion, network, integration,
+Git, records or data publication is authorized. Hermes remains unauthorized pending the
+source disposition. This exception supersedes the initial no-test instruction only for
+the one enumerated corrective-drop command.
+
+Reviewer read-only input checks also confirmed the exact disjoint 2,790/354 union and
+independently reconstructed the unchanged complete cost-manifest digest. ZIP central
+directories for all 3,144 selected objects contain one member each; the maximum expanded
+ticker member is 1,593,414,699 bytes and depth member 2,139,688 bytes, both within the
+proposed 2 GiB ceiling. First-row inspection of all 909 selected ticker objects found no
+transaction timestamp outside its source day. These are bounded metadata/row inspections,
+not a whole-corpus CRC, economic validation, test result or real-product acceptance.
 
 ## Assignment
 
