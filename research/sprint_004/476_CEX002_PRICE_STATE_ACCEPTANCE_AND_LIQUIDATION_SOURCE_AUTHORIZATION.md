@@ -550,6 +550,29 @@ checklist and publish the original three terminal record/control paths. No sourc
 new data run, new record number or later batch is authorized. Any actual artifact/hash/schema/
 row/authority inconsistency remains a stop condition and must be reported without repair.
 
+### Current reviewer inspection and remaining execution boundary
+
+The reviewer independently read all 37,890 published regular files, checked every referenced
+SHA-256 and actual Arrow schema, and bound all 479,340 liquidation values and original ordinals
+to all 569 retained response bodies (20,126,995 bytes). Exact rational subtraction reproves
+every signed imbalance. Native/canonical-null identity, observed/censored row semantics,
+unknown source availability, month ownership and full source-ordinal coverage agree.
+The 4,626 daily gap rows describe exactly the 6,716 missing requested days, in 2,570
+partitions; the separate authority gap has 202 rows. The request calendar has 486,056 days,
+16,419 symbol/months and 46 gap-only months. All descriptor references reconcile to the
+complete filesystem inventory, including sole completion/comparison and empty staging.
+Logical bytes are 136,197,937, below the unchanged 187,270,569 allocation; the largest data
+Parquet is 5,777 bytes, below 11,544. This is reviewer inspection, not a replacement Hermes
+implementation record or final secondary-source acceptance.
+
+The resumed Hermes session then hit an internal approval timeout on its read-only Python
+completion inspection. Its terminal returned `status=blocked`, `exit_code=-1`, with an explicit
+no-retry/no-rephrasing denial. The reviewer stopped the session before a proposed alternate
+script could execute and requested explicit permission to resume read-only reconciliation
+and Record 477 publication. That permission is pending. The normalizer remains completed;
+do not rerun it. Record 477 and independent 18-comparison reconciliation remain unfinished.
+No liquidation-data acceptance, Batch C authorization or next-ticket authorization is made.
+
 ## Reviewer publication scope
 
 Under the AGENTS.md reviewer governance-publication exception, this review publishes exactly:

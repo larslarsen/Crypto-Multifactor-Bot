@@ -21,6 +21,19 @@ remain. Gate 2 stays accepted; Gate 3 and CEX-002 remain `IN_PROGRESS`.
 
 ## Current action
 
+Batch B integration and the single local run are now complete: integration
+`f83653c8747e627d9e8ceb2b88973e16556602f3`, completion
+`dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`, exit 0 in 297.4 seconds.
+Reviewer inspection of every output file/schema/hash/raw value/ordinal and the complete daily
+gap calendar passed; logical output is 136,197,937 bytes. Review 476 records the exact scope.
+Hermes's internal approval timeout subsequently blocked its read-only Python inspection;
+the reviewer stopped it and requested permission to resume reconciliation/publication.
+That permission is pending. Remaining work is read-only evidence reconciliation, all 18
+comparisons, and Record 477/current-field publication. Do not rerun tests, integration or
+the normalizer. Liquidation-data acceptance remains pending; seven products are accepted.
+
+The source acceptance and original integration/run contract below remain the audit trail.
+
 Review 476 accepts the complete Batch B source drop after consolidated correction and a
 fixture-only repair. All 46 focused tests passed under the targeted senior exception. The
 reviewer independently reproved these final source identities:
@@ -41,7 +54,7 @@ comparison evidence from the three retained Coinalyze overlap responses and acce
 bar/OI/funding products. Review 476 fixes dates, fields, unit conversion and explicit missing
 ETH OI overlap. No source substitution or new acquisition is needed for this source assignment.
 
-The next actor is Hermes, directly prompted by the reviewer under the owner's instruction,
+The assigned actor is Hermes, directly prompted by the reviewer under the owner's instruction,
 using the currently free Nous Portal model `poolside/laguna-s-2.1:free` for this bounded assignment.
 Review 476's complete Hermes workflow governs: exact
 preproof and ordered checks, three-path integration commit/push, capacity and authority preproof,
