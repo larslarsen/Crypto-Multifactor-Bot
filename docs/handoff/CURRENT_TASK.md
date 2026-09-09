@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -30,15 +30,21 @@ Review 476 contains the acceptance limits and corrects Record 477's workflow chr
 Do not rerun completed source checks, integration, conversion or accepted-product audits
 without specific evidence of an invalidating defect.
 
-Review 474's fixed completion checklist remains governing. The reviewer's next action is to
-bound and authorize Batch C cost calibration under the existing ADR-0026 contract. Batch D
-then covers the coverage/gap product and daily intersection, remaining Gate-4 reconciliation,
-pinned bundle, catalog publication and clean NautilusTrader readback. Original quarantine,
-holdout, replay and final acceptance requirements remain. No later-batch implementation or
-next ticket is authorized yet. Gate 2 stays accepted; Gate 3 and CEX-002 remain IN_PROGRESS.
+Review 474's fixed completion checklist remains governing. Review 478 authorizes Sol High
+as the sole senior to author the three-path Batch C cost-calibration drop, with direct
+reviewer delegation. It covers all 3,144 frozen book objects across generation 0 and the
+accepted recovery archive, the explicit historical-fee component absence, 771 fee gaps and
+the two ADR-0026 policy rows. Sol stops after source/test-source authoring; test execution,
+Hermes integration and the real run await source disposition.
+
+Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
+bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and
+final acceptance requirements remain. No Batch D or next ticket is authorized. Gate 2
+stays accepted; Gate 3 and CEX-002 remain IN_PROGRESS.
 
 Governing documents:
 
+- research/sprint_004/478_CEX002_COST_CALIBRATION_SOURCE_AUTHORIZATION.md
 - research/sprint_004/477_CEX002_LIQUIDATION_INTEGRATION_AND_REAL_RUN_RECORD.md
 - research/sprint_004/476_CEX002_PRICE_STATE_ACCEPTANCE_AND_LIQUIDATION_SOURCE_AUTHORIZATION.md
 - research/sprint_004/475_CEX002_PRICE_STATE_INTEGRATION_AND_REAL_RUN_RECORD.md
