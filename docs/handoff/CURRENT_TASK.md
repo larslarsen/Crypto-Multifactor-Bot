@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -30,15 +30,15 @@ Review 476 contains the acceptance limits and corrects Record 477's workflow chr
 Do not rerun completed source checks, integration, conversion or accepted-product audits
 without specific evidence of an invalidating defect.
 
-Review 474's fixed completion checklist remains governing. Review 478 authorizes Sol High
-as the sole senior for the bounded Batch C cost-calibration drop, with direct reviewer
-delegation. The initial three-path source review is complete; Review 478 returns one
-consolidated production/test correction for inventory verification, measured row/storage
-reconciliation and direct publication of the held staged partition. The CLI remains frozen. It covers all 3,144 frozen book objects across generation 0 and the
-accepted recovery archive, the explicit historical-fee component absence, 771 fee gaps and
-the two ADR-0026 policy rows. Sol may run only the one enumerated targeted pytest command after the full correction,
-then stops with its exact output and hashes. Hermes integration and the real run remain
-unauthorized pending source disposition.
+Review 474's fixed completion checklist remains governing. Review 478 accepts the corrected
+Batch C source; Sol's sole targeted pytest run passed all 38 cases. Hermes is authorized
+for the complete focused validation, exact three-path integration, capacity/authority
+preproof, one foreground local conversion and terminal Record 479 publication workflow.
+The run covers all 3,144 frozen book objects, 494 source gaps, 771 fee gaps, the zero-row
+official-fee schema and two ADR-0026 policy rows. It uses the accepted generation-0 and
+recovery inputs and a 43,200-second foreground allowance. No further source correction,
+retry or second invocation is authorized. Stop on the first failed command and publish
+its evidence; product acceptance remains with the reviewer after the terminal result.
 
 Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
 bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and

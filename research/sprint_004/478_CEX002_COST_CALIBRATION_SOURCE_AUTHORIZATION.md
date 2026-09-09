@@ -3,11 +3,129 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** return the initial source drop for one consolidated bounded correction
+- **Decision:** accept corrected Batch C source; authorize Hermes validation, integration and one local run
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - eight products accepted
-- **Next required actor:** Sr Dev — Codex Sol
+- **Next required actor:** Jr Dev — Hermes
 - **Next ticket:** `NONE`
+
+## Corrected source acceptance and Hermes workflow
+
+This section is the current authorization. The initial assignment and consolidated
+correction below are history and must not be replayed. The reviewer accepts the corrected
+three-path source drop at these exact identities:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/binance_usdm_cost_calibration.py` | 1,551 | `2026982aa275ffb09e5dceb75453d0290cd7c0b35e248f48e45cf3f3cee3b41d` |
+| `scripts/research/normalize_binance_usdm_cost_calibration.py` | 57 | `196bbd5efec2465ca17a62b728eed754c85096c71409e8a35f47ba68a1b4162d` |
+| `tests/ingest/test_binance_usdm_cost_calibration.py` | 907 | `0aa2c218e7cdccaef37327dbf9c4f9229fc74744bae01d98ad50843781a5d701` |
+
+Sol ran the one authorized targeted pytest command once: 38 cases passed, exit 0. Its
+complete output was `...................................... [100%]` (spacing abbreviated
+here). No Ruff, integration or real-data result is claimed from the source author.
+
+Static review closes the three consolidated findings. Publication now renames the held
+verified staged file directly, verifies its inode and bytes, preserves conflicting winners,
+and cleans only the current invocation's own failed temporary files. Source ordinals are
+counted independently and their retained ranges must cover each source exactly once.
+The five existing sizing allocations are bound and measured output bytes are enforced.
+Every described Parquet/lineage/schema/row/byte fact and the full file/directory inventory
+is re-proved around completion publication. The corrected tests cover these failure paths,
+deterministic ZIP fixtures, interrupted replay and direct-rename inode preservation.
+
+This is source acceptance only. Eight products remain accepted; cost calibration awaits
+the real run and reviewer product disposition. No further source edits are authorized.
+
+### Hermes assignment
+
+The owner has authorized direct developer prompting. Hermes alone now owns the following
+complete workflow. Use the currently available free Nous Portal model
+`poolside/laguna-s-2.1:free`; the live recommendations endpoint still listed it on this
+review. It successfully executed Batch B's commands, while Solar Pro4's tool transport
+failed. Its prior report transcription problems require copying observed facts accurately,
+not another model trial or speculative report narrative. No other model or paid routing
+is needed for this bounded integration assignment.
+
+Run from `/home/lars/Crypto_Multifactor_Bot`. Preserve the unrelated dirty baseline.
+Stop at the first nonzero command or failed proof, record the exact failure, and do not
+patch source, retry, relaunch, delete output or diagnose by running additional mutating
+commands. Read-only failure inventory and the terminal record are authorized after a stop.
+An ordinary successful command does not require another reviewer or owner relay.
+
+1. Prove `HEAD == origin/main` including this published review, capture the full hash,
+   confirm the index is empty, and compare the three file hashes and line counts above.
+2. Execute these checks in order, stopping at the first failure:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_cost_calibration.py -q --tb=short
+   PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/ingest/binance_usdm_cost_calibration.py scripts/research/normalize_binance_usdm_cost_calibration.py tests/ingest/test_binance_usdm_cost_calibration.py
+   python3 scripts/check_repo_control.py
+   git diff --check
+   ```
+
+3. Stage exactly the accepted three Python paths, inspect the staged path set, run
+   `git diff --cached --check`, commit and push them, and prove `HEAD == origin/main`.
+   Reprove the three source hashes after integration. Do not stage unrelated paths.
+4. Before the real run, rehash the pinned qualification, sizing and compressed v3 manifest
+   files named below and compare them to their accepted hashes. Prove the accepted
+   membership completion exists with its fixed hash. Confirm PyArrow is exactly 25.0.0
+   and the writer identity is
+   `pyarrow25.0.0_parquet2.6_zstdl3_rowgroup65536_nostats_typed_v2`.
+   Prove `data/.cex002_cost_calibration` is absent and not a symlink; no cost normalizer
+   process is live. Record exact available bytes using `statvfs.f_bavail * f_frsize`.
+   Require at least **73,204,546,497 bytes**, the unchanged cost allocation
+   37,957,477,079 + temporary-work bound 5,556,368,003 + operating reserve 29,690,701,415.
+5. Run exactly one foreground local conversion with a **43,200-second** execution
+   allowance. Hermes must be launched with `TERMINAL_MAX_FOREGROUND_TIMEOUT=43200`, and
+   its terminal call must request `timeout=43200`; do not launch through a mechanism still
+   capped at 600 seconds. This allowance is a ceiling, not a runtime prediction. Stay
+   attached to the existing execution until terminal. No wrapper, detach, second process,
+   retry or resume is authorized here. The exact command is:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python scripts/research/normalize_binance_usdm_cost_calibration.py \
+     --report research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json \
+     --sizing research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json \
+     --generation0-state data/cex002_qualify/gate2/state.sqlite \
+     --generation0-content-root data/cex002_qualify/gate2/content \
+     --v3-manifest data/cex002_qualify/gate2_revision_candidate_v3/manifest/4dacaba97c17ad9c4a9724f5db74dfab7ee98760cdb3df6dea46ab37c0684c2d.json.gz \
+     --recovery-root data/cex002_recovery \
+     --membership-root data/.cex002_perpetual_membership \
+     --output-root data/.cex002_cost_calibration
+   ```
+
+   Preserve these relative authority spellings. Record actual start/end timestamps in
+   UTC, terminal exit code and observed elapsed duration. Do not convert local time to
+   UTC by changing its label. Capture the immediate post-run available bytes separately
+   from the output's logical file-byte sum.
+6. On success, reconcile the sole completion's own digest; every referenced Parquet and
+   lineage digest, size, schema and row count; the exact component/file inventories; empty
+   staging and zero foreign/symlink objects; actual versus allocated bytes; and every
+   per-source ordinal-domain/range equation. Reconcile 3,144 sources / 12,522,974,218 raw
+   bytes, the 2,790/354 authority split, 909/2,235 family split, 494 frozen source gaps,
+   771 fee gaps, zero historical fee rows and two policy rows. Report actual book rows,
+   quote-state counts and partitions; projections are not observations. Read bounded
+   real book-ticker/depth examples against the original raw rows, including the retained
+   empty/one-sided states, exact decimals, timestamps and signed depth bands. Do not rerun
+   the normalizer for reconciliation or rewrite accepted data. On failure preserve all
+   partial output and report its exact inventory with no completion claim.
+7. Publish the result as
+   `research/sprint_004/479_CEX002_COST_CALIBRATION_INTEGRATION_AND_REAL_RUN_RECORD.md`.
+   Record observed commands/exits, hashes, integration commit, timing, capacity, actual
+   component counts/bytes, row/lineage reconciliation and limitations. Use exact observed
+   fields; do not invent success, estimates, independent checks or workflow chronology.
+   Reviewer acceptance remains exclusive. Update only `CURRENT_TASK.md` and the existing
+   checklist/current-action portion of `tickets/CEX-002.md` in place, returning both actor
+   fields to `Lead Quantitative Finance Researcher/Engineer`. Keep CEX-002 `IN_PROGRESS`,
+   eight accepted products pending this review, next ticket `NONE`. Run repository control
+   and whitespace checks after these edits; stage exactly those three record/control
+   paths, run staged whitespace checks, commit, push, prove `HEAD == origin/main`, and stop.
+
+Hermes may author temporary read-only reconciliation helpers as implementation evidence,
+with their commands and identities recorded; this does not authorize production/test edits
+or reviewer-authored implementation evidence. No acquisition, other-product rerun, Batch D,
+catalog transaction, NautilusTrader, model, experiment or next ticket is authorized.
 
 ## Consolidated source disposition
 
