@@ -139,6 +139,40 @@ acceptance commands, real finalization, Git, network, records or data mutation. 
 validation, integration and publication will receive one complete workflow after source
 acceptance. Batch D and the next ticket remain unauthorized.
 
+### Consolidated finalizer source review
+
+The reviewer inspected the complete initial finalizer drop: production 864 lines at
+`c55828c0bfa37e8584b7b925effb89be75f834fdc8887772aee70b4179991947`, CLI 55 lines at
+`6e9609c4fa781c32e2044e31338e0d03f68f401cc0445f8e8bd5c09b30bcdf18`, and tests 569 lines at
+`5c69818d63da04b570ac138d9170b7924438b12cd9b390fa7f009dec8e0bcadf`. Its pinned recovery,
+authority reproof, vectorized checks, explicit projection variance and completion identity
+are retained. No tests or real finalization have run. The consolidated correction is:
+
+1. Refuse a missing or unsafe preserved `.staging` directory before constructing the
+   producer's `_OutputTree`. Its constructor currently recreates a missing `.staging`,
+   hiding a change to the exact reviewed directory inventory. The finalizer may create
+   its completion directory and own temporary completion file, but must not repair the
+   preserved input tree. Add a fixture proving refusal without recreation; retain the
+   already tested allowance for an empty `.complete` left by interrupted finalization.
+2. Correct the truncated-row fixture's competing precondition. `_replace_partition`
+   removes a row and `_pin` updates component facts, but `EXPECTED_ALL_ROWS` stays 11.
+   `_component_facts` therefore refuses the aggregate count before the test can reach its
+   expected encoded ordinal-range check. Pin the fixture's actual aggregate component
+   count for this case while retaining the original raw ordinal-domain expectation.
+   Do not weaken the production row equation or change the intended assertion.
+
+Sol remains the sole author. Edit only the new finalizer production and test paths; keep
+the CLI and original producer frozen. Under the targeted senior test exception, after
+the complete correction Sol may run this exact command once:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_cost_finalization.py -q --tb=short
+```
+
+Stop on the first nonzero result and report exact output without patching or rerunning.
+On success return final hashes and the observed result for reviewer inspection. No Ruff,
+full suite, integration, Git, records, network, real finalizer or data mutation is authorized.
+
 ## Historical corrected source acceptance and Hermes workflow
 
 This section records the completed authorization. The initial assignment and consolidated
