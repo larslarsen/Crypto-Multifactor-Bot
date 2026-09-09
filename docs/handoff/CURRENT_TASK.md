@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -40,11 +40,25 @@ with exit 1: `retained_book_ticker measured allocation exceeded`. Measured ticke
 bounds. No completion descriptor was published. Record 479 preserves the failed run;
 Review 478 corrects its row-total/timing details and pins the verified preserved output.
 Review 478 accepts the finalizer source after Sol's fixture correction and 30 passing
-focused cases. Hermes now owns its complete integration, preserved-output finalization,
-one successful replay proof and in-place Record 479 update. Reuse all 7,731 existing
-files and publish only the verified completion, preserving the exceeded projection and
-every byte limit. Follow the current finalizer workflow in Review 478; earlier producer
-assignments are history. No repeated conversion is authorized.
+focused cases.
+
+Hermes executed the complete Review 478 finalizer workflow using
+`meituan/longcat-2.0:free`: preflight proof, four-step validation suite
+(pytest 30/30, ruff clean, repo control PASS, whitespace clean), exact
+three-path finalizer integration at commit
+`ab671b4713add0d9367c08cb18603f99b037fe1a` (pushed; `HEAD == origin/main`),
+capacity/authority preproof with preserved-inventory hashing (7,731 files,
+17,940,823,719 bytes, digest
+`482cda93ba68c93d46a17207bbb6b01764dd5b66d72d936860eba67d2f399b98`),
+one foreground finalization (exit 0, `completion_reused=false`, 3,865
+partitions, 939,130,319 source rows, completion SHA-256
+`fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`),
+full post-run verification and reconciliation against Review 478, and one
+authorized deterministic replay (exit 0, `completion_reused=true`, identical
+completion digest, entire preserved inventory unchanged). Record 479 is
+updated in place. The exceeded ticker projection remains explicit with
+`ordinary_sizing_check_passed: false`; all byte limits including completion
+are satisfied.
 
 Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
 bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and
