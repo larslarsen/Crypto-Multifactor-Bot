@@ -531,6 +531,25 @@ the Lead Quantitative Finance Researcher/Engineer, keeps CEX-002 `IN_PROGRESS` a
 this reviewer-authored Review 476 or append a duplicate ticket narrative. Return the publication
 commit and completion identity, or precise terminal blocker, then stop for reviewer acceptance.
 
+### Reviewer feedback during terminal reconciliation
+
+Hermes integrated the frozen drop as `f83653c8747e627d9e8ceb2b88973e16556602f3` and its
+single normalizer invocation exited 0 after about 297 seconds, publishing completion
+`dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`. During subsequent
+read-only exploration, an invented `data/.cex002_liquidation_observed_daily/d/` listing
+exited 2 because that directory does not exist. Hermes incorrectly continued past this
+nonzero result. The reviewer interrupted it and independently confirmed the real product
+uses the descriptor-referenced hidden directories, with a correctly hashed completion.
+The failed listing is an evidence-workflow error, not evidence that the normalizer failed.
+
+The reviewer authorizes continuation of **read-only reconciliation and terminal Record 477
+publication only**, using the existing completion and its actual descriptor paths. Record the
+failed command, exit 2 and this reviewer disposition honestly. Do not restart preproof/tests,
+integration or the normalizer; do not mutate product data. Finish the original reconciliation
+checklist and publish the original three terminal record/control paths. No source change,
+new data run, new record number or later batch is authorized. Any actual artifact/hash/schema/
+row/authority inconsistency remains a stop condition and must be reported without repair.
+
 ## Reviewer publication scope
 
 Under the AGENTS.md reviewer governance-publication exception, this review publishes exactly:
