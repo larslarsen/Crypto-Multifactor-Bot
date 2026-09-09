@@ -28,7 +28,8 @@ Reviewer inspection of every output file/schema/hash/raw value/ordinal and the c
 gap calendar passed; logical output is 136,197,937 bytes. Review 476 records the exact scope.
 Hermes's internal approval timeout subsequently blocked its read-only Python inspection;
 the reviewer stopped it and requested permission to resume reconciliation/publication.
-That permission is pending. Remaining work is read-only evidence reconciliation, all 18
+The owner has now renewed that permission by replying `continue`. Resume the same Hermes
+session with interactive approval handling. Remaining work is read-only evidence reconciliation, all 18
 comparisons, and Record 477/current-field publication. Do not rerun tests, integration or
 the normalizer. Liquidation-data acceptance remains pending; seven products are accepted.
 
