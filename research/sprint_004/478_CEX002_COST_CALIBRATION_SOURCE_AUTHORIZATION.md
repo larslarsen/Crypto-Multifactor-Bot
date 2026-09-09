@@ -3,15 +3,145 @@
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept corrected Batch C source; authorize Hermes validation, integration and one local run
+- **Decision:** preserve the failed run; authorize bounded finalizer source for the verified Batch C artifacts
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - eight products accepted
-- **Next required actor:** Jr Dev — Hermes
+- **Next required actor:** Sr Dev — Codex Sol
 - **Next ticket:** `NONE`
 
-## Corrected source acceptance and Hermes workflow
+## Current disposition - preserved-output finalization
 
-This section is the current authorization. The initial assignment and consolidated
+This section supersedes all execution assignments below. Record 479 is published at
+`ca2d42027b676072bab3f115dc2aa1b38e816c1b`; the producer integration is
+`e092d17afa3d229135d89fa144ddc2b120e8e2f7`. The sole conversion exited 1 after writing
+all components and passing its source-row reconciliation, at the ticker projected-row
+bound. No completion exists. Hermes correctly stopped without another conversion.
+
+The reviewer has independently read and hashed the entire preserved tree: 7,731 regular
+files, 11,386 directories, no symlinks, foreign files or staging leftovers. Every Parquet
+schema and metadata row count agrees with its authenticated lineage. All 3,144 frozen
+source keys and their declared ordinal domains reconcile exactly: 2,790 generation-0
+objects plus 354 recovery objects, 909 ticker plus 2,235 depth objects, and 12,522,974,218
+compressed raw bytes. The reviewer then independently hashed all 3,144 raw objects,
+read every ZIP member through CRC validation, and counted the physical unquoted data
+lines: exactly 882,076,090 ticker and 57,054,229 depth rows. A separate bounded Parquet
+scan verified every actual raw-reference/ordinal sequence against its declared domain.
+Thus the ticker excess is an underestimated row projection, not duplicated output.
+These are complete raw-count and encoded-ordinal checks, not a claim of independent
+CSV-to-Parquet equality for every value.
+
+The encoded ticker quote-state scan measured 882,075,718 two-sided, 279 bid-only,
+76 ask-only and 17 empty observations. Their sum is exactly 882,076,090. The finalizer
+must reproduce these counts. The independently measured per-source row-facts digest is
+`aac31786a8f18088481cd00579c30dece80cf9907c792638d2e0047c076fc89b`, using the same compact
+sorted-key/no-newline JSON encoding over entries `{source_key, physical_rows}` ordered
+by source key. Reviewer audit helpers were read-only with respect to repository and data:
+`/tmp/cex002_cost_reviewer_audit.py`, `/tmp/cex002_cost_reviewer_raw_counts.py`, and
+`/tmp/cex002_cost_reviewer_ordinals.py`; each finished successfully. No normalizer or
+acceptance test was run by the reviewer.
+
+| Component | Partitions | Actual rows | Parquet bytes | Largest file bytes |
+|---|---:|---:|---:|---:|
+| retained_book_ticker | 866 | 882,076,090 | 16,475,583,828 | 368,974,047 |
+| retained_book_depth | 2,226 | 57,054,229 | 1,455,739,653 | 1,977,525 |
+| fee_authority_gap | 771 | 771 | 2,634,470 | 3,428 |
+| official_fee_schedule | 1 | 0 | 3,551 | 3,551 |
+| scenario_policy | 1 | 2 | 3,651 | 3,651 |
+
+Book rows total 939,130,319; all component rows total 939,131,092. Record 479's depth row
+count is 61 too high and its total is 1,061 too high. Parquet bytes total 17,933,965,153;
+lineage bytes total 6,679,783. The existing 494-row source-gap JSON adds 178,783 bytes at
+SHA-256 `aace941a43e38c2f790fed4c383e08cbbd27d3f5f7215bc95b50bb134ae3519e`.
+All preserved output therefore totals 17,940,823,719 bytes, before a future completion.
+The 37,957,477,079-byte allocation and every component byte/file/partition limit remain
+unchanged and satisfied. The ticker projection was exceeded by 136,532,583 rows; that
+projection failure must remain explicit, never be relabeled a passed sizing check.
+
+Record 479's timestamps bracket the workflow rather than the process exactly. Session
+evidence records the conversion tool call at 2026-09-09T04:52:20.233206Z and the terminal
+exit-1 result at 2026-09-09T11:14:30.406978Z, a 6h 22m 10.174s tool-call interval.
+The separately observed timestamps 04:50:01Z and 11:14:55Z include pre/post-command delay.
+The recorded post-run available bytes, 168,851,566,592, are the later observed capacity.
+Ruff, repository control and whitespace were submitted together after pytest; all passed,
+but the record's presentation is not proof they were separately gated. None of these
+record corrections invalidates the preserved data or authorizes a repeated conversion.
+
+### Exact recovery boundary
+
+Apply ADR-0024's verified partition reuse and completion-last contract to this exact
+reviewed inventory. Receipt 258, its coefficients/projections, the ordinary normalizer,
+schemas, economic semantics and all byte allocations remain immutable. This is a bounded
+recovery of the existing product, not a new sizing version or a general row-limit waiver.
+The reviewer permits the observed ticker-row variance only for the exact inventory and
+component facts above. Real-product acceptance and a finalizer run remain unauthorized
+until the complete source and independent review evidence are accepted.
+
+The preserved inventory SHA-256 is
+`482cda93ba68c93d46a17207bbb6b01764dd5b66d72d936860eba67d2f399b98`.
+Its encoding is UTF-8 `json.dumps(entries, sort_keys=True, separators=(',', ':'))` with
+no newline. Each entry has exactly `path`, `sha256`, and `bytes`; paths are relative POSIX
+spellings; entries are sorted lexicographically by path. It includes all 7,731 files,
+including the source-gap JSON. Expected directories are the file ancestors plus the empty
+`.staging` directory. This review pins the digest; no reviewer-authored implementation
+manifest is required or authorized. Hermes retains implementation-evidence ownership.
+
+### Bounded senior source assignment
+
+The reviewer selects GPT-5.6-sol High as the sole senior, under the owner's continuing
+direct-prompt authorization. Author only these three new paths:
+
+- `src/cryptofactors/ingest/binance_usdm_cost_finalization.py`;
+- `scripts/research/finalize_binance_usdm_cost_calibration.py`;
+- `tests/ingest/test_binance_usdm_cost_finalization.py`.
+
+The original producer module, CLI, tests and every data artifact are read-only. Keep the
+new finalizer specific to the exact reviewed inventory above; do not create a generic
+recovery framework, source override, row-limit override, or permissive fallback.
+
+1. Reauthenticate the same report, sizing, generation-0 seal/completion/sidecar chain,
+   v3 manifest, membership and exact disjoint source union, preserving the original
+   relative authority spellings. Rehash the compressed bytes of all 3,144 raw objects and
+   bind every lineage source fact to those authenticated authorities. Do not expand ZIPs,
+   parse CSVs or invoke any Parquet writer/normalizer in this finalizer.
+2. Require the exact pinned preserved inventory, schemas, metadata rows, row-group cap,
+   per-component facts, gap artifact and directory set. Refuse an absent/unsafe root,
+   missing, altered, foreign or symlink artifact. The original producer source hash is
+   `2026982aa275ffb09e5dceb75453d0290cd7c0b35e248f48e45cf3f3cee3b41d` and its integration
+   commit is fixed above; verify the module identity before using its helpers.
+3. Read Parquet in bounded batches. Prove actual raw references/ordinal ranges exactly
+   once; timestamps, source-day/month ownership, native membership/null reference state,
+   ticker integer/quote domains and quote-state counts; signed depth-band and nonnegative
+   values; exact 771 fee-gap identities, zero official fee rows and two unchanged policies.
+   Preserve the distinction between this encoded-row validation and independent complete
+   CSV-to-Parquet value equality; the latter is not claimed from a finalizer.
+4. Build completion from verified existing descriptors and measured facts. Preserve
+   `normalizer_source_sha256` as the actual original producer hash; separately bind the
+   finalizer source, this reviewed inventory digest, original integration commit and the
+   explicit projected/actual/excess ticker-row disposition. Derive all quote counts and
+   source/component equations. Enforce every unchanged byte, largest-file and partition
+   bound and the total including completion. The ordinary row-bound failure remains in
+   the unchanged producer; only this exact-artifact finalization uses the reviewed variance.
+5. Publish only the content-addressed completion, last, through held no-follow directory
+   descriptors, exclusive ownership, fsync and no-clobber rename. Never rewrite a preserved
+   artifact. Reprove the exact tree before and after publication. A replay accepts only
+   its byte-identical sole completion, reauthenticates all dependencies, and creates no
+   duplicate. Reject foreign, stale, missing, changed or conflicting state; clean only
+   an invocation's own temporary file. Successful inventory is exactly 7,732 files.
+6. Author meaningful bounded fixtures for missing/corrupt/foreign/symlink artifacts,
+   authority mismatch, inventory mismatch, actual row/ordinal/time/identity/quote mismatch,
+   exact-only variance handling, byte limits including completion, fee semantics,
+   completion-last interruption/no-clobber/replay, and proof that no CSV parser or Parquet
+   writer is invoked. Fixture-only pins may be monkeypatched; production arguments may
+   not override the accepted scope or hashes.
+
+Return the complete source drop for one consolidated review. Do not execute tests, Ruff,
+acceptance commands, real finalization, Git, network, records or data mutation. Hermes
+validation, integration and publication will receive one complete workflow after source
+acceptance. Batch D and the next ticket remain unauthorized.
+
+## Historical corrected source acceptance and Hermes workflow
+
+This section records the completed authorization. The initial assignment and consolidated
 correction below are history and must not be replayed. The reviewer accepts the corrected
 three-path source drop at these exact identities:
 

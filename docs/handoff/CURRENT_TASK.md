@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -37,10 +37,12 @@ three paths at commit `e092d17afa3d229135d89fa144ddc2b120e8e2f7` and pushed; `HE
 conversion with a 43,200-second allowance. The run failed at `_enforce_component_bounds`
 with exit 1: `retained_book_ticker measured allocation exceeded`. Measured ticker rows
 882,076,090 exceed the bound 745,543,507 by 136,532,583 rows. All other components are within
-bounds. No completion descriptor was published. Record 479 preserves the exact failure
-evidence and the partial output inventory. Execution stopped at the first nonzero command
-per the first-nonzero rule. No source edit, retry or second run is authorized. Control
-returns to the reviewer.
+bounds. No completion descriptor was published. Record 479 preserves the failed run;
+Review 478 corrects its row-total/timing details and pins the verified preserved output.
+Sol High now owns exactly the three new finalizer source/test paths enumerated there.
+The finalizer must reuse the existing 7,731 files, preserve the exceeded projection and
+every byte limit, and publish only a verified completion. No repeated conversion,
+senior test execution or real finalization is authorized before source review.
 
 Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
 bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and
