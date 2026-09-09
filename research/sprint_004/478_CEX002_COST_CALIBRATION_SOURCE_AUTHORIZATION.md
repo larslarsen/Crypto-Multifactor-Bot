@@ -40,12 +40,27 @@ the real run and reviewer product disposition. No further source edits are autho
 ### Hermes assignment
 
 The owner has authorized direct developer prompting. Hermes alone now owns the following
-complete workflow. Use the currently available free Nous Portal model
-`poolside/laguna-s-2.1:free`; the live recommendations endpoint still listed it on this
-review. It successfully executed Batch B's commands, while Solar Pro4's tool transport
-failed. Its prior report transcription problems require copying observed facts accurately,
-not another model trial or speculative report narrative. No other model or paid routing
-is needed for this bounded integration assignment.
+complete workflow. The reviewer replaces Laguna with `meituan/longcat-2.0:free`, listed
+second in the live Nous Portal free recommendations on 2026-09-08. Solar, listed first,
+previously failed tool transport; Laguna now repeated procedural errors after Batch B's
+reporting errors. Longcat is the bounded replacement, not a claim of demonstrated
+repository reliability. Hermes's role and the accepted source remain unchanged.
+
+The reviewer halted and closed Laguna session `20260908_213716_d483b4` before validation,
+integration or a data run. At HEAD `d22f8302853a1584a83b4f72420ce8aa6abd1d3e`, it used
+`git diff --quiet` to test the index, received exit 1 from the intentionally dirty working
+tree, and repeated that command despite the first-nonzero rule. It then compared Git blob
+SHA-1 from `git hash-object` with the accepted file SHA-256 and falsely reported a source
+mismatch. Its attempted nonexistent `shell` tool did not execute. All actual commands
+were read-only. Reviewer inspection confirms the empty index, unchanged HEAD/origin and
+the accepted three file SHA-256 values. This is a procedural rejection, not a source
+defect. Record 479 must preserve these facts alongside the eventual result.
+
+The reviewer explicitly reauthorizes the unstarted workflow below once under the replacement
+session. This disposition clears only the failed preflight; it does not authorize a second
+normalizer invocation or further automatic retries. Use `git diff --cached --name-only`
+for the empty-index proof (empty output required), `sha256sum` for file identities, and
+`wc -l` for line counts. Do not substitute `git diff --quiet` or `git hash-object`.
 
 Run from `/home/lars/Crypto_Multifactor_Bot`. Preserve the unrelated dirty baseline.
 Stop at the first nonzero command or failed proof, record the exact failure, and do not
