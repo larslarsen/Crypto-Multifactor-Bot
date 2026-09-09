@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -31,14 +31,16 @@ Do not rerun completed source checks, integration, conversion or accepted-produc
 without specific evidence of an invalidating defect.
 
 Review 474's fixed completion checklist remains governing. Review 478 accepts the corrected
-Batch C source; Sol's sole targeted pytest run passed all 38 cases. Hermes is authorized
-for the complete focused validation, exact three-path integration, capacity/authority
-preproof, one foreground local conversion and terminal Record 479 publication workflow.
-The run covers all 3,144 frozen book objects, 494 source gaps, 771 fee gaps, the zero-row
-official-fee schema and two ADR-0026 policy rows. It uses the accepted generation-0 and
-recovery inputs and a 43,200-second foreground allowance. No further source correction,
-retry or second invocation is authorized. Stop on the first failed command and publish
-its evidence; product acceptance remains with the reviewer after the terminal result.
+Batch C source; Sol's sole targeted pytest run passed all 38 cases. Hermes integrated the
+three paths at commit `e092d17afa3d229135d89fa144ddc2b120e8e2f7` and pushed; `HEAD == origin/main
+== e092d17afa3d229135d89fa144ddc2b120e8e2f7`. Hermes ran exactly one foreground local
+conversion with a 43,200-second allowance. The run failed at `_enforce_component_bounds`
+with exit 1: `retained_book_ticker measured allocation exceeded`. Measured ticker rows
+882,076,090 exceed the bound 745,543,507 by 136,532,583 rows. All other components are within
+bounds. No completion descriptor was published. Record 479 preserves the exact failure
+evidence and the partial output inventory. Execution stopped at the first nonzero command
+per the first-nonzero rule. No source edit, retry or second run is authorized. Control
+returns to the reviewer.
 
 Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
 bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and
@@ -48,6 +50,7 @@ stays accepted; Gate 3 and CEX-002 remain IN_PROGRESS.
 Governing documents:
 
 - research/sprint_004/478_CEX002_COST_CALIBRATION_SOURCE_AUTHORIZATION.md
+- research/sprint_004/479_CEX002_COST_CALIBRATION_INTEGRATION_AND_REAL_RUN_RECORD.md
 - research/sprint_004/477_CEX002_LIQUIDATION_INTEGRATION_AND_REAL_RUN_RECORD.md
 - research/sprint_004/476_CEX002_PRICE_STATE_ACCEPTANCE_AND_LIQUIDATION_SOURCE_AUTHORIZATION.md
 - research/sprint_004/475_CEX002_PRICE_STATE_INTEGRATION_AND_REAL_RUN_RECORD.md
