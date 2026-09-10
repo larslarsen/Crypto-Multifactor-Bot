@@ -3,70 +3,49 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Codex Sol
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Eight of eleven products are accepted: membership, hourly bars, hourly trade flow, open
-interest, realized funding, indicative funding, mark/index/basis and observed liquidation.
-Review 476 accepts the real Batch A and Batch B products. Record 477 is Hermes's completed
-integration, single-run and reconciliation evidence for Batch B.
+Nine of eleven products are accepted. Review 480 accepts Batch C cost calibration,
+finalizer integration `ab671b4713add0d9367c08cb18603f99b037fe1a`, Hermes publication
+`d6d86e0900c051f938cdf91fb9ffeb6336baf766` and Record 479. Gate 2 remains accepted;
+Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Batch B is complete and accepted. Integration:
-`f83653c8747e627d9e8ceb2b88973e16556602f3`; Hermes publication:
-`8a589baf0d298724fc753ff4d26c22a8dba7f8bc`; liquidation completion:
-`dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f`.
-The one run exited 0 in 297.4 seconds. All 37,890 files and 479,340 source-bound rows,
-schemas, hashes, values, ordinals and typed gaps were independently reviewed; output uses
-136,197,937 bytes within the unchanged 187,270,569-byte allocation.
+Sr Dev - Codex Sol, GPT-5.6-sol High, authors exactly the three new source/CLI/test paths
+in Review 480 for the coverage/gap product and complete daily-alignment report. Return
+one complete source drop for consolidated reviewer inspection. No test execution, real
+run, integration, Git, records, network or data mutation is assigned. Hermes is not yet
+authorized. Review 480 is the complete one-way developer prompt.
 
-The declared 18-entry secondary-source comparison is accepted as bounded reconciliation:
-12 exact price/funding pairs, three measured BTC OI differences and three unavailable ETH OI
-overlaps. OI differences are not equality passes and their cause remains unproven. The
-liquidation product retains its observed/censored base-asset semantics and unknown availability.
-Review 476 contains the acceptance limits and corrects Record 477's workflow chronology.
-Do not rerun completed source checks, integration, conversion or accepted-product audits
-without specific evidence of an invalidating defect.
+Accepted cost completion:
+`fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
+The reviewer independently reconciled 7,732 files, 3,865 partitions and matching lineages,
+939,130,319 book rows, 939,131,092 total component rows and 17,943,795,556 output bytes.
+All 7,731 preserved files retain identical hashes/inodes/mtimes. The 136,532,583-row ticker
+projection excess remains explicit with `ordinary_sizing_check_passed: false`; all byte
+bounds pass. Hermes's successful finalization and authorized byte-identical replay are
+accepted. Do not rerun the producer, finalizer or accepted-product audits without a
+specific invalidating defect.
 
-Review 474's fixed completion checklist remains governing. Review 478 accepts the corrected
-Batch C source; Sol's sole targeted pytest run passed all 38 cases. Hermes integrated the
-three paths at commit `e092d17afa3d229135d89fa144ddc2b120e8e2f7` and pushed; `HEAD == origin/main
-== e092d17afa3d229135d89fa144ddc2b120e8e2f7`. Hermes ran exactly one foreground local
-conversion with a 43,200-second allowance. The run failed at `_enforce_component_bounds`
-with exit 1: `retained_book_ticker measured allocation exceeded`. Measured ticker rows
-882,076,090 exceed the bound 745,543,507 by 136,532,583 rows. All other components are within
-bounds. No completion descriptor was published. Record 479 preserves the failed run;
-Review 478 corrects its row-total/timing details and pins the verified preserved output.
-Review 478 accepts the finalizer source after Sol's fixture correction and 30 passing
-focused cases.
+Review 474's fixed closeout still governs Batch D: coverage/daily intersection, remaining
+Gate-4 comparisons, pinned bundle/catalog, clean NautilusTrader readback, release replay
+and original final acceptance commands. Observed-day overlap must remain distinguishable
+from complete daily coverage and known source availability. Accepted Batch B comparison
+limits, fee scenarios, unknown availability and censored liquidation semantics remain.
 
-Hermes executed the complete Review 478 finalizer workflow using
-`meituan/longcat-2.0:free`: preflight proof, four-step validation suite
-(pytest 30/30, ruff clean, repo control PASS, whitespace clean), exact
-three-path finalizer integration at commit
-`ab671b4713add0d9367c08cb18603f99b037fe1a` (pushed; `HEAD == origin/main`),
-capacity/authority preproof with preserved-inventory hashing (7,731 files,
-17,940,823,719 bytes, digest
-`482cda93ba68c93d46a17207bbb6b01764dd5b66d72d936860eba67d2f399b98`),
-one foreground finalization (exit 0, `completion_reused=false`, 3,865
-partitions, 939,130,319 source rows, completion SHA-256
-`fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`),
-full post-run verification and reconciliation against Review 478, and one
-authorized deterministic replay (exit 0, `completion_reused=true`, identical
-completion digest, entire preserved inventory unchanged). Record 479 is
-updated in place. The exceeded ticker projection remains explicit with
-`ordinary_sizing_check_passed: false`; all byte limits including completion
-are satisfied.
-
-Batch D follows with coverage/daily intersection, remaining Gate-4 reconciliation, pinned
-bundle/catalog and clean NautilusTrader readback. Original quarantine, holdout, replay and
-final acceptance requirements remain. No Batch D or next ticket is authorized. Gate 2
-stays accepted; Gate 3 and CEX-002 remain IN_PROGRESS.
+The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished:
+Review 480's read-only query of exp003.db finds all five invalid BitMEX datasets still
+PASS / REGISTERED. A separate corrective assignment is required before final release;
+quarantine and catalog mutation are outside the current coverage source scope.
+No bundle publication, full-ticket acceptance, experiment, model or next ticket is
+authorized now.
 
 Governing documents:
 
+- research/sprint_004/480_CEX002_COST_ACCEPTANCE_AND_COVERAGE_SOURCE_AUTHORIZATION.md
 - research/sprint_004/478_CEX002_COST_CALIBRATION_SOURCE_AUTHORIZATION.md
 - research/sprint_004/479_CEX002_COST_CALIBRATION_INTEGRATION_AND_REAL_RUN_RECORD.md
 - research/sprint_004/477_CEX002_LIQUIDATION_INTEGRATION_AND_REAL_RUN_RECORD.md

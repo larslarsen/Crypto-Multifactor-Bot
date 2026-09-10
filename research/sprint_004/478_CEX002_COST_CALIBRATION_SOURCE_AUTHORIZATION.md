@@ -1,5 +1,9 @@
 # CEX-002 Review 478 - Cost Calibration Source Authorization
 
+> Superseded current action: Review 480 accepts the completed Batch C product and Record
+> 479, and authorizes the bounded Batch D coverage source drop. The execution workflows
+> below are completed history and must not be replayed.
+
 - **Date:** 2026-09-08
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
