@@ -107,6 +107,19 @@ one-way prompt. Author exactly these three new files:
 - `scripts/research/normalize_binance_usdm_coverage.py`;
 - `tests/ingest/test_binance_usdm_coverage.py`.
 
+On 2026-09-09 the owner explicitly authorized direct sub-agent launch for this assignment.
+The reviewer launched Sol High, may receive its complete drop and deliver consolidated
+source feedback directly, and retains the source-only boundary below. This replaces
+manual relay for this drop; Hermes's integration and validation ownership is unchanged.
+
+The reviewer checked the five accepted 0GUSDT September 2025 timestamp columns read-only,
+authenticating the selected partition hashes. Bar/OI/funding/basis/liquidation rows are
+321 / 3,843 / 233 / 206 / 14. The five-product observed-day intersection is September
+22-30 (nine days); complete hourly/OI/basis cadence with observed funding and liquidation
+presence is September 23-30 (eight days). September 22 has only 14 basis rows. Funding
+counts change during the month and do not establish an expected settlement schedule.
+This bounded source-review check is not a coverage run or an accepted coverage product.
+
 Do not edit existing source, exports, tests, ADRs, records, configuration or data. Author
 the complete coverage/gap producer and its full daily alignment report together. The
 senior returns the complete drop with file SHA-256 values and line counts for one
@@ -207,6 +220,26 @@ coefficients. Keep at most one symbol/month's observations in memory; incrementa
 and descriptor indexes may persist. Do not materialize whole-history market rows or the
 full universe/day matrix in memory. Expose explicit authority/input/output path arguments
 and return a concise JSON result. No real output root is created by the senior.
+
+**Exact metadata sub-budget clarification:** daily alignment is symbol/month JSON report
+metadata, not an additional Parquet schema or required product. Compact shared field and
+product names with per-day records are permitted; loss of dates, counts or semantics is
+not. Receipt 258 reserves 4,817 source-gap, 3,742 typed-gap and 130,820 quality-gap catalog
+pages, at 4,096 bytes each. Their existing 139,379-page reservation supplies a single
+**570,896,384-byte coverage metadata sub-budget** for all daily reports, instrument/product
+summaries, lineages, completion and any copied metadata together. Each gap Parquet component
+retains its separate unchanged ceiling. Bytes may be counted in only one category.
+
+This is a subdivision of the unchanged 5,556,368,003-byte release-wide
+`capacity.catalog_manifest_bundle_bytes`, not a new allowance. Reserve/debit 570,896,384
+once for coverage metadata, leaving **4,985,471,619 bytes** reserved for the remaining
+release metadata/catalog work. Coverage completion must declare the source page counts,
+page size, reserved debit, measured category bytes and remainder. The later bundle must
+honor this ledger; it may not allocate the whole release allowance a second time. Unused
+coverage reservation is not implicitly available to another component. A metadata overrun
+fails without trimming coverage, changing coefficients or claiming a sizing pass. This
+clarification resolves the senior's allocation question before implementation; existing
+publication architecture, schemas and aggregate capacity remain unchanged.
 
 Author meaningful fixtures covering the frozen schemas; all membership classes; source
 versus observed gap distinctions; unknown bounds; native-phase OI and midnight boundaries;
