@@ -3,7 +3,7 @@
 - **Date:** 2026-09-09
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept Batch C; authorize the bounded Batch D coverage source drop below
+- **Decision:** accept Batch C; reject the initial Batch D coverage source drop; authorize the consolidated correction below
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
 - **Next required actor:** Sr Dev - Codex Sol
@@ -248,7 +248,109 @@ unmatched price-state coverage; unknown availability; row-equation reconciliatio
 path/descriptor/schema/hash refusal; memory bounds; byte limits including metadata;
 interrupted completion-last publication; concurrent no-clobber; and byte-identical replay.
 Tests must demonstrate that a common symbol/month is insufficient to prove common days.
-Return source for review and stop. No targeted test exception is granted at this stage.
+Return source for review and stop. The initial assignment granted no targeted test exception;
+the corrective assignment below grants one exact command.
+
+## Initial coverage source review and consolidated correction
+
+The reviewer rejects the complete initial source drop for integration. This is a static
+source decision, not an executed test result or a rejection of any accepted input product.
+The three inspected files have these identities:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/binance_usdm_coverage.py` | 1,285 | `8ff893b28c8b9f185f9ca72e13297c2dede266f0a5556cabbad3175a295fa3cd` |
+| `scripts/research/normalize_binance_usdm_coverage.py` | 85 | `567f8ce77b7f19d1174fd9a9c074d541ac7cab823c63957a32f739c8b1097f5f` |
+| `tests/ingest/test_binance_usdm_coverage.py` | 560 | `2acb4fe3126e433f84166b3298f39e7dec563e1af6e42eff037d274d7ea7d4bb` |
+
+The same Sol High actor is authorized to correct the production and test files above.
+The CLI has no identified blocker and remains unchanged. Return one complete corrective
+drop covering this entire list; no intermediate integration or real run is authorized.
+The original input pins, schemas, source/metadata allocations, membership domain, and
+financial semantics remain binding.
+
+1. **Accepted OI schema and native timestamps (blocking).** `TIMESTAMP_COLUMNS` selects
+   `calc_time`, but the accepted product field is `create_time`. `_scan_partition`
+   (initial lines 542-567) also requires absolute five-minute clock alignment, and
+   `publish_quality_gaps` (lines 862-866) repeats that requirement for gap endpoints.
+   These contradict accepted Reviews 436/437/445: retain exact source milliseconds,
+   native offset phases, prior-observation-phase missing runs, and the accepted midnight
+   exclusion disposition. Use the actual frozen schema. Preserve valid irregular
+   intervals without asserting that they establish complete cadence. Cover nonzero
+   phase, 301-599-second intervals without invented missing rows, off-phase missing runs,
+   and UTC-month boundaries with independently specified fixtures.
+2. **Publication and completion proof (blocking).** `_OutputTree.publish` (lines 621-655)
+   closes the staged file before its hook/rename and never verifies newly published
+   bytes. Replacing or modifying that staged file can publish incorrect bytes under the
+   original digest. `audit` checks names/set membership only. `normalize_coverage`
+   publishes completion before its sole audit (lines 1266-1268), so a pre-existing foreign
+   digest-shaped artifact can cause failure only after a completion is visible. Hold
+   safe directory/file descriptors through publication, verify staged and winning bytes,
+   Parquet schema/rows and declared sizes, and reprove the complete expected inventory
+   before exposing completion. Verify replay dependencies and output contents, not just
+   filenames. Refuse stale/foreign files, unexpected directories and non-regular entries.
+   Preserve no-clobber concurrency, bounded staging, fsync and safe reuse after interruption;
+   clean only positively owned temporary files on handled failures. Do not delete foreign
+   leftovers or mutate accepted inputs. Tests must inject staged and destination mutation,
+   a foreign digest-shaped artifact, and interruption before completion.
+3. **Input containment and scan identity (blocking).** `_require_safe_path`, `_file_sha`
+   and the later `pq.ParquetFile(path)` independently reopen pathnames. Parent replacement
+   or input mutation between authentication and scan can detach the reported descriptors
+   from consumed bytes. Use descriptor-relative no-follow traversal and bind scans to the
+   authenticated regular file; reprove consumed dependencies before completion. Detect
+   source/parent substitution using bounded fixtures. `_safe_relative` also normalizes
+   `./local` before inspecting its parts, contradicting the explicit refusal test;
+   validate the original path spelling and unsafe components before normalization.
+4. **Daily cadence and exclusion reasons.** `publish_reports` (lines 1007-1011) equates
+   24/288 row counts with complete cadence. `_scan_partition` counts duplicates while
+   separately recording them, so duplicated timestamps can conceal a missing slot. Prove
+   distinct observed slots and the applicable native cadence; preserve actual observation
+   counts and valid OI phase changes without rounding or inventing observations. A partial
+   observed day currently has `complete=false` but no exclusion reason. Report explicit
+   reasons for failure of each applicable full-cadence predicate as well as absence,
+   retaining unknown event expectations and censored liquidation semantics. Keep the
+   0GUSDT nine-day presence/eight-day cadence reference case above.
+5. **Cost summary facts.** `publish_reports` (lines 1076-1088) labels per-instrument counts
+   unavailable although its pinned partition descriptors already provide known component
+   row counts. Report those counts separately with their actual units; do not combine
+   book observations, fee gaps and scenarios as one economic count. Authenticate the
+   referenced cost lineages needed for source-day extrema and report those actual dates
+   at day precision. Exact event-time extrema and unestablished duplicate statistics may
+   remain null. A `source_day_only` label without source days does not satisfy the report
+   contract. Do not rescan book-value Parquet rows.
+6. **Test contracts and complete producer coverage.** The test file uses `Mapping` at
+   line 423 without importing it. Line 109 expects `canonical_reference_unavailable`,
+   whereas the accepted sizing/native-identity contract is
+   `reference_identity_not_yet_created`. The liquidation test at lines 258-270 removes
+   the whole partition but expects the different reason used for an absent day within an
+   existing partition. Correct the contracts, and distinguish a real zero-valued observed
+   liquidation row from a missing row. Current fixtures derive timestamp columns from
+   the implementation and reproduce `calc_time`; they cannot detect the real schema
+   mismatch. Add a bounded fixture with actual authority/completion/lineage/schema shapes
+   that exercises `load_inputs` and the complete `normalize_coverage` path through
+   completion and byte-identical replay. Test all membership classes, rowless identities,
+   source-versus-observed gaps, component and metadata bounds, and the failure paths
+   above. Fixture-only pins/bounds may be controlled inside tests; production pins and CLI
+   authority must remain strict. Do not claim helper-only publication as producer replay.
+
+The reviewer executed no source tests, Ruff, conversion, integration, or data mutation.
+The deterministic assertion mismatches above were identified by reading the source and
+accepted contracts; they are not claimed as observed pytest output.
+
+After completing all edits, Sol may execute exactly once under the AGENTS.md targeted
+senior test exception:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_binance_usdm_coverage.py -q --tb=short
+```
+
+This single focused command is for immediate corrective source feedback. Stop on its
+first nonzero result and report the exact command and complete output; do not patch and
+retry, run Ruff, expand tests, or execute real data. Even a passing result does not accept
+or integrate the drop. Return all three file hashes/line counts, the bounded change
+description, and the command result. Hermes retains all integration, acceptance, evidence,
+record and implementation Git ownership. The reviewer may deliver this correction to
+the existing directly authorized Sol sub-agent and will not poll for progress.
 
 ## Reviewer publication scope
 

@@ -14,11 +14,12 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Sr Dev - Codex Sol, GPT-5.6-sol High, authors exactly the three new source/CLI/test paths
-in Review 480 for the coverage/gap product and complete daily-alignment report. Return
-one complete source drop for consolidated reviewer inspection. No test execution, real
-run, integration, Git, records, network or data mutation is assigned. Hermes is not yet
-authorized. Review 480 is the complete one-way developer prompt.
+Review 480 rejects the initial coverage source drop. Sr Dev - Codex Sol, GPT-5.6-sol High,
+corrects its production and test files against the consolidated six-part review; the CLI
+stays unchanged. Return one complete corrective drop. Review 480 grants exactly one
+enumerated focused pytest command after editing, with stop on first nonzero and no retry.
+No real run, integration, Git, records, network or data mutation is assigned. Hermes is
+not yet authorized. Review 480 contains the complete corrective prompt.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
