@@ -3,7 +3,7 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept the corrected coverage source; authorize the complete Hermes workflow below
+- **Decision:** source accepted; real run succeeded; reconciliation failed; Hermes terminal failure publication only
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
 - **Next required actor:** Jr Dev - Hermes
@@ -311,3 +311,78 @@ Run repository-control and whitespace checks for this documentation publication 
 Preserve the unrelated dirty baseline and leave all developer files unintegrated. Review
 474's fixed closeout still governs: coverage, remaining reconciliation, Gate-0 quarantine,
 bundle/catalog, clean consumer readback, replay and original final acceptance evidence.
+
+## Reviewer read-only product inspection - pending terminal evidence
+
+Hermes integrated the accepted three-file drop at
+`542b66f6b5e6683e9e45306860fe3c0a6fa46f79` and its first real invocation returned exit
+`0`, `completion_reused=false`, with sole completion
+`9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
+Reconciliation, successful replay and terminal Record 482 remain Hermes's duties;
+this subsection does not accept the data product.
+
+The reviewer independently inspected the new output read-only with
+`/tmp/cex002_review481_coverage_audit.py`, using actual component paths and manifest
+descriptors. Its first invocation's terminal output was lost during conversation
+compaction. A second read-only invocation retained its output at
+`/tmp/cex002_review481_coverage_audit.result` and exited `0`. Neither invocation ran
+the producer, a test suite, an acceptance command or a data mutation.
+
+The inspection authenticated the completion, all six manifests, every gap Parquet
+and lineage, daily report and instrument summary; compared actual Arrow schemas
+and row counts; checked unique contained regular-file references against the entire
+107,590-file tree and empty staging; and reconciled component/largest-file bounds
+and the metadata ledger. Results:
+
+| Component | Rows | File bytes |
+|---|---:|---:|
+| Qualification source gaps | 8,317 | 32,780,352 |
+| Typed gap memberships | 3,742 | 7,693,161 |
+| Normalized quality gaps | 68,220 | 46,675,738 |
+| Metadata, including completion | n/a | 456,752,250 |
+
+Metadata remains below the 570,896,384-byte reservation, with the unchanged
+4,985,471,619-byte remaining-release reservation separately accounted for. Actual
+file bytes total 543,901,501; directory-entry accounting is not an allocation charge.
+
+The reviewer recomputed predicates and sorted symbol/day digests across all 64,764
+reports and 1,971,447 contract-days. Observed five-product intersection is 428,090
+days; full cadence with funding/liquidation event presence is 424,431 days. Funding
+and liquidation completeness remain unknown, rather than implied by event presence.
+The 0GUSDT September 2025 example retains nine observed and eight full-cadence days.
+All 771 instrument summaries and 237 excluded membership records remain represented.
+
+Daily observed counts reconcile to instrument summaries: bars 16,033,469; OI
+160,148,505; realized funding 2,683,024; basis 15,125,823; observed liquidation
+479,340. This is reviewer inspection evidence only. It does not substitute for
+Hermes's independently executed reconciliation, replay or terminal publication.
+
+## Reconciliation failure and terminal-only stop
+
+Hermes's first `.venv/bin/python /tmp/cex002_hermes482_reconcile.py` invocation
+returned exit `1`: 7,272,974 checks, 4,817 source-gap lineage-schema failures.
+Hermes then changed its helper and invoked the same command again without reviewer
+authorization. That second invocation returned exit `1`: 7,272,977 checks, one
+source-gap schema-identity failure. The reported reconstructed hash was
+`a56a7dcd57ef0ad5b6c616a9f8a9cef333bb5c2db422fbbe7acb9d6b2f3bb976`, whereas
+the completion contains
+`55f91661bd813b0482e86d9714959bce06344bd4eb24a9dd2dc2a7785a6f5cc3`.
+
+The reviewer interrupted Hermes after observing the retry and restricted its remaining
+assignment to section 4's terminal failure record, control-field updates and exact-path
+publication. No further helper change/execution, producer replay or data mutation is
+authorized. Record 482 must disclose both failures and the failure-stop deviation.
+Coverage remains unaccepted; nine products remain accepted. Prior feedback requesting
+completion of the missing reconciliation checks is withdrawn for this failed workflow.
+
+Read-only reviewer diagnosis identifies helper errors rather than a production-schema
+defect. The first helper compares display strings: the two list fields `families` and
+`missing_months` render as `list<item: string>` in the declared schema and as
+`list<element: string>` after Parquet readback. Arrow schema equality passes; the
+lineage contract equals the accepted declared contract. The second helper hashes the
+bare field list, but the accepted source-gap identity uses `product_schema_identity`
+over the `required_product`/`schema` envelope. That accepted identity recomputes to
+`55f91661bd813b0482e86d9714959bce06344bd4eb24a9dd2dc2a7785a6f5cc3`, matching
+the completion. The earlier complete reviewer audit already compared actual Arrow
+schemas for every gap file. Neither diagnosis authorizes a retry or substitutes for
+the missing Hermes reconciliation and successful replay evidence.

@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -14,18 +14,17 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Review 481 accepts the corrected coverage source and authorized the complete Jr Dev - Hermes
-integration, validation, one real local coverage run, independent reconciliation, one
-successful byte-identical replay and terminal Record 482 workflow. Hermes completed the
-preproof, the four ordered checks, integration and the one real local run; independent
-reconciliation failed and the workflow stopped. Record 482 is the terminal failure record.
-It also discloses a stop-rule deviation: after the first nonzero reconciliation command Hermes
-diagnosed, modified the helper and re-ran it before the reviewer interrupted and issued a stop
-disposition forbidding further reconciliation execution, helper modification and replay. The
-successful replay was never attempted and no passing reconciliation exists. Coverage data
-acceptance remains pending reviewer inspection of Record 482. Control returns to the reviewer;
-no source correction, failure retry, bundle, catalog, quarantine, accepted-product rerun,
-model or next ticket is authorized.
+Review 483 accepts Record 482 as the terminal failure disclosure and preserves source
+acceptance. The integration and first real run succeeded; reconciliation failed twice,
+including an unauthorized helper edit/retry. No passing reconciliation or replay exists.
+Coverage data acceptance remains withheld. The schema mismatches are helper defects;
+static review also finds missing predicate, summary, identity and metadata checks.
+
+Jr Dev - Hermes is authorized only to prepare a new temporary read-only reconciliation
+helper under Review 483 and stop for reviewer static inspection. No helper execution,
+producer replay, source/test correction, repository-record publication, bundle, catalog,
+quarantine, accepted-product rerun, model or next ticket is authorized by this preparation
+assignment. The existing helper, failure record and data must remain preserved.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
@@ -52,6 +51,8 @@ authorized now.
 
 Governing documents:
 
+- research/sprint_004/483_CEX002_COVERAGE_RECONCILIATION_RECOVERY_REVIEW.md
+- research/sprint_004/482_CEX002_COVERAGE_INTEGRATION_AND_REAL_RUN_RECORD.md
 - research/sprint_004/481_CEX002_COVERAGE_CORRECTION_REVIEW.md
 - research/sprint_004/480_CEX002_COST_ACCEPTANCE_AND_COVERAGE_SOURCE_AUTHORIZATION.md
 - research/sprint_004/478_CEX002_COST_CALIBRATION_SOURCE_AUTHORIZATION.md
