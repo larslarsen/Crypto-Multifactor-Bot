@@ -204,3 +204,40 @@ assigned. Return SHA-256, lines, a factual check map and any remaining uncertain
 stop for reviewer inspection. A syntax-only compile is permitted; it does not import or
 execute the helper and does not establish acceptance. Exactly one Hermes session may
 perform this bounded correction after the prior preparation session has terminated.
+
+## Preparation discovery stop and exact-path continuation
+
+The Longcat session `20261016_142047_361cc5` returned the rejected helper, then continued
+with an additional static check. The reviewer interrupted it; terminal exit was 130.
+The helper still has its rejected hash above. No helper execution or producer run occurred.
+
+Laguna session `20261016_143823_76bfa2` did not create its assigned helper. Its exploratory
+command below returned exit 1 because some temporary directories were inaccessible:
+
+```bash
+find /home/lars/Crypto_Multifactor_Bot/research -name "*482*" -o -name "*481*" -o -name "*483*" 2>/dev/null; echo "---"; find /tmp -name "*cex002*" -o -name "*hermes484*" 2>/dev/null
+```
+
+A separate already-issued `find /home/lars/Crypto_Multifactor_Bot -name "*.py" | head -60`
+returned exit 0 and listed virtual-environment files. The reviewer interrupted the session
+at this discovery failure; terminal exit 130. This is a tooling/discovery stop before any
+helper creation, audit, replay or data mutation, not a product failure. The reviewer inspected
+the redacted session export read-only to establish the exact command and exit.
+
+The reviewer now authorizes one continuation of the same Laguna preparation assignment.
+No audit retry is involved. Avoid broad directory discovery; all needed paths are known.
+Use direct reads of these existing files and bounded artifact paths derived from the pinned
+coverage completion/manifests:
+
+- `/home/lars/Crypto_Multifactor_Bot/src/cryptofactors/ingest/binance_usdm_coverage.py`;
+- `/home/lars/Crypto_Multifactor_Bot/src/cryptofactors/acquisition/binance_usdm_harmonic_sizing.py`;
+- `/home/lars/Crypto_Multifactor_Bot/research/sprint_004/482_CEX002_COVERAGE_INTEGRATION_AND_REAL_RUN_RECORD.md`;
+- `/home/lars/Crypto_Multifactor_Bot/docs/engineering/DEVELOPMENT_ROLES.md`;
+- `/tmp/cex002_hermes484_reconcile.py` (rejected, read-only);
+- `/home/lars/Crypto_Multifactor_Bot/data/.cex002_coverage/.complete/9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151.json`.
+
+Use `rg` only on the named source paths if locating definitions. Do not walk `/tmp`, the
+virtual environment, unrelated repositories or the prohibited archive. Preserve the same
+preparation-only write path, seven requirements, consolidated corrections and static-review
+stop boundary. The first nonzero execution/proof still stops this continuation. No audit,
+replay, producer or repository mutation is authorized.
