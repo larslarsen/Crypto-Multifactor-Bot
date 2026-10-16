@@ -3,7 +3,7 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** accept Record 482 as a terminal failure disclosure; authorize bounded audit-helper preparation only
+- **Decision:** Record 482 disclosure accepted; first replacement helper rejected; bounded preparation reassigned within Hermes
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
 - **Next required actor:** Jr Dev - Hermes
@@ -129,3 +129,78 @@ all unrelated dirty paths. No implementation evidence or developer source is int
 the reviewer. CEX-002 and Gate 3 remain IN_PROGRESS, nine products remain accepted, and next
 ticket remains NONE. Review 474's remaining Gate-4, Gate-0, bundle/catalog, clean consumer,
 release replay and final acceptance obligations remain unchanged.
+
+## First preparation rejected; consolidated correction
+
+Hermes returned `/tmp/cex002_hermes484_reconcile.py`, 772 lines, SHA-256
+`655808599238b3e726c2667495d6a316fc821e77d4d54d62b25b543f6c9c9df9`.
+It reported a successful syntax compilation, explicitly disclosed uncertainty about real
+field shapes, and did not execute the helper or producer. Syntax is not reconciliation.
+The reviewer read the complete helper and rejects it for execution:
+
+1. `schemas_equal` still compares `str(field.type)` despite claiming Arrow equality.
+   Source-gap identity uses the row's covered product (for example bars), rather than
+   `binance_usdm_coverage_gap`, and hashes the physical readback's field names. Use
+   accepted declared schemas from the sizing module: `final_product_schema`,
+   `TYPED_GAP_MEMBERSHIP_COLUMNS`, `QUALITY_GAP_COLUMNS`. Compare physical Arrow schema
+   with the declared Arrow schema; compare lineage field lists with the declared contract.
+   Source-gap identity is `product_schema_identity("binance_usdm_coverage_gap")`.
+2. Completion has `input_completions` keyed by product names, not `coverage_bindings`
+   keyed by directories. Authenticate report/sizing/holdout, source identity and each actual
+   input binding. Fee references do not contain `historical_observations` or
+   `non_backdated_policies`; obtain the evidence from the accepted cost descriptor and
+   summary fields instead of inventing keys.
+3. A daily row is exactly `[utc_date, observed_counts, observed_presence,
+   fixed_cadence_complete, exclusion_reasons, observed_intersection, full_cadence]`.
+   The helper's long speculative comments and copied observed-only logic do not implement
+   the required proof. Recompute presence from counts and full cadence as
+   `complete[0] is True and complete[1] is True and complete[3] is True and
+   presence[2] and presence[4]`; event completeness must stay null. Require exact calendars,
+   strict ordering and uniqueness before hashing. Deduplicating rows into a set and comparing
+   that set with itself cannot prove absence of duplicates. Prove the bounded real 0GUSDT
+   example and 14 September-22 basis timestamps.
+4. Summary `products` is a list of eight dictionaries, not a mapping. Each has
+   `required_product`, `observed_count`, `first_observed_ms`, `last_observed_ms`,
+   `input_descriptors`, `duplicate_timestamps`, `source_gap_row_sha256`,
+   `qualification_source_gap_context` and `quality_gap_partitions`. Cost additionally has
+   `component_counts`, `source_day_extrema` and `non_instrument_cost_counts`. The current
+   helper would fail on `.items()` and does not reconcile any accepted partition descriptor,
+   per-symbol row sum, extrema or gap reference. Read the real pinned membership authority
+   for the funding-only set; absence of nonfunding rows is not that classification.
+5. Actual metadata categories are `completion`, `coverage-summary`, `daily`,
+   `daily-alignment`, `excluded_membership`, `quality-gaps-lineage`, `quality_gap`,
+   `source-gaps-lineage`, `source_gap`, `summary`, `typed-gaps-lineage`, `typed_gap`.
+   Map each authenticated artifact to its actual category; require exact category-key and
+   measured-byte equality. The invented aggregate categories skip all but completion.
+6. `safe_resolve` is unused. Validate containment and regular-file/no-symlink status before
+   reading every reference; include manifests/daily/summaries in duplicate detection.
+   Expected directories are reference ancestors plus the required empty `.staging`.
+   The current expected set would reject that legitimate staging directory yet accepts
+   missing staging. Actual quality-gap partition count is 12,465; 130,820 is its ceiling.
+   Neither the sum of unrelated component ceilings nor a guessed structure is evidence.
+7. The helper has no durable result or replay inventory implementation. Author those outputs
+   now (outside the repo), guarded by later explicit execution; preserve full sorted relative
+   path/SHA-256/size/inode/mtime_ns entries. Do not promise them without implementing them.
+
+All seven preparation requirements above remain mandatory. The reviewer supplied bounded
+shape observations and source references, not an implementation or execution result. No
+full-tree audit, test, producer or replay was run by the reviewer.
+
+For this correction select **Jr Dev - Hermes using `poolside/laguna-s-2.1:free`**, with no
+reasoning override. The same live endpoint lists it at `$0.00/1M`; Review 476 documents prior
+use for integration/evidence work. This is an evidence-based rotation after Longcat's
+repeated audit-semantic misses, not a claim that the replacement is already validated on
+this task. Keep all rejected helpers unchanged. Author only
+`/tmp/cex002_hermes484_reconcile_laguna.py`. Read the actual source declarations and bounded
+real JSON/Parquet examples before writing; the correct Record 482 path is
+`research/sprint_004/482_CEX002_COVERAGE_INTEGRATION_AND_REAL_RUN_RECORD.md`.
+Do not infer layouts from the failed helper. A missing exploratory file lookup is not an
+execution/proof result; resolve document paths from CURRENT_TASK. Any failed audit,
+validation command or authority proof still requires stopping without a retry.
+
+The assignment is preparation only. No execution of either helper, full-tree audit,
+producer, test/acceptance command, repository write, Git mutation or data mutation is
+assigned. Return SHA-256, lines, a factual check map and any remaining uncertainty, then
+stop for reviewer inspection. A syntax-only compile is permitted; it does not import or
+execute the helper and does not establish acceptance. Exactly one Hermes session may
+perform this bounded correction after the prior preparation session has terminated.

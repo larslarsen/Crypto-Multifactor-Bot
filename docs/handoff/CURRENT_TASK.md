@@ -20,8 +20,9 @@ including an unauthorized helper edit/retry. No passing reconciliation or replay
 Coverage data acceptance remains withheld. The schema mismatches are helper defects;
 static review also finds missing predicate, summary, identity and metadata checks.
 
-Jr Dev - Hermes is authorized only to prepare a new temporary read-only reconciliation
-helper under Review 483 and stop for reviewer static inspection. No helper execution,
+Review 483 rejects Longcat's first replacement helper on static review. Jr Dev - Hermes
+using Laguna S is authorized only to prepare the corrected temporary read-only helper
+under Review 483 and stop for reviewer static inspection. No helper execution,
 producer replay, source/test correction, repository-record publication, bundle, catalog,
 quarantine, accepted-product rerun, model or next ticket is authorized by this preparation
 assignment. The existing helper, failure record and data must remain preserved.
