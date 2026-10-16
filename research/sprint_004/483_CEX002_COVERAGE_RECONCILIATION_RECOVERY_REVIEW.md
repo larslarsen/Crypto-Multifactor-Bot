@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** owner authorized resuming blocked read-only inspection; bounded Hermes preparation resumed
+- **Decision:** read-only approval resolved; reconciliation source routed to one senior; Hermes preparation stopped
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Jr Dev - Hermes
+- **Next required actor:** Sr Dev - Codex Sol
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -309,3 +309,92 @@ the rejected helpers, data and dirty working tree. Stop on a failed validation o
 proof, report the exact failure, and do not retry. Return the completed helper identity and
 factual check map, then end the turn for reviewer inspection. Previous failures remain
 preserved; this continuation does not retroactively authorize them.
+
+## Routing correction - senior reconciliation source, Hermes execution
+
+The resumed Laguna session successfully executed the owner-authorized bounded `jq` reads
+of completion keys, manifest keys, input-completion keys and metadata ledger, all exit 0.
+The approval blocker is resolved. It still produced no replacement helper. The reviewer
+interrupted that session to change the assignment; outer terminal exit was 1 following
+KeyboardInterrupt. This is a reviewer routing decision, not another product or audit failure.
+No helper audit, producer replay or data mutation ran.
+
+The complete independent reconciliation now requires source-authority, financial-semantic
+and publication-identity validation with adversarial tests. Under DEVELOPMENT_ROLES this
+belongs with a senior source author; keeping that implementation as a large untested Jr-owned
+temporary helper has not produced an acceptable result. Supersede the temporary helper
+preparation assignment. Hermes owns execution, implementation evidence and integration after
+source acceptance. This changes the developer route, not the data contract, architecture,
+release identity, ticket, or acceptance requirements.
+
+Select exactly one **Sr Dev - Codex Sol, GPT-6.1-sol, High reasoning** for the bounded source
+drop below. The available-OpenAI-model selection and direct coverage delegation recorded in
+Reviews 480/481 apply. The reviewer may send one consolidated correction directly after
+static inspection. No other source author or Hermes execution is concurrent.
+
+### Exact source scope and behavior
+
+Author only these two new paths:
+
+- `scripts/research/reconcile_binance_usdm_coverage.py`;
+- `tests/test_cex002_coverage_reconciliation.py`.
+
+The script is a standalone research reconciliation command, not an application-layer module.
+It may import accepted schema declarations from sizing, plus standard library and existing
+PyArrow. Do not add a dependency, modify package exports or the layer dependency matrix,
+import producer audit/report-building functions, or modify the accepted producer, CLI or tests.
+No ADR is needed for a read-only command implementing existing Gate-4 proof requirements.
+All seven requirements and seven consolidated corrections in this review remain the script's
+contract. Preserve original pinned identities and all accepted semantics. Rejected temporary
+helpers are read-only evidence, not an implementation base to trust.
+
+Expose a CLI with required `--repo-root`, `--output-root`, `--result-path`, and
+`--inventory-path`. The real invocation will use the repository root, existing
+`data/.cex002_coverage`, and fresh result/inventory files outside the repo and data roots.
+No production CLI option may relax the accepted authority/completion/source pins. Refuse
+unsafe paths, output destinations inside repository/data inputs, aliases between outputs,
+existing output files or input collisions. Write only the two requested evidence artifacts;
+never mutate data, repair directories or invoke the producer. A failure must return nonzero
+without a PASS result or a completed replay inventory. Publish PASS evidence only after all
+checks succeed. Include helper/source identity, UTC timing, statvfs capacity, all measured
+reconciliation counts, and an inventory digest. Inventory rows must be sorted and include
+relative path, SHA-256, size, inode and mtime_ns for the entire authenticated coverage tree.
+
+The audit must be independently implemented. Shared schema/type declarations are authority;
+producer validators, report constructors, or reading back a producer PASS flag are not an
+independent proof. Use bounded memory: process one report or timestamp partition at a time,
+retain descriptor indexes and per-symbol counters, and do not load whole market-value
+columns or 939 million cost rows. Authenticated accepted descriptors/lineages may establish
+unchanged accepted input facts. For extrema and duplicate counts absent from descriptors,
+read only necessary timestamp columns in bounded partitions. Hash any accepted file whose
+newly read facts are used; do not silently trust unauthenticated footer values. The small
+0GUSDT September-2025 example must independently establish nine observed days, eight
+full-cadence days and fourteen basis observations on September 22. Preserve native-phase OI,
+unknown event completeness/availability and observed/censored liquidation.
+
+### Test source and one targeted command
+
+Add meaningful bounded fixture tests that exercise the complete audit path, not only helpers:
+accepted schema equality across Parquet list-child display names; source-envelope versus
+bare schema identities; authority/input-binding refusal; sorted unique complete calendars
+and member sets; independent presence/full-cadence predicates; summary-to-input row/extrema/
+gap references; exact metadata-category measurement; foreign files/directories, missing
+staging, symlink/path traversal and duplicate references; and no PASS evidence on failure.
+Use small representative fixtures with explicit internal test-only pin/count overrides where
+needed. Include successful result/inventory serialization and refused output collisions.
+No real-data audit, fixtures outside the test path or production authority changes are allowed.
+
+After edits, the senior may run this exact command once under the targeted senior exception:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/test_cex002_coverage_reconciliation.py -q --tb=short
+```
+
+Stop on its first nonzero result and report complete output without patching or retrying.
+On success also stop for source inspection. Do not run Ruff, full acceptance commands,
+real reconciliation, producer, network, Git, repository records, catalog, quarantine or data
+mutation. Bounded read-only inspection of source and representative accepted JSON/schema/
+timestamp examples is allowed to avoid guesses. Return the two file SHA-256 identities,
+line counts, complete targeted output and a concise implementation/limitations report.
+Hermes remains unauthorized until reviewer source acceptance; no replay or next ticket is
+assigned. Nine products remain accepted and CEX-002 remains IN_PROGRESS.
