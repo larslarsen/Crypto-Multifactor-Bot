@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** read-only approval resolved; reconciliation source routed to one senior; Hermes preparation stopped
+- **Decision:** Sol reconciliation source accepted; Hermes integration and bounded execution authorized below
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Sr Dev - Codex Sol
+- **Next required actor:** Jr Dev - Hermes
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -458,3 +458,120 @@ existing release requirements after previous verification helpers failed. All so
 boundaries, seven requirements/corrections, the once-only targeted test command, failure
 stop and reviewer checkpoint above remain in force. Hermes execution remains unassigned
 until source acceptance. This is a model-route change, not data acceptance or a new ticket.
+
+## Sol source checkpoint and formatting correction
+
+GPT-6.1 Sol High returned the two-path drop. Its one authorized targeted pytest command
+exited 0 with complete output `.......................................................................  [100%]`
+(71 cases). The reviewer did not execute tests or a real audit.
+
+- Checker: 1,069 lines, SHA-256
+  `1b416de36600496b83da904e26d67154ce216a8ddfe7341b3dee80046b7a8832`.
+- Tests: 792 lines, SHA-256
+  `ea5b5864ddc5fb538b112cc417c55bdd80762d23dd1a6ec125ae1d24e8479aa0`.
+
+Static review covers the complete checker and fixtures. During preparation the reviewer
+identified the accepted zero-row `official_fee_schedule/__schema__/schema` descriptor and
+requested held-directory evidence publication; both are addressed, including rollback and
+ancestor-replacement tests. The source independently checks authority/schema bindings,
+accepted timestamp facts, daily predicates, summary equations, separate gap classes,
+metadata categories and exact output inventory. Cost market-value rows remain unscanned.
+Only accepted schema declarations are shared with the producer.
+
+One bounded source-only formatting correction remains: the same Sol agent may expand the
+one-line `def mutation(c): ...` and `else: stamps[1] += 1` suites in
+`tests/test_cex002_coverage_reconciliation.py` (currently lines 670 and 729) into ordinary
+indented suites. Change no semantics or other path. No additional test, Ruff, audit or Git
+command is authorized to the senior; Hermes will validate the final bytes. Return the
+final test-file hash and line count, then stop. The checker bytes remain fixed. Hermes is
+not authorized until reviewer acceptance of this exact correction.
+
+## Final source acceptance and Hermes execution
+
+The reviewer accepts the two-path source drop. Checker SHA-256 remains
+`1b416de36600496b83da904e26d67154ce216a8ddfe7341b3dee80046b7a8832` (1,069 lines).
+Final test SHA-256 is
+`4dcd55e5b495d0092e81855f22a5fe54a246bfa8bfb9d7f3f49f1e81ffa42166` (794 lines).
+Reversing the two layout edits in memory reproduces the preceding test hash exactly.
+The 71-case result belongs to the pre-layout bytes; Hermes must validate the final bytes.
+No real-data PASS or coverage acceptance is inferred from this source decision.
+
+Select Jr Dev - Hermes using `poolside/laguna-s-2.1:free`, without reasoning override.
+The live Nous recommended-models endpoint checked again on this review date lists it at
+`$0.00/1M`. Prior accepted integration work in Review 476 supports this command-execution
+route; the failed helper-authoring attempts do not establish implementation capability.
+Hermes now executes accepted source and exact commands only. Sol's source assignment is
+finished. No concurrent developer, source modification, new helper or test authoring is
+authorized. The standing direct-prompt authorization applies.
+
+From `/home/lars/Crypto_Multifactor_Bot`, run the following sequence. Inspect each exit
+before continuing. At the first nonzero command or failed proof, stop execution, preserve
+all artifacts, and publish the terminal failure record. No patch, retry, substitution,
+deletion or successful replay after failure. Read-only failure inspection and the terminal
+record publication remain authorized. Reviewer inspections are not Hermes evidence.
+
+1. Prove HEAD equals origin/main and includes this final authorization. Require an empty
+   Git index; preserve unrelated dirty files. Reprove the two final source hashes/line counts
+   above and the three accepted producer/CLI/test hashes in Record 482. Run separately:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python -m pytest tests/test_cex002_coverage_reconciliation.py -q --tb=short
+   PYTHONPATH=src .venv/bin/python -m ruff check scripts/research/reconcile_binance_usdm_coverage.py tests/test_cex002_coverage_reconciliation.py
+   python3 scripts/check_repo_control.py
+   git diff --check
+   ```
+
+   After success, stage exactly the two new checker/test paths, inspect the staged set,
+   run `git diff --cached --check`, commit `CEX-002: integrate independent coverage reconciliation`,
+   push and reprove HEAD equals origin/main and the two file hashes. Do not integrate
+   other source/test paths or the unrelated dirty baseline.
+
+2. Prove the pinned coverage completion still hashes to
+   `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`, that no coverage
+   producer/checker is active, and that all four fresh evidence destinations below are
+   absent (expected-false existence predicates are not failures). Record current UTC and
+   `statvfs.f_bavail * f_frsize`. Launch with `TERMINAL_MAX_FOREGROUND_TIMEOUT=43200`, request
+   terminal `timeout=43200`, stay attached until exit, and run once:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python scripts/research/reconcile_binance_usdm_coverage.py --repo-root /home/lars/Crypto_Multifactor_Bot --output-root /home/lars/Crypto_Multifactor_Bot/data/.cex002_coverage --result-path /tmp/cex002_hermes484_before.result.json --inventory-path /tmp/cex002_hermes484_before.inventory.jsonl
+   ```
+
+   Capture complete terminal output, actual exit, UTC before/after and duration. Only an
+   exit-0 PASS with authenticated result/inventory permits step 3. The checker authenticates
+   authorities, all nine completions and consumed inputs itself; do not write another
+   reconciliation helper or scan cost market values. Record measured facts, not projections.
+
+3. After step 2 succeeds, use the exact producer invocation in Review 481 section 2, with
+   the same paths and 43,200-second foreground timeout, exactly once as the successful
+   replay. This is the existing coverage tree: require exit 0, `completion_reused=true`
+   and the same completion identity. Do not delete, repair or recreate the tree. Then run
+   the checker once more, with only these two destination substitutions:
+   `/tmp/cex002_hermes484_after.result.json` and
+   `/tmp/cex002_hermes484_after.inventory.jsonl`. Require exit-0 PASS and run separately:
+
+   ```bash
+   cmp /tmp/cex002_hermes484_before.inventory.jsonl /tmp/cex002_hermes484_after.inventory.jsonl
+   ```
+
+   Exit 0 proves every sorted path/hash/size/inode/mtime entry is unchanged. Record both
+   inventory hashes, completion identity, replay timing/output and post-run statvfs.
+   This second audit is assigned only to validate the replay, not to retry a failure.
+
+4. On success or first failure, publish
+   `research/sprint_004/484_CEX002_COVERAGE_RECONCILIATION_AND_REPLAY_RECORD.md` with exact
+   commands/exits, source/integration identities, actual results and artifact hashes,
+   timing/capacity, measured coverage/gap/metadata totals, and any missing evidence. On
+   failure explicitly state that subsequent steps did not run. No partial PASS or data
+   acceptance claim. Keep evidence artifacts and failed output unchanged.
+
+   Update only current action/checklist/actor fields in CURRENT_TASK and CEX-002, returning
+   both actor fields to Lead Quantitative Finance Researcher/Engineer. Keep nine products
+   accepted, Gate 2 ACCEPTED, Gate 3 and ticket IN_PROGRESS, next ticket NONE. Add Record 484
+   as a governing reference once it exists. Run repository control and whitespace checks
+   separately. Stage exactly Record 484, `docs/handoff/CURRENT_TASK.md`, `tickets/CEX-002.md`;
+   inspect staged paths, run staged whitespace check, commit, push, prove HEAD equals
+   origin/main and stop for reviewer disposition. Do not edit this review.
+
+No full acceptance suite, acquisition, Gate-0 quarantine, catalog, bundle, other product,
+trading model or next ticket is assigned. All previous failed attempts remain disclosed.
