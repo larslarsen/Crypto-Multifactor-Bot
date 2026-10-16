@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -14,14 +14,18 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Review 481 accepts the corrected coverage source after all 74 focused cases pass.
-Jr Dev - Hermes owns its complete integration, validation, one real local coverage run,
-independent reconciliation, one successful byte-identical replay, and terminal Record 482
-publication. Use the exact source hashes, commands, input pins and stop rules in Review
-481. The senior assignment is finished. Stop on the first nonzero command or failed proof;
-no source correction or failure retry is authorized. No bundle, catalog, quarantine,
-accepted-product rerun, model or next ticket is assigned. Coverage data acceptance remains
-pending reviewer inspection of the terminal result.
+Review 481 accepts the corrected coverage source and authorized the complete Jr Dev - Hermes
+integration, validation, one real local coverage run, independent reconciliation, one
+successful byte-identical replay and terminal Record 482 workflow. Hermes completed the
+preproof, the four ordered checks, integration and the one real local run; independent
+reconciliation failed and the workflow stopped. Record 482 is the terminal failure record.
+It also discloses a stop-rule deviation: after the first nonzero reconciliation command Hermes
+diagnosed, modified the helper and re-ran it before the reviewer interrupted and issued a stop
+disposition forbidding further reconciliation execution, helper modification and replay. The
+successful replay was never attempted and no passing reconciliation exists. Coverage data
+acceptance remains pending reviewer inspection of Record 482. Control returns to the reviewer;
+no source correction, failure retry, bundle, catalog, quarantine, accepted-product rerun,
+model or next ticket is authorized.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
