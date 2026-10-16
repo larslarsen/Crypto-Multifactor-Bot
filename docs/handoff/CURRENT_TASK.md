@@ -14,12 +14,14 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Review 480 rejects the initial coverage source drop. Sr Dev - Codex Sol, GPT-5.6-sol High,
-corrects its production and test files against the consolidated six-part review; the CLI
-stays unchanged. Return one complete corrective drop. Review 480 grants exactly one
-enumerated focused pytest command after editing, with stop on first nonzero and no retry.
-No real run, integration, Git, records, network or data mutation is assigned. Hermes is
-not yet authorized. Review 480 contains the complete corrective prompt.
+Review 481 rejects the current coverage correction on relative-output handling,
+completion precommit ordering, and incomplete whole-producer failure coverage. The sole
+senior assignment is GPT-6.1-sol High in the Sr Dev - Codex Sol role, replacing GPT-5.6-sol
+for this bounded correction. Edit only the coverage production/test files; keep the CLI
+byte-identical. Review 481 supplies the complete prompt and exactly one focused pytest
+command after editing, with stop on first nonzero and no retry. Direct delegation remains
+authorized under Review 480. No real run, integration, Git, records, network or data
+mutation is assigned. Hermes is not yet authorized.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
@@ -46,6 +48,7 @@ authorized now.
 
 Governing documents:
 
+- research/sprint_004/481_CEX002_COVERAGE_CORRECTION_REVIEW.md
 - research/sprint_004/480_CEX002_COST_ACCEPTANCE_AND_COVERAGE_SOURCE_AUTHORIZATION.md
 - research/sprint_004/478_CEX002_COST_CALIBRATION_SOURCE_AUTHORIZATION.md
 - research/sprint_004/479_CEX002_COST_CALIBRATION_INTEGRATION_AND_REAL_RUN_RECORD.md
