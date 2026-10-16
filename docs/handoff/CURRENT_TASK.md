@@ -28,7 +28,7 @@ Both Hermes sessions are terminated. No new audit or producer replay occurred.
 
 The owner-authorized read-only inspection succeeded. The reviewer stopped Hermes and
 routed the complete reconciliation implementation to one Sr Dev - Codex Sol assignment
-(GPT-6 Astra xhigh): a standalone repository research script and focused test source, under
+(GPT-6.1 Sol High): a standalone repository research script and focused test source, under
 Review 483's exact two-path scope and one targeted-test exception. This implements the
 existing independent reconciliation requirements; no producer or architecture changes.
 

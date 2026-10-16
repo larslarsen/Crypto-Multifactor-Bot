@@ -438,3 +438,23 @@ this source drop; ordinary integration remains Hermes's job. No duplicate-model 
 parallel senior author, paid external-provider call or quota-exhaustion strategy is assigned.
 The two file identities, targeted result and subsequent reviewer findings will provide
 repository evidence for the next selection.
+
+## Owner preference applied: GPT-6.1 Sol High
+
+The owner requests GPT-6.1 Sol and clearer explanation of the work. The reviewer stopped
+the Astra source agent before launching a replacement. At interruption it had reported
+read-only shape inspection and no test or audit execution; neither authorized source path
+was present in the working tree. No source drop is accepted from that attempt.
+
+Supersede the Astra model selection above with exactly one **Sr Dev - Codex Sol using
+GPT-6.1 Sol (`gpt-6.1-sol`), High reasoning**. Sol is a capable choice supported by the
+related accepted coverage-source work in Review 481; a more expensive model is not required
+by demonstrated evidence here. This selection honors the owner's preference and the
+minimum-usage capable-developer rule. Do not restart Astra or run concurrent developers.
+
+The task remains the same two-file independent coverage checker and its fixture tests.
+Its purpose is to establish whether the already-produced coverage data satisfy the
+existing release requirements after previous verification helpers failed. All source
+boundaries, seven requirements/corrections, the once-only targeted test command, failure
+stop and reviewer checkpoint above remain in force. Hermes execution remains unassigned
+until source acceptance. This is a model-route change, not data acceptance or a new ticket.
