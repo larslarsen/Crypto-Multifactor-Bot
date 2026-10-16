@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -25,14 +25,14 @@ and pushed `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, and executed the first re
 once: exit 0 PASS. The before-result and complete inventory are preserved in `/tmp` at
 Review 483's pinned hashes. Source and reconciliation success do not complete acceptance.
 
-Hermes's internal approval gate timed out and denied the producer replay before execution,
-then also denied a follow-up evidence-inspection command. The reviewer stopped Hermes.
-No replay, after-audit, comparison or Record 484 publication occurred. An explicit owner
-permission question is pending; no retry, rephrasing, approval bypass or alternate actor
-may perform those denied operations before permission arrives. Remaining work after
-authorization is replay, after-audit/comparison and terminal evidence, preserving the
-already-passing integration and first audit. No source edits, new helpers, bundle, catalog,
-quarantine, other-product rerun, trading model or next ticket. Nine products remain accepted.
+Hermes's internal approval gate timed out and denied replay and follow-up inspection
+before execution. The owner has now explicitly authorized continuation. Resume the existing
+Hermes session in interactive mode under Review 483's final continuation: reauthenticate
+preserved inputs/evidence, run one replay, one after-audit and inventory comparison, and
+publish terminal Record 484. Preserve the passing tests and before-audit; do not rerun them.
+No replay, after-audit, comparison or Record 484 publication has occurred yet. No source
+edits, new helpers, bundle, catalog, quarantine, other-product rerun, trading model or next
+ticket. Nine products remain accepted; coverage acceptance remains pending.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.

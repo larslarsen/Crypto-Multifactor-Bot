@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** checker integrated and real reconciliation PASS; replay and follow-up inspection blocked by approval gate; Hermes stopped
+- **Decision:** owner authorized continuation; preserve passing reconciliation and resume bounded replay/evidence
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
+- **Next required actor:** Jr Dev - Hermes
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -632,3 +632,44 @@ Do not rerun passing tests or the before-audit. The record must distinguish the 
 result, actual checker exit, blocked commands, and reviewer-only inspections. In particular,
 the reviewer independently reproved the three accepted producer/CLI/test hashes unchanged;
 Hermes must not label that reviewer observation as its own unexecuted preflight.
+
+
+## Owner-authorized replay and evidence continuation
+
+The owner answered **yes** to the explicit replay/check/evidence resumption question.
+This supersedes the preceding permission-pending stop for those operations only. Resume
+Hermes session `20261016_154342_b70534`, retaining Laguna S 2.1 free and no reasoning
+override. GPT-6.1 Sol's source assignment remains finished. Nine products remain accepted;
+coverage data acceptance is pending. No additional source or test changes are authorized.
+
+The reviewer inspected the local Hermes CLI: the `-q` path invokes `cli.chat` directly,
+whereas interactive mode invokes `cli.run` and supports the approval prompt. Resume in
+interactive mode without `-q`, `-z`, `--yolo` or approval-policy changes. The reviewer may
+select **once** for an exact command within this owner-authorized scope. This does not
+authorize blanket approval or any operation outside the assignment.
+
+Preserve the integrated source, final-byte 71-case PASS, and first real PASS. Do not rerun
+tests, Ruff, integration or the before-audit. First reauthenticate the five source hashes
+and two before-artifact hashes recorded above / in Record 482; prove HEAD equals origin/main,
+an empty index, no active coverage producer/checker, the pinned completion unchanged, and
+both after-artifact destinations absent. Record current UTC and statvfs available bytes.
+These are new observations; do not backdate them or describe reviewer-only observations as
+Hermes measurements.
+
+Then execute steps 3 and 4 of **Final source acceptance and Hermes execution** above:
+one exact Review 481 producer replay, one after-audit, and one separate inventory `cmp`,
+followed by Record 484 publication. Each long command stays attached with a 43,200-second
+foreground timeout. Separate timestamp/capacity observations from execution where helpful;
+retain the actual producer/checker exit rather than masking it with a wrapper's final exit.
+Require replay exit 0, `completion_reused=true`, unchanged completion identity, after-audit
+exit-0 PASS and identical inventories. Stop at the first actual failed command or proof,
+preserve artifacts and publish the terminal outcome; do not retry a failed execution.
+The earlier replay and evidence-inspection approval timeouts remain disclosed as commands
+that never executed. A further approval denial is a stop, not authority to bypass the gate.
+
+Hermes publication remains limited to Record 484, `docs/handoff/CURRENT_TASK.md` and current
+fields/checklist in `tickets/CEX-002.md`, with the checks, exact staging, push and return to
+reviewer required above. Record actual 71 cases, complete timing/capacity and artifact
+identities; disclose missing measurements. No acceptance claim or next-ticket authorization.
+Reviewer publication of this continuation is limited to this Review 483, CURRENT_TASK and
+current ticket fields/checklist under the existing governance exception.
