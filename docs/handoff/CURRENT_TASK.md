@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -14,13 +14,14 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Review 481's complete correction has one targeted-test fixture failure: the new
-599-second OI example shifts its last timestamp into the next day. The same sole senior,
-GPT-6.1-sol High in the Sr Dev - Codex Sol role, may correct only that test's nonzero
-phase and comment, then run Review 481's exact focused command once. Production and CLI
-are frozen. Stop on first nonzero with no retry. Review 481 records the complete result
-and correction prompt. No real run, integration, records, Git, network or data mutation
-is assigned. Hermes remains unauthorized pending source acceptance.
+Review 481 accepts the corrected coverage source after all 74 focused cases pass.
+Jr Dev - Hermes owns its complete integration, validation, one real local coverage run,
+independent reconciliation, one successful byte-identical replay, and terminal Record 482
+publication. Use the exact source hashes, commands, input pins and stop rules in Review
+481. The senior assignment is finished. Stop on the first nonzero command or failed proof;
+no source correction or failure retry is authorized. No bundle, catalog, quarantine,
+accepted-product rerun, model or next ticket is assigned. Coverage data acceptance remains
+pending reviewer inspection of the terminal result.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
