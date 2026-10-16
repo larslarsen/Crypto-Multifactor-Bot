@@ -105,6 +105,46 @@ change description and SHA-256/line counts of all three coverage files. Hermes r
 integration, acceptance execution, implementation evidence and implementation Git duties.
 Hermes is not yet authorized. No other product or next ticket is authorized.
 
+## Targeted result and fixture-only correction
+
+The senior returned the complete correction and executed its authorized pytest once,
+with exit `1` and this complete reported output:
+
+```text
+.....................F.................................................. [ 97%]
+..                                                                       [100%]
+=================================== FAILURES ===================================
+____ test_oi_irregular_intervals_are_observed_without_invented_gaps[599000] ____
+tests/ingest/test_binance_usdm_coverage.py:282: in test_oi_irregular_intervals_are_observed_without_invented_gaps
+    assert scan.observed_by_day["2025-09-01"] == 288
+E   assert 287 == 288
+=========================== short test summary info ============================
+FAILED tests/ingest/test_binance_usdm_coverage.py::test_oi_irregular_intervals_are_observed_without_invented_gaps[599000]
+```
+
+The reviewer inspected the complete correction. Production's relative-root identity and
+post-hook precommit proof now satisfy the identified residuals. The expanded tests use
+the real coverage-authority parser and full producer for the specified refusal and replay
+paths. The sole listed test failure is a fixture boundary error: phase 1,234 ms plus the
+299,000 ms shift makes the last observation occur on the following UTC day. Production
+correctly reports 287 observations on September 1; its timestamp semantics must not change.
+
+Freeze production at SHA-256
+`6bb3788a91612d52fd204f9efc21a21e4a067eb679f387f16974915bcc501eee` (1,730 lines)
+and the unchanged CLI hash above. The returned test file is SHA-256
+`427175b97039104fe06af1626e020e330d5f568f6238113a6b55b0c386379fc2` (1,512 lines).
+
+The same sole senior may edit only
+`test_oi_irregular_intervals_are_observed_without_invented_gaps` in
+`tests/ingest/test_binance_usdm_coverage.py`: use a nonzero phase below 1,000 ms
+(500 ms is sufficient) so both 301-second and 599-second fixtures remain within the
+declared day, and document that boundary choice. Retain the 288 observed/distinct counts,
+irregular-cadence refusal, exact interval assertion and separate midnight-boundary test.
+No production, CLI, other test or other path change is authorized. After this sole
+correction, run the exact targeted pytest command above once, returning its full output,
+exit and all three hashes/line counts. Stop on nonzero without patching or retrying.
+Hermes remains unauthorized pending source acceptance.
+
 ## Reviewer publication scope
 
 The reviewer may publish exactly these governance paths under AGENTS.md:

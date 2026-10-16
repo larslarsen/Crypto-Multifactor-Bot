@@ -14,14 +14,13 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Review 481 rejects the current coverage correction on relative-output handling,
-completion precommit ordering, and incomplete whole-producer failure coverage. The sole
-senior assignment is GPT-6.1-sol High in the Sr Dev - Codex Sol role, replacing GPT-5.6-sol
-for this bounded correction. Edit only the coverage production/test files; keep the CLI
-byte-identical. Review 481 supplies the complete prompt and exactly one focused pytest
-command after editing, with stop on first nonzero and no retry. Direct delegation remains
-authorized under Review 480. No real run, integration, Git, records, network or data
-mutation is assigned. Hermes is not yet authorized.
+Review 481's complete correction has one targeted-test fixture failure: the new
+599-second OI example shifts its last timestamp into the next day. The same sole senior,
+GPT-6.1-sol High in the Sr Dev - Codex Sol role, may correct only that test's nonzero
+phase and comment, then run Review 481's exact focused command once. Production and CLI
+are frozen. Stop on first nonzero with no retry. Review 481 records the complete result
+and correction prompt. No real run, integration, records, Git, network or data mutation
+is assigned. Hermes remains unauthorized pending source acceptance.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
