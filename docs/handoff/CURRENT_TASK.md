@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -26,11 +26,11 @@ failed, then the authorized exact-path continuation reached an internal approval
 and explicit denial for a completion-JSON inspection command. The command did not execute.
 Both Hermes sessions are terminated. No new audit or producer replay occurred.
 
-Control returns to the reviewer. An owner response is pending on the explicit internal
-denial before read-only inspection can resume. No workaround, helper execution, replay,
-source/test correction, implementation-record publication, bundle, catalog, quarantine,
-accepted-product rerun, model or next ticket is authorized. Existing helpers and data
-remain preserved; Review 483 retains the complete static correction requirements.
+The owner has authorized resuming the blocked read-only inspection. Review 483 resumes
+Jr Dev - Hermes on Laguna S solely to finish the corrected temporary audit helper and
+stop for reviewer static inspection. No helper execution, replay, source/test correction,
+implementation-record publication, bundle, catalog, quarantine, accepted-product rerun,
+model or next ticket is authorized. Existing helpers and data remain preserved.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.

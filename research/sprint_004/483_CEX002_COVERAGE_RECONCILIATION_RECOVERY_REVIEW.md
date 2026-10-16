@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** Record 482 disclosure accepted; first helper rejected; replacement preparation stopped at internal approval denial
+- **Decision:** owner authorized resuming blocked read-only inspection; bounded Hermes preparation resumed
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
+- **Next required actor:** Jr Dev - Hermes
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -286,3 +286,26 @@ the preparation continuation is stopped; no retry or alternate-command workaroun
 assigned. The reviewer must resolve the approval blocker before a new bounded assignment.
 Both current actor fields return to the reviewer. Nine data products remain accepted;
 Gate 2 is ACCEPTED, Gate 3 and CEX-002 remain IN_PROGRESS, and next ticket is NONE.
+
+## Owner-authorized read-only continuation
+
+The owner replied `continue` to the explicit question whether Hermes may resume read-only
+inspection. That response authorizes the previously denied completion-JSON inspection and
+resumption of the bounded preparation assignment; it does not accept any engineering work.
+The reviewer resumes the existing Laguna session, with no reasoning override and no change
+to its helper path or requirements. No new source, audit execution or replay is assigned.
+
+Use direct `read_file` or simple `jq` queries for bounded JSON inspection where sufficient.
+If Python inspection is needed, use correct shell quoting or a heredoc, not doubly escaped
+multiline `-c` text. Read only actual known paths and descriptor-selected examples. Do not
+repeat the already-read source files unnecessarily. Complete the helper rather than return
+another speculative outline. Syntax compilation, hash and line-count measurement are allowed;
+execution of the helper and any test/audit/producer remain forbidden pending static review.
+
+The reviewer will supervise the resumed Hermes terminal interactively and may approve the
+specific owner-authorized read-only inspection if its gate prompts again. Do not disable
+approval controls, grant blanket approvals, or infer authority for other commands. Preserve
+the rejected helpers, data and dirty working tree. Stop on a failed validation or authority
+proof, report the exact failure, and do not retry. Return the completed helper identity and
+factual check map, then end the turn for reviewer inspection. Previous failures remain
+preserved; this continuation does not retroactively authorize them.
