@@ -327,7 +327,7 @@ preparation assignment. Hermes owns execution, implementation evidence and integ
 source acceptance. This changes the developer route, not the data contract, architecture,
 release identity, ticket, or acceptance requirements.
 
-Select exactly one **Sr Dev - Codex Sol, GPT-6.1-sol, High reasoning** for the bounded source
+Select exactly one **Sr Dev - Codex Sol, GPT-6 Astra, xhigh reasoning** for the bounded source
 drop below. The available-OpenAI-model selection and direct coverage delegation recorded in
 Reviews 480/481 apply. The reviewer may send one consolidated correction directly after
 static inspection. No other source author or Hermes execution is concurrent.
@@ -398,3 +398,43 @@ timestamp examples is allowed to avoid guesses. Return the two file SHA-256 iden
 line counts, complete targeted output and a concise implementation/limitations report.
 Hermes remains unauthorized until reviewer source acceptance; no replay or next ticket is
 assigned. Nine products remain accepted and CEX-002 remains IN_PROGRESS.
+
+## Task-specific model selection before source launch
+
+The owner explicitly directs intelligent developer selection rather than reusing Sol by
+precedent. No source developer had been launched under the preceding GPT-6.1-sol selection.
+That unlaunched model choice is superseded by **GPT-6 Astra (`gpt-6-astra`), xhigh reasoning**,
+within the existing OpenAI senior role. DEVELOPMENT_ROLES permits any available OpenAI model;
+this does not create a concurrent senior or change the exact two-path scope.
+
+Selection criteria are authority/semantic risk, relevant accepted-result evidence, current
+callable availability, anticipated correction/review burden, and usage. This is a one-time
+independent reconciliation implementation, not a high-volume mechanical transformation.
+It must detect internally consistent but invalid output across schema identities, accepted
+input facts, full calendars, summary equations, safe file references and completion evidence.
+Repeated weak temporary-helper work has already incurred substantial review and elapsed time.
+
+| Candidate | Evidence and disposition for this assignment |
+|---|---|
+| Spark / Luna-class source route | Suitable for decided mechanical changes; this authority-sensitive validator and its adversarial tests require a senior role. Not selected. |
+| GPT-6.1-sol High / higher effort | Callable here; Review 481 accepted related coverage source after one explicit fixture-boundary correction and 74 focused cases. A credible lower-usage candidate, but prior use alone is not a selection argument. Not launched. |
+| Grok Build | Reviews 467/468 show funding source acceptance after bounded-memory and source-authentication corrections; Review 356 records repeated authority-boundary misses on a different task. This is mixed relevant evidence, not a universal ranking. CLI exists, but current account quota and live model access were not verified. |
+| Claude Build | Review 291 documents authority/recovery/boundedness defects on a different earlier task; Review 357's historical unavailability does not establish current availability. CLI exists; current quota/access and matched-task advantage are unknown. |
+| GPT-6 Astra xhigh | Callable in the current agent runtime. Selected for the exacting multi-contract reasoning and independent adversarial proof. No prior accepted-result advantage on this repository is asserted; static review and the bounded targeted test must establish this drop's quality. |
+
+Current official documentation identifies GPT-6 Astra for demanding reasoning/coding and
+GPT-6.1 Sol for complex work with lower cost; model-selection guidance places Astra xhigh
+with exacting complex deliverables. Sources inspected on this review date:
+
+- https://developers.openai.com/api/docs/guides/model-selection
+- https://developers.openai.com/api/docs/models/gpt-6-astra
+- https://developers.openai.com/api/docs/models/gpt-6.1-sol
+
+Astra has higher nominal API token prices. Those prices are not this session's measured
+cost or remaining account quota. Choosing it here is a reviewer inference that a stronger
+single bounded pass is justified by the proof complexity and correction burden, not a claim
+that it will necessarily be cheaper or outperform every alternative. xhigh is limited to
+this source drop; ordinary integration remains Hermes's job. No duplicate-model bake-off,
+parallel senior author, paid external-provider call or quota-exhaustion strategy is assigned.
+The two file identities, targeted result and subsequent reviewer findings will provide
+repository evidence for the next selection.
