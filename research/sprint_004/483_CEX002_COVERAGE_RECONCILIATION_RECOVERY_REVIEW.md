@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** Sol reconciliation source accepted; Hermes integration and bounded execution authorized below
+- **Decision:** checker integrated and real reconciliation PASS; replay and follow-up inspection blocked by approval gate; Hermes stopped
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Jr Dev - Hermes
+- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -575,3 +575,60 @@ record publication remain authorized. Reviewer inspections are not Hermes eviden
 
 No full acceptance suite, acquisition, Gate-0 quarantine, catalog, bundle, other product,
 trading model or next ticket is assigned. All previous failed attempts remain disclosed.
+
+## Execution checkpoint: reconciliation passed, replay approval blocked
+
+Hermes session `20261016_154342_b70534` used Laguna S 2.1 free. The reviewer inspected its
+terminal results and the generated evidence read-only. Final-byte pytest passed 71 cases,
+Ruff passed, repository control passed, and whitespace checks passed. Hermes's interim
+statement of "79 dots" is incorrect; its actual complete output has 71. The source was
+integrated and pushed at `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, with HEAD equal to
+origin/main. That commit contains exactly the two accepted paths, 1,863 inserted lines.
+
+The first real checker command executed once and returned PASS, actual checker exit 0.
+The terminal wrapper printed the exit explicitly; its own final exit alone is not the
+proof. Terminal timestamps are `2026-10-16T23:00:10.810033318+0000` and
+`2026-10-16T23:12:00.561354235+0000`, about 709.75 seconds apart. Result timestamps are
+`2026-10-16T23:00:11.010826+00:00` and `2026-10-16T23:11:56.687970+00:00`.
+Preflight statvfs observed 195,020,529,664 available bytes.
+
+Hermes-produced artifacts, subsequently inspected and hashed by the reviewer:
+
+- `/tmp/cex002_hermes484_before.result.json`, SHA-256
+  `1d47abf0002c2b4f06b3a0642c152d1059e8affff31cc7cc4bacba7dde6497a5`;
+- `/tmp/cex002_hermes484_before.inventory.jsonl`, SHA-256
+  `7efd31b90a4fc57bcb9a04e32d163102fcb041a6976f7282d3ab0a79e3dbd29f`.
+
+The report binds the accepted checker and coverage completion, and measures 107,590 files,
+543,901,501 bytes, 771 members including 73 funding-only identities, 237 exclusions,
+64,764 monthly reports and 1,971,447 daily rows. Observed five-product days are 428,090;
+full-cadence days with event presence are 424,431. Qualification/typed/quality gap rows
+are 8,317/3,742/68,220. Metadata is 456,752,250 bytes. The 0GUSDT example reproduces
+nine observed days, eight full-cadence days and fourteen September-22 basis rows.
+
+Hermes next submitted the authorized producer replay, wrapped with UTC/statvfs reporting.
+Its internal approval gate displayed `Timeout — denying command`, returned exit -1 and
+status `blocked`, and stated: "The user has NOT consented to this action." It explicitly
+forbade retry, rephrasing or another route to the same outcome. **The replay did not execute.**
+The gate then similarly blocked a terminal-record preparation command combining UTC,
+statvfs, hashes and inventory line count. That command did not execute either. The reviewer
+does not attribute either automatic timeout/denial to a manual owner decision.
+
+The reviewer interrupted Hermes after the second denial; outer terminal exit was 1 after
+KeyboardInterrupt. No replay, after-audit, inventory comparison or Record 484 publication
+occurred. The senior and Hermes are stopped. The passing audit artifacts, integrated source,
+existing data and unrelated dirty baseline remain preserved.
+
+An explicit owner question asks permission to resume the replay/check and complete its
+evidence workflow. Until an answer authorizes resumption, do not retry the denied commands,
+rephrase them, bypass approvals or launch another actor for the same operations. This
+reviewer checkpoint records observed state under the governance-publication exception;
+it does not substitute for Hermes's missing terminal implementation record or data acceptance.
+Both actor fields return to the reviewer, with nine accepted products and next ticket NONE.
+
+On any authorized continuation, preserve the successful integration and first audit. The
+remaining work is the replay, after-audit/inventory comparison and accurate terminal record.
+Do not rerun passing tests or the before-audit. The record must distinguish the 71-case
+result, actual checker exit, blocked commands, and reviewer-only inspections. In particular,
+the reviewer independently reproved the three accepted producer/CLI/test hashes unchanged;
+Hermes must not label that reviewer observation as its own unexecuted preflight.

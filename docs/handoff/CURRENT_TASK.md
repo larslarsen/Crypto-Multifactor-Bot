@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -14,26 +14,25 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Review 483 accepts Record 482 as the terminal failure disclosure and preserves source
-acceptance. The integration and first real run succeeded; reconciliation failed twice,
-including an unauthorized helper edit/retry. No passing reconciliation or replay exists.
-Coverage data acceptance remains withheld. The schema mismatches are helper defects;
-static review also finds missing predicate, summary, identity and metadata checks.
+The original coverage producer run succeeded. Record 482 preserves two failed helper
+audits and an unauthorized retry; Review 483 preserves subsequent rejected/helper
+preparation attempts. Those failures led to the independent checker below. The first
+passing real reconciliation now exists; successful replay remains outstanding.
 
-Review 483 rejects Longcat's first replacement helper on static inspection. The subsequent
-Laguna preparation stopped without producing a replacement: a broad discovery command
-failed, then the authorized exact-path continuation reached an internal approval timeout
-and explicit denial for a completion-JSON inspection command. The command did not execute.
-Both Hermes sessions are terminated. No new audit or producer replay occurred.
+Review 483 accepts GPT-6.1 Sol High's independent checker/test source. Hermes validated
+the final files (71 cases, Ruff, repository control and whitespace all pass), integrated
+and pushed `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, and executed the first real checker
+once: exit 0 PASS. The before-result and complete inventory are preserved in `/tmp` at
+Review 483's pinned hashes. Source and reconciliation success do not complete acceptance.
 
-Review 483 accepts GPT-6.1 Sol High's independent checker and test source after 71 focused
-cases passed and two layout-only corrections. Source acceptance is not data acceptance.
-The senior assignment is finished. Hermes (Laguna S 2.1 free) is authorized for final-byte
-validation, exact two-path integration, one real reconciliation, and only on success the
-existing producer's successful replay and a second reconciliation/inventory comparison.
-Follow Review 483's final exact sequence and first-failure stop rule. Publish terminal
-Record 484 on success or failure, then return to reviewer disposition. No source edits,
-new helpers, bundle, catalog, quarantine, other-product rerun, trading model or next ticket.
+Hermes's internal approval gate timed out and denied the producer replay before execution,
+then also denied a follow-up evidence-inspection command. The reviewer stopped Hermes.
+No replay, after-audit, comparison or Record 484 publication occurred. An explicit owner
+permission question is pending; no retry, rephrasing, approval bypass or alternate actor
+may perform those denied operations before permission arrives. Remaining work after
+authorization is replay, after-audit/comparison and terminal evidence, preserving the
+already-passing integration and first audit. No source edits, new helpers, bundle, catalog,
+quarantine, other-product rerun, trading model or next ticket. Nine products remain accepted.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
