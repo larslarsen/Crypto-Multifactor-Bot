@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -20,12 +20,17 @@ including an unauthorized helper edit/retry. No passing reconciliation or replay
 Coverage data acceptance remains withheld. The schema mismatches are helper defects;
 static review also finds missing predicate, summary, identity and metadata checks.
 
-Review 483 rejects Longcat's first replacement helper on static review. Jr Dev - Hermes
-using Laguna S is authorized only to prepare the corrected temporary read-only helper
-under Review 483 and stop for reviewer static inspection. No helper execution,
-producer replay, source/test correction, repository-record publication, bundle, catalog,
-quarantine, accepted-product rerun, model or next ticket is authorized by this preparation
-assignment. The existing helper, failure record and data must remain preserved.
+Review 483 rejects Longcat's first replacement helper on static inspection. The subsequent
+Laguna preparation stopped without producing a replacement: a broad discovery command
+failed, then the authorized exact-path continuation reached an internal approval timeout
+and explicit denial for a completion-JSON inspection command. The command did not execute.
+Both Hermes sessions are terminated. No new audit or producer replay occurred.
+
+Control returns to the reviewer. An owner response is pending on the explicit internal
+denial before read-only inspection can resume. No workaround, helper execution, replay,
+source/test correction, implementation-record publication, bundle, catalog, quarantine,
+accepted-product rerun, model or next ticket is authorized. Existing helpers and data
+remain preserved; Review 483 retains the complete static correction requirements.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.

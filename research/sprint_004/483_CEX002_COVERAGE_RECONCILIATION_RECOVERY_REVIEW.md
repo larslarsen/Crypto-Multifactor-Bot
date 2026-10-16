@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** Record 482 disclosure accepted; first replacement helper rejected; bounded preparation reassigned within Hermes
+- **Decision:** Record 482 disclosure accepted; first helper rejected; replacement preparation stopped at internal approval denial
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Jr Dev - Hermes
+- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -241,3 +241,48 @@ virtual environment, unrelated repositories or the prohibited archive. Preserve 
 preparation-only write path, seven requirements, consolidated corrections and static-review
 stop boundary. The first nonzero execution/proof still stops this continuation. No audit,
 replay, producer or repository mutation is authorized.
+
+## Continuation terminal disposition - internal approval denial
+
+The resumed Laguna session read the named source files and pinned completion successfully
+through read-file tools. Its later proposed terminal command to inspect completion JSON
+was denied by Hermes's internal approval gate after a timeout. Observed UI:
+`Timeout — denying command`. Tool result: `exit_code: -1`, `status: blocked`, empty output,
+and the explicit instruction not to retry, rephrase or pursue the same result through a
+different command. The exact proposed command text retained in the session is:
+
+```text
+cd /home/lars/Crypto_Multifactor_Bot && PYTHONPATH=src .venv/bin/python -c "
+import json
+with open('data/.cex002_coverage/.complete/9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151.json') as f:
+    c = json.load(f)
+print('TOP KEYS:', sorted(c.keys()))
+print()
+print('manifests keys:', sorted(c.get('manifests',{}).keys()))
+print()
+print('components keys:', sorted(c.get('components',{}).keys()))
+print()
+print('metadata_ledger keys:', sorted(c.get('metadata_ledger',{}).keys()))
+print()
+print('membership:', json.dumps(c.get('membership'), indent=2))
+print()
+print('alignment keys:', sorted(c.get('alignment',{}).keys()))
+print()
+print('input_completions keys:', sorted(c.get('input_completions',{}).keys()))
+"
+
+```
+
+This command did not execute. Its escaped shell text is not a validated invocation. The
+reviewer interrupted the session; outer terminal exit was 130. The assigned replacement
+`/tmp/cex002_hermes484_reconcile_laguna.py` does not exist. No helper audit, producer replay,
+source/test change or data mutation occurred in this continuation. No execution result is
+claimed from preparation or syntax compilation.
+
+The reviewer does not attribute a manual denial to the owner: the observed event was the
+internal gate's timeout, followed by its explicit denial. An asynchronous owner question
+requests permission to resume this read-only inspection. Until that response arrives,
+the preparation continuation is stopped; no retry or alternate-command workaround is
+assigned. The reviewer must resolve the approval blocker before a new bounded assignment.
+Both current actor fields return to the reviewer. Nine data products remain accepted;
+Gate 2 is ACCEPTED, Gate 3 and CEX-002 remain IN_PROGRESS, and next ticket is NONE.
