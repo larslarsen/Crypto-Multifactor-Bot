@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 
 from cryptofactors.catalog.dataset.errors import (
     CorruptDatasetError,
+    DatasetQuarantineError,
     RecoverableDatasetCatalogError,
     SupersessionError,
 )
@@ -18,6 +20,7 @@ from cryptofactors.catalog.dataset.models import (
     DatasetPublicationReceipt,
     DependencyKind,
     PublicationStatus,
+    QualityStatus,
 )
 from cryptofactors.catalog.dataset.verify_tree import verify_published_tree
 
@@ -65,6 +68,7 @@ class SqliteDatasetCatalog:
         chunk_size: int = 1024 * 1024,
     ) -> None:
         self._owned = connection is None
+        self._database_argument = Path(database)
         if connection is not None:
             self._conn = connection
         else:
@@ -85,39 +89,143 @@ class SqliteDatasetCatalog:
         ).fetchone()
         return dict(row) if row is not None else None
 
+    def database_path(self) -> Path:
+        """File-backed main catalog path for quarantine safety/reporting.
+
+        Retain an owned connection's lexical input so SQLite's own pathname
+        canonicalization cannot hide a supplied symlink. For external connections
+        the actual filename comes from SQLite, never the constructor's hint.
+        """
+        row = self._conn.execute("PRAGMA database_list").fetchone()
+        if row is None or not row["file"]:
+            raise DatasetQuarantineError("quarantine requires a file-backed catalog")
+        return self._database_argument if self._owned else Path(str(row["file"]))
+
     def dataset_exists(self, dataset_id: str) -> bool:
         return self.get_dataset(dataset_id) is not None
 
-    def resolve_latest_by_type(self, dataset_type: str) -> str | None:
+    def resolve_latest_by_type(
+        self,
+        dataset_type: str,
+        *,
+        consumable_only: bool = True,
+    ) -> str | None:
         """Return the preferred dataset_id with the given dataset_type, or None.
 
-        Preference order: PASS first, then PASS_WITH_WARNINGS, then QUARANTINED,
-        then REJECTED/other, followed by created_at DESC and dataset_id DESC as
-        tie-breakers. This prevents an older REJECTED dataset from being preferred
-        over a PASS dataset solely because of epoch created_at or a larger hash.
+        Consumable resolution (default) requires REGISTERED and excludes
+        ``QUARANTINED`` and ``REJECTED``
+        so false-authority artifacts cannot be selected for research. Among
+        remaining rows the preference order is PASS, then PASS_WITH_WARNINGS,
+        then created_at DESC and dataset_id DESC.
 
-        Used to discover content-addressed ``ds_<sha256>`` ids by logical type
-        (e.g. ``market_bars``) without requiring the caller to know the hash.
+        Pass ``consumable_only=False`` only for audit/admin inspection. That
+        path still ranks PASS above warnings, then quarantined, then rejected.
         """
-        row = self._conn.execute(
-            """
-            SELECT dataset_id FROM dataset
-            WHERE dataset_type = ?
-            ORDER BY
-                CASE quality_status
-                    WHEN 'PASS' THEN 0
-                    WHEN 'PASS_WITH_WARNINGS' THEN 1
-                    WHEN 'QUARANTINED' THEN 2
-                    WHEN 'REJECTED' THEN 3
-                    ELSE 4
-                END ASC,
-                created_at DESC,
-                dataset_id DESC
-            LIMIT 1
-            """,
-            (dataset_type,),
-        ).fetchone()
+        if consumable_only:
+            row = self._conn.execute(
+                """
+                SELECT dataset_id FROM dataset
+                WHERE dataset_type = ?
+                  AND publication_status = 'REGISTERED'
+                  AND quality_status IN ('PASS', 'PASS_WITH_WARNINGS')
+                ORDER BY
+                    CASE quality_status
+                        WHEN 'PASS' THEN 0
+                        WHEN 'PASS_WITH_WARNINGS' THEN 1
+                        ELSE 2
+                    END ASC,
+                    created_at DESC,
+                    dataset_id DESC
+                LIMIT 1
+                """,
+                (dataset_type,),
+            ).fetchone()
+        else:
+            row = self._conn.execute(
+                """
+                SELECT dataset_id FROM dataset
+                WHERE dataset_type = ?
+                ORDER BY
+                    CASE quality_status
+                        WHEN 'PASS' THEN 0
+                        WHEN 'PASS_WITH_WARNINGS' THEN 1
+                        WHEN 'QUARANTINED' THEN 2
+                        WHEN 'REJECTED' THEN 3
+                        ELSE 4
+                    END ASC,
+                    created_at DESC,
+                    dataset_id DESC
+                LIMIT 1
+                """,
+                (dataset_type,),
+            ).fetchone()
         return str(row["dataset_id"]) if row is not None else None
+
+    def is_consumable(self, dataset_id: str) -> bool:
+        """Membership in the default resolver's eligible set, independent of rank."""
+        return self._conn.execute(
+            """SELECT 1 FROM dataset WHERE dataset_id = ?
+            AND publication_status = 'REGISTERED'
+            AND quality_status IN ('PASS', 'PASS_WITH_WARNINGS')""",
+            (dataset_id,),
+        ).fetchone() is not None
+
+    @contextmanager
+    def quarantine_transaction(self, *, inspection_only: bool = False) -> Iterator[None]:
+        """Own the entire quarantine transaction or refuse before doing any work.
+
+        No nesting/savepoints: an external connection is allowed only when idle.
+        BEGIN IMMEDIATE prevents another writer changing dataset or file identities
+        between authentication and CAS. Inspection uses a read transaction and can
+        run on mode=ro connections. Neither path commits caller-owned pending work.
+        """
+        if self._conn.in_transaction:
+            raise DatasetQuarantineError("quarantine requires an idle connection")
+        self._conn.execute("BEGIN" if inspection_only else "BEGIN IMMEDIATE")
+        try:
+            yield
+            if inspection_only:
+                self._conn.rollback()
+            else:
+                self._conn.commit()
+        except BaseException:
+            self._conn.rollback()
+            raise
+
+    def compare_and_swap_quality_status(
+        self,
+        expected: Mapping[str, Any],
+        expected_files: Sequence[Mapping[str, Any]],
+        *,
+        quality_status: QualityStatus,
+        quality_summary: Mapping[str, Any],
+    ) -> None:
+        """CAS every inspected dataset column and protect the complete file list.
+
+        The caller owns a quarantine_transaction; this method never commits.
+        Column names come from SQLite, never from untrusted mapping keys.
+        """
+        if not self._conn.in_transaction:
+            raise DatasetQuarantineError("CAS requires a quarantine transaction")
+        columns = [str(r["name"]) for r in self._conn.execute("PRAGMA table_info(dataset)")]
+        if set(expected) != set(columns):
+            raise DatasetQuarantineError("CAS snapshot is not the complete dataset row")
+        dataset_id = str(expected["dataset_id"])
+        if list(self.list_files(dataset_id)) != list(expected_files):
+            raise DatasetQuarantineError("CAS dataset_file snapshot changed")
+        # IS is NULL-safe and SQLite column names are quoted defensively.
+        predicate = " AND ".join('"' + c.replace('"', '""') + '" IS ?' for c in columns)
+        cursor = self._conn.execute(
+            "UPDATE dataset SET quality_status = ?, quality_summary_json = ? WHERE " + predicate,
+            (quality_status.value, _dumps(quality_summary), *(expected[c] for c in columns)),
+        )
+        if cursor.rowcount != 1:
+            raise DatasetQuarantineError(
+                "complete-row compare-and-swap failed",
+                context={"dataset_id": dataset_id, "rowcount": cursor.rowcount},
+            )
+        if list(self.list_files(dataset_id)) != list(expected_files):
+            raise DatasetQuarantineError("CAS dataset_file snapshot changed after update")
 
     def raw_object_exists(self, raw_object_id: str) -> bool:
         row = self._conn.execute(

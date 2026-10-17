@@ -62,6 +62,14 @@ class SupersessionError(DatasetError):
     """Invalid supersession target or cycle."""
 
 
+class DatasetQuarantineError(DatasetError):
+    """Atomic catalog quarantine pre/postcondition failed; no partial authority change."""
+
+
+class QuarantineReportError(DatasetError):
+    """Report output failed after inspection/commit; catalog state is unchanged."""
+
+
 class RecoverableDatasetCatalogError(DatasetError):
     """Dataset files published; catalog registration failed and may be retried."""
 

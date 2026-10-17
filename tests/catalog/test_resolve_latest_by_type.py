@@ -11,7 +11,6 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -166,7 +165,7 @@ def test_resolve_latest_by_type_prefers_pass_over_warnings(
         dataset_id_hint="rejected_dataset_2",
         quality_status=QualityStatus.REJECTED,
     )
-    pass_warn_id = _publish_dataset(
+    _publish_dataset(
         tmp_path,
         db_path,
         dataset_id_hint="warning_dataset",
@@ -258,13 +257,65 @@ def test_resolve_latest_by_type_respects_created_at_across_quality(
         cat.close()
 
 
+def test_resolve_latest_by_type_excludes_rejected_and_quarantined(
+    tmp_path: Path,
+) -> None:
+    """Consumable latest-resolution must not return REJECTED or QUARANTINED IDs."""
+    db_path = _db(tmp_path)
+    rejected_id = _publish_dataset(
+        tmp_path,
+        db_path,
+        dataset_id_hint="only_rejected",
+        quality_status=QualityStatus.REJECTED,
+    )
+    quarantined_id = _publish_dataset(
+        tmp_path,
+        db_path,
+        dataset_id_hint="only_quarantined",
+        quality_status=QualityStatus.QUARANTINED,
+    )
+    cat = SqliteDatasetCatalog(db_path)
+    try:
+        assert cat.resolve_latest_by_type("market_bars") is None
+        audit = cat.resolve_latest_by_type("market_bars", consumable_only=False)
+        assert audit in {rejected_id, quarantined_id}
+    finally:
+        cat.close()
+
+
+def test_resolve_latest_by_type_consumable_ignores_rejected_sibling(
+    tmp_path: Path,
+) -> None:
+    db_path = _db(tmp_path)
+    rejected_id = _publish_dataset(
+        tmp_path,
+        db_path,
+        dataset_id_hint="rejected_sibling",
+        quality_status=QualityStatus.REJECTED,
+        created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+    )
+    pass_id = _publish_dataset(
+        tmp_path,
+        db_path,
+        dataset_id_hint="pass_sibling",
+        quality_status=QualityStatus.PASS,
+        created_at=datetime(2020, 1, 1, tzinfo=timezone.utc),
+    )
+    cat = SqliteDatasetCatalog(db_path)
+    try:
+        assert cat.resolve_latest_by_type("market_bars") == pass_id
+        assert rejected_id != pass_id
+    finally:
+        cat.close()
+
+
 def test_resolve_latest_by_type_respects_newer_pass_created_at(
     tmp_path: Path,
 ) -> None:
     """Among PASS datasets, the newer created_at wins."""
     db_path = _db(tmp_path)
 
-    older_id = _publish_dataset(
+    _publish_dataset(
         tmp_path,
         db_path,
         dataset_id_hint="older_pass_2",
@@ -285,3 +336,37 @@ def test_resolve_latest_by_type_respects_newer_pass_created_at(
         assert resolved == newer_id
     finally:
         cat.close()
+
+
+@pytest.mark.parametrize("quality", [QualityStatus.PASS, QualityStatus.PASS_WITH_WARNINGS])
+def test_default_resolution_requires_registered_publication(tmp_path: Path, quality) -> None:
+    db = _db(tmp_path)
+    dataset_id = _publish_dataset(tmp_path, db, dataset_id_hint="unregistered-" + quality.value,
+                                  quality_status=quality)
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE dataset SET publication_status='SUPERSEDED' WHERE dataset_id=?",
+                     (dataset_id,))
+    catalog = SqliteDatasetCatalog(db)
+    try:
+        assert catalog.resolve_latest_by_type("market_bars") is None
+        assert not catalog.is_consumable(dataset_id)
+        # Historical inspection requires the explicit audit option.
+        assert catalog.resolve_latest_by_type("market_bars", consumable_only=False) == dataset_id
+    finally:
+        catalog.close()
+
+
+def test_all_rejected_ids_are_ineligible_even_with_valid_sibling(tmp_path: Path) -> None:
+    db = _db(tmp_path)
+    rejected = [_publish_dataset(tmp_path, db, dataset_id_hint=f"rejected-{i}",
+                                 quality_status=QualityStatus.REJECTED) for i in range(5)]
+    valid = _publish_dataset(tmp_path, db, dataset_id_hint="valid-sibling",
+                             quality_status=QualityStatus.PASS_WITH_WARNINGS)
+    catalog = SqliteDatasetCatalog(db)
+    try:
+        assert catalog.resolve_latest_by_type("market_bars") == valid
+        assert catalog.is_consumable(valid)
+        assert all(not catalog.is_consumable(dataset_id) for dataset_id in rejected)
+        assert not catalog.is_consumable("ds_" + "f" * 64)
+    finally:
+        catalog.close()
