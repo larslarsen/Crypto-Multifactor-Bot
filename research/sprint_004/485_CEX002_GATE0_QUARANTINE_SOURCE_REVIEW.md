@@ -269,3 +269,58 @@ PYTHONPATH=src .venv/bin/python scripts/research/quarantine_bitmex_funding.py --
 
 The workflow authorizes the existing exact-five catalog quality transition and one authenticated
 no-op replay. It never rewrites historical manifest/Parquet files or accepts Gate 0 as a whole.
+
+## Integration and dry-run preserved; inspection correction and execution-model rotation
+
+Hermes's validation passed: 225 quarantine/catalog cases, focused Ruff, repository control
+and whitespace. It integrated exactly the frozen seven paths and pushed
+`49e307e0114ab7320b821a208095f678c3c183a2`, with HEAD equal to origin/main. The standalone
+real dry-run exited 0 and produced the expected inspected/applied=false report for all five
+PASS/REGISTERED targets and 307,738 rows. No application or replay command has executed.
+
+The reviewer inspected exported tool results. Preflight `ls` returned 2 for the three expected
+absent report files; its appended echo returned 0. This is the intended absence observation,
+not a claim that ls passed. Git blob IDs and raw SHA-1 were initially compared under different
+hash definitions; the correct `git hash-object` proof subsequently matched all seven index
+blobs. The first JSON inspection guessed `quality`/`publication_state`, which returned None;
+actual keys are `catalog_row.quality_status` and `catalog_row.publication_status`.
+
+The next inspection printed all five PASS, REGISTERED and already_quarantined=false values,
+then failed with exit 1:
+
+```text
+TypeError: unhashable type: 'dict'
+```
+
+The faulty expression was `set(d["targets"])`; targets are dictionaries, as the workflow
+already specifies. The reviewer interrupted the actor during its following API call before
+any retry/application. Session `20261016_200920_21d18a` preserves the actual command/output;
+reviewer diagnostic export is `/tmp/cex002_review485_hermes_inspection_stop.jsonl`.
+This is an evidence-helper defect, not an invalidation of the accepted source or real dry-run.
+
+The repeated schema/hash mistakes, despite exact bounds and supervision, now outweigh
+Longcat's prior accepted workflow. The reviewer rotates **Hermes execution only** to the
+freshly listed zero-price `stepfun/step-5-preview:free`, without a reasoning override.
+This route has no prior repository acceptance record; use the same bounded stop-on-failure
+workflow rather than asserting proven reliability. Source authorship and role ownership do
+not change. The reviewer authorizes this one corrected read-only inspection and then the
+previously authorized, unexecuted remainder of steps 5-8, including application and replay.
+Do not repeat validation, integration, dry-run, or any accepted Binance work.
+
+For the corrected inspection, read the existing dry-run JSON and derive IDs as
+`{target["dataset_id"] for target in d["targets"]}`. Compare that set with
+`set(d["pre_resolver"]["eligible_targets"])`, require exactly five, verify both pre/post
+catalog quality_status/publication_status, and require inspections_pre == inspections_post
+and pre_resolver == post_resolver. These are exact existing schema names, not new source.
+On success continue the already printed standalone application command, inspect its exact
+JSON, then the already printed standalone replay command and reconciliation/publication.
+Record the failed helper and corrected outcome in Record 486, together with both execution
+models and preserved results. Stop on any further nonzero/failed proof; no inferred retry.
+No approval rejection occurred in this inspection failure.
+
+The owner now reports one week of Grok usage expiring in two days and expressly invites
+Grok Build use. Account discovery confirms Grok Build is installed and authenticated to
+grok.com. Prefer that allowance for the next suitable bounded senior source assignment,
+including the pending BitMEX normalizer/publisher correction. This preference does not switch
+the accepted Sol drop or transfer Hermes integration duties to a senior developer. No next
+source assignment or ticket is authorized by this routing note.

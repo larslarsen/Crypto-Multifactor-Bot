@@ -21,15 +21,18 @@ after-audit exited 0 PASS. Separate inventory cmp exited 0: all 107,590 files an
 days remain 428,090; full-cadence days with event presence remain 424,431. The 71 final-byte
 tests and first audit were preserved, not rerun. No further coverage replay/audit is assigned.
 
-Review 485 accepts GPT-6.1 Sol High's seven-path quarantine/resolver source drop.
-All 137 targeted tests passed and the frozen hashes remain unchanged. Hermes on
-meituan/longcat-2.5-preview:free is authorized for Review 485's complete ordered
-validation, exact-source integration, real inspection, exact-five catalog quarantine,
-one authenticated no-op replay, independent reconciliation and Record 486 publication.
-Stop on the first nonzero result or failed proof; no source patch or retry is authorized.
-The old drafts remain preserved. Every accepted Binance product remains untouched.
-Gate 0 remains open: its separate BitMEX normalizer/publisher correction is still pending.
-No bundle, experiment or next ticket is authorized. Next ticket remains NONE.
+Review 485 accepts the seven-path Sol quarantine/resolver source. Hermes passed 225
+quarantine/catalog tests, Ruff and repository checks, integrated/pushed 49e307e, and ran
+the real dry-run once: exit 0, all five PASS/REGISTERED, files unchanged. Preserve these
+results; no repeat validation, integration or dry-run is assigned.
+Longcat's read-only JSON inspection then failed (unhashable target dictionaries); the
+reviewer interrupted it before retry or application. Review 485 now rotates Hermes to
+stepfun/step-5-preview:free for one exact corrected inspection and the previously authorized
+remaining application, replay, reconciliation and Record 486 publication. Stop on the next
+nonzero/failed proof; no source patch or inferred retry. No real catalog mutation has yet
+occurred. Gate 0 still needs its separate normalizer/publisher correction. The owner's
+expiring Grok allowance should inform the next suitable source assignment; none starts yet.
+Ten Binance products remain accepted. No bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
