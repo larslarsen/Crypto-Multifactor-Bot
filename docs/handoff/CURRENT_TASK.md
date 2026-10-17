@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev - Codex Sol (GPT-6.1 Sol High)
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -21,13 +21,15 @@ after-audit exited 0 PASS. Separate inventory cmp exited 0: all 107,590 files an
 days remain 428,090; full-cadence days with event presence remain 424,431. The 71 final-byte
 tests and first audit were preserved, not rerun. No further coverage replay/audit is assigned.
 
-Review 485 authorizes the next bounded source correction: exact five-artifact BitMEX
-quarantine and default resolver exclusion, assigned directly to GPT-6.1 Sol High.
-Only its seven enumerated source/test paths may change. Prior drafts are preserved;
-no real quarantine, database mutation or integration is authorized yet.
-The separate BitMEX normalizer/publisher correction remains pending. The complete source drop passed static review; Sol is authorized
-for Review 485's one targeted pytest command, then stops for reviewer disposition. Coverage acceptance and all passing evidence remain preserved.
-Next ticket remains NONE.
+Review 485 accepts GPT-6.1 Sol High's seven-path quarantine/resolver source drop.
+All 137 targeted tests passed and the frozen hashes remain unchanged. Hermes on
+meituan/longcat-2.5-preview:free is authorized for Review 485's complete ordered
+validation, exact-source integration, real inspection, exact-five catalog quarantine,
+one authenticated no-op replay, independent reconciliation and Record 486 publication.
+Stop on the first nonzero result or failed proof; no source patch or retry is authorized.
+The old drafts remain preserved. Every accepted Binance product remains untouched.
+Gate 0 remains open: its separate BitMEX normalizer/publisher correction is still pending.
+No bundle, experiment or next ticket is authorized. Next ticket remains NONE.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
@@ -47,8 +49,8 @@ limits, fee scenarios, unknown availability and censored liquidation semantics r
 
 The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished:
 Review 480's read-only query of exp003.db finds all five invalid BitMEX datasets still
-PASS / REGISTERED. Review 485 assigns corrective quarantine source before release;
-real quarantine and catalog mutation remain unauthorized pending source review.
+PASS / REGISTERED. Review 485 now authorizes the exact-five quarantine workflow after source acceptance;
+normalizer/publisher correction still remains before Gate-0 acceptance.
 No bundle publication, full-ticket acceptance, experiment, model or next ticket is
 authorized now.
 

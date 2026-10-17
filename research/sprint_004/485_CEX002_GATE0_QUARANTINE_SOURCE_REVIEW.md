@@ -173,3 +173,99 @@ result; no correction/retry is implied. No Ruff, full suite, integration, real-d
 Git, record edit or catalog mutation is assigned. On success preserve the source bytes and
 return to the reviewer for the next disposition. Hermes remains unauthorized pending that
 disposition. This targeted result cannot accept the real quarantine or complete Gate 0.
+
+## Targeted result and Hermes integration/execution authorization
+
+Sol executed the enumerated command exactly once, exit **0**:
+
+```text
+........................................................................ [ 52%]
+.................................................................        [100%]
+```
+
+All **137 cases passed**. The reviewer reproved all seven frozen hashes unchanged and
+accepts the source for integration. This does not accept an unexecuted real quarantine.
+Gate 0 remains open, including its separate pending normalizer/publisher correction.
+
+The reviewer selects **Jr Dev - Hermes, `meituan/longcat-2.5-preview:free`**, without a
+reasoning override. The Nous recommended-model endpoint was freshly checked and still
+lists this exact zero-price model. Selection rests on its completed Review-483 standalone
+workflow and functioning tool route, not its prior use alone. Its path-guessing, discretionary
+search and evidence mistakes remain adverse evidence. This assignment eliminates discretionary
+discovery and retry authority: use the exact paths and ordered commands below, with reviewer
+supervision. Laguna's repeated stop-rule failures do not justify returning to that route;
+an untested free route has no stronger repository acceptance evidence for this short workflow.
+The selected role is execution/integration only; GPT-6.1 Sol remains the accepted source author.
+
+Continue the owner's existing directly supervised Hermes workflow. Do not disable approval
+checks or change configuration. Use interactive CLI, not quiet one-shot mode. A denied command
+is a terminal failure, not retry authority. Stop on the first nonzero/failed proof, preserve
+exact output, and publish the bounded terminal record; do not patch source or rerun anything.
+No home-directory search, archive access, gitleaks discovery, installation, acquisition,
+accepted-Binance-product rerun, normalizer/backfill edit/run, bundle or experiment is assigned.
+
+### Complete ordered workflow
+
+1. Read this review's final authorization and `CURRENT_TASK.md`. Prove HEAD equals origin/main
+   at this review's latest publication, index empty, and seven hashes/line counts match the
+   frozen table. Preserve every other dirty/untracked path. No broad discovery is needed.
+2. Execute these validation commands in order, each as a standalone command, stopping on failure:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/acquisition/test_bitmex_funding_quarantine.py tests/catalog -q --tb=short
+PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/acquisition/bitmex_funding_quarantine.py scripts/research/quarantine_bitmex_funding.py tests/acquisition/test_bitmex_funding_quarantine.py src/cryptofactors/catalog/dataset/catalog_store.py src/cryptofactors/catalog/dataset/errors.py src/cryptofactors/catalog/dataset/__init__.py tests/catalog/test_resolve_latest_by_type.py
+python3 scripts/check_repo_control.py
+git diff --check
+```
+
+3. If all pass, stage exactly the seven frozen source/test files; prove the index contains
+   exactly those files and their accepted bytes, run `git diff --cached --check`, commit
+   `CEX-002: integrate exact-five BitMEX quarantine`, push and prove HEAD equals origin/main.
+   No source/test edit is authorized, including lint fixes.
+4. Confirm the existing `exp003.db` and `data/exp003_store` paths are regular database/directory
+   paths, not symlinks, and all three exact report destinations below are absent. Do not create
+   or migrate a catalog. The SQLite transaction itself acquires the write lock and reauthenticates
+   every target. These tiny existing artifacts require no bulk capacity allocation.
+5. Run the following three **standalone** commands in order, once each, with a foreground
+   timeout of at least 600 seconds. Await each actual exit code. Inspect the completed JSON
+   after each command for the expected disposition before proceeding. The expected dry-run is
+   `inspected`, applied=false, all five PASS/REGISTERED and eligible; the application is
+   `applied`, applied=true, all five REJECTED/REGISTERED and ineligible; replay is `replayed`,
+   applied=false, idempotent_replay=true and the same quarantine metadata. Any mismatch stops.
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/research/quarantine_bitmex_funding.py --db-path exp003.db --store-root data/exp003_store --report-path research/sprint_004/486_CEX002_GATE0_QUARANTINE_DRY_RUN.json --dry-run
+PYTHONPATH=src .venv/bin/python scripts/research/quarantine_bitmex_funding.py --db-path exp003.db --store-root data/exp003_store --report-path research/sprint_004/486_CEX002_GATE0_QUARANTINE_APPLY.json
+PYTHONPATH=src .venv/bin/python scripts/research/quarantine_bitmex_funding.py --db-path exp003.db --store-root data/exp003_store --report-path research/sprint_004/486_CEX002_GATE0_QUARANTINE_REPLAY.json
+```
+
+6. Reconcile the three reports with a bounded read-only evidence inspection (no production
+   helper or test authoring). The exact schema is `targets` (five target dictionaries),
+   `inspections_pre` / `inspections_post` (five each), `pre_resolver` / `post_resolver`
+   (`latest` and `eligible_targets`), and `artifacts_unchanged`. Each inspection contains
+   `catalog_row`, `catalog_files`, `manifest_sha256`, `manifest_file_sha256`, `parquet`
+   and `artifacts`. Assert dry-run pre == dry-run post == application pre; application post
+   == replay pre == replay post. The ten artifact records (manifest and Parquet per ID)
+   must retain exact path/hash/size/device/inode/mtime/ctime/mode entries across all reports.
+   Rehash the ten actual files independently from their report paths and compare with those
+   artifact hashes and sizes. Re-query the five actual dataset rows and dataset_file rows
+   through SQLite URI mode=ro and compare with replay snapshots. Economics must sum to
+   307,738 rows, zero null/nonzero rates and 307,738 empty intervals; symbol counts are
+   [2,5,5,5,45] in fixed target order. Preserve both kinds of manifest hash distinctly.
+   Record actual observations and exit codes, never guessed fields or unsupported PASS.
+7. Publish `research/sprint_004/486_CEX002_GATE0_QUARANTINE_INTEGRATION_RECORD.md`, the three
+   generated JSON reports (only those actually produced), `CURRENT_TASK.md` and the current
+   checklist summary in `tickets/CEX-002.md`. Record exact commands, exits, validation output,
+   source integration identity, real dispositions, immutable-file proof and any failure.
+   Return both actor fields to Lead Quantitative Finance Researcher/Engineer. Ticket and
+   Gate 3 remain IN_PROGRESS, ten products accepted, next ticket NONE. Do not mark Gate 0
+   complete: normalizer/publisher correction remains pending and reviewer acceptance exclusive.
+   On post-commit report failure (exit 2), record the reported catalog disposition explicitly;
+   do not claim rollback or retry.
+8. Run repository-control and whitespace checks for publication, stage only the record,
+   actually produced reports and two control files, prove staged paths, check staged whitespace,
+   commit `CEX-002: record exact-five quarantine integration outcome`, push, verify HEAD equals
+   origin/main, and stop for reviewer disposition. Do not stage source again or unrelated files.
+
+The workflow authorizes the existing exact-five catalog quality transition and one authenticated
+no-op replay. It never rewrites historical manifest/Parquet files or accepts Gate 0 as a whole.
