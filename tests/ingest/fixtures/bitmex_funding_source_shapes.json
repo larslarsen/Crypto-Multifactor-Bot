@@ -1,0 +1,83 @@
+{
+  "note": "Synthetic shapes derived from documented BitMEX GET /funding field names. Not a captured live response. Official raw records use camelCase. The retained invalid row has funding_rate=0.0, an empty funding_interval, and an availability value supplied by the fixture rather than derived by the normalizer.",
+  "official_raw_success": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": 0.0001,
+    "fundingRateDaily": 0.0003
+  },
+  "retained_normalized_invalid": {
+    "timestamp": "2020-01-01T04:00:00Z",
+    "timestamp_us": 1577851200000000,
+    "symbol": "ETHUSD",
+    "funding_rate": 0.0,
+    "funding_rate_daily": 0.0,
+    "funding_interval": "",
+    "source": "bitmex_funding",
+    "availability_time": 1577851200000000
+  },
+  "drifted_snake_only": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "funding_rate": 0.0001,
+    "funding_rate_daily": 0.0003,
+    "funding_interval": "2000-01-01T08:00:00.000Z"
+  },
+  "missing_funding_rate": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRateDaily": 0.0003
+  },
+  "empty_funding_interval": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "",
+    "fundingRate": 0.0001,
+    "fundingRateDaily": 0.0003
+  },
+  "non_finite_rate": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": "NaN",
+    "fundingRateDaily": 0.0003
+  },
+  "boolean_rate": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": true,
+    "fundingRateDaily": 0.0003
+  },
+  "null_rate": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": null,
+    "fundingRateDaily": 0.0003
+  },
+  "wrong_type_symbol": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": 123,
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": 0.0001,
+    "fundingRateDaily": 0.0005
+  },
+  "mixed_aliases": {
+    "timestamp": "2020-01-01T04:00:00.000Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": 0.0001,
+    "funding_rate": 0.0001,
+    "fundingRateDaily": 0.0005
+  },
+  "supplied_daily_not_three_times_rate": {
+    "timestamp": "2020-01-01T04:00:00.123456Z",
+    "symbol": "XBTUSD",
+    "fundingInterval": "2000-01-01T08:00:00.000Z",
+    "fundingRate": 0.0001,
+    "fundingRateDaily": 0.0005
+  }
+}

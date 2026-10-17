@@ -9,6 +9,7 @@ from cryptofactors.ingest.bitmex_funding import (
     BitMEXFundingProvider,
     build_funding_table,
     normalize_funding_record,
+    validate_funding_history,
 )
 from cryptofactors.ingest.legacy_local import (
     ClassificationRule,
@@ -95,6 +96,7 @@ __all__ = [
     "BitMEXFundingProvider",
     "build_funding_table",
     "normalize_funding_record",
+    "validate_funding_history",
     "ClassificationRule",
     "DuplicateGroup",
     "EntryType",
