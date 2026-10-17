@@ -162,3 +162,105 @@ Work stops here at the replay approval denial. Nine products remain accepted. Ga
 ## Publication provenance
 
 Hermes staged and committed this Record 484, `docs/handoff/CURRENT_TASK.md` and `tickets/CEX-002.md` only, after repository-control and whitespace checks passed. No source/test/helper paths were modified.
+
+---
+
+## Continuation — Standalone replay, after-audit, and comparison (2026-10-17)
+
+- **Session:** Jr Dev - Hermes, `meituan/longcat-2.5-preview:free`, no reasoning override, session ID `20261016_174722_4c2f0d`.
+**Authorization:** Review 483 final section (lines 724-802) at commit `e661054`; owner explicit YES.
+**Scope:** preconditions, one standalone producer replay, one after-audit, inventory comparison, terminal publication.
+
+### Corrected-path error disclosure (pre-replay)
+
+During preproof, Hermes guessed the completion path as `data/.cex002_coverage/completion.json` and ran `sha256sum` on it. That path does not exist; the command exited 1. A subsequent read-only `python3 -c` lookup of `completion_sha256` in the before-result returned `NOT FOUND` (the field name differs). Both errors are disclosed. The reviewer resolved the correct pinned path at commit `e661054` as `data/.cex002_coverage/.complete/9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151.json`. The corrected `sha256sum` exited 0 with exactly `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`. The failed guess and NOT FOUND lookup are not completion proof; only the corrected-path sha256sum establishes pinned identity.
+
+### Preconditions (reauthenticated, no passing work repeated)
+
+- `git rev-parse HEAD` = `git ls-remote origin refs/heads/main` = `af4d9cbe48826a7af9923b05a572d864976b9f64`; index clean.
+- Five source hashes match Record 484 section 3 exactly (exit 0):
+  - `scripts/research/reconcile_binance_usdm_coverage.py` → `1b416de36600496b83da904e26d67154ce216a8ddfe7341b3dee80046b7a8832`
+  - `tests/test_cex002_coverage_reconciliation.py` → `4dcd55e5b495d0092e81855f22a5fe54a246bfa8bfb9d7f3f49f1e81ffa42166`
+  - `src/cryptofactors/ingest/binance_usdm_coverage.py` → `6bb3788a91612d52fd204f9efc21a21e4a067eb679f387f16974915bcc501eee`
+  - `scripts/research/normalize_binance_usdm_coverage.py` → `567f8ce77b7f19d1174fd9a9c074d541ac7cab823c63957a32f739c8b1097f5f`
+  - `tests/ingest/test_binance_usdm_coverage.py` → `a5c85b98dedef9e84e4f28bdb3529c26f3fd7e627cd05d10aa6f06bf8ad90eb1`
+- Two before-artifact hashes match Record 484 section 3 exactly (exit 0):
+  - `/tmp/cex002_hermes484_before.result.json` → `1d47abf0002c2b4f06b3a0642c152d1059e8affff31cc7cc4bacba7dde6497a5`
+  - `/tmp/cex002_hermes484_before.inventory.jsonl` → `7efd31b90a4fc57bcb9a04e32d163102fcb041a6976f7282d3ab0a79e3dbd29f`
+- Pinned completion SHA-256 verified at corrected path (exit 0): `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
+- `ps -C python -C python3 -o pid,ppid,comm,args` (exit 0): only unrelated `wsdd` daemon processes; no coverage producer/checker active.
+- After-artifact paths `/tmp/cex002_hermes484_after.result.json` and `/tmp/cex002_hermes484_after.inventory.jsonl` both absent.
+- Pre-replay UTC: `2026-10-17T01:02:41.153696802Z` (standalone `date -u`).
+- Pre-replay capacity: `stat -f -c '%a %S' data` → `47396955 4096` (raw); product = 194,137,927,680 bytes (above the 110,648,021,942-byte floor).
+- Post-audit UTC: `2026-10-17T01:51:56.772476027Z` (standalone `date -u`).
+- Post-audit capacity: `stat -f -c '%a %S' data` → `46852023 4096` (raw); product = 191,905,886,208 bytes.
+- No tests, Ruff, or before-audit rerun. No source/helper edits. No data repair or deletion.
+
+### Standalone replay (exact command, foreground, timeout 43200, no wrappers)
+
+```
+PYTHONPATH=src .venv/bin/python scripts/research/normalize_binance_usdm_coverage.py --report research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json --sizing research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json --holdout data/cex002_qualify/cex002_holdout_boundary.json --membership-root data/.cex002_perpetual_membership --bar-root data/.cex002_bar_1h --trade-flow-root data/.cex002_trade_flow_1h --open-interest-root data/.cex002_open_interest_5m --funding-realized-root data/.cex002_funding_realized --price-state-root data/.cex002_price_state --liquidation-root data/.cex002_liquidation_observed_daily --cost-root data/.cex002_cost_calibration --output-root data/.cex002_coverage
+```
+
+- Actual exit: 0.
+- Terminal duration: ~1618.1 s (reported terminal-tool elapsed duration).
+- stdout (single line JSON):
+  `{"aligned_day_count":1971447,"completion_path":"/home/lars/Crypto_Multifactor_Bot/data/.cex002_coverage/.complete/9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151.json","completion_reused":true,"completion_sha256":"9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151","daily_report_count":64764,"five_product_observed_day_count":428090,"full_cadence_day_count":424431,"metadata_bytes":456752250,"quality_gap_rows":68220,"source_gap_rows":8317,"typed_gap_rows":3742}`
+- `completion_reused=true` confirmed.
+- Completion SHA-256 unchanged: `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
+
+### Standalone after-audit (exact command, foreground, timeout 43200, no wrappers)
+
+```
+PYTHONPATH=src .venv/bin/python scripts/research/reconcile_binance_usdm_coverage.py --repo-root /home/lars/Crypto_Multifactor_Bot --output-root /home/lars/Crypto_Multifactor_Bot/data/.cex002_coverage --result-path /tmp/cex002_hermes484_after.result.json --inventory-path /tmp/cex002_hermes484_after.inventory.jsonl
+```
+
+- Actual exit: 0.
+- Terminal duration: ~754.0 s (reported terminal-tool elapsed duration).
+- stdout: `{"inventory_sha256": "7efd31b90a4fc57bcb9a04e32d163102fcb041a6976f7282d3ab0a79e3dbd29f", "status": "PASS"}`
+- `status=PASS` confirmed.
+
+### Inventory comparison (separate command, after audit PASS)
+
+```
+cmp /tmp/cex002_hermes484_before.inventory.jsonl /tmp/cex002_hermes484_after.inventory.jsonl
+```
+
+- Actual exit: 0. Byte-identical inventories; the replay mutated no data files.
+
+### Result/inventory hashes (batch sha256sum, exit 0)
+
+- `/tmp/cex002_hermes484_before.result.json` → `1d47abf0002c2b4f06b3a0642c152d1059e8affff31cc7cc4bacba7dde6497a5`
+- `/tmp/cex002_hermes484_after.result.json` → `125c034d5e71e2dd999f8e37cab5299229c1b063ea602adc442ecf0a0e04b098`
+- `/tmp/cex002_hermes484_before.inventory.jsonl` → `7efd31b90a4fc57bcb9a04e32d163102fcb041a6976f7282d3ab0a79e3dbd29f`
+- `/tmp/cex002_hermes484_after.inventory.jsonl` → `7efd31b90a4fc57bcb9a04e32d163102fcb041a6976f7282d3ab0a79e3dbd29f`
+- `data/.cex002_coverage/.complete/9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151.json` → `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`
+
+Note: result JSONs differ (different `--result-path` and checker run timestamps), but inventory files are byte-identical, confirming no data mutation.
+
+### After-audit measured facts (from `/tmp/cex002_hermes484_after.result.json`, exit 0 read)
+
+- `authenticated_input_files`: 419,581
+- Alignment counts: `[64764, 1971447, 428090, 424431]`
+- Maximum timestamp partition rows: 8,928
+- Reference example (0GUSDT): observed_days=9, full_cadence_days=8, basis_rows=14, basis_date=2025-09-22, utc_month=2025-09
+- Quality gap: 12,465 partitions, 68,220 rows, 46,675,738 parquet bytes, 9,154,761,060 bound bytes
+- Source gap: 4,817 partitions, 8,317 rows, 32,780,352 parquet bytes, 36,831,146 bound bytes
+- Typed gap: 3,742 partitions, 3,742 rows, 7,693,161 parquet bytes, 7,757,166 bound bytes
+- Observed days (5-product): 428,090; full-cadence days with event presence: 424,431
+- Checker intrinsic started_utc: `2026-10-17T01:33:46.547667+00:00`
+- Checker intrinsic finished_utc: `2026-10-17T01:46:15.700494+00:00`
+- Checker statvfs_before available_bytes: 193,414,062,080
+- Checker statvfs available_bytes: 192,595,849,216
+- `accepted_cost_market_values_rescanned`: false
+- Metadata bytes: 456,752,250
+
+### Honest disclosure — missing observations
+
+- Separate UTC/stat observations between the replay exit and the after-audit start were omitted. The separate UTC observations bracket the overall replay/audit sequence and intervening model/tool delays; they do not isolate either command duration.
+- The result JSONs differ because they are distinct checker runs with different output paths and intrinsic timestamps; the byte-identical inventories prove no data mutation.
+- The corrected-path pre-replay error (guessed `completion.json` exit 1, `python -c` NOT FOUND) and its resolution at reviewer commit `e661054` are fully disclosed above.
+
+### Stop
+
+The authorized standalone replay, after-audit, inventory comparison, and terminal publication are complete. Nine products remain accepted. Gate 2 remains `ACCEPTED`; Gate 3 and CEX-002 remain `IN_PROGRESS`; next ticket remains `NONE`. Coverage data acceptance remains pending reviewer disposition. No bundle, catalog, quarantine, other-product rerun, accepted-product rerun, model, or next ticket is authorized.
