@@ -27,11 +27,13 @@ the real dry-run once: exit 0, all five PASS/REGISTERED, files unchanged. Preser
 results; no repeat validation, integration or dry-run is assigned.
 Longcat's read-only JSON inspection then failed (unhashable target dictionaries); the
 reviewer interrupted it before retry or application. Review 485 now rotates Hermes to
-stepfun/step-5-preview:free for one exact corrected inspection and the previously authorized
+stepfun/step-3.7-flash:free for one exact corrected inspection and the previously authorized
 remaining application, replay, reconciliation and Record 486 publication. Stop on the next
 nonzero/failed proof; no source patch or inferred retry. No real catalog mutation has yet
 occurred. Gate 0 still needs its separate normalizer/publisher correction. The owner's
 expiring Grok allowance should inform the next suitable source assignment; none starts yet.
+Step-5 returned upstream-capacity HTTP 429 before any tool execution; the same bounded
+continuation now uses Step 3.7 Flash. No prior successful command is repeated.
 Ten Binance products remain accepted. No bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:

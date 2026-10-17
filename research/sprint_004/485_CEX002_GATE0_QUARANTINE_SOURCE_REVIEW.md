@@ -324,3 +324,16 @@ grok.com. Prefer that allowance for the next suitable bounded senior source assi
 including the pending BitMEX normalizer/publisher correction. This preference does not switch
 the accepted Sol drop or transfer Hermes integration duties to a senior developer. No next
 source assignment or ticket is authorized by this routing note.
+
+## Step-5 provider unavailable; same bounded continuation on Step 3.7 Flash
+
+The resumed Step-5 route returned upstream-capacity HTTP 429 on every provider attempt
+and terminated before any tool execution. Its own standard inference retries were transport
+attempts, not quarantine or evidence commands. No corrected inspection, application, replay,
+new validation or artifact mutation occurred. Do not retry that unavailable route now.
+
+The reviewer selects the currently listed zero-price `stepfun/step-3.7-flash:free` for Hermes's
+same bounded continuation. This is an availability fallback, not a claim of prior acceptance
+or a change of source author. Preserve all prior successes and the recorded helper failure.
+Exactly the previously authorized corrected inspection and remaining steps 5-8 remain;
+no producer, validation or integration rerun is authorized. Stop on first command failure.
