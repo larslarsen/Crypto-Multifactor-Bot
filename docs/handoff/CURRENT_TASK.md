@@ -7,32 +7,26 @@ Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Nine of eleven products are accepted. Review 480 accepts Batch C cost calibration,
-finalizer integration `ab671b4713add0d9367c08cb18603f99b037fe1a`, Hermes publication
-`d6d86e0900c051f938cdf91fb9ffeb6336baf766` and Record 479. Gate 2 remains accepted;
+Ten of eleven products are accepted. Review 483 accepts coverage source integration
+`867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, the Record 484 continuation, and Hermes
+publication `becb6d259663258fbc5eb2cd50911b462848b896`. Gate 2 remains accepted;
 Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-Coverage replay and independent reconciliation have succeeded; terminal publication and
-reviewer acceptance remain to be completed. GPT-6.1 Sol High's checker/test source is
-accepted and integrated at `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`. The 71 final-byte tests
-and first real audit remain preserved. No passing test or before-audit was rerun.
+Coverage is ACCEPTED. The standalone replay exited 0, reused completion
+`9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`, and the independent
+after-audit exited 0 PASS. Separate inventory cmp exited 0: all 107,590 files and
+543,901,501 bytes retain identical path/hash/size/inode/mtime entries. Observed five-product
+days remain 428,090; full-cadence days with event presence remain 424,431. The 71 final-byte
+tests and first audit were preserved, not rerun. No further coverage replay/audit is assigned.
 
-Fresh Hermes session `20261016_174722_4c2f0d` (Longcat 2.5 free) executed one standalone
-replay: actual exit 0, completion_reused=true, unchanged completion
-`9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
-The after-audit returned exit 0 PASS; separate inventory cmp exited 0. All 107,590 files
-and 543,901,501 bytes retain identical path/hash/size/inode/mtime entries. The observed-day
-count is 428,090; full-cadence days with event presence are 424,431. The correction of an
-initial wrong completion filename and earlier denied attempts remain disclosed in Record
-484 / Review 483; none is erased by successful execution.
-
-Hermes's remaining assignment is evidence continuation and exact three-path publication
-under Review 483. These current fields are reviewer-authored for that publication.
-After it, stop for reviewer disposition. Nine products remain accepted pending that
-review; Gate 2 ACCEPTED, Gate 3/CEX-002 IN_PROGRESS, next NONE. No further replay/audit,
-source/helper changes, bundle, catalog, quarantine, other-product rerun, model or next ticket.
+Review 483's final disposition records the corrected preflight path, timing/capacity
+limitations, prior denied submissions and rejected workflow deviations. These remain
+visible in the evidence history. The execution actor is stopped; control remains with
+the reviewer. The next bounded CEX-002 assignment has not yet been authorized. No new
+source/helper task, bundle/catalog/quarantine mutation, other-product rerun, model,
+experiment or next ticket is authorized by this acceptance. Next ticket remains NONE.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.

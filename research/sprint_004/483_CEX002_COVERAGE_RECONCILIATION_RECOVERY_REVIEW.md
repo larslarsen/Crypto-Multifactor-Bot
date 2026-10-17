@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** owner approved standalone replay; bounded Hermes execution authorized; coverage acceptance withheld
+- **Decision:** coverage product ACCEPTED after successful standalone replay, independent after-audit and exact inventory comparison
 - **Gate 2:** `ACCEPTED`
-- **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Jr Dev - Hermes
+- **Gate 3:** `IN_PROGRESS` - ten of eleven products accepted
+- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -823,3 +823,70 @@ new helper or broader scope is authorized. On any further actual failure/denial 
 Raw capacity `47440829 4096` means 194,317,635,584 available bytes; the earlier model's
 194,277,715,584 arithmetic was wrong. Preserve raw values and corrected arithmetic.
 This clarification is reviewer-only Review 483 publication under the existing exception.
+
+
+## Coverage product acceptance after standalone replay
+
+The reviewer accepts `binance_usdm_coverage_gap`, the completed Record 484 continuation,
+and Hermes publication `becb6d259663258fbc5eb2cd50911b462848b896`. The reviewer inspected
+the exact three-path commit, actual session command/results, corrected continuation and
+after-result JSON, and independently authenticated the after-result/inventory artifacts.
+Hermes's remote query matched its publication HEAD. The required repository-control,
+working-tree whitespace and staged whitespace checks passed. No source/test changes were
+made in this continuation. The preserved 71-case final-byte result remains applicable to
+the reauthenticated checker/test source integrated at `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`.
+
+Acceptance evidence:
+
+- One standalone producer replay actually executed and exited 0, with
+  `completion_reused=true` and unchanged completion
+  `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
+  Terminal-tool elapsed duration was approximately 1,618.1 seconds.
+- One independent after-audit exited 0 PASS in approximately 754.0 terminal-tool seconds.
+  It authenticated 419,581 input files and reproduced the before-audit facts. Its intrinsic
+  start/finish UTC values were `2026-10-17T01:33:46.547667+00:00` and
+  `2026-10-17T01:46:15.700494+00:00`.
+- Separate inventory `cmp` exited 0. All 107,590 files / 543,901,501 bytes retain identical
+  paths, SHA-256 values, sizes, inodes and mtimes. Both inventories hash to
+  `7efd31b90a4fc57bcb9a04e32d163102fcb041a6976f7282d3ab0a79e3dbd29f`.
+  The after-result SHA-256 is
+  `125c034d5e71e2dd999f8e37cab5299229c1b063ea602adc442ecf0a0e04b098`.
+- Membership remains 771 identities, including 73 funding-only identities; exclusions 237.
+  Daily reports 64,764 and aligned daily rows 1,971,447. Observed five-product days 428,090
+  remain distinct from 424,431 full-cadence days with event presence. The reference 0GUSDT
+  example remains nine observed / eight full-cadence days and fourteen September-22 basis rows.
+- Qualification-source, typed-membership and quality-gap rows remain 8,317 / 3,742 / 68,220;
+  their measured bytes and partitions remain within pinned bounds. Metadata is 456,752,250
+  bytes. Historical fee observations remain zero; schema declarations and non-backdated
+  scenarios are not historical observations. Censored liquidation/event semantics remain.
+  Accepted cost market values were not rescanned.
+
+Separate UTC/stat observations between replay and after-audit were omitted. Record 484
+correctly discloses this and distinguishes tool elapsed durations from the broader UTC
+bracket; checker intrinsic timing/capacity is retained. Available bytes were
+194,137,927,680 in the standalone pre-replay stat observation, 193,414,062,080 at checker
+start, 192,595,849,216 at checker finish and 191,905,886,208 in the later standalone stat
+observation. These missing intermediate observations do not invalidate the pinned-input,
+completion-reuse and exact-inventory proofs. No extra run is justified to manufacture them.
+
+Procedural findings remain separate from data acceptance. The wrong completion filename
+failed with exit 1; the subsequent unsupported before-result field lookup returned NOT FOUND
+and did not prove identity. The corrected pinned-path read was explicitly authorized by
+reviewer commit `e661054a71ee37653a6125a64d989f65b3618ba2` and passed. Earlier unauthorized
+replay submissions and approval denials remain rejected/disclosed. During publication Hermes
+also attempted an unassigned `gitleaks` scan; it was unavailable, not a PASS. Its subsequent
+`which gitleaks || find /home/lars -name gitleaks -type f ...` search exceeded repository
+scope and timed out with exit 124, returning no discovery output. The reviewer rejects
+that search and the continued discretionary discovery. No installation occurred. It is
+not part of the required acceptance checks and supplies no security-scan assurance.
+The final record's capacity/duration errors were corrected before publication. These
+execution/control weaknesses must inform future Hermes routing and bounded prompts;
+they are not erased by the successful coverage result. The execution actor is stopped.
+
+Ten of eleven products are now accepted. Gate 2 remains ACCEPTED; Gate 3 and CEX-002 remain
+IN_PROGRESS. The harmonic bundle and Review 474's remaining Gate-4 comparisons, Gate-0
+correction, pinned catalog/bundle, clean NautilusTrader readback, release replay and original
+full-ticket acceptance remain outstanding. This is not full release acceptance. No new
+source task, accepted-product rerun, model, experiment or next ticket is authorized here.
+Reviewer governance publication is limited to this Review 483, CURRENT_TASK and current
+CEX-002 fields/checklist; the unrelated dirty baseline remains preserved.
