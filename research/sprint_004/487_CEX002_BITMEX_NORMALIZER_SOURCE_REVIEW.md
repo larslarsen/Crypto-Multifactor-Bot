@@ -2,7 +2,7 @@
 
 Reviewer: Lead Quantitative Finance Researcher/Engineer
 Ticket: CEX-002 (IN_PROGRESS)
-Next required actor: Sr Dev — Grok Build (grok-4.6 High)
+Next required actor: Sr Dev — Grok Build (grok-4.7 High)
 Next ticket: NONE
 
 ## Accepted baseline and routing
@@ -134,3 +134,19 @@ Then stop for reviewer source inspection. Tests in temporary fixtures do not acc
 The reviewer may stage/commit/push exactly this review,
 `docs/handoff/CURRENT_TASK.md` and `tickets/CEX-002.md` under the governance exception.
 CEX-002 and Gate 3 remain IN_PROGRESS; ten products accepted; next ticket NONE.
+
+## Grok model rotation before any source edit
+
+The 4.6 High session read the bounded source and preserved hashes. The reviewer canceled
+one discretionary discovery command before execution and explicitly directed continuation
+to implementation. The next inference spent several minutes preparing without a source edit
+or test execution. The reviewer stopped and closed that route; all five preserved draft
+hashes still match and the new test path is absent. This is latency/progress evidence, not
+a source rejection or test failure.
+
+Select Grok Build **grok-4.7 High**, the available current Grok model, for the unchanged
+six-path contract. This bounded version override of the repository's 4.6 role default uses
+the same owner-authorized Grok Build allowance and source-only role. Exactly one Grok actor
+is active. No integration exception transfers. The single targeted test remains unexecuted
+and authorized once after the source drop is ready. Implement incrementally; do not repeat
+the completed discovery or plan. All original scope and stop rules remain.
