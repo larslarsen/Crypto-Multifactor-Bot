@@ -41,6 +41,13 @@ source correction and one targeted test command. No integration or real acquisit
 authorized. Ten Binance products remain accepted. No
 bundle, experiment or next ticket is authorized.
 
+Review 487's first normalizer/publisher drop passed its one targeted run (38 tests,
+exit 0); reviewer hashes match. Integration is rejected pending the final bounded
+correction section: empty-fetch/window coverage, malformed instrument discovery,
+exact timestamp precision, crash-durable retained ordering and stronger failure tests.
+The same Grok 4.7 High actor owns four-path correction and one newly authorized targeted
+run after those changes. Prior test success is preserved. Hermes is not assigned yet.
+
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
 The reviewer independently reconciled 7,732 files, 3,865 partitions and matching lineages,

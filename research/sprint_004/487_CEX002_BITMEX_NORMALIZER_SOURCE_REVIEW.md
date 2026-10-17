@@ -160,3 +160,96 @@ Grok Build grok-4.7 High remains the sole selected senior and resumes the full s
 contract through completion, including the one targeted test. The temporary normalization-
 only pass restriction is superseded. Do not interrupt merely for planning latency. Normal
 approvals, exact scope, test failure stop rule and source-only ownership still apply.
+
+## In-flight source inspection and CLI control correction
+
+Grok produced normalizer, backfill and synthetic-fixture source edits. Reviewer static
+feedback requires preserving existing catalog APIs and identity: import the migration
+runner from `catalog.runner`, use `PublishPlan.output_specs`, treat
+`resolve_latest_by_type` as `str | None`, preserve schema `bitmex_funding` / `1` /
+`fund_v1` and transform `bitmex_funding_full_backfill` / `1`, and hash the actual run
+configuration. Preserve existing report/helper contracts. Request bounds must retain
+microseconds; raw JSON numeric strings are not numeric values. Resolver/close failures
+after publication must retain and disclose the already-published dataset ID. These are
+corrections inside the existing six-path contract, not added integration authority.
+
+While queuing that feedback, reviewer TUI input was partly consumed by a pending approval
+dialog and inadvertently enabled always-approve. The reviewer stopped the inference,
+closed the CLI, and resumed the same Grok session with explicit `--permission-mode default`.
+The intervening transcript contains a bounded backfill edit and relevant source reads;
+no test, Git mutation, integration or real-data execution is recorded. This interruption
+restored approval controls, not a latency-based model rotation. The missing feedback was
+queued again using bracketed paste. Grok remains the sole selected senior; its first
+targeted test is still pending. Source is not accepted by this inspection note.
+
+## First drop disposition and bounded correction — 2026-10-17
+
+The first targeted command ran once and exited 0, with 38 dots at 100%. Repository
+pytest configuration already supplies `-q`, explaining the missing summary line when
+the authorized command adds another `-q`. Do not rerun solely to obtain that line.
+Reviewer independently matched all six reported hashes:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/bitmex_funding.py` | 1049 | `60e836c60fcfa345b08ba305fd1c619ee2dd380a030f3dc81b1f62fdced329aa` |
+| `src/cryptofactors/ingest/__init__.py` | 119 | `369be49f416a5dabd0b661511cdd3077bcef12c3a0c8e9481778e09963bc8499` |
+| `scripts/research/backfill_bitmex_funding.py` | 987 | `148b8cd0e028a22e96f9dcff5e2ace4f450bf87923e67e218d5355aac9cdd05a` |
+| `tests/ingest/test_bitmex_funding.py` | 586 | `7443db617ea4dfb814f1a0fe7d8cec5a17c8cff22d69ff2deeddd3bdc20d9f74` |
+| `tests/ingest/test_bitmex_funding_backfill.py` | 476 | `581338a959e39f1115326939715ff96ca39359a721915ebfe44ad891eba24326` |
+| `tests/ingest/fixtures/bitmex_funding_source_shapes.json` | 83 | `469f4225d7318687a8af48aa27b1d1c27b16783fdda268009c8fc587fdcc34a3` |
+
+The reviewer rejects the drop for integration pending these specific corrections.
+Grok 4.7 High remains the sole source author. Limit changes to the normalizer,
+backfill script and their two test files; the fixture and exports now remain frozen.
+
+1. An empty fetch is currently excused whenever the symbol exists anywhere in prior
+   history. That is not evidence explaining an empty response, particularly an inclusive
+   refetch of a known event. Refuse every attempted empty fetch in this bounded drop.
+   A skipped-current symbol must have validated retained observations inside the explicit
+   requested window; future-only history plus a later watermark is insufficient. Reject
+   missing in-window evidence without publishing or advancing retained state. Do not
+   infer complete cadence from this necessary presence check.
+2. `_fetch_instrument_page` silently removes non-dictionaries before pagination counts
+   are checked, and discovery coerces arbitrary symbols to strings. Fail closed on
+   malformed instrument entries and missing/non-string/empty required symbol/type
+   fields (and state when a state filter is used). Keep valid non-perpetual instruments
+   filterable. Prove a full page containing malformed entries cannot terminate as a
+   shorter successful page or silently shrink the discovered universe. For both clients,
+   a full page with no progress must fail; a short terminal page of identical duplicate
+   observations may collapse successfully, consistent with the duplicate contract.
+3. `datetime.fromisoformat` silently truncates fractional precision beyond microseconds.
+   Reject source and saved-watermark timestamps whose precision cannot be represented
+   exactly by the eight-field microsecond contract. Do not silently round/truncate them.
+   Cover sub-microsecond differences that would otherwise collapse into one key.
+4. Atomic rename alone does not establish crash-durable ordering. Fsync the candidate
+   file before publication, and fsync the retained-stage directory after promotion before
+   attempting watermark replacement. Fsync the watermark directory after replacement.
+   Preserve catalog -> durable retained stage -> watermarks ordering. An fsync failure
+   before publication must not call the publisher or alter old retained bytes; a stage
+   barrier failure after publication must disclose the dataset ID and prevent watermark
+   advancement. Keep the current single-writer design and existing DatasetPublisher.
+5. The mixed-fetch test patches `httpx.Client` twice without restoring the first factory;
+   the first empty transport can override the second transport. Its assertion only finds
+   the `fetch_errors` dictionary key, which is printed even when its value is empty.
+   Use independent cases or restore the original factory. Assert the intended requests
+   and actual error, publisher call count zero, and unchanged prior stage/watermark bytes.
+   Add missing post-publication watermark/report/close failure cases that verify the real
+   published ID, plus the cases above. Tests must exercise behavior rather than merely
+   matching an always-present report field.
+
+Keep the already-corrected schema and transform version literals exactly `"1"`.
+The rejected `"version1"` replacement never executed. The reviewer corrected the
+ambiguous shorthand; the queued old clarification does not authorize another test.
+The status poll blocked by approval-review usage limits likewise executed no test.
+
+After these source/test corrections, authorize exactly one new targeted execution:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_bitmex_funding.py tests/ingest/test_bitmex_funding_backfill.py -q --tb=short
+```
+
+This is a new bounded corrective-drop test, not a retry for display output. Stop on its
+first nonzero result, with exact output and no subsequent edit/retry until reviewer
+disposition. Report all six hashes/line counts and stop for review. No integration,
+acceptance suite, real acquisition, data, record or Git ownership transfers. Gate 0,
+Gate 3 and CEX-002 remain open; ten products accepted; next ticket NONE.
