@@ -371,3 +371,30 @@ execution has launched. If approved, retain all passing evidence and execute onl
 remaining application, replay, reconciliation and bounded Record-486 publication above;
 no rerun of validation, integration, dry-run or corrected inspection is needed. If the owner
 retains the existing role boundary, reviewer execution routing remains to be resolved.
+
+## Owner-approved Grok execution exception
+
+The owner answered **yes** to the explicit request that Grok Build finish this reviewed
+quarantine, replay and evidence publication. This supersedes the pending-exception paragraph
+above for this bounded continuation only. The reviewer selects **Grok Build, grok-4.6 High**,
+using the owner's expiring Grok subscription. The accepted source remains GPT-6.1 Sol's
+frozen seven-path drop integrated at 49e307e; no source authoring or source edits are assigned.
+
+Under this owner-approved exception to the normal source-only Grok and Hermes execution
+roles, Grok may perform the unexecuted application and replay commands in step 5, read-only
+reconciliation in step 6, and Record-486/control/evidence publication and Git operations in
+steps 7-8. Preserve all completed tests, lint, integration, dry-run and corrected inspection;
+do not repeat them. First perform only current safety checks: unchanged seven source hashes,
+HEAD equal to origin/main, empty index, existing dry-run, absent application/replay reports,
+and no competing execution actor. Use normal tool approval checks. Stop on the first nonzero,
+failed proof or denied command; no source patch or automatic data retry is authorized.
+
+Grok may write/stage only Record 486, its three exact JSON reports and the two control files
+CURRENT_TASK.md and tickets/CEX-002.md named in steps 7-8. The existing dry-run is preserved.
+Return both actor fields to the reviewer after publishing the actual outcome. Gate 0 remains
+open pending separate normalizer/publisher correction and reviewer acceptance; ten products
+remain accepted, CEX-002 and Gate 3 remain IN_PROGRESS, and next ticket remains NONE.
+This is not a durable role-policy change or next-ticket authorization.
+
+The reviewer may publish this authorization using exactly this Review-485 file,
+docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md under the governance exception.

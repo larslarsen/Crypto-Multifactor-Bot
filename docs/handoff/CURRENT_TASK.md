@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Grok Build (owner-approved bounded execution)
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -28,11 +28,12 @@ all these results; no repeat tests, integration, dry-run or inspection is assign
 Longcat's helper TypeError, Step-5 upstream-capacity failure and Step-3.7 inference stall
 are disclosed in Review 485. The execution session is closed. Application/replay never
 ran: the five actual catalog targets remain PASS/REGISTERED and their files unchanged.
-Record 486's full implementation publication remains unfinished. Control is with reviewer.
-The owner has been asked for a narrow Grok Build integration-role exception to finish the
-already-reviewed remaining commands. No exception reply or Grok launch has occurred yet.
-The owner's expiring Grok allowance remains a source-routing preference; the pending
-normalizer/publisher correction is not yet assigned. Gate 0 and full CEX-002 remain open.
+Record 486's full implementation publication remains unfinished. The owner explicitly
+approved the narrow integration-role exception. Grok Build (grok-4.6 High) is authorized
+only to finish application, replay, independent reconciliation and Record-486/control/Git
+publication under Review 485's final section. Preserve all passing work; no source edits
+or validation/integration/dry-run/inspection reruns. The separate normalizer/publisher
+correction remains unassigned. Gate 0 and full CEX-002 remain open.
 Ten Binance products remain accepted. No bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:
@@ -53,8 +54,8 @@ limits, fee scenarios, unknown availability and censored liquidation semantics r
 
 The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished:
 Review 480's read-only query of exp003.db finds all five invalid BitMEX datasets still
-PASS / REGISTERED. Review 485 preserves the accepted source and dry-run but stops execution at the
-reviewer routing boundary. Both real quarantine and normalizer/publisher correction
+PASS / REGISTERED. Review 485 preserves the accepted source and dry-run and authorizes Grok to finish
+the remaining execution under the explicit owner exception. Both real quarantine and normalizer/publisher correction
 still remain before Gate-0 acceptance.
 No bundle publication, full-ticket acceptance, experiment, model or next ticket is
 authorized now.
