@@ -3,9 +3,18 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes (meituan/longcat-2.5-preview:free)
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
+
+Review 487's final ordered integration workflow is complete. Hermes
+(meituan/longcat-2.5-preview:free) verified HEAD == origin/main at 49f4789, an empty
+index, and all six frozen hashes/line counts; ran the four ordered standalone checks
+(52 targeted tests exit 0, Ruff all checks passed, repository control PASS, source
+whitespace empty); staged exactly the six frozen paths; committed
+`CEX-002: integrate strict BitMEX funding publication` at
+`f85177d9f1d21fe1fd054d40035afbf62b4e457f`; pushed; and confirmed HEAD == origin/main.
+Every unrelated dirty and untracked path was preserved. Record 488 is published.
 
 Ten of eleven products are accepted. Review 483 accepts coverage source integration
 `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, the Record 484 continuation, and Hermes
