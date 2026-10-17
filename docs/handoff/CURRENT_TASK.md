@@ -3,87 +3,62 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Grok Build (grok-4.7 High)
 Next ticket: NONE
 Next ticket authorized: NONE
 
-Review 487's final ordered integration workflow is complete. Hermes
-(meituan/longcat-2.5-preview:free) verified HEAD == origin/main at 49f4789, an empty
-index, and all six frozen hashes/line counts; ran the four ordered standalone checks
-(52 targeted tests exit 0, Ruff all checks passed, repository control PASS, source
-whitespace empty); staged exactly the six frozen paths; committed
-`CEX-002: integrate strict BitMEX funding publication` at
-`f85177d9f1d21fe1fd054d40035afbf62b4e457f`; pushed; and confirmed HEAD == origin/main.
-Every unrelated dirty and untracked path was preserved. Record 488 is published.
-
-Ten of eleven products are accepted. Review 483 accepts coverage source integration
-`867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, the Record 484 continuation, and Hermes
-publication `becb6d259663258fbc5eb2cd50911b462848b896`. Gate 2 remains accepted;
-Gate 3 and CEX-002 remain IN_PROGRESS.
-
 ## Current action
 
-Coverage is ACCEPTED. The standalone replay exited 0, reused completion
-`9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`, and the independent
-after-audit exited 0 PASS. Separate inventory cmp exited 0: all 107,590 files and
-543,901,501 bytes retain identical path/hash/size/inode/mtime entries. Observed five-product
-days remain 428,090; full-cadence days with event presence remain 424,431. The 71 final-byte
-tests and first audit were preserved, not rerun. No further coverage replay/audit is assigned.
+Review 489 authorizes Grok's five-path source/test implementation of the remaining
+bounded one-minute/hourly kline reconciliation. Grok is active in native Build with
+normal approvals. Use the nine exact daily sample dates and ten role bindings from
+the pinned qualification report; implement bounded sample acquisition, offline exact
+aggregation/comparison, CLI and tests. Only Review 489's single targeted test is
+assigned after source is ready. Stop on its first failure and return source for review.
+No real download or comparison run, integration, data/catalog mutation, bundle,
+experiment or next ticket is authorized. Hermes has finished Record 488 publication.
 
-Review 485 accepts Sol's seven-path quarantine/resolver source integration 49e307e.
-Hermes passed 225 quarantine/catalog tests, Ruff/control/whitespace and the real dry-run
-(exit 0). The corrected read-only inspection also passed on Step 3.7 Flash. Those results
-were preserved and were not rerun. Longcat's helper TypeError, Step-5 upstream-capacity
-failure and Step-3.7 inference stall remain disclosed.
+The owner reports almost all Grok usage remains and access ends tomorrow night.
+Prioritize Grok for substantive senior source work while preserving reviewer acceptance
+and bounded integration ownership. Do not rotate merely for planning latency.
 
-Under Review 485's owner-approved bounded execution exception, Grok Build (grok-4.6 High)
-ran the remaining application and replay once each, reconciled the three reports against
-independent file hashes and SQLite mode=ro catalog rows, and published Record 486 at 4ff8bf4. Review 485 now accepts this quarantine portion.
-Application exited 0: disposition=applied, applied=true, all five REJECTED/REGISTERED and
-ineligible. Replay exited 0: disposition=replayed, applied=false, idempotent_replay=true,
-same quarantine metadata. Ten manifest/Parquet artifacts retain identical
-path/hash/size/device/inode/mtime/ctime/mode entries. Economics remain 307,738 rows, zero
-null/nonzero rates, 307,738 empty intervals, symbol counts [2,5,5,5,45]. Control returns
-to the reviewer. Independent reviewer catalog/file/source reconciliation passed. Gate 0
-remains open. Review 487 accepts Grok's corrected six-path normalizer/publisher source
-for Hermes validation and integration under its final ordered workflow. Real acquisition
-is not assigned. Ten Binance products remain accepted. No
-bundle, experiment or next ticket is authorized.
+## Accepted state and remaining release work
 
-Review 487's first normalizer/publisher drop passed its one targeted run (38 tests,
-exit 0). The corrected drop passed its new run (52 tests, exit 0), and the reviewer
-matched all six hashes and accepts the source for integration. The unassigned Grok
-syntax/AST check remains disclosed. Review 487's final section assigns Hermes on
-meituan/longcat-2.5-preview:free only final-byte validation, six-path integration and
-Record 488 publication. Source is frozen; no real data/backfill execution is assigned.
-Gate 0 remains pending final integration review; ten products accepted; next ticket NONE.
+Gate 0 is ACCEPTED in Reviews 485 and 487. Five invalid BitMEX datasets are
+REJECTED/REGISTERED and excluded by the default resolver; real application and
+idempotent replay passed with all ten historical artifacts unchanged. Source 49e307e
+and Record 486 publication 4ff8bf4 remain accepted. The separate strict normalizer/
+publisher correction is integrated at f85177d9f1d21fe1fd054d40035afbf62b4e457f;
+Hermes passed 52 targeted cases, Ruff/control/whitespace, then published Record 488
+at 68e93069acfdaa0a2fc9d7d606f75feaa4fcd49f. Review 487 independently reconciles the
+six committed source hashes and accepts the completed gate. Grok's extra syntax check
+and Hermes's malformed Git-object probe/post-failure inspection remain disclosed.
+Do not rerun quarantine, source tests or accepted-product audits without a specific defect.
 
-Accepted cost completion:
-`fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
-The reviewer independently reconciled 7,732 files, 3,865 partitions and matching lineages,
-939,130,319 book rows, 939,131,092 total component rows and 17,943,795,556 output bytes.
-All 7,731 preserved files retain identical hashes/inodes/mtimes. The 136,532,583-row ticker
-projection excess remains explicit with `ordinary_sizing_check_passed: false`; all byte
-bounds pass. Hermes's successful finalization and authorized byte-identical replay are
-accepted. Do not rerun the producer, finalizer or accepted-product audits without a
-specific invalidating defect.
+Ten of eleven Binance products are accepted; Gate 2 remains ACCEPTED. Gate 3 and
+CEX-002 remain IN_PROGRESS. Review 474's fixed completion checklist still governs.
+Coverage source 867c47a and Record 484 publication becb6d2 are accepted in Review 483:
+replay reused completion 9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151,
+after-audit PASS, all 107,590 files / 543,901,501 bytes unchanged. Observed five-product
+days are 428,090; full-cadence days with event presence are 424,431. These remain distinct
+from known source availability. No further coverage replay/audit is assigned.
 
-Review 474's fixed closeout still governs Batch D: coverage/daily intersection, remaining
-Gate-4 comparisons, pinned bundle/catalog, clean NautilusTrader readback, release replay
-and original final acceptance commands. Observed-day overlap must remain distinguishable
-from complete daily coverage and known source availability. Accepted Batch B comparison
-limits, fee scenarios, unknown availability and censored liquidation semantics remain.
+Cost completion fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e is
+accepted: 3,865 partitions, 939,130,319 book rows, 939,131,092 component rows and
+17,943,795,556 bytes. The 136,532,583-row ticker projection excess and
+ordinary_sizing_check_passed=false remain explicit; byte bounds pass. Prior exact
+inventory/replay evidence is preserved.
 
-The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished.
-Review 485 accepts the five BitMEX catalog rows as REJECTED/REGISTERED after authenticated
-application and no-op replay; immutable manifests and Parquets were not rewritten. The
-separate BitMEX missing-to-zero/unconditional-PASS normalizer/publisher correction remains
-pending. Reviewer acceptance is exclusive.
-No bundle publication, full-ticket acceptance, experiment, model or next ticket is
-authorized now.
+Batch D still owes remaining Gate-4 comparisons, the pinned harmonic bundle/catalog,
+clean NautilusTrader readback, release replay and original final acceptance commands.
+Accepted fee scenarios, unknown availability and observed/censored liquidation semantics
+remain unchanged. Holdout: 2026-08-21T16:19:08.994166+00:00. Reviewer acceptance is
+exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/489_CEX002_BOUNDED_KLINE_RECONCILIATION_SOURCE_REVIEW.md
+- research/sprint_004/488_CEX002_BITMEX_NORMALIZER_INTEGRATION_RECORD.md
 - research/sprint_004/487_CEX002_BITMEX_NORMALIZER_SOURCE_REVIEW.md
 - research/sprint_004/486_CEX002_GATE0_QUARANTINE_INTEGRATION_RECORD.md
 - research/sprint_004/485_CEX002_GATE0_QUARANTINE_SOURCE_REVIEW.md

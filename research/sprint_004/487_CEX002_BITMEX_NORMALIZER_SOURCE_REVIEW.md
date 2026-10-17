@@ -2,7 +2,7 @@
 
 Reviewer: Lead Quantitative Finance Researcher/Engineer
 Ticket: CEX-002 (IN_PROGRESS)
-Next required actor: Jr Dev — Hermes (meituan/longcat-2.5-preview:free)
+Next required actor: Lead Quantitative Finance Researcher/Engineer (review complete; source continuation in Review 489)
 Next ticket: NONE
 
 ## Accepted baseline and routing
@@ -339,3 +339,47 @@ git diff --check -- src/cryptofactors/ingest/bitmex_funding.py src/cryptofactors
    rerun, accepted-product audit, production database/store mutation, new data, bundle,
    experiment, model research or next ticket is assigned. Gate 0 is not accepted merely
    by this source inspection; final integration review remains with the reviewer.
+
+## Final integration and Gate-0 acceptance — 2026-10-17
+
+The reviewer accepts source integration
+`f85177d9f1d21fe1fd054d40035afbf62b4e457f` and terminal Record 488 publication
+`68e93069acfdaa0a2fc9d7d606f75feaa4fcd49f`. Hermes independently ran the four ordered
+commands once: 52 targeted cases, Ruff, repository control and source whitespace all
+exited 0. Its staged whitespace check also exited 0. The source commit contains exactly
+the six frozen paths. Reviewer read-back of staged and committed blobs matched every
+accepted SHA-256 and worktree byte; seven accepted quarantine source hashes and eight
+unrelated source fingerprints remained unchanged.
+
+Record publication control, unstaged/staged whitespace, commit and push exited 0.
+The record commit contains exactly Record 488, CURRENT_TASK and CEX-002; HEAD equals
+origin/main at 68e9306. These outcomes were inspected from actual tool results, not
+inferred from the record's prose. The reviewer executed no acceptance commands, source
+integration, real backfill or data mutation.
+
+Hermes made unnecessary historical/version inspections after integration, then passed
+a file SHA-256 to `git cat-file -t`, which exited 128. Its subsequent source-diff
+inspection violated the first-failure stop rule; the reviewer interrupted inference
+and explicitly continued only terminal record publication. The corrected record
+acknowledges that violation. Record 488 lists both proposed cat-file probes, but only
+the first ran: the original command joined them with `&&`, so the second was skipped.
+`EXIT:128` in the record denotes the tool's observed exit status, not an emitted line
+from that failed command. No extra test, source change or data mutation resulted.
+The four validation invocations each appended an exit-status echo in the shell; their
+observed EXIT:0 values establish success independently of the echo's own exit code.
+These workflow defects are adverse Hermes routing evidence, not source-validation
+failures and not grounds to rerun successful tests or accepted data.
+
+**Gate 0 is ACCEPTED.** Review 485 already accepts the authenticated, atomic five-row
+quarantine and replay with immutable historical files unchanged; this review accepts
+the remaining missing-to-zero/unconditional-PASS normalizer and publisher correction.
+The gate is supported by the real quarantine evidence plus integrated source and
+failure-path tests, not by treating synthetic comparison data as real acquisition.
+The MOM-TS synthetic generator limitation documented above remains outside this drop.
+
+Ten Binance products remain accepted. Gate 3 and CEX-002 remain IN_PROGRESS; the bundle,
+remaining Gate-4 reconciliation, clean NautilusTrader readback, release replay and final
+acceptance commands remain pending. Review 489 authorizes Grok 4.7 High's five disjoint
+source/test paths for the missing bounded one-minute/hourly comparison. No real download,
+accepted-product rerun, bundle publication, experiment or next ticket is authorized.
+The owner-reported expiring Grok capacity is prioritized for this substantive source work.
