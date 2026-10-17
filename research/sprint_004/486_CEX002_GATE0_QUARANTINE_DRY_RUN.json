@@ -1,0 +1,844 @@
+{
+  "applied": false,
+  "artifacts_unchanged": true,
+  "database_path": "/home/lars/Crypto_Multifactor_Bot/exp003.db",
+  "disposition": "inspected",
+  "dry_run": true,
+  "generated_at": "2026-10-17T03:28:47.860470+00:00",
+  "idempotent_replay": false,
+  "inspections_post": [
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1250,
+          "ctime_ns": 1784855300526275538,
+          "device": 64513,
+          "inode": 19561077,
+          "mode": 33152,
+          "mtime_ns": 1784855300526275538,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/manifest.json",
+          "sha256": "c26ec01f0fccae79da1b130d75803070bc1efe585b0a4bfe1e73be96aa1f24cc"
+        },
+        {
+          "byte_size": 205097,
+          "ctime_ns": 1784855300524350443,
+          "device": 64513,
+          "inode": 19561076,
+          "mode": 33188,
+          "mtime_ns": 1784855300524350443,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/bitmex/funding/funding.parquet",
+          "sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 205097,
+          "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+          "file_sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 14376,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 205097,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:07:43.024566+00:00",
+        "event_start": "2020-01-01T00:00:00+00:00",
+        "manifest_sha256": "7d43319236fc73f87bcbbcac19c2ec5028a70e5faed252ae9397ec83d1ca39f4",
+        "manifest_uri": "datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":14376,\"symbols\":[\"XBTUSD\",\"ETHUSD\"]}",
+        "row_count": 14376,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+      "manifest_created_at": "1970-01-01T00:00:00+00:00",
+      "manifest_file_sha256": "c26ec01f0fccae79da1b130d75803070bc1efe585b0a4bfe1e73be96aa1f24cc",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "7d43319236fc73f87bcbbcac19c2ec5028a70e5faed252ae9397ec83d1ca39f4",
+      "parquet": {
+        "byte_size": 205097,
+        "empty_interval_count": 14376,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/bitmex/funding/funding.parquet",
+        "row_count": 14376,
+        "sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2",
+        "symbol_count": 2
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1279,
+          "ctime_ns": 1784855954740403130,
+          "device": 64513,
+          "inode": 19562472,
+          "mode": 33152,
+          "mtime_ns": 1784855954740403130,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/manifest.json",
+          "sha256": "9020c0faa95199d31d71c523f0fd86451088ce83dcb13a200cd86e74df6c1d1a"
+        },
+        {
+          "byte_size": 295554,
+          "ctime_ns": 1784855954738242214,
+          "device": 64513,
+          "inode": 19562471,
+          "mode": 33188,
+          "mtime_ns": 1784855954738242214,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/bitmex/funding/funding.parquet",
+          "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 295554,
+          "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+          "file_sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 32768,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 295554,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:17:52.066584+00:00",
+        "event_start": "2020-01-01T00:00:00+00:00",
+        "manifest_sha256": "6083d41c906f6bf4278b48a0cc6cd376a0c3c3bdc334fa94f42385eec8083ebb",
+        "manifest_uri": "datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":32768,\"symbols\":[\"XBTUSD\",\"ETHUSD\",\"XRPUSD\",\"ADAUSDT\",\"SOLUSDT\"]}",
+        "row_count": 32768,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+      "manifest_created_at": "1970-01-01T00:00:00+00:00",
+      "manifest_file_sha256": "9020c0faa95199d31d71c523f0fd86451088ce83dcb13a200cd86e74df6c1d1a",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "6083d41c906f6bf4278b48a0cc6cd376a0c3c3bdc334fa94f42385eec8083ebb",
+      "parquet": {
+        "byte_size": 295554,
+        "empty_interval_count": 32768,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/bitmex/funding/funding.parquet",
+        "row_count": 32768,
+        "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+        "symbol_count": 5
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1293,
+          "ctime_ns": 1784856702874766067,
+          "device": 64513,
+          "inode": 19563197,
+          "mode": 33152,
+          "mtime_ns": 1784856702874766067,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/manifest.json",
+          "sha256": "0bd3c6d4bfc52642a05764b0b2b32b932bfe9b5e46379f5d9e4f0fdbdc32bc91"
+        },
+        {
+          "byte_size": 295554,
+          "ctime_ns": 1784856702872757731,
+          "device": 64513,
+          "inode": 19563196,
+          "mode": 33188,
+          "mtime_ns": 1784856702872757731,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/bitmex/funding/funding.parquet",
+          "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 295554,
+          "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+          "file_sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 32768,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 295554,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-07-24T01:32:06.704813+00:00",
+        "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:30:21.083309+00:00",
+        "event_start": "2020-01-01T00:00:00+00:00",
+        "manifest_sha256": "0e340f3e18f48bd93ccb3d8b00e17fe7883c677350a95c7dec677a08c1f274e6",
+        "manifest_uri": "datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":32768,\"symbols\":[\"XBTUSD\",\"ETHUSD\",\"XRPUSD\",\"ADAUSDT\",\"SOLUSDT\"]}",
+        "row_count": 32768,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+      "manifest_created_at": "2026-07-24T01:31:42.871560+00:00",
+      "manifest_file_sha256": "0bd3c6d4bfc52642a05764b0b2b32b932bfe9b5e46379f5d9e4f0fdbdc32bc91",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "0e340f3e18f48bd93ccb3d8b00e17fe7883c677350a95c7dec677a08c1f274e6",
+      "parquet": {
+        "byte_size": 295554,
+        "empty_interval_count": 32768,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/bitmex/funding/funding.parquet",
+        "row_count": 32768,
+        "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+        "symbol_count": 5
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1293,
+          "ctime_ns": 1784857875160350252,
+          "device": 64513,
+          "inode": 19563243,
+          "mode": 33152,
+          "mtime_ns": 1784857875159926724,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/manifest.json",
+          "sha256": "d434c8219ae382bb9f35164ebe3a05c76db845e5d0777a1ac8d1d02e7bf4fd92"
+        },
+        {
+          "byte_size": 409230,
+          "ctime_ns": 1784857875157942379,
+          "device": 64513,
+          "inode": 19563242,
+          "mode": 33188,
+          "mtime_ns": 1784857875157942379,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/bitmex/funding/funding.parquet",
+          "sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 409230,
+          "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+          "file_sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 38256,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 409230,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-07-24T01:51:15.156657+00:00",
+        "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:49:39.177850+00:00",
+        "event_start": "2016-05-14T00:00:00+00:00",
+        "manifest_sha256": "e7b64fc0312f6e2dea118bb3699734e85ce590ab519390cf5d1867edea7947e1",
+        "manifest_uri": "datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":38256,\"symbols\":[\"XBTUSD\",\"ETHUSD\",\"XRPUSD\",\"ADAUSDT\",\"SOLUSDT\"]}",
+        "row_count": 38256,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "manifest_created_at": "2026-07-24T01:51:15.156657+00:00",
+      "manifest_file_sha256": "d434c8219ae382bb9f35164ebe3a05c76db845e5d0777a1ac8d1d02e7bf4fd92",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "e7b64fc0312f6e2dea118bb3699734e85ce590ab519390cf5d1867edea7947e1",
+      "parquet": {
+        "byte_size": 409230,
+        "empty_interval_count": 38256,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/bitmex/funding/funding.parquet",
+        "row_count": 38256,
+        "sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e",
+        "symbol_count": 5
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1772,
+          "ctime_ns": 1784865641837200228,
+          "device": 64513,
+          "inode": 19662892,
+          "mode": 33152,
+          "mtime_ns": 1784865641837114044,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/manifest.json",
+          "sha256": "389a192f0d0c64d8403801946506c8f5841c37985cd9bef2c2e9e99b5f558bda"
+        },
+        {
+          "byte_size": 1187191,
+          "ctime_ns": 1784865641832090836,
+          "device": 64513,
+          "inode": 19662891,
+          "mode": 33188,
+          "mtime_ns": 1784865641832090836,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/bitmex/funding_full/funding.parquet",
+          "sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 1187191,
+          "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+          "file_sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215",
+          "partition_json": "{\"kind\":\"funding_full\",\"source\":\"bitmex\"}",
+          "row_count": 189570,
+          "storage_uri": "bitmex/funding_full/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 1187191,
+        "code_commit": "DATA-009",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-07-24T04:00:41.830213+00:00",
+        "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+        "dataset_type": "bitmex_funding_full",
+        "event_end": "2026-07-23T20:00:00+00:00",
+        "event_start": "2016-05-14T12:00:00+00:00",
+        "manifest_sha256": "a6427c8277f951a120984a654254e91d6e704b129aedf2bda8ee080a6cb4a39e",
+        "manifest_uri": "datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"rate_limit_incidents\":0,\"record_count\":189570,\"symbol_count\":45,\"symbols_backfilled\":[\"AAVEUSDT\",\"ADAUSD\",\"ADAUSDT\",\"APEUSDT\",\"ARBUSDT\",\"AVAXUSDT\",\"BCHUSD\",\"BCHUSDT\",\"BNBUSD\",\"BNBUSDT\",\"CRVUSDT\",\"DOGEUSD\",\"DOGEUSDT\",\"DOTUSDT\",\"ETHUSD\",\"ETHUSDT\",\"FILUSDT\",\"GRAMUSDT\",\"HYPEUSDT\",\"LINKUSD\",\"LINKUSDT\",\"LOTUSDT\",\"LTCUSD\",\"LTCUSDT\",\"NEARUSDT\",\"OPNUSDT\",\"PEPEUSD\",\"PEPEUSDT\",\"SEIUSDT\",\"SHIBUSDT\",\"SOLUSD\",\"SOLUSDT\",\"SUIUSDT\",\"UNIUSDT\",\"WLDUSD\",\"WLDUSDT\",\"XAUTUSDT\",\"XBTETH\",\"XBTEUR\",\"XBTUSD\",\"XBTUSDT\",\"XMRUSDT\",\"XRPUSD\",\"XRPUSDT\",\"ZECUSDT\"]}",
+        "row_count": 189570,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_full_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+      "manifest_created_at": "2026-07-24T04:00:41.830213+00:00",
+      "manifest_file_sha256": "389a192f0d0c64d8403801946506c8f5841c37985cd9bef2c2e9e99b5f558bda",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "a6427c8277f951a120984a654254e91d6e704b129aedf2bda8ee080a6cb4a39e",
+      "parquet": {
+        "byte_size": 1187191,
+        "empty_interval_count": 189570,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/bitmex/funding_full/funding.parquet",
+        "row_count": 189570,
+        "sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215",
+        "symbol_count": 45
+      }
+    }
+  ],
+  "inspections_pre": [
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1250,
+          "ctime_ns": 1784855300526275538,
+          "device": 64513,
+          "inode": 19561077,
+          "mode": 33152,
+          "mtime_ns": 1784855300526275538,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/manifest.json",
+          "sha256": "c26ec01f0fccae79da1b130d75803070bc1efe585b0a4bfe1e73be96aa1f24cc"
+        },
+        {
+          "byte_size": 205097,
+          "ctime_ns": 1784855300524350443,
+          "device": 64513,
+          "inode": 19561076,
+          "mode": 33188,
+          "mtime_ns": 1784855300524350443,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/bitmex/funding/funding.parquet",
+          "sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 205097,
+          "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+          "file_sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 14376,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 205097,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:07:43.024566+00:00",
+        "event_start": "2020-01-01T00:00:00+00:00",
+        "manifest_sha256": "7d43319236fc73f87bcbbcac19c2ec5028a70e5faed252ae9397ec83d1ca39f4",
+        "manifest_uri": "datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":14376,\"symbols\":[\"XBTUSD\",\"ETHUSD\"]}",
+        "row_count": 14376,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+      "manifest_created_at": "1970-01-01T00:00:00+00:00",
+      "manifest_file_sha256": "c26ec01f0fccae79da1b130d75803070bc1efe585b0a4bfe1e73be96aa1f24cc",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "7d43319236fc73f87bcbbcac19c2ec5028a70e5faed252ae9397ec83d1ca39f4",
+      "parquet": {
+        "byte_size": 205097,
+        "empty_interval_count": 14376,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/4f/82/ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933/bitmex/funding/funding.parquet",
+        "row_count": 14376,
+        "sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2",
+        "symbol_count": 2
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1279,
+          "ctime_ns": 1784855954740403130,
+          "device": 64513,
+          "inode": 19562472,
+          "mode": 33152,
+          "mtime_ns": 1784855954740403130,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/manifest.json",
+          "sha256": "9020c0faa95199d31d71c523f0fd86451088ce83dcb13a200cd86e74df6c1d1a"
+        },
+        {
+          "byte_size": 295554,
+          "ctime_ns": 1784855954738242214,
+          "device": 64513,
+          "inode": 19562471,
+          "mode": 33188,
+          "mtime_ns": 1784855954738242214,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/bitmex/funding/funding.parquet",
+          "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 295554,
+          "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+          "file_sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 32768,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 295554,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:17:52.066584+00:00",
+        "event_start": "2020-01-01T00:00:00+00:00",
+        "manifest_sha256": "6083d41c906f6bf4278b48a0cc6cd376a0c3c3bdc334fa94f42385eec8083ebb",
+        "manifest_uri": "datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":32768,\"symbols\":[\"XBTUSD\",\"ETHUSD\",\"XRPUSD\",\"ADAUSDT\",\"SOLUSDT\"]}",
+        "row_count": 32768,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+      "manifest_created_at": "1970-01-01T00:00:00+00:00",
+      "manifest_file_sha256": "9020c0faa95199d31d71c523f0fd86451088ce83dcb13a200cd86e74df6c1d1a",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "6083d41c906f6bf4278b48a0cc6cd376a0c3c3bdc334fa94f42385eec8083ebb",
+      "parquet": {
+        "byte_size": 295554,
+        "empty_interval_count": 32768,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/f6/1c/ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb/bitmex/funding/funding.parquet",
+        "row_count": 32768,
+        "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+        "symbol_count": 5
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1293,
+          "ctime_ns": 1784856702874766067,
+          "device": 64513,
+          "inode": 19563197,
+          "mode": 33152,
+          "mtime_ns": 1784856702874766067,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/manifest.json",
+          "sha256": "0bd3c6d4bfc52642a05764b0b2b32b932bfe9b5e46379f5d9e4f0fdbdc32bc91"
+        },
+        {
+          "byte_size": 295554,
+          "ctime_ns": 1784856702872757731,
+          "device": 64513,
+          "inode": 19563196,
+          "mode": 33188,
+          "mtime_ns": 1784856702872757731,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/bitmex/funding/funding.parquet",
+          "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 295554,
+          "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+          "file_sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 32768,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 295554,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-07-24T01:32:06.704813+00:00",
+        "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:30:21.083309+00:00",
+        "event_start": "2020-01-01T00:00:00+00:00",
+        "manifest_sha256": "0e340f3e18f48bd93ccb3d8b00e17fe7883c677350a95c7dec677a08c1f274e6",
+        "manifest_uri": "datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":32768,\"symbols\":[\"XBTUSD\",\"ETHUSD\",\"XRPUSD\",\"ADAUSDT\",\"SOLUSDT\"]}",
+        "row_count": 32768,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+      "manifest_created_at": "2026-07-24T01:31:42.871560+00:00",
+      "manifest_file_sha256": "0bd3c6d4bfc52642a05764b0b2b32b932bfe9b5e46379f5d9e4f0fdbdc32bc91",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "0e340f3e18f48bd93ccb3d8b00e17fe7883c677350a95c7dec677a08c1f274e6",
+      "parquet": {
+        "byte_size": 295554,
+        "empty_interval_count": 32768,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/11/b6/ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea/bitmex/funding/funding.parquet",
+        "row_count": 32768,
+        "sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+        "symbol_count": 5
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1293,
+          "ctime_ns": 1784857875160350252,
+          "device": 64513,
+          "inode": 19563243,
+          "mode": 33152,
+          "mtime_ns": 1784857875159926724,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/manifest.json",
+          "sha256": "d434c8219ae382bb9f35164ebe3a05c76db845e5d0777a1ac8d1d02e7bf4fd92"
+        },
+        {
+          "byte_size": 409230,
+          "ctime_ns": 1784857875157942379,
+          "device": 64513,
+          "inode": 19563242,
+          "mode": 33188,
+          "mtime_ns": 1784857875157942379,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/bitmex/funding/funding.parquet",
+          "sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 409230,
+          "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+          "file_sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e",
+          "partition_json": "{\"kind\":\"funding\",\"source\":\"bitmex\"}",
+          "row_count": 38256,
+          "storage_uri": "bitmex/funding/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 409230,
+        "code_commit": "DATA-006",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-07-24T01:51:15.156657+00:00",
+        "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+        "dataset_type": "bitmex_funding",
+        "event_end": "2026-07-24T01:49:39.177850+00:00",
+        "event_start": "2016-05-14T00:00:00+00:00",
+        "manifest_sha256": "e7b64fc0312f6e2dea118bb3699734e85ce590ab519390cf5d1867edea7947e1",
+        "manifest_uri": "datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"record_count\":38256,\"symbols\":[\"XBTUSD\",\"ETHUSD\",\"XRPUSD\",\"ADAUSDT\",\"SOLUSDT\"]}",
+        "row_count": 38256,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "manifest_created_at": "2026-07-24T01:51:15.156657+00:00",
+      "manifest_file_sha256": "d434c8219ae382bb9f35164ebe3a05c76db845e5d0777a1ac8d1d02e7bf4fd92",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "e7b64fc0312f6e2dea118bb3699734e85ce590ab519390cf5d1867edea7947e1",
+      "parquet": {
+        "byte_size": 409230,
+        "empty_interval_count": 38256,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ab/70/ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512/bitmex/funding/funding.parquet",
+        "row_count": 38256,
+        "sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e",
+        "symbol_count": 5
+      }
+    },
+    {
+      "already_quarantined": false,
+      "artifacts": [
+        {
+          "byte_size": 1772,
+          "ctime_ns": 1784865641837200228,
+          "device": 64513,
+          "inode": 19662892,
+          "mode": 33152,
+          "mtime_ns": 1784865641837114044,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/manifest.json",
+          "sha256": "389a192f0d0c64d8403801946506c8f5841c37985cd9bef2c2e9e99b5f558bda"
+        },
+        {
+          "byte_size": 1187191,
+          "ctime_ns": 1784865641832090836,
+          "device": 64513,
+          "inode": 19662891,
+          "mode": 33188,
+          "mtime_ns": 1784865641832090836,
+          "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/bitmex/funding_full/funding.parquet",
+          "sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215"
+        }
+      ],
+      "catalog_files": [
+        {
+          "byte_size": 1187191,
+          "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+          "file_sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215",
+          "partition_json": "{\"kind\":\"funding_full\",\"source\":\"bitmex\"}",
+          "row_count": 189570,
+          "storage_uri": "bitmex/funding_full/funding.parquet"
+        }
+      ],
+      "catalog_row": {
+        "availability_end": null,
+        "availability_start": null,
+        "byte_size": 1187191,
+        "code_commit": "DATA-009",
+        "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-07-24T04:00:41.830213+00:00",
+        "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+        "dataset_type": "bitmex_funding_full",
+        "event_end": "2026-07-23T20:00:00+00:00",
+        "event_start": "2016-05-14T12:00:00+00:00",
+        "manifest_sha256": "a6427c8277f951a120984a654254e91d6e704b129aedf2bda8ee080a6cb4a39e",
+        "manifest_uri": "datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/manifest.json",
+        "publication_status": "REGISTERED",
+        "publication_uri": "datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+        "quality_status": "PASS",
+        "quality_summary_json": "{\"rate_limit_incidents\":0,\"record_count\":189570,\"symbol_count\":45,\"symbols_backfilled\":[\"AAVEUSDT\",\"ADAUSD\",\"ADAUSDT\",\"APEUSDT\",\"ARBUSDT\",\"AVAXUSDT\",\"BCHUSD\",\"BCHUSDT\",\"BNBUSD\",\"BNBUSDT\",\"CRVUSDT\",\"DOGEUSD\",\"DOGEUSDT\",\"DOTUSDT\",\"ETHUSD\",\"ETHUSDT\",\"FILUSDT\",\"GRAMUSDT\",\"HYPEUSDT\",\"LINKUSD\",\"LINKUSDT\",\"LOTUSDT\",\"LTCUSD\",\"LTCUSDT\",\"NEARUSDT\",\"OPNUSDT\",\"PEPEUSD\",\"PEPEUSDT\",\"SEIUSDT\",\"SHIBUSDT\",\"SOLUSD\",\"SOLUSDT\",\"SUIUSDT\",\"UNIUSDT\",\"WLDUSD\",\"WLDUSDT\",\"XAUTUSDT\",\"XBTETH\",\"XBTEUR\",\"XBTUSD\",\"XBTUSDT\",\"XMRUSDT\",\"XRPUSD\",\"XRPUSDT\",\"ZECUSDT\"]}",
+        "row_count": 189570,
+        "schema_fingerprint": "fund_v1",
+        "schema_version": "1",
+        "supersedes_dataset_id": null,
+        "transform_name": "bitmex_funding_full_backfill",
+        "transform_version": "1"
+      },
+      "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+      "manifest_created_at": "2026-07-24T04:00:41.830213+00:00",
+      "manifest_file_sha256": "389a192f0d0c64d8403801946506c8f5841c37985cd9bef2c2e9e99b5f558bda",
+      "manifest_quality_status": "PASS",
+      "manifest_sha256": "a6427c8277f951a120984a654254e91d6e704b129aedf2bda8ee080a6cb4a39e",
+      "parquet": {
+        "byte_size": 1187191,
+        "empty_interval_count": 189570,
+        "nonzero_rate_count": 0,
+        "null_rate_count": 0,
+        "path": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store/datasets/sha256/ee/8e/ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8/bitmex/funding_full/funding.parquet",
+        "row_count": 189570,
+        "sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215",
+        "symbol_count": 45
+      }
+    }
+  ],
+  "post_resolver": {
+    "eligible_targets": [
+      "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+      "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+      "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+      "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8"
+    ],
+    "latest": {
+      "bitmex_funding": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "bitmex_funding_full": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8"
+    }
+  },
+  "pre_resolver": {
+    "eligible_targets": [
+      "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+      "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+      "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+      "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8"
+    ],
+    "latest": {
+      "bitmex_funding": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "bitmex_funding_full": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8"
+    }
+  },
+  "reason": "all-zero funding_rate and empty funding_interval; false PASS authority",
+  "store_root": "/home/lars/Crypto_Multifactor_Bot/data/exp003_store",
+  "targets": [
+    {
+      "catalog_created_at": "1970-01-01T00:00:00+00:00",
+      "dataset_id": "ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933",
+      "dataset_type": "bitmex_funding",
+      "expected_byte_size": 205097,
+      "expected_rows": 14376,
+      "expected_symbols": 2,
+      "file_sha256": "0213d0b070b02c3a4db02f7028a21938b48237a806731ed4ba03166833b055e2",
+      "manifest_file_sha256": "c26ec01f0fccae79da1b130d75803070bc1efe585b0a4bfe1e73be96aa1f24cc",
+      "manifest_sha256": "7d43319236fc73f87bcbbcac19c2ec5028a70e5faed252ae9397ec83d1ca39f4",
+      "relative_path": "bitmex/funding/funding.parquet"
+    },
+    {
+      "catalog_created_at": "1970-01-01T00:00:00+00:00",
+      "dataset_id": "ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb",
+      "dataset_type": "bitmex_funding",
+      "expected_byte_size": 295554,
+      "expected_rows": 32768,
+      "expected_symbols": 5,
+      "file_sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+      "manifest_file_sha256": "9020c0faa95199d31d71c523f0fd86451088ce83dcb13a200cd86e74df6c1d1a",
+      "manifest_sha256": "6083d41c906f6bf4278b48a0cc6cd376a0c3c3bdc334fa94f42385eec8083ebb",
+      "relative_path": "bitmex/funding/funding.parquet"
+    },
+    {
+      "catalog_created_at": "2026-07-24T01:32:06.704813+00:00",
+      "dataset_id": "ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea",
+      "dataset_type": "bitmex_funding",
+      "expected_byte_size": 295554,
+      "expected_rows": 32768,
+      "expected_symbols": 5,
+      "file_sha256": "8246d1eb5c77f242bc01178c29aa2fa4e9b2a62ea6d4f15192b82735e42a9c3f",
+      "manifest_file_sha256": "0bd3c6d4bfc52642a05764b0b2b32b932bfe9b5e46379f5d9e4f0fdbdc32bc91",
+      "manifest_sha256": "0e340f3e18f48bd93ccb3d8b00e17fe7883c677350a95c7dec677a08c1f274e6",
+      "relative_path": "bitmex/funding/funding.parquet"
+    },
+    {
+      "catalog_created_at": "2026-07-24T01:51:15.156657+00:00",
+      "dataset_id": "ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512",
+      "dataset_type": "bitmex_funding",
+      "expected_byte_size": 409230,
+      "expected_rows": 38256,
+      "expected_symbols": 5,
+      "file_sha256": "658ef0f1b5409aaf075ce40f385195712967bb0d369dfdf6a02785525436771e",
+      "manifest_file_sha256": "d434c8219ae382bb9f35164ebe3a05c76db845e5d0777a1ac8d1d02e7bf4fd92",
+      "manifest_sha256": "e7b64fc0312f6e2dea118bb3699734e85ce590ab519390cf5d1867edea7947e1",
+      "relative_path": "bitmex/funding/funding.parquet"
+    },
+    {
+      "catalog_created_at": "2026-07-24T04:00:41.830213+00:00",
+      "dataset_id": "ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8",
+      "dataset_type": "bitmex_funding_full",
+      "expected_byte_size": 1187191,
+      "expected_rows": 189570,
+      "expected_symbols": 45,
+      "file_sha256": "2ef8257c9724ca1949344175276c11b8f7764fd37eedfa866d5a47cf012fd215",
+      "manifest_file_sha256": "389a192f0d0c64d8403801946506c8f5841c37985cd9bef2c2e9e99b5f558bda",
+      "manifest_sha256": "a6427c8277f951a120984a654254e91d6e704b129aedf2bda8ee080a6cb4a39e",
+      "relative_path": "bitmex/funding_full/funding.parquet"
+    }
+  ],
+  "ticket": "CEX-002"
+}

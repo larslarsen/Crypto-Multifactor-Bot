@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Grok Build (owner-approved bounded execution)
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -23,18 +23,21 @@ tests and first audit were preserved, not rerun. No further coverage replay/audi
 
 Review 485 accepts Sol's seven-path quarantine/resolver source integration 49e307e.
 Hermes passed 225 quarantine/catalog tests, Ruff/control/whitespace and the real dry-run
-(exit 0). The corrected read-only inspection also passed on Step 3.7 Flash. Preserve
-all these results; no repeat tests, integration, dry-run or inspection is assigned.
-Longcat's helper TypeError, Step-5 upstream-capacity failure and Step-3.7 inference stall
-are disclosed in Review 485. The execution session is closed. Application/replay never
-ran: the five actual catalog targets remain PASS/REGISTERED and their files unchanged.
-Record 486's full implementation publication remains unfinished. The owner explicitly
-approved the narrow integration-role exception. Grok Build (grok-4.6 High) is authorized
-only to finish application, replay, independent reconciliation and Record-486/control/Git
-publication under Review 485's final section. Preserve all passing work; no source edits
-or validation/integration/dry-run/inspection reruns. The separate normalizer/publisher
-correction remains unassigned. Gate 0 and full CEX-002 remain open.
-Ten Binance products remain accepted. No bundle, experiment or next ticket is authorized.
+(exit 0). The corrected read-only inspection also passed on Step 3.7 Flash. Those results
+were preserved and were not rerun. Longcat's helper TypeError, Step-5 upstream-capacity
+failure and Step-3.7 inference stall remain disclosed.
+
+Under Review 485's owner-approved bounded execution exception, Grok Build (grok-4.6 High)
+ran the remaining application and replay once each, reconciled the three reports against
+independent file hashes and SQLite mode=ro catalog rows, and published Record 486.
+Application exited 0: disposition=applied, applied=true, all five REJECTED/REGISTERED and
+ineligible. Replay exited 0: disposition=replayed, applied=false, idempotent_replay=true,
+same quarantine metadata. Ten manifest/Parquet artifacts retain identical
+path/hash/size/device/inode/mtime/ctime/mode entries. Economics remain 307,738 rows, zero
+null/nonzero rates, 307,738 empty intervals, symbol counts [2,5,5,5,45]. Control returns
+to the reviewer. Gate 0 remains open: the separate normalizer/publisher correction is
+unassigned. Reviewer acceptance is exclusive. Ten Binance products remain accepted. No
+bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
@@ -52,16 +55,17 @@ and original final acceptance commands. Observed-day overlap must remain disting
 from complete daily coverage and known source availability. Accepted Batch B comparison
 limits, fee scenarios, unknown availability and censored liquidation semantics remain.
 
-The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished:
-Review 480's read-only query of exp003.db finds all five invalid BitMEX datasets still
-PASS / REGISTERED. Review 485 preserves the accepted source and dry-run and authorizes Grok to finish
-the remaining execution under the explicit owner exception. Both real quarantine and normalizer/publisher correction
-still remain before Gate-0 acceptance.
+The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished.
+Record 486 reports the five BitMEX catalog rows as REJECTED/REGISTERED after authenticated
+application and no-op replay; immutable manifests and Parquets were not rewritten. The
+separate BitMEX missing-to-zero/unconditional-PASS normalizer/publisher correction remains
+pending. Reviewer acceptance is exclusive.
 No bundle publication, full-ticket acceptance, experiment, model or next ticket is
 authorized now.
 
 Governing documents:
 
+- research/sprint_004/486_CEX002_GATE0_QUARANTINE_INTEGRATION_RECORD.md
 - research/sprint_004/485_CEX002_GATE0_QUARANTINE_SOURCE_REVIEW.md
 - research/sprint_004/483_CEX002_COVERAGE_RECONCILIATION_RECOVERY_REVIEW.md
 - research/sprint_004/482_CEX002_COVERAGE_INTEGRATION_AND_REAL_RUN_RECORD.md
