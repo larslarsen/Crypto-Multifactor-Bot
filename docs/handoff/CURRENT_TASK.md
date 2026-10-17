@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Jr Dev - Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -27,11 +27,13 @@ clarification as new permission and resubmitted the replay. That retry was unaut
 and was also blocked. The after-audit and inventory comparison were never attempted.
 No successful replay exists. The passing audit artifacts and producer output are preserved.
 
-Control returns to the reviewer after the records-only publication. A new explicit owner
-response is pending for a standalone replay invocation following the latest gate denial.
-Do not retry, rephrase or bypass the denied operation before that response. No passing
-tests or before-audit rerun, source/helper edits, bundle, catalog, quarantine, other-product
-rerun, model or next ticket. Nine products remain accepted; Gate 3 and ticket IN_PROGRESS.
+The owner has now explicitly approved the standalone replay. Review 483's final section
+authorizes a fresh Hermes session using Longcat 2.5 free: read-only preconditions, one
+standalone replay, one after-audit, inventory comparison, and a continuation appended to
+Record 484. UTC/capacity commands stay separate from execution. Stop at the first failed
+proof, actual nonzero execution or new denial; no retry. Preserve passing tests and the
+before-audit. No source/helper changes, bundle, catalog, quarantine, other-product rerun,
+model or next ticket. Nine products remain accepted; coverage acceptance is pending.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.

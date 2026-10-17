@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** Record 484 terminal disclosure accepted; resumed replay denied before execution; coverage acceptance withheld
+- **Decision:** owner approved standalone replay; bounded Hermes execution authorized; coverage acceptance withheld
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
+- **Next required actor:** Jr Dev - Hermes
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -719,3 +719,84 @@ GPT-6.1 Sol High remains the owner's developer preference; its accepted source n
 new development assignment on present evidence. Nine products remain accepted; Gate 2
 ACCEPTED, Gate 3/CEX-002 IN_PROGRESS, next ticket NONE. Control remains with the reviewer.
 This disposition is a reviewer-owned Review 483-only governance publication.
+
+
+## Standalone replay authorization after the latest owner yes
+
+The owner explicitly answered **yes** to the standalone replay request after the terminal
+review above. This authorizes the replay and dependent after-audit/comparison and evidence
+publication despite the preceding stop. Prior denials and violations remain disclosed.
+Select Jr Dev - Hermes in a fresh interactive session using
+`meituan/longcat-2.5-preview:free`, no reasoning override. The live Nous recommended-models
+endpoint still lists it at $0.00/1M. This rotates away from Laguna's repeated stop-rule and
+record errors. Longcat's prior producer execution and the earlier Longcat-family accepted
+cost execution support command-only scope, not helper authorship; its own earlier helper
+failure/retry means no discretion to edit source, invent helpers or retry is granted.
+No senior source assignment is reopened. GPT-6.1 Sol High remains the developer preference.
+
+Use the exact commands below from `/home/lars/Crypto_Multifactor_Bot`. Do not wrap the
+producer/checker in shell timing, echo, Python -c, redirection, pipelines or compound
+commands. Set terminal timeout=43200 and remain attached to each long execution until its
+actual exit. The caller provides TERMINAL_MAX_FOREGROUND_TIMEOUT=43200. Approval rules stay
+unchanged; interactive Allow once is permitted only for the exact authorized action.
+At the first failed proof, actual nonzero execution or new denial: stop runs, preserve
+outputs and publish the terminal record. A queued pre-denial message is not new permission.
+
+### Preconditions (read-only, no passing work repeated)
+
+Verify HEAD equals remote main and the index is empty. Reauthenticate the five source
+hashes and the two preserved before-artifacts against Record 484 section 3. Verify the
+coverage completion SHA-256 remains
+`9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
+Inspect actual Python processes using `ps -C python -C python3 -o pid,ppid,comm,args`; no
+coverage producer/checker may already be active. Require the two after-artifact paths
+below absent (use `test ! -e PATH` for each). Do not rerun tests, Ruff or the before-audit.
+For capacity use standalone `stat -f -c '%a %S' data`, recording available blocks and
+fundamental block size and their product; this is the statvfs-equivalent available-byte
+measurement. Require at least 110,648,021,942 available bytes. For UTC use standalone
+`date -u +%Y-%m-%dT%H:%M:%S.%NZ` before and after each long command. Do not combine these
+observations with producer/checker execution. No Python -c helper is needed.
+
+### Execute exactly once, in order after successful preconditions
+
+1. Standalone replay:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/research/normalize_binance_usdm_coverage.py --report research/sprint_004/62_CEX002_GATE1_SOURCE_PROCUREMENT.json --sizing research/sprint_004/258_CEX002_GATE2_STORAGE_SIZING_V3.json --holdout data/cex002_qualify/cex002_holdout_boundary.json --membership-root data/.cex002_perpetual_membership --bar-root data/.cex002_bar_1h --trade-flow-root data/.cex002_trade_flow_1h --open-interest-root data/.cex002_open_interest_5m --funding-realized-root data/.cex002_funding_realized --price-state-root data/.cex002_price_state --liquidation-root data/.cex002_liquidation_observed_daily --cost-root data/.cex002_cost_calibration --output-root data/.cex002_coverage
+```
+
+Require actual exit 0, `completion_reused=true`, and unchanged completion SHA-256 above.
+Only then proceed to the after-audit. Record actual duration and separate capacity/UTC.
+
+2. Standalone after-audit (preserved before-artifacts stay untouched):
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/research/reconcile_binance_usdm_coverage.py --repo-root /home/lars/Crypto_Multifactor_Bot --output-root /home/lars/Crypto_Multifactor_Bot/data/.cex002_coverage --result-path /tmp/cex002_hermes484_after.result.json --inventory-path /tmp/cex002_hermes484_after.inventory.jsonl
+```
+
+Require actual exit 0 and PASS. Then separately:
+
+```bash
+cmp /tmp/cex002_hermes484_before.inventory.jsonl /tmp/cex002_hermes484_after.inventory.jsonl
+```
+
+Require exit 0; hash both result/inventory pairs and reprove completion identity. Read the
+actual result JSON for measured facts, capacity and checker timestamps. No independent
+helper, full-tree duplicate audit or accepted-cost market-value scan is assigned.
+
+### Terminal publication
+
+Append a clearly dated continuation to Record 484; preserve its prior terminal history.
+Record model/session, exact standalone commands and actual exits, UTC/duration/capacity,
+completion reuse and identity, result/inventory hashes, `cmp` result, measured totals,
+and missing steps on failure. Distinguish observed days (428,090 in before-result) from
+full-cadence days with event presence (424,431). Do not claim acceptance or invent evidence.
+Update only current action/actor/checklist fields in CURRENT_TASK and CEX-002, returning
+both actors to reviewer. Nine accepted products, Gate 2 ACCEPTED, Gate 3/ticket IN_PROGRESS,
+next NONE. Run repository-control and whitespace checks separately. Stage exactly
+`research/sprint_004/484_CEX002_COVERAGE_RECONCILIATION_AND_REPLAY_RECORD.md`,
+`docs/handoff/CURRENT_TASK.md`, `tickets/CEX-002.md`; inspect staged paths, staged whitespace,
+commit, push, prove HEAD equals remote main and stop. No source/test/data repair, deletion,
+new helper, acquisition, quarantine, catalog, bundle, other product or next ticket.
+Reviewer publication of this authorization is limited to Review 483, CURRENT_TASK and
+current ticket fields under the standing governance exception.
