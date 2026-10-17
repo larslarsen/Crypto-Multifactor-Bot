@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -14,25 +14,24 @@ Gate 3 and CEX-002 remain IN_PROGRESS.
 
 ## Current action
 
-The original coverage producer run succeeded. Record 482 preserves two failed helper
-audits and an unauthorized retry; Review 483 preserves subsequent rejected/helper
-preparation attempts. Those failures led to the independent checker below. The first
-passing real reconciliation now exists; successful replay remains outstanding.
+Coverage acceptance remains pending. GPT-6.1 Sol High's checker/test source is accepted
+and integrated at `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`. Hermes's 71 final-byte tests,
+Ruff, repository-control and whitespace checks passed. The first real independent audit
+passed, measuring 107,590 files and 543,901,501 bytes. Those results were not rerun in this
+continuation; all five source hashes and both before-artifact hashes were reauthenticated.
 
-Review 483 accepts GPT-6.1 Sol High's independent checker/test source. Hermes validated
-the final files (71 cases, Ruff, repository control and whitespace all pass), integrated
-and pushed `867c47a4d26b4c4e49bae13450a0ce8103ef2f69`, and executed the first real checker
-once: exit 0 PASS. The before-result and complete inventory are preserved in `/tmp` at
-Review 483's pinned hashes. Source and reconciliation success do not complete acceptance.
+Record 484 preserves the terminal outcome: three replay submissions and one evidence
+inspection were blocked before execution across the original session and continuation.
+After the first resumed denial Hermes incorrectly treated a previously queued reviewer
+clarification as new permission and resubmitted the replay. That retry was unauthorized
+and was also blocked. The after-audit and inventory comparison were never attempted.
+No successful replay exists. The passing audit artifacts and producer output are preserved.
 
-Hermes's internal approval gate timed out and denied replay and follow-up inspection
-before execution. The owner has now explicitly authorized continuation. Resume the existing
-Hermes session in interactive mode under Review 483's final continuation: reauthenticate
-preserved inputs/evidence, run one replay, one after-audit and inventory comparison, and
-publish terminal Record 484. Preserve the passing tests and before-audit; do not rerun them.
-No replay, after-audit, comparison or Record 484 publication has occurred yet. No source
-edits, new helpers, bundle, catalog, quarantine, other-product rerun, trading model or next
-ticket. Nine products remain accepted; coverage acceptance remains pending.
+Control returns to the reviewer after the records-only publication. A new explicit owner
+response is pending for a standalone replay invocation following the latest gate denial.
+Do not retry, rephrase or bypass the denied operation before that response. No passing
+tests or before-audit rerun, source/helper edits, bundle, catalog, quarantine, other-product
+rerun, model or next ticket. Nine products remain accepted; Gate 3 and ticket IN_PROGRESS.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
@@ -61,6 +60,7 @@ Governing documents:
 
 - research/sprint_004/483_CEX002_COVERAGE_RECONCILIATION_RECOVERY_REVIEW.md
 - research/sprint_004/482_CEX002_COVERAGE_INTEGRATION_AND_REAL_RUN_RECORD.md
+- research/sprint_004/484_CEX002_COVERAGE_RECONCILIATION_AND_REPLAY_RECORD.md
 - research/sprint_004/481_CEX002_COVERAGE_CORRECTION_REVIEW.md
 - research/sprint_004/480_CEX002_COST_ACCEPTANCE_AND_COVERAGE_SOURCE_AUTHORIZATION.md
 - research/sprint_004/478_CEX002_COST_CALIBRATION_SOURCE_AUTHORIZATION.md
