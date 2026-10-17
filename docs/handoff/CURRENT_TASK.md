@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Grok Build (grok-4.6 High)
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -36,7 +36,9 @@ same quarantine metadata. Ten manifest/Parquet artifacts retain identical
 path/hash/size/device/inode/mtime/ctime/mode entries. Economics remain 307,738 rows, zero
 null/nonzero rates, 307,738 empty intervals, symbol counts [2,5,5,5,45]. Control returns
 to the reviewer. Independent reviewer catalog/file/source reconciliation passed. Gate 0
-remains open: the separate normalizer/publisher correction is unassigned. Ten Binance products remain accepted. No
+remains open. Review 487 assigns Grok 4.6 High the bounded six-path normalizer/publisher
+source correction and one targeted test command. No integration or real acquisition is
+authorized. Ten Binance products remain accepted. No
 bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:
@@ -65,6 +67,7 @@ authorized now.
 
 Governing documents:
 
+- research/sprint_004/487_CEX002_BITMEX_NORMALIZER_SOURCE_REVIEW.md
 - research/sprint_004/486_CEX002_GATE0_QUARANTINE_INTEGRATION_RECORD.md
 - research/sprint_004/485_CEX002_GATE0_QUARANTINE_SOURCE_REVIEW.md
 - research/sprint_004/483_CEX002_COVERAGE_RECONCILIATION_RECOVERY_REVIEW.md
