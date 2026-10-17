@@ -150,3 +150,13 @@ the same owner-authorized Grok Build allowance and source-only role. Exactly one
 is active. No integration exception transfers. The single targeted test remains unexecuted
 and authorized once after the source drop is ready. Implement incrementally; do not repeat
 the completed discovery or plan. All original scope and stop rules remain.
+
+## Owner correction: continue Grok through completion
+
+The owner rejected the reviewer's premature conclusion that Grok would not produce source.
+The reviewer acknowledges interrupting inference too early; elapsed planning time alone did
+not establish inability to deliver. The proposed Sol reassignment was not launched.
+Grok Build grok-4.7 High remains the sole selected senior and resumes the full six-path
+contract through completion, including the one targeted test. The temporary normalization-
+only pass restriction is superseded. Do not interrupt merely for planning latency. Normal
+approvals, exact scope, test failure stop rule and source-only ownership still apply.
