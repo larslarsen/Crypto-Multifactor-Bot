@@ -800,3 +800,26 @@ commit, push, prove HEAD equals remote main and stop. No source/test/data repair
 new helper, acquisition, quarantine, catalog, bundle, other product or next ticket.
 Reviewer publication of this authorization is limited to Review 483, CURRENT_TASK and
 current ticket fields under the standing governance exception.
+
+
+### Reviewer correction of the completion preflight path
+
+The fresh Longcat session `20261016_174722_4c2f0d` reauthenticated all five source hashes,
+both before-artifact hashes, Git identity/empty index, absent after-artifacts and process
+absence. It then guessed `data/.cex002_coverage/completion.json`; sha256sum exited 1 because
+that path does not exist. The reviewer stopped the session. This is an incorrect read-only
+preflight path, not a failed replay or a mismatching completion. No approval denial occurred.
+The owner-authorized standalone replay has not executed. Preserve this error in Record 484.
+The reviewer now specifically authorizes one corrected metadata read:
+
+```bash
+sha256sum data/.cex002_coverage/.complete/9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151.json
+```
+
+Require hash `9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151`.
+On that success continue the unexecuted standalone sequence above, preserving other
+passing preflight checks. Refresh separate UTC/capacity before replay. No replay retry,
+new helper or broader scope is authorized. On any further actual failure/denial stop.
+Raw capacity `47440829 4096` means 194,317,635,584 available bytes; the earlier model's
+194,277,715,584 arithmetic was wrong. Preserve raw values and corrected arithmetic.
+This clarification is reviewer-only Review 483 publication under the existing exception.
