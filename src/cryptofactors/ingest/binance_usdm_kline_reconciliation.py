@@ -102,11 +102,14 @@ ARITHMETIC_POLICY = {
     "close": "last",
     "decimal_precision": DECIMAL_PRECISION,
     "decimal_scale": DECIMAL_SCALE,
+    "empty_minute": "zero_trade_count_requires_zero_volumes",
     "high": "maximum",
     "imbalance_ratio": "not_used",
     "low": "minimum",
     "missing_slot": "explicit_uncomparable_never_filled",
-    "open": "first",
+    "open": "first_positive_trade_count_else_retained_carry",
+    "open_all_empty": "retained_first_source_open",
+    "open_evidence": "native_minute_time_ordinal_token_leading_empty_count",
     "quote_volume": "sum",
     "quote_volume_imbalance": "buy_minus_sell",
     "representation": "exact_unscaled_integer",
@@ -238,6 +241,11 @@ def _parse_minute(
         raise ReconciliationError("taker volume exceeds its total")
     if numbers["taker_buy_quote_volume"] > numbers["quote_volume"]:
         raise ReconciliationError("taker volume exceeds its total")
+    if count == 0 and any(
+        numbers[name] != 0
+        for name in ("volume", "quote_volume", "taker_buy_volume", "taker_buy_quote_volume")
+    ):
+        raise ReconciliationError("zero-trade minute has nonzero volume")
     numbers["count"] = count
     numbers["ignore"] = ignore
     return _Minute(ordinal, open_time, tokens, numbers)
@@ -296,10 +304,43 @@ def _aggregate_day(rows: Sequence[tuple[str, ...]], utc_date: str, key: str) -> 
     )
 
 
-def _aggregate_numbers(slots: Sequence[_Minute]) -> dict[str, int]:
-    # Sell is total minus buy. Imbalance is buy minus sell, not a ratio.
+def _select_open(slots: Sequence[_Minute]) -> tuple[_Minute, str, int]:
+    """Use the first traded minute. An hour with no trades retains the first open."""
+
+    leading = 0
+    for slot in slots:
+        if slot.numbers["count"] > 0:
+            return slot, "observed_trade", leading
+        leading += 1
+    return slots[0], "retained_carry", leading
+
+
+def _opening_record(
+    symbol: str,
+    utc_date: str,
+    hour: int,
+    selected: _Minute,
+    mode: str,
+    leading: int,
+) -> dict[str, Any]:
+    return {
+        "kind": "opening_price_selection",
+        "leading_empty_minute_count": leading,
+        "native_minute": (selected.open_time - hour) // MINUTE_MS,
+        "native_open_time": selected.open_time,
+        "native_ordinal": selected.ordinal,
+        "open_time": hour,
+        "selection": mode,
+        "source_open_token": selected.tokens[TOKEN_INDEX["open"]],
+        "symbol": symbol,
+        "utc_date": utc_date,
+    }
+
+
+def _aggregate_numbers(slots: Sequence[_Minute], opener: _Minute) -> dict[str, int]:
+    # Open is the selected minute. Sell is total minus buy. Imbalance is buy minus sell.
     numbers = {
-        "open": slots[0].numbers["open"],
+        "open": opener.numbers["open"],
         "high": max(slot.numbers["high"] for slot in slots),
         "low": min(slot.numbers["low"] for slot in slots),
         "close": slots[-1].numbers["close"],
@@ -864,6 +905,7 @@ def _compare(
         "parsed_rows": 0,
         "uncomparable_rows": 0,
     }
+    openings: list[dict[str, Any]] = []
     comparable_hours = 0
     success_hours = 0
     uncomparable_hour_count = 0
@@ -881,7 +923,18 @@ def _compare(
         day_success = 0
         for hour, slots in parts.comparable:
             comparable_hours += 1
-            aggregated = _aggregate_numbers(slots)
+            selected, mode, leading = _select_open(slots)
+            aggregated = _aggregate_numbers(slots, selected)
+            openings.append(
+                _opening_record(
+                    retained_day.symbol,
+                    retained_day.utc_date,
+                    hour,
+                    selected,
+                    mode,
+                    leading,
+                )
+            )
             hour_matched_products = 0
             hour_ok = True
             for product in PRODUCTS:
@@ -1049,6 +1102,7 @@ def _compare(
         "flow_completion_sha256": policy.flow_completion,
         "flow_schema_sha256": _SCHEMA_SHA[PRODUCT_TRADE_FLOW_1H],
         "full_history": False,
+        "opening_price_selections": sorted(openings, key=_record_sort),
         "qualification_report_sha256": policy.report_sha256,
         "sample_manifest_sha256": loaded.manifest_sha256,
         "sample_objects": [

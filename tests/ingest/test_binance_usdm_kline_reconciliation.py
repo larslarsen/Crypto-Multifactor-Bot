@@ -1109,3 +1109,155 @@ def test_cli_usage_pass_and_missing_sample(tmp_path: Path) -> None:
         policy=mismatch.policy,
     ) == 1
     _no_marker(mismatch.output)
+
+
+OPEN_1075 = 107500000000000000
+OPEN_1076 = 107600000000000000
+
+
+def _opening_rows(start: int, spec: list[tuple[str, str]]) -> list[list[str]]:
+    rows = []
+    for offset, (price, count) in enumerate(spec):
+        volume = "0" if count == "0" else "1"
+        rows.append(
+            _minute(
+                start + offset * rec.MINUTE_MS,
+                {
+                    "open": price,
+                    "high": price,
+                    "low": price,
+                    "close": price,
+                    "volume": volume,
+                    "quote_volume": volume,
+                    "count": count,
+                    "taker_buy_volume": "0",
+                    "taker_buy_quote_volume": "0",
+                },
+            )
+        )
+    return rows
+
+
+def _selection(report: dict, hour: int) -> dict:
+    found = [item for item in report["opening_price_selections"] if item["open_time"] == hour]
+    assert len(found) == 1
+    return found[0]
+
+
+def test_leading_empty_minute_selects_first_traded_open(tmp_path: Path) -> None:
+    start = sample.utc_day_start_ms("2025-10-25")
+    hour = start + 10 * rec.HOUR_MS
+    spec = [("0.1075", "0"), ("0.1076", "2")] + [("0.1076", "1")] * 58
+    rows = _opening_rows(hour, spec)
+    day = Day(
+        "KAIAUSDT",
+        "2025-10-25",
+        ("middle",),
+        hours=(Hour(index=10, rows=rows, bar_override={"open": OPEN_1076}),),
+    )
+    _result, report = _run(assemble(tmp_path, [day]))
+    assert report["status"] == "PASS"
+    assert report["arithmetic_policy"]["open"] == "first_positive_trade_count_else_retained_carry"
+    assert report["arithmetic_policy"]["open_all_empty"] == "retained_first_source_open"
+    assert report["arithmetic_policy"]["empty_minute"] == "zero_trade_count_requires_zero_volumes"
+    assert report["accounting"]["parsed_rows"] == 60
+    assert report["accounting"]["compared_primary_rows"] == 60
+    assert report["coverage"]["per_product"][BAR]["fields"]["open"] == {"denominator": 1, "matched": 1}
+    chosen = _selection(report, hour)
+    assert chosen["selection"] == "observed_trade"
+    assert chosen["leading_empty_minute_count"] == 1
+    assert chosen["native_minute"] == 1
+    assert chosen["native_ordinal"] == 1
+    assert chosen["native_open_time"] == hour + rec.MINUTE_MS
+    assert chosen["source_open_token"] == "0.1076"
+    assert chosen["symbol"] == "KAIAUSDT"
+    assert chosen["utc_date"] == "2025-10-25"
+
+
+def test_multiple_leading_empty_minutes_select_the_later_open(tmp_path: Path) -> None:
+    start = sample.utc_day_start_ms("2025-09-17")
+    spec = [("1", "0")] * 3 + [("2", "1")] * 57
+    rows = _opening_rows(start, spec)
+    day = Day(
+        "0GUSDT",
+        "2025-09-17",
+        ("early",),
+        hours=(Hour(rows=rows, bar_override={"open": 2 * SCALE}),),
+    )
+    _result, report = _run(assemble(tmp_path, [day]))
+    assert report["status"] == "PASS"
+    assert report["coverage"]["per_product"][BAR]["fields"]["open"] == {"denominator": 1, "matched": 1}
+    chosen = _selection(report, start)
+    assert chosen["selection"] == "observed_trade"
+    assert chosen["leading_empty_minute_count"] == 3
+    assert chosen["native_minute"] == 3
+    assert chosen["native_ordinal"] == 3
+    assert chosen["native_open_time"] == start + 3 * rec.MINUTE_MS
+    assert chosen["source_open_token"] == "2"
+
+
+def test_all_empty_hour_retains_the_first_open(tmp_path: Path) -> None:
+    start = sample.utc_day_start_ms("2025-09-17")
+    rows = _opening_rows(start, [("0.1075", "0")] * 60)
+    day = Day("0GUSDT", "2025-09-17", ("early",), hours=(Hour(rows=rows),))
+    _result, report = _run(assemble(tmp_path, [day]))
+    assert report["status"] == "PASS"
+    assert report["accounting"]["parsed_rows"] == 60
+    assert report["coverage"]["per_product"][BAR]["fields"]["open"] == {"denominator": 1, "matched": 1}
+    assert report["coverage"]["per_product"][BAR]["fields"]["trade_count"] == {"denominator": 1, "matched": 1}
+    chosen = _selection(report, start)
+    assert chosen["selection"] == "retained_carry"
+    assert chosen["leading_empty_minute_count"] == 60
+    assert chosen["native_minute"] == 0
+    assert chosen["native_ordinal"] == 0
+    assert chosen["native_open_time"] == start
+    assert chosen["source_open_token"] == "0.1075"
+
+
+def test_zero_trade_nonzero_volume_fails(tmp_path: Path) -> None:
+    start = sample.utc_day_start_ms("2025-09-17")
+    row = _minute(
+        start,
+        {
+            "count": "0",
+            "volume": "1",
+            "quote_volume": "0",
+            "taker_buy_volume": "0",
+            "taker_buy_quote_volume": "0",
+        },
+    )
+    day = Day(
+        "0GUSDT",
+        "2025-09-17",
+        ("early",),
+        hours=(Hour(rows=[row], bar=False, flow=False),),
+        gaps=(Gap(BAR, 0, rec.MISSING_KIND, rec.MISSING_REASONS[0]),),
+    )
+    world = assemble(tmp_path, [day])
+    with pytest.raises(rec.ReconciliationError, match="zero-trade minute has nonzero volume"):
+        rec.reconcile(world.policy, world.evidence, world.output)
+    _no_marker(world.output)
+
+
+def test_unequal_traded_open_still_fails(tmp_path: Path) -> None:
+    start = sample.utc_day_start_ms("2025-10-25")
+    hour = start + 10 * rec.HOUR_MS
+    spec = [("0.1075", "0"), ("0.1076", "2")] + [("0.1076", "1")] * 58
+    rows = _opening_rows(hour, spec)
+    day = Day("KAIAUSDT", "2025-10-25", ("middle",), hours=(Hour(index=10, rows=rows),))
+    world = assemble(tmp_path, [day])
+    result, report = _run(world)
+    assert result.status == "FAILED"
+    found = [item for item in report["discrepancies"] if item["kind"] == "field_mismatch"]
+    assert len(found) == 1
+    assert found[0]["field"] == "open"
+    assert found[0]["product"] == BAR
+    assert found[0]["aggregated_unscaled"] == str(OPEN_1076)
+    assert found[0]["product_unscaled"] == str(OPEN_1075)
+    assert found[0]["source_tokens"][0] == "0.1075"
+    assert found[0]["source_tokens"][1] == "0.1076"
+    chosen = _selection(report, hour)
+    assert chosen["selection"] == "observed_trade"
+    assert chosen["source_open_token"] == "0.1076"
+    assert chosen["leading_empty_minute_count"] == 1
+    _no_marker(world.output)

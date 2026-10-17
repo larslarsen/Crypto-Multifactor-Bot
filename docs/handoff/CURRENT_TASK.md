@@ -3,11 +3,26 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 491 accepts Grok's correction and the bounded real comparison: 58 tests and all
+local checks passed; both offline runs returned PASS; all 2,672 fields match across
+167 complete hours, nine days and ten roles. Replay preserved all 31 retained files.
+Completion e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c
+pins report 96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c.
+Record 490 is complete and reviewer-accepted. The owner explicitly approved Review
+491's exact six-file commit and normal push, resolving the earlier publication block.
+Hermes publishes that package and returns to the reviewer for committed-byte verification.
+The record identifies the corrected source as uncommitted during its validation runs;
+the publication commit supplies its integration identity. Preserve the original FAILED
+report and accepted products. No further real run, tests, record work, bundle work or
+next ticket is assigned by this publication.
+
+## Completed integration and execution history
 
 Review 489 accepts Grok's five-path source drop after 53 targeted cases passed.
 Hermes owns its final section's complete validation, integration, bounded nine-day
@@ -23,6 +38,17 @@ source hashes. Preserve these results. The owner has now manually approved deliv
 the exact full-workflow prompt and answered yes to the remaining publication/comparison
 work. Continue from the outstanding whitespace check and step 3 onward in Review 489;
 do not repeat the passed checks. Normal approvals and first-failure stops remain active.
+
+Reviewer continuation: unsupported 1,200/1,300-second requests did not start a process.
+Hermes attempted an unassigned environment override, which did not change the tool cap.
+The first supported 600-second fetch then started, but the reviewer interrupted it
+while correcting the earlier override attempt: exit 130. One 0GUSDT 2025-09-17 pair
+(21,312 ZIP bytes) is retained, with no sample/comparison completion. The reviewer
+rehashed that ZIP and sidecar successfully. Authorize one foreground resume of the same
+fixed --fetch command with timeout 600; reuse the valid receipt and fetch only remaining
+objects. No config changes, test reruns, source edits or duplicate completed downloads.
+On success continue the original inspection/replay/record workflow. Record the rejected
+requests, unassigned override, operator interruption and explicit resume in Record 490.
 
 The owner reports almost all Grok usage remains and access ends tomorrow night.
 Prioritize Grok for substantive senior source work while preserving reviewer acceptance
@@ -63,6 +89,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/491_CEX002_EMPTY_MINUTE_OPEN_CORRECTION_REVIEW.md
 - research/sprint_004/489_CEX002_BOUNDED_KLINE_RECONCILIATION_SOURCE_REVIEW.md
 - research/sprint_004/488_CEX002_BITMEX_NORMALIZER_INTEGRATION_RECORD.md
 - research/sprint_004/487_CEX002_BITMEX_NORMALIZER_SOURCE_REVIEW.md
