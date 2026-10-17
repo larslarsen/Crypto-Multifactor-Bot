@@ -398,3 +398,44 @@ This is not a durable role-policy change or next-ticket authorization.
 
 The reviewer may publish this authorization using exactly this Review-485 file,
 docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md under the governance exception.
+
+## Reviewer acceptance of real quarantine and Record 486
+
+The reviewer accepts the exact-five quarantine/resolver portion of Gate 0, source integration
+49e307e, Record 486 and Grok's six-path evidence publication
+`4ff8bf4d169b64b98093a8765fd8ac7b91d846ed`. HEAD equaled origin/main after push and the
+index was empty. Grok 4.6 High completed the explicit owner-approved execution exception;
+application and authenticated replay each ran once and exited 0. The exception is discharged.
+
+The reviewer independently read the three published reports, queried exp003.db with mode=ro,
+and hashed/statted the ten historical files. Dry pre == dry post == application pre; application
+post == replay pre == replay post. The five complete dataset and dataset_file rows match replay
+snapshots, all targets are REJECTED/REGISTERED, and no target remains normally eligible.
+All ten manifest/Parquet files retain identical hashes, sizes, device/inode, mtime/ctime and
+mode. Seven accepted source hashes and twelve unrelated fingerprints remain unchanged.
+The preserved invalid economics are 307,738 rows, zero null/nonzero rates and 307,738 empty
+intervals, with symbol counts [2,5,5,5,45]. Canonical and physical manifest identities remain
+distinct. No historical manifest PASS label was rewritten.
+
+Grok's publication repository-control, unstaged whitespace and staged whitespace checks
+exited 0; staged-path proof named exactly the three reports, Record 486 and two control files.
+The source validation and real dry-run were not rerun. Precision on Record 486's preserved
+inspection wording: Grok did additionally summarize the existing dry-run JSON before
+application, without invoking the producer or replacing the prior successful inspection.
+This redundant read did not mutate data or invalidate the retained evidence.
+
+One outer terminal-approval response was initially rejected by automatic approval review
+because the exact pending command was not fully visible. The reviewer exported the pending
+command, verified that it only read Git/source/report/process/file state, and received approval
+for that exact single command. No blanket approval mode was enabled, and no application or
+replay command was denied or retried. This recovered approval-review interruption is distinct
+from the earlier Hermes/provider failures already disclosed in Record 486.
+
+Grok stopped after publication; no further implementation work is assigned. Gate 0 remains
+open solely as to its separate normalizer/publisher correction and eventual full-gate review.
+Ten Binance products remain accepted; the harmonic bundle, remaining Gate-4/5 work and full
+CEX-002 acceptance remain pending. CEX-002 and Gate 3 remain IN_PROGRESS, reviewer retains
+control, next ticket NONE. No accepted-product rerun is authorized.
+
+This acceptance is published by the reviewer using exactly Review 485,
+docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md under the governance exception.

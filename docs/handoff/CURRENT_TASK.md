@@ -29,14 +29,14 @@ failure and Step-3.7 inference stall remain disclosed.
 
 Under Review 485's owner-approved bounded execution exception, Grok Build (grok-4.6 High)
 ran the remaining application and replay once each, reconciled the three reports against
-independent file hashes and SQLite mode=ro catalog rows, and published Record 486.
+independent file hashes and SQLite mode=ro catalog rows, and published Record 486 at 4ff8bf4. Review 485 now accepts this quarantine portion.
 Application exited 0: disposition=applied, applied=true, all five REJECTED/REGISTERED and
 ineligible. Replay exited 0: disposition=replayed, applied=false, idempotent_replay=true,
 same quarantine metadata. Ten manifest/Parquet artifacts retain identical
 path/hash/size/device/inode/mtime/ctime/mode entries. Economics remain 307,738 rows, zero
 null/nonzero rates, 307,738 empty intervals, symbol counts [2,5,5,5,45]. Control returns
-to the reviewer. Gate 0 remains open: the separate normalizer/publisher correction is
-unassigned. Reviewer acceptance is exclusive. Ten Binance products remain accepted. No
+to the reviewer. Independent reviewer catalog/file/source reconciliation passed. Gate 0
+remains open: the separate normalizer/publisher correction is unassigned. Ten Binance products remain accepted. No
 bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:
@@ -56,7 +56,7 @@ from complete daily coverage and known source availability. Accepted Batch B com
 limits, fee scenarios, unknown availability and censored liquidation semantics remain.
 
 The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished.
-Record 486 reports the five BitMEX catalog rows as REJECTED/REGISTERED after authenticated
+Review 485 accepts the five BitMEX catalog rows as REJECTED/REGISTERED after authenticated
 application and no-op replay; immutable manifests and Parquets were not rewritten. The
 separate BitMEX missing-to-zero/unconditional-PASS normalizer/publisher correction remains
 pending. Reviewer acceptance is exclusive.
