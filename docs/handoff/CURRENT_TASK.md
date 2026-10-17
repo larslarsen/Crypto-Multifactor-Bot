@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev - Hermes
+Next required actor: Lead Quantitative Finance Researcher/Engineer
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -21,19 +21,18 @@ after-audit exited 0 PASS. Separate inventory cmp exited 0: all 107,590 files an
 days remain 428,090; full-cadence days with event presence remain 424,431. The 71 final-byte
 tests and first audit were preserved, not rerun. No further coverage replay/audit is assigned.
 
-Review 485 accepts the seven-path Sol quarantine/resolver source. Hermes passed 225
-quarantine/catalog tests, Ruff and repository checks, integrated/pushed 49e307e, and ran
-the real dry-run once: exit 0, all five PASS/REGISTERED, files unchanged. Preserve these
-results; no repeat validation, integration or dry-run is assigned.
-Longcat's read-only JSON inspection then failed (unhashable target dictionaries); the
-reviewer interrupted it before retry or application. Review 485 now rotates Hermes to
-stepfun/step-3.7-flash:free for one exact corrected inspection and the previously authorized
-remaining application, replay, reconciliation and Record 486 publication. Stop on the next
-nonzero/failed proof; no source patch or inferred retry. No real catalog mutation has yet
-occurred. Gate 0 still needs its separate normalizer/publisher correction. The owner's
-expiring Grok allowance should inform the next suitable source assignment; none starts yet.
-Step-5 returned upstream-capacity HTTP 429 before any tool execution; the same bounded
-continuation now uses Step 3.7 Flash. No prior successful command is repeated.
+Review 485 accepts Sol's seven-path quarantine/resolver source integration 49e307e.
+Hermes passed 225 quarantine/catalog tests, Ruff/control/whitespace and the real dry-run
+(exit 0). The corrected read-only inspection also passed on Step 3.7 Flash. Preserve
+all these results; no repeat tests, integration, dry-run or inspection is assigned.
+Longcat's helper TypeError, Step-5 upstream-capacity failure and Step-3.7 inference stall
+are disclosed in Review 485. The execution session is closed. Application/replay never
+ran: the five actual catalog targets remain PASS/REGISTERED and their files unchanged.
+Record 486's full implementation publication remains unfinished. Control is with reviewer.
+The owner has been asked for a narrow Grok Build integration-role exception to finish the
+already-reviewed remaining commands. No exception reply or Grok launch has occurred yet.
+The owner's expiring Grok allowance remains a source-routing preference; the pending
+normalizer/publisher correction is not yet assigned. Gate 0 and full CEX-002 remain open.
 Ten Binance products remain accepted. No bundle, experiment or next ticket is authorized.
 
 Accepted cost completion:
@@ -54,8 +53,9 @@ limits, fee scenarios, unknown availability and censored liquidation semantics r
 
 The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished:
 Review 480's read-only query of exp003.db finds all five invalid BitMEX datasets still
-PASS / REGISTERED. Review 485 now authorizes the exact-five quarantine workflow after source acceptance;
-normalizer/publisher correction still remains before Gate-0 acceptance.
+PASS / REGISTERED. Review 485 preserves the accepted source and dry-run but stops execution at the
+reviewer routing boundary. Both real quarantine and normalizer/publisher correction
+still remain before Gate-0 acceptance.
 No bundle publication, full-ticket acceptance, experiment, model or next ticket is
 authorized now.
 

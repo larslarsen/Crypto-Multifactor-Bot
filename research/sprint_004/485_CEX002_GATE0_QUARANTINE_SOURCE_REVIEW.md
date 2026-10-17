@@ -337,3 +337,37 @@ same bounded continuation. This is an availability fallback, not a claim of prio
 or a change of source author. Preserve all prior successes and the recorded helper failure.
 Exactly the previously authorized corrected inspection and remaining steps 5-8 remain;
 no producer, validation or integration rerun is authorized. Stop on first command failure.
+
+## Reviewer boundary after Step-3.7 inspection and provider stall
+
+Step 3.7 Flash completed the corrected read-only inspection, exit 0:
+
+```text
+target_count 5
+all_quality ['PASS', 'PASS', 'PASS', 'PASS', 'PASS']
+all_publication ['REGISTERED', 'REGISTERED', 'REGISTERED', 'REGISTERED', 'REGISTERED']
+ids_match True
+pre_post_equal True
+applied False disposition inspected artifacts_unchanged True
+```
+
+The following inference stalled for several minutes. The reviewer interrupted the session;
+its saved terminal state says `Operation interrupted: retrying API call after error (retry 1/3)`.
+No subsequent tool/application/replay command executed. The session was then closed. The
+reviewer reproved through SQLite mode=ro that four bitmex_funding and one bitmex_funding_full
+rows still have PASS/REGISTERED state. Application/replay reports are absent. All twelve
+unrelated source/config fingerprints remain unchanged.
+
+Preserve integration `49e307e`, 225 passing integration cases, lint/control/whitespace,
+successful real dry-run, and successful corrected inspection. Record 486's full implementation
+publication remains unfinished. No quarantine or Gate-0 acceptance is claimed. The execution
+actor is stopped and control returns to the reviewer; no further invocation is assigned now.
+
+The owner was asked whether Grok Build may finish this exact already-reviewed integration,
+as a narrow exception to AGENTS.md's source-only Grok / free-Nous Hermes integration roles.
+The owner's existing invitation to use Grok is recorded for source selection; do not silently
+interpret it as an integration-role change. That exception remains pending, and no Grok
+execution has launched. If approved, retain all passing evidence and execute only the
+remaining application, replay, reconciliation and bounded Record-486 publication above;
+no rerun of validation, integration, dry-run or corrected inspection is needed. If the owner
+retains the existing role boundary, reviewer execution routing remains to be resolved.
