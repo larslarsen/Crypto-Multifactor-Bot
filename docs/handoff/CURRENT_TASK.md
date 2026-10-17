@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev - Codex Sol (GPT-6.1 Sol High)
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -21,12 +21,13 @@ after-audit exited 0 PASS. Separate inventory cmp exited 0: all 107,590 files an
 days remain 428,090; full-cadence days with event presence remain 424,431. The 71 final-byte
 tests and first audit were preserved, not rerun. No further coverage replay/audit is assigned.
 
-Review 483's final disposition records the corrected preflight path, timing/capacity
-limitations, prior denied submissions and rejected workflow deviations. These remain
-visible in the evidence history. The execution actor is stopped; control remains with
-the reviewer. The next bounded CEX-002 assignment has not yet been authorized. No new
-source/helper task, bundle/catalog/quarantine mutation, other-product rerun, model,
-experiment or next ticket is authorized by this acceptance. Next ticket remains NONE.
+Review 485 authorizes the next bounded source correction: exact five-artifact BitMEX
+quarantine and default resolver exclusion, assigned directly to GPT-6.1 Sol High.
+Only its seven enumerated source/test paths may change. Prior drafts are preserved;
+no real quarantine, database mutation, test execution or integration is authorized yet.
+The separate BitMEX normalizer/publisher correction remains pending. Sol stops for
+reviewer source inspection. Coverage acceptance and all passing evidence remain preserved.
+Next ticket remains NONE.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.
@@ -46,13 +47,14 @@ limits, fee scenarios, unknown availability and censored liquidation semantics r
 
 The holdout is pinned at 2026-08-21T16:19:08.994166+00:00. Gate 0 remains unfinished:
 Review 480's read-only query of exp003.db finds all five invalid BitMEX datasets still
-PASS / REGISTERED. A separate corrective assignment is required before final release;
-quarantine and catalog mutation are outside the current coverage source scope.
+PASS / REGISTERED. Review 485 assigns corrective quarantine source before release;
+real quarantine and catalog mutation remain unauthorized pending source review.
 No bundle publication, full-ticket acceptance, experiment, model or next ticket is
 authorized now.
 
 Governing documents:
 
+- research/sprint_004/485_CEX002_GATE0_QUARANTINE_SOURCE_REVIEW.md
 - research/sprint_004/483_CEX002_COVERAGE_RECONCILIATION_RECOVERY_REVIEW.md
 - research/sprint_004/482_CEX002_COVERAGE_INTEGRATION_AND_REAL_RUN_RECORD.md
 - research/sprint_004/484_CEX002_COVERAGE_RECONCILIATION_AND_REPLAY_RECORD.md

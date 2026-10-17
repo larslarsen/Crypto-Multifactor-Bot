@@ -1,0 +1,127 @@
+# CEX-002 Review 485 - Gate-0 quarantine source correction
+
+- **Reviewer:** Lead Quantitative Finance Researcher/Engineer
+- **Decision:** authorize bounded corrective source only
+- **Ticket:** CEX-002, IN_PROGRESS; ten of eleven products accepted
+- **Next required actor:** Sr Dev - Codex Sol (GPT-6.1 Sol High)
+- **Next ticket:** NONE
+- **Base:** `89e2b10c1a06d74d482dd94b32e706325fece1e6`
+
+## Purpose and routing
+
+The owner directs continuation after coverage acceptance. Before bundle publication, close
+Gate 0's unresolved false catalog authority. The reviewer selects GPT-6.1 Sol High for
+transaction and source-authentication risk, its accepted coverage checker, and the owner's
+explicit developer preference. Continue the owner-approved direct developer delegation and
+review feedback workflow. Only one senior is assigned. Hermes retains integration, validation,
+implementation evidence, and all catalog/data execution ownership.
+
+This drop corrects quarantine and default resolution only. Gate 0 also requires the separate
+BitMEX missing-to-zero/unconditional-PASS normalizer/publisher correction; that remains pending.
+No accepted Binance product is reopened. The harmonic bundle, remaining Gate-4 checks and
+Gate-5 release/consumer work remain required under Review 474.
+
+## Read-only findings
+
+The reviewer queried `exp003.db` using SQLite URI `mode=ro`. All five exact targets from
+Research 54 remain PASS / REGISTERED. The historical draft is unintegrated CEX-001 source,
+not accepted implementation. Static defects include an already-quarantined early return
+before byte/economic authentication, optional/unvalidated manifest handling, preflight outside
+the mutation transaction, an unconditional UPDATE rather than compare-and-swap, and migrations
+even in CLI dry-run mode. These violate existing CEX-002 Gate-0 requirements.
+
+Catalog `manifest_sha256` is the repository's canonical manifest identity, not SHA-256 of the
+whole serialized manifest including its embedded digest. The existing strict manifest parser
+must reprove identity; separately pin and check exact physical bytes. Preserve historical
+catalog registration `created_at` differences from manifest publication time (notably ds_11b6).
+The manifests and Parquets must never be rewritten.
+
+| Dataset suffix/prefix (full IDs in Research 54) | Canonical manifest identity | Physical manifest SHA-256 |
+|---|---|---|
+| ds_4f82 | 7d43319236fc73f87bcbbcac19c2ec5028a70e5faed252ae9397ec83d1ca39f4 | c26ec01f0fccae79da1b130d75803070bc1efe585b0a4bfe1e73be96aa1f24cc |
+| ds_f61c | 6083d41c906f6bf4278b48a0cc6cd376a0c3c3bdc334fa94f42385eec8083ebb | 9020c0faa95199d31d71c523f0fd86451088ce83dcb13a200cd86e74df6c1d1a |
+| ds_11b6 | 0e340f3e18f48bd93ccb3d8b00e17fe7883c677350a95c7dec677a08c1f274e6 | 0bd3c6d4bfc52642a05764b0b2b32b932bfe9b5e46379f5d9e4f0fdbdc32bc91 |
+| ds_ab70 | e7b64fc0312f6e2dea118bb3699734e85ce590ab519390cf5d1867edea7947e1 | d434c8219ae382bb9f35164ebe3a05c76db845e5d0777a1ac8d1d02e7bf4fd92 |
+| ds_ee8e | a6427c8277f951a120984a654254e91d6e704b129aedf2bda8ee080a6cb4a39e | 389a192f0d0c64d8403801946506c8f5841c37985cd9bef2c2e9e99b5f558bda |
+
+This is source-review discovery, not executed quarantine or acceptance evidence. Research 54's
+307,738 rows, zero nonzero/null rates and 307,738 empty intervals remain expected observations
+that execution must independently authenticate.
+
+## Exact source scope and preservation
+
+The reviewer preserved the seven prior working files byte-for-byte under
+`/tmp/cex002_review485_preserved_source/` before authorizing edits. Their identities are:
+
+| Authorized path | Prior lines | Prior SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/acquisition/bitmex_funding_quarantine.py` | 612 | `95f5529442143634261e58b53eec79b5a84f8e45990374d5f5056578b5c0e401` |
+| `scripts/research/quarantine_bitmex_funding.py` | 69 | `61d0b52b74fc3b009c9223fdbec679d5f2054d042b5d4907e7d0bd75b902ed10` |
+| `tests/acquisition/test_bitmex_funding_quarantine.py` | 371 | `8b6e5f552a3d6112c17b227065639dad095c6142b534af11d0b1c3aeece39b29` |
+| `src/cryptofactors/catalog/dataset/catalog_store.py` | 544 | `b5f9014aed8484845b8c58cca14d33359db5250a5912144872b60098e50e2b34` |
+| `src/cryptofactors/catalog/dataset/errors.py` | 84 | `0c90bc572b9b5b1a7f3103d07bc106764500aff40f62019ac1c10e60bc58693a` |
+| `src/cryptofactors/catalog/dataset/__init__.py` | 121 | `1385930627cca8b3a45076f587c97eedd9e0be91b2de94570fbe87c9ec35292a` |
+| `tests/catalog/test_resolve_latest_by_type.py` | 339 | `b4056ab6abde09c0d7a07c58a33f2aa3b4dc80cea5046796d5c8bd1afb9beea6` |
+
+Sol may replace/correct only these seven source/test paths. The preserved draft is evidence
+and a defect reference; acceptance is against the full existing contract, never presumed from
+that draft. Keep unrelated dirty files, especially all BitMEX normalizer/backfill and DEX files,
+untouched. No new fixtures outside the named test file, shared refactor, migration, dependency,
+package configuration, or record edit is authorized. Existing unchanged helpers are read-only
+references. Do not access the archive.
+
+## Required behavior
+
+1. Production always targets exactly the five pinned IDs and their types, paths, Parquet hashes,
+   sizes, row counts and symbol counts in Research 54 / the preserved target table. Bind both
+   manifest identities above. Authenticate strict manifest/dataset identity and complete file
+   list, corresponding catalog dataset/file rows, declared schema/code/config/coverage identity,
+   file hashes/size, required economic columns, zero null/nonzero rates, exact symbol count and
+   empty intervals on every invocation, including already-quarantined replay. Reject missing,
+   altered, extra, conflicting or unsafe artifacts. No symlink/path traversal authority.
+2. Apply only the catalog quality transition PASS to REJECTED with a CEX-002 quarantine marker,
+   reason and preserved prior quality evidence. Publication state remains REGISTERED; immutable
+   manifests retain their historical PASS label and bytes. Do not label this SUPERSEDED or
+   silently support a different target set in the production CLI. Tests may build isolated
+   equivalents through a clearly bounded test API.
+3. Acquire an explicit SQLite write transaction before snapshot/authentication for application;
+   use compare-and-swap against the inspected complete catalog row, require exactly one affected
+   row, and roll back all five on any mismatch or postcondition failure. Protect dataset_file
+   identity within the same transaction. Define nested/external-transaction behavior explicitly;
+   never commit a caller's unrelated pending work. A complete valid prior quarantine is a
+   reauthenticated no-op with unchanged original quarantine metadata. A partial/mixed set is a
+   failure, not permission to finish a prior unknown operation. Recheck files and resolver
+   exclusion before commit. Failed transactions leave all catalog rows unchanged.
+4. Default latest resolution excludes REJECTED/QUARANTINED and non-REGISTERED records, retains
+   existing PASS-before-warning and deterministic tie-breaking, and permits rejected historical
+   inspection only through explicit audit mode. Quarantine checks all five IDs are excluded,
+   not just that each target is not the latest one. Preserve unaffected catalog APIs and tests.
+5. CLI requires an existing catalog/store, applies no migrations, and offers inspection-only
+   dry-run through a read-only SQLite connection. JSON report records exact targets, complete
+   catalog/file snapshots, both manifest hashes, byte/economic inspection, pre/post resolvers,
+   applied/no-op disposition and unchanged artifacts. Write reports atomically and refuse unsafe
+   destinations that could replace catalog/store artifacts; report failure must not imply
+   transaction success was rolled back after commit. A subsequent genuine replay can recover
+   reporting after a post-commit output failure without modifying prior metadata.
+6. Test source must prove valid transaction and replay, authentication on replay, changed
+   manifest/catalog/file/bytes/economic counts, partial state and wrong markers, extra file rows,
+   symlink/path rejection, concurrent/CAS change refusal, failure after an early update rolling
+   back every target, nested transaction ownership, read-only dry-run/no migrations, resolver
+   filtering, preserved bytes, and safe report publication/error semantics. Fixtures must use
+   real canonical manifests and real temporary SQLite/Parquet structures, not mock away the
+   identities the tests claim to check.
+
+## Source feedback and stop boundary
+
+Sol returns all seven final file hashes/line counts and a concise behavior/test-source report.
+No tests, real command, quarantine, database/data mutation, network, Git, integration, evidence
+record, cleanup, bundle, other product, experiment or next-ticket work is authorized. Stop for
+reviewer static inspection. Any targeted-test exception will be separately enumerated after
+inspection. Hermes is not yet authorized to integrate or execute this drop.
+
+## Reviewer publication
+
+The reviewer may publish exactly this review, `docs/handoff/CURRENT_TASK.md`, and
+`tickets/CEX-002.md` under the existing small-governance-publication exception. Repository-control
+and whitespace checks concern this governance publication only; no source integration or
+acceptance command transfers to the reviewer.
