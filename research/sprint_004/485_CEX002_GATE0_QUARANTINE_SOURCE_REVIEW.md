@@ -125,3 +125,51 @@ The reviewer may publish exactly this review, `docs/handoff/CURRENT_TASK.md`, an
 `tickets/CEX-002.md` under the existing small-governance-publication exception. Repository-control
 and whitespace checks concern this governance publication only; no source integration or
 acceptance command transfers to the reviewer.
+
+## Complete static source disposition and targeted feedback
+
+The reviewer inspected the complete seven-path source/test drop. The old replay bypass,
+manifest permissiveness, missing CAS, transaction ownership, resolver eligibility, and CLI
+migration defects are corrected. Every target is authenticated before and after mutation in
+one owned transaction. The source preserves both original manifest hashes and actual catalog
+registration times. Canonical fixture tests exercise altered evidence on replay, complete-row
+and file-row conflicts, triggers, early-update rollback, competing writers, pending external
+transactions, dry-run and post-commit reporting failures.
+
+The reviewer returned one exception-boundary/test mismatch: linked-store validation escaped
+the quarantine error wrapper. Sol corrected it and removed carried unused test locals. Final
+inspection finds no remaining source blocker under this bounded contract. This is source
+acceptance for targeted feedback, not integration, real quarantine or Gate-0 acceptance.
+Twelve unrelated dirty source/config files retain the reviewer's initial fingerprints.
+
+Sol's explicitly authorized metadata-only probe used the unchanged strict manifest parser
+and SQLite mode=ro; it exited 0 and accepted all five pinned manifests with their catalog
+canonical identities. It did not read real Parquets or execute the quarantine pipeline.
+Sol disclosed one initial read-only `git status`, contrary to its no-Git instruction. The
+reviewer records that workflow deviation; no Git mutation occurred and no further Git use
+is authorized for Sol. It does not change source or data acceptance.
+
+Frozen candidate:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/acquisition/bitmex_funding_quarantine.py` | 535 | `40fdf5dc09f628ecd9bff4a95c0fa804159b51b911768def95c587e8b8810181` |
+| `scripts/research/quarantine_bitmex_funding.py` | 66 | `03c53c0e98a11d60ebca1d554bb8d978e726fb4c5530e280f00cb56dde53b257` |
+| `tests/acquisition/test_bitmex_funding_quarantine.py` | 712 | `23e241f506eb07fe3ec0a01a16220cbd434516b5fc26e04b904d0508686c8e81` |
+| `src/cryptofactors/catalog/dataset/catalog_store.py` | 587 | `029d3cf77ad95056139f51ae1cc88207b88a716918c88de9158eb9107dc0b620` |
+| `src/cryptofactors/catalog/dataset/errors.py` | 88 | `3b2f37436e44f85c81dab696fc20144f5ab020439f6f0c9ffd1b7b8836c4c517` |
+| `src/cryptofactors/catalog/dataset/__init__.py` | 123 | `3de121666142e1f4acf46c9b8fe9c2fffd0a5f838918bb76c24d4550fa36979d` |
+| `tests/catalog/test_resolve_latest_by_type.py` | 372 | `d4b6be0aac9b361ef6415bc6d8f316b1e6bbce46c277474ff5e6c51700bdf651` |
+
+Under AGENTS.md's **Targeted senior test exception**, the reviewer authorizes the same
+Sol actor to execute exactly this one command once against the frozen corrective drop:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/acquisition/test_bitmex_funding_quarantine.py tests/catalog/test_resolve_latest_by_type.py -q --tb=short
+```
+
+Report the exact command, exit code and terminal output. Stop immediately on a nonzero
+result; no correction/retry is implied. No Ruff, full suite, integration, real-data command,
+Git, record edit or catalog mutation is assigned. On success preserve the source bytes and
+return to the reviewer for the next disposition. Hermes remains unauthorized pending that
+disposition. This targeted result cannot accept the real quarantine or complete Gate 0.

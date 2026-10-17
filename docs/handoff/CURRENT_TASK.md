@@ -24,9 +24,9 @@ tests and first audit were preserved, not rerun. No further coverage replay/audi
 Review 485 authorizes the next bounded source correction: exact five-artifact BitMEX
 quarantine and default resolver exclusion, assigned directly to GPT-6.1 Sol High.
 Only its seven enumerated source/test paths may change. Prior drafts are preserved;
-no real quarantine, database mutation, test execution or integration is authorized yet.
-The separate BitMEX normalizer/publisher correction remains pending. Sol stops for
-reviewer source inspection. Coverage acceptance and all passing evidence remain preserved.
+no real quarantine, database mutation or integration is authorized yet.
+The separate BitMEX normalizer/publisher correction remains pending. The complete source drop passed static review; Sol is authorized
+for Review 485's one targeted pytest command, then stops for reviewer disposition. Coverage acceptance and all passing evidence remain preserved.
 Next ticket remains NONE.
 
 Accepted cost completion:
