@@ -178,3 +178,247 @@ The reviewer may publish exactly this review, Review 487's final acceptance sect
 `docs/handoff/CURRENT_TASK.md` and `tickets/CEX-002.md`. Wait for Hermes's three-path
 Record 488 publication before staging reviewer governance, to avoid shared-index races.
 Grok may author its five disjoint source paths while that record-only work finishes.
+
+## Source supervision — implementation in progress
+
+Native Grok Build session `01a14b01-adae-7ce2-83b5-ed5851be7d9d` is the sole
+senior source actor. During preparation it requested an unassigned Python calendar /
+PyArrow-Parquet roundtrip probe. The reviewer denied that command before execution;
+it produced no test result. Because denial ended the native turn, the reviewer explicitly
+continued the same five-path assignment in the same session, directing incremental
+source writing and preserving the one targeted pytest command above. This was not a
+model rotation or authorization for further exploratory executable probes.
+
+The acquisition module, offline reconciler and subsequent scoped edits have been written.
+The CLI/test files and targeted result are still pending. No source acceptance,
+integration, real sample acquisition, or comparison evidence is claimed by this update.
+
+### In-progress static feedback
+
+Before the first targeted test, address these concrete issues within the same five paths:
+
+- `load_sample` validates manifest records against themselves rather than reading their
+  physical receipts. Authenticate the receipt file, its content-addressed name and its
+  exact agreement with the manifest; reject missing, corrupt or conflicting receipts.
+  Recheck the retained sidecar SHA-256 when consuming minute rows, as for the ZIP.
+- `_aggregate_day` iterates only hours containing rows. Report all 24 native UTC hours
+  of each selected day, including zero-observation hours, with explicit expected /
+  observed slot denominators. This does not require filling gaps or rejecting an otherwise
+  valid bounded sample solely for partial boundary coverage.
+- `_compare_hour` can accept an authenticated quality exclusion without recording it in
+  the result. Emit each skipped product/hour with its reason and authenticated evidence
+  reference, plus per-product/field comparison denominators. Preserve the distinction
+  between observed minute rows, excluded hourly products and successfully compared values.
+
+Include focused regression cases for these behaviors. The original single targeted test
+authorization remains unchanged; this feedback grants no additional command or retry.
+
+For applying these source edits, the reviewer inspected and authorizes the temporary
+editing helper `/tmp/patch_cex002_489.py` and its single execution with
+`python3 /tmp/patch_cex002_489.py`. It performs exact-string edit preconditions and writes
+only the assigned acquisition and reconciliation modules. It imports no project code,
+runs no tests or application logic, and touches no data or repository records. The
+temporary helper is not part of the source drop or integration. This explicit editing
+allowance does not expand the production/test paths or the targeted-test authorization.
+
+The helper was not created or executed: delivery of queued reviewer guidance canceled
+that pending tool call. Queued static feedback and a repeated instruction to write files
+also canceled pending direct-edit batches before execution. The native tool results
+reported `user_cancel`; these were supervisor message-delivery interruptions, not test
+failures or a developer refusal to produce code. Existing files remained intact. The
+reviewer now lets the same Grok session finish the edits without further queued messages.
+
+Grok subsequently submitted the same bounded replacement operation directly as a
+`python3` heredoc, without creating the temporary helper. The reviewer inspected its
+entire command and authorizes that source-edit operation: it reads/writes only the two
+assigned modules and checks replacement preconditions; it executes no project code or
+tests. Normal single-command approval applies. This is the source-edit alternative to
+the unused temporary helper, not an additional validation command.
+
+The inline source-edit command exited 0 and applied the three corrections. Grok then
+wrote both test files and submitted the exact targeted pytest. The reviewer accidentally
+selected rejection in the native command approval menu; the native result says
+`User rejected the execution for tool run_terminal_command`. The test did not execute,
+so there is no failing or passing result from that submission. The reviewer explicitly
+reauthorizes submission of the identical targeted command; the allowance remains one
+actual execution, followed by a stop on its first nonzero result.
+
+## Complete drop review and bounded correction
+
+The identical targeted command subsequently executed once and exited 1. Its progress
+line was `.........F.....................................F..... [100%]`; the two failures
+were `test_unsafe_zip_members_are_rejected` (the expected encrypted-member error was
+not raised) and `test_structural_minute_failures_raise_and_gaps_do_not_hide_them`
+(expected outside-day error, received minute-alignment error). Grok correctly stopped,
+reported the exact output, and made no repair or retry. No integration is accepted.
+
+The reviewer inspected the complete five-path drop. The three earlier production
+corrections are present. Exact arithmetic, product completion/partition/lineage proof,
+quality-gap provenance, deterministic publication and CLI fetch gating pass static
+review. Following the owner's direction to reduce overhead, the immediate correction
+is bounded to the two failing test fixtures and the statically visible fixture defects
+listed below, in these two paths:
+
+- `tests/acquisition/test_binance_usdm_kline_comparison_sample.py`
+- `tests/ingest/test_binance_usdm_kline_reconciliation.py`
+
+Keep the acquisition module frozen at SHA-256
+`5f90aed17a483d29cbb17116250161f0412d8de8af5769e2a3a374d0f06b3f31`
+(1,095 lines), and the CLI at
+`e036f914797addca42cef88c77602744c368219ae6acdab57c5f7b8d9219751a`
+(65 lines). The first tested reconciliation source is
+`a175a34e9864d37502641f0dbe652844b464410773a9d0541c22c135a219ed48`
+(1,134 lines); its test is
+`f9b2e815d3e032a9cf4fa2d24506cf3e4b6e0d0be12b528d7c47a8acfd962d04`
+(1,108 lines). The acquisition test is
+`22c2637f482ae2dc4ae61f9336ad8a06f75b5e95db943983b2ab68653ef87b22`
+(595 lines).
+
+Grok remains the selected senior and must address this consolidated list:
+
+1. Correct the encrypted-ZIP fixture. Python's ZIP writer clears a preassigned
+   `ZipInfo.flag_bits`; construct bytes with the encryption flag actually present in
+   both applicable headers and assert the fixture property before exercising rejection.
+   Preserve the independent CRC and unsafe-member cases.
+2. Isolate every malformed-minute case. The helper currently reuses a directory based
+   on the first word of the expected error, so multiple `minute ...` cases reuse the
+   first retained sample. Use independent fixture directories or parametrization.
+   Correct the later `_minute(..., volume=...)` and
+   `_minute(..., taker_buy_volume=...)` calls to its declared token-dictionary interface.
+   Every specified failure must reach the production parser, not fail in fixture setup.
+3. Remove the unused local `extra = dict(document)` in the selection test. This is a
+   statically visible lint defect; no Ruff command has been run by the reviewer.
+
+The reviewer withdraws the proposed extra test expansion from this immediate correction.
+The previously noted prior-day object lifetime remains a source-review observation,
+not an additional instruction to Grok in this fixture correction. Production is frozen.
+
+After these edits, Grok is newly authorized to execute the same enumerated targeted
+pytest command exactly once. The previous execution's failure is preserved; this is a
+reviewer-authorized corrective execution, not an automatic retry. Stop on its first
+nonzero result and return the exact output. No syntax/AST probes, Ruff, acceptance
+suite, real run, data, integration, Git or record changes are assigned. All other
+paths remain frozen, and next ticket remains NONE.
+
+## Corrective targeted result
+
+Grok fixed the two fixtures and the unused local, then executed the authorized
+corrective command once: exit 0, all 53 cases passed. The production files retained
+their hashes above. Final acquisition test: 600 lines, SHA-256
+`562a45b459d093872e529fafc9c8ccb9418cdf53ca8111db431b8b1c84d1a295`.
+Final reconciliation test: 1,111 lines, SHA-256
+`a008bb38c0aee5940b92e698885c6a8d64154763c8bf24f020fc94cb8036a64c`.
+The reviewer independently read the changed fixture sections and fingerprinted all
+five files; the reviewer did not execute tests. The bounded fixture correction is
+complete. No further Grok command, integration or real-data run is assigned. Control
+returns to the reviewer for source disposition and integration planning; the earlier
+source-memory observation remains explicit. CEX-002 remains IN_PROGRESS, next NONE.
+
+## Final source decision and complete integration workflow
+
+The reviewer accepts the five frozen paths above for integration. The prior-day
+object-lifetime observation is a bounded resource limitation, not a release blocker
+for these nine fixed samples: parsed minute objects can overlap for two days (at most
+2,880 rows), with a fixed selected-hour cache and one partition read at a time. The
+reviewer explicitly relaxes this assignment's one-day transient-lifetime target to
+that two-day bound. Input byte/row caps and the nine-object limit remain enforced.
+This narrow tool does not acquire full minute history or change the product architecture.
+The owner directs reduced overhead; no additional source correction or test expansion
+is warranted. The 53-case targeted pass and final hashes remain the source evidence.
+
+Jr Dev — Hermes, using Nous `meituan/longcat-2.5-preview:free` with no reasoning
+override, owns the following complete workflow. Selection uses its most recent accepted
+52-case source integration and current native availability; earlier record errors stay
+disclosed. Use normal interactive approvals. Stop on the first nonzero command,
+denial, identity mismatch, or unexpected state; record the result without repair/retry.
+No source/test edits, test design, package installation or additional helper is assigned.
+
+1. Read this section, the current-task header and ticket's current checklist. Verify
+   `HEAD == origin/main == c8a415266f47595381572f1d5040f99c439203ad`, empty index,
+   and the five final hashes above. Preserve all unrelated dirty/untracked files.
+2. Run these standalone checks, in order, each once:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python -m pytest tests/acquisition/test_binance_usdm_kline_comparison_sample.py tests/ingest/test_binance_usdm_kline_reconciliation.py -q --tb=short
+   PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/acquisition/binance_usdm_kline_comparison_sample.py src/cryptofactors/ingest/binance_usdm_kline_reconciliation.py scripts/research/reconcile_binance_usdm_klines.py tests/acquisition/test_binance_usdm_kline_comparison_sample.py tests/ingest/test_binance_usdm_kline_reconciliation.py
+   python3 scripts/check_repo_control.py
+   git diff --check -- research/sprint_004/489_CEX002_BOUNDED_KLINE_RECONCILIATION_SOURCE_REVIEW.md docs/handoff/CURRENT_TASK.md tickets/CEX-002.md
+   ```
+
+3. Stage exactly the five accepted source/test paths plus this reviewer-authored review,
+   `docs/handoff/CURRENT_TASK.md` and `tickets/CEX-002.md`. Confirm exactly those eight
+   paths are staged, run `git diff --cached --check`, commit with message
+   `CEX-002: integrate bounded minute-hour reconciliation`, and push `origin main`.
+   Verify HEAD and origin/main agree. The reviewer authorizes publication of its three
+   governance files with this source integration, avoiding a separate publication handoff.
+4. Prove both `data/.cex002_kline_comparison_sample` and
+   `data/.cex002_kline_reconciliation` are absent, `data/` is a real directory, and at
+   least 1 GiB is available. Then execute this command once in the foreground, allowing
+   up to 20 minutes, and remain attached through its terminal result:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python scripts/research/reconcile_binance_usdm_klines.py --repo . --evidence-root data/.cex002_kline_comparison_sample --output-root data/.cex002_kline_reconciliation --fetch
+   ```
+
+   Only this bounded fetch is authorized: nine exact official ZIP/CHECKSUM pairs. No
+   alternative dates, full-history acquisition, accepted-product conversion, catalog
+   mutation or source repair. A nonzero result ends real execution; preserve its evidence.
+5. On success, inspect the sample manifest, comparison report and completion read-only.
+   Record their content hashes, nine distinct days, ten roles, per-day compared hours,
+   expected/observed slot counts, exclusions/gaps and zero mismatch/coverage-failure
+   counts. Check report and completion names agree with their bytes and references.
+   Preserve the completion/report identities. Run one offline replay:
+
+   ```bash
+   PYTHONPATH=src .venv/bin/python scripts/research/reconcile_binance_usdm_klines.py --repo . --evidence-root data/.cex002_kline_comparison_sample --output-root data/.cex002_kline_reconciliation
+   ```
+
+   Confirm the same manifest/report/completion hashes. No extra replay or whole-product
+   audit is assigned; the CLI reauthenticates the selected retained inputs and products.
+6. Publish `research/sprint_004/490_CEX002_KLINE_RECONCILIATION_INTEGRATION_AND_RUN_RECORD.md`
+   with exact commands, outputs, exit codes, source/integration identities, real counts,
+   replay identities and any failure/denial. Update the current-action summary in
+   CURRENT_TASK and the existing ticket summary; return the actor to the reviewer.
+   Keep CEX-002 IN_PROGRESS, next NONE and ten products accepted. Run repository control
+   and whitespace over these three record/control paths, stage exactly those paths,
+   confirm the staged list, check cached whitespace, commit
+   `CEX-002: record bounded kline reconciliation result`, push, and verify HEAD equals
+   origin/main. On an earlier execution failure, skip remaining tests/run/Git steps and
+   publish the terminal failure through this same bounded record workflow only.
+
+Reviewer acceptance of the real comparison remains separate from source acceptance.
+The remaining release work stays the existing bundle, consumer readback and final checks.
+
+Dispatch status: the sandboxed Hermes startup could not resolve network hosts. A request
+to launch the native interactive agent with network access was rejected by automatic
+approval review before launch, citing broad publication/download capabilities without
+explicit owner authorization at launch. No assigned integration/check/download command
+has executed. The owner has been asked to approve the bounded workflow above; source
+acceptance and the existing 53-case pass remain valid. Do not bypass the rejection.
+
+The owner subsequently manually approved the exact native Hermes launch with this
+model/provider and repository working directory. Dispatch may proceed under that
+approval and the bounded workflow above; unrelated actions remain unauthorized.
+
+The approved launch succeeded in Hermes session `20261017_134003_4ecfbf`. Automatic
+review separately rejected delivery of the full workflow prompt because manual approval
+covered the launch only. A safer, local-validation-only prompt was accepted: read-only
+identity proof, targeted pytest, scoped Ruff and repository control, then stop/report.
+It authorizes no source/record edits, Git mutations, publication, download or real run.
+Those steps remain pending explicit approval; do not infer them from launch approval.
+
+Hermes completed local validation: all 53 targeted cases passed, scoped Ruff passed,
+and repository control passed. It rehashed the five files afterward with all identities
+unchanged and no staged changes. Native session export
+`/tmp/cex002_review490_hermes_06.jsonl` retains the commands/results. Hermes appended
+`echo EXIT:$?` to each check; each printed `EXIT:0`, independently preserving the check's
+successful status. The control command included a trailing `.` and returned PASS.
+These successful checks are preserved without rerun. Publication, real acquisition,
+comparison/replay and Record 490 remain pending explicit owner approval of that scope.
+
+The owner has now manually approved delivery of the exact full-workflow Hermes prompt
+and answered yes to the remaining publication/comparison/replay work. Continue the
+workflow with its outstanding documentation whitespace check, then step 3 onward.
+The completed identity proof, 53-case pytest pass, scoped Ruff and repository-control
+PASS satisfy steps 1-2: preserve them, do not repeat them. All other bounds and the
+first-failure stop remain in force. This continuation grants no source/test repair.

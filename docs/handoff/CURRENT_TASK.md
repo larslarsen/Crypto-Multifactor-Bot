@@ -3,20 +3,26 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Grok Build (grok-4.7 High)
+Next required actor: Jr Dev — Hermes
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 489 authorizes Grok's five-path source/test implementation of the remaining
-bounded one-minute/hourly kline reconciliation. Grok is active in native Build with
-normal approvals. Use the nine exact daily sample dates and ten role bindings from
-the pinned qualification report; implement bounded sample acquisition, offline exact
-aggregation/comparison, CLI and tests. Only Review 489's single targeted test is
-assigned after source is ready. Stop on its first failure and return source for review.
-No real download or comparison run, integration, data/catalog mutation, bundle,
-experiment or next ticket is authorized. Hermes has finished Record 488 publication.
+Review 489 accepts Grok's five-path source drop after 53 targeted cases passed.
+Hermes owns its final section's complete validation, integration, bounded nine-day
+real comparison, one offline replay and Record 490 publication. Execute that ordered
+workflow and stop on the first failure or denial. The two-day transient row-memory
+bound is explicitly accepted for this fixed sample. No further source change is assigned.
+The owner directs reduced overhead. Keep to this workflow and the existing release
+checklist. Reviewer acceptance of the real result remains pending.
+The owner approved the exact Hermes launch. Automatic review then rejected the broader
+publication/download prompt. Hermes completed the read-only identity checks and three
+local validations: 53 tests, scoped Ruff and repository control all passed, with unchanged
+source hashes. Preserve these results. The owner has now manually approved delivery of
+the exact full-workflow prompt and answered yes to the remaining publication/comparison
+work. Continue from the outstanding whitespace check and step 3 onward in Review 489;
+do not repeat the passed checks. Normal approvals and first-failure stops remain active.
 
 The owner reports almost all Grok usage remains and access ends tomorrow night.
 Prioritize Grok for substantive senior source work while preserving reviewer acceptance
