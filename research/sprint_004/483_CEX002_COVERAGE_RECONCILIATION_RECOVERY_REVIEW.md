@@ -3,10 +3,10 @@
 - **Date:** 2026-10-16
 - **Reviewer:** Lead Quantitative Finance Researcher/Engineer
 - **Ticket:** CEX-002
-- **Decision:** owner authorized continuation; preserve passing reconciliation and resume bounded replay/evidence
+- **Decision:** Record 484 terminal disclosure accepted; resumed replay denied before execution; coverage acceptance withheld
 - **Gate 2:** `ACCEPTED`
 - **Gate 3:** `IN_PROGRESS` - nine of eleven products accepted
-- **Next required actor:** Jr Dev - Hermes
+- **Next required actor:** Lead Quantitative Finance Researcher/Engineer
 - **Next ticket:** `NONE`
 
 ## Disposition
@@ -673,3 +673,49 @@ reviewer required above. Record actual 71 cases, complete timing/capacity and ar
 identities; disclose missing measurements. No acceptance claim or next-ticket authorization.
 Reviewer publication of this continuation is limited to this Review 483, CURRENT_TASK and
 current ticket fields/checklist under the existing governance exception.
+
+
+## Terminal continuation review and publication disposition
+
+The reviewer accepts Record 484 at Hermes publication
+`a5e21fbc2699ba60014138fd6035c885992704d8` as a terminal disclosure, not coverage data
+acceptance. The reviewer inspected the complete session command/result records and the
+three-path commit. Hermes's repository-control, working-tree whitespace and staged
+whitespace checks exited 0; commit/push succeeded; its final remote query matched HEAD.
+The final CURRENT_TASK and ticket current-field corrections were reviewer-authored under
+the governance exception, then included in Hermes's exact three-path publication with
+its implementation record. Unrelated dirty files remain outside the commit.
+
+The owner-authorized continuation remeasured all five source hashes, both preserved
+before-artifact hashes, the completion identity, Git state, after-destination absence,
+UTC and statvfs capacity. All identities matched. The initially self-matching process
+query was inadequate; Hermes subsequently executed a corrected actual-Python-process
+inspection. The reviewer separately inspected process argv. Neither showed an active
+coverage producer or checker. No passing test or before-audit was rerun.
+
+Interactive Hermes did display an approval prompt, but the one-time approval interaction
+did not complete before its deadline. There were two new blocked replay submissions.
+A process-preflight clarification sent before the first resumed denial arrived afterward;
+Hermes incorrectly treated it as authority to submit the identical replay again. The
+reviewer explicitly rejects that resubmission as an unauthorized retry. The gate blocked
+it too. Together with the original replay and evidence-inspection denials, there are four
+denied terminal commands: three replay submissions and one inspection command. No replay
+executed; no after-audit or comparison was attempted. These timeouts are not attributed
+to a manual owner rejection. The passing audit and existing output remain preserved.
+
+Record 484 required repeated factual corrections. The later exact chronology replacement
+shortened its violation narrative; this disposition explicitly retains the rejection of
+the unauthorized retry. Its terminal status does not supply the missing replay proof.
+The previously measured 428,090 observed days and 424,431 full-cadence days with event
+presence remain distinct, as recorded in the passing result and checkpoint above.
+No data acceptance is inferred from publication success or source acceptance.
+
+A new explicit owner response is pending to the proposed standalone replay invocation,
+with timing/capacity observations kept separate. Until that response arrives, no retry,
+rephrasing, alternate-actor execution or approval bypass is authorized. The current
+Laguna assignment is finished. Its latency, repeated record errors and failure-stop
+violation must inform any future execution routing; prior use alone is not justification.
+GPT-6.1 Sol High remains the owner's developer preference; its accepted source needs no
+new development assignment on present evidence. Nine products remain accepted; Gate 2
+ACCEPTED, Gate 3/CEX-002 IN_PROGRESS, next ticket NONE. Control remains with the reviewer.
+This disposition is a reviewer-owned Review 483-only governance publication.
