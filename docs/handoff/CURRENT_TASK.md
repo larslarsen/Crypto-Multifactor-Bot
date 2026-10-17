@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Grok Build (grok-4.7 High)
+Next required actor: Jr Dev — Hermes (meituan/longcat-2.5-preview:free)
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -36,17 +36,18 @@ same quarantine metadata. Ten manifest/Parquet artifacts retain identical
 path/hash/size/device/inode/mtime/ctime/mode entries. Economics remain 307,738 rows, zero
 null/nonzero rates, 307,738 empty intervals, symbol counts [2,5,5,5,45]. Control returns
 to the reviewer. Independent reviewer catalog/file/source reconciliation passed. Gate 0
-remains open. Review 487 assigns Grok 4.7 High the bounded six-path normalizer/publisher
-source correction and one targeted test command. No integration or real acquisition is
-authorized. Ten Binance products remain accepted. No
+remains open. Review 487 accepts Grok's corrected six-path normalizer/publisher source
+for Hermes validation and integration under its final ordered workflow. Real acquisition
+is not assigned. Ten Binance products remain accepted. No
 bundle, experiment or next ticket is authorized.
 
 Review 487's first normalizer/publisher drop passed its one targeted run (38 tests,
-exit 0); reviewer hashes match. Integration is rejected pending the final bounded
-correction section: empty-fetch/window coverage, malformed instrument discovery,
-exact timestamp precision, crash-durable retained ordering and stronger failure tests.
-The same Grok 4.7 High actor owns four-path correction and one newly authorized targeted
-run after those changes. Prior test success is preserved. Hermes is not assigned yet.
+exit 0). The corrected drop passed its new run (52 tests, exit 0), and the reviewer
+matched all six hashes and accepts the source for integration. The unassigned Grok
+syntax/AST check remains disclosed. Review 487's final section assigns Hermes on
+meituan/longcat-2.5-preview:free only final-byte validation, six-path integration and
+Record 488 publication. Source is frozen; no real data/backfill execution is assigned.
+Gate 0 remains pending final integration review; ten products accepted; next ticket NONE.
 
 Accepted cost completion:
 `fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e`.

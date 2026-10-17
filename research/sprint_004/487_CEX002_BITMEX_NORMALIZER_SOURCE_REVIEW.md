@@ -2,7 +2,7 @@
 
 Reviewer: Lead Quantitative Finance Researcher/Engineer
 Ticket: CEX-002 (IN_PROGRESS)
-Next required actor: Sr Dev — Grok Build (grok-4.7 High)
+Next required actor: Jr Dev — Hermes (meituan/longcat-2.5-preview:free)
 Next ticket: NONE
 
 ## Accepted baseline and routing
@@ -253,3 +253,89 @@ first nonzero result, with exact output and no subsequent edit/retry until revie
 disposition. Report all six hashes/line counts and stop for review. No integration,
 acceptance suite, real acquisition, data, record or Git ownership transfers. Gate 0,
 Gate 3 and CEX-002 remain open; ten products accepted; next ticket NONE.
+
+### In-flight correction feedback
+
+Reviewer rejected one pending normalizer edit before execution: top-level instrument
+helpers were inserted between client methods, which would detach `_get`/`_throttle`
+from `BitMEXFundingClient`. Place the helpers outside the complete class body. The
+precision helper must also cover every accepted timestamp syntax: checking only the
+first dot leaves comma fractions and fractional timezone offsets subject to silent
+truncation. Explicit syntax restriction with clear rejection is acceptable. This is
+feedback within the four-path contract. Grok received explicit continuation after
+the denied edit; the newly authorized targeted test has not run at this point.
+
+The first tested six-path drop is preserved at
+`/tmp/cex002_review487_first_tested_drop/`, with an inventory. Static compatibility
+inspection also found that the existing MOM-TS dry-run generator omits fundingInterval.
+Its synthetic rows will be refused by the strict required-field boundary; no experiment
+run or change to that out-of-scope generator is authorized by this source correction.
+
+## Corrected source accepted for Hermes integration — 2026-10-17
+
+The corrective targeted command ran once and exited 0 with 52 dots at 100%. The
+reviewer matched all six hashes, inspected the corrective diff and failure assertions,
+and accepts these exact bytes for integration. The prior 38-case result is preserved;
+the 52-case result applies to the corrected source. The fixture and exports were frozen
+through correction. Seven accepted quarantine source hashes and eight unrelated source
+hashes still match their preserved inventories.
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `src/cryptofactors/ingest/bitmex_funding.py` | 1120 | `339c1f27277eb919ba69cbb466f8e84433c53392b09a545983d0b05bc4d3208b` |
+| `src/cryptofactors/ingest/__init__.py` | 119 | `369be49f416a5dabd0b661511cdd3077bcef12c3a0c8e9481778e09963bc8499` |
+| `scripts/research/backfill_bitmex_funding.py` | 1038 | `3c3883f95b7dc366d0f9540b4193b0788f34be3a9a4993cc293f3deb6112073b` |
+| `tests/ingest/test_bitmex_funding.py` | 752 | `2c4d9b74730a6516771dd688a3623feeda205d9c1af57df3a9af8fd0990e316b` |
+| `tests/ingest/test_bitmex_funding_backfill.py` | 833 | `1587069bfb7502bbc9ed05bd3f0c32566cc0edb2b6fe64d0240e90656ed45855` |
+| `tests/ingest/fixtures/bitmex_funding_source_shapes.json` | 83 | `469f4225d7318687a8af48aa27b1d1c27b16783fdda268009c8fc587fdcc34a3` |
+
+Grok also executed an unassigned syntax/AST command before the corrective pytest:
+`py_compile` over the four corrective Python paths, followed by an AST assertion that
+`_get`, `_throttle` and `_fetch_instrument_page` remain client methods. It exited 0
+and printed `class methods ok True True`. This exceeded the enumerated validation
+scope and remains a workflow deviation, not additional acceptance authority. No Git,
+real-data execution or evidence publication occurred. The reviewer does not endorse
+the extra command. Grok's completed session is closed; source ownership is now frozen.
+
+Select **Jr Dev — Hermes, `meituan/longcat-2.5-preview:free`**, no reasoning override,
+for the following execution/integration-only workflow. The public Nous recommended
+model endpoint was fetched on 2026-10-17 and lists this exact model at $0.00/1M.
+It completed the preceding 225-case quarantine/catalog validation and integration;
+its evidence-helper failure remains adverse evidence. This assignment requires no
+new helper or data analysis. Step-5's capacity failure and Step-3.7's inference stall
+give neither a stronger demonstrated execution route. No fallback providers are
+configured. Use interactive CLI with normal approvals; no one-shot/yolo/config changes.
+
+### Ordered integration workflow
+
+1. Read this final section and CURRENT_TASK. Verify HEAD equals origin/main, index
+   empty, and the six exact hashes/line counts above. Preserve every unrelated dirty
+   and untracked path. No broad discovery, archive/home search, installation or source
+   edits. A denied command or first nonzero result stops execution; do not retry.
+2. Execute each standalone command in this order:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest tests/ingest/test_bitmex_funding.py tests/ingest/test_bitmex_funding_backfill.py -q --tb=short
+PYTHONPATH=src .venv/bin/python -m ruff check src/cryptofactors/ingest/bitmex_funding.py src/cryptofactors/ingest/__init__.py scripts/research/backfill_bitmex_funding.py tests/ingest/test_bitmex_funding.py tests/ingest/test_bitmex_funding_backfill.py
+python3 scripts/check_repo_control.py
+git diff --check -- src/cryptofactors/ingest/bitmex_funding.py src/cryptofactors/ingest/__init__.py scripts/research/backfill_bitmex_funding.py tests/ingest/test_bitmex_funding.py tests/ingest/test_bitmex_funding_backfill.py tests/ingest/fixtures/bitmex_funding_source_shapes.json
+```
+
+3. If all pass, stage exactly the six frozen source/test paths, prove the index contains
+   only those paths at the accepted hashes, run `git diff --cached --check`, commit
+   `CEX-002: integrate strict BitMEX funding publication`, push, and verify HEAD equals
+   origin/main. No source/test edits, including lint fixes, are assigned.
+4. Whether success or terminal failure, write only
+   `research/sprint_004/488_CEX002_BITMEX_NORMALIZER_INTEGRATION_RECORD.md` with exact
+   executed commands/results, hashes, integration commit if any, first-stop details,
+   and the prior Grok 38/52-case results plus disclosed syntax/AST deviation. Do not
+   claim missing commands ran. Update CURRENT_TASK and the current ticket summary/
+   actor headers to return control to the reviewer, retaining IN_PROGRESS and next
+   ticket NONE. Run repository control and whitespace checks for these three record
+   paths, then stage/commit/push exactly the record, CURRENT_TASK and ticket. This
+   terminal record publication remains authorized after a validation failure; it does
+   not authorize a failed validation retry or source integration.
+5. Report commit IDs and stop for reviewer acceptance. No real backfill, quarantine
+   rerun, accepted-product audit, production database/store mutation, new data, bundle,
+   experiment, model research or next ticket is assigned. Gate 0 is not accepted merely
+   by this source inspection; final integration review remains with the reviewer.
