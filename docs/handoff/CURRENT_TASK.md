@@ -3,21 +3,37 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), awaiting owner prompt relay or direct-delegation approval
+Next required actor: Jr Dev — Hermes, Review 494 integration prompt awaiting owner relay or direct-launch approval
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
+Review 494 accepts the final five-path source correction for Hermes validation and
+integration after all 28 focused cases passed. The reviewer independently verified the
+final hashes and inspected both fixture corrections; no production bytes changed after
+the preceding 26-pass/2-fail result. The developer is stopped. Review 494's final section
+contains the exact Hermes validation/record/commit/push prompt, ready for owner relay
+or explicit direct-launch approval. No Hermes launch, integration or real release run
+has occurred for this step. GPT-6.1 Sol remains reviewer; next ticket is NONE.
+
+## Review 494 developer history
+
 Review 494 prepares the consolidated five-path repair for GPT-6 Sol High. Grok's
 syntax repair restored execution: the exact targeted run returned exit 1 with 14 passed
 and 10 failed. Source remains unaccepted and Grok has stopped. The reviewer selected
 the alternate senior after repeated misses/latency; GPT-6.1 Sol remains reviewer only.
-The owner must relay Review 494's concrete one-way prompt or explicitly approve direct
-launch/supervision for this bounded assignment. Review 474's direct-delegation exception
-covered Batch A only. No new developer has been launched. All prior Grok test slots are
-consumed. No integration, real preparation/publication, consumer run or next ticket is
-authorized. Hermes's ownership is unchanged.
+The owner explicitly approved direct launch and supervision of this bounded assignment.
+The reviewer launched GPT-6 Sol High as bundle_correction_sol with Review 494's exact
+five-path scope and one targeted pytest slot. This approval applies to Review 494;
+Review 474's Batch A exception is not being extended by assumption. All prior Grok
+test slots are consumed. No integration, real preparation/publication, consumer run or
+next ticket is authorized. Hermes's ownership is unchanged.
+
+The developer's first correction run returned 26 passed, 2 failed and stopped. Review
+494's final section authorizes only two test-fixture selection corrections followed
+by one additional execution of the same two-file pytest. The three production/CLI
+paths are read-only. Keep exact rejection/absence assertions and stop at first nonzero.
 
 ## Prior source-feedback record
 

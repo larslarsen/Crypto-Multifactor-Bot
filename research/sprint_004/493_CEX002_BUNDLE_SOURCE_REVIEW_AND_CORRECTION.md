@@ -294,3 +294,12 @@ ingest/CLI coverage-schema failures. Grok stopped. No tests were executed by the
 reviewer and no developer integration is accepted. Review 494 records the next bounded
 correction, model selection and owner relay/direct-delegation boundary. All Review 493
 execution slots are consumed; no further Grok edits or tests are assigned.
+
+The owner explicitly approved Review 494's direct launch and supervision. Its sole
+GPT-6 Sol High developer is now active within the five-path repair and one targeted
+test slot. GPT-6.1 Sol remains reviewer only; integration remains unassigned.
+
+Review 494 subsequently accepted the alternate developer's final source correction
+for Hermes validation/integration after 28 focused cases passed. Its first 26-pass/
+2-fail result and two fixture corrections remain disclosed there. The developer is
+stopped; Review 494's concrete Hermes prompt awaits owner relay/direct-launch approval.
