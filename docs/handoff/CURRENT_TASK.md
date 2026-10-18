@@ -3,11 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), Review 501 physical-count correction
+Next required actor: Jr Dev — Hermes, Review 501 integration and one new bundle preparation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 501 accepts the two-path derived-bound correction after 37 focused tests and
+reviewer diff/hash inspection. Hermes owns its final ordered regression/lint/control,
+exact three-path integration (two source/test files + Record 502), full pre-run catalog
+snapshot and one new preparation bound to that new commit, then terminal Record 503.
+Use the existing directly supervised native route with normal approvals. Stop on first
+failure without repair/retry. No accepted-data change, catalog admission, consumer run
+or next ticket; GPT-6.1 remains reviewer and the source actor is stopped.
+
+## Diagnosed physical-count failure
 
 Review 501 accepts integration 2395f03 (134 regression cases, Ruff/control passed),
 corrected Record 497 and terminal Record 500. The real attempt stopped at flow's

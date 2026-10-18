@@ -78,3 +78,72 @@ no third real preparation is authorized by this source assignment.
 
 Reviewer publication scope is exactly this Review 501, docs/handoff/CURRENT_TASK.md
 and tickets/CEX-002.md. This publication excludes source/tests and implementation evidence.
+
+## Final source acceptance and Hermes workflow
+
+The developer removed an unnecessary proposed duplicate-reference rejection before
+testing; that rule is not part of the final drop. The single authorized targeted command
+returned exit 0 with 37 passing cases. The reviewer inspected the complete final source
+and test diffs and independently verified:
+
+| Path | SHA-256 | Lines |
+|---|---|---:|
+| src/cryptofactors/ingest/binance_usdm_harmonic_bundle.py | 1370c63017275692c4b43c8577bcee8c3475ea357bf041a446a6ccec4debd3e5 | 1925 |
+| tests/ingest/test_binance_usdm_harmonic_bundle.py | e91ac496b1de969b975c0dd95b3ef0c79340d7b0ed8f0ce6310761e917baf1b4 | 1239 |
+
+Accept these bytes for integration. The physical bound is the unique authenticated
+descriptor-path count plus that product's frozen retained-kind allowance; all existing
+classification, digest and symlink rules remain. The synthetic walk test permits exactly
+65,635/65,651 files and rejects the next regular file for each product, without physical
+data creation. There is no public bypass or unexplained slack. No reviewer test ran.
+The source actor has stopped. Acceptance of the real bundle remains pending.
+
+Continue the owner-approved direct Hermes route with the existing native session and
+Nous meituan/longcat-2.5-preview:free, which completed the preceding checks and correctly
+stopped/published the terminal failure. This final section explicitly authorizes one new
+prepare only after the new integration below. Keep normal approvals, first-failure stops,
+immutable accepted products and unrelated changes. Do not author source/tests/helpers,
+install, acquire, read archive, repair or retry. GPT-6.1 remains reviewer.
+
+1. Confirm HEAD==origin/main, empty index and the two frozen changed hashes above.
+   Verify the three unchanged hashes from Review 498: CLI cfb5b04f87226c9d1efbb39bbd04b634c40c7a20ddb868b8c6b3768d817b3fd9,
+   catalog source 942140dbbc85a4b7cb7f24284442edf8b8289705651895be7cdaa076ddaa8387,
+   catalog test e4d7cf4335e87d8e7bb4ecb2f87dd106f601e845c47e369f095a784fe3c5f456.
+   Confirm absent bundle root including no dangling symlink. Run exactly once in order:
+
+   ```bash
+   .venv/bin/python -m pytest -q tests/catalog tests/ingest/test_binance_usdm_harmonic_bundle.py
+   .venv/bin/ruff check src/cryptofactors/ingest/binance_usdm_harmonic_bundle.py tests/ingest/test_binance_usdm_harmonic_bundle.py
+   .venv/bin/python scripts/check_repo_control.py
+   ```
+
+2. On success write research/sprint_004/502_CEX002_PHYSICAL_BOUND_INTEGRATION_RECORD.md
+   with actual model, exact validation commands/results and the five hashes. Distinguish
+   the developer's 37-case run. Stage exactly the TWO changed paths above and Record 502;
+   inspect names, frozen hashes and git diff --cached --check. Commit as
+   CEX-002: derive physical inventory cap from accepted closure
+   and push normally. Verify HEAD==origin/main and empty index; save this full new
+   source integration commit and verify its five committed blobs. Do not use an old
+   source commit for execution. No amend/reset/force push or unrelated staging.
+
+3. Execute Review 498 final workflow steps 3–5 exactly, substituting only this new
+   source integration commit. Those steps capture full ordered-row catalog baselines
+   BEFORE launch, verify zero CEX rows/five rejected IDs and absent bundle root, launch
+   the exact prepare command ONCE with background=true/notify_on_complete=true, track
+   its same native process to terminal, inspect only emitted candidate metadata/footer
+   on success, and repeat the same read-only catalog snapshots/free-space observation
+   afterward. The prepared release remains non-consumable. Existing allocations,
+   resource reserves and new-write confinement to data/.cex002_harmonic_bundle persist.
+   No private-function diagnostic, second invocation, catalog admission or consumer run.
+
+4. Publish terminal evidence only as
+   research/sprint_004/503_CEX002_PHYSICAL_BOUND_BUNDLE_PREPARATION_RECORD.md,
+   applying Review 498 step 6's record-only scope and Git checks. Include actual literal
+   command/full source commit, model/process/exit/output, correctly timed full catalog
+   digests, resources and candidate facts or exact blocker. A producer failure stops
+   execution without retry; terminal evidence publication is still allowed. Any earlier
+   validation, identity, Git or approval failure stops the workflow without repair/retry.
+   Verify normal push, HEAD==origin/main and empty index, then stop for reviewer inspection.
+
+No additional source, new ticket, product rerun, replay, proof generation, catalog
+publication or final Gate acceptance is authorized by this continuation.
