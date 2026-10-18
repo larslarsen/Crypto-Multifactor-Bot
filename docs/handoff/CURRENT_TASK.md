@@ -3,11 +3,23 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Grok Build (grok-4.7 High)
+Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), awaiting owner prompt relay or direct-delegation approval
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 494 prepares the consolidated five-path repair for GPT-6 Sol High. Grok's
+syntax repair restored execution: the exact targeted run returned exit 1 with 14 passed
+and 10 failed. Source remains unaccepted and Grok has stopped. The reviewer selected
+the alternate senior after repeated misses/latency; GPT-6.1 Sol remains reviewer only.
+The owner must relay Review 494's concrete one-way prompt or explicitly approve direct
+launch/supervision for this bounded assignment. Review 474's direct-delegation exception
+covered Batch A only. No new developer has been launched. All prior Grok test slots are
+consumed. No integration, real preparation/publication, consumer run or next ticket is
+authorized. Hermes's ownership is unchanged.
+
+## Prior source-feedback record
 
 Review 493 returns one consolidated blocking review of Review 492's complete five-file
 bundle/reference-catalog source snapshot. Grok remains the sole senior corrective actor
@@ -100,6 +112,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/494_CEX002_BUNDLE_CORRECTION_HANDOFF.md
 - research/sprint_004/493_CEX002_BUNDLE_SOURCE_REVIEW_AND_CORRECTION.md
 - research/sprint_004/492_CEX002_BUNDLE_AND_REFERENCE_CATALOG_SOURCE_AUTHORIZATION.md
 - docs/adr/0037-cex002-reference-release-catalog-adapter.md

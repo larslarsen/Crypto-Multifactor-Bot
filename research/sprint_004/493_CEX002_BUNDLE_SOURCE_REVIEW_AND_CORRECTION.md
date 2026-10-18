@@ -287,3 +287,10 @@ The four syntax edits are now saved. The reviewer cancelled the unneeded pending
 refactor after its old text confirmed the keyword arguments already existed. Preserve
 that helper unchanged. The additional pytest authorization is unconsumed: execute it
 once now, with no further source or test edits, then stop at the result boundary above.
+
+The additional exact run returned exit 1: 14 passed, 10 failed, all 24 cases executed.
+The public progress/output identifies eight catalog dependency-order failures and two
+ingest/CLI coverage-schema failures. Grok stopped. No tests were executed by the
+reviewer and no developer integration is accepted. Review 494 records the next bounded
+correction, model selection and owner relay/direct-delegation boundary. All Review 493
+execution slots are consumed; no further Grok edits or tests are assigned.
