@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 494 integration prompt awaiting owner relay or direct-launch approval
+Next required actor: Jr Dev — Hermes, owner-approved Review 494 validation/integration
 Next ticket: NONE
 Next ticket authorized: NONE
 
@@ -13,9 +13,11 @@ Review 494 accepts the final five-path source correction for Hermes validation a
 integration after all 28 focused cases passed. The reviewer independently verified the
 final hashes and inspected both fixture corrections; no production bytes changed after
 the preceding 26-pass/2-fail result. The developer is stopped. Review 494's final section
-contains the exact Hermes validation/record/commit/push prompt, ready for owner relay
-or explicit direct-launch approval. No Hermes launch, integration or real release run
-has occurred for this step. GPT-6.1 Sol remains reviewer; next ticket is NONE.
+contains the exact Hermes validation/record/commit/push prompt. The owner explicitly
+approved direct Hermes launch and supervision. Deliver that bounded workflow to the
+existing native Hermes session using the reliable free Nous route; preserve normal
+interactive approvals and stop on first failure/denial. No real release run is assigned.
+GPT-6.1 Sol remains reviewer; next ticket is NONE.
 
 ## Review 494 developer history
 

@@ -3,7 +3,7 @@
 Reviewer: Lead Quantitative Finance Researcher/Engineer
 Ticket: CEX-002, IN_PROGRESS; next ticket NONE
 Selected senior: Sr Dev — Codex Sol, GPT-6 Sol High (gpt-6-sol, high)
-Launch state: owner-approved developer assignment complete; developer stopped
+Launch state: developer stopped; owner approved direct Hermes validation/integration
 Disposition: final source accepted for Hermes validation/integration; real runs unassigned
 
 ## Decision and fixed scope
@@ -185,6 +185,14 @@ Gate 2 acceptance, Gate 3 IN_PROGRESS, CEX-002 IN_PROGRESS and next ticket NONE 
 The following concrete one-way Hermes prompt is authorized for owner relay. Direct
 Hermes launch/supervision requires the owner's explicit approval; the current approval
 covered the Review 494 source developer. No Hermes launch has occurred for this step.
+
+The owner subsequently answered yes to the explicit request to launch Hermes for
+this prepared validation/commit/push workflow. Direct delivery and bounded supervision
+are now approved. Use the existing native Hermes session and its Nous
+meituan/longcat-2.5-preview:free route, selected for its recent accepted repository
+integrations and current session availability. Retain normal interactive approvals;
+do not use oneshot/yolo approval bypasses. This approval does not authorize a real
+prepare/publish/consumer run or source changes.
 
 > Work on CEX-002 only in /home/lars/Crypto_Multifactor_Bot. Read AGENTS.md,
 > docs/handoff/CURRENT_TASK.md and this final section of Review 494. You are Jr Dev
