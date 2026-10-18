@@ -525,10 +525,14 @@ def _resolve(root: Path, spec: ProductSpec, relative: str) -> tuple[str, str, in
     return found[0]
 
 
-def _walk(root: Path, spec: ProductSpec) -> set[str]:
+def _walk(root: Path, spec: ProductSpec, *, accepted_file_count: int) -> set[str]:
     base = lexical_join(root, _safe(spec.root, "product root"))
     if not base.is_dir() or base.is_symlink():
         _fail("unsafe_path", "product root is not a real directory", path=spec.root)
+    physical_limit = None
+    if spec.dataset_type in _RETAINED_KLINE_COUNTS:
+        retained_parquets, retained_lineages = _RETAINED_KLINE_COUNTS[spec.dataset_type]
+        physical_limit = accepted_file_count + retained_parquets + retained_lineages
     found: set[str] = set()
     for directory, dirnames, filenames in os.walk(base, followlinks=False):
         current = Path(directory)
@@ -541,7 +545,7 @@ def _walk(root: Path, spec: ProductSpec) -> set[str]:
             if child.is_symlink() or not stat.S_ISREG(child.lstat().st_mode):
                 _fail("unsafe_path", "product tree contains a non-regular file", path=str(child))
             found.add(child.relative_to(base).as_posix())
-            if spec.dataset_type in _RETAINED_KLINE_COUNTS and len(found) > 65_650:
+            if physical_limit is not None and len(found) > physical_limit:
                 _fail("metadata_bound", "kline physical inventory exceeds the accepted bound", product=spec.dataset_type)
     return found
 
@@ -1436,13 +1440,13 @@ def _account_product(root: Path, spec: ProductSpec, receipt: Mapping[str, Any], 
         account = _account_cost(root, spec, completion, completion_file, receipt, production)
     else:
         account = _account_ordinary(root, spec, completion, completion_file, receipt, production)
-    disk = _walk(root, spec)
     declared = set()
     for item in account.files:
         prefix = spec.root + "/"
         if not item.relative_path.startswith(prefix):
             _fail("unsafe_path", "accounted file escaped its product root", path=item.relative_path)
         declared.add(item.relative_path[len(prefix):])
+    disk = _walk(root, spec, accepted_file_count=len(declared))
     missing = declared - disk
     if missing:
         _fail(

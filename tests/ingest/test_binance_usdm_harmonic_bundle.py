@@ -5,10 +5,13 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import sqlite3
+import stat
 from decimal import Decimal
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -54,6 +57,7 @@ from cryptofactors.ingest.binance_usdm_harmonic_bundle import (
     AssemblyPolicy,
     ReleaseError,
     _retained_kline_inventory,
+    _walk,
     prepare_harmonic_bundle,
     release_metadata_budget,
 )
@@ -1039,6 +1043,38 @@ def test_retained_kline_production_count_and_missing_accepted_file(tmp_path: Pat
     with pytest.raises(ReleaseError) as missing:
         prepare_harmonic_bundle(policy)
     assert missing.value.blocker == "reference_mismatch"
+
+
+@pytest.mark.parametrize(
+    ("product", "retained_parquets", "expected_limit"),
+    [
+        ("binance_usdm_bar_1h", 31, 65_635),
+        ("binance_usdm_trade_flow_1h", 47, 65_651),
+    ],
+)
+def test_physical_walk_bound_uses_complete_accepted_closure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    product: str,
+    retained_parquets: int,
+    expected_limit: int,
+) -> None:
+    spec = next(item for item in PRODUCTS if item.dataset_type == product)
+    (tmp_path / spec.root).mkdir(parents=True)
+    accepted_files = 22_633 + 22_633 + 1 + 1 + 1  # partitions, lineages, gap pair, completion
+    assert accepted_files == 45_269
+    assert accepted_files + retained_parquets + 20_335 == expected_limit
+    names = [f"file-{index:05x}" for index in range(expected_limit + 1)]
+    with monkeypatch.context() as patched:
+        patched.setattr(Path, "is_symlink", lambda _path: False)
+        patched.setattr(Path, "lstat", lambda _path: SimpleNamespace(st_mode=stat.S_IFREG))
+        patched.setattr(os, "walk", lambda path, followlinks=False: [(str(path), [], names[:-1])])
+        assert len(_walk(tmp_path, spec, accepted_file_count=accepted_files)) == expected_limit
+        patched.setattr(os, "walk", lambda path, followlinks=False: [(str(path), [], names)])
+        with pytest.raises(ReleaseError) as exceeded:
+            _walk(tmp_path, spec, accepted_file_count=accepted_files)
+    assert exceeded.value.blocker == "metadata_bound"
+    assert exceeded.value.context["product"] == product
 
 
 def test_cli_reports_blocker_product_and_path(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
