@@ -3,11 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 498 integration and one corrected preparation
+Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), Review 501 physical-count correction
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 501 accepts integration 2395f03 (134 regression cases, Ruff/control passed),
+corrected Record 497 and terminal Record 500. The real attempt stopped at flow's
+physical-file guard. Record 459's component counts sum to 65,651, not 65,650; Review
+498 and the reviewer adopted that off-by-one total. Assign the same GPT-6 Sol High
+actor a two-path derived-bound correction and one targeted command. Hermes is stopped.
+No producer retry, accepted-data change, catalog admission, consumer run or next ticket.
+
+## Completed Review 498 assignment
 
 Review 498 accepts the three-path inventory/CLI correction after the developer's
 35 focused cases passed and reviewer source/hash inspection. The source actor has
@@ -191,6 +200,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/501_CEX002_PHYSICAL_INVENTORY_BOUND_CORRECTION.md
 - research/sprint_004/498_CEX002_RETAINED_KLINE_INVENTORY_CORRECTION.md
 - research/sprint_004/496_CEX002_REAL_BUNDLE_PREPARATION_REVIEW.md
 - research/sprint_004/494_CEX002_BUNDLE_CORRECTION_HANDOFF.md
