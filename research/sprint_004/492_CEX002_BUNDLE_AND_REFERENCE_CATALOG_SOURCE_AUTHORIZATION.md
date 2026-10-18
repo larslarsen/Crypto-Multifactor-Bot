@@ -134,7 +134,10 @@ an otherwise matching accepted completion. Do not rewrite sizing.
    inputs. Prepared, absent, stale, incompatible, partial or mixed releases must fail.
    Preserve generic catalog behavior, including exclusion of the five invalid datasets.
 7. Enforce existing resource allocations before visibility. Receipt 258's harmonic
-   bundle allocation is 24,352,003 bytes; derive and explain the exact receipt terms.
+   bundle file cap is 24,352,003 bytes. Review 493 corrects the original receipt-key
+   attribution: the measured current projection is 1,133,590 bytes; 24,352,003 is the
+   future-only bundle charge. Retain the conservative cap and authenticate the actual
+   current/future terms; do not treat them as the same field or expand capacity.
    Remaining release metadata reservation after coverage is 4,985,471,619 bytes;
    coverage's unused reservation is not transferable. Count new manifest/descriptor,
    SQLite/WAL and temporary bytes without charging accepted data again. Preserve

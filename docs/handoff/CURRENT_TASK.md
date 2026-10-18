@@ -9,12 +9,18 @@ Next ticket authorized: NONE
 
 ## Current action
 
-Review 492 authorizes Grok's five-path source/test drop for the actual harmonic bundle
-and CEX reference-publication catalog adapter. ADR-0037 records the adapter design:
-reference accepted files in place, prepare an immutable non-consumable candidate,
-require a pinned clean consumer proof, then admit all eleven dataset identities in one
-catalog transaction. Grok authors source/tests only; no tests, Git, real preparation,
-catalog mutation or consumer run is assigned yet. GPT-6.1 Sol stays reviewer.
+Review 493 returns one consolidated blocking review of Review 492's complete five-file
+bundle/reference-catalog source snapshot. Grok remains the sole senior corrective actor
+and may edit only the same five paths. Correct actual descriptor/lineage support,
+streaming/batches, pinned logical consumer proof, committed source identity, complete
+manifest chain, safe crash replay/readback and measured resource preservation. The
+reviewer also corrects Review 492's wrong receipt-key attribution while retaining the
+conservative bundle-file cap. ADR-0037 and all accepted products remain unchanged.
+
+After correction Grok may run exactly the one targeted two-file pytest command in
+Review 493, once; stop on first nonzero result and return without edits/retry. No other
+tests, Git, integration, records, real preparation, catalog mutation or consumer run
+is assigned. Hermes retains validation/integration ownership. GPT-6.1 Sol stays reviewer.
 
 Review 491's six-file publication f574ec1343834217c9f3baca40a0862a829b0e00 is
 independently verified and accepted. All 58 tests and 2,672 real field comparisons
@@ -88,6 +94,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/493_CEX002_BUNDLE_SOURCE_REVIEW_AND_CORRECTION.md
 - research/sprint_004/492_CEX002_BUNDLE_AND_REFERENCE_CATALOG_SOURCE_AUTHORIZATION.md
 - docs/adr/0037-cex002-reference-release-catalog-adapter.md
 - research/sprint_004/491_CEX002_EMPTY_MINUTE_OPEN_CORRECTION_REVIEW.md
