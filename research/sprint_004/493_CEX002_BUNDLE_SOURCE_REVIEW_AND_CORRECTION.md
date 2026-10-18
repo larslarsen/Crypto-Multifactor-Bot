@@ -207,8 +207,9 @@ consolidates these remaining blockers; no cosmetic changes are requested:
 
 1. Four function calls incorrectly use exception chaining: catalog lines 1473, 1844,
    2039 and ingest line 462 in this snapshot. Only raise statements can use that syntax.
-   Also repair _release_charge calling _resource_totals without its three required
-   keyword arguments. Preserve the intended byte accounting when fixing this interface.
+   Reviewer correction: the _release_charge call already supplies the three required
+   keyword arguments in the returned bytes. That diagnosis was stale and is withdrawn;
+   no helper-accounting refactor is authorized by this immediate step.
 2. _require_connection_binding indexes a PRAGMA row by string before the catalog
    constructor sets a row factory. Ordinary idle autocommit sqlite3 connections return
    tuples there. Accept correctly bound tuple-row connections; still reject pending
@@ -268,7 +269,7 @@ Retain the already authorized native Grok actor for these precise fixes: the own
 prioritizes its expiring availability and its source context is available. No concurrent
 senior is authorized. GPT-6.1 Sol remains reviewer only.
 
-Authorize **only item 1's collection/interface repair** now, in the catalog and ingest
+Authorize **only item 1's four syntax repairs** now, in the catalog and ingest
 source modules. The other three developer paths are read-only for this immediate step.
 Then authorize exactly one additional execution of the same two-file pytest command
 above. Stop at its first nonzero result and report the complete result without edits
@@ -281,3 +282,8 @@ No syntax/AST probe, other tests, installation, records, project Git, integratio
 preparation/publication, catalog/data mutation or next ticket is assigned. Reviewer
 publication scope for this continuation is exactly this Review 493,
 docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md.
+
+The four syntax edits are now saved. The reviewer cancelled the unneeded pending helper
+refactor after its old text confirmed the keyword arguments already existed. Preserve
+that helper unchanged. The additional pytest authorization is unconsumed: execute it
+once now, with no further source or test edits, then stop at the result boundary above.

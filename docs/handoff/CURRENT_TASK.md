@@ -19,9 +19,10 @@ conservative bundle-file cap. ADR-0037 and all accepted products remain unchange
 
 Grok's exact targeted pytest returned exit 2 during collection (invalid exception
 chaining); no tests ran and Grok stopped. Review 493 records the full returned-drop
-review and a narrow immediate continuation: fix only the four invalid chaining sites
-and the _release_charge/_resource_totals interface in the two source modules, then run
-the same two-file pytest command once more. Stop on first nonzero result without
+review and a narrow immediate continuation: the four invalid chaining sites in the two
+source modules are now repaired. The reviewer's helper-interface diagnosis was stale
+and is withdrawn; no helper refactor is assigned. Run the same two-file pytest command
+once more, with no further source/test edits. Stop on first nonzero result without
 edits/retry. The other three paths are read-only for this step. Other consolidated
 blockers remain unaccepted until this feedback is reviewed. No other tests, Git,
 integration, records, real preparation, catalog mutation or consumer run is assigned.
