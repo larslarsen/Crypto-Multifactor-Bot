@@ -3,11 +3,41 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 496 first real bundle preparation
+Next required actor: Jr Dev — Hermes, Review 498 integration and one corrected preparation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 498 accepts the three-path inventory/CLI correction after the developer's
+35 focused cases passed and reviewer source/hash inspection. The source actor has
+stopped. Hermes first corrects/publishes terminal Record 497 without rerunning anything,
+then owns Review 498's final ordered regression/lint/control, exact four-path integration,
+full pre-run catalog baseline and one new real preparation bound to its new source
+commit. Publish Records 499 and 500 at the prescribed steps. Stop at first failure;
+no source repair, producer retry, catalog admission or consumer run. GPT-6.1 remains
+reviewer; accepted inputs stay immutable and next ticket remains NONE.
+
+## Superseded source assignment
+
+Review 498 diagnoses the failed real preparation: the adapter rejects older kline
+artifacts that Review 460 explicitly preserves outside the accepted descriptors.
+Authorize the existing GPT-6 Sol High source actor's three-path inventory/CLI-context
+correction and one targeted pytest. GPT-6.1 stays reviewer. Hermes finishes only
+terminal Record 497 publication, preserving the concurrent source drop. No accepted
+data changes, catalog admission, consumer run, producer retry or next ticket is assigned.
+
+## First preparation failure and diagnostic
+
+The one real preparation exited 1 with reference_mismatch; no bundle directory was
+created and no CEX release rows are visible. Review 496's final section authorizes
+one read-only invocation of existing authority/product authentication functions to
+recover the suppressed message/context, then terminal Record 497 publication. No
+producer retry, source changes or data writes are authorized. The complete quarantine
+digest was captured after launch, so it is not a full pre-run baseline; disclose that
+timing limitation. Hermes owns the diagnostic/evidence/publication; reviewer inspects.
+
+## First preparation assignment
 
 Review 496 bounds one real preparation using accepted source commit 30719fd and
 existing exp003.db. The owner directs continuation; use the previously approved direct
@@ -161,6 +191,8 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/498_CEX002_RETAINED_KLINE_INVENTORY_CORRECTION.md
+- research/sprint_004/496_CEX002_REAL_BUNDLE_PREPARATION_REVIEW.md
 - research/sprint_004/494_CEX002_BUNDLE_CORRECTION_HANDOFF.md
 - research/sprint_004/493_CEX002_BUNDLE_SOURCE_REVIEW_AND_CORRECTION.md
 - research/sprint_004/492_CEX002_BUNDLE_AND_REFERENCE_CATALOG_SOURCE_AUTHORIZATION.md

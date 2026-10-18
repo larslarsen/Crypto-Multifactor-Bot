@@ -56,6 +56,8 @@ no oneshot/yolo bypasses, installations, acquisition, source/test edits or new h
    Expect zero CEX reference-publication rows and the five existing REJECTED/REGISTERED
    quarantine rows. Do not open a writable catalog or rerun quarantine. Basic inline
    read-only metadata inspection is allowed; do not author a new checker/helper file.
+   Retain complete ordered rows, or their full deterministic JSON SHA-256 plus all
+   five ID/status pairs. A truncated quality-summary prefix is not a full snapshot.
 3. Execute this exact producer command once:
 
    ```bash
@@ -102,3 +104,51 @@ mutation, next ticket or final release acceptance is authorized by this review.
 Reviewer publication scope is exactly this Review 496,
 docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md. The reviewer may publish only
 that governance set; Hermes owns producer execution, data and Record 497 publication.
+
+Delivery note: the initial full-review terminal input was rejected before delivery:
+"terminal input and permission details are too large to review safely; use a smaller
+input or start a new terminal with fewer grants". No Hermes producer command ran from
+that input. Following the tool's stated size remedy, the reviewer delivered a compact
+handoff pointing to this saved review, retaining the same explicit command/scope and
+normal approvals. This changes input size only; it does not bypass action review.
+
+## First result and read-only diagnostic continuation
+
+Hermes launched exactly one preparation as native process proc_11b8c71b71af,
+PID 1263330, with the specified source commit and command. Native process poll
+call_ab22e855d56c405ba99610a7 reports exited, exit 1, output reference_mismatch.
+No retry is authorized. The CLI suppresses the underlying error context, so this
+token alone does not establish a corrupt accepted artifact or identify a source bug.
+
+The pre-run query found zero CEX reference-publication rows and the five expected
+REJECTED/REGISTERED IDs, but printed only quality-summary prefixes. A full-row JSON
+digest was captured after launch; it must be labelled post-launch, not a complete
+pre-run baseline. Post-launch results are zero CEX rows, digest
+4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945,
+and five quarantine rows, digest
+b4334b2c3f28d58a288b0130e1009dd305c5cf30b7e4af734f8036bd74d82103.
+Report this timing limitation honestly; do not repeat preparation to replace evidence.
+
+Authorize Hermes one new read-only diagnostic invocation before finalizing Record 497.
+Use the integrated module's existing _authenticate_authorities(root, True), followed
+by _account_product(root, spec, sizing, True) in PRODUCTS order. Print the product name
+before each account call, then stop on the first DatasetError and print its message,
+blocker and complete context. If all product calls pass, inspect the accepted
+reconciliation with existing _authenticate_reconciliation using those returned accounts
+and the authenticated qualification hash. Stop at its result. These named functions
+only authenticate existing metadata/files and use streamed hashes/footers; do not call
+prepare_harmonic_bundle, prepare_release, write_new_bundle_object or any writer.
+
+This is bounded execution evidence, not new source/test/helper design: a single inline
+invocation of existing functions is allowed, no helper file or repository code edits.
+Preserve normal approvals, finite metadata reads and the first-error stop. No arbitrary
+probes, accepted normalizer, producer retry, data write, installs or consumer run.
+Record the diagnostic command/output separately from the failed producer, then complete
+the already authorized Record-497-only publication and stop for reviewer inspection.
+
+The diagnostic returned exit 0 after reporting the expected DatasetError: authorities
+and membership passed, then bar's physical-tree equality check rejected retained old
+lineages, with missing=[]. Review 460 explicitly excludes those older artifacts from
+the accepted descriptors; Record 459 records their counts. Review 498 bounds the
+correction under that existing acceptance. Hermes should complete terminal Record 497
+and record-only publication; do not stage the source actor's concurrent three-path drop.
