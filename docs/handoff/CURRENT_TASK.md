@@ -3,11 +3,31 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, owner-approved Review 494 validation/integration
+Next required actor: Lead Quantitative Finance Researcher/Engineer — next Batch D preparation/proof assignment
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 494 accepts Hermes integration 30719fdd2a0e71ed8266d8ce50564f4dc5efaea5 and
+Record 495. All five committed source/test hashes and the exact six-path publication
+were independently verified. Hermes's 127-case catalog/bundle validation, resumed
+scoped Ruff and repository control passed. The three unused imports were removed by
+the source actor only; the passing tests were preserved. Hermes has completed its
+assignment. The reviewer next bounds real preparation and consumer-proof work under
+the existing Batch D checklist. No real release run or next ticket is authorized.
+
+## Completed import-only continuation
+
+Hermes's broader catalog/bundle test command passed (127 progress marks), but scoped
+Ruff stopped integration on three unused names in one catalog-test import. The same
+source actor removed only that import and stopped without validation. The reviewer
+verified the precise one-line change and final hash in Review 494's last section.
+Hermes resumes at scoped Ruff, then repository control and the original Record 495 /
+six-path commit/push steps. Do not repeat the passing pytest. No source behavior or
+real release run is assigned; normal approvals and first-failure stops persist.
+
+## Accepted source and integration launch
 
 Review 494 accepts the final five-path source correction for Hermes validation and
 integration after all 28 focused cases passed. The reviewer independently verified the

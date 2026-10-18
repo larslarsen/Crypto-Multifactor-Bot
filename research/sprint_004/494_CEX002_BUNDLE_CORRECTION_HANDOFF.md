@@ -3,8 +3,8 @@
 Reviewer: Lead Quantitative Finance Researcher/Engineer
 Ticket: CEX-002, IN_PROGRESS; next ticket NONE
 Selected senior: Sr Dev — Codex Sol, GPT-6 Sol High (gpt-6-sol, high)
-Launch state: developer stopped; owner approved direct Hermes validation/integration
-Disposition: final source accepted for Hermes validation/integration; real runs unassigned
+Launch state: developer stopped; Hermes validation/integration complete
+Disposition: integration and Record 495 accepted; real release runs unassigned
 
 ## Decision and fixed scope
 
@@ -226,3 +226,59 @@ prepare/publish/consumer run or source changes.
 > the full commit hash, final hashes and validation results. Do not change reviewer
 > acceptance or ticket status. Stop for reviewer inspection. No real preparation,
 > publication, external checker or next ticket is authorized by this integration prompt.
+
+## Integration feedback: import-only cleanup
+
+Hermes verified the five final hashes and empty index at governance HEAD
+2ce350bb01c5defc20f255fdbb16c1f54f666995. Its broader pytest command returned exit 0
+with 127 passing progress marks. Scoped Ruff then returned exit 1 with exactly three
+F401 findings: unused datetime, timedelta and timezone imported by one statement at
+tests/catalog/test_cex002_reference_release.py:12. Hermes stopped; repository control,
+Record 495 and integration/publication have not run. No test behavior failed.
+
+Authorize the same GPT-6 Sol High source actor to remove only that unused import
+statement in the catalog test. All other files stay read-only. No test, lint or other
+executable probe, Git, records or integration belongs to this cleanup assignment.
+Return its new hash/line count and stop. GPT-6.1 remains reviewer. The original source
+and all test behavior remain frozen; this is bounded supervision under the existing
+owner-approved Review 494 assignment, not another acceptance-suite run.
+
+After reviewer hash verification, Hermes may resume at scoped Ruff once, then repository
+control and the original Record 495/six-path commit/push steps if both pass. Do not repeat
+the passing 127-case pytest. Record the initial lint failure, exact import-only correction
+and resumed checks separately. Stop again on first nonzero/denial without repair/retry.
+The final catalog-test hash will be recorded below before this continuation is delivered.
+
+The source actor removed only the unused import and stopped without validation.
+The reviewer verified final hash
+e4d7cf4335e87d8e7bb4ecb2f87dd106f601e845c47e369f095a784fe3c5f456
+(1020 lines), and verified that restoring the one import in memory reproduces the
+previous c043dcc63fce6e2c7366cdf2365c0af96b39d26a9203455be0e493132585e1a2 hash.
+All other four source/test hashes are unchanged. Accept this import-only correction
+for the bounded Hermes continuation above. The catalog-test hash here supersedes the
+earlier five-hash table for integration; no test behavior changed and no pytest rerun
+is required. Hermes remains authorized for the original exact six-path commit/push.
+
+## Integration acceptance
+
+Accept Hermes integration commit 30719fdd2a0e71ed8266d8ce50564f4dc5efaea5 and
+Record 495 (SHA-256 04cf4ac25cf4ecd5b9d26d4cc896e1c616af7272cb220d798ef93f4de4237049,
+92 lines). The reviewer independently inspected the exact six committed paths and
+verified every committed source/test hash against the accepted final bytes, including
+the import-only correction. The committed record equals the inspected working copy.
+At review, HEAD equalled origin/main and the index was empty. Unrelated changes were
+preserved; Hermes staged no reviewer governance files.
+
+Hermes's actual command results establish 127 passing test progress marks, passing
+resumed scoped Ruff and passing repository control. Its initial halted chat response
+miscounted the tests as 144; the reviewer counted the raw output (72 plus 55 marks),
+and the final Record 495 correctly reports 127. The initial three F401 findings and
+the reviewer-authorized import-only cleanup remain disclosed in that record. The
+passing pytest was not repeated. No reviewer tests or acceptance commands ran.
+
+This accepts source integration and its validation record only. No real bundle
+preparation, catalog admission, external Nautilus checker or final economic validation
+occurred. The reviewer next bounds the remaining Batch D preparation and consumer-proof
+assignment against the existing checklist. Ten accepted products, Gate 2 ACCEPTED,
+Gate 3 IN_PROGRESS, CEX-002 IN_PROGRESS and next ticket NONE remain unchanged.
+Hermes's integration assignment is complete; no additional execution is authorized.
