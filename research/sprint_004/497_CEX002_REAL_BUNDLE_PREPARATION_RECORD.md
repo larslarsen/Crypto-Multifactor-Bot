@@ -8,10 +8,11 @@ Governing: Review 496 `research/sprint_004/496_CEX002_REAL_BUNDLE_PREPARATION_RE
 
 ## Outcome
 
-The single authorized real preparation FAILED at the first product. The producer exited 1
-with blocker `reference_mismatch` for `binance_usdm_bar_1h`. No candidate was created, no
-catalog row was admitted, no proof or publication occurred, and the release remains
-non-consumable. No repair, retry or data mutation was performed.
+The single authorized real preparation FAILED at `binance_usdm_bar_1h`, the SECOND product
+in `PRODUCTS` order. The producer exited 1 with blocker `reference_mismatch` for that
+product. No candidate was created, no catalog row was admitted, no proof or publication
+occurred, and the release remains non-consumable. No repair, retry or data mutation was
+performed.
 
 ## Source identity
 
@@ -61,35 +62,68 @@ no producer retry, no helper file.
 PYTHONPATH=src .venv/bin/python <<'PY'
 from pathlib import Path
 from cryptofactors.ingest.binance_usdm_harmonic_bundle import (
-    PRODUCTS, _account_product, _authenticate_authorities, _authenticate_reconciliation)
+    PRODUCTS,
+    _account_product,
+    _authenticate_authorities,
+    _authenticate_reconciliation,
+)
 from cryptofactors.catalog.dataset.errors import DatasetError
+
 root = Path('/home/lars/Crypto_Multifactor_Bot')
 sizing, authorities = _authenticate_authorities(root, True)
+print('AUTHORITIES_OK')
 accounts = {}
-for spec in PRODUCTS:
-    accounts[spec.dataset_type] = _account_product(root, spec, sizing, True)
+try:
+    for spec in PRODUCTS:
+        print('PRODUCT', spec.dataset_type)
+        accounts[spec.dataset_type] = _account_product(root, spec, sizing, True)
+except DatasetError as exc:
+    print('DATASETERROR_STR', str(exc))
+    print('DATASETERROR_CONTEXT', dict(getattr(exc, 'context', {}) or {}))
+    print('DATASETERROR_BLOCKER', getattr(exc, 'blocker', None))
+    raise SystemExit(0)
+qual = authorities['authenticated_files']['qualification_report_sha256']
+recon = _authenticate_reconciliation(root, accounts, qual, True)
+print('RECON_OK', dict(recon))
 PY
 ```
 
-Output (ordered, verbatim):
+Output (accurate concise summary; not a verbatim transcript):
 
 ```
 AUTHORITIES_OK
 PRODUCT binance_usdm_perpetual_membership
 PRODUCT binance_usdm_bar_1h
-DATASETERROR_STR product tree does not match the reconstructed artifacts | context={'blocker': 'reference_mismatch', 'product': 'binance_usdm_bar_1h', 'extra': ['.lineage/0GUSDT/2025-09/af2c6111f3c32930097077a00af38dba57e5140dceae32d4ddcc50d83df76210.json', '.lineage/0GUSDT/2025-10/0f478d26e9aca6796c740ad5d8945f4677fd2a9fc7840b00113d17a174439d04.json', '.lineage/0GUSDT/2025-11/0cb39b9a2bd72149ff24ccd444860462824100ab6828c442405fc189aaa83842.json', '.lineage/0GUSDT/2025-12/fbe6d1d00a5437a88af832207152e5ea7355c5bb9b142946bfb2726df3463a6d.json', '.lineage/0GUSDT/2026-01/77006313d31b4b52066b64c2c0c9259ae47bf7458c72e94c5a0b1dd918f7907f.json', '.lineage/0GUSDT/2026-02/55e7eaa3e2c638339ae606a20acb179ffb82de936311d1e78defaf225c1d74d.json', '.lineage/0GUSDT/2026-03/80be109c819f645a075e38beb46c2ed02bfff71e2520c07cb028ed70e985592b.json', '.lineage/0GUSDT/2026-04/3cfa5f83c788a3b2f79a8e7f898dab5e799f91cc745ff5d36a307191165a64be.json'], 'missing': []}
-DATASETERROR_CONTEXT {'blocker': 'reference_mismatch', 'product': 'binance_usdm_bar_1h', 'extra': [... same list ...], 'missing': []}
+DATASETERROR_STR product tree does not match the reconstructed artifacts | context={'blocker': 'reference_mismatch', 'product': 'binance_usdm_bar_1h', 'extra': [<8 .lineage/0GUSDT/YYYY-MM/*.json paths, listed below>], 'missing': []}
+DATASETERROR_CONTEXT {'blocker': 'reference_mismatch', 'product': 'binance_usdm_bar_1h', 'extra': [<same 8 .lineage paths>], 'missing': []}
 DATASETERROR_BLOCKER reference_mismatch
 ```
+
+The `extra` list (8 `.lineage/0GUSDT/YYYY-MM/*.json` paths) was:
+
+```
+.lineage/0GUSDT/2025-09/af2c6111f3c32930097077a00af38dba57e5140dceae32d4ddcc50d83df76210.json
+.lineage/0GUSDT/2025-10/0f478d26e9aca6796c740ad5d8945f4677fd2a9fc7840b00113d17a174439d04.json
+.lineage/0GUSDT/2025-11/0cb39b9a2bd72149ff24ccd444860462824100ab6828c442405fc189aaa83842.json
+.lineage/0GUSDT/2025-12/fbe6d1d00a5437a88af832207152e5ea7355c5bb9b142946bfb2726df3463a6d.json
+.lineage/0GUSDT/2026-01/77006313d31b4b52066b64c2c0c9259ae47bf7458c72e94c5a0b1dd918f7907f.json
+.lineage/0GUSDT/2026-02/55e7eaa3c02c638339ae606a20acb179ffb82de936311d1e78defaf225c1d74d.json
+.lineage/0GUSDT/2026-03/80be109c819f645a075e38beb46c2ed02bfff71e2520c07cb028ed70e985592b.json
+.lineage/0GUSDT/2026-04/3cfa5f83c788a3b2f79a8e7f898dab5e799f91cc745ff5d36a307191165a64be.json
+```
+
+Exit status: the diagnostic exited 0 (the DatasetError was caught and the script ended via
+`raise SystemExit(0)`); the producer exited 1.
 
 Diagnostic finding (Hermes's observation, not a reviewer conclusion): the blocker is the
 `reference_mismatch` gate in `_account_product` (module line 1385-1392), which compares
 the declared file set reconstructed from the sealed artifacts against the on-disk tree
 (`_walk`). For `binance_usdm_bar_1h` the on-disk `data/.cex002_bar_1h/.lineage/0GUSDT/...`
 tree contains `.lineage` JSON files that the reconstruction does not declare, so
-`declared != disk`. `missing` is empty; only `extra` entries exist. The first product,
-`binance_usdm_perpetual_membership`, passed before this failure. `_authenticate_reconciliation`
-was not reached (its precondition is successful accounting of all products).
+`declared != disk`. `missing` is empty; only `extra` entries exist. `binance_usdm_bar_1h` is the SECOND product
+in `PRODUCTS` order; the FIRST product, `binance_usdm_perpetual_membership`, passed before
+this failure. `_authenticate_reconciliation` was not reached (its precondition is successful
+accounting of all products).
 
 Reviewer explanation (attributed, not independently verified by Hermes): Review 460 excludes
 retained older artifacts from accepted descriptors, and Record 459 gives the older counts
@@ -107,24 +141,27 @@ new unintegrated drop.
 
 ## Catalog snapshot
 
-Read-only SQLite snapshot via URI `mode=ro`, two ordered queries, before and after the
-failed run. Both snapshots are byte-identical:
+Read-only SQLite snapshot via URI `mode=ro`, two ordered queries.
+
+PRE-RUN: the query returned 0 rows for `cex002_reference_publication` and 5 rows for the
+`cex002_bitmex_false_authority` marker. The pre-run capture recorded only the dataset IDs
+and their status pairs plus 80-character `quality_summary_json` prefixes. No full pre-run
+digest was captured (the full ordered-row digests below were taken after launch); no full
+pre-run baseline digest is claimed or fabricated.
+
+POST-LAUNCH AND POST-FAILURE/DIAGNOSTIC: full ordered-row digests are identical between
+these two captures:
 
 - `SELECT dataset_id, publication_uri FROM dataset WHERE transform_name = 'cex002_reference_publication' ORDER BY dataset_id;`
-  -> 0 rows, SHA-256 of ordered rows `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945` (both before and after).
+  -> 0 rows, SHA-256 of ordered rows `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`.
 - `SELECT dataset_id, quality_status, publication_status, quality_summary_json FROM dataset WHERE quality_summary_json LIKE '%cex002_bitmex_false_authority%' ORDER BY dataset_id;`
-  -> 5 rows, SHA-256 of ordered rows `b4334b2c3f28d58a288b0130e1009dd305c5cf30b7e4af734f8036bd74d82103` (both before and after).
+  -> 5 rows, SHA-256 of ordered rows `b4334b2c3f28d58a288b0130e1009dd305c5cf30b7e4af734f8036bd74d82103`.
   IDs/statuses: `ds_11b6665e7dcd37cb85c0098f60681a252801bbc4f80cb053eccc0fa0ce3679ea`, `ds_4f82fede83f446e3ca29522e6e5f5a0ad7fb6d03d8931f1300addfe413364933`, `ds_ab70ebd21268fe47cbde63b266c0b6f41d0e2ca529d319e3f6f0aa5a5646f512`, `ds_ee8e9cd9ddd4de87a0c68ef0ff9b4a0da6c6bd7692c96b9f29f8cca13daf46c8`, `ds_f61c69342932c78c370b7950faf46d3e78be3695dbde8e6077acf8ccfa115deb` — all REJECTED / REGISTERED.
 
-### Snapshot timing limitation (disclosed, no invented baseline)
-
-The producer was launched before the full ordered-row digests were captured. The full
-before-and-after digests above were taken after launch. The pre-run evidence establishes
-the zero CEX reference-publication rows and the five REJECTED/REGISTERED dataset IDs
-(with truncated summaries only); the full 80-character-truncated summary content was not
-captured before launch. No full pre-run baseline digest is claimed or fabricated. The
-post-failure snapshot is identical to the post-launch snapshot, so no catalog row was
-admitted by the failed run.
+No complete before/after byte-equality claim is made: the before snapshot has truncated
+summary prefixes only, while the after snapshots carry full digests. The full digests were
+captured post-launch and again post-failure/diagnostic; the post-failure digest equals the
+post-launch digest, so no catalog row was admitted by the failed run.
 
 ## Scope limits and gaps
 
