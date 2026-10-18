@@ -3,11 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer — next Batch D preparation/proof assignment
+Next required actor: Jr Dev — Hermes, Review 496 first real bundle preparation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 496 bounds one real preparation using accepted source commit 30719fd and
+existing exp003.db. The owner directs continuation; use the previously approved direct
+Hermes execution/supervision route. Capture read-only catalog before/after state, run
+the exact prepare command once, inspect the non-consumable candidate on success and
+publish terminal Record 497 only. Preserve the passing 127-case/lint/control results.
+No source change, accepted-product rerun, preparation replay, catalog admission,
+consumer proof or next ticket is authorized. Stop at first failure without repair/retry;
+the review separately permits terminal disclosure and record publication.
+
+## Completed integration acceptance
 
 Review 494 accepts Hermes integration 30719fdd2a0e71ed8266d8ce50564f4dc5efaea5 and
 Record 495. All five committed source/test hashes and the exact six-path publication
