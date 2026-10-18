@@ -93,7 +93,8 @@ def main(argv: list[str] | None = None, policy: AssemblyPolicy | None = None) ->
             return 0
         return int(exc.code) if type(exc.code) is int else 2
     except DatasetError as exc:
-        sys.stderr.write(str(exc.context.get("blocker") or "release_error") + "\n")
+        blocker = str(exc.context.get("blocker") or "release_error")
+        sys.stderr.write(f"{blocker}: {exc}\n")
         return 1
 
 

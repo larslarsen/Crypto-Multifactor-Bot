@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import stat
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -247,6 +248,7 @@ class _ProductAccount:
     bundle_sources: tuple[_BundleSource, ...]
     schema_fingerprint: str
     quality: dict[str, Any]
+    retained_audit: dict[str, Any] | None = None
 
 
 PRODUCTS: tuple[ProductSpec, ...] = (
@@ -261,6 +263,11 @@ PRODUCTS: tuple[ProductSpec, ...] = (
     ProductSpec(PRODUCT_COST, "data/.cex002_cost_calibration", "cost", "fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e"),
     ProductSpec(PRODUCT_COVERAGE, "data/.cex002_coverage", "coverage", COVERAGE_COMPLETION_SHA256),
 )
+
+_RETAINED_KLINE_COUNTS: Mapping[str, tuple[int, int]] = {
+    "binance_usdm_bar_1h": (31, 20_335),
+    "binance_usdm_trade_flow_1h": (47, 20_335),
+}
 
 
 def _fail(blocker: str, message: str, **context: Any) -> Any:
@@ -534,6 +541,8 @@ def _walk(root: Path, spec: ProductSpec) -> set[str]:
             if child.is_symlink() or not stat.S_ISREG(child.lstat().st_mode):
                 _fail("unsafe_path", "product tree contains a non-regular file", path=str(child))
             found.add(child.relative_to(base).as_posix())
+            if spec.dataset_type in _RETAINED_KLINE_COUNTS and len(found) > 65_650:
+                _fail("metadata_bound", "kline physical inventory exceeds the accepted bound", product=spec.dataset_type)
     return found
 
 
@@ -555,6 +564,58 @@ _PATH_ROOTS = frozenset(
     }
 )
 _GLOBAL_ROOTS = frozenset({".quality-gaps", ".authority-gaps", ".quality-gap-lineage", ".authority-gap-lineage"})
+
+
+def _retained_kline_inventory(
+    root: Path, spec: ProductSpec, extras: set[str], *, production: bool
+) -> dict[str, Any]:
+    """Authenticate excluded Review-459 files without making them dataset inputs."""
+
+    parquet_limit, lineage_limit = _RETAINED_KLINE_COUNTS[spec.dataset_type]
+    counts = {"parquet": 0, "lineage": 0}
+    byte_counts = {"parquet": 0, "lineage": 0}
+    inventory = hashlib.sha256()
+    if len(extras) > parquet_limit + lineage_limit:
+        _fail("metadata_bound", "retained kline inventory exceeds the accepted bound", product=spec.dataset_type)
+    for relative in sorted(extras):
+        safe = _safe(relative, "retained kline path")
+        parts = safe.split("/")
+        if len(parts) != 4:
+            _fail("reference_mismatch", "retained kline path has an unknown shape", product=spec.dataset_type, path=relative)
+        folder, symbol, month, filename = parts
+        if folder == ".partitions":
+            kind, suffix, limit = "parquet", ".parquet", parquet_limit
+        elif folder == ".lineage":
+            kind, suffix, limit = "lineage", ".json", lineage_limit
+        else:
+            _fail("reference_mismatch", "retained kline file has an unknown class", product=spec.dataset_type, path=relative)
+        if (
+            re.fullmatch(r"[A-Z0-9]{1,40}", symbol) is None
+            or re.fullmatch(r"[0-9]{4}-(0[1-9]|1[0-2])", month) is None
+            or not filename.endswith(suffix)
+            or re.fullmatch(r"[0-9a-f]{64}", filename[: -len(suffix)]) is None
+        ):
+            _fail("reference_mismatch", "retained kline filename is not canonical", product=spec.dataset_type, path=relative)
+        counts[kind] += 1
+        if counts[kind] > limit:
+            _fail("metadata_bound", "retained kline kind exceeds the accepted bound", product=spec.dataset_type, path=relative)
+        repo_relative = f"{spec.root}/{safe}"
+        digest, size = _hash_reference(root, repo_relative, None)
+        if digest != filename[: -len(suffix)]:
+            _fail("reference_mismatch", "retained kline content differs from its filename", product=spec.dataset_type, path=repo_relative)
+        byte_counts[kind] += size
+        inventory.update(_compact({"kind": kind, "path": repo_relative, "sha256": digest, "bytes": size}))
+    if production and (counts["parquet"], counts["lineage"]) != (parquet_limit, lineage_limit):
+        _fail(
+            "reference_mismatch", "retained kline inventory differs from Review 459",
+            product=spec.dataset_type, parquet_count=counts["parquet"], lineage_count=counts["lineage"],
+            expected_parquet_count=parquet_limit, expected_lineage_count=lineage_limit,
+        )
+    return {
+        "parquet_count": counts["parquet"], "parquet_bytes": byte_counts["parquet"],
+        "lineage_count": counts["lineage"], "lineage_bytes": byte_counts["lineage"],
+        "inventory_sha256": inventory.hexdigest(),
+    }
 
 
 def _declared_text(document: Mapping[str, Any], key: str) -> str | None:
@@ -1382,13 +1443,22 @@ def _account_product(root: Path, spec: ProductSpec, receipt: Mapping[str, Any], 
         if not item.relative_path.startswith(prefix):
             _fail("unsafe_path", "accounted file escaped its product root", path=item.relative_path)
         declared.add(item.relative_path[len(prefix):])
-    if declared != disk:
+    missing = declared - disk
+    if missing:
         _fail(
             "reference_mismatch",
-            "product tree does not match the reconstructed artifacts",
+            "accepted descriptor file is absent from the product tree",
             product=spec.dataset_type,
-            extra=sorted(disk - declared)[:8],
-            missing=sorted(declared - disk)[:8],
+            path=f"{spec.root}/{min(missing)}",
+        )
+    extras = disk - declared
+    if spec.dataset_type in _RETAINED_KLINE_COUNTS:
+        audit = _retained_kline_inventory(root, spec, extras, production=production)
+        return replace(account, retained_audit=audit)
+    if extras:
+        _fail(
+            "reference_mismatch", "product tree has an unexpected file",
+            product=spec.dataset_type, path=f"{spec.root}/{min(extras)}",
         )
     return account
 
@@ -1665,6 +1735,9 @@ def prepare_harmonic_bundle(assembly: AssemblyPolicy) -> PreparedRelease:
     production = assembly.authenticate_production_receipt
     sizing, authorities = _authenticate_authorities(root, production)
     accounts = {spec.dataset_type: _account_product(root, spec, sizing, production) for spec in PRODUCTS}
+    authorities["retained_unreferenced_kline_inventory"] = {
+        product: accounts[product].retained_audit for product in _RETAINED_KLINE_COUNTS
+    }
     reconciliation = _authenticate_reconciliation(
         root,
         accounts,

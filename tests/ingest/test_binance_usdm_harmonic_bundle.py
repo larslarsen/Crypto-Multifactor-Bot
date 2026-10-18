@@ -53,6 +53,7 @@ from cryptofactors.ingest.binance_usdm_harmonic_bundle import (
     UNUSED_COVERAGE_RESERVATION_BYTES,
     AssemblyPolicy,
     ReleaseError,
+    _retained_kline_inventory,
     prepare_harmonic_bundle,
     release_metadata_budget,
 )
@@ -340,6 +341,14 @@ def _build(repo: Path) -> int:
         lineage_extra = None
         if spec.family == "membership":
             lineage_extra = {"evidence_records": 4, "native_symbol": "BTCUSDT"}
+        elif spec.dataset_type in {"binance_usdm_bar_1h", "binance_usdm_trade_flow_1h"}:
+            lineage_extra = {
+                "schema_version": 2,
+                "native_symbol": "BTCUSDT",
+                "utc_month": "2024-01",
+                "parquet_sha256": "FILL",
+                "raw_objects": [{"name": "current"}],
+            }
         elif spec.dataset_type == "binance_usdm_open_interest_5m":
             lineage_extra = {
                 "native_symbol": "BTCUSDT",
@@ -764,6 +773,30 @@ def _fixture(tmp_path: Path):
     return repo, catalog, _policy(repo, catalog), rows
 
 
+def _retained_kline_files(repo: Path, product: str) -> dict[str, bytes]:
+    spec = next(item for item in PRODUCTS if item.dataset_type == product)
+    completion_path = next((repo / spec.root / ".complete").glob("*.json"))
+    accepted = json.loads(completion_path.read_bytes())["partitions"][0]
+    current = json.loads((repo / spec.root / accepted["lineage_path"]).read_bytes())
+    assert current["schema_version"] == 2
+    schema = pq.ParquetFile(repo / spec.root / accepted["parquet_path"]).schema_arrow
+    old_parquet = _write_parquet(schema, 2)
+    old_parquet_path = f"{spec.root}/.partitions/BTCUSDT/2024-01/{_sha(old_parquet)}.parquet"
+    _write(repo, old_parquet_path, old_parquet)
+    old_lineage = json.dumps({
+        "schema_version": 1,
+        "required_product": product,
+        "native_symbol": "BTCUSDT",
+        "utc_month": "2024-01",
+        "row_count": 1,
+        "parquet_sha256": accepted["parquet_sha256"],
+        "raw_objects": [{"name": "older-unreferenced"}],
+    }, sort_keys=True).encode()
+    old_lineage_path = f"{spec.root}/.lineage/BTCUSDT/2024-01/{_sha(old_lineage)}.json"
+    _write(repo, old_lineage_path, old_lineage)
+    return {old_parquet_path: old_parquet, old_lineage_path: old_lineage}
+
+
 def test_release_pins_and_metadata_budget() -> None:
     assert [spec.root for spec in PRODUCTS] == [
         "data/.cex002_perpetual_membership",
@@ -938,6 +971,88 @@ def test_prepare_preserves_economics_and_accounts_every_file(tmp_path: Path) -> 
     assert replay.descriptor_sha256 == prepared.descriptor_sha256
     assert inventory() == before
     assert not [path for path in owned.rglob("*.tmp") if path.is_file()]
+
+
+def test_retained_kline_inventory_is_audited_outside_accepted_datasets(tmp_path: Path) -> None:
+    repo, _catalog, policy, expected_rows = _fixture(tmp_path)
+    baseline = prepare_harmonic_bundle(policy)
+    retained = {}
+    for product in ("binance_usdm_bar_1h", "binance_usdm_trade_flow_1h"):
+        retained[product] = _retained_kline_files(repo, product)
+    prepared = prepare_harmonic_bundle(policy)
+    assert prepared.dataset_ids == baseline.dataset_ids
+    assert prepared.descriptor_sha256 != baseline.descriptor_sha256
+    assert prepared.bundle_bytes == baseline.bundle_bytes
+    descriptor = json.loads((repo / prepared.descriptor_relative_path).read_bytes())
+    audit = descriptor["authorities"]["retained_unreferenced_kline_inventory"]
+    referenced = {item.relative_path for manifest in prepared.manifests for item in manifest.files}
+    for product, files in retained.items():
+        assert not (set(files) & referenced)
+        ordered = sorted(files)
+        independent = b"".join(_compact({
+            "kind": "parquet" if path.endswith(".parquet") else "lineage",
+            "path": path, "sha256": _sha(files[path]), "bytes": len(files[path]),
+        }) for path in ordered)
+        assert audit[product] == {
+            "parquet_count": 1,
+            "parquet_bytes": sum(len(body) for path, body in files.items() if path.endswith(".parquet")),
+            "lineage_count": 1,
+            "lineage_bytes": sum(len(body) for path, body in files.items() if path.endswith(".json")),
+            "inventory_sha256": _sha(independent),
+        }
+    bundle = next(item for item in prepared.manifests if item.dataset_type == "binance_usdm_harmonic_bundle")
+    assert pq.ParquetFile(repo / bundle.files[0].relative_path).metadata.num_rows == expected_rows
+    assert prepare_harmonic_bundle(policy).descriptor_sha256 == prepared.descriptor_sha256
+    assert all((repo / path).read_bytes() == body for files in retained.values() for path, body in files.items())
+
+
+@pytest.mark.parametrize("defect", ["hash", "path", "symlink", "class"])
+def test_retained_kline_rejects_unsafe_or_unknown_files(tmp_path: Path, defect: str) -> None:
+    repo, _catalog, policy, _rows = _fixture(tmp_path)
+    files = _retained_kline_files(repo, "binance_usdm_bar_1h")
+    lineage_path = next(path for path in files if path.endswith(".json"))
+    if defect == "hash":
+        (repo / lineage_path).write_bytes(files[lineage_path] + b" ")
+    elif defect == "path":
+        _write(repo, "data/.cex002_bar_1h/.lineage/BTCUSDT/2024-13/" + _sha(b"old") + ".json", b"old")
+    elif defect == "symlink":
+        (repo / "data/.cex002_bar_1h/.lineage/BTCUSDT/2024-01" / (_sha(b"link") + ".json")).symlink_to(
+            repo / lineage_path
+        )
+    else:
+        (repo / "data/.cex002_bar_1h/unknown.txt").write_bytes(b"unknown")
+    with pytest.raises(ReleaseError) as error:
+        prepare_harmonic_bundle(policy)
+    assert error.value.blocker in {"unsafe_path", "reference_mismatch"}
+
+
+def test_retained_kline_production_count_and_missing_accepted_file(tmp_path: Path) -> None:
+    repo, _catalog, policy, _rows = _fixture(tmp_path)
+    files = _retained_kline_files(repo, "binance_usdm_trade_flow_1h")
+    spec = next(item for item in PRODUCTS if item.dataset_type == "binance_usdm_trade_flow_1h")
+    extras = {path[len(spec.root) + 1:] for path in files}
+    with pytest.raises(ReleaseError) as count:
+        _retained_kline_inventory(repo, spec, extras, production=True)
+    assert count.value.blocker == "reference_mismatch"
+    completion = json.loads(next((repo / spec.root / ".complete").glob("*.json")).read_bytes())
+    (repo / spec.root / completion["partitions"][0]["parquet_path"]).unlink()
+    with pytest.raises(ReleaseError) as missing:
+        prepare_harmonic_bundle(policy)
+    assert missing.value.blocker == "reference_mismatch"
+
+
+def test_cli_reports_blocker_product_and_path(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, catalog, policy, _rows = _fixture(tmp_path)
+    unknown = repo / "data/.cex002_perpetual_membership/unexpected.txt"
+    unknown.write_bytes(b"unexpected")
+    assert _cli().main(
+        ["prepare", "--repo", str(repo), "--catalog", str(catalog), "--code-commit", COMMIT],
+        policy=policy,
+    ) == 1
+    error = capsys.readouterr().err
+    assert "reference_mismatch" in error
+    assert "binance_usdm_perpetual_membership" in error
+    assert str(unknown.relative_to(repo)) in error
 
 
 def test_unsafe_extra_and_production_pin_failures(tmp_path: Path) -> None:
