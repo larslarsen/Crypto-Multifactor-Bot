@@ -186,3 +186,98 @@ this targeted result nor source review accepts the release or authorizes another
 Reviewer governance publication scope is exactly this Review 493, Review 492's sizing
 clarification, docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md. Developer files are
 excluded from reviewer staging/commit/push.
+
+## Returned correction: targeted run failed collection
+
+Grok ran the exact authorized pytest command once: exit 2. Both modules failed
+collection on invalid Python exception chaining at catalog line 1473. No tests ran.
+Grok stopped without editing or retrying. The reviewer measured the returned hashes,
+in the five-path order above:
+
+```
+dde894ff3a11e7de35f28c9523ee2e05251df53386701ae0b94bbd2621a2e682
+fb2c1f73c6059d28341360382b93ebd1525ee724b6535c2d54e4fb4615cb9a8e
+d245e6195f5619a3d2c5594bb3a1edf4a5345b2696486a352b5af398b3681553
+c6eb65f46b90a26706631445b284a772ff54785f87e8d831e20ed5c22e74c8f7
+4169ba20d5ed5cda44e149212bd8da4230adb60038fa34759df873d80365234b
+```
+
+The complete returned drop remains unaccepted. The full changed-source/test review
+consolidates these remaining blockers; no cosmetic changes are requested:
+
+1. Four function calls incorrectly use exception chaining: catalog lines 1473, 1844,
+   2039 and ingest line 462 in this snapshot. Only raise statements can use that syntax.
+   Also repair _release_charge calling _resource_totals without its three required
+   keyword arguments. Preserve the intended byte accounting when fixing this interface.
+2. _require_connection_binding indexes a PRAGMA row by string before the catalog
+   constructor sets a row factory. Ordinary idle autocommit sqlite3 connections return
+   tuples there. Accept correctly bound tuple-row connections; still reject pending
+   work and mismatched catalogs without changing caller work.
+3. Actual input formats still fail. _reconcile_ordinary applies the kline physical_rows /
+   excluded_rows equation to realized funding and both price-state products. Their
+   accepted documents use physical_source_rows, excluded_source_rows and
+   collapsed_identical_rows. Price state also declares joined_input_rows and
+   unjoinable_source_rows; basis joins three source legs per output. Its accepted totals
+   are 47,279,134 physical, 45,377,469 joined, 1,901,665 unjoinable and 15,125,823 product
+   rows. Derive each equation from the accepted producer. Coverage lineage declares
+   source-gaps, typed-gaps and quality-gaps, while bundle components are source_gap,
+   typed_gap_membership and quality_gap. The direct comparison in _validate_lineage
+   rejects those accepted lineages. Validate the explicit producer-specific mapping.
+   Keep the actual names and equations in fixtures instead of synthesizing one shape.
+4. The SQLite reservation still cannot admit the full release. It charges nine
+   4096-byte pages per file before overflow. Coverage's accepted 107,590 files plus
+   OI's 19,744 partition/lineage pairs, quality pair and completion already mean at
+   least 147,081 references: 5,421,993,984 bytes under this formula, exceeding the
+   4,985,471,619 remainder before the other products/manifests/proof. Use measured
+   growth or a justified feasible bound for the existing schema and serialized records;
+   do not enlarge allocations. The free-space guard must include SQLite/WAL/temp
+   growth on its filesystem, not just incoming JSON. Preflight the policy-aware bundle
+   write too: the assembler currently places its object before any capacity guard.
+5. Successful EEXIST reuse leaves the current attempt's unique stage behind because
+   cleanup runs only on exceptions. Clean and fsync only this attempt's unrenamed
+   stage on success as well. Preserve other attempts' evidence. Test the whole owned
+   file inventory on replay, not only unchanged descriptor hashes.
+6. _encode_logical quantizes precision-38 decimals using the ambient decimal context,
+   normally precision 28. Preserve the full supported coefficient and scale without
+   rounding or InvalidOperation. Timestamp helpers also append zeros after
+   datetime.microsecond, losing the last three digits of Arrow timestamp[ns]. Preserve
+   declared precision. Include independent cases beyond 28 coefficient digits and
+   differing by one nanosecond; decimal(10,4)/timestamp(ms) cases do not prove this.
+7. Prepared/manifest snapshots are taken after proof recomputation without comparing
+   their captured hashes with the original prepared/manifest-file pins. Mutation in
+   that interval can become the new snapshot baseline. Bind snapshots to expected
+   bytes, and recheck the complete chain, including durable proof/publication files,
+   immediately before the single commit. _require_publication_entries also omits
+   manifest_relative_path; compare complete sealed entries instead of another subset.
+   Cover metadata mutation during admission as well as data mutation before BEGIN.
+8. Tests still use one-column financial tables and kline-shaped equations for several
+   actual products. Include the actual funding/price-state/coverage variants above and
+   a representative frozen financial schema with precision-38 data. Cover the helper
+   interface, tuple-row connections, realistic resource scaling, owned-stage cleanup
+   and complete chain bindings. Model free space deterministically so fixtures do not
+   depend on 29.7 GB of actual test-runner headroom.
+
+The explicit native_symbol_absent_token in quality metadata is accepted for genuinely
+global gaps: it denotes absence, not an invented venue instrument. Preserve actual
+native identities and unknown canonical IDs. Do not add a rejection for hypothetical
+missing-file liquidation gaps; the accepted completion has no such descriptors.
+
+### Immediate continuation: restore runnable feedback first
+
+Retain the already authorized native Grok actor for these precise fixes: the owner
+prioritizes its expiring availability and its source context is available. No concurrent
+senior is authorized. GPT-6.1 Sol remains reviewer only.
+
+Authorize **only item 1's collection/interface repair** now, in the catalog and ingest
+source modules. The other three developer paths are read-only for this immediate step.
+Then authorize exactly one additional execution of the same two-file pytest command
+above. Stop at its first nonzero result and report the complete result without edits
+or retry. Early feedback is intentional because the preceding run reached no test.
+The remaining consolidated blockers stay recorded and unaccepted; do not begin their
+larger correction before this feedback boundary. The reviewer will inspect that result
+before authorizing continuation of the already-enumerated remaining work.
+
+No syntax/AST probe, other tests, installation, records, project Git, integration, real
+preparation/publication, catalog/data mutation or next ticket is assigned. Reviewer
+publication scope for this continuation is exactly this Review 493,
+docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md.

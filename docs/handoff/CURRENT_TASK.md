@@ -17,10 +17,15 @@ manifest chain, safe crash replay/readback and measured resource preservation. T
 reviewer also corrects Review 492's wrong receipt-key attribution while retaining the
 conservative bundle-file cap. ADR-0037 and all accepted products remain unchanged.
 
-After correction Grok may run exactly the one targeted two-file pytest command in
-Review 493, once; stop on first nonzero result and return without edits/retry. No other
-tests, Git, integration, records, real preparation, catalog mutation or consumer run
-is assigned. Hermes retains validation/integration ownership. GPT-6.1 Sol stays reviewer.
+Grok's exact targeted pytest returned exit 2 during collection (invalid exception
+chaining); no tests ran and Grok stopped. Review 493 records the full returned-drop
+review and a narrow immediate continuation: fix only the four invalid chaining sites
+and the _release_charge/_resource_totals interface in the two source modules, then run
+the same two-file pytest command once more. Stop on first nonzero result without
+edits/retry. The other three paths are read-only for this step. Other consolidated
+blockers remain unaccepted until this feedback is reviewed. No other tests, Git,
+integration, records, real preparation, catalog mutation or consumer run is assigned.
+Hermes retains validation/integration ownership. GPT-6.1 Sol stays reviewer.
 
 Review 491's six-file publication f574ec1343834217c9f3baca40a0862a829b0e00 is
 independently verified and accepted. All 58 tests and 2,672 real field comparisons
