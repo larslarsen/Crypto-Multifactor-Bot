@@ -3,24 +3,23 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer
+Next required actor: Sr Dev — Grok Build (grok-4.7 High)
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 491 accepts Grok's correction and the bounded real comparison: 58 tests and all
-local checks passed; both offline runs returned PASS; all 2,672 fields match across
-167 complete hours, nine days and ten roles. Replay preserved all 31 retained files.
-Completion e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c
-pins report 96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c.
-Record 490 is complete and reviewer-accepted. The owner explicitly approved Review
-491's exact six-file commit and normal push, resolving the earlier publication block.
-Hermes publishes that package and returns to the reviewer for committed-byte verification.
-The record identifies the corrected source as uncommitted during its validation runs;
-the publication commit supplies its integration identity. Preserve the original FAILED
-report and accepted products. No further real run, tests, record work, bundle work or
-next ticket is assigned by this publication.
+Review 492 authorizes Grok's five-path source/test drop for the actual harmonic bundle
+and CEX reference-publication catalog adapter. ADR-0037 records the adapter design:
+reference accepted files in place, prepare an immutable non-consumable candidate,
+require a pinned clean consumer proof, then admit all eleven dataset identities in one
+catalog transaction. Grok authors source/tests only; no tests, Git, real preparation,
+catalog mutation or consumer run is assigned yet. GPT-6.1 Sol stays reviewer.
+
+Review 491's six-file publication f574ec1343834217c9f3baca40a0862a829b0e00 is
+independently verified and accepted. All 58 tests and 2,672 real field comparisons
+passed; replay preserved all 31 files. Record 490 is accepted; its staged EOF issue was
+corrected before commit. Keep these results and all accepted products unchanged.
 
 ## Completed integration and execution history
 
@@ -81,7 +80,7 @@ accepted: 3,865 partitions, 939,130,319 book rows, 939,131,092 component rows an
 ordinary_sizing_check_passed=false remain explicit; byte bounds pass. Prior exact
 inventory/replay evidence is preserved.
 
-Batch D still owes remaining Gate-4 comparisons, the pinned harmonic bundle/catalog,
+Batch D still owes remaining independent economic evidence, the pinned harmonic bundle/catalog,
 clean NautilusTrader readback, release replay and original final acceptance commands.
 Accepted fee scenarios, unknown availability and observed/censored liquidation semantics
 remain unchanged. Holdout: 2026-08-21T16:19:08.994166+00:00. Reviewer acceptance is
@@ -89,6 +88,8 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/492_CEX002_BUNDLE_AND_REFERENCE_CATALOG_SOURCE_AUTHORIZATION.md
+- docs/adr/0037-cex002-reference-release-catalog-adapter.md
 - research/sprint_004/491_CEX002_EMPTY_MINUTE_OPEN_CORRECTION_REVIEW.md
 - research/sprint_004/489_CEX002_BOUNDED_KLINE_RECONCILIATION_SOURCE_REVIEW.md
 - research/sprint_004/488_CEX002_BITMEX_NORMALIZER_INTEGRATION_RECORD.md
