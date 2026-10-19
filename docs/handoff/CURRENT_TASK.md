@@ -3,11 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), Review 504 liquidation accounting correction
+Next required actor: Jr Dev — Hermes, Review 504 integration and corrected bundle preparation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 504 accepts the two-path liquidation category/comparison correction after the
+fixture-only continuation passed all 50 cases and reviewer diff/hash inspection. Hermes
+owns its final ordered validation (grouped with set -e permitted), exact three-path
+integration including Record 505, full pre-run catalog baseline and one new preparation
+bound to that new source commit, then terminal Record 506. Preserve the initial test
+assertion failure separately. Source actor stopped; normal approvals and first-failure
+stops persist. No accepted-data change, retry, consumer run, catalog admission or next
+ticket. GPT-6.1 remains reviewer.
+
+## Diagnosed liquidation accounting failure
 
 Review 504 accepts integration 05acac2 and Record 502 (136 cases, Ruff/control passed)
 and terminal Record 503. Real preparation failed because the adapter adds 202 authority

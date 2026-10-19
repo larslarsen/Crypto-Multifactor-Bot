@@ -92,3 +92,96 @@ no new real prepare, comparison rerun or consumer run is authorized by this sour
 
 Reviewer publication scope is exactly this Review 504, docs/handoff/CURRENT_TASK.md
 and tickets/CEX-002.md. No source/test integration or implementation evidence is included.
+
+## Targeted feedback: manifest assertion correction
+
+The first authorized targeted run returned exit 1: 49 passed, one failed. The fixture
+successfully prepared the release and established distinct gap counts; its new assertion
+then accessed is_table on an OutputFileSpec, which exposes canonical manifest fields,
+not the private producer classification flag. The developer stopped without edits/retry.
+The reviewer inspected the complete production/test diff and verified production SHA
+1c9214d088c4279cf34e78c24d97a9bc14124491c27f5575edcca67c675cb48b.
+
+Authorize the same source actor to correct only that new fixture's canonical-manifest
+assertions in the ingest test. Use the public manifest fields and metadata kind/role
+to prove zero metadata rows, preserved table totals and both gap components; retain
+the separate private-account is_table assertions, which use _File correctly. Production
+source is frozen. Once corrected, run the same exact two-file targeted command above
+once more, stop first nonzero without edits/retry, and return both hashes/output.
+No other tests, source changes, integration, records, Git or real execution.
+
+## Final source acceptance and conditional execution
+
+The fixture-only continuation passed all 50 cases, exit 0, using the same exact
+targeted command. Production bytes did not change after the first result. The reviewer
+inspected all final changes and independently verified:
+
+| Path | SHA-256 | Lines |
+|---|---|---:|
+| src/cryptofactors/ingest/binance_usdm_harmonic_bundle.py | 1c9214d088c4279cf34e78c24d97a9bc14124491c27f5575edcca67c675cb48b | 1996 |
+| tests/ingest/test_binance_usdm_harmonic_bundle.py | 867125b2c123349abe56caa1f8c5e8ec5cc8342dc1909cb4029d123af364f2e0 | 1383 |
+
+Accept this source for integration. The category checks retain every accepted gap
+table/lineage, separate quality and authority accounting, preserve the physical total,
+and enforce the existing quality pin plus the explicit 202 authority pin. The comparison
+is authenticated before a bounded 1 MiB read, retains the accepted pending_reviewer
+history marker, and enters the manifest once as zero-row metadata. The production
+entry pin remains 18; no comparison is rerun and no OI equality is claimed. The tests
+exercise representative schemas and nonzero counts, production pins, canonical manifest
+and bundle inclusion, wrong categories/paths/counts and invalid comparison references.
+No reviewer validation or producer ran. The source actor has stopped.
+
+The owner directs continuation through the established direct native Hermes route.
+Authorize the existing meituan/longcat-2.5-preview:free session to execute the following
+complete ordered workflow, with normal interactive approvals and first-failure stops.
+This final section authorizes one new preparation only after the exact new integration.
+Preserve accepted inputs and unrelated changes; no source/test/helper edits, acquisition,
+installation, archive, repair or retry. GPT-6.1 remains reviewer.
+
+1. Apply Review 501 final workflow step 1's five-hash/index/upstream/absent-bundle
+   checks, substituting ONLY the two changed hashes above. The unchanged CLI/catalog
+   source/catalog test hashes remain exactly those in Review 501. Run once in order:
+
+   ```bash
+   .venv/bin/python -m pytest -q tests/catalog tests/ingest/test_binance_usdm_harmonic_bundle.py
+   .venv/bin/ruff check src/cryptofactors/ingest/binance_usdm_harmonic_bundle.py tests/ingest/test_binance_usdm_harmonic_bundle.py
+   .venv/bin/python scripts/check_repo_control.py
+   ```
+
+   These three named checks may be grouped in one terminal request with set -e,
+   preserving complete output and immediate first-nonzero stop. Do not repeat passed
+   checks as separate invocations. No automatic formatting/source repair on lint failure.
+
+2. On success write only
+   research/sprint_004/505_CEX002_LIQUIDATION_ACCOUNTING_INTEGRATION_RECORD.md.
+   Include actual model, exact results/five hashes, and distinguish the developer's
+   initial 49-pass/1-fail manifest assertion from the passing 50-case continuation.
+   Recheck all five hashes; stage exactly the TWO changed files above plus Record 505.
+   Inspect names and git diff --cached --check. Commit as
+   CEX-002: preserve liquidation gap categories and comparison provenance
+   and push normally; verify HEAD==origin/main and empty index. Retain the full NEW
+   source integration commit and verify its five committed blobs against frozen hashes.
+   Do not invent a pre-commit hash in the record; Record 506 pins the resulting commit.
+
+3. Execute Review 498 final workflow steps 3–5, using only that NEW full source commit
+   in the exact prepare CLI. Capture full catalog ordered-row digests and all ID/status
+   pairs BEFORE launch, zero CEX rows/five rejected IDs, free space and absent bundle
+   root. Invoke once with native background=true/notify_on_complete=true, retain and
+   monitor that same process to terminal. On success inspect only emitted descriptor,
+   eleven named manifests, bundle footer and owned inventory. Include the separate
+   liquidation quality/authority counts and the comparison metadata reference, alongside
+   the already-required IDs/dependencies/rows/bytes/schema/retained-inventory audit.
+   Confirm consumable=false and unchanged catalog full snapshots after the attempt.
+   On failure preserve exact rich output, repeat only catalog/free-space observations,
+   and stop without product inspection, private-function diagnostic or producer retry.
+   All allocations, reserves and producer-owned new-write confinement remain unchanged.
+
+4. Publish terminal evidence only as
+   research/sprint_004/506_CEX002_LIQUIDATION_CORRECTED_BUNDLE_PREPARATION_RECORD.md,
+   applying Review 498 step 6's exact record-only Git checks, normal commit/push and
+   final HEAD==origin/main/empty-index verification. Include actual literal source commit,
+   command/model/process/exit/output, correctly timed full catalog evidence/resources
+   and candidate facts or blocker. Terminal evidence publication is allowed after a
+   producer failure; earlier identity/validation/Git/approval failure stops without repair.
+   Stop for reviewer inspection. No replay, proof, catalog admission, consumer run,
+   next ticket or final Gate acceptance is authorized.
