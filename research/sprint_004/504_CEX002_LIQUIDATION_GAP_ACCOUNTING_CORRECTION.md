@@ -124,7 +124,7 @@ inspected all final changes and independently verified:
 Accept this source for integration. The category checks retain every accepted gap
 table/lineage, separate quality and authority accounting, preserve the physical total,
 and enforce the existing quality pin plus the explicit 202 authority pin. The comparison
-is authenticated before a bounded 1 MiB read, retains the accepted pending_reviewer
+is authenticated with a bounded 1 MiB read, retains the accepted pending_reviewer
 history marker, and enters the manifest once as zero-row metadata. The production
 entry pin remains 18; no comparison is rerun and no OI equality is claimed. The tests
 exercise representative schemas and nonzero counts, production pins, canonical manifest
@@ -185,3 +185,26 @@ installation, archive, repair or retry. GPT-6.1 remains reviewer.
    producer failure; earlier identity/validation/Git/approval failure stops without repair.
    Stop for reviewer inspection. No replay, proof, catalog admission, consumer run,
    next ticket or final Gate acceptance is authorized.
+
+## Integration acceptance and live preparation
+
+Accept Hermes integration 42ecac90f5c47411d4d098cf68e046257bab3a97 and Record 505.
+The reviewer independently matched every committed source/test hash above and all
+three unchanged CLI/catalog hashes, and verified the exact three-path commit. Hermes's
+grouped regression/lint/control command returned exit 0: 149 cases, Ruff clean and
+repository control PASS. No passing check was repeated. Normal push and empty index
+were confirmed before execution.
+
+Record 505 repeats this review's earlier imprecise wording, authenticated before a
+bounded read. The actual source checks the size before the bounded read and authenticates
+its bytes with SHA-256; this review corrects that phrasing. No source correction or
+validation rerun follows from this editorial clarification.
+
+The single new real prepare launched with that full source commit as native process
+proc_311fa1978b3f / PID 1612662. Its pre-launch full catalog digests are the unchanged
+zero-CEX-row digest 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+and five-quarantine-row digest b4334b2c3f28d58a288b0130e1009dd305c5cf30b7e4af734f8036bd74d82103.
+All five IDs are REJECTED/REGISTERED, bundle root absent, free bytes 78,953,398,272.
+The first native poll reports running, uptime 68 seconds, no output. Hermes owns
+continued monitoring of that same process and Record 506 publication. Do not launch
+another process or repeat a completed producer/validation command.

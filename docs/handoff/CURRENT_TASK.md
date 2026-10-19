@@ -3,11 +3,32 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 504 integration and corrected bundle preparation
+Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), Review 507 shared-schema metadata correction
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+The sole Review-504 preparation exited 1 after writing its 13,232,150-byte bundle
+object: calculated metadata 7,450,831,574 exceeds the fixed 4,985,471,619 remainder.
+All product accounts passed; no completed candidate was sealed. Hermes finishes only
+terminal Record 506 publication. Review 507 / ADR-0038 assign the same GPT-6 Sol High
+actor a two-path catalog schema-registry correction and representative resource tests,
+keeping the SQLite reserve multiplier and allocations unchanged. No real retry or
+cleanup: preserve the exact failed object until a later enumerated Hermes action.
+GPT-6.1 remains reviewer; no consumer run, admission or next ticket is authorized.
+
+## Completed Review 504 execution
+
+Integration 42ecac90f5c47411d4d098cf68e046257bab3a97 and Record 505 are accepted:
+149 cases, lint/control passed; reviewer verified five committed hashes/exact three-path
+commit. Hermes launched the sole new real prepare as native proc_311fa1978b3f /
+PID 1612662, bound to that full commit. The first native poll is running with no output.
+Monitor that SAME process to terminal, then finish the already assigned Record 506;
+no new launch, duplicate validation, private-function diagnostic or producer retry.
+Full catalog baselines were captured before launch. See Review 504's final section.
+
+## Accepted source and execution assignment
 
 Review 504 accepts the two-path liquidation category/comparison correction after the
 fixture-only continuation passed all 50 cases and reviewer diff/hash inspection. Hermes
@@ -231,6 +252,8 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/507_CEX002_SHARED_SCHEMA_SOURCE_AUTHORIZATION.md
+- docs/adr/0038-cex002-shared-schema-contracts.md
 - research/sprint_004/504_CEX002_LIQUIDATION_GAP_ACCOUNTING_CORRECTION.md
 - research/sprint_004/501_CEX002_PHYSICAL_INVENTORY_BOUND_CORRECTION.md
 - research/sprint_004/498_CEX002_RETAINED_KLINE_INVENTORY_CORRECTION.md
