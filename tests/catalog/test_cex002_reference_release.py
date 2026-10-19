@@ -8,6 +8,7 @@ import json
 import sqlite3
 import subprocess
 import threading
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -20,18 +21,24 @@ from cryptofactors.catalog.dataset.cex002_reference_release import (
     BUNDLE_ROOT_RELATIVE,
     CODE_PATHS,
     HARMONIC_BUNDLE_ALLOCATION_BYTES,
+    MANIFEST_MAX_BYTES,
     MEASURED_CURRENT_BUNDLE_BYTES,
     OPERATING_RESERVE_BYTES,
     QUARANTINE_MARKER,
     RELEASE_METADATA_BYTES,
     RELEASE_METADATA_REMAINDER_BYTES,
+    PREPARED_MAX_BYTES,
+    PROOF_MAX_BYTES,
     SEALED_CREATED_AT,
     SIZING_PROJECTED_BUNDLE_ROWS,
+    TRANSFORM_VERSION,
     ReleaseError,
     ReleaseHooks,
     ReferenceDatasetPlan,
     ReferenceFile,
     identify_products,
+    manifest_bytes,
+    manifest_for_plan,
     prepare_release,
     production_release_policy,
     publish_release as _publish_release,
@@ -40,7 +47,14 @@ from cryptofactors.catalog.dataset.cex002_reference_release import (
     seal_code_identity,
     write_new_bundle_object,
     _sqlite_reservation,
+    _contract_document,
+    _contract_hash,
+    _footer_from_partition,
+    _registry_contracts,
+    _resource_totals,
+    _with_config,
 )
+from cryptofactors.catalog.dataset.models import DatasetStatistics, OutputFileSpec
 from cryptofactors.catalog.runner import apply_migrations
 
 REPO = Path(__file__).resolve().parents[2]
@@ -293,24 +307,225 @@ def test_resource_pins_are_the_measured_projection() -> None:
     assert RELEASE_METADATA_REMAINDER_BYTES == 4_985_471_619
     assert OPERATING_RESERVE_BYTES == 29_690_701_415
     assert SEALED_CREATED_AT.isoformat() == "1970-01-01T00:00:00+00:00"
+    assert TRANSFORM_VERSION == "2"
 
 
-def test_sqlite_record_reservation_admits_accepted_reference_scale(tmp_path: Path) -> None:
+def test_sqlite_record_reservation_admits_accepted_reference_scale(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     catalog = tmp_path / "catalog.sqlite"
     _migrate(catalog)
-    manifests = prepare_release(
+    originals = prepare_release(
         _plans(repo), _policy(repo, catalog), config_sha256=CONFIG, authorities={"fixture": True}
     ).manifests
-    sample = manifests[0].files[0]
-    prefix = "data/.cex002_coverage/.source-gaps/binance_usdm_bar_1h/BTCUSDT/authority/"
-    partition = {"kind": "table", "native_symbol": "BTCUSDT", "utc_month": "authority", "component": "source_gap"}
-    scaled = replace(manifests[0], files=tuple(
-        replace(sample, relative_path=f"{prefix}{index:064x}.parquet", partition=partition)
-        for index in range(147_081)
-    ))
-    assert _sqlite_reservation((scaled, *manifests[1:])) < RELEASE_METADATA_REMAINDER_BYTES
+    inventory = (
+        (1_543, 771), (45_269, 22_634), (45_269, 22_634), (39_491, 19_745),
+        (42_071, 21_035), (45_245, 22_622), (51_345, 25_672), (37_890, 18_944),
+        (7_732, 3_865), (107_590, 21_024), (1, 1),
+    )
+    assert sum(files for files, _tables in inventory) == 423_446
+    assert sum(tables for _files, tables in inventory) == 178_947
+    assert sum(files - tables for files, tables in inventory) == 244_499
+    dictionary = "dictionary<values=string, indices=int32, ordered=0>"
+    contracts = (
+        _contract_document((("native_symbol", dictionary, False), ("amount", "decimal128(38, 8)", True),
+                            ("source_ids", "list<item: string>", True))),
+        _contract_document((("native_symbol", dictionary, False), ("utc_month", dictionary, False),
+                            ("row_count", "int64", False))),
+    )
+    references = tuple(_contract_hash(contract) for contract in contracts)
+    manifests = []
+    manifest_lengths = []
+    representative_proof_bytes = 64 * 1024  # strict release/dataset wrappers and separators
+    for original, (file_count, table_count) in zip(originals, inventory, strict=True):
+        product = original.dataset_type
+        registry = {references[0]: contracts[0]}
+        if table_count > 1:
+            registry[references[1]] = contracts[1]
+        table_partition = {"kind": "table", "role": "partition", "component": "quality_gap",
+                           "native_symbol": "BTCUSDT", "utc_month": "2024-01", "schema_ref": references[0]}
+        other_table_partition = {**table_partition, "schema_ref": references[1]}
+        metadata_partition = {"kind": "metadata", "role": "lineage", "component": "quality_gap",
+                              "native_symbol": "BTCUSDT", "utc_month": "2024-01"}
+        files = []
+        for index in range(file_count):
+            is_table = index < table_count
+            digest = f"{index:064x}"
+            if product == "binance_usdm_harmonic_bundle":
+                relative = f"{BUNDLE_ROOT_RELATIVE}/.objects/aa/{digest}"
+            else:
+                folder = ".quality-gaps" if is_table else ".quality-gaps-lineage"
+                suffix = ".parquet" if is_table else ".json"
+                relative = (
+                    f"data/.cex002_coverage/{folder}/{product}/BTCUSDT/2024-01/{digest}{suffix}"
+                )
+            files.append(OutputFileSpec(
+                relative_path=relative, sha256=digest, rows=1 if is_table else 0,
+                bytes=13_232_150 if product == "binance_usdm_harmonic_bundle" else 4_096,
+                partition=(table_partition if index % 2 == 0 else other_table_partition)
+                if is_table else metadata_partition,
+                rows_verified=True,
+            ))
+        quality = dict(original.quality_summary)
+        quality["schema_registry"] = {"version": 1, "contracts": registry}
+        manifest = replace(
+            original, files=tuple(files), quality_summary=quality,
+            statistics=DatasetStatistics(row_count=table_count, byte_size=sum(item.bytes for item in files)),
+        )
+        payload_bytes = len(manifest_bytes(manifest))
+        assert payload_bytes <= MANIFEST_MAX_BYTES
+        manifest_lengths.append(payload_bytes)
+        assert len(_registry_contracts(manifest)) == len(registry)
+        for kind, count, sample in (("table", table_count, files[0]),
+                                    ("metadata", file_count - table_count, files[-1])):
+            if count == 0:
+                continue
+            proof_component = {
+                "relative_path": sample.relative_path, "physical_sha256": "a" * 64,
+                "physical_bytes": sample.bytes, "kind": kind, "source_row_count": 100_000 if kind == "table" else 0,
+                "readback_row_count": 100_000 if kind == "table" else 0,
+                "source_value_sha256": "b" * 64, "roundtrip_value_sha256": "b" * 64,
+                "time_start": "2025-01-01T00:00:00.000000000+00:00" if kind == "table" else None,
+                "time_end": "2025-01-31T23:59:59.999999999+00:00" if kind == "table" else None,
+                "time_absence_reason": None if kind == "table" else "non_temporal_component",
+                "value_identity": "typed_row_digest" if kind == "table" else "metadata_bytes",
+            }
+            representative_proof_bytes += count * (len(json.dumps(
+                proof_component, sort_keys=True, separators=(",", ":")
+            ).encode()) + 1)
+        manifests.append(manifest)
+    manifests = tuple(manifests)
+    manifest_payload_bytes = sum(manifest_lengths)
+    prepared_bytes = PREPARED_MAX_BYTES
+    publication_bytes = PREPARED_MAX_BYTES
+    proof_bytes = PROOF_MAX_BYTES
+    assert PROOF_MAX_BYTES == 512 * 2**20
+    assert representative_proof_bytes <= proof_bytes
+    leftover_bytes = 13_232_150
+    _bundle, charged, sqlite_bytes = _resource_totals(
+        manifests, manifest_payload_bytes=manifest_payload_bytes, prepared_bytes=prepared_bytes,
+        publication_bytes=publication_bytes, proof_bytes=proof_bytes, leftover_bytes=leftover_bytes,
+    )
+    assert sqlite_bytes == _sqlite_reservation(manifests)
+    assert charged == (manifest_payload_bytes + prepared_bytes + publication_bytes + proof_bytes
+                       + leftover_bytes + sqlite_bytes)
+    assert charged < RELEASE_METADATA_REMAINDER_BYTES
+    with capsys.disabled():
+        print(json.dumps({"synthetic_files": 423_446, "tables": 178_947, "metadata_files": 244_499,
+                          "manifest_bytes": manifest_payload_bytes, "prepared_bytes": prepared_bytes,
+                          "publication_bytes": publication_bytes, "representative_proof_bytes": representative_proof_bytes,
+                          "proof_reservation_bytes": proof_bytes,
+                          "leftover_bytes": leftover_bytes, "sqlite_bytes": sqlite_bytes,
+                          "charged_total": charged, "remainder": RELEASE_METADATA_REMAINDER_BYTES},
+                         sort_keys=True), flush=True)
+
+
+def _shared_manifest(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    policy = _policy(repo, tmp_path / "catalog.sqlite")
+    base = _plans(repo)[0]
+    body = _parquet()
+    fields = _fields()
+    tables = tuple(ReferenceFile(
+        f"data/fixture/shared-{index}.parquet", _sha(body), 1, len(body),
+        {"role": "partition", "native_symbol": "BTCUSDT"}, True, fields,
+    ) for index in range(2))
+    plan = replace(base, files=(*tables, *base.files))
+    manifest = _with_config(manifest_for_plan(plan, policy, dependency_ids={}), CONFIG)
+    return manifest
+
+
+def test_shared_schema_registry_binds_ordered_fields_and_excludes_metadata(tmp_path: Path) -> None:
+    manifest = _shared_manifest(tmp_path)
+    assert manifest.transform.version == TRANSFORM_VERSION
+    contracts = _registry_contracts(manifest)
+    assert len(contracts) == 1
+    first, second, metadata = manifest.files
+    assert first.partition["kind"] == second.partition["kind"] == "table"
+    assert first.partition["schema_ref"] == second.partition["schema_ref"] == next(iter(contracts))
+    assert all("schema" not in item.partition for item in manifest.files)
+    assert metadata.partition["kind"] == "metadata" and metadata.rows == 0
+    assert "schema_ref" not in metadata.partition
+    ordered = _contract_document((("first", "int64", False), ("second", "string", True)))
+    assert _contract_hash(ordered) != _contract_hash(list(reversed(ordered)))
+    changed_contract = deepcopy(dict(manifest.quality_summary))
+    ref = first.partition["schema_ref"]
+    field = changed_contract["schema_registry"]["contracts"][ref][0]
+    field["nullable"] = not field["nullable"]
+    changed = _with_config(replace(manifest, quality_summary=changed_contract), CONFIG)
+    assert changed.dataset_id != manifest.dataset_id
+    with pytest.raises(ReleaseError) as altered:
+        _registry_contracts(changed)
+    assert altered.value.blocker == "schema_mismatch"
+    files = list(manifest.files)
+    files[0] = replace(first, partition={**first.partition, "schema_ref": "0" * 64})
+    changed_ref = _with_config(replace(manifest, files=tuple(files)), CONFIG)
+    assert changed_ref.dataset_id != manifest.dataset_id
+    with pytest.raises(ReleaseError) as unbound:
+        _registry_contracts(changed_ref)
+    assert unbound.value.blocker == "schema_mismatch"
+
+
+@pytest.mark.parametrize("change", ["missing", "version", "mixed", "metadata_ref", "unused", "malformed", "count", "bytes"])
+def test_shared_schema_registry_refuses_malformed_bindings(tmp_path: Path, change: str) -> None:
+    manifest = _shared_manifest(tmp_path)
+    quality = deepcopy(dict(manifest.quality_summary))
+    files = list(manifest.files)
+    registry = quality["schema_registry"]
+    if change == "missing":
+        quality.pop("schema_registry")
+    elif change == "version":
+        registry["version"] = 2
+    elif change == "mixed":
+        files[0] = replace(files[0], partition={**files[0].partition, "schema": _contract_document(_fields())})
+    elif change == "metadata_ref":
+        files[-1] = replace(files[-1], partition={**files[-1].partition, "schema_ref": files[0].partition["schema_ref"]})
+    elif change == "unused":
+        contract = _contract_document((("different", "string", False),))
+        registry["contracts"][_contract_hash(contract)] = contract
+    elif change == "malformed":
+        ref = files[0].partition["schema_ref"]
+        registry["contracts"][ref][0]["nullable"] = "false"
+    elif change == "count":
+        registry["contracts"] = {f"{index:064x}": _contract_document((("field", "string", False),))
+                                 for index in range(65)}
+    else:
+        contract = _contract_document((("field" + "x" * (256 * 1024), "string", False),))
+        registry["contracts"] = {_contract_hash(contract): contract}
+    damaged = replace(manifest, quality_summary=quality, files=tuple(files))
+    with pytest.raises(ReleaseError) as refused:
+        _registry_contracts(damaged)
+    assert refused.value.blocker == ("metadata_bound" if change in {"count", "bytes"} else "schema_mismatch")
+
+
+def test_registry_preserves_decimal_dictionary_list_footer_and_proof_tokens(tmp_path: Path) -> None:
+    schema = pa.schema([
+        pa.field("native_symbol", pa.dictionary(pa.int32(), pa.string()), nullable=False),
+        pa.field("amount", pa.decimal128(38, 8), nullable=True),
+        pa.field("source_ids", pa.list_(pa.string()), nullable=True),
+    ])
+    table = pa.Table.from_arrays([
+        pa.array(["BTCUSDT"], type=schema.field("native_symbol").type),
+        pa.array([decimal.Decimal("123456789012345678901234567890.12345678")], type=schema.field("amount").type),
+        pa.array([["raw-a", "raw-b"]], type=schema.field("source_ids").type),
+    ], schema=schema)
+    path = tmp_path / "typed.parquet"
+    _write_table(path, table)
+    proof_before = reference_proof_component(path, path.name, "table")
+    fields = tuple((field.name, str(field.type), field.nullable) for field in schema)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    policy = _policy(repo, tmp_path / "catalog.sqlite")
+    plan = ReferenceDatasetPlan(PRODUCTS[0], CONFIG, (
+        ReferenceFile(path.name, proof_before["physical_sha256"], 1, path.stat().st_size,
+                      {"role": "partition"}, True, fields),
+    ), {"fixture": True})
+    manifest = _with_config(manifest_for_plan(plan, policy, dependency_ids={}), CONFIG)
+    contracts = _registry_contracts(manifest)
+    assert list(contracts.values()) == [fields]
+    _footer_from_partition(path, manifest.files[0], contracts)
+    assert reference_proof_component(path, path.name, "table") == proof_before
 
 
 def test_prepare_is_not_a_consumable_release(tmp_path: Path) -> None:
@@ -360,6 +575,11 @@ def test_bundle_allocation_and_metadata_bounds_fail_closed(tmp_path: Path) -> No
     with pytest.raises(ReleaseError) as remainder:
         prepare_release(_plans(huge), metadata, config_sha256=CONFIG, authorities={"fixture": True})
     assert remainder.value.blocker == "metadata_remainder_exceeded"
+    detail = remainder.value.context
+    assert detail["manifest_bytes"] > 0 and detail["descriptor_bytes"] > 0 and detail["sqlite_bytes"] > 0
+    assert detail["proof_bytes"] == detail["leftover_bytes"] == 0
+    assert sum(detail[key] for key in ("manifest_bytes", "descriptor_bytes", "proof_bytes",
+                                       "leftover_bytes", "sqlite_bytes")) == detail["metadata_bytes"]
 
 
 def test_operating_reserve_cannot_be_spent(tmp_path: Path) -> None:
@@ -454,6 +674,27 @@ def test_publish_replay_and_reader(tmp_path: Path) -> None:
         assert consumable == []
     finally:
         connection.close()
+
+
+@pytest.mark.parametrize("route", ["publish", "read", "replay"])
+def test_schema_registry_tamper_refuses_admission_read_and_replay(tmp_path: Path, route: str) -> None:
+    repo, policy, prepared = _ready(tmp_path)
+    proof = _proof(repo, prepared)
+    published = publish_release(policy, prepared.descriptor_sha256, proof) if route != "publish" else None
+    descriptor = json.loads((repo / prepared.descriptor_relative_path).read_bytes())
+    manifest_path = repo / descriptor["datasets"][-1]["manifest_relative_path"]
+    document = json.loads(manifest_path.read_bytes())
+    registry = document["quality_summary"]["schema_registry"]
+    ref = next(iter(registry["contracts"]))
+    registry["contracts"][ref][0]["nullable"] = not registry["contracts"][ref][0]["nullable"]
+    manifest_path.write_bytes((json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n").encode())
+    with pytest.raises(ReleaseError) as rejected:
+        if route == "read":
+            assert published is not None
+            read_release(policy, published.publication_sha256, proof)
+        else:
+            publish_release(policy, prepared.descriptor_sha256, proof)
+    assert rejected.value.blocker == "manifest_identity"
 
 
 def test_interruption_before_and_after_commit(tmp_path: Path) -> None:

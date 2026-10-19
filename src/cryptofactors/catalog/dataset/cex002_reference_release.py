@@ -75,7 +75,7 @@ from cryptofactors.catalog.dataset.paths import (
 )
 
 TRANSFORM_NAME = "cex002_reference_publication"
-TRANSFORM_VERSION = "1"
+TRANSFORM_VERSION = "2"
 SCHEMA_VERSION = "1"
 PUBLISHER_NAME = "cryptofactors.catalog.dataset.cex002_reference_release"
 PUBLISHER_VERSION = "1"
@@ -93,9 +93,13 @@ RELEASE_METADATA_REMAINDER_BYTES = 4_985_471_619
 OPERATING_RESERVE_BYTES = 29_690_701_415
 SQLITE_PAGE_BYTES = 4_096
 HASH_CHUNK_BYTES = 1024 * 1024
-PROOF_MAX_BYTES = 256 * 2**20
+PROOF_MAX_BYTES = 512 * 2**20
 MANIFEST_MAX_BYTES = 64 * 2**20
 PREPARED_MAX_BYTES = 8 * 2**20
+SCHEMA_REGISTRY_VERSION = 1
+SCHEMA_REGISTRY_MAX_CONTRACTS = 64
+SCHEMA_REGISTRY_MAX_FIELDS = 128
+SCHEMA_REGISTRY_MAX_BYTES = 256 * 1024
 REQUIRED_DATASET_TYPES: tuple[str, ...] = (
     "binance_usdm_perpetual_membership",
     "binance_usdm_bar_1h",
@@ -437,19 +441,79 @@ def _schema_from_fields(fields: Sequence[tuple[str, str, bool]]) -> pa.Schema:
     )
 
 
-def _footer_from_partition(path: Path, spec: OutputFileSpec) -> None:
-    schema = spec.partition.get("schema")
-    if type(schema) is not list or not schema:
-        _fail("schema_mismatch", "a table manifest has no sealed Arrow contract", path=spec.relative_path)
-    fields = []
-    for field in schema:
-        if type(field) is not dict or type(field.get("nullable")) is not bool:
-            _fail("schema_mismatch", "sealed Arrow field is malformed", path=spec.relative_path)
-        name = field.get("name")
-        arrow_type = field.get("arrow_type")
-        if type(name) is not str or type(arrow_type) is not str:
-            _fail("schema_mismatch", "sealed Arrow field is malformed", path=spec.relative_path)
-        fields.append((name, arrow_type, field["nullable"]))
+def _contract_document(fields: Sequence[tuple[str, str, bool]]) -> list[dict[str, Any]]:
+    return [
+        {"name": name, "arrow_type": arrow_type, "nullable": nullable}
+        for name, arrow_type, nullable in fields
+    ]
+
+
+def _contract_hash(contract: Sequence[Mapping[str, Any]]) -> str:
+    return _sha256(dumps_canonical(list(contract)).encode("utf-8"))
+
+
+def _registry_contracts(manifest: DatasetManifest) -> dict[str, tuple[tuple[str, str, bool], ...]]:
+    registry = manifest.quality_summary.get("schema_registry")
+    if type(registry) is not dict or set(registry) != {"version", "contracts"}:
+        _fail("schema_mismatch", "manifest schema registry is absent or malformed", dataset_type=manifest.dataset_type)
+    if type(registry.get("version")) is not int or registry["version"] != SCHEMA_REGISTRY_VERSION:
+        _fail("schema_mismatch", "manifest schema registry version is incompatible", dataset_type=manifest.dataset_type)
+    contracts = registry.get("contracts")
+    if type(contracts) is not dict or len(contracts) > SCHEMA_REGISTRY_MAX_CONTRACTS:
+        _fail("metadata_bound", "manifest schema registry contract count exceeds its bound", dataset_type=manifest.dataset_type)
+    if len(dumps_canonical(registry).encode("utf-8")) > SCHEMA_REGISTRY_MAX_BYTES:
+        _fail("metadata_bound", "manifest schema registry bytes exceed their bound", dataset_type=manifest.dataset_type)
+    parsed: dict[str, tuple[tuple[str, str, bool], ...]] = {}
+    for key, contract in contracts.items():
+        _hex64(key, "schema registry key")
+        if type(contract) is not list or not contract or len(contract) > SCHEMA_REGISTRY_MAX_FIELDS:
+            _fail("schema_mismatch", "schema registry contract has invalid field count", schema_ref=key)
+        fields: list[tuple[str, str, bool]] = []
+        names: set[str] = set()
+        for field in contract:
+            if type(field) is not dict or set(field) != {"name", "arrow_type", "nullable"}:
+                _fail("schema_mismatch", "schema registry field is malformed", schema_ref=key)
+            name, arrow_type, nullable = field["name"], field["arrow_type"], field["nullable"]
+            if (type(name) is not str or not name or name in names or type(arrow_type) is not str
+                    or type(nullable) is not bool):
+                _fail("schema_mismatch", "schema registry field is malformed", schema_ref=key)
+            names.add(name)
+            fields.append((name, arrow_type, nullable))
+        if _contract_hash(contract) != key:
+            _fail("schema_mismatch", "schema registry key differs from its ordered fields", schema_ref=key)
+        _schema_from_fields(fields)
+        parsed[key] = tuple(fields)
+    used: set[str] = set()
+    for spec in manifest.files:
+        kind = spec.partition.get("kind")
+        if kind == "table":
+            if "schema" in spec.partition or "schema_ref" not in spec.partition:
+                _fail("schema_mismatch", "table has mixed or absent schema reference", path=spec.relative_path)
+            ref = _hex64(spec.partition["schema_ref"], "table schema reference")
+            if ref not in parsed:
+                _fail("schema_mismatch", "table schema reference is not bound by its manifest", path=spec.relative_path)
+            used.add(ref)
+        elif kind == "metadata":
+            if spec.rows != 0:
+                _fail("metadata_row", "metadata references have table row count zero", path=spec.relative_path)
+            if "schema" in spec.partition or "schema_ref" in spec.partition:
+                _fail("schema_mismatch", "metadata file carries a table schema", path=spec.relative_path)
+        else:
+            _fail("malformed_metadata", "manifest file kind is not table or metadata", path=spec.relative_path)
+    if used != set(parsed):
+        _fail("schema_mismatch", "schema registry contains a contract unused by its manifest", dataset_type=manifest.dataset_type)
+    return parsed
+
+
+def _footer_from_partition(
+    path: Path,
+    spec: OutputFileSpec,
+    contracts: Mapping[str, tuple[tuple[str, str, bool], ...]],
+) -> None:
+    ref = _hex64(spec.partition.get("schema_ref"), "table schema reference")
+    fields = contracts.get(ref)
+    if fields is None or "schema" in spec.partition:
+        _fail("schema_mismatch", "table has no authenticated manifest contract", path=spec.relative_path)
     _footer_matches(
         path,
         ReferenceFile(
@@ -459,7 +523,7 @@ def _footer_from_partition(path: Path, spec: OutputFileSpec) -> None:
             byte_size=spec.bytes,
             partition=spec.partition,
             is_table=True,
-            schema_fields=tuple(fields),
+            schema_fields=fields,
         ),
     )
 
@@ -950,12 +1014,14 @@ def write_new_bundle_object(repo: Path, payload: bytes, policy: ReleasePolicy | 
         digest = _sha256(payload)
         relative = f"{BUNDLE_ROOT_RELATIVE}/.objects/{digest[:2]}/{digest}"
         if policy is not None:
-            objects, other = _tree_bytes(root)
+            objects, charged = _tree_inventory(root)
+            other = sum(charged.values())
             incoming = 0 if lexical_join(root, relative).exists() else len(payload)
             _enforce_resources(
                 policy, root, objects + incoming, other,
                 stage="bundle_write",
                 incoming_bytes=incoming,
+                charged_subtotals={**charged, "sqlite_bytes": 0},
             )
         _write_exclusive(root, relative, payload)
         return relative, digest, len(payload)
@@ -976,8 +1042,12 @@ def manifest_for_plan(
     if not plan.files:
         _fail("empty_required", "a reference dataset declares no artifacts", dataset_type=plan.dataset_type)
     _hex64(plan.schema_fingerprint, f"{plan.dataset_type} schema fingerprint")
+    if "schema_registry" in plan.quality_summary:
+        _fail("schema_mismatch", "producer quality summary cannot supply its own schema registry")
     files = []
     seen: set[str] = set()
+    contracts: dict[str, list[dict[str, Any]]] = {}
+    contract_cache: dict[tuple[tuple[str, str, bool], ...], str] = {}
     for spec in plan.files:
         relative = assert_relative_safe(spec.relative_path, label="reference path")
         if relative in seen:
@@ -989,17 +1059,23 @@ def manifest_for_plan(
         if not spec.is_table and spec.rows != 0:
             _fail("metadata_row", "metadata references have table row count zero", path=relative)
         partition = dict(spec.partition)
+        if "schema" in partition or "schema_ref" in partition:
+            _fail("schema_mismatch", "producer file partition supplied a schema binding", path=relative)
         if spec.is_table:
             if not spec.schema_fields:
                 _fail("schema_mismatch", "a table reference has no Arrow contract", path=relative)
             partition["kind"] = "table"
-            partition["schema"] = [
-                {"name": name, "arrow_type": arrow_type, "nullable": nullable}
-                for name, arrow_type, nullable in spec.schema_fields
-            ]
+            ref = contract_cache.get(spec.schema_fields)
+            if ref is None:
+                contract = _contract_document(spec.schema_fields)
+                ref = _contract_hash(contract)
+                contracts[ref] = contract
+                contract_cache[spec.schema_fields] = ref
+            partition["schema_ref"] = ref
         else:
+            if spec.schema_fields:
+                _fail("schema_mismatch", "metadata reference carries table fields", path=relative)
             partition["kind"] = "metadata"
-            partition.pop("schema", None)
         files.append(
             OutputFileSpec(
                 relative_path=relative,
@@ -1024,6 +1100,7 @@ def manifest_for_plan(
         byte_size=sum(spec.bytes for spec in files),
     )
     quality = dict(plan.quality_summary)
+    quality["schema_registry"] = {"version": SCHEMA_REGISTRY_VERSION, "contracts": contracts}
     base = DatasetManifest(
         dataset_id="",
         dataset_type=plan.dataset_type,
@@ -1045,6 +1122,7 @@ def manifest_for_plan(
     )
     # Config is attached below once the caller-supplied digest is known. The
     # empty placeholder is replaced before either identifier is computed.
+    _registry_contracts(base)
     return base
 
 
@@ -1073,6 +1151,7 @@ def _with_config(manifest: DatasetManifest, config_sha256: str) -> DatasetManife
 def _authenticate_files(root: Path, manifest: DatasetManifest, plans_by_type: Mapping[str, ReferenceDatasetPlan]) -> None:
     plan = plans_by_type[manifest.dataset_type]
     by_path = {spec.relative_path: spec for spec in plan.files}
+    contracts = _registry_contracts(manifest)
     for spec in manifest.files:
         snapshot = _snapshot(root, spec.relative_path)
         if snapshot.sha256 != spec.sha256 or snapshot.byte_size != spec.bytes:
@@ -1083,7 +1162,10 @@ def _authenticate_files(root: Path, manifest: DatasetManifest, plans_by_type: Ma
             )
         source = by_path[spec.relative_path]
         if source.is_table:
-            _footer_matches(_relative(root, spec.relative_path), source)
+            ref = spec.partition["schema_ref"]
+            if contracts[ref] != source.schema_fields:
+                _fail("schema_mismatch", "producer fields differ from the sealed schema registry", path=spec.relative_path)
+            _footer_from_partition(_relative(root, spec.relative_path), spec, contracts)
 
 
 def _sqlite_reservation(manifests: Sequence[DatasetManifest]) -> int:
@@ -1134,14 +1216,14 @@ def _resource_totals(
     return bundle_bytes, metadata_bytes, sqlite_bytes
 
 
-def _tree_bytes(root: Path) -> tuple[int, int]:
-    """Return ``(admitted-object bytes, other candidate bytes)`` already on disk."""
+def _tree_inventory(root: Path) -> tuple[int, dict[str, int]]:
+    """Charge every owned byte once, separating existing metadata classes."""
 
     base = lexical_join(root, BUNDLE_ROOT_RELATIVE)
+    charged = {"manifest_bytes": 0, "descriptor_bytes": 0, "proof_bytes": 0, "leftover_bytes": 0}
     if not base.exists():
-        return 0, 0
+        return 0, charged
     objects = 0
-    other = 0
     for directory, dirnames, filenames in os.walk(base, followlinks=False):
         current = Path(directory)
         for name in list(dirnames):
@@ -1157,8 +1239,19 @@ def _tree_bytes(root: Path) -> tuple[int, int]:
             if relative.startswith(".objects/"):
                 objects += size
             else:
-                other += size
-    return objects, other
+                charged[_metadata_class(relative)] += size
+    return objects, charged
+
+
+def _metadata_class(relative: str) -> str:
+    under = relative.removeprefix(f"{BUNDLE_ROOT_RELATIVE}/")
+    if under.startswith(".manifests/"):
+        return "manifest_bytes"
+    if under.startswith((".prepared/", ".publication/")):
+        return "descriptor_bytes"
+    if under.startswith(".proofs/"):
+        return "proof_bytes"
+    return "leftover_bytes"
 
 
 def _free_bytes(path: Path, observed: int | None) -> int:
@@ -1178,6 +1271,7 @@ def _enforce_resources(
     *,
     stage: str,
     incoming_bytes: int,
+    charged_subtotals: Mapping[str, int] | None = None,
 ) -> None:
     if bundle_bytes > policy.bundle_allocation_bytes:
         _fail(
@@ -1187,6 +1281,7 @@ def _enforce_resources(
             bundle_bytes=bundle_bytes,
             bundle_allocation_bytes=policy.bundle_allocation_bytes,
             measured_current_bundle_bytes=MEASURED_CURRENT_BUNDLE_BYTES,
+            **dict(charged_subtotals or {}),
         )
     if metadata_bytes > policy.metadata_remainder_bytes:
         _fail(
@@ -1196,6 +1291,7 @@ def _enforce_resources(
             metadata_bytes=metadata_bytes,
             metadata_remainder_bytes=policy.metadata_remainder_bytes,
             release_metadata_bytes=RELEASE_METADATA_BYTES,
+            **dict(charged_subtotals or {}),
         )
     catalog = _require_catalog_file(policy)
     bundle_free = _free_bytes(root, policy.observed_free_bytes)
@@ -1214,6 +1310,7 @@ def _enforce_resources(
                 free_bytes=bundle_free,
                 incoming_bytes=staged,
                 operating_reserve_bytes=OPERATING_RESERVE_BYTES,
+                **dict(charged_subtotals or {}),
             )
         return
     if bundle_free < OPERATING_RESERVE_BYTES + staged:
@@ -1223,6 +1320,7 @@ def _enforce_resources(
             stage=stage,
             free_bytes=bundle_free,
             incoming_bytes=staged,
+            **dict(charged_subtotals or {}),
         )
     if catalog_free < OPERATING_RESERVE_BYTES + metadata_bytes:
         _fail(
@@ -1230,6 +1328,7 @@ def _enforce_resources(
             "catalog filesystem free space would consume the operating reserve",
             stage=stage,
             free_bytes=catalog_free,
+            **dict(charged_subtotals or {}),
         )
 
 
@@ -1259,8 +1358,8 @@ def _release_charge(
     root: Path,
     manifests: Sequence[DatasetManifest],
     planned: Sequence[tuple[str, int]],
-) -> tuple[int, int, int]:
-    """Return bundle bytes, metadata bytes, and bytes that do not exist yet.
+) -> tuple[int, int, int, dict[str, int]]:
+    """Return bundle bytes, metadata bytes, incoming bytes and exact charged classes.
 
     Existing bundle-root files count once. The admitted bundle object is
     excluded from metadata. Content-addressed files already on disk are not
@@ -1274,7 +1373,7 @@ def _release_charge(
         prepared_bytes=0,
         publication_bytes=0,
     )
-    objects, other = _tree_bytes(root)
+    objects, charged = _tree_inventory(root)
     incoming = 0
     for relative, nbytes in planned:
         path = lexical_join(root, relative)
@@ -1282,8 +1381,11 @@ def _release_charge(
             _fail("unsafe_path", "planned release path is a symlink", path=relative)
         if not path.exists():
             incoming += nbytes
-    metadata_bytes = other + max(0, objects - bundle_bytes) + incoming + sqlite_bytes
-    return bundle_bytes, metadata_bytes, incoming
+            charged[_metadata_class(relative)] += nbytes
+    charged["leftover_bytes"] += max(0, objects - bundle_bytes)
+    charged["sqlite_bytes"] = sqlite_bytes
+    metadata_bytes = sum(charged.values())
+    return bundle_bytes, metadata_bytes, incoming, charged
 
 
 def _guard_resources(
@@ -1294,6 +1396,7 @@ def _guard_resources(
     *,
     stage: str,
     incoming_bytes: int,
+    charged_subtotals: Mapping[str, int] | None = None,
 ) -> None:
     try:
         _enforce_resources(
@@ -1303,6 +1406,7 @@ def _guard_resources(
             metadata_bytes,
             stage=stage,
             incoming_bytes=incoming_bytes,
+            charged_subtotals=charged_subtotals,
         )
     except ReleaseError as exc:
         if exc.blocker != "operating_reserve_not_preserved":
@@ -1430,7 +1534,7 @@ def prepare_release(
     planned.append((prepared_relative, len(prepared_payload)))
     held = _lock_bundle(root)
     try:
-        bundle_bytes, metadata_bytes, incoming = _release_charge(root, manifests, planned)
+        bundle_bytes, metadata_bytes, incoming, charged = _release_charge(root, manifests, planned)
         _guard_resources(
             policy,
             root,
@@ -1438,6 +1542,7 @@ def prepare_release(
             metadata_bytes,
             stage="prepare",
             incoming_bytes=incoming,
+            charged_subtotals=charged,
         )
         for manifest, body in zip(manifests, bodies, strict=True):
             relative = f"{BUNDLE_ROOT_RELATIVE}/.manifests/{manifest.manifest_sha256}.json"
@@ -1541,17 +1646,7 @@ def _seal_manifest_entry(root: Path, entry: Mapping[str, Any], index: int) -> Da
         _fail("manifest_identity", "manifest publisher version changed", path=manifest_path)
     if manifest.supersedes_dataset_id is not None:
         _fail("conflicting_release", "a reference dataset supersedes another dataset", dataset_id=manifest.dataset_id)
-    for spec in manifest.files:
-        kind = spec.partition.get("kind")
-        if kind == "table":
-            schema = spec.partition.get("schema")
-            if type(schema) is not list or not schema:
-                _fail("schema_mismatch", "a table manifest has no sealed Arrow contract", path=spec.relative_path)
-        elif kind == "metadata":
-            if spec.rows != 0:
-                _fail("metadata_row", "metadata references have table row count zero", path=spec.relative_path)
-        else:
-            _fail("malformed_metadata", "manifest file kind is not table or metadata", path=spec.relative_path)
+    _registry_contracts(manifest)
     return manifest
 
 
@@ -1921,12 +2016,13 @@ def publish_release(
                 _fail("input_changed_during_admission", "manifest changed after proof")
             snapshots.append(manifest_snapshot)
         for manifest in manifests:
+            contracts = _registry_contracts(manifest)
             for spec in manifest.files:
                 current = _snapshot(root, spec.relative_path)
                 if current.sha256 != spec.sha256 or current.byte_size != spec.bytes:
                     _fail("reference_mismatch", "referenced bytes changed after prepare", path=spec.relative_path)
                 if spec.partition.get("kind") == "table":
-                    _footer_from_partition(_relative(root, spec.relative_path), spec)
+                    _footer_from_partition(_relative(root, spec.relative_path), spec, contracts)
                 snapshots.append(current)
         proof_relative = f"{BUNDLE_ROOT_RELATIVE}/.proofs/{proof_sha256}.json"
         publication = _descriptor(
@@ -1944,7 +2040,7 @@ def publish_release(
         publication_payload = _canonical_document(publication)
         publication_sha = _sha256(publication_payload)
         publication_relative = f"{BUNDLE_ROOT_RELATIVE}/.publication/{publication_sha}.json"
-        bundle_bytes, metadata_bytes, incoming = _release_charge(
+        bundle_bytes, metadata_bytes, incoming, charged = _release_charge(
             root,
             manifests,
             (
@@ -1959,6 +2055,7 @@ def publish_release(
             metadata_bytes,
             stage="publish",
             incoming_bytes=incoming,
+            charged_subtotals=charged,
         )
         catalog = _open_catalog(policy, connection)
         _require_bitmex(_bitmex_snapshot(catalog))
@@ -2102,12 +2199,13 @@ def read_release(
     )
     _require_publication_entries(document, manifests)
     for manifest in manifests:
+        contracts = _registry_contracts(manifest)
         for spec in manifest.files:
             snapshot = _snapshot(root, spec.relative_path)
             if snapshot.sha256 != spec.sha256 or snapshot.byte_size != spec.bytes:
                 _fail("stale_release", "a published reference changed", path=spec.relative_path)
             if spec.partition.get("kind") == "table":
-                _footer_from_partition(_relative(root, spec.relative_path), spec)
+                _footer_from_partition(_relative(root, spec.relative_path), spec, contracts)
         if "publication_sha256" in _dumps(manifest.quality_summary) or "prepared_sha256" in _dumps(manifest.quality_summary):
             _fail("circular_quality", "quality summary captures the publication descriptor")
     catalog = _open_readonly(policy)
