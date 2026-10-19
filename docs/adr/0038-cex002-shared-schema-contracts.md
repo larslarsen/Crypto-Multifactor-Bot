@@ -35,6 +35,14 @@ dictionary representation, decimal precision/scale and the existing accepted lis
 normalization. A hash token without its authenticated full contract is insufficient.
 The strict consumer-proof schema and complete logical readback obligations do not change.
 
+The actual complete inventory is 423,446 files. Its strict per-file proof repeats three
+digests plus paths/counts/time fields for every file, so the old 256 MiB metadata read
+ceiling must not be assumed to fit. Set a finite 512 MiB proof read ceiling, keeping
+the strict proof schema unchanged. The large-inventory regression must account for
+the encoded representative complete proof and reserve the full finite proof ceiling
+in its capacity scenario. This is a read bound, not a new storage allocation: all
+actual proof bytes still consume the same release metadata remainder.
+
 Keep the existing SQLite reservation formula/multipliers, metadata allocation, bundle
 file cap and operating reserve unchanged. Include registry bytes once in actual manifest
 and SQLite quality-summary accounting, and each reference in file-row accounting.

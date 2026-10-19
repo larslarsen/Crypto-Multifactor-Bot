@@ -3,11 +3,24 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), Review 507 shared-schema metadata correction
+Next required actor: Jr Dev — Hermes, Review 507 integration, exact orphan disposal and one preparation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 507 accepts the two-path shared-schema source after 63 focused cases and
+reviewer diff/hash inspection. Its complete 423,446-reference synthetic scenario charges
+4,475,019,201 bytes, leaving 510,452,418 below the fixed remainder with unchanged 12x
+SQLite reserve and a full 512 MiB proof allowance. Hermes owns the final ordered
+regression/lint/control, three-path integration with Record 508, exact authenticated
+disposal of only the unreferenced failed object named in Review 507, full pre-launch
+catalog baseline, and one new preparation bound to the new source commit, then Record
+509. Normal approvals/first-failure stops persist; no arbitrary cleanup, accepted-data
+change, consumer/proof run, catalog admission or next ticket. Source actor stopped;
+GPT-6.1 remains reviewer. Record 506's corrected terminal publication is accepted.
+
+## Completed diagnosis and source assignment
 
 The sole Review-504 preparation exited 1 after writing its 13,232,150-byte bundle
 object: calculated metadata 7,450,831,574 exceeds the fixed 4,985,471,619 remainder.
