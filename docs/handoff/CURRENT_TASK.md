@@ -3,11 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 501 integration and one new bundle preparation
+Next required actor: Sr Dev — Codex Sol (GPT-6 Sol High), Review 504 liquidation accounting correction
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 504 accepts integration 05acac2 and Record 502 (136 cases, Ruff/control passed)
+and terminal Record 503. Real preparation failed because the adapter adds 202 authority
+gaps to 4,626 daily gap runs before checking the daily-gap pin. Its file closure also
+omits the accepted comparison JSON. Assign the same GPT-6 Sol High actor the two-path
+category/provenance correction and one targeted command. Preserve all accepted bytes
+and observed/censored semantics. Hermes is stopped; no real retry, admission, consumer
+run or next ticket is authorized. GPT-6.1 remains reviewer.
+
+## Completed Review 501 assignment
 
 Review 501 accepts the two-path derived-bound correction after 37 focused tests and
 reviewer diff/hash inspection. Hermes owns its final ordered regression/lint/control,
@@ -210,6 +220,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/504_CEX002_LIQUIDATION_GAP_ACCOUNTING_CORRECTION.md
 - research/sprint_004/501_CEX002_PHYSICAL_INVENTORY_BOUND_CORRECTION.md
 - research/sprint_004/498_CEX002_RETAINED_KLINE_INVENTORY_CORRECTION.md
 - research/sprint_004/496_CEX002_REAL_BUNDLE_PREPARATION_REVIEW.md
