@@ -92,17 +92,19 @@ the failed run.
 
 ## Scope limits and gaps
 
-- No completed prepared descriptor, eleven named manifests, bundle Parquet, candidate SHA or
-  footer inspection exists; the producer stopped at the final metadata guard before emitting
-  them.
+- No completed prepared descriptor, eleven sealed manifests, candidate SHA or footer
+  inspection exists; the producer stopped at the final metadata guard before emitting them.
+  The existing owned 13,232,150-byte bundle object (reviewer-observed, `.objects/89/8923a89f…`)
+  is retained; no completed prepared release was emitted.
 - No proof/publication file, catalog admission, consumer run, external checker or preparation
   replay was performed.
 - No private-function diagnostic, source/test edits, installs, acquisition, helpers or archive
   reads.
 - Created owned files are preserved; no cleanup or retry.
-- The exact `metadata_bytes` charge and `release_metadata_bytes` subtotal are the producer's
-  emitted context values; Hermes did not independently recompute or attribute a SQLite/
-  manifest subtotal that the command did not emit.
+- The exact `metadata_bytes` charge (7,450,831,574) and the `release_metadata_bytes` value
+  (5,556,368,003, the fixed release-wide allocation pin) are the producer's emitted context
+  values; Hermes did not independently recompute or attribute a SQLite/manifest component
+  subtotal that the command did not emit.
 
 ## Record status
 
