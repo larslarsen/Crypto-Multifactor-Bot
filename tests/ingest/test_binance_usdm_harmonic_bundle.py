@@ -17,6 +17,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+import cryptofactors.ingest.binance_usdm_harmonic_bundle as bundle_module
 from cryptofactors.acquisition.binance_usdm_harmonic_sizing import final_product_schema
 
 from cryptofactors.catalog.dataset.cex002_reference_release import (
@@ -39,6 +40,8 @@ from cryptofactors.ingest.binance_usdm_harmonic_bundle import (
     HARMONIC_BUNDLE_ALLOCATION_BYTES,
     HOLDOUT_ID,
     HOLDOUT_UTC,
+    LIQUIDATION_AUTHORITY_GAP_ROWS,
+    LIQUIDATION_COMPARISON_ENTRIES,
     MEASURED_CURRENT_BUNDLE_BYTES,
     OBSERVED_DAY_COUNT,
     OBSERVED_DAY_SHA256,
@@ -56,11 +59,14 @@ from cryptofactors.ingest.binance_usdm_harmonic_bundle import (
     UNUSED_COVERAGE_RESERVATION_BYTES,
     AssemblyPolicy,
     ReleaseError,
+    _account_ordinary,
+    _completion_file,
     _retained_kline_inventory,
     _walk,
     prepare_harmonic_bundle,
     release_metadata_budget,
 )
+from cryptofactors.ingest.binance_usdm_liquidation_observed import GAP_SCHEMA as LIQUIDATION_GAP_SCHEMA
 
 REPO = Path(__file__).resolve().parents[2]
 MIGRATIONS = REPO / "sql/migrations"
@@ -164,14 +170,15 @@ def _contract(schema: pa.Schema) -> list[dict[str, object]]:
     ]
 
 
-def _write_parquet(schema: pa.Schema, count: int) -> bytes:
+def _write_parquet(schema: pa.Schema, count: int, gap_kind: str | None = None) -> bytes:
     arrays = []
     for field in schema:
         if count == 0:
             arrays.append(pa.array([], type=field.type))
             continue
         if pa.types.is_dictionary(field.type) or pa.types.is_string(field.type):
-            arrays.append(pa.array(["BTCUSDT"] * count, type=field.type))
+            value = gap_kind if field.name == "gap_kind" and gap_kind is not None else "BTCUSDT"
+            arrays.append(pa.array([value] * count, type=field.type))
         elif pa.types.is_integer(field.type):
             arrays.append(pa.array(list(range(count)), type=field.type))
         elif pa.types.is_boolean(field.type):
@@ -271,7 +278,7 @@ def _placed_gap(
     schema: pa.Schema,
     count: int,
 ) -> dict:
-    payload = _write_parquet(schema, count)
+    payload = _write_parquet(schema, count, gap_kind=kind)
     digest = _sha(payload)
     if symbol is None:
         parquet_rel = f".authority-gaps/{digest}.parquet"
@@ -421,13 +428,24 @@ def _build(repo: Path) -> int:
                 "physical_source_rows": count,
                 "collapsed_identical_rows": 0,
                 "product_rows": count,
-                "missing_daily_slots": 0,
-                "inclusive_requested_slots": count,
+                "missing_daily_slots": 2,
+                "inclusive_requested_slots": count + 2,
             }
             document["gaps"] = [
-                _placed_gap(repo, spec.root, "quality_gap", "BTCUSDT", "2024-01", ordinary, 0),
-                _placed_gap(repo, spec.root, "coinalyze_symbol_unmapped", None, None, ordinary, 1),
+                _placed_gap(repo, spec.root, "all_input_missing", "BTCUSDT", "2024-01", LIQUIDATION_GAP_SCHEMA, 2),
+                _placed_gap(repo, spec.root, "coinalyze_symbol_unmapped", None, None,
+                            LIQUIDATION_GAP_SCHEMA, LIQUIDATION_AUTHORITY_GAP_ROWS),
             ]
+            document["authority_gap_rows"] = LIQUIDATION_AUTHORITY_GAP_ROWS
+            comparison = {"document_type": "cex002_liquidation_bounded_secondary_comparison",
+                          "entries": [{"case": index} for index in range(LIQUIDATION_COMPARISON_ENTRIES)]}
+            comparison_payload = json.dumps(comparison).encode()
+            comparison_sha = _sha(comparison_payload)
+            comparison_path = f".comparison/{comparison_sha}.json"
+            _write(repo, f"{spec.root}/{comparison_path}", comparison_payload)
+            document["comparison"] = {"path": comparison_path, "sha256": comparison_sha,
+                                      "entry_count": LIQUIDATION_COMPARISON_ENTRIES,
+                                      "disposition": "pending_reviewer"}
             bundle_rows += 2
         completions[spec.dataset_type] = _completion(repo, spec.root, document)
         bundle_rows += 1
@@ -927,6 +945,28 @@ def test_prepare_preserves_economics_and_accounts_every_file(tmp_path: Path) -> 
     assert authority["native_symbol"] == "absent"
     assert authority["utc_month"] == "absent"
     assert authority["required_product"] == "binance_usdm_liquidation_observed_daily"
+    assert authority["row_count"] == LIQUIDATION_AUTHORITY_GAP_ROWS
+    daily = next(row for row in frame if row["component"] == "all_input_missing")
+    assert daily["row_count"] == 2
+    liquidation = next(item for item in prepared.manifests
+                       if item.dataset_type == "binance_usdm_liquidation_observed_daily")
+    assert liquidation.quality_summary["quality_gap_rows"] == 2
+    assert liquidation.quality_summary["authority_gap_rows"] == LIQUIDATION_AUTHORITY_GAP_ROWS
+    assert liquidation.quality_summary["total_gap_table_rows"] == 2 + LIQUIDATION_AUTHORITY_GAP_ROWS
+    assert liquidation.quality_summary["comparison_entry_count"] == LIQUIDATION_COMPARISON_ENTRIES
+    assert liquidation.quality_summary["comparison_disposition"] == "pending_reviewer"
+    comparison = [item for item in liquidation.files if item.partition.get("role") == "comparison"]
+    assert len(comparison) == 1
+    assert comparison[0].partition["kind"] == "metadata"
+    assert comparison[0].rows == 0
+    assert comparison[0].sha256 == liquidation.quality_summary["comparison_sha256"]
+    assert sum(item.rows for item in liquidation.files if item.partition.get("kind") == "table") == (
+        1 + 2 + LIQUIDATION_AUTHORITY_GAP_ROWS
+    )
+    assert {item.partition.get("component") for item in liquidation.files
+            if item.partition.get("kind") == "table"} >= {
+        "all_input_missing", "coinalyze_symbol_unmapped"
+    }
     fee = next(row for row in frame if row["component"] == "official_fee_schedule")
     assert fee["row_count"] == 0
     ticker = next(row for row in frame if row["component"] == "retained_book_ticker")
@@ -975,6 +1015,110 @@ def test_prepare_preserves_economics_and_accounts_every_file(tmp_path: Path) -> 
     assert replay.descriptor_sha256 == prepared.descriptor_sha256
     assert inventory() == before
     assert not [path for path in owned.rglob("*.tmp") if path.is_file()]
+
+
+def _liquidation_fixture_account(repo: Path, production: bool = False):
+    spec = next(item for item in PRODUCTS if item.dataset_type == "binance_usdm_liquidation_observed_daily")
+    completion, _sha256, marker = _completion_file(repo, spec, False)
+    return spec, completion, marker, _account_ordinary(repo, spec, completion, marker, {}, production)
+
+
+def test_liquidation_production_pins_distinct_gap_categories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, _catalog, _policy_value, _rows = _fixture(tmp_path)
+    assert LIQUIDATION_AUTHORITY_GAP_ROWS == 202
+    assert LIQUIDATION_COMPARISON_ENTRIES == 18
+    monkeypatch.setitem(bundle_module.QUALITY_ROWS_BY_PRODUCT, "binance_usdm_liquidation_observed_daily", 2)
+    _spec, _completion_doc, _marker, account = _liquidation_fixture_account(repo, production=True)
+    assert account.quality["quality_gap_rows"] == 2
+    assert account.quality["authority_gap_rows"] == 202
+    assert sum(item.rows for item in account.files if item.is_table) == 205
+    monkeypatch.setitem(bundle_module.QUALITY_ROWS_BY_PRODUCT, "binance_usdm_liquidation_observed_daily", 3)
+    with pytest.raises(ReleaseError) as daily_pin:
+        _liquidation_fixture_account(repo, production=True)
+    assert daily_pin.value.blocker == "row_mismatch"
+    monkeypatch.setitem(bundle_module.QUALITY_ROWS_BY_PRODUCT, "binance_usdm_liquidation_observed_daily", 2)
+    monkeypatch.setattr(bundle_module, "LIQUIDATION_AUTHORITY_GAP_ROWS", 203)
+    with pytest.raises(ReleaseError) as authority_pin:
+        _liquidation_fixture_account(repo, production=True)
+    assert authority_pin.value.blocker == "row_mismatch"
+
+
+@pytest.mark.parametrize(
+    ("change", "blocker"),
+    [
+        ("unknown_kind", "malformed_metadata"),
+        ("missing_kind", "malformed_metadata"),
+        ("daily_as_authority", "identity_pin"),
+        ("authority_as_daily", "identity_pin"),
+        ("crossed_lineage", "identity_pin"),
+        ("authority_count", "row_mismatch"),
+    ],
+)
+def test_liquidation_rejects_gap_category_and_count_mismatch(
+    tmp_path: Path, change: str, blocker: str
+) -> None:
+    repo, _catalog, _policy_value, _rows = _fixture(tmp_path)
+    spec, document, marker, _account = _liquidation_fixture_account(repo)
+    daily, authority = document["gaps"]
+    if change == "unknown_kind":
+        daily["kind"] = "unexpected"
+    elif change == "missing_kind":
+        daily.pop("kind")
+    elif change == "daily_as_authority":
+        daily["parquet_path"] = daily["parquet_path"].replace(".quality-gaps/", ".authority-gaps/")
+    elif change == "authority_as_daily":
+        authority["parquet_path"] = authority["parquet_path"].replace(".authority-gaps/", ".quality-gaps/")
+    elif change == "crossed_lineage":
+        daily["lineage_path"] = authority["lineage_path"]
+    else:
+        document["authority_gap_rows"] = 201
+    with pytest.raises(ReleaseError) as rejected:
+        _account_ordinary(repo, spec, document, marker, {}, False)
+    assert rejected.value.blocker == blocker
+
+
+@pytest.mark.parametrize(
+    ("change", "blocker"),
+    [
+        ("missing", "unsafe_path"),
+        ("changed", "reference_mismatch"),
+        ("unsafe", "unsafe_path"),
+        ("count", "row_mismatch"),
+        ("doctype", "malformed_metadata"),
+        ("disposition", "identity_pin"),
+    ],
+)
+def test_liquidation_rejects_invalid_comparison_reference(
+    tmp_path: Path, change: str, blocker: str
+) -> None:
+    repo, _catalog, _policy_value, _rows = _fixture(tmp_path)
+    spec, document, marker, _account = _liquidation_fixture_account(repo)
+    reference = document["comparison"]
+    path = repo / spec.root / reference["path"]
+    if change == "missing":
+        path.unlink()
+    elif change == "changed":
+        path.write_bytes(path.read_bytes() + b" ")
+    elif change == "unsafe":
+        reference["path"] = "../outside.json"
+    elif change == "count":
+        reference["entry_count"] += 1
+    elif change == "doctype":
+        comparison = json.loads(path.read_bytes())
+        comparison["document_type"] = "wrong_document"
+        body = json.dumps(comparison).encode()
+        digest = _sha(body)
+        new_path = f".comparison/{digest}.json"
+        _write(repo, f"{spec.root}/{new_path}", body)
+        reference["path"] = new_path
+        reference["sha256"] = digest
+    else:
+        reference["disposition"] = "accepted"
+    with pytest.raises(ReleaseError) as rejected:
+        _account_ordinary(repo, spec, document, marker, {}, False)
+    assert rejected.value.blocker == blocker
 
 
 def test_retained_kline_inventory_is_audited_outside_accepted_datasets(tmp_path: Path) -> None:

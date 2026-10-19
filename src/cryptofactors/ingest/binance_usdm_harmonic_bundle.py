@@ -128,6 +128,10 @@ QUALITY_ROWS_BY_PRODUCT = {
     "binance_usdm_mark_index_basis_1h": 4_603,
     "binance_usdm_liquidation_observed_daily": 4_626,
 }
+LIQUIDATION_AUTHORITY_GAP_ROWS = 202
+LIQUIDATION_COMPARISON_DOCUMENT = "cex002_liquidation_bounded_secondary_comparison"
+LIQUIDATION_COMPARISON_ENTRIES = 18
+LIQUIDATION_COMPARISON_MAX_BYTES = 1024 * 1024
 RECON_MATCHED_FIELDS = 2_672
 RECON_FIELD_DENOMINATOR = 2_672
 RECON_COMPARED_HOURS = 167
@@ -1042,11 +1046,14 @@ def _account_ordinary(
             expected_schema=None,
         )
     quality_rows = 0
+    authority_rows = 0
     artifacts: list[Mapping[str, Any]] = []
     single = completion.get("quality_gap_artifact")
+    many = completion.get("quality_gap_artifacts")
+    if spec.family == "liquidation" and (single is not None or many is not None):
+        _fail("malformed_metadata", "liquidation gaps must use their declared categories")
     if type(single) is dict:
         artifacts.append(single)
-    many = completion.get("quality_gap_artifacts")
     if type(many) is list:
         artifacts.extend(item for item in many if type(item) is dict)
     if spec.family == "liquidation":
@@ -1062,6 +1069,33 @@ def _account_ordinary(
     for artifact in artifacts:
         before = len(sources)
         component_name = str(artifact.get("kind") or artifact.get("component") or "quality_gap")
+        if spec.family == "liquidation":
+            kind = artifact.get("kind")
+            if type(kind) is not str or kind not in {"all_input_missing", "coinalyze_symbol_unmapped"}:
+                _fail("malformed_metadata", "liquidation gap kind is unknown", kind=str(kind))
+            parquet_path = artifact.get("parquet_path")
+            lineage_path = artifact.get("lineage_path")
+            if type(parquet_path) is not str or type(lineage_path) is not str:
+                _fail("malformed_metadata", "liquidation gap pair paths are absent", kind=kind)
+            parquet_parts = _safe(parquet_path, "liquidation gap path").split("/")
+            lineage_parts = _safe(lineage_path, "liquidation gap lineage path").split("/")
+            parquet_sha = _hex64(artifact.get("parquet_sha256"), "liquidation gap")
+            lineage_sha = _hex64(artifact.get("lineage_sha256"), "liquidation gap lineage")
+            if kind == "all_input_missing":
+                valid_shape = (
+                    len(parquet_parts) == len(lineage_parts) == 4
+                    and parquet_parts[0] == ".quality-gaps"
+                    and lineage_parts[0] == ".quality-gap-lineage"
+                    and parquet_parts[1:3] == lineage_parts[1:3]
+                )
+            else:
+                valid_shape = (
+                    len(parquet_parts) == len(lineage_parts) == 2
+                    and parquet_parts[0] == ".authority-gaps"
+                    and lineage_parts[0] == ".authority-gap-lineage"
+                )
+            if not valid_shape or parquet_parts[-1] != f"{parquet_sha}.parquet" or lineage_parts[-1] != f"{lineage_sha}.json":
+                _fail("identity_pin", "liquidation gap pair contradicts its category or digest", kind=kind)
         expected_schema = QUALITY_GAP_SCHEMA if spec.family == "partition" else None
         _append_pair(
             files,
@@ -1078,9 +1112,43 @@ def _account_ordinary(
             ))),
             expected_schema=expected_schema,
         )
-        quality_rows += sources[-1].row_count
+        if spec.family == "liquidation" and component_name == "coinalyze_symbol_unmapped":
+            authority_rows += sources[-1].row_count
+        else:
+            quality_rows += sources[-1].row_count
         if len(sources) == before:
             _fail("empty_required", "quality artifact produced no row")
+    comparison_quality: dict[str, Any] = {}
+    if spec.family == "liquidation":
+        if authority_rows != _whole(completion.get("authority_gap_rows"), "authority gap rows"):
+            _fail("row_mismatch", "liquidation authority-gap rows differ from completion")
+        if production and authority_rows != LIQUIDATION_AUTHORITY_GAP_ROWS:
+            _fail("row_mismatch", "liquidation authority-gap rows are not the accepted pin")
+        comparison = completion.get("comparison")
+        if type(comparison) is not dict:
+            _fail("malformed_metadata", "liquidation comparison reference is absent")
+        path = comparison.get("path")
+        if type(path) is not str:
+            _fail("malformed_metadata", "liquidation comparison path is absent")
+        safe_path = _safe(path, "liquidation comparison path")
+        declared_sha = _hex64(comparison.get("sha256"), "liquidation comparison")
+        entry_count = _whole(comparison.get("entry_count"), "liquidation comparison entries")
+        if safe_path != f".comparison/{declared_sha}.json":
+            _fail("identity_pin", "liquidation comparison path is not content addressed", path=safe_path)
+        if production and entry_count != LIQUIDATION_COMPARISON_ENTRIES:
+            _fail("row_mismatch", "liquidation comparison count is not the accepted pin")
+        if comparison.get("disposition") != "pending_reviewer":
+            _fail("identity_pin", "liquidation comparison disposition changed")
+        relative = _safe(f"{spec.root}/{safe_path}", "liquidation comparison reference")
+        document, digest, size = _load_json(root, relative, LIQUIDATION_COMPARISON_MAX_BYTES, declared_sha)
+        entries = document.get("entries")
+        if document.get("document_type") != LIQUIDATION_COMPARISON_DOCUMENT or type(entries) is not list:
+            _fail("malformed_metadata", "liquidation comparison document is malformed", path=relative)
+        if len(entries) != entry_count:
+            _fail("row_mismatch", "liquidation comparison entry count differs from completion", path=relative)
+        files.append(_File(relative, digest, size, 0, False, (), {"role": "comparison", "kind": "metadata"}))
+        comparison_quality = {"comparison_sha256": digest, "comparison_entry_count": entry_count,
+                              "comparison_disposition": comparison.get("disposition")}
     authority = completion.get("authority_gap_lineage")
     if type(authority) is dict and authority.get("lineage_path"):
         lineage, _sha, _document = _lineage(root, spec, authority)
@@ -1101,6 +1169,9 @@ def _account_ordinary(
     quality = {
         "completion_sha256": completion_file.sha256,
         "quality_gap_rows": quality_rows,
+        **({"authority_gap_rows": authority_rows, "total_gap_table_rows": quality_rows + authority_rows}
+           if spec.family == "liquidation" else {}),
+        **comparison_quality,
         "partition_count": len(typed_parts),
         "utc_month_absent_token": ABSENT_MONTH,
         "native_symbol_absent_token": ABSENT_MONTH,
