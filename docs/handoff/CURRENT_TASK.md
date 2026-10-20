@@ -3,20 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, GPT-6 Sol High, Review 513 gap routing
+Next required actor: Jr Dev — Hermes, Review 513 integration and real measurement
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review513 identifies a concrete real-manifest routing bug before consumer execution:
-bar main and gap tables both use role=partition; only component="" denotes native
-bars. The sole existing GPT-6 Sol High senior may correct the checker and its test
-source exactly as Review513 specifies, with one targeted test invocation under the
-corrective exception. Preserve full gap transport and mandatory main-bar projection.
-Return hashes/output and stop on first nonzero without repair/retry. GPT-6.1 remains
-reviewer; Hermes integration and real-data execution are not yet assigned. No proof,
-admission or next ticket. Existing integration/tests/data remain accepted.
+Review513 accepts the two-path bar-gap routing correction after 27 senior targeted
+cases passed. Senior is stopped. Fresh native free Nous Hermes authenticates final
+hashes, runs scoped Ruff/control/whitespace and integrates exactly the two source
+paths plus Record514. Then one bounded real measurement: whole selected table per
+component group across eleven manifests, 24tables/369588rows, actual Nautilus custom
+and native Bar readback, unchanged catalog and bounded fresh SSD scratch. Publish
+terminal Record515 and stop reviewer. Review513's final sections enumerate exact
+commands, resource/identity checks, failure stops and paths. No test/setup repeats,
+source edits, full release proof/admission, producer retry or next ticket. GPT-6.1
+remains reviewer; all accepted inputs stay read-only.
 
 ## Accepted preparation
 
