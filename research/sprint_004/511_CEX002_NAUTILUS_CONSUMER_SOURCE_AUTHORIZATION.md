@@ -228,3 +228,41 @@ Existing accepted producer/catalog tests are preserved, not rerun. Final whole-r
 acceptance remains pending under the original ticket; this is only the new checker
 integration. Any dependency handling for that later suite requires a later bounded
 assignment. GPT-6.1 remains reviewer; no implementation/evidence Git duty transfers.
+
+
+## First execution disposition — bounded string-decoder correction
+
+Hermes's native message 99892 records the exact assigned pytest command exiting 1:
+9 failed, 13 passed in 1.03 seconds. All nine failures originate in custom Arrow
+field validation during real Nautilus query, before later roundtrip assertions.
+The grouped set -e workflow correctly did not execute Ruff, control or whitespace.
+No Record512, integration, full-data proof or admission occurred. Preserve output
+and partial fixture state. The first-execution source is unaccepted for integration.
+The preceding integration assignment is suspended pending corrective source review.
+
+Authorize the same sole GPT-6 Sol High senior for only the same two source/test
+paths. The decoder permits logical string variants for payload but requires exact
+pa.string for payload_sha256. Correct every declared string field consistently
+for pinned Nautilus/DataFusion string/large_string/string_view readback, retaining
+strict integer types, exact names, value authentication and wire semantics. Do not
+relax unrelated fields or introduce coercion. Use actual error feedback; if another
+concrete API issue appears, stop and return it without repair/retry.
+
+Strengthen the late-failure fixture so it asserts each intended injected error is
+actually reached and matched; its broad pytest.raises(Exception) currently allows
+early decoder failure to masquerade as successful source/code/seal-failure coverage.
+Keep the existing real-catalog success tests and all accepted contracts unchanged.
+
+Under the repository's corrective senior targeted-test exception, authorize exactly
+ONE execution after these edits, from the repository root:
+
+```
+PYTHONPATH=src /tmp/cex002_nautilus_review511_env/bin/python -m pytest tests/test_cex002_nautilus_consumer.py -o addopts='' -q --tb=short -ra
+```
+
+This is immediate source feedback only, not integration/acceptance. Stop at the
+first nonzero result and return full exact output/status without edits or retry.
+If it passes, return output/count plus final two hashes/line counts and stop for
+review. No other commands that execute source/tests/import probes, installs,
+records, Git, source paths, real data, cleanup, proof or catalog work are assigned.
+Hermes is stopped; GPT-6.1 remains reviewer. Next ticket NONE.
