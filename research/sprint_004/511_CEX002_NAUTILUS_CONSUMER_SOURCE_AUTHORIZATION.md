@@ -296,3 +296,40 @@ source author/test attribution, actual native setup evidence/freeze and limitati
 and no full-release consumer/proof/admission. Record512 remains the only evidence
 path; old source/test/evidence are read-only. No further source authoring, real
 checker execution, catalog admission or next ticket is authorized. Stop reviewer.
+
+
+## Lint stop — exact mechanical source continuation
+
+Hermes message 99905 records scoped Ruff exit 1: F402 for the decoder's local
+field loop variable shadowing dataclasses.field, and F841 for the unused result
+assignment in the refused test helper. Control/whitespace did not execute. No
+record/integration occurred. Preserve the accepted 22-case runtime result.
+
+Authorize the same sole GPT-6 Sol High actor for exactly these two mechanical
+changes in the existing two writable paths: rename the decoder's loop variable
+and its references; remove only the unused result assignment, retaining the call
+to original. No behavior, assertions or other source changes. No tests, lint,
+imports/probes, data, records, Git or integration by the senior. Return new hashes
+and stop. Hermes is stopped until reviewer verifies the exact diff and resumes it
+at Ruff; do not repeat setup or the passing targeted tests.
+
+
+## Mechanical correction accepted — final Hermes resume
+
+The reviewer compared both files against the frozen pre-lint copies. The only
+changes rename field to schema_field in the decoder loop and remove result = from
+the refused helper's original call. They preserve behavior and all assertions;
+retain the accepted 22-case targeted result without retesting. Final hashes:
+
+| Path | SHA-256 | Lines |
+| --- | --- | ---: |
+| scripts/research/check_cex002_nautilus_consumer.py | 6ac5fd0dbf4c676ccaf87fc288d68c3725a170a1de5aefe9babe497b2fb9584e | 795 |
+| tests/test_cex002_nautilus_consumer.py | 37363e911a82cb2c7394cbb806f2acbe9c8b35a148f16f12c69ca8ebcd54802e | 442 |
+
+Senior is stopped. Hermes now authenticates these final hashes and resumes only
+scoped Ruff, control, whitespace, then Record512 and the original exact three-path
+commit/push guards. Record both failed checks and their disposition, plus the
+accepted senior 22-pass run attributed accurately; no other tests or setup reruns.
+First nonzero/denial stops without source repair/retry. The mechanical edits do
+not reopen runtime behavior. No full-data proof, admission or next ticket. Stop
+for reviewer inspection after publication.

@@ -3,20 +3,19 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 511 remaining lint/integration
+Next required actor: Jr Dev — Hermes, Review 511 final lint/integration
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 511 accepts the corrected checker source after the senior's one targeted
-run passed all 22 cases in 1.08 seconds. Preserve the original 9-fail/13-pass result
-and do not repeat setup or pytest. Hermes authenticates the NEW frozen hashes and
-resumes at scoped Ruff, then control/whitespace, Record512 and exact three-path
-integration/push. Attribute the 22-pass run to the senior's targeted exception.
-Stop on first failure without edits/retry. Source actor is stopped; GPT-6.1 remains
-reviewer. No full-release consumer/proof run, admission or next ticket is authorized.
-See Review 511's final section for the controlling continuation.
+Review 511's final section accepts exactly two mechanical Ruff fixes after reviewer
+diff/hash inspection. Preserve the senior's accepted 22-pass runtime result; no
+pytest/setup repeats. Hermes authenticates FINAL hashes, resumes scoped Ruff,
+control/whitespace, then Record512 and exact three-path integration/push. Include
+both initial failed checks and their dispositions. Stop first failure without
+source edits/retry. Senior is stopped; GPT-6.1 remains reviewer. No full-release
+consumer/proof run, admission or next ticket is authorized.
 
 ## Accepted preparation
 
