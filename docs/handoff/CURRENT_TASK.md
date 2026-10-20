@@ -3,11 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 507 bounds-marker continuation and one preparation
+Next required actor: Lead Quantitative Finance Researcher/Engineer, capacity-restoration decision
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Record 509 at 17122ed7040d56a753c1a3792e2bd90624e23d7a is accepted as a stopped
+preflight: 20,142,739,456 free bytes is below the fixed 29,690,701,415 reserve even
+before incoming/metadata charges. No disposal or new producer ran; both owned files,
+five source hashes and frozen catalog digests are preserved. Hermes is finished.
+Review 507 derives a conservative 34,724,877,040-byte free-space floor, about 14.6 GB
+above that observation. The reviewer must resolve capacity before a later execution
+assignment. No cleanup, relaunch, retest, proof, admission or next ticket is authorized.
+
+## Superseded bounds-marker continuation
 
 Review 507 accepts integration 1f5629b / Record 508: 162 cases, Ruff/control passed,
 five committed hashes and exact three-path publication verified. Hermes stopped before

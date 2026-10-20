@@ -309,3 +309,50 @@ Producer failure still permits terminal disclosure/Record-509-only publication. 
 approvals, immutable accepted data, budgets and absence of catalog admission/proof/
 consumer work persist. This continuation corrects governance only; no new producer
 has yet run from source 1f5629b.
+
+## Capacity preflight stop — 2026-10-19
+
+The refreshed native preflight (message 99228) reports 20,142,739,456 available
+bytes, below the unchanged operating reserve of 29,690,701,415 by 9,547,961,959
+bytes even before incoming data and metadata reservations. The five source hashes,
+empty index, synchronized 6537b07 HEAD and both frozen catalog digests still match.
+This is an environmental capacity blocker, not a new source or schema failure.
+
+The reviewer sent an immediate native steer before any further logged action:
+stop before object disposal or producer launch; preserve both owned files. This
+section supersedes the disposal/launch continuation while capacity is insufficient.
+Hermes publishes only terminal Record 509, disclosing actual actions and capacity,
+then stops. If any action was already in flight, report it exactly; do not claim an
+unobserved stop. No retry, source change, accepted-data deletion, proof, admission,
+or next ticket is authorized. Preserve the passed 162 cases and integration.
+
+The real preparation remains unexecuted from source 1f5629b. Restore sufficient
+filesystem capacity before any later bounded execution authorization. The reserve
+alone is a lower bound; the existing guard also charges incoming bytes and actual
+release metadata. The 4,475,019,201-byte synthetic charge is not a real candidate
+measurement and does not establish a launch floor.
+
+A conservative later prelaunch floor is 34,724,877,040 bytes: unchanged reserve
+29,690,701,415 + full metadata remainder 4,985,471,619 + twice the bundle cap
+24,352,003. Relative to message 99228 this requires 14,582,137,584 additional
+available bytes. This derived capacity check changes no allocation or guard and
+does not authorize cleanup or a relaunch; the real guard remains authoritative.
+
+## Terminal capacity record accepted
+
+Accept Record 509 at 17122ed7040d56a753c1a3792e2bd90624e23d7a as the stopped
+preflight result. Reviewer inspection confirms its exact one-record commit, native
+successful push, synchronized HEAD/origin and empty index. Native messages 99228
+and 99232 authenticate the unchanged catalog/source identities and both preserved
+owned files. No disposal, new producer or new candidate occurred. The reviewer
+capacity steer ended the pending workflow; this is not a producer exit failure.
+
+Record 509's displayed old-object path has an extra `e` in its basename. Its
+64-character SHA and the exact earlier Review-507/native inventory path are
+authoritative; the typo authorizes no alternate path. No repeat record cycle or
+test rerun is needed to resolve that transcription.
+
+Hermes is finished and no source actor is assigned. Next actor is the reviewer for
+the capacity-restoration decision. CEX-002 remains IN_PROGRESS, with an explicit
+capacity blocker and next ticket NONE. Preserve all data and accepted checks; no
+cleanup, relaunch, proof, catalog admission or next-ticket work is authorized.
