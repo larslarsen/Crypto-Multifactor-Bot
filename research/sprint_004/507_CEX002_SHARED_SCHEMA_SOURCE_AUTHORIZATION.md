@@ -253,3 +253,59 @@ reviewer. The named source correction is accepted; final release acceptance is p
 
 No next ticket or final Gate acceptance is authorized. This ordered continuation alone
 supersedes the preceding source-only ban on cleanup and another real preparation.
+
+## Integration acceptance and bounds-marker continuation
+
+Accept integration 1f5629badfa0e8af6338fbeb019a5f7e60b6a324 and Record 508. The
+reviewer independently matched all five committed hashes and the exact three-path
+commit. Hermes's grouped validation passed 162 cases, Ruff and repository control,
+with the same full-count synthetic result. Preserve these checks; do not rerun them.
+Record 508's progress-line split is inaccurate; the native output totals 162 and exit
+0. That transcription does not change the accepted validation result.
+
+Hermes then found two owned files rather than this review's expected one and stopped
+without unlinking or launching a producer. It additionally read/hash/stat inspected
+the unexpected marker after inventory discovery; this exceeded the literal immediate
+stop instruction, but was read-only and changed no data. Preserve that disclosure in
+Record 509 rather than silently claiming perfect stop compliance.
+
+The reviewer confirms that _guard_resources intentionally calls _write_bounds for
+metadata_remainder_exceeded. The latter writes a non-consumable BOUNDS_DOCUMENT under
+.prepared. The reviewer's one-file precondition overlooked this existing failure path;
+there is no new source defect and no completed candidate at this point. The marker is:
+
+- data/.cex002_harmonic_bundle/.prepared/a918bc1271be169073d793d87461dfeb0ea6dbe5e7c8ed46793ef873a3b0308a.json
+- SHA-256 a918bc1271be169073d793d87461dfeb0ea6dbe5e7c8ed46793ef873a3b0308a; 305 bytes.
+- document_type=cex002_harmonic_bundle_bounds_block, schema_version=1,
+  consumable=false, blocker=metadata_remainder_exceeded, detail stage=prepare and
+  the exact Record-506 values 7,450,831,574 / 4,985,471,619 / 5,556,368,003.
+
+Authorize the existing Hermes session to resume only the remaining workflow from
+step 3, using source commit 1f5629badfa0e8af6338fbeb019a5f7e60b6a324. No source,
+tests, integration, validation or new helper is assigned. Refresh the same two complete
+read-only catalog snapshots and free space before disposal/launch; require their frozen
+zero/five rows and digests. Recheck five unchanged source hashes, empty index and
+HEAD==origin/main; reviewer governance may have advanced HEAD past that source commit.
+
+Replace the one-file precondition with EXACTLY the two regular, non-symlink files
+enumerated here and in step 3: the old 13,232,150-byte object and this 305-byte bounds
+marker. Verify both full hashes/sizes and marker contents before action, no symlinked
+components, no additional files or live producer. Keep the marker unchanged. Unlink
+ONLY the originally authorized old object, after the original no-candidate/no-catalog
+reference guards. Verify the sole remaining owned file is the unchanged marker.
+No directory, marker, accepted product or other file may be removed or moved.
+
+Then resume steps 4–6 once: capture full pre-launch baseline/free bytes, launch the
+exact prepare command using the full source commit above with native background/notify,
+monitor the SAME process, perform the original success-only candidate inspection and
+post-catalog comparison, and publish terminal Record 509 only. On success allow exactly
+one newly sealed candidate alongside the preserved bounds marker; require each document
+type and emitted candidate SHA to be unambiguous. The marker's 305 bytes remain charged
+as existing descriptor metadata under the unchanged resource guard. Preserve its hash
+and explicitly distinguish it from the new candidate in Record 509.
+
+Stop again on first unexpected state, denial or nonzero without inspection/repair/retry.
+Producer failure still permits terminal disclosure/Record-509-only publication. Normal
+approvals, immutable accepted data, budgets and absence of catalog admission/proof/
+consumer work persist. This continuation corrects governance only; no new producer
+has yet run from source 1f5629b.

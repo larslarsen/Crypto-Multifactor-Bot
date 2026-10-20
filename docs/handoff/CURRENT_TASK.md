@@ -3,11 +3,23 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 507 integration, exact orphan disposal and one preparation
+Next required actor: Jr Dev — Hermes, Review 507 bounds-marker continuation and one preparation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 507 accepts integration 1f5629b / Record 508: 162 cases, Ruff/control passed,
+five committed hashes and exact three-path publication verified. Hermes stopped before
+cleanup/launch because the reviewer overlooked the producer's 305-byte non-consumable
+bounds marker under .prepared. The final Review-507 continuation enumerates BOTH files,
+keeps that authenticated marker, disposes only the originally authorized old object,
+then resumes one preparation using source 1f5629b and terminal Record 509. Refresh
+read-only catalog baselines; preserve passed checks and do not reintegrate/retest. The
+post-discovery read-only marker inspection is disclosed. No source change, arbitrary
+cleanup, retry, proof/consumer run, admission or next ticket. GPT-6.1 remains reviewer.
+
+## Completed integration assignment
 
 Review 507 accepts the two-path shared-schema source after 63 focused cases and
 reviewer diff/hash inspection. Its complete 423,446-reference synthetic scenario charges
