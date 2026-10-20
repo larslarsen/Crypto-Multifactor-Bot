@@ -333,3 +333,23 @@ accepted senior 22-pass run attributed accurately; no other tests or setup rerun
 First nonzero/denial stops without source repair/retry. The mechanical edits do
 not reopen runtime behavior. No full-data proof, admission or next ticket. Stop
 for reviewer inspection after publication.
+
+
+## Integration accepted — reviewer checkpoint
+
+Accept Hermes integration b186b3a250ee147bb8d55311090bfb232f90e3ab and Record512. Native messages 99915–99926
+confirm final scoped Ruff, repository control, unstaged/staged whitespace all
+passed, exact three-path publication, normal push and empty index. The reviewer
+independently verified that commit's complete path set and both committed SHA-256
+values against the final frozen drop. HEAD equals origin/main; unrelated dirty
+work remains untouched. The accepted senior 22-case targeted result is retained
+with its attribution and the mechanical no-behavior-change qualification. Record512
+honestly preserves both initial failures and setup sanity limitation.
+
+This accepts checker implementation/integration only. No full-release consumer
+execution/proof, catalog admission, replay, remaining economic evidence or final
+ticket acceptance occurred. The non-consumable prepared candidate and accepted
+products remain unchanged. Hermes and the senior have finished this assignment.
+Next actor is the reviewer to bound the real consumer check, including measured
+throughput/capacity before committing to the 1,165,116,869-row traversal. No new
+execution is authorized by this checkpoint; CEX-002 IN_PROGRESS, next ticket NONE.
