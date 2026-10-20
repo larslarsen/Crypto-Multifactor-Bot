@@ -3,20 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, real consumer authorization
+Next required actor: Sr Dev — Codex Sol, GPT-6 Sol High, Review 513 gap routing
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 511 accepts checker integration b186b3a250ee147bb8d55311090bfb232f90e3ab and Record512.
-The senior's 22-case targeted result is retained; final scoped Ruff/control and
-whitespace passed. Reviewer independently verified the exact three committed
-paths, both final hashes, synchronized HEAD/origin and empty index. Preserve the
-initial failures and mechanical-fix qualification in Record512. Hermes and senior
-are finished. Next reviewer work is bounding the real consumer check with measured
-throughput/capacity; no execution is currently authorized. No full-release proof,
-admission or next ticket. GPT-6.1 remains reviewer; CEX-002 remains IN_PROGRESS.
+Review513 identifies a concrete real-manifest routing bug before consumer execution:
+bar main and gap tables both use role=partition; only component="" denotes native
+bars. The sole existing GPT-6 Sol High senior may correct the checker and its test
+source exactly as Review513 specifies, with one targeted test invocation under the
+corrective exception. Preserve full gap transport and mandatory main-bar projection.
+Return hashes/output and stop on first nonzero without repair/retry. GPT-6.1 remains
+reviewer; Hermes integration and real-data execution are not yet assigned. No proof,
+admission or next ticket. Existing integration/tests/data remain accepted.
 
 ## Accepted preparation
 
