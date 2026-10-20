@@ -4,7 +4,7 @@ Reviewer: Lead Quantitative Finance Researcher/Engineer
 Ticket: CEX-002, IN_PROGRESS; next ticket NONE
 Senior source actor: Sr Dev — Codex Sol, GPT-6 Sol High
 Architecture: ADR-0037 /0038 /0039
-Disposition: one bounded two-path source/test-source drop; no execution or integration
+Disposition: source accepted for bounded Hermes validation and integration below; no real consumer run
 
 ## Accepted starting point and routing
 
@@ -165,3 +165,66 @@ ParquetDataCatalog from nautilus_trader.persistence. Assert Python 3.13 and exac
 distribution versions. This is environment compatibility only; do not import or run
 the unreviewed checker, pytest, normalizers, catalog admission or any real-data check.
 Capture actual commands/output/status/model and stop for reviewer source disposition.
+
+
+## Final source disposition and Hermes validation/integration
+
+The reviewer accepts the corrected two-path source for first execution by Hermes,
+not as a passed consumer check. Static review confirmed actual registered row and
+native-Bar readback paths, independent returned-value hashing, exact wire contract,
+owned scratch bindings, preserved HOLD failure stages, original writer identity at
+seal, final runtime-source reauthentication and fixed resource reservations. The
+source author performed no tests/import probes/execution. Original five-file source
+hashes remain unchanged. The following final hashes supersede interim drops:
+
+| Path | SHA-256 | Lines |
+| --- | --- | ---: |
+| scripts/research/check_cex002_nautilus_consumer.py | 438452694111131753d7f8dc34f1ca3fdf5e60377b8bc07564100a5a6f505b0b | 795 |
+| tests/test_cex002_nautilus_consumer.py | 184b1e4758e667a9a2f674607ca5735b3c5080fb5cb76da51257573e5787e702 | 431 |
+
+Parallel environment setup is accepted from native session 20261017_134003_4ecfbf,
+public messages 99877–99882. All three setup commands exited 0; interpreter is
+Python 3.13.14 and the four pinned versions match. The sanity command asserted
+Python 3.13 and printed matching versions; it did not assert all four versions,
+which the reviewer verified from its output. Preserve this exact limitation.
+The uv cross-filesystem cache-copy warning required no operator fallback. Do not
+repeat setup or sanity checks. Hermes uses meituan/longcat-2.5-preview:free through
+the existing native route with normal approvals.
+
+Hermes now owns this exact ordered workflow, stopping on the first nonzero result
+or denial without repair/retry. No source edits, dependency changes, full-data
+checker run, catalog mutation, producer, admission or next ticket is authorized.
+
+1. Require empty index and HEAD == origin/main at this reviewer publication.
+   Authenticate the two hashes above and preserve all unrelated working files.
+2. Execute these commands once in order from the repository root. Private pytest
+   temporary fixtures are authorized; accepted release data are read-only.
+
+```
+PYTHONPATH=src /tmp/cex002_nautilus_review511_env/bin/python -m pytest tests/test_cex002_nautilus_consumer.py -o addopts='' -q --tb=short -ra
+.venv/bin/python -m ruff check scripts/research/check_cex002_nautilus_consumer.py tests/test_cex002_nautilus_consumer.py
+python3 scripts/check_repo_control.py
+git diff --check
+```
+
+3. If any command fails, preserve its exact command/output/status and all partial
+   state, report the failure, and stop. Do not change source, write the success
+   record, integrate, retry or repeat earlier passing checks. The reviewer will
+   disposition the concrete failure.
+4. Only after all commands pass, write
+   research/sprint_004/512_CEX002_NAUTILUS_CONSUMER_INTEGRATION_RECORD.md.
+   Record source hashes/line counts, actual test count/output/status, lint/control/
+   whitespace results, environment setup commands/output and full freeze from the
+   preceding session, sanity limitation, actual actor/model, and the fact no real
+   full-release proof/admission ran. Do not claim release acceptance from fixtures.
+5. Reauthenticate both hashes. Stage EXACTLY those two source paths and Record512.
+   Require the staged-name set to equal those three paths and run
+   git diff --cached --check. Correct only record whitespace if necessary; source
+   repair belongs to the senior. Commit normally with a CEX-002 consumer-checker
+   message and push origin main. Require HEAD == origin/main and an empty index.
+   Return commit, exact staged names, hashes, test summary and stop for reviewer.
+
+Existing accepted producer/catalog tests are preserved, not rerun. Final whole-repo
+acceptance remains pending under the original ticket; this is only the new checker
+integration. Any dependency handling for that later suite requires a later bounded
+assignment. GPT-6.1 remains reviewer; no implementation/evidence Git duty transfers.

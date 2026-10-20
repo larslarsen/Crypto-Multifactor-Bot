@@ -3,23 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, GPT-6 Sol High, Review 511 consumer-checker source
+Next required actor: Jr Dev — Hermes, Review 511 checker validation/integration
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 511 /ADR-0039 authorize the existing GPT-6 Sol High source actor for exactly
-the standalone clean Nautilus checker and its test source. It must round-trip every
-table row through actual registered custom data, also prove native Bar compatibility,
-preserve all original values/unknowns, obey bounded scratch/proof storage, and emit
-the existing strict complete-release proof. No tests, execution, installation, real
-data, records, Git or integration by the source actor. Return two-path hashes for
-review. Review 511's final section allows Hermes only parallel setup of the fresh
-/tmp/cex002_nautilus_review511_env with four pinned tooling packages and a bounded
-interpreter/import sanity check; no tests, integration, source or data execution.
-GPT-6.1 stays reviewer. No consumer run, admission
-or next ticket is authorized yet.
+Review 511 accepts the corrected two-path Nautilus checker source for Hermes's
+first execution. The isolated pinned environment is installed and accepted; do not
+repeat setup. Hermes authenticates the frozen hashes, runs the enumerated tiny
+real-Nautilus tests, scoped Ruff/control/whitespace, then only on all-pass publishes
+the two source paths and Record 512 in one exact three-path commit/push. Stop on
+first failure without edits/retry/integration. Source actor is stopped; GPT-6.1
+remains reviewer. No full-release consumer/proof run, admission or next ticket is
+authorized. See Review 511's final section for exact commands and ownership.
 
 ## Accepted preparation
 
@@ -31,12 +28,10 @@ ten dependency edges, schema registries and unchanged catalog are confirmed. The
 charges 3,686,198,800; full future proof/publication allowances leave 754,013,299
 below the fixed remainder. Post-run free space is 147,669,061,632 bytes.
 
-Hermes is finished. Next work is reviewer authorization of the existing strict clean
-NautilusTrader catalog-load/readback checker for this exact non-consumable candidate.
-Remaining economic evidence, admission, replay and final acceptance commands remain
-pending. Preserve all accepted checks and data. No source actor, producer retry,
-proof/consumer execution, catalog admission or next ticket is currently authorized.
-GPT-6.1 remains reviewer and does not author production or test source.
+Preparation remains accepted. Review 511 now governs checker validation/integration.
+Remaining economic evidence, full-release consumer proof, admission, replay and final
+acceptance commands remain pending. Preserve all accepted checks and data. GPT-6.1
+remains reviewer and does not author production or test source.
 
 ## Completed terminal inspection and publication
 
