@@ -3,20 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, GPT-6 Sol High, Review 511 string-decoder correction
+Next required actor: Jr Dev — Hermes, Review 511 remaining lint/integration
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Hermes's first checker test returned 9 failed, 13 passed in 1.03 seconds. All
-failures stop in real Nautilus custom Arrow field decoding. Nothing was integrated;
-Ruff/control/whitespace did not run. Review 511's final section assigns the same
-GPT-6 Sol High senior a two-path logical string correction and stronger late-error
-assertions, with exactly one targeted test invocation for immediate source feedback.
-Stop at first nonzero without repair/retry; return frozen hashes and exact output.
-Hermes is stopped pending source review. GPT-6.1 remains reviewer. No full-release
-consumer/proof run, admission or next ticket is authorized.
+Review 511 accepts the corrected checker source after the senior's one targeted
+run passed all 22 cases in 1.08 seconds. Preserve the original 9-fail/13-pass result
+and do not repeat setup or pytest. Hermes authenticates the NEW frozen hashes and
+resumes at scoped Ruff, then control/whitespace, Record512 and exact three-path
+integration/push. Attribute the 22-pass run to the senior's targeted exception.
+Stop on first failure without edits/retry. Source actor is stopped; GPT-6.1 remains
+reviewer. No full-release consumer/proof run, admission or next ticket is authorized.
+See Review 511's final section for the controlling continuation.
 
 ## Accepted preparation
 

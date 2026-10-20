@@ -266,3 +266,33 @@ If it passes, return output/count plus final two hashes/line counts and stop for
 review. No other commands that execute source/tests/import probes, installs,
 records, Git, source paths, real data, cleanup, proof or catalog work are assigned.
 Hermes is stopped; GPT-6.1 remains reviewer. Next ticket NONE.
+
+
+## Corrected source accepted — resume Hermes at lint/integration
+
+The senior's single authorized corrective command exited 0: 22 passed in 1.08
+seconds. The reviewer inspected the one-condition decoder correction and precise
+late-failure assertions, and independently verified the frozen hashes below. The
+real custom and native catalog success tests now pass, and each late failure is
+matched to its intended cause. Accept this source for integration; retain the
+initial 9-fail/13-pass output separately. The earlier 13 passes did not establish
+that late injected failures were reached, which the corrected assertions address.
+
+| Path | SHA-256 | Lines |
+| --- | --- | ---: |
+| scripts/research/check_cex002_nautilus_consumer.py | 283d1730a2af0d734a52bf03515fec989e591d4dcdbd9cbba81ed727dccad282 | 795 |
+| tests/test_cex002_nautilus_consumer.py | 66bd7c1a74e5e420e636acd546e3827360c89ff36720d892057a4aa8fcefa75e | 442 |
+
+The senior is stopped. Hermes resumes the preceding exact validation/integration
+workflow at the unexecuted scoped Ruff command, then control and whitespace. Do
+not rerun pytest or environment setup: preserve the accepted targeted 22-pass
+source result and attribute it to GPT-6 Sol High under the narrow exception, not
+to Hermes. Reauthenticate the NEW hashes above and empty/synchronized index before
+resuming. The original first-failure stop/normal approvals remain unchanged.
+
+Only after remaining checks pass, finish the originally assigned Record512 and
+exact three-path commit/push. Record both test runs with exact commands/status,
+source author/test attribution, actual native setup evidence/freeze and limitation,
+and no full-release consumer/proof/admission. Record512 remains the only evidence
+path; old source/test/evidence are read-only. No further source authoring, real
+checker execution, catalog admission or next ticket is authorized. Stop reviewer.
