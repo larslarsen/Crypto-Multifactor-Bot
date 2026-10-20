@@ -440,3 +440,40 @@ Complete the already assigned table/metadata/count/registry checks in that one p
 limitations honestly in Record 510, then its exact one-record commit/push and stop.
 Do not repeat the producer, SQLite calculation, completed hashes/catalog snapshots
 or tests. No new helper/source/data repair, proof, admission or next ticket is assigned.
+
+## Preparation accepted — consumer check remains pending
+
+Accept Record 510 at 16765eedc87eba67bbe18cda90afaf5301d6b28d and the successful
+non-consumable candidate 8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34.
+Reviewer commit inspection confirms exactly the one assigned record path; native
+publication succeeded with synchronized HEAD/origin and an empty index.
+
+The corrected native inspection 99865 reconciles 178,947 table files and 244,499
+metadata files, totaling 423,446, with 1,165,116,869 physical table rows. The bundle's
+178,946 rows describe the ten constituents' table files; its own one table accounts
+for the additional table-file count. All eleven registries are version 1 under
+transform version 2. The ten dependency IDs/roles and separate liquidation counts
+4,626 /202 /18 match. No source, test, producer, SQLite calculation or catalog check
+was repeated to correct the earlier inspector field-path errors.
+
+Reviewer artifact inspection independently matches the descriptor and all eleven
+manifest physical byte/hash pins. It also finds no missing schema references,
+unused contracts, inline repeated contracts or invalid metadata entries. In Record
+510, schema_ref applies to table partitions only; metadata has zero rows and no
+schema_ref. Its abbreviated inspector disclosure covers both the absent dataclass
+attribute probe and the wrong JSON nesting probe recorded above. The immutable
+liquidation comparison's pending_reviewer string is retained provenance, not a
+reversal of the already accepted comparison evidence.
+
+Record 510's 148,463,267,840-byte observation is the refreshed preflight. The final
+immediate-prelaunch observation was 148,369,633,280 (native 99831), and post-terminal
+was 147,669,061,632 (99855). Both complete catalog digests are unchanged. The real
+preparation charge and future allowance calculation above fit the unchanged budget;
+no reserve, allocation or accepted input was changed.
+
+Hermes is finished; the source actor remains stopped. Next actor is the reviewer to
+bound the existing clean NautilusTrader consumer check for this exact candidate.
+The strict full-release proof, catalog admission, release replay, remaining economic
+evidence and original final acceptance commands are still pending. No checker source
+actor, consumer run, proof generation, admission, producer retry or next ticket is
+authorized by this acceptance. CEX-002 and Gates 3–5 remain IN_PROGRESS.

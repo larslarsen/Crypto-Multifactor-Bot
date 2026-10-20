@@ -3,18 +3,35 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, capacity-restored preparation resume and Record 510
+Next required actor: Lead Quantitative Finance Researcher/Engineer, clean consumer-check source authorization
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
+Review 507 accepts Record 510 at 16765eedc87eba67bbe18cda90afaf5301d6b28d and
+the prepared candidate 8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34.
+The sole producer exited 0; all eleven manifest pins, corrected 423,446-file count,
+ten dependency edges, schema registries and unchanged catalog are confirmed. The
+178,946-row bundle is 13,232,150 bytes. Preparation metadata plus SQLite reserve
+charges 3,686,198,800; full future proof/publication allowances leave 754,013,299
+below the fixed remainder. Post-run free space is 147,669,061,632 bytes.
+
+Hermes is finished. Next work is reviewer authorization of the existing strict clean
+NautilusTrader catalog-load/readback checker for this exact non-consumable candidate.
+Remaining economic evidence, admission, replay and final acceptance commands remain
+pending. Preserve all accepted checks and data. No source actor, producer retry,
+proof/consumer execution, catalog admission or next ticket is currently authorized.
+GPT-6.1 remains reviewer and does not author production or test source.
+
+## Completed terminal inspection and publication
+
 The resumed preparation exited 0 and sealed candidate 8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34.
 Eleven manifest pins, 178,946-row/13,232,150-byte bundle and unchanged catalog are
 confirmed. Measured preparation metadata charge is 3,686,198,800; full future
 proof/publication allowances still leave 754,013,299 below the fixed remainder.
-Hermes must finish Review 507's one corrected metadata inspection (its prior probes
-used wrong field paths), disclose those limitations, publish Record 510 and stop.
+Hermes completed Review 507's corrected metadata inspection (its prior probes used
+wrong field paths), disclosed those limitations, published Record 510 and stopped.
 No retry, revalidation, source change, proof/consumer run, admission or next ticket.
 
 ## Completed capacity restoration and execution
@@ -307,6 +324,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/510_CEX002_SHARED_SCHEMA_BUNDLE_PREPARATION_RESUME_RECORD.md
 - research/sprint_004/507_CEX002_SHARED_SCHEMA_SOURCE_AUTHORIZATION.md
 - docs/adr/0038-cex002-shared-schema-contracts.md
 - research/sprint_004/504_CEX002_LIQUIDATION_GAP_ACCOUNTING_CORRECTION.md
