@@ -399,3 +399,44 @@ record publication allowed after producer failure. No retry, arbitrary cleanup,
 accepted-data change, proof/consumer execution, catalog admission, new source actor,
 or next ticket is authorized. The real resource guard and all allocations remain fixed.
 Reviewer publication remains exactly this Review 507, CURRENT_TASK and CEX-002 ticket.
+
+## Successful preparation and bounded inspection correction
+
+The one resumed producer proc_2dad8d51733f / PID 1918894 exited 0, reported at
+845 seconds, and emitted candidate
+8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34.
+The reviewer independently matched its 11,020-byte descriptor and all eleven
+manifest physical hashes/byte pins (228,098,515 bytes total), and inspected their
+metadata counts. Hermes authenticated the new 13,232,150-byte object
+32029cf9cd182839719574f3963e2faa89935c682ed861712be5ef07c23a381c,
+its 178,946-row footer, preserved marker and unchanged post-catalog digests.
+Post-run free space is 147,669,061,632 bytes. No producer retry is needed.
+
+The sole measured _sqlite_reservation result is 3,458,088,960 bytes. Together with
+manifest bytes, descriptor and preserved 305-byte marker, preparation charges
+3,686,198,800. Adding a full 536,870,912-byte proof allowance and 8,388,608-byte
+publication ceiling gives 4,231,458,320, below the fixed remainder by 754,013,299.
+Those future allowances are not a measured consumer proof/publication.
+
+Hermes's read-only inspection 99860 used absent dataclass row_count/byte_size
+attributes and printed None; their actual locations are statistics.row_count and
+statistics.byte_size. Pending inspection 99862 likewise uses wrong JSON key paths.
+It must not treat zero/None outputs as product facts or substitute them for counts.
+These are inspector errors, not changes to the accepted source or real candidate.
+
+Authorize exactly one corrected metadata-only inspection after that pending call,
+using the actual paths confirmed by reviewer artifact inspection:
+
+- File kind and schema_ref live under file.partition.
+- Schema registry lives under manifest.quality_summary.schema_registry, with
+  version/contracts. Metadata files have zero rows and no schema_ref.
+- Liquidation counts/comparison live under manifest.quality_summary: daily quality
+  gaps 4,626, authority gaps 202, comparison entries 18.
+- Dependency entries use id/kind/role; the bundle has the ten constituent edges.
+- Raw manifest row_count/byte_size and file.rows are top-level wire fields.
+
+Complete the already assigned table/metadata/count/registry checks in that one pass:
+178,947 table files +244,499 metadata files =423,446. Record the earlier inspector
+limitations honestly in Record 510, then its exact one-record commit/push and stop.
+Do not repeat the producer, SQLite calculation, completed hashes/catalog snapshots
+or tests. No new helper/source/data repair, proof, admission or next ticket is assigned.

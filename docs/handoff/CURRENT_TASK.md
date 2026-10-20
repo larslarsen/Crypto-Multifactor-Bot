@@ -9,6 +9,16 @@ Next ticket authorized: NONE
 
 ## Current action
 
+The resumed preparation exited 0 and sealed candidate 8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34.
+Eleven manifest pins, 178,946-row/13,232,150-byte bundle and unchanged catalog are
+confirmed. Measured preparation metadata charge is 3,686,198,800; full future
+proof/publication allowances still leave 754,013,299 below the fixed remainder.
+Hermes must finish Review 507's one corrected metadata inspection (its prior probes
+used wrong field paths), disclose those limitations, publish Record 510 and stop.
+No retry, revalidation, source change, proof/consumer run, admission or next ticket.
+
+## Completed capacity restoration and execution
+
 Capacity is restored: reviewer df observes 148,586,504,192 available bytes against
 the unchanged 34,724,877,040-byte conservative floor. Review 507's final section
 authorizes Hermes to refresh identities/catalog/capacity, authenticate both owned
