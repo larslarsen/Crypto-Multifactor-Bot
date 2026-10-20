@@ -132,3 +132,36 @@ Stop for source review. No real consumer/proof run, admission or next ticket is 
 Exactly this Review 511, docs/adr/0039-cex002-clean-consumer-transport.md,
 docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md. No source/test/evidence/data
 integration is included in the reviewer's publication.
+
+## Parallel Hermes environment setup only
+
+To overlap environment preparation with source authoring, authorize the existing
+native free Nous Hermes session for this bounded setup only. This does not authorize
+tests, source integration, source edits, data/proof execution or Git publication.
+The senior remains the only authorized source actor. Record setup output for the
+later integration record; create no implementation-record file now.
+
+Require an empty index, synchronized HEAD/origin, free bytes above the operating
+reserve plus 2 GiB, and /tmp/cex002_nautilus_review511_env entirely absent, including
+no symlink. Use the existing repository Python 3.13 interpreter. Execute once in
+order, stopping on first failure/denial without retry, deletion or repair:
+
+```
+uv venv --no-project --no-config --python /home/lars/Crypto_Multifactor_Bot/.venv/bin/python /tmp/cex002_nautilus_review511_env
+uv pip install --no-config --python /tmp/cex002_nautilus_review511_env/bin/python --default-index https://pypi.org/simple 'nautilus-trader==2.0.0rc3' 'pyarrow==25.0.0' 'pytest==9.1.1' 'pydantic==2.13.4'
+uv pip freeze --python /tmp/cex002_nautilus_review511_env/bin/python
+```
+
+Cached packages may be reused by uv; package acquisition is limited to this tooling
+environment, not market data. Do not modify either existing project environment,
+project dependency/lock files, interpreter configuration, repository source or data.
+No --clear, --allow-existing, system-site-packages, manual symlink or installation
+fallback. Do not dump environment variables, credentials or package-index config.
+
+Finally run one inline interpreter sanity check limited to sys.executable/version,
+importlib.metadata versions of the four pinned distributions, and importing
+CustomData/DataType/register_custom_data_class from nautilus_trader.model and
+ParquetDataCatalog from nautilus_trader.persistence. Assert Python 3.13 and exact
+distribution versions. This is environment compatibility only; do not import or run
+the unreviewed checker, pytest, normalizers, catalog admission or any real-data check.
+Capture actual commands/output/status/model and stop for reviewer source disposition.

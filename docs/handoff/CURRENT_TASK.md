@@ -15,7 +15,10 @@ table row through actual registered custom data, also prove native Bar compatibi
 preserve all original values/unknowns, obey bounded scratch/proof storage, and emit
 the existing strict complete-release proof. No tests, execution, installation, real
 data, records, Git or integration by the source actor. Return two-path hashes for
-review; Hermes remains stopped. GPT-6.1 stays reviewer. No consumer run, admission
+review. Review 511's final section allows Hermes only parallel setup of the fresh
+/tmp/cex002_nautilus_review511_env with four pinned tooling packages and a bounded
+interpreter/import sanity check; no tests, integration, source or data execution.
+GPT-6.1 stays reviewer. No consumer run, admission
 or next ticket is authorized yet.
 
 ## Accepted preparation
