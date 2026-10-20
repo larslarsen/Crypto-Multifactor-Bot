@@ -356,3 +356,46 @@ Hermes is finished and no source actor is assigned. Next actor is the reviewer f
 the capacity-restoration decision. CEX-002 remains IN_PROGRESS, with an explicit
 capacity blocker and next ticket NONE. Preserve all data and accepted checks; no
 cleanup, relaunch, proof, catalog admission or next-ticket work is authorized.
+
+## Capacity restored — bounded preparation resume
+
+The owner reports deleting files. Reviewer read-only df now observes 148,586,504,192
+available bytes, above the unchanged conservative 34,724,877,040-byte prelaunch
+floor. HEAD==origin/main==dfdf5f9872a277ef7de8f2eda9b0ae5461d81e42 and the index
+is empty. This resolves the environmental stop only; accepted input existence and
+identities must still be authenticated by the existing producer.
+
+Authorize the same native free Nous Hermes session to resume the remaining workflow
+once, without tests, reintegration or source changes. This section supersedes the
+capacity-stop ban solely for the following bounded execution. Preserve Record 509.
+
+1. Refresh HEAD/origin equality, empty index, the five frozen hashes, BOTH complete
+   read-only catalog snapshots/digests/status pairs, and free bytes. Require the
+   unchanged zero/five catalog rows and free bytes >=34,724,877,040 before disposal
+   and immediately before launch. Reviewer governance may have advanced HEAD.
+2. Apply the exact TWO-file authentication and disposal guards in the bounds-marker
+   continuation: authenticate the old 13,232,150-byte object and 305-byte marker,
+   no symlinks or extra files/candidates/stages and no live producer. Unlink only
+   the old object whose full SHA is
+   8923a89f98eb0a570d2e4fabd227ef4d8ee02b3e6536dbdd010d23eeec53a05f.
+   Retain the exact a918bc1271be169073d793d87461dfeb0ea6dbe5e7c8ed46793ef873a3b0308a
+   bounds marker unchanged. Do not delete directories, accepted data or other files.
+3. Execute the original steps 4–5 once, using the exact full source commit
+   1f5629badfa0e8af6338fbeb019a5f7e60b6a324. Use native background/notify and
+   monitor that SAME process through terminal. On success inspect the candidate,
+   eleven manifests, bundle footer, real resource totals and owned inventory as
+   assigned above; distinguish the preserved bounds marker from the candidate.
+   In either terminal case repeat both full read-only catalog snapshots and free
+   bytes, require unchanged catalog digests, and preserve exact output/exit status.
+4. Publish ONLY
+   research/sprint_004/510_CEX002_SHARED_SCHEMA_BUNDLE_PREPARATION_RESUME_RECORD.md
+   with the complete original terminal evidence, capacity restoration, actual
+   disposal and measured result/blocker. Never overwrite Record 509. Empty index,
+   exact one-path staged-name/whitespace checks, normal commit/push, synchronized
+   HEAD/origin and empty index, then stop for reviewer inspection.
+
+Normal approvals and first-nonzero/denial/unexpected-state stops persist, with terminal
+record publication allowed after producer failure. No retry, arbitrary cleanup,
+accepted-data change, proof/consumer execution, catalog admission, new source actor,
+or next ticket is authorized. The real resource guard and all allocations remain fixed.
+Reviewer publication remains exactly this Review 507, CURRENT_TASK and CEX-002 ticket.

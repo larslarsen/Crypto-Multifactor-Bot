@@ -3,11 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, capacity-restoration decision
+Next required actor: Jr Dev — Hermes, capacity-restored preparation resume and Record 510
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Capacity is restored: reviewer df observes 148,586,504,192 available bytes against
+the unchanged 34,724,877,040-byte conservative floor. Review 507's final section
+authorizes Hermes to refresh identities/catalog/capacity, authenticate both owned
+files, dispose only the named old failed object while retaining the bounds marker,
+then run one preparation from source 1f5629b and publish terminal Record 510.
+Preserve all passed checks and Record 509; no retest, reintegration, arbitrary
+cleanup, retry, proof/consumer run, admission or next ticket. GPT-6.1 stays reviewer.
+
+## Completed capacity stop
 
 Record 509 at 17122ed7040d56a753c1a3792e2bd90624e23d7a is accepted as a stopped
 preflight: 20,142,739,456 free bytes is below the fixed 29,690,701,415 reserve even
