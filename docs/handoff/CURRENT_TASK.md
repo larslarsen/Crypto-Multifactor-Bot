@@ -3,11 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, clean consumer-check source authorization
+Next required actor: Sr Dev — Codex Sol, GPT-6 Sol High, Review 511 consumer-checker source
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Review 511 /ADR-0039 authorize the existing GPT-6 Sol High source actor for exactly
+the standalone clean Nautilus checker and its test source. It must round-trip every
+table row through actual registered custom data, also prove native Bar compatibility,
+preserve all original values/unknowns, obey bounded scratch/proof storage, and emit
+the existing strict complete-release proof. No tests, execution, installation, real
+data, records, Git or integration by the source actor. Return two-path hashes for
+review; Hermes remains stopped. GPT-6.1 stays reviewer. No consumer run, admission
+or next ticket is authorized yet.
+
+## Accepted preparation
 
 Review 507 accepts Record 510 at 16765eedc87eba67bbe18cda90afaf5301d6b28d and
 the prepared candidate 8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34.
@@ -324,6 +335,8 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/511_CEX002_NAUTILUS_CONSUMER_SOURCE_AUTHORIZATION.md
+- docs/adr/0039-cex002-clean-consumer-transport.md
 - research/sprint_004/510_CEX002_SHARED_SCHEMA_BUNDLE_PREPARATION_RESUME_RECORD.md
 - research/sprint_004/507_CEX002_SHARED_SCHEMA_SOURCE_AUTHORIZATION.md
 - docs/adr/0038-cex002-shared-schema-contracts.md
