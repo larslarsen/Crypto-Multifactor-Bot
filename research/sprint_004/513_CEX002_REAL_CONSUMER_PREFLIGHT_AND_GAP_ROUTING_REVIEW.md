@@ -592,3 +592,68 @@ if [ "$tee_status" -ne 0 ]; then
 fi
 exit "$python_status"
 ```
+
+
+## Execution gate blocked before measurement
+
+Native terminal call100041 attempted the exact committed-document invocation;
+result100042 was status=blocked, exit_code=-1, no stdout. The approval gate stated:
+"BLOCKED: User denied this command. The user has NOT consented to this action."
+This is the tool's stated reason; no owner message independently denying the action
+was received in this conversation. The reviewer requested explicit owner execution
+consent through the question UI and will not infer it from silence or prior generic
+continuation. No retry, rephrased command or alternate consumer route is authorized
+while that answer is pending.
+
+Native100044/100046 read-only postchecks confirm Record515, owned scratch root and
+.proofs absent, both source hashes unchanged, source/test/Record514 tracked-clean,
+HEAD==origin/main and empty index. No real consumer measurement or proof ran; no
+throughput, RSS, final-run resource result or full runtime estimate exists. A and
+its27-case/scoped-check integration remain accepted.
+
+The reviewer directs only C's previously authorized terminal evidence publication:
+Record515 must disclose the denied invocation/status and no execution, preserve
+postcheck observations, and stop. This does not approve measurement retry or alter
+accepted source/data. After its publication the reviewer may accept that evidence
+as a stopped gate, not as consumer success. Any later execution requires explicit
+owner consent plus a fresh reviewer-bounded action, retaining the failure record.
+
+
+## Unintended clarify-menu default corrected; no execution consent
+
+Native clarify100047 recorded its default first option as approval even though
+the reviewer's supplied response explicitly chose terminal-record-only. This
+was a menu-input error, not owner execution consent. Native100048 announced an
+intended retry, but no retry tool call was emitted. The reviewer immediately
+interrupted the model and explicitly limited the new prompt to terminal Record515
+publication only, with no retry/alternate measurement or further clarify menu.
+Read-only inspection still finds Record515/scratch/.proofs absent at that point.
+The external owner approval question remains unanswered; all prior execution-gate
+restrictions remain. The terminal record must preserve this correction rather than
+attribute an execution approval to the owner. No consumer result is claimed.
+
+
+## Terminal evidence accepted; execution consent remains pending
+
+Accept Record515 publication a47ee0c5de2439cd95eff14d3b6267f3be4f5c85 as a
+blocked-before-execution terminal record, not a consumer result. Reviewer verified
+the exact one-path commit, record SHA256
+80484f094e46c7189240363360c46e74366800557d21a278d7f94d79d8b7c3e0,
+normal push/HEAD==origin/main and empty index. Native100055/100057 confirm source
+hashes unchanged and scratch/.proofs still absent. Hermes has completed C.
+
+Precision qualification: Record515's displayed logical invocation omits only the
+native tool's `cd /home/lars/Crypto_Multifactor_Bot &&` CWD preface. Its phrase
+"executed as a single foreground terminal call" means submitted to that tool;
+the gate rejected it before process execution. The native status was blocked,
+exit_code=-1, empty stdout. No measurement executed and no values/throughput/RSS
+or real-release reconciliation is available. Retain the accidental menu-default
+correction; it is not owner consent.
+
+The accepted source correction is c189065/Record514 with27 senior cases and scoped
+checks; the blocked measurement is preserved separately in Record515. Explicit
+owner approval requested in the question UI is still unanswered. Do not retry,
+rephrase or use an alternate consumer route. Any later owner-approved measurement
+must retain Record515 and use a fresh enumerated evidence destination rather than
+overwrite it, with reviewer authorization before execution. CEX-002 remains
+IN_PROGRESS, next ticket NONE; reviewer owns resolving the execution-consent gate.

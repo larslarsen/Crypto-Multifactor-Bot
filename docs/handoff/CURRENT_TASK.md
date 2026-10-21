@@ -3,21 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 513 one real measurement and Record515
+Next required actor: Lead Quantitative Finance Researcher/Engineer, resolve execution consent
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review513 accepts integration c189065fecacd446ab8681238675866585d38050 and
-Record514:27 senior targeted cases, scoped Ruff/control/whitespace, exact three
-committed paths and hashes confirmed. A is complete; do not repeat checks/setup.
-Hermes resumes ONLY B/C: one exact senior-prepared/reviewer-inspected inline command
-on24 whole selected real tables/369588rows, with unchanged catalog, pinned code and
-bounded fresh SSD scratch. Capture full actual raw output directly into safely
-created Record515, append command/results/limitations, publish that one record and
-stop. Terminal timeout600; first failure stops without repair/retry. No full-release
-proof/admission or next ticket. GPT-6.1 reviewer; source actor is stopped.
+Review513 accepts source correction c189065/Record514 (27 senior cases and scoped
+checks) and terminal Record515 at a47ee0c5de2439cd95eff14d3b6267f3be4f5c85 as a
+BLOCKED-BEFORE-EXECUTION result. Approval gate100042 reported missing consent;
+no real measurement, scratch or .proofs exists. The unintended clarify-menu default
+was corrected before any retry and is NOT owner approval. Explicit owner consent
+requested through the question UI is still pending. Hermes and senior are finished.
+Do NOT retry/rephrase/use another route without an owner answer and reviewer-bound
+new action. Preserve Record515; any approved later measurement needs a fresh named
+record. Source/data remain unchanged. GPT-6.1 reviewer; no release proof/admission
+or next ticket. See Review513 final disposition for exact evidence/qualification.
 
 ## Accepted preparation
 
