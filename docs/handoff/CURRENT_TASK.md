@@ -3,22 +3,20 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, resolve execution consent
+Next required actor: Jr Dev — Hermes, owner-approved real measurement / Record516
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review513 accepts source correction c189065/Record514 (27 senior cases and scoped
-checks) and terminal Record515 at a47ee0c5de2439cd95eff14d3b6267f3be4f5c85 as a
-BLOCKED-BEFORE-EXECUTION result. Approval gate100042 reported missing consent;
-no real measurement, scratch or .proofs exists. The unintended clarify-menu default
-was corrected before any retry and is NOT owner approval. Explicit owner consent
-requested through the question UI is still pending. Hermes and senior are finished.
-Do NOT retry/rephrase/use another route without an owner answer and reviewer-bound
-new action. Preserve Record515; any approved later measurement needs a fresh named
-record. Source/data remain unchanged. GPT-6.1 reviewer; no release proof/admission
-or next ticket. See Review513 final disposition for exact evidence/qualification.
+The owner explicitly answered yes to the reviewed369588-row real-data check.
+Review513's final section authorizes ONE actual24-table measurement with unchanged
+Python logic/data/resource guards, using fresh Record516 so blocked Record515 is
+preserved. Hermes runs the exact newly pinned command once with foreground600s,
+retains full actual output, appends evidence and publishes ONLY Record516 with
+normal exact-path Git guards, then stops reviewer. No further confirmation menus,
+API research, tests/setup repeats, source/data edits, full proof/admission or next
+ticket. First failure/denial stops without repair/retry. GPT-6.1 remains reviewer.
 
 ## Accepted preparation
 
