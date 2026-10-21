@@ -195,3 +195,37 @@ execution. Do not invent unobserved measurements or claim all release rows passe
 Require exact one-path stage, cached whitespace, normal commit/push, synchronized
 HEAD/origin and empty index. Correct record whitespace only if needed. Stop for
 reviewer inspection with both commits/results; no automatic full-release run.
+
+
+## Execution-command preparation clarification
+
+To reduce Jr integration latency, the same sole GPT-6 Sol High senior may provide
+read-only assistance: return the exact single inline operational command for B in
+its response, with NO file edits, execution, imports/probes, tests, Git, records,
+install or data work. No writable path or architecture is added. The reviewer
+checks this command against B's fixed contract and relays it to Hermes for the
+one authorized execution after A. Hermes remains sole executor/evidence/Git owner.
+This does not authorize a second measurement, script file or proof. A preparation
+interruption while no validation/data command ran changes none of the passed checks.
+
+
+## A accepted; exact B command ready and output retention clarified
+
+Accept integration c189065fecacd446ab8681238675866585d38050 and Record514.
+Reviewer independently verified its exact three-path commit and both frozen
+committed hashes; native100031/100032 confirm normal push, synchronized HEAD/origin
+and empty index. The reviewer preparation interrupt occurred with no test, data
+or validation command active. Preserve all passed checks; do not repeat A.
+
+The senior returned the exact single inline B command without file edits or
+execution. The reviewer statically checked it against B and relays its full text
+directly to Hermes. No Jr redesign or API research is needed. Terminal tool timeout
+is600; there is no second GNU timeout wrapper. Record515 may be created safely at
+measurement start solely to retain the complete actual combined stdout/stderr.
+Use the returned no-clobber held-descriptor/tee wrapper, pipe statuses and raw
+code fence; append the actual command, interpretation/status/limitations after
+terminal. Do not truncate, reconstruct or overwrite raw output and do not create
+another log/source file. This is the already enumerated Record515 path; its small
+output is covered by the unchanged8MiB future-publication allowance. Scratch has
+its separate256MiB cap and must drain to zero. No proof/admission, full-run launch
+or retry. Hermes resumes ONLY B/C now, then stops for reviewer inspection.

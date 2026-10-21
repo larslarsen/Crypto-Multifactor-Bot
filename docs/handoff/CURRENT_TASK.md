@@ -3,22 +3,21 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review 513 integration and real measurement
+Next required actor: Jr Dev — Hermes, Review 513 one real measurement and Record515
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review513 accepts the two-path bar-gap routing correction after 27 senior targeted
-cases passed. Senior is stopped. Fresh native free Nous Hermes authenticates final
-hashes, runs scoped Ruff/control/whitespace and integrates exactly the two source
-paths plus Record514. Then one bounded real measurement: whole selected table per
-component group across eleven manifests, 24tables/369588rows, actual Nautilus custom
-and native Bar readback, unchanged catalog and bounded fresh SSD scratch. Publish
-terminal Record515 and stop reviewer. Review513's final sections enumerate exact
-commands, resource/identity checks, failure stops and paths. No test/setup repeats,
-source edits, full release proof/admission, producer retry or next ticket. GPT-6.1
-remains reviewer; all accepted inputs stay read-only.
+Review513 accepts integration c189065fecacd446ab8681238675866585d38050 and
+Record514:27 senior targeted cases, scoped Ruff/control/whitespace, exact three
+committed paths and hashes confirmed. A is complete; do not repeat checks/setup.
+Hermes resumes ONLY B/C: one exact senior-prepared/reviewer-inspected inline command
+on24 whole selected real tables/369588rows, with unchanged catalog, pinned code and
+bounded fresh SSD scratch. Capture full actual raw output directly into safely
+created Record515, append command/results/limitations, publish that one record and
+stop. Terminal timeout600; first failure stops without repair/retry. No full-release
+proof/admission or next ticket. GPT-6.1 reviewer; source actor is stopped.
 
 ## Accepted preparation
 
