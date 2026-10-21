@@ -695,10 +695,13 @@ def check_release(repo: Path, candidate_sha256: str, checker_source_sha256: str,
                 if kind == "table":
                     _require(spec.partition.get("schema_ref") in contracts, "schema reference changed")
                     _footer_from_partition(path, spec, contracts)
-                    native_bars = (
-                        manifest.dataset_type == "binance_usdm_bar_1h"
-                        and spec.partition.get("role") == "partition"
-                    )
+                    native_bars = False
+                    if manifest.dataset_type == "binance_usdm_bar_1h":
+                        _require(spec.partition.get("role") == "partition", "bar table role is not the accepted partition role")
+                        _require("component" in spec.partition and type(spec.partition["component"]) is str
+                                 and spec.partition["component"] in {"", "quality_gap"},
+                                 "bar table component is not the accepted primary or quality_gap tag")
+                        native_bars = spec.partition["component"] == ""
                     if native_bars:
                         _require(
                             {"venue_symbol", "open_time", "close_time", "open", "high", "low", "close", "volume"}

@@ -308,7 +308,8 @@ def _mini_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path
         table_spec = SimpleNamespace(
             relative_path=table_path.relative_to(repo).as_posix(), sha256=_sha(table_bytes),
             bytes=len(table_bytes), rows=1,
-            partition={"kind": "table", "schema_ref": ref, "role": "partition"},
+            partition={"kind": "table", "schema_ref": ref, "role": "partition",
+                       "component": "" if dataset_type == "binance_usdm_bar_1h" else dataset_type},
         )
         metadata_spec = SimpleNamespace(
             relative_path=metadata_path.relative_to(repo).as_posix(), sha256=_sha(metadata_bytes),
@@ -316,12 +317,50 @@ def _mini_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path
             partition={"kind": "metadata", "role": "lineage"},
         )
         contracts = {ref: tuple((field.name, str(field.type), field.nullable) for field in schema)}
+        files = [table_spec]
+        if dataset_type == "binance_usdm_bar_1h":
+            dictionary = pa.dictionary(pa.int32(), pa.string())
+            gap_schema = pa.schema([
+                pa.field("venue", dictionary, nullable=False),
+                pa.field("native_symbol", dictionary, nullable=False),
+                pa.field("canonical_instrument_id", dictionary),
+                pa.field("canonical_instrument_version_id", dictionary),
+                pa.field("reference_identity_state", dictionary, nullable=False),
+                pa.field("required_product", dictionary, nullable=False),
+                pa.field("utc_month", dictionary, nullable=False),
+                pa.field("missing_run_start_ms", pa.int64()),
+                pa.field("missing_run_end_ms", pa.int64()),
+                pa.field("expected_grid_count", pa.int64(), nullable=False),
+                pa.field("gap_kind", dictionary, nullable=False),
+                pa.field("reason", dictionary, nullable=False),
+            ])
+            gap_path = base / "quality-gap.parquet"
+            pq.write_table(pa.Table.from_pylist([{
+                "venue": "BINANCE_USDM", "native_symbol": "BTCUSDT",
+                "canonical_instrument_id": None, "canonical_instrument_version_id": None,
+                "reference_identity_state": "unmapped",
+                "required_product": dataset_type, "utc_month": "2024-01",
+                "missing_run_start_ms": 1_704_067_200_000,
+                "missing_run_end_ms": 1_704_067_200_000,
+                "expected_grid_count": 1, "gap_kind": "missing_hour_run",
+                "reason": "source_missing",
+            }], schema=gap_schema), gap_path)
+            gap_bytes = gap_path.read_bytes()
+            gap_ref = "b" * 64
+            contracts[gap_ref] = tuple((field.name, str(field.type), field.nullable) for field in gap_schema)
+            files.append(SimpleNamespace(
+                relative_path=gap_path.relative_to(repo).as_posix(), sha256=_sha(gap_bytes),
+                bytes=len(gap_bytes), rows=1,
+                partition={"kind": "table", "schema_ref": gap_ref, "role": "partition",
+                           "component": "quality_gap"},
+            ))
+        files.append(metadata_spec)
         manifests.append(SimpleNamespace(dataset_id=f"ds_{index:064x}", dataset_type=dataset_type,
-                                         files=(table_spec, metadata_spec), code=code, contracts=contracts))
+                                         files=tuple(files), code=code, contracts=contracts))
     sealed = tuple(manifests)
     descriptor = {"consumable": False, "fixture": "eleven complete datasets"}
-    monkeypatch.setattr(checker, "EXPECTED_FILES", 22)
-    monkeypatch.setattr(checker, "EXPECTED_ROWS", 11)
+    monkeypatch.setattr(checker, "EXPECTED_FILES", 23)
+    monkeypatch.setattr(checker, "EXPECTED_ROWS", 12)
     monkeypatch.setattr(checker, "seal_code_identity", lambda *_args, **_kwargs: code)
     monkeypatch.setattr(checker, "_load_prepared", lambda *_args: (descriptor, sealed))
     monkeypatch.setattr(checker, "_registry_contracts", lambda manifest: manifest.contracts)
@@ -344,12 +383,52 @@ def test_complete_eleven_dataset_proof_passes_strict_existing_verifier(
     assert set(proof) == PROOF_KEYS
     assert proof["status"] == "PASS" and proof["scope"] == "complete_release"
     assert [entry["dataset_id"] for entry in proof["datasets"]] == [manifest.dataset_id for manifest in manifests]
-    assert [len(entry["components"]) for entry in proof["datasets"]] == [2] * 11
-    assert sum(component["source_row_count"] for entry in proof["datasets"] for component in entry["components"]) == 11
+    assert [len(entry["components"]) for entry in proof["datasets"]] == [2, 3] + [2] * 9
+    assert sum(component["source_row_count"] for entry in proof["datasets"] for component in entry["components"]) == 12
+    gap_spec = manifests[1].files[1]
+    gap_component = proof["datasets"][1]["components"][1]
+    assert gap_component == reference_proof_component(repo / gap_spec.relative_path,
+                                                    gap_spec.relative_path, "table")
+    assert gap_component["source_value_sha256"] == gap_component["roundtrip_value_sha256"]
     _verify_proof(
         repo, proof, manifests, candidate_sha256=checker.CANDIDATE_SHA256,
         checker_sha256=source_sha, nautilus_version=checker.NAUTILUS_VERSION,
     )
+
+
+@pytest.mark.parametrize("fault", ["missing_component", "unknown_component", "missing_role", "unknown_role", "malformed_primary"])
+def test_bar_table_routing_refuses_unaccepted_tags_and_malformed_primary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str,
+) -> None:
+    repo, manifests = _mini_release(tmp_path, monkeypatch)
+    bar = manifests[1]
+    primary = bar.files[0]
+    gap = bar.files[1]
+    if fault == "missing_component":
+        del gap.partition["component"]
+    elif fault == "unknown_component":
+        gap.partition["component"] = "unknown_gap"
+    elif fault == "missing_role":
+        del gap.partition["role"]
+    elif fault == "unknown_role":
+        gap.partition["role"] = "metadata"
+    else:
+        path = repo / primary.relative_path
+        shortened = pq.read_table(path).drop(["volume"])
+        pq.write_table(shortened, path)
+        changed = path.read_bytes()
+        primary.sha256, primary.bytes = _sha(changed), len(changed)
+        bar.contracts[primary.partition["schema_ref"]] = tuple(
+            (field.name, str(field.type), field.nullable) for field in shortened.schema
+        )
+    message = ("mandatory native projection" if fault == "malformed_primary"
+               else "bar table role" if fault.endswith("role") else "bar table component")
+    with pytest.raises(checker.ConsumerCheckError, match=message):
+        checker.check_release(repo, checker.CANDIDATE_SHA256,
+                              _sha(Path(checker.__file__).read_bytes()), tmp_path / "scratch")
+    proofs = repo / checker.BUNDLE_ROOT_RELATIVE / ".proofs"
+    assert not list(proofs.glob("*.json"))
+    assert len(list(proofs.glob(".stage-*"))) == 1
 
 
 @pytest.mark.parametrize("fault", ["source", "manifest", "schema", "transport", "code", "seal", "seal_after_rename"])
