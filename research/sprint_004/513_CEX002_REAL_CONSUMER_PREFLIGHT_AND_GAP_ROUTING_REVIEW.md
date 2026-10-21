@@ -1038,3 +1038,25 @@ if [ "$tee_status" -ne 0 ]; then
 fi
 exit "$python_status"
 ```
+
+
+## Normal one-operation approval prompt identified
+
+The owner-approved invocation100060 was again returned as blocked at100061 before
+any process/Record516 started. Read-only inspection of Hermes's approval code and
+actual retained terminal panel identified the additional normal CLI confirmation:
+Security scan HIGH "Pipe to interpreter: sed | bash", offering "1. Allow once".
+The callback waits60seconds and returns deny if unanswered; generic denial text
+therefore does not establish that the owner withdrew their explicit yes. The
+reviewer had supplied no confirmation keystroke during that prompt. This corrects
+the earlier interpretation that the action lacked owner consent.
+
+No approval policy/configuration is changed, disabled or bypassed. The explicit
+owner yes authorizes the same bounded measurement and its normal one-operation
+confirmation. Reviewer authorizes Hermes to resubmit the IDENTICAL Record516
+invocation ONCE, then the reviewer relays owner consent by selecting the normal
+Allow once option (never session/permanent/yolo). This is no alternate command or
+scope expansion. Python/data/resource guards and Record516 freshness are unchanged;
+Record515 remains intact. No actual measurement has yet run. Preserve this prompt
+and prior timeout/blocked attempts in Record516. After this single execution,
+continue its terminal evidence/publication workflow and stop for reviewer.
