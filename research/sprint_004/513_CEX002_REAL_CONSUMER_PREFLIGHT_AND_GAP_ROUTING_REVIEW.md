@@ -229,3 +229,366 @@ another log/source file. This is the already enumerated Record515 path; its smal
 output is covered by the unchanged8MiB future-publication allowance. Scratch has
 its separate256MiB cap and must drain to zero. No proof/admission, full-run launch
 or retry. Hermes resumes ONLY B/C now, then stops for reviewer inspection.
+
+
+## Exact reviewed B command
+
+Prepared as command text by the authorized GPT-6 Sol High senior and statically
+reviewed by GPT-6.1. The oversized terminal prompt was rejected before delivery;
+no measurement ran. Retain the literal operational command here for a short,
+reviewable invocation by Hermes. This is the SAME sole B measurement, not new
+software/test source, another execution or a permission bypass. Use terminal
+foreground timeout600; preserve the raw Record515 output and all B/C stop rules.
+
+```bash
+cd /home/lars/Crypto_Multifactor_Bot || exit 1
+record=research/sprint_004/515_CEX002_REAL_CONSUMER_MEASUREMENT_RECORD.md
+if [ -e "$record" ] || [ -L "$record" ]; then
+    printf 'Record 515 already exists or is a symlink\n' >&2
+    exit 1
+fi
+set -o noclobber
+exec 3> "$record" || exit 1
+set +o noclobber
+exec 4>> /dev/fd/3 || exit 1
+exec 3>&-
+printf '# CEX-002 Review 513 bounded real consumer measurement\n\n## Raw terminal output\n\n```text\n' >&4 || exit 1
+set -o pipefail
+PYTHONPATH=src /tmp/cex002_nautilus_review511_env/bin/python - 2>&1 <<'PY' | tee -a /dev/fd/4
+from __future__ import annotations
+
+import hashlib
+import importlib.metadata
+import json
+import resource
+import sqlite3
+import subprocess
+import sys
+import time
+from collections import defaultdict
+from pathlib import Path
+
+import pyarrow as pa
+
+from scripts.research import check_cex002_nautilus_consumer as c
+
+repo = Path("/home/lars/Crypto_Multifactor_Bot")
+catalog_path = repo / "exp003.db"
+scratch_path = Path("/home/lars/.cache/tmp/cex002_review513_consumer_scratch")
+candidate = c.CANDIDATE_SHA256
+checker_hash = "ac83cc25af508b75fb79d85ba7a615041235f9a9835bb37cb81f9f2f7b740117"
+test_hash = "c4e051a1b9e0f9ae9df983f4319c2f4370cbe108b2d88b2632af8768d4465ff5"
+q0_sql = "SELECT dataset_id, publication_uri FROM dataset WHERE transform_name='cex002_reference_publication' ORDER BY dataset_id;"
+q1_sql = "SELECT dataset_id, quality_status, publication_status, quality_summary_json FROM dataset WHERE quality_summary_json LIKE '%cex002_bitmex_false_authority%' ORDER BY dataset_id;"
+q0_pin = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+q1_pin = "b4334b2c3f28d58a288b0130e1009dd305c5cf30b7e4af734f8036bd74d82103"
+started = time.monotonic()
+
+def need(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+def emit(**values):
+    print(json.dumps(values, default=str, separators=(",", ":"), ensure_ascii=False), flush=True)
+
+def sha(body):
+    return hashlib.sha256(body).hexdigest()
+
+def integrated_blobs():
+    for relative, expected in (
+        ("scripts/research/check_cex002_nautilus_consumer.py", checker_hash),
+        ("tests/test_cex002_nautilus_consumer.py", test_hash),
+    ):
+        working = (repo / relative).read_bytes()
+        committed = subprocess.run(
+            ["git", "-C", str(repo), "show", f"HEAD:{relative}"],
+            check=True, capture_output=True,
+        ).stdout
+        need(sha(working) == expected and committed == working,
+             f"integrated blob mismatch: {relative}")
+
+def catalog_snapshot():
+    db = sqlite3.connect(f"file:{catalog_path}?mode=ro", uri=True)
+    try:
+        db.execute("PRAGMA query_only=ON")
+        result = []
+        for sql in (q0_sql, q1_sql):
+            rows = db.execute(sql).fetchall()
+            encoded = json.dumps(
+                rows, default=str, separators=(",", ":"), ensure_ascii=False
+            ).encode("utf-8")
+            result.append((rows, sha(encoded)))
+        return tuple(result)
+    finally:
+        db.close()
+
+need(sys.version_info[:2] == (3, 13), "Python version changed")
+need(importlib.metadata.version("nautilus-trader") == c.NAUTILUS_VERSION,
+     "Nautilus version changed")
+need(pa.__version__ == c.PYARROW_VERSION, "PyArrow version changed")
+need(not Path(c.__file__).is_symlink(), "executing checker is a symlink")
+need(c._sha(Path(c.__file__).read_bytes()) == checker_hash,
+     "executing checker changed")
+integrated_blobs()
+
+runtime_sources = {
+    "src/cryptofactors/catalog/dataset/cex002_reference_release.py":
+        repo / "src/cryptofactors/catalog/dataset/cex002_reference_release.py",
+    "src/cryptofactors/ingest/binance_usdm_harmonic_bundle.py":
+        repo / "src/cryptofactors/ingest/binance_usdm_harmonic_bundle.py",
+    "scripts/research/publish_binance_usdm_harmonic_bundle.py":
+        repo / "scripts/research/publish_binance_usdm_harmonic_bundle.py",
+}
+code = c.seal_code_identity(
+    repo, c.SOURCE_COMMIT, bind_runtime=True, executing=runtime_sources
+)
+descriptor, manifests = c._load_prepared(repo, candidate)
+need(descriptor.get("consumable") is False and len(manifests) == 11,
+     "candidate is not the complete non-consumable preparation")
+need(all(manifest.code == code for manifest in manifests),
+     "manifest code identity changed")
+need(sum(len(manifest.files) for manifest in manifests) == c.EXPECTED_FILES,
+     "referenced file closure changed")
+need(sum(spec.rows for manifest in manifests for spec in manifest.files)
+     == c.EXPECTED_ROWS, "referenced row closure changed")
+
+bundle_bytes, charged, _incoming, subtotals = c._release_charge(
+    repo, manifests, []
+)
+need(
+    charged + c.PROOF_MAX_BYTES + c.SCRATCH_CAP_BYTES
+    + c.PUBLICATION_ALLOWANCE_BYTES <= c.RELEASE_METADATA_REMAINDER_BYTES,
+    "combined release capacity changed",
+)
+need(scratch_path.is_absolute() and not scratch_path.exists()
+     and not scratch_path.is_symlink(), "scratch root is not fresh")
+same_device = repo.stat().st_dev == scratch_path.parent.stat().st_dev
+c._reserve(
+    repo,
+    c.PROOF_MAX_BYTES + c.PUBLICATION_ALLOWANCE_BYTES
+    + subtotals["sqlite_bytes"]
+    + (c.SCRATCH_CAP_BYTES if same_device else 0),
+)
+ssd_free_before = c._free(scratch_path.parent)
+repo_free_before = c._free(repo)
+
+before_catalog = catalog_snapshot()
+need(len(before_catalog[0][0]) == 0 and before_catalog[0][1] == q0_pin,
+     "catalog Q0 baseline changed")
+need(len(before_catalog[1][0]) == 5 and before_catalog[1][1] == q1_pin,
+     "catalog Q1 baseline changed")
+for index, (rows, digest) in enumerate(before_catalog):
+    emit(stage="catalog_before", query=f"Q{index}", count=len(rows),
+         sha256=digest, rows=rows)
+
+selected = []
+metadata = []
+contracts_by_id = {}
+for manifest in manifests:
+    contracts_by_id[manifest.dataset_id] = c._registry_contracts(manifest)
+    groups = defaultdict(list)
+    metadata_refs = []
+    for spec in manifest.files:
+        kind = spec.partition.get("kind")
+        if kind == "metadata":
+            metadata_refs.append(spec)
+            continue
+        need(kind == "table", "unknown referenced component kind")
+        if manifest.dataset_type == "binance_usdm_harmonic_bundle":
+            need("component" not in spec.partition,
+                 "bundle component tag changed")
+            component = ""
+        else:
+            component = spec.partition.get("component")
+            need(type(component) is str,
+                 "non-bundle table component tag absent or malformed")
+        groups[component].append(spec)
+    for component in sorted(groups):
+        group = groups[component]
+        eligible = [spec for spec in group if 0 <= spec.rows <= c.MAX_ROWS]
+        if eligible:
+            chosen = min(
+                eligible,
+                key=lambda spec: (-spec.rows, spec.bytes, spec.relative_path),
+            )
+        else:
+            need(
+                manifest.dataset_type == "binance_usdm_harmonic_bundle"
+                and component == "" and len(group) == 1
+                and group[0].rows == 178_946,
+                "unapproved table exceeds the whole-file selection bound",
+            )
+            chosen = group[0]
+        selected.append((manifest, component, chosen))
+    if metadata_refs:
+        chosen_metadata = min(
+            metadata_refs, key=lambda spec: (spec.bytes, spec.relative_path)
+        )
+        metadata.append((manifest, chosen_metadata))
+
+need(len(selected) == 24 and sum(spec.rows for _, _, spec in selected) == 369_588,
+     "bounded selection count or rows changed")
+selected_by_group = {
+    (manifest.dataset_type, component): spec.rows
+    for manifest, component, spec in selected
+}
+for key, expected_rows in (
+    (("binance_usdm_bar_1h", "quality_gap"), 154),
+    (("binance_usdm_cost_calibration", "official_fee_schedule"), 0),
+    (("binance_usdm_cost_calibration", "retained_book_depth"), 59_388),
+    (("binance_usdm_cost_calibration", "retained_book_ticker"), 59_085),
+    (("binance_usdm_harmonic_bundle", ""), 178_946),
+):
+    need(selected_by_group.get(key) == expected_rows,
+         f"required measured component changed: {key}")
+emit(stage="selection", tables=len(selected), rows=369_588,
+     metadata_refs=len(metadata), dataset_types=len(manifests),
+     bundle_bytes=bundle_bytes, metadata_charge_bytes=charged,
+     sqlite_reservation_bytes=subtotals["sqlite_bytes"],
+     scratch_cap_bytes=c.SCRATCH_CAP_BYTES,
+     proof_allowance_bytes=c.PROOF_MAX_BYTES,
+     publication_allowance_bytes=c.PUBLICATION_ALLOWANCE_BYTES)
+
+scratch = c._fresh_scratch(scratch_path, repo)
+c._reserve(scratch, c.SCRATCH_CAP_BYTES)
+sequence = 0
+completed_rows = 0
+verified = []
+elapsed_by_component = {}
+for manifest, component, spec in selected:
+    path = c._relative(repo, spec.relative_path)
+    initial = c._snapshot(repo, spec.relative_path)
+    need((initial.sha256, initial.byte_size) == (spec.sha256, spec.bytes),
+         "selected table bytes changed")
+    c._footer_from_partition(
+        path, spec, contracts_by_id[manifest.dataset_id]
+    )
+    native = False
+    if manifest.dataset_type == "binance_usdm_bar_1h":
+        need(spec.partition.get("role") == "partition",
+             "bar table role changed")
+        need(
+            "component" in spec.partition
+            and type(spec.partition["component"]) is str
+            and spec.partition["component"] in {"", "quality_gap"},
+            "bar table component changed",
+        )
+        native = component == ""
+        if native:
+            import pyarrow.parquet as pq
+            need(
+                {"venue_symbol", "open_time", "close_time", "open",
+                 "high", "low", "close", "volume"}
+                <= set(pq.ParquetFile(path).schema_arrow.names),
+                "primary bar schema lacks native projection",
+            )
+    component_started = time.monotonic()
+    proof_component, sequence = c._stream_table(
+        scratch, sequence, path, spec, native
+    )
+    elapsed = time.monotonic() - component_started
+    need(
+        proof_component["source_row_count"]
+        == proof_component["readback_row_count"]
+        == spec.rows,
+        "source/readback row mismatch",
+    )
+    need(
+        proof_component["source_value_sha256"]
+        == proof_component["roundtrip_value_sha256"],
+        "source/readback digest mismatch",
+    )
+    need(
+        proof_component["physical_sha256"] == spec.sha256
+        and proof_component["physical_bytes"] == spec.bytes,
+        "selected table physical identity mismatch",
+    )
+    need(c._snapshot(repo, spec.relative_path) == initial,
+         "selected table changed during transport")
+    verified.append((spec, initial))
+    completed_rows += spec.rows
+    elapsed_by_component[f"{manifest.dataset_type}:{component}"] = elapsed
+    emit(
+        stage="component", dataset_type=manifest.dataset_type,
+        component=component, relative_path=spec.relative_path,
+        physical_bytes=spec.bytes, source_rows=proof_component["source_row_count"],
+        readback_rows=proof_component["readback_row_count"],
+        source_value_sha256=proof_component["source_value_sha256"],
+        roundtrip_value_sha256=proof_component["roundtrip_value_sha256"],
+        time_start=proof_component["time_start"],
+        time_end=proof_component["time_end"],
+        time_absence_reason=proof_component["time_absence_reason"],
+        elapsed_seconds=round(elapsed, 6),
+        rows_per_second=round(spec.rows / elapsed, 3) if elapsed > 0 else None,
+    )
+
+for manifest, spec in metadata:
+    initial = c._snapshot(repo, spec.relative_path)
+    need((initial.sha256, initial.byte_size) == (spec.sha256, spec.bytes),
+         "selected metadata bytes changed")
+    component = c._metadata_component(spec)
+    need(component["source_row_count"] == component["readback_row_count"] == 0,
+         "metadata was counted as observations")
+    need(c._snapshot(repo, spec.relative_path) == initial,
+         "selected metadata changed during measurement")
+    verified.append((spec, initial))
+    emit(stage="metadata", dataset_type=manifest.dataset_type,
+         relative_path=spec.relative_path, physical_bytes=spec.bytes,
+         physical_sha256=spec.sha256, source_rows=0, readback_rows=0,
+         value_identity=component["value_identity"])
+
+need(len(selected) == 24 and completed_rows == 369_588,
+     "measured selection did not reconcile")
+need(c._scratch_bytes(scratch) == 0,
+     "authenticated scratch was not fully drained")
+again, current = c._load_prepared(repo, candidate)
+need(again == descriptor and current == manifests,
+     "candidate or manifests changed at terminal")
+need(
+    c.seal_code_identity(
+        repo, c.SOURCE_COMMIT, bind_runtime=True, executing=runtime_sources
+    ) == code,
+    "runtime code identity changed at terminal",
+)
+need(c._sha(Path(c.__file__).read_bytes()) == checker_hash,
+     "checker source changed at terminal")
+integrated_blobs()
+for spec, initial in verified:
+    need(c._snapshot(repo, spec.relative_path) == initial,
+         "selected reference changed at terminal")
+after_catalog = catalog_snapshot()
+need(after_catalog == before_catalog, "read-only catalog baseline changed")
+for index, (rows, digest) in enumerate(after_catalog):
+    emit(stage="catalog_after", query=f"Q{index}", count=len(rows),
+         sha256=digest, rows=rows)
+c._reserve(scratch, 0)
+c._reserve(repo, subtotals["sqlite_bytes"])
+emit(
+    stage="MEASUREMENT_COMPLETE_NOT_RELEASE_PASS",
+    tables=len(selected), table_rows=completed_rows,
+    metadata_components=len(metadata), batch_sequence=sequence,
+    elapsed_seconds=round(time.monotonic() - started, 6),
+    elapsed_by_component_seconds={
+        key: round(value, 6) for key, value in elapsed_by_component.items()
+    },
+    rss_high_water_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
+    ssd_free_before_bytes=ssd_free_before,
+    ssd_free_after_bytes=c._free(scratch),
+    repo_free_before_bytes=repo_free_before,
+    repo_free_after_bytes=c._free(repo),
+    final_scratch_bytes=c._scratch_bytes(scratch),
+    scratch_cap_bytes=c.SCRATCH_CAP_BYTES,
+    catalog_q0_sha256=after_catalog[0][1],
+    catalog_q1_sha256=after_catalog[1][1],
+)
+PY
+pipeline_status=("${PIPESTATUS[@]}")
+python_status=${pipeline_status[0]}
+tee_status=${pipeline_status[1]}
+printf '```\n\nPython exit status: %s\nOutput capture exit status: %s\n' "$python_status" "$tee_status" >&4 || exit 1
+exec 4>&-
+if [ "$tee_status" -ne 0 ]; then
+    exit "$tee_status"
+fi
+exit "$python_status"
+```
