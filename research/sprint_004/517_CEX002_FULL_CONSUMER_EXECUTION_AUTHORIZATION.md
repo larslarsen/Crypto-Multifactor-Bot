@@ -147,3 +147,30 @@ tickets/CEX-002.md. Hermes alone owns command execution and Record 518 publicati
 Reviewer may append the returned running process identity/status to this review and
 handoff without changing the execution or treating launch as successful completion.
 CEX-002 remains IN_PROGRESS; next ticket and its authorization remain NONE.
+
+
+## Launch inspection — running, no terminal result
+
+Hermes preflight messages 100101–100106 report synchronized execution HEAD
+`2e7fadb34e2a434c44da6502c617c97490f04f47`, empty index, matching checker/test
+and all three runtime-source pins, descriptor hash equal to the accepted candidate,
+299,267,674,112 free SSD bytes, and fresh nonsymlink proof/scratch/evidence paths.
+Both read-only catalog query digests/counts match the accepted pins. The first
+process-count command included its own shell text; actual matching-process
+inspection found zero checker processes. This was preflight clarification, not
+a failed checker run. No setup or tests were repeated.
+
+Hermes launched the exact reviewed command once at `2026-10-21T05:01:23Z`,
+terminal messages 100107/100108: native session `proc_0c886acde04a`, PID `2343463`,
+notify_on_complete=true. The first SAME-session poll, messages 100109/100110,
+reports RUNNING at 67 seconds uptime. The live raw Record 518 contains the
+`authenticated_descriptor` stage at 40.229 seconds and a later `roundtrip`
+observation of 24,576 completed references / 283,250 rows at 126.044 seconds.
+These are intermediate counters, not full-release success or a runtime forecast.
+
+Do not relaunch. Keep the existing Hermes CLI/session alive and retrieve only
+this tracked process on continuation/completion. Record 518 is live and uncommitted;
+Hermes appends/publishes it only after terminal under the workflow above. The
+96-hour deadline and all original guards remain active. Catalog admission, replay,
+economic checks, final suites and ticket acceptance remain unassigned. Reviewer
+publication here is only the previously enumerated three governance paths.

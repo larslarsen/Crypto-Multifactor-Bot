@@ -3,25 +3,27 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, one full consumer verification
+Next required actor: Jr Dev — Hermes, monitor same full consumer process
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 517 authorizes Hermes to run the unchanged integrated checker ONCE over
-all 423,446 references / 1,165,116,869 rows of accepted candidate 8b46beb….
-Use the existing clean environment, a fresh owned SSD scratch root, native tracked
-background execution with completion notification and a 96-hour external deadline.
-Full actual output goes to fresh Record 518. No tests, setup or measurement repeats,
-source changes, admission, replay or next ticket. First failure stops without retry.
-Hermes publishes only terminal Record 518, then stops for reviewer.
+The ONE Review 517 full consumer verification is RUNNING. Hermes launched at
+2026-10-21T05:01:23Z from 2e7fadb34e2a434c44da6502c617c97490f04f47:
+native process proc_0c886acde04a, PID 2343463, completion notification enabled.
+The first same-session poll confirmed running. Live Record 518 reports descriptor
+authentication and 24,576 completed references / 283,250 rows at 126.044 seconds.
+These are intermediate counters; no full-release PASS exists yet.
 
-Review 513 / Record 516's accepted bounded check remains preserved: 369,588 rows,
-all 11 dataset types, exact readback, 139.139743 seconds and unchanged catalog.
-The approximately 49.24-hour linear transport estimate excludes overhead and is
-not a measured full-run time. Launch is not full-release success. GPT-6.1 stays
-reviewer; CEX-002 stays IN_PROGRESS and next ticket remains NONE.
+Keep the Hermes CLI alive; retrieve ONLY that process on continuation/completion.
+Do not relaunch, repeat tests/setup, alter source, clean partial state or admit the
+catalog. The 96-hour deadline, fresh owned SSD scratch and unchanged resource
+limits remain enforced. Hermes preserves the live raw output, performs the bounded
+terminal inspection, publishes only terminal Record 518, then stops for reviewer.
+Review 517 governs. The accepted bounded measurement and preliminary approximately
+49.24-hour transport estimate remain preserved; additional overhead is unknown.
+GPT-6.1 stays reviewer; CEX-002 is IN_PROGRESS and next ticket remains NONE.
 
 ## Accepted preparation
 
