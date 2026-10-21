@@ -3,20 +3,23 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, owner-approved real measurement / Record516
+Next required actor: Lead Quantitative Finance Researcher/Engineer, full-release verification bounds
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-The owner explicitly answered yes to the reviewed369588-row real-data check.
-Review513's final section authorizes ONE actual24-table measurement with unchanged
-Python logic/data/resource guards, using fresh Record516 so blocked Record515 is
-preserved. Hermes runs the exact newly pinned command once with foreground600s,
-retains full actual output, appends evidence and publishes ONLY Record516 with
-normal exact-path Git guards, then stops reviewer. No further confirmation menus,
-API research, tests/setup repeats, source/data edits, full proof/admission or next
-ticket. First failure/denial stops without repair/retry. GPT-6.1 remains reviewer.
+Review 513 accepts Hermes Record 516 at
+e8aa52611e32132587dc1a0f42d8432b9f3e62a3. The owner-approved bounded check
+passed: 24 tables, 369,588 rows across all 11 dataset types, matching readback,
+139.139743 seconds, unchanged catalog and empty final scratch. Original output
+and accepted source identities are preserved. Hermes's assignment is complete.
+
+The reviewer next bounds full-release verification. A preliminary per-component
+linear transport estimate is about 49.24 hours for 1,165,116,869 rows, excluding
+additional overhead; it is not a measured full-run time. No full proof execution,
+admission, replay, source optimization or next ticket is authorized by this result.
+CEX-002 remains IN_PROGRESS and next ticket remains NONE. GPT-6.1 stays reviewer.
 
 ## Accepted preparation
 

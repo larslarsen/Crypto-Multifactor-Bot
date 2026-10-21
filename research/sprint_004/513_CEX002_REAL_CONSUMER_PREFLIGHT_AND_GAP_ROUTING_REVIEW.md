@@ -1060,3 +1060,61 @@ scope expansion. Python/data/resource guards and Record516 freshness are unchang
 Record515 remains intact. No actual measurement has yet run. Preserve this prompt
 and prior timeout/blocked attempts in Record516. After this single execution,
 continue its terminal evidence/publication workflow and stop for reviewer.
+
+
+## Reviewer acceptance — approved real measurement / Record 516
+
+Record 516 is ACCEPTED as the completed bounded measurement, published by Hermes at
+`e8aa52611e32132587dc1a0f42d8432b9f3e62a3`. Reviewer inspection verified that this
+commit contains only
+`research/sprint_004/516_CEX002_APPROVED_REAL_CONSUMER_MEASUREMENT_RECORD.md`,
+HEAD equals origin/main at that publication, the index is empty, and the committed
+record matches its worktree bytes. The record SHA-256 is
+`02e82826210ba96ea89f9f5a676a67c3a3ba356792a06baa1ee6dc55e4023eb6`.
+Its original 31,628-byte output prefix remains byte-identical, SHA-256
+`76690b07e1c255dd894f755fa27b3d791e89f39a52a7316c047822f53728130a`.
+These are reviewer inspections of existing artifacts, not test or measurement reruns.
+
+The single actual execution at `18689e8c40d8d87a9dd3a3ee662560e40da02ddd`
+returned Python/capture status 0 and `MEASUREMENT_COMPLETE_NOT_RELEASE_PASS`:
+24 tables, 369,588 table rows, all 11 dataset types and component groups, plus
+10 separate metadata components. All 24 source/readback row counts and logical
+value digests match. Runtime was 139.139743 seconds; process RSS high water was
+1,931,726,848 bytes. Scratch ended empty under the enforced 268,435,456-byte cap;
+that cap is not a measured peak disk figure. Both catalog query digests/counts
+match before and after. Main bars used native Bar transport and the 154-row bar
+gap table used custom transport. Zero-row fee authority remains zero, and metadata
+is not counted as observations. The checker/test hashes and immutable Record 515
+match their accepted pins; no full proof directory or catalog admission was created.
+
+The earlier approval timeouts are resolved: owner explicit yes was relayed through
+the observed normal Allow once prompt, without policy/configuration changes or a
+session-wide grant. Earlier denied submissions did not execute the measurement.
+Record 515 remains preserved; Record 516 records the successful single execution.
+No further measurement, test, or integration is needed for this assignment.
+
+### Preliminary scale assessment
+
+Using the authenticated manifest row totals grouped by dataset type/component,
+sum(full group rows * observed group stream seconds / selected group rows)
+is approximately 49.24 hours for 1,165,116,869 rows. The zero-row schema group has
+zero full rows and adds no row-processing term. About 34.91 hours comes from
+882,076,090 retained ticker rows, 8.29 hours from main open interest, and 2.24 hours
+from retained depth. This is a linear transport estimate from one selected whole
+file per group, not a measured or guaranteed full-release wall time. Full-file
+hashing, metadata traversal, per-file overhead, cache and I/O differences, and any
+other proof work can materially change the duration. The 139-second bounded run
+must not be extrapolated as though its row mix represented the full release.
+
+### Disposition and stop
+
+Hermes's bounded measurement/evidence assignment is complete. CEX-002 stays
+IN_PROGRESS; next ticket and next-ticket authorization remain NONE. The next
+required actor is the Lead Quantitative Finance Researcher/Engineer to bound the
+remaining full-release verification using this evidence. This acceptance does not
+authorize that execution, source optimization, catalog admission, replay, or final
+ticket acceptance. Remaining economic evidence and Review 474's final release
+requirements remain outstanding. Preserve all accepted source/data/results.
+
+Reviewer publication is limited to this review, `docs/handoff/CURRENT_TASK.md`, and
+`tickets/CEX-002.md`; implementation/evidence integration stays Hermes-owned.
