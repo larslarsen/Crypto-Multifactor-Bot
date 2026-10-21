@@ -3,23 +3,25 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, full-release verification bounds
+Next required actor: Jr Dev — Hermes, one full consumer verification
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 513 accepts Hermes Record 516 at
-e8aa52611e32132587dc1a0f42d8432b9f3e62a3. The owner-approved bounded check
-passed: 24 tables, 369,588 rows across all 11 dataset types, matching readback,
-139.139743 seconds, unchanged catalog and empty final scratch. Original output
-and accepted source identities are preserved. Hermes's assignment is complete.
+Review 517 authorizes Hermes to run the unchanged integrated checker ONCE over
+all 423,446 references / 1,165,116,869 rows of accepted candidate 8b46beb….
+Use the existing clean environment, a fresh owned SSD scratch root, native tracked
+background execution with completion notification and a 96-hour external deadline.
+Full actual output goes to fresh Record 518. No tests, setup or measurement repeats,
+source changes, admission, replay or next ticket. First failure stops without retry.
+Hermes publishes only terminal Record 518, then stops for reviewer.
 
-The reviewer next bounds full-release verification. A preliminary per-component
-linear transport estimate is about 49.24 hours for 1,165,116,869 rows, excluding
-additional overhead; it is not a measured full-run time. No full proof execution,
-admission, replay, source optimization or next ticket is authorized by this result.
-CEX-002 remains IN_PROGRESS and next ticket remains NONE. GPT-6.1 stays reviewer.
+Review 513 / Record 516's accepted bounded check remains preserved: 369,588 rows,
+all 11 dataset types, exact readback, 139.139743 seconds and unchanged catalog.
+The approximately 49.24-hour linear transport estimate excludes overhead and is
+not a measured full-run time. Launch is not full-release success. GPT-6.1 stays
+reviewer; CEX-002 stays IN_PROGRESS and next ticket remains NONE.
 
 ## Accepted preparation
 
@@ -336,6 +338,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/517_CEX002_FULL_CONSUMER_EXECUTION_AUTHORIZATION.md
 - research/sprint_004/511_CEX002_NAUTILUS_CONSUMER_SOURCE_AUTHORIZATION.md
 - docs/adr/0039-cex002-clean-consumer-transport.md
 - research/sprint_004/510_CEX002_SHARED_SCHEMA_BUNDLE_PREPARATION_RESUME_RECORD.md
