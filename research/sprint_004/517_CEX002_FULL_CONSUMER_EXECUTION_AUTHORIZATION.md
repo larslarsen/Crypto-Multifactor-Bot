@@ -174,3 +174,43 @@ Hermes appends/publishes it only after terminal under the workflow above. The
 96-hour deadline and all original guards remain active. Catalog admission, replay,
 economic checks, final suites and ticket acceptance remain unassigned. Reviewer
 publication here is only the previously enumerated three governance paths.
+
+
+## Reviewer acceptance — full consumer proof completed
+
+ACCEPT Record 518 at `8a47e787ac1999e9bb3f0c623b973be319ddacd9` and the
+completed full consumer verification. Hermes received the tracked completion
+notice, completed the already authorized terminal inspection/catalog comparison,
+published only Record 518 and stopped. Reviewer inspected the exact one-path
+commit, HEAD==origin/main, empty index and committed/worktree record equality.
+Record SHA256: `1a62d03d63df5eeadb7d269d58cd095e1eb34e4db08a6558b4ff4d5e70b6951e`.
+The retained raw capture has 415 structured progress records, terminal PASS, and
+both checker/deadline and capture exit statuses 0. No run or test was repeated.
+
+Actual elapsed time: 189,195.734 seconds (52 hours 33 minutes 16 seconds), within
+the unchanged 96-hour deadline. All 423,446 components and 1,165,116,869 table
+rows were reconciled. Scratch ended empty. Terminal metadata charge is
+3,950,355,317 bytes, including the 264,156,517-byte proof and unchanged SQLite
+reservation. All original resource limits remain satisfied.
+
+Proof: data/.cex002_harmonic_bundle/.proofs/3be8597604efc7353935d79fd663efd7ffa6083ede10f4807d458b9e76927c8d.json
+SHA256: 3be8597604efc7353935d79fd663efd7ffa6083ede10f4807d458b9e76927c8d
+Size: 264,156,517 bytes.
+
+Reviewer artifact inspection independently matched physical proof hash/filename/
+size, PASS/complete_release root, accepted candidate/checker pins, 11 datasets,
+178,947 table plus 244,499 metadata components and the exact total row count.
+Every emitted component's source/readback row counts and logical digests match.
+This inspection reads the emitted proof; it is not another source-data traversal
+or acceptance-command execution. Current candidate/checker/test hashes match their
+accepted pins and the scratch root contains no entries. Hermes's terminal Q0/Q1
+counts/digests match preflight; the catalog remains unchanged.
+
+The clean full-release Nautilus consumer check is complete and accepted. Preserve
+its proof, Record 518 and all previous accepted evidence. The candidate remains
+non-consumable and no catalog admission occurred. CEX-002 remains IN_PROGRESS:
+remaining independent economic evidence, release admission/replay and original
+final acceptance requirements still need reviewer disposition. Next required actor
+is the Lead Quantitative Finance Researcher/Engineer; next ticket and its
+authorization remain NONE. This checkpoint authorizes no new run or source change.
+Reviewer publication remains limited to the three previously enumerated paths.

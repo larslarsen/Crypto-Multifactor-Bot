@@ -3,27 +3,26 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, monitor same full consumer process
+Next required actor: Lead Quantitative Finance Researcher/Engineer, remaining release closeout
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-The ONE Review 517 full consumer verification is RUNNING. Hermes launched at
-2026-10-21T05:01:23Z from 2e7fadb34e2a434c44da6502c617c97490f04f47:
-native process proc_0c886acde04a, PID 2343463, completion notification enabled.
-The first same-session poll confirmed running. Live Record 518 reports descriptor
-authentication and 24,576 completed references / 283,250 rows at 126.044 seconds.
-These are intermediate counters; no full-release PASS exists yet.
+The full consumer check is COMPLETE / ACCEPTED in Review 517. Hermes published
+Record 518 at 8a47e787ac1999e9bb3f0c623b973be319ddacd9 and stopped. The single
+run passed all 423,446 references / 1,165,116,869 rows in 189,195.734 seconds
+(52 hours 33 minutes), with empty final scratch and unchanged catalog.
+Reviewer independently inspected the committed record and emitted proof: matching
+physical hash/size, 11 datasets, exact complete counts and source/readback digests.
+Proof SHA: 3be8597604efc7353935d79fd663efd7ffa6083ede10f4807d458b9e76927c8d.
 
-Keep the Hermes CLI alive; retrieve ONLY that process on continuation/completion.
-Do not relaunch, repeat tests/setup, alter source, clean partial state or admit the
-catalog. The 96-hour deadline, fresh owned SSD scratch and unchanged resource
-limits remain enforced. Hermes preserves the live raw output, performs the bounded
-terminal inspection, publishes only terminal Record 518, then stops for reviewer.
-Review 517 governs. The accepted bounded measurement and preliminary approximately
-49.24-hour transport estimate remain preserved; additional overhead is unknown.
-GPT-6.1 stays reviewer; CEX-002 is IN_PROGRESS and next ticket remains NONE.
+Do not relaunch or repeat passed checks. Preserve the accepted proof and evidence.
+The reviewer next resolves remaining independent economic evidence, release
+admission/replay and original final acceptance requirements. No new execution,
+source change or next ticket is authorized at this checkpoint. Prepared candidate
+remains non-consumable; CEX-002 stays IN_PROGRESS and next ticket remains NONE.
+GPT-6.1 stays reviewer; Hermes's assignment is finished.
 
 ## Accepted preparation
 
@@ -36,8 +35,8 @@ charges 3,686,198,800; full future proof/publication allowances leave 754,013,29
 below the fixed remainder. Post-run free space is 147,669,061,632 bytes.
 
 Preparation remains accepted. Review 511 now governs checker validation/integration.
-Remaining economic evidence, full-release consumer proof, admission, replay and final
-acceptance commands remain pending. Preserve all accepted checks and data. GPT-6.1
+Full-release consumer proof is now accepted in Review 517. Remaining economic
+evidence, admission, replay and final acceptance commands remain pending. Preserve all accepted checks and data. GPT-6.1
 remains reviewer and does not author production or test source.
 
 ## Completed terminal inspection and publication
