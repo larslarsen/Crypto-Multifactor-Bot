@@ -3,26 +3,25 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, remaining release closeout
+Next required actor: Jr Dev — Hermes, catalog admission / replay / release readback
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-The full consumer check is COMPLETE / ACCEPTED in Review 517. Hermes published
-Record 518 at 8a47e787ac1999e9bb3f0c623b973be319ddacd9 and stopped. The single
-run passed all 423,446 references / 1,165,116,869 rows in 189,195.734 seconds
-(52 hours 33 minutes), with empty final scratch and unchanged catalog.
-Reviewer independently inspected the committed record and emitted proof: matching
-physical hash/size, 11 datasets, exact complete counts and source/readback digests.
-Proof SHA: 3be8597604efc7353935d79fd663efd7ffa6083ede10f4807d458b9e76927c8d.
+Review 519 authorizes Hermes to use the unchanged production CLI for one catalog
+admission, one identical publish replay, and one explicit release-reader verify,
+in that order with first-failure stop. Pins are the accepted candidate 8b46beb…,
+proof 3be8597…, checker ac83cc2… and source 1f5629b. Keep all completed consumer
+evidence; do not repeat that check. Use one tracked native background job with
+completion notification, a 96-hour whole-workflow deadline and fresh Record 520.
+No source/setup/tests, direct SQL mutation, repair, cleanup or retries.
 
-Do not relaunch or repeat passed checks. Preserve the accepted proof and evidence.
-The reviewer next resolves remaining independent economic evidence, release
-admission/replay and original final acceptance requirements. No new execution,
-source change or next ticket is authorized at this checkpoint. Prepared candidate
-remains non-consumable; CEX-002 stays IN_PROGRESS and next ticket remains NONE.
-GPT-6.1 stays reviewer; Hermes's assignment is finished.
+Hermes captures exact commands/statuses, complete all-column catalog snapshot
+digests and unchanged quarantine state. It publishes only terminal Record 520 and
+stops for reviewer. Reviewer may record the running session in the three enumerated
+governance paths. Remaining independent economic examples, final suites/report and
+ticket acceptance are still outstanding. CEX-002 is IN_PROGRESS; next ticket NONE.
 
 ## Accepted preparation
 
@@ -339,6 +338,7 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/519_CEX002_CATALOG_ADMISSION_AND_REPLAY_AUTHORIZATION.md
 - research/sprint_004/517_CEX002_FULL_CONSUMER_EXECUTION_AUTHORIZATION.md
 - research/sprint_004/511_CEX002_NAUTILUS_CONSUMER_SOURCE_AUTHORIZATION.md
 - docs/adr/0039-cex002-clean-consumer-transport.md
