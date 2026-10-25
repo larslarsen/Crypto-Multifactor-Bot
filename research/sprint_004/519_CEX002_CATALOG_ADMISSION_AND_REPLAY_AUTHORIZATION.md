@@ -465,3 +465,27 @@ Hermes confirms zero admitted release rows, unchanged quarantine digest and abse
 publication namespace after the import failure. The existing full consumer PASS
 remains accepted. The preceding exact project-environment continuation is now
 released for Hermes execution into Record 521; no other scope is added.
+
+
+### Project-environment continuation launched — running
+
+Hermes refreshed only the enumerated small gates at 2026-10-25T21:44:10Z:
+HEAD==origin/main==8263ae072d2c2341ca7eeb0300900ea8aa218eaf, empty index,
+zero surviving publishers, fresh nonsymlink Record521 and publication namespace,
+executable project interpreter, free SSD bytes 56,979,161,088. Earlier passed
+source/proof checks and the accepted full consumer result were preserved.
+
+The exact SECOND bash block was launched once at 2026-10-25T21:45:52Z:
+native session proc_947fee95812a, PID 3809588, notify_on_complete=true.
+Reviewer compared the actual native command text with the committed second block
+and confirmed exact equality. The first same-session poll (100170/100171) reports
+RUNNING at 68 seconds uptime in phase admission. The live Record521 logs the
+matching quarantine digest, empty release baseline and exact production CLI call
+using the project interpreter. No phase result/publication identity exists yet.
+
+Keep this SAME tracked process; do not relaunch. Leave the Hermes CLI alive for
+completion notification. Record521 is live and must not be committed until terminal.
+Hermes then completes its authorized terminal record-only publication and stops.
+The reviewer may update these same three governance paths; that later governance
+HEAD change does not change execution HEAD 8263ae0 or original source pin 1f5629b.
+Admission/replay/readback acceptance remains pending; next ticket stays NONE.

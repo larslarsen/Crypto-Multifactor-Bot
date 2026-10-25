@@ -3,26 +3,27 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, catalog admission / replay / release readback
+Next required actor: Jr Dev — Hermes, monitor same catalog workflow
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review 519's first admission attempt stopped before application initialization:
-the reviewer selected the isolated consumer environment, which lacks httpx.
-No catalog write or replay/readback occurred. Hermes preserves and publishes
-terminal Record 520, then stops. The final Review-519 correction authorizes ONE
-new workflow using the existing project .venv/bin/python, already proven by
-Record 510, into fresh Record 521. No dependency install or source change.
+Review519's corrected catalog workflow is RUNNING as native proc_947fee95812a /
+PID3809588, launched 2026-10-25T21:45:52Z from 8263ae072d2c2341ca7eeb0300900ea8aa218eaf.
+The first same-session poll confirms running at68seconds in phase admission.
+It uses the existing project .venv/bin/python, accepted candidate/proof/source pins,
+one 96-hour whole-workflow deadline and completion notification. Exact command
+matches Review519's SECOND bash block. Live evidence is Record521; no phase result yet.
 
-After Record520 publication/reviewer inspection, refresh only synchronization,
-process absence, fresh evidence/publication paths, interpreter and free space;
-reuse passed preflight and accepted proof. Run the final exact command in one
-tracked background job with notification and unchanged 96-hour deadline/guards.
-First failure stops. Hermes publishes only terminal Record521, then stops reviewer.
-CEX-002 remains IN_PROGRESS; remaining economic/final requirements and next-ticket
-NONE are unchanged. Do not rerun the accepted full consumer check.
+Keep Hermes alive and monitor ONLY that process on continuation/completion.
+Do not relaunch or commit live evidence. On success the same job proceeds through
+identical publish replay and explicit release-reader verification. First failure
+stops without retry/repair/cleanup. Hermes publishes only terminal Record521 and
+stops for reviewer. Record520's import failure is preserved at9555d26; it changed
+no catalog rows and was caused by the reviewer's isolated-environment selection.
+No install/source changes or repeated consumer/test/preflight work were performed.
+Remaining independent economic/final requirements stay outstanding; next ticket NONE.
 
 ## Accepted preparation
 
