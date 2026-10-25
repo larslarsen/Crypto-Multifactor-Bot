@@ -254,3 +254,214 @@ Exactly this Review 519, docs/handoff/CURRENT_TASK.md and tickets/CEX-002.md.
 Reviewer may record the returned process identity/observed phase in these same paths.
 Hermes exclusively owns execution, implementation evidence and Record 520 Git.
 CEX-002 remains IN_PROGRESS; next ticket and its authorization remain NONE.
+
+
+## Environment-selection correction — one explicit continuation
+
+The single native job proc_0e5738780857 / PID 3800846 launched at
+2026-10-25T21:30:12Z from c32ad0ad06c111d015efb34d427cc6c28aa947fa. Its
+read-only baseline matched, but the first CLI process exited 1 in 0.71 seconds
+at package initialization: ModuleNotFoundError: No module named 'httpx'. The
+isolated Nautilus consumer environment does not include this project dependency.
+No publication logic/catalog write ran; replay and release-reader phases did not run.
+Workflow status 1 and capture status 0 are retained in Record 520. This is the
+reviewer's environment-selection error; it does not invalidate the accepted proof.
+
+Hermes first completes terminal Record-520-only publication and stops. Preserve
+that record unchanged. The raw capture before narrative was 2,649 bytes, SHA256
+a2886694ff6ec6028e5391a2589700d6bb904c05e6a9ad03dc4629c29221b1b8.
+Reviewer will inspect its publication before delivering this continuation.
+
+Record 510's successful preparation used the SAME production CLI with
+`.venv/bin/python`, at the same original source pin 1f5629b. Read-only filesystem
+inspection confirms this existing project environment contains httpx and metadata
+for PyArrow25.0.0 / Pydantic2.13.4 under Python3.13. No install, dependency/source
+change or import/version probe is needed. The isolated environment remains the
+accepted environment for the already completed Nautilus check only.
+
+After Record 520 is published, authorize ONE new workflow in the existing project
+environment. Use fresh Record 521, never truncate or append execution to Record 520.
+The exact replacement command below differs only in its outer interpreter and fresh
+evidence destination/header/collision label. The inline operational logic and all
+three production CLI phases, data/proof/source pins, guards, snapshot comparisons,
+96-hour deadline, first-failure stops and terminal record-only publication remain
+unchanged. sys.executable supplies the project interpreter to each existing CLI call.
+
+Do not repeat the passing broad preflight, source/proof hashes, tests or setup.
+Before launch refresh only HEAD==origin/main / empty index, absence of a surviving
+failed publisher process, fresh nonsymlink Record521 and still-absent publication
+namespace, executable project interpreter and actual free space. The command itself
+rechecks candidate/proof physical pins and the read-only catalog/quarantine baseline
+before invoking the first CLI. A mismatch or first failure stops without another
+retry. Native background=true / notify_on_complete=true / pty=false and same-session
+startup/status retrieval remain authorized. On terminal publish ONLY Record521 with
+the same exact-one-path Git guards, then stop reviewer. No final-ticket acceptance,
+economic/final suites, data repair, cleanup, prepare or other source change.
+
+### Exact project-environment continuation command
+
+```bash
+cd /home/lars/Crypto_Multifactor_Bot
+set -euo pipefail
+record=research/sprint_004/521_CEX002_CATALOG_ENVIRONMENT_CONTINUATION_RECORD.md
+if [ -e "$record" ] || [ -L "$record" ]; then
+    printf 'Record 521 already exists or is a symlink\n' >&2
+    exit 1
+fi
+set -o noclobber
+exec 3> "$record"
+set +o noclobber
+exec 4>> /dev/fd/3
+exec 3>&-
+printf '# CEX-002 Record 521 — Catalog admission and replay\n\nLaunch UTC: ' >&4
+date -u +'%Y-%m-%dT%H:%M:%SZ' >&4
+printf 'Execution HEAD: ' >&4
+git rev-parse HEAD >&4
+printf '\n## Raw execution output\n\n```jsonl\n' >&4
+set +e
+/usr/bin/timeout --signal=TERM --kill-after=60s 345600s /home/lars/Crypto_Multifactor_Bot/.venv/bin/python -u - 2>&1 <<'RUN' | tee -a /dev/fd/4
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import sqlite3
+import subprocess
+import sys
+import time
+
+root = Path('/home/lars/Crypto_Multifactor_Bot')
+candidate = '8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34'
+proof = '3be8597604efc7353935d79fd663efd7ffa6083ede10f4807d458b9e76927c8d'
+checker = 'ac83cc25af508b75fb79d85ba7a615041235f9a9835bb37cb81f9f2f7b740117'
+code = '1f5629badfa0e8af6338fbeb019a5f7e60b6a324'
+base = root / 'data/.cex002_harmonic_bundle'
+prepared_path = base / '.prepared' / (candidate + '.json')
+proof_path = base / '.proofs' / (proof + '.json')
+started = time.monotonic()
+phase = 'preflight'
+
+def emit(**items):
+    print(json.dumps(items, sort_keys=True, separators=(',', ':'), default=str), flush=True)
+
+def need(condition, reason):
+    if not condition:
+        raise RuntimeError(reason)
+
+def physical(path):
+    need(path.is_file() and not path.is_symlink(), 'unsafe or missing pinned file')
+    h = hashlib.sha256()
+    with path.open('rb') as f:
+        for chunk in iter(lambda: f.read(8 * 2**20), b''):
+            h.update(chunk)
+    return h.hexdigest(), path.stat().st_size
+
+def snapshot(label):
+    con = sqlite3.connect('file:' + str(root / 'exp003.db') + '?mode=ro', uri=True)
+    try:
+        con.execute('BEGIN')
+        rows = con.execute("SELECT dataset_id, quality_status, publication_status, quality_summary_json FROM dataset WHERE quality_summary_json LIKE '%cex002_bitmex_false_authority%' ORDER BY dataset_id").fetchall()
+        qbody = json.dumps(rows, default=str, separators=(',', ':'), ensure_ascii=False)
+        qsha = hashlib.sha256(qbody.encode()).hexdigest()
+        need(len(rows) == 5 and qsha == 'b4334b2c3f28d58a288b0130e1009dd305c5cf30b7e4af734f8036bd74d82103', 'quarantine state changed')
+        selected = "SELECT dataset_id FROM dataset WHERE transform_name='cex002_reference_publication'"
+        queries = {
+            'dataset': "SELECT * FROM dataset WHERE transform_name='cex002_reference_publication' ORDER BY dataset_id",
+            'dataset_file': 'SELECT * FROM dataset_file WHERE dataset_id IN (' + selected + ') ORDER BY dataset_id, storage_uri',
+            'dataset_input_dataset': 'SELECT * FROM dataset_input_dataset WHERE dataset_id IN (' + selected + ') ORDER BY dataset_id, input_dataset_id, role',
+            'dataset_input_raw_object': 'SELECT * FROM dataset_input_raw_object WHERE dataset_id IN (' + selected + ') ORDER BY dataset_id, raw_object_id, role',
+        }
+        observed = {}
+        for name, sql in queries.items():
+            cursor = con.execute(sql)
+            columns = [d[0] for d in cursor.description]
+            digest = hashlib.sha256()
+            digest.update((json.dumps(columns, separators=(',', ':')) + '\n').encode())
+            count = 0
+            for row in cursor:
+                digest.update((json.dumps(row, default=str, separators=(',', ':'), ensure_ascii=False) + '\n').encode())
+                count += 1
+            observed[name] = {'count': count, 'sha256': digest.hexdigest()}
+        ids = sorted(r[0] for r in con.execute(selected))
+        observed['dataset_ids'] = ids
+        observed['quarantine_sha256'] = qsha
+        emit(stage='catalog_snapshot', label=label, snapshot=observed)
+        return observed
+    finally:
+        if con.in_transaction:
+            con.rollback()
+        con.close()
+
+try:
+    need(physical(prepared_path)[0] == candidate, 'candidate physical pin changed')
+    need(physical(proof_path) == (proof, 264156517), 'proof physical pin changed')
+    descriptor = json.loads(prepared_path.read_bytes())
+    expected_ids = sorted(d['dataset_id'] for d in descriptor['datasets'])
+    need(len(expected_ids) == len(set(expected_ids)) == 11, 'candidate dataset count changed')
+    initial = snapshot('before_admission')
+    need(initial['dataset'] ['count'] == 0 and initial['dataset_ids'] == [], 'release already exists before initial admission')
+    env = os.environ.copy()
+    env['PYTHONPATH'] = 'src'
+    common = ['--repo', str(root), '--catalog', str(root / 'exp003.db'), '--code-commit', code,
+              '--proof', str(proof_path), '--proof-sha', proof, '--checker-sha', checker,
+              '--nautilus-version', '2.0.0rc3']
+    publication = None
+    admitted = None
+    for phase in ('admission', 'identical_replay', 'release_reader'):
+        action = 'verify' if phase == 'release_reader' else 'publish'
+        args = ['--publication-sha', publication] if action == 'verify' else ['--prepared-sha', candidate]
+        cmd = [sys.executable, '-u', 'scripts/research/publish_binance_usdm_harmonic_bundle.py', action, *common, *args]
+        emit(stage='phase_started', phase=phase, utc=datetime.datetime.now(datetime.timezone.utc).isoformat(), command=shlex.join(cmd))
+        began = time.monotonic()
+        result = subprocess.run(cmd, cwd=root, env=env, text=True, capture_output=True)
+        emit(stage='phase_result', phase=phase, exit_code=result.returncode, elapsed_seconds=round(time.monotonic()-began, 3), stdout=result.stdout, stderr=result.stderr)
+        need(result.returncode == 0, phase + ' failed; no further phase is authorized')
+        found = result.stdout.strip()
+        need(re.fullmatch('[0-9a-f]{64}', found) is not None, 'CLI did not return one publication identity')
+        if publication is None:
+            publication = found
+        else:
+            need(found == publication, 'publication identity changed across replay/readback')
+        final_path = base / '.publication' / (publication + '.json')
+        need(physical(final_path)[0] == publication, 'publication physical pin mismatch')
+        final = json.loads(final_path.read_bytes())
+        need(final.get('consumable') is True and final.get('prepared_sha256') == candidate, 'publication does not bind the candidate')
+        need(final.get('proof_sha256') == proof and final.get('checker_source_sha256') == checker, 'publication proof/checker binding changed')
+        current = snapshot(phase)
+        need(current['dataset_ids'] == expected_ids, 'catalog dataset closure differs from candidate')
+        need([current[n]['count'] for n in ('dataset','dataset_file','dataset_input_dataset','dataset_input_raw_object')] == [11,423446,10,0], 'catalog row/file/dependency closure mismatch')
+        if admitted is None:
+            admitted = current
+        else:
+            need(current == admitted, 'persisted catalog fields changed across replay/readback')
+    need(physical(prepared_path)[0] == candidate and physical(proof_path) == (proof,264156517), 'candidate/proof changed at terminal')
+    emit(stage='PUBLICATION_REPLAY_READBACK_COMPLETE_NOT_TICKET_ACCEPTANCE', publication_sha256=publication, prepared_sha256=candidate, proof_sha256=proof, dataset_count=11, file_count=423446, dependency_edges=10, elapsed_seconds=round(time.monotonic()-started,3), free_bytes=os.statvfs(root).f_bavail*os.statvfs(root).f_frsize)
+except BaseException as exc:
+    emit(stage='FAILED', phase=phase, error_type=type(exc).__name__, error=str(exc))
+    raise
+RUN
+pipeline_status=("${PIPESTATUS[@]}")
+workflow_status=${pipeline_status[0]}
+capture_status=${pipeline_status[1]}
+printf '```\n\nWorkflow/deadline exit status: %s\nOutput capture exit status: %s\n' "$workflow_status" "$capture_status" >&4 || exit 1
+exec 4>&-
+if [ "$capture_status" -ne 0 ]; then
+    exit "$capture_status"
+fi
+exit "$workflow_status"
+```
+
+
+### Failure publication reviewed — continuation released
+
+Record 520 at 9555d26b0205aef4f62b93f9cbd8970c62a614a1 is accepted as
+terminal failure disclosure only. Reviewer verified its exact one-path commit,
+HEAD==origin/main, empty index and committed/worktree equality. Record SHA256:
+dc723e400b8ca513bef86de197d981bd875fd65f42234f9aa286058d359735e1.
+The complete original 2,649-byte raw capture matches the pin above unchanged.
+Hermes confirms zero admitted release rows, unchanged quarantine digest and absent
+publication namespace after the import failure. The existing full consumer PASS
+remains accepted. The preceding exact project-environment continuation is now
+released for Hermes execution into Record 521; no other scope is added.

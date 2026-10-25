@@ -9,19 +9,20 @@ Next ticket authorized: NONE
 
 ## Current action
 
-Review 519 authorizes Hermes to use the unchanged production CLI for one catalog
-admission, one identical publish replay, and one explicit release-reader verify,
-in that order with first-failure stop. Pins are the accepted candidate 8b46beb…,
-proof 3be8597…, checker ac83cc2… and source 1f5629b. Keep all completed consumer
-evidence; do not repeat that check. Use one tracked native background job with
-completion notification, a 96-hour whole-workflow deadline and fresh Record 520.
-No source/setup/tests, direct SQL mutation, repair, cleanup or retries.
+Review 519's first admission attempt stopped before application initialization:
+the reviewer selected the isolated consumer environment, which lacks httpx.
+No catalog write or replay/readback occurred. Hermes preserves and publishes
+terminal Record 520, then stops. The final Review-519 correction authorizes ONE
+new workflow using the existing project .venv/bin/python, already proven by
+Record 510, into fresh Record 521. No dependency install or source change.
 
-Hermes captures exact commands/statuses, complete all-column catalog snapshot
-digests and unchanged quarantine state. It publishes only terminal Record 520 and
-stops for reviewer. Reviewer may record the running session in the three enumerated
-governance paths. Remaining independent economic examples, final suites/report and
-ticket acceptance are still outstanding. CEX-002 is IN_PROGRESS; next ticket NONE.
+After Record520 publication/reviewer inspection, refresh only synchronization,
+process absence, fresh evidence/publication paths, interpreter and free space;
+reuse passed preflight and accepted proof. Run the final exact command in one
+tracked background job with notification and unchanged 96-hour deadline/guards.
+First failure stops. Hermes publishes only terminal Record521, then stops reviewer.
+CEX-002 remains IN_PROGRESS; remaining economic/final requirements and next-ticket
+NONE are unchanged. Do not rerun the accepted full consumer check.
 
 ## Accepted preparation
 
