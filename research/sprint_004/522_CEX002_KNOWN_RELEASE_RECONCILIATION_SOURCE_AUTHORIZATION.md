@@ -221,3 +221,100 @@ focused pytest command printed above. First nonzero stops without edits/retry.
 Return final hashes/line counts and exact output/status; no real audit, other
 validation, Git, integration or record authoring. Hermes remains stopped until
 reviewer accepts this final source and separately enumerates its workflow.
+
+
+## Final source acceptance and complete Hermes workflow
+
+Reviewer accepts the bounded source drop after full source inspection and the senior's
+second, explicitly authorized focused command above: exit0, 25 passed in3.77seconds.
+The earlier exit1/21passed/2failed remains evidence; no real run has occurred.
+Frozen source: scripts/research/reconcile_cex002_admitted_release.py,596lines,
+SHA256 857aec234bc5ebb5905a32d6383fb7f7d59cbf8dbf6da435c5042fd1b095041b.
+Frozen tests: tests/test_cex002_admitted_release_reconciliation.py,423lines,
+SHA256 e0f3d7e8d5b5e66a2daa431f4fd3d7b6c4b886d1c8cbb4fb18d01df8f92ec768.
+The successful tiny real-Parquet/catalog case traps logical row readers. Fixed
+accepted anchors remain immutable. Senior source work is stopped; Hermes now owns
+the following ordered integration, one bounded execution and evidence publication.
+Do not repeat the already passed focused pytest or old consumer/admission/replay.
+
+### Integration, stop on first failure
+
+Require HEAD==origin/main, empty index and both exact frozen worktree hashes; preserve
+all unrelated dirty paths and accepted original runtime/checker/candidate/proof/publication.
+Run exactly these remaining integration checks in order, stopping on the first failure:
+
+```bash
+.venv/bin/python -m ruff check scripts/research/reconcile_cex002_admitted_release.py tests/test_cex002_admitted_release_reconciliation.py
+python3 scripts/check_repo_control.py
+git diff --check
+```
+
+Write research/sprint_004/523_CEX002_KNOWN_RELEASE_RECONCILIATION_INTEGRATION_RECORD.md
+with actual commands/statuses, frozen hashes, senior test attribution and first failure
+history. Stage exactly the new script, new test and Record523 (three paths); guard exact
+staged set, cached whitespace, normal commit/push, HEAD==origin/main and empty index.
+No source/test edits, test design, auto-fixes or widened integration. A failure stops
+for reviewer; do not run the real reconciliation until successful integration.
+
+### One bounded real reconciliation, actively monitored to terminal
+
+After successful integration, execute the following capture once from the repository
+using native terminal background=true,notify_on_complete=true,pty=false. The project
+.venv, PYTHONPATH=src and exact command/source pin are mandatory. Do not use the old
+isolated consumer environment. No installation, cleanup, source patch, duplicate run,
+old generic publish/read CLI, full proof rerun, logical-row transport or data writes.
+The command owns its rollback-only transaction. Internal/external deadline1800seconds;
+any failure/timeout stops without retry. Native background-launch exit0 is not PASS.
+
+```bash
+cd /home/lars/Crypto_Multifactor_Bot
+set -euo pipefail
+record=research/sprint_004/524_CEX002_KNOWN_RELEASE_REPLAY_READBACK_RECORD.md
+if [ -e "$record" ] || [ -L "$record" ]; then echo 'Record524 already exists; stop'; exit 1; fi
+set -o noclobber
+exec 3> "$record"
+set +o noclobber
+exec 4>> /dev/fd/3
+exec 3>&-
+printf '# CEX-002 known-release replay/readback execution record\n\nLaunch UTC: ' >&4
+date -u +'%Y-%m-%dT%H:%M:%SZ' >&4
+printf 'Execution HEAD: ' >&4
+git rev-parse HEAD >&4
+printf '\n## Raw execution output\n\n```jsonl\n' >&4
+set +e
+PYTHONPATH=src /usr/bin/timeout --signal=TERM --kill-after=60s 1800s /home/lars/Crypto_Multifactor_Bot/.venv/bin/python -u scripts/research/reconcile_cex002_admitted_release.py --repo /home/lars/Crypto_Multifactor_Bot --catalog /home/lars/Crypto_Multifactor_Bot/exp003.db --source-sha 857aec234bc5ebb5905a32d6383fb7f7d59cbf8dbf6da435c5042fd1b095041b 2>&1 | tee -a /dev/fd/4
+pipeline_status=("${PIPESTATUS[@]}")
+audit_status=${pipeline_status[0]}
+capture_status=${pipeline_status[1]}
+printf '```\n\nAudit/deadline exit status: %s\nOutput capture exit status: %s\n' "$audit_status" "$capture_status" >&4 || exit 1
+exec 4>&-
+if [ "$capture_status" -ne 0 ]; then exit "$capture_status"; fi
+exit "$audit_status"
+```
+
+Keep the held append FD and tee -a: never truncate/rewrite captured bytes. Poll the
+same native session once to confirm startup, then supervise that same session to
+terminal (reviewer reads progress too). Record counters are CUMULATIVE hash operations
+and bytes across safety passes; they are not unique-file percentages. Expected unique
+closure423446files /38950242846bytes. There is no new logical-row/Nautilus run.
+
+### Terminal evidence and publication
+
+On terminal status, inspect the emitted JSON and exact exit status; no extra dataset
+scan, verifier, catalog mutation or acceptance rerun. PASS requires the exact scope
+accepted_proof_unchanged_bytes_and_catalog, all fixed pins, complete unique counts,
+accepted all-column catalog anchors and unchanged quarantine, reused accepted value
+proof=true, fresh physical/footer authentication=true, new logical/Nautilus run=false.
+This proves only ADR0040's known admitted release checkpoint; the old replay failure
+remains failed. On failure preserve raw output/status and stop without retry.
+
+Authenticate the raw captured prefix before appending a concise actual-run narrative:
+Hermes model/provenance, exact command, integration HEAD, launch/finish times, terminal
+status, scope, counts, pins/resources/anchors and limitations. Preserve its bytes and
+verify the prefix digest after append and from committed content. Publish only
+Record524 with exact-one-path staging guard, cached whitespace and normal commit/push;
+verify HEAD==origin/main and empty index, then STOP for reviewer. Record a failed
+terminal result truthfully too; never label a launch or interrupted run PASS.
+No extra review handoff between these successful steps. Reviewer keeps active track
+through terminal result and evidence publication. Full-ticket economics/final suite
+and acceptance remain pending; CEX-002 IN_PROGRESS, next ticket/authorization NONE.

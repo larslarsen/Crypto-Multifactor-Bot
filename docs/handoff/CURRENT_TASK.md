@@ -3,26 +3,25 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — Codex Sol, bounded known-release reconciliation source
+Next required actor: Jr Dev — Hermes, integration and monitored known-release reconciliation
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review522 / ADR0040 assign the existing GPT-6 Sol High senior a two-path external
-known-release reconciliation correction. Reuse the accepted full consumer proof;
-freshly authenticate every physical file/schema and all catalog fields, then prove
-the already-admitted identical no-op replay and independent read-only snapshot.
-Do not recalculate 1.16billion typed rows or change original frozen modules/data.
-The new command is limited to the exact accepted publication/proof/candidate, checks
-capacity first, emits measured progress and has a 30-minute execution bound.
+Review522 accepts the frozen two-path reconciliation source after 25 focused cases
+passed (senior-authored feedback, exit0,3.77seconds). Hermes owns the complete final
+Review522 workflow: scoped lint/control/whitespace, exact-three-path integration with
+Record523, then ONE project-environment real reconciliation under a1800second deadline
+with append-only Record524 and exact-one-path terminal evidence publication. Stop on
+first failure, no retries. Reviewer actively monitors through terminal publication.
 
-Source actor alone writes its new script/tests and has one exact targeted test slot.
-Stop for reviewer source inspection; Hermes is stopped and no new real run is yet
-authorized. The reviewer monitors this source task and will supervise any later
-bounded Hermes execution. Initial admission/publication 5ea2227… stays accepted;
-Record521's replay failure remains preserved. No initial-admission or full-consumer
-rerun, data cleanup or next ticket. CEX-002 IN_PROGRESS; next ticket NONE.
+Reuse the accepted full consumer proof; freshly authenticate all423446 physical files,
+footers/schema and complete fixed catalog anchors. Prove identical rollback-only replay
+and independent read-only snapshot for the already admitted release. No logical-row
+or Nautilus rerun, original source/data mutation or cleanup. Original failed replay
+stays failed. Remaining economics/final acceptance are pending. CEX-002 IN_PROGRESS;
+next ticket and authorization NONE. Exact commands/pins are in Review522's final section.
 
 ## Accepted preparation
 
