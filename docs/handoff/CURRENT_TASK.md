@@ -3,29 +3,26 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, replay/readback disposition
+Next required actor: Sr Dev — Codex Sol, bounded known-release reconciliation source
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-The Review519 / Record521 catalog workflow has STOPPED. Hermes published terminal
-Record521 at b2c485ce86bb8d93e059e96439c3c4e63352edc6 and is finished.
-Initial admission passed in9h39m56s; final consumable publication is
-5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d.
-Its authenticated descriptor pins eleven datasets and the accepted full consumer proof.
-The retained catalog snapshot reconciles 11 datasets /423446 files /10 edges /0 raw edges.
+Review522 / ADR0040 assign the existing GPT-6 Sol High senior a two-path external
+known-release reconciliation correction. Reuse the accepted full consumer proof;
+freshly authenticate every physical file/schema and all catalog fields, then prove
+the already-admitted identical no-op replay and independent read-only snapshot.
+Do not recalculate 1.16billion typed rows or change original frozen modules/data.
+The new command is limited to the exact accepted publication/proof/candidate, checks
+capacity first, emits measured progress and has a 30-minute execution bound.
 
-Identical replay failed after9h8m56s at the operating-reserve guard: free23,299,330,048
-versus required29,690,701,415 bytes. Release-reader verification never ran. Preserve
-successful admission and all accepted evidence; do not repeat initial admission.
-Reviewer status inspection now observes200,142,807,040 free bytes, so capacity has
-recovered since that failure. Nothing has been restarted or cleaned by the reviewer.
-
-The reviewer next decides how to finish replay/readback and remaining economic/final
-evidence, addressing the repeated full-value validation cost raised by the owner.
-No new execution, source change or next ticket is authorized at this checkpoint.
-CEX-002 remains IN_PROGRESS; next ticket NONE. Review519's terminal section governs.
+Source actor alone writes its new script/tests and has one exact targeted test slot.
+Stop for reviewer source inspection; Hermes is stopped and no new real run is yet
+authorized. The reviewer monitors this source task and will supervise any later
+bounded Hermes execution. Initial admission/publication 5ea2227… stays accepted;
+Record521's replay failure remains preserved. No initial-admission or full-consumer
+rerun, data cleanup or next ticket. CEX-002 IN_PROGRESS; next ticket NONE.
 
 ## Accepted preparation
 
@@ -342,6 +339,8 @@ exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
 
+- research/sprint_004/522_CEX002_KNOWN_RELEASE_RECONCILIATION_SOURCE_AUTHORIZATION.md
+- docs/adr/0040-cex002-accepted-proof-reuse.md
 - research/sprint_004/519_CEX002_CATALOG_ADMISSION_AND_REPLAY_AUTHORIZATION.md
 - research/sprint_004/517_CEX002_FULL_CONSUMER_EXECUTION_AUTHORIZATION.md
 - research/sprint_004/511_CEX002_NAUTILUS_CONSUMER_SOURCE_AUTHORIZATION.md
