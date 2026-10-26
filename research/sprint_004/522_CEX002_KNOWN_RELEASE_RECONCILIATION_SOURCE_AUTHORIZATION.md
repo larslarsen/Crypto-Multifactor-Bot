@@ -161,3 +161,27 @@ integration and one separately authorized, actively monitored bounded real run.
 No source/test/evidence/data integration by reviewer. The ticket remains CEX-002
 IN_PROGRESS; next ticket and authorization remain NONE. This is its bounded
 reconciliation correction, not a new ticket or expanded acquisition/research scope.
+
+
+## Additional fixed admission snapshot anchors
+
+For complete all-column catalog binding, production must also match the accepted
+post-admission Record521 snapshot (record SHA256
+33f6f74a9d53699a11c7a9249b3b61000f01f882e229fe2e6384bbbca5eb7528):
+
+| Table | Rows | Accepted snapshot SHA256 |
+| --- | ---: | --- |
+| dataset | 11 | 04d27a4fc58f80189889df81e3e78a196c33ee7d0d7a98cb497b72bb15993f5d |
+| dataset_file | 423446 | c37bdb87f6925f0c6441ed6bf2b1751904b6b7ddab4dd0f054154b871f9c9855 |
+| dataset_input_dataset | 10 | 9f4fbf2eec784f2b801f709b4b27ab24b7f0388ad4ad3d22e6d24640d6e2f322 |
+| dataset_input_raw_object | 0 | 6a8d487a15f8d0927d64f2c03491325ce88b37d29ed7402743c05bd67f210de3 |
+
+Use the EXACT query/order/all-column serialization from Review519's committed
+snapshot function that produced those values; inspect the actual Python string
+escaping rather than assuming a delimiter. Bind column order as well as rows.
+Require these trusted production anchors in addition to before/after invariance and
+original manifest classification. This detects a change predating this checker,
+including bookkeeping/extra-column changes, rather than only changes during it.
+Private fixture policy may provide its own independently constructed tiny snapshot
+anchors; the production CLI has no override. Missing/wrong snapshot anchors fail.
+This strengthens requirement5 without changing either writable developer path.
