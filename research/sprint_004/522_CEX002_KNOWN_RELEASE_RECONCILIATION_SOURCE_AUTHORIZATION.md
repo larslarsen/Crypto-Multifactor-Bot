@@ -185,3 +185,39 @@ including bookkeeping/extra-column changes, rather than only changes during it.
 Private fixture policy may provide its own independently constructed tiny snapshot
 anchors; the production CLI has no override. Missing/wrong snapshot anchors fail.
 This strengthens requirement5 without changing either writable developer path.
+
+
+## First targeted source feedback — bounded correction
+
+The senior executed the sole assigned pytest once: exit1, 21 passed and 2 failed
+in4.25seconds. Source at that stop: 594lines / SHA256
+818d05690bbdc8b66e6b8ee289195b6a599a30bead59b523239b8e5d1df980f9;
+tests414lines / SHA256
+1dcc84e5a38fcf8b1bd1476d97b747c929a5a844ee2c037c40323da449a708a8.
+The candidate-pin refusal raised the correct missing-path UnsafePathError but its
+test expected another family. The independent empty-raw-table snapshot oracle
+returned fcce0904… for a literal backslash-n delimiter, while the immutable accepted
+Record521 digest is6a8d487a… . The senior stopped without edits or retry.
+
+The reviewer's earlier interpretation of the saved command escaping was wrong.
+The accepted digest oracle is authoritative: the actual recorded snapshot uses a
+newline byte as delimiter. Correct the new implementation and independently coded
+fixture serializer to newline; NEVER change the accepted6a8d… oracle or production
+anchors to match a different implementation. No real reconciliation has run.
+
+Authorize only this correction in the same two paths, plus these already reviewed
+test-quality items: candidate-pin refusal expects its specific UnsafePathError;
+test CLI refusal by executing argument parsing for forbidden overrides, replacing
+source-text assertions; trap pq.read_table/ParquetFile.iter_batches and the original
+logical proof helper during the successful tiny-fixture audit. Generic reader
+compatibility is checked after removing those traps. Keep all previous cases and
+actual original known authorities. Make cumulative hash-progress counters clearly
+identified as hash operations/bytes across passes or provide phase-local counters,
+so monitoring does not mislabel repeated safety rechecks as unique completion.
+No other source behavior, original-module edit or widened authority is assigned.
+
+After all corrections, authorize exactly ONE additional execution of the SAME
+focused pytest command printed above. First nonzero stops without edits/retry.
+Return final hashes/line counts and exact output/status; no real audit, other
+validation, Git, integration or record authoring. Hermes remains stopped until
+reviewer accepts this final source and separately enumerates its workflow.
