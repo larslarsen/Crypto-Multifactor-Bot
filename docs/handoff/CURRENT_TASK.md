@@ -3,27 +3,29 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, monitor same catalog workflow
+Next required actor: Lead Quantitative Finance Researcher/Engineer, replay/readback disposition
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review519's corrected catalog workflow is RUNNING as native proc_947fee95812a /
-PID3809588, launched 2026-10-25T21:45:52Z from 8263ae072d2c2341ca7eeb0300900ea8aa218eaf.
-The first same-session poll confirms running at68seconds in phase admission.
-It uses the existing project .venv/bin/python, accepted candidate/proof/source pins,
-one 96-hour whole-workflow deadline and completion notification. Exact command
-matches Review519's SECOND bash block. Live evidence is Record521; no phase result yet.
+The Review519 / Record521 catalog workflow has STOPPED. Hermes published terminal
+Record521 at b2c485ce86bb8d93e059e96439c3c4e63352edc6 and is finished.
+Initial admission passed in9h39m56s; final consumable publication is
+5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d.
+Its authenticated descriptor pins eleven datasets and the accepted full consumer proof.
+The retained catalog snapshot reconciles 11 datasets /423446 files /10 edges /0 raw edges.
 
-Keep Hermes alive and monitor ONLY that process on continuation/completion.
-Do not relaunch or commit live evidence. On success the same job proceeds through
-identical publish replay and explicit release-reader verification. First failure
-stops without retry/repair/cleanup. Hermes publishes only terminal Record521 and
-stops for reviewer. Record520's import failure is preserved at9555d26; it changed
-no catalog rows and was caused by the reviewer's isolated-environment selection.
-No install/source changes or repeated consumer/test/preflight work were performed.
-Remaining independent economic/final requirements stay outstanding; next ticket NONE.
+Identical replay failed after9h8m56s at the operating-reserve guard: free23,299,330,048
+versus required29,690,701,415 bytes. Release-reader verification never ran. Preserve
+successful admission and all accepted evidence; do not repeat initial admission.
+Reviewer status inspection now observes200,142,807,040 free bytes, so capacity has
+recovered since that failure. Nothing has been restarted or cleaned by the reviewer.
+
+The reviewer next decides how to finish replay/readback and remaining economic/final
+evidence, addressing the repeated full-value validation cost raised by the owner.
+No new execution, source change or next ticket is authorized at this checkpoint.
+CEX-002 remains IN_PROGRESS; next ticket NONE. Review519's terminal section governs.
 
 ## Accepted preparation
 
@@ -36,8 +38,8 @@ charges 3,686,198,800; full future proof/publication allowances leave 754,013,29
 below the fixed remainder. Post-run free space is 147,669,061,632 bytes.
 
 Preparation remains accepted. Review 511 now governs checker validation/integration.
-Full-release consumer proof is now accepted in Review 517. Remaining economic
-evidence, admission, replay and final acceptance commands remain pending. Preserve all accepted checks and data. GPT-6.1
+Full-release consumer proof is accepted in Review517 and initial catalog admission
+in Review519. Replay/readback, remaining economic evidence and final acceptance remain pending. Preserve all accepted checks and data. GPT-6.1
 remains reviewer and does not author production or test source.
 
 ## Completed terminal inspection and publication

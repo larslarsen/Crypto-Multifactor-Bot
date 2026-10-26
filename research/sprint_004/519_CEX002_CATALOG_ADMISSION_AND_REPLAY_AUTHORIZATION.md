@@ -489,3 +489,40 @@ Hermes then completes its authorized terminal record-only publication and stops.
 The reviewer may update these same three governance paths; that later governance
 HEAD change does not change execution HEAD 8263ae0 or original source pin 1f5629b.
 Admission/replay/readback acceptance remains pending; next ticket stays NONE.
+
+
+### Terminal review — admission succeeded; replay stopped on capacity
+
+Record 521 is published at b2c485ce86bb8d93e059e96439c3c4e63352edc6.
+Reviewer inspected the exact one-record commit, HEAD==origin/main, empty index,
+and committed/worktree record equality. Record SHA256:
+33f6f74a9d53699a11c7a9249b3b61000f01f882e229fe2e6384bbbca5eb7528.
+Accept this as terminal evidence and accept the successful initial admission only;
+the full publication/replay/readback workflow did not pass.
+
+Admission returned exit0 after 34,796.240 seconds (9h39m56s), publication
+5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d.
+Reviewer independently authenticated the existing 7,502-byte final descriptor's
+hash/filename, consumable=true, eleven dataset entries and accepted candidate/proof
+bindings. The retained after-admission snapshot has 11 datasets, 423,446 file rows,
+ten dataset dependency edges and zero raw-input edges. The quarantine digest matches
+the accepted pin. Preserve this committed release; do not repeat initial admission.
+
+Identical replay returned exit1 after 32,935.614 seconds (9h8m56s):
+operating_reserve_not_preserved, stage publish, free_bytes=23,299,330,048,
+incoming_bytes=0, fixed operating_reserve_bytes=29,690,701,415. It stopped before
+successful replay; the release-reader phase never ran. This does not invalidate the
+previous successful admission or the accepted full Nautilus consumer proof. Hermes
+preserved the failure, published Record521 and stopped without repair/retry/cleanup.
+
+At the owner's subsequent status check on 2026-10-26, reviewer df observes
+200,142,807,040 available bytes. The capacity condition has therefore changed since
+the failure; this observation is not replay evidence or authorization to relaunch.
+No reviewer cleanup, retry, tests, source change or catalog mutation occurred.
+
+The current process is STOPPED, not running. The next required actor is the Lead
+Quantitative Finance Researcher/Engineer to decide how to finish replay/readback
+and remaining economic/final evidence while addressing the repeated full-value
+validation cost identified by the owner. No new execution is authorized by this
+status review. CEX-002 remains IN_PROGRESS; next ticket and authorization stay NONE.
+Reviewer publication remains restricted to Review519, CURRENT_TASK and CEX-002.
