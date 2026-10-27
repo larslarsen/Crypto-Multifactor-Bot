@@ -3,33 +3,22 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer, final closeout evidence assignment
+Next required actor: Jr Dev — Hermes, Review525 final evidence and acceptance commands
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-COMPLETED: the known-release replay/readback check PASSED in773.097seconds (12m53s).
-Reviewer accepts integration9b24ceac34a40f2ee0aaf20d774a6e344b1ce1c1 and terminal
-Record524 publication/correction2f9f14485127f72ca0003fcc2331a2dbdb406dde under
-Review522/ADR0040. All423446 physical files, complete accepted catalog anchors and
-five-row quarantine matched. Identical replay rolled back; independent read-only
-snapshot passed. No logical-row/Nautilus rerun or catalog-row changes occurred.
+Review525 assigns Hermes the original full pytest, Ruff, repository-control and
+whitespace commands, then bounded retained OI/funding economic examples and a
+consolidated final release report. Stop on first nonzero result and publish actual
+failure evidence; no source fixes or retries. Complete workflow and exact bounds:
+research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md.
+Record526 is the sole Hermes publication path. Direct native supervision continues.
 
-Tracking: launch2026-10-26T23:47:45Z; jobproc_8e5ec0014d2f exited0 (uptime774s),
-output capture0, deadline1800s not reached. Hermes session20261026_163106_0df3aa used
-Step3.7Flash for integration/execution after documented provider recovery. Hermes is
-stopped; no job remains running. Evidence:
-research/sprint_004/524_CEX002_KNOWN_RELEASE_REPLAY_READBACK_RECORD.md,
-SHA256dc3eec2f927cc9353dd9a5dc56e85abecc82254bcec4f3ddb2a9dfb79b5fcbd0.
-The first35462 raw bytes remain checksum-identical; model-history/query errata are
-explicitly appended. Do not repeat this successful check or the accepted full proof.
-
-Remaining fixed closeout: independent economic examples/reconciliation evidence,
-consolidated final release/coverage report and original full acceptance commands.
-Reviewer selects the bounded remaining assignment; no further source/run is assigned
-here. Preserve the original failed replay as failed. CEX-002 IN_PROGRESS; next ticket
-and authorization NONE. Full-ticket acceptance has not been granted.
+Review522's 773.097-second replay/readback and all accepted product/coverage/full
+consumer/admission evidence remain accepted. Do not repeat these runs. CEX-002
+IN_PROGRESS; full-ticket acceptance pending; next ticket and authorization NONE.
 
 ## Accepted preparation
 
