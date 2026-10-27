@@ -1,5 +1,12 @@
 # Crypto-Multifactor-Bot
 
+The complete CEX-002 research data release and Harmonic Trader data delivery are
+[accepted](research/sprint_004/531_CEX002_DATA_RELEASE_ACCEPTANCE.md).
+[Release contents and coverage limits](research/sprint_004/530_CEX002_FINAL_DATA_RELEASE_REVIEW.md)
+cover all eleven products and dated contract histories. The existing reader and Nautilus
+commands are documented in the sibling Harmonic Trader README. Whole-repository pytest
+remains incomplete; data acceptance uses the explicitly amended release-specific checks.
+
 ## Structure
 
 `src/` — production packages  

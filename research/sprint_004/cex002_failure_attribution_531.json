@@ -1,0 +1,406 @@
+{
+  "ticket": "CEX-002",
+  "review": 531,
+  "method": "Read-only AST reconstruction of the acquisition-prefix definition order and parameter counts; no imported tests, collection or test execution.",
+  "classification": "Strongly corroborated reconstruction, not recovered per-test runtime reports.",
+  "limitations": [
+    "The stopped run did not preserve node IDs or tracebacks.",
+    "Uncommitted engine source at launch was not hash-pinned; old mtimes and matching launch dirty paths support continuity but are not historical hash proof.",
+    "The old mixed failure cache is corroborating evidence only.",
+    "No root cause or current pass/fail outcome is established for any of these tests.",
+    "The unexecuted remainder of the broad suite remains unknown."
+  ],
+  "stopped_log": {
+    "path": "/tmp/cex002_pytest_r_retry.aXQOHA",
+    "sha256": "448eb755a35accb45542c4075edc77e73247e839d0a150736a7b86ba4510ed90",
+    "pytest_exit": 143,
+    "wrapper_exit": 0
+  },
+  "parameter_count_sources": {
+    "sorted(sizing.ACCEPTED_RETAINED_SUMMARY_FIELDS)": 5,
+    "list(PHYSICAL_FAMILIES)": 12,
+    "list(_METRICS_RATIO_NAMES)": 4,
+    "ALL_PROBES": 6,
+    "_DIVERGENCE_CASES": 46
+  },
+  "source_pins": {
+    "src/cryptofactors/acquisition/binance_usdm_harmonic_sizing.py": {
+      "sha256": "d4afaa6285733c10311560b9fd68b223ab31fa90b1293a71871ea262daa82f5b",
+      "bytes": 413911,
+      "mtime_utc": "2026-08-23T20:44:39.965028+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_harmonic_sizing.py": {
+      "sha256": "3b5acf85c5ee5aab891f9b9622e3cc7e86e0c2df2b630812f6f26e9bce20580a",
+      "bytes": 304861,
+      "mtime_utc": "2026-08-23T23:52:02.227432+00:00"
+    },
+    "src/cryptofactors/acquisition/free_source_probes.py": {
+      "sha256": "f863bdab793ecc0884ed7314003689160cd981327d9abcf5e0f1b6618a9d2a24",
+      "bytes": 23251,
+      "mtime_utc": "2026-07-26T16:20:47.037656+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py": {
+      "sha256": "6f3d3379ebd126b6b8e8a91444cac750eae9c813a26a3481d5240cb3cdec67ef",
+      "bytes": 282142,
+      "mtime_utc": "2026-08-18T05:35:53.274623+00:00"
+    },
+    "tests/acquisition/test_binance_fetcher.py": {
+      "sha256": "7e2c31ce46b9e6df947fbd6b46f02020eeaf83218f402119c03c2183e194ad6e",
+      "bytes": 5649,
+      "mtime_utc": "2026-07-23T13:45:18.811088+00:00"
+    },
+    "tests/acquisition/test_binance_universe.py": {
+      "sha256": "4a0187d6bae9b11e9a322a014b3b5b8783e4c0afac7e150eda6cccbf41aef320",
+      "bytes": 110508,
+      "mtime_utc": "2026-07-27T22:46:42.136713+00:00"
+    },
+    "tests/acquisition/test_binance_universe_expansion.py": {
+      "sha256": "c4b7d7206fce51407fa3cd75fef4857dea062e6cd3c3a43c694478de4041aaaa",
+      "bytes": 8937,
+      "mtime_utc": "2026-07-24T02:51:08.607813+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_capacity_attestation.py": {
+      "sha256": "09c9663613a4addf7080d5d84f0470926e4aa86915094b2c4d21d27e6ac73cf9",
+      "bytes": 24643,
+      "mtime_utc": "2026-08-24T03:23:33.238936+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_gate2_revision_candidate.py": {
+      "sha256": "a715023e8e8c43ef908097c4bb7332cfcc4798d08929d433223f4e149599b905",
+      "bytes": 129670,
+      "mtime_utc": "2026-09-01T08:20:16.598658+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_harmonic_acquisition.py": {
+      "sha256": "40a75c4e8516f94e9d7528ec036bd7fef964219ac2203768f510364ff30d2624",
+      "bytes": 212014,
+      "mtime_utc": "2026-08-28T00:17:44.563061+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_harmonic_gate2_retirement.py": {
+      "sha256": "62984202d04adcc5a78694bd8152ac786b53cc3e10e9ad955846e6ae216d2505",
+      "bytes": 52484,
+      "mtime_utc": "2026-08-28T02:06:17.827146+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_harmonic_path_bound_transition.py": {
+      "sha256": "60b018f05e5d96e0863c529ca6670e6563c9c3cead9539b30dbf381803ab76ff",
+      "bytes": 33654,
+      "mtime_utc": "2026-08-22T22:20:53.473641+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_harmonic_qualification.py": {
+      "sha256": "e4bd0203668a4488fe56ba4efede53696d908a0a68a227d005e3420badc29dea",
+      "bytes": 460268,
+      "mtime_utc": "2026-08-22T20:09:19.998419+00:00"
+    },
+    "tests/acquisition/test_binance_usdm_kline_comparison_sample.py": {
+      "sha256": "562a45b459d093872e529fafc9c8ccb9418cdf53ca8111db431b8b1c84d1a295",
+      "bytes": 26037,
+      "mtime_utc": "2026-10-17T20:13:43.004960+00:00"
+    },
+    "tests/acquisition/test_bitmex_funding_quarantine.py": {
+      "sha256": "23e241f506eb07fe3ec0a01a16220cbd434516b5fc26e04b904d0508686c8e81",
+      "bytes": 34089,
+      "mtime_utc": "2026-10-17T03:05:03.756043+00:00"
+    },
+    "tests/acquisition/test_free_source_probes.py": {
+      "sha256": "fb2dbfbad628610eb8444d452ec119316ac87a00df15052fb68f6d77f28c493a",
+      "bytes": 7681,
+      "mtime_utc": "2026-07-26T16:21:03.893934+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2.py": {
+      "sha256": "1869416b99878225a45ed5430183adf46501f9b1ecb08776a76feb45deeb2393",
+      "bytes": 95158,
+      "mtime_utc": "2026-07-29T20:01:01.911855+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_event_orchestrator.py": {
+      "sha256": "251f6b6451f90ab1db0cb4c614afe929b3bc84af378944e2531ec007641eee34",
+      "bytes": 26604,
+      "mtime_utc": "2026-07-30T20:48:55.840581+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events.py": {
+      "sha256": "43de289a8279535deded3ac406a48abed1d756bb1098895f202a205fe3031560",
+      "bytes": 57413,
+      "mtime_utc": "2026-07-30T20:27:22.552225+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2.py": {
+      "sha256": "1876ac59bda81434cb9bf523b0699717352b2e8c5738899d0e77439e225fec3d",
+      "bytes": 32821,
+      "mtime_utc": "2026-08-10T00:51:28.931067+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py": {
+      "sha256": "afef397a02ee651542678f19d87f0c01ee55cd21f24d27e67056ca5bbdb6e2f8",
+      "bytes": 120811,
+      "mtime_utc": "2026-08-06T21:48:52.390311+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_migration.py": {
+      "sha256": "45afd6517a7bb3c08a01bec2d3858cb283932e97a9a4fd1e3f1968833e751188",
+      "bytes": 15316,
+      "mtime_utc": "2026-07-31T07:04:09.307656+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0018.py": {
+      "sha256": "f4f7906d0a6e3cb5e98cacfbdec0d4b9877d76e3a53b21bb9439a585597bdc3b",
+      "bytes": 27704,
+      "mtime_utc": "2026-07-31T22:33:22.942259+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0019.py": {
+      "sha256": "51e7b4399f217bdcfee8adff3f6e628abba46a4adf8e6b845f662c064d290aef",
+      "bytes": 51227,
+      "mtime_utc": "2026-08-01T00:16:00.791100+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py": {
+      "sha256": "69f5a41e94dfdc1890d975284f56c3a26cebee0c759ebd71435b09673ff7b289",
+      "bytes": 18647,
+      "mtime_utc": "2026-08-10T00:51:28.931067+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py": {
+      "sha256": "66d9a86ce409601380b29cf9c936fe3013ed4f07a2a80261bdc325a15bf5a308",
+      "bytes": 43680,
+      "mtime_utc": "2026-08-18T03:31:08.718313+00:00"
+    },
+    "tests/acquisition/test_uniswap_v2_pair_events_v2_production.py": {
+      "sha256": "301cb2fd864b0307e1a164cc566a472cc8823ea4204b7940a216ab8c6c784026",
+      "bytes": 194981,
+      "mtime_utc": "2026-08-18T05:18:18.958042+00:00"
+    },
+    "pyproject.toml": {
+      "sha256": "e4b3a40eee6ecf5ff0b4c10f238ced165342df4973e06e986ccc1bc1d889b03c",
+      "bytes": 1127
+    },
+    ".venv/lib/python3.13/site-packages/_pytest/main.py": {
+      "sha256": "8ee2725057ff1811e2ae9ebdf1befb7518195f8f333f9f8ca024d76a4b80780e",
+      "bytes": 42771
+    },
+    ".venv/lib/python3.13/site-packages/_pytest/python.py": {
+      "sha256": "b04488f5e46bf1ffe2e8344f81756e10b970dbfaf2f7f2f4d312becd6404df76",
+      "bytes": 67758
+    },
+    ".venv/lib/python3.13/site-packages/_pytest/pathlib.py": {
+      "sha256": "c9fe77dccbf52afa1196ff92870ed919e09f254c082710a86ed417fd3ca90329",
+      "bytes": 37454
+    }
+  },
+  "acquisition_file_spans": [
+    {
+      "path": "tests/acquisition/test_binance_fetcher.py",
+      "first_one_based": 1,
+      "last_one_based": 4
+    },
+    {
+      "path": "tests/acquisition/test_binance_universe.py",
+      "first_one_based": 5,
+      "last_one_based": 221
+    },
+    {
+      "path": "tests/acquisition/test_binance_universe_expansion.py",
+      "first_one_based": 222,
+      "last_one_based": 238
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_capacity_attestation.py",
+      "first_one_based": 239,
+      "last_one_based": 253
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_gate2_revision_candidate.py",
+      "first_one_based": 254,
+      "last_one_based": 400
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_harmonic_acquisition.py",
+      "first_one_based": 401,
+      "last_one_based": 707
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_harmonic_gate2_retirement.py",
+      "first_one_based": 708,
+      "last_one_based": 768
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_harmonic_path_bound_transition.py",
+      "first_one_based": 769,
+      "last_one_based": 837
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_harmonic_qualification.py",
+      "first_one_based": 838,
+      "last_one_based": 1255
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_harmonic_sizing.py",
+      "first_one_based": 1256,
+      "last_one_based": 1562
+    },
+    {
+      "path": "tests/acquisition/test_binance_usdm_kline_comparison_sample.py",
+      "first_one_based": 1563,
+      "last_one_based": 1578
+    },
+    {
+      "path": "tests/acquisition/test_bitmex_funding_quarantine.py",
+      "first_one_based": 1579,
+      "last_one_based": 1704
+    },
+    {
+      "path": "tests/acquisition/test_free_source_probes.py",
+      "first_one_based": 1705,
+      "last_one_based": 1737
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2.py",
+      "first_one_based": 1738,
+      "last_one_based": 1889
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_event_orchestrator.py",
+      "first_one_based": 1890,
+      "last_one_based": 1910
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events.py",
+      "first_one_based": 1911,
+      "last_one_based": 1940
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2.py",
+      "first_one_based": 1941,
+      "last_one_based": 1979
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py",
+      "first_one_based": 1980,
+      "last_one_based": 2182
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py",
+      "first_one_based": 2183,
+      "last_one_based": 2256
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_migration.py",
+      "first_one_based": 2257,
+      "last_one_based": 2265
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0018.py",
+      "first_one_based": 2266,
+      "last_one_based": 2287
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0019.py",
+      "first_one_based": 2288,
+      "last_one_based": 2321
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0020.py",
+      "first_one_based": 2322,
+      "last_one_based": 2326
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py",
+      "first_one_based": 2327,
+      "last_one_based": 2342
+    },
+    {
+      "path": "tests/acquisition/test_uniswap_v2_pair_events_v2_production.py",
+      "first_one_based": 2343,
+      "last_one_based": 2436
+    }
+  ],
+  "skip_anchor": {
+    "position_one_based": 1491,
+    "node": "tests/acquisition/test_binance_usdm_harmonic_sizing.py::test_the_real_accepted_authority_completes_the_receipt_path",
+    "parameter_slot_zero_based": 0,
+    "source_line": 4728
+  },
+  "failures": [
+    {
+      "node": "tests/acquisition/test_uniswap_v2.py::TestPairCreatedPilotEquivalence::test_existing_receipts_replay_identically_twice",
+      "parameter_slot_zero_based": 0,
+      "source_line": 2014,
+      "progress_position_one_based": 1888,
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2.py::TestPairCreatedPilotEquivalence::test_existing_receipts_replay_identically_twice"
+    },
+    {
+      "node": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_attempt_atomic_success_and_lineage",
+      "parameter_slot_zero_based": 0,
+      "source_line": 4742,
+      "progress_position_one_based": 2074,
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_attempt_atomic_success_and_lineage"
+    },
+    {
+      "node": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_journal_recovery_carries_authority_and_is_idempotent",
+      "parameter_slot_zero_based": 0,
+      "source_line": 5032,
+      "progress_position_one_based": 2076,
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_journal_recovery_carries_authority_and_is_idempotent"
+    },
+    {
+      "node": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_startup_failure_replay_through_engine",
+      "parameter_slot_zero_based": 0,
+      "source_line": 5351,
+      "progress_position_one_based": 2077,
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_startup_failure_replay_through_engine"
+    },
+    {
+      "node": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_startup_field_divergence_retains_journal",
+      "parameter_slot_zero_based": 23,
+      "source_line": 5634,
+      "progress_position_one_based": 2103,
+      "parameter_values": [
+        "uniswap_v2_pair_event_v2_stage_attempt",
+        "domain_id",
+        "dom_x"
+      ],
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_startup_field_divergence_retains_journal[uniswap_v2_pair_event_v2_stage_attempt-domain_id-dom_x]"
+    },
+    {
+      "node": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_cleanup_before_either_unlink",
+      "parameter_slot_zero_based": 0,
+      "source_line": 5724,
+      "progress_position_one_based": 2126,
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py::test_production_cleanup_before_either_unlink"
+    },
+    {
+      "node": "tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py::test_streamed_response_wall_expiry",
+      "parameter_slot_zero_based": 0,
+      "source_line": 1187,
+      "progress_position_one_based": 2212,
+      "corroborating_cached_failure": "tests/acquisition/test_uniswap_v2_pair_events_v2_matrix.py::test_streamed_response_wall_expiry"
+    }
+  ],
+  "failure_cache": {
+    "path": ".pytest_cache/v/cache/lastfailed",
+    "sha256": "40c3b31564c2cee2399451a418db197b41f30c4bf09fd6beffb9f676b89e7ac1",
+    "entries": 113
+  },
+  "runner_records": [
+    {
+      "message_id": 100280,
+      "session_id": "20261026_174058_da9db4",
+      "role": "tool",
+      "tool": "terminal",
+      "result": {
+        "output": "2d0c2a0 CEX-002: authorize pinned test environment repair and executor rotation\n3047186 CEX-002: append Record526 failure/deviation correction\n86ac571 CEX-002: publish Record526 final evidence and acceptance record\n8eb225f CEX-002: authorize bounded final evidence and acceptance commands\nc4dd8c7 CEX-002: accept monitored replay and readback; preserve terminal handoff\nOn branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n\tmodified:   opencode.json\n\tmodified:   src/cryptofactors/acquisition/uniswap_v2_pair_events_v2_engine.py\n\tmodified:   tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py\n\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\t.recovery/\n\tcontrol.db-shm\n\tcontrol.db-wal\n\tresearch/sprint_004/52_GMGN_SOLANA_DEX_PROSPECTIVE.md\n\tresearch/sprint_004/53_DEX003_V2_ENDURANCE_HARNESS_DESIGN.md\n\trun_continuation_runner.sh\n\tscripts/research/run_uniswap_v2_pair_events_v2_production.py\n\tsql/migrations/0021_uniswap_v2_pair_event_v2_production_control.sql\n\tsrc/cryptofactors/acquisition/uniswap_v2_pair_events_v2_production.py\n\ttests/acquisition/test_uniswap_v2_pair_events_v2_migration_0021.py\n\ttests/acquisition/test_uniswap_v2_pair_events_v2_production.py\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n2d0c2a072b2bab9a53901fd166b82b2d245ceb65\n2d0c2a072b2bab9a53901fd166b82b2d245ceb65",
+        "exit_code": 0,
+        "error": null
+      }
+    },
+    {
+      "message_id": 100329,
+      "session_id": "20261026_174058_da9db4",
+      "role": "tool",
+      "tool": "process",
+      "result": {
+        "status": "already_exited",
+        "command": "date -u +\"%Y-%m-%dT%H:%M:%S.%NZ start\"; .venv/bin/python -m pytest tests/ -q --tb=short > /tmp/cex002_pytest_r_retry.aXQOHA 2>&1; echo \"PYTEST_EXIT=$?\"; date -u +\"%Y-%m-%dT%H:%M:%S.%NZ end\"",
+        "exit_code": 0,
+        "completion_reason": "exited",
+        "termination_source": "",
+        "output": "2026-10-27T00:59:24.466877917Z start\nbash: [4188127: 2 (255)] tcsetattr: Inappropriate ioctl for device\nPYTEST_EXIT=143\n2026-10-27T01:23:12.017055107Z end\n"
+      }
+    }
+  ],
+  "installed_pytest_plugins_observed": [
+    "anyio.pytest_plugin",
+    "_hypothesis_pytestplugin"
+  ],
+  "reconstruction_command": "python3 /tmp/cex002_triage531/reconstruct.py",
+  "reconstruction_source": "import ast\nimport hashlib\nimport json\nimport re\nimport sqlite3\nfrom datetime import datetime, timezone\nfrom pathlib import Path\n\nROOT = Path('/home/lars/Crypto_Multifactor_Bot')\nOUT = Path('/tmp/cex002_triage531')\npins = {}\n\ndef read_tree(relative):\n    path = ROOT / relative\n    data = path.read_bytes()\n    pins[relative] = {'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data),\n                      'mtime_utc': datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()}\n    return ast.parse(data)\n\ndef assigned(tree, name):\n    for node in tree.body:\n        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == name:\n            return node.value\n        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == name for t in node.targets):\n            return node.value\n    raise AssertionError(name)\n\nsizing = read_tree('src/cryptofactors/acquisition/binance_usdm_harmonic_sizing.py')\nsizing_test = read_tree('tests/acquisition/test_binance_usdm_harmonic_sizing.py')\nprobes = read_tree('src/cryptofactors/acquisition/free_source_probes.py')\nengine = read_tree('tests/acquisition/test_uniswap_v2_pair_events_v2_engine.py')\nsizes = {\n    'sorted(sizing.ACCEPTED_RETAINED_SUMMARY_FIELDS)': len(assigned(sizing, 'ACCEPTED_RETAINED_SUMMARY_FIELDS').keys),\n    'list(PHYSICAL_FAMILIES)': len(assigned(sizing, 'ARCHIVE_FAMILIES').elts) + len(assigned(sizing, 'COST_FAMILIES').elts),\n    'list(_METRICS_RATIO_NAMES)': len(assigned(sizing_test, '_METRICS_RATIO_NAMES').elts),\n    'ALL_PROBES': len(assigned(probes, 'ALL_PROBES').elts),\n    '_DIVERGENCE_CASES': len(assigned(engine, '_DIVERGENCE_CASES').elts),\n}\nrows = []\nspans = []\n\ndef visit(nodes, prefix):\n    for node in nodes:\n        if isinstance(node, ast.ClassDef) and node.name.startswith('Test'):\n            assert not node.bases, (prefix, node.name, 'unhandled inheritance')\n            visit(node.body, prefix + '::' + node.name)\n        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test'):\n            count = 1\n            for decorator in node.decorator_list:\n                if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and decorator.func.attr == 'parametrize':\n                    values = decorator.args[1]\n                    count *= len(values.elts) if isinstance(values, (ast.List, ast.Tuple)) else sizes[ast.unparse(values)]\n            for slot in range(count):\n                rows.append({'node': prefix + '::' + node.name, 'parameter_slot_zero_based': slot, 'source_line': node.lineno})\n\nfor path in sorted((ROOT / 'tests/acquisition').glob('test*.py')):\n    relative = str(path.relative_to(ROOT))\n    before = len(rows)\n    visit(read_tree(relative).body, relative)\n    spans.append({'path': relative, 'first_one_based': before + 1, 'last_one_based': len(rows)})\n\nlog_path = Path('/tmp/cex002_pytest_r_retry.aXQOHA')\nlog = log_path.read_bytes()\ntokens = ''.join(re.findall(r'^[.Fs]+', log.decode(), re.M))\npositions = [i + 1 for i, token in enumerate(tokens) if token == 'F']\nassert positions == [1888, 2074, 2076, 2077, 2103, 2126, 2212]\ncache_path = ROOT / '.pytest_cache/v/cache/lastfailed'\ncache_bytes = cache_path.read_bytes()\ncache = json.loads(cache_bytes)\nfindings = []\nfor position in positions:\n    item = dict(rows[position - 1])\n    item['progress_position_one_based'] = position\n    matches = [key for key in cache if key.split('[', 1)[0] == item['node']]\n    if item['parameter_slot_zero_based']:\n        value = ast.literal_eval(assigned(engine, '_DIVERGENCE_CASES').elts[item['parameter_slot_zero_based']])\n        item['parameter_values'] = value\n        expected = item['node'] + '[' + '-'.join(map(str, value)) + ']'\n        assert matches == [expected], matches\n    else:\n        assert matches == [item['node']], matches\n    item['corroborating_cached_failure'] = matches[0]\n    assert 'uniswap' in item['node']\n    findings.append(item)\nskip = [i + 1 for i, token in enumerate(tokens) if token == 's']\nassert skip == [1491]\nassert rows[1490]['node'].endswith('::test_the_real_accepted_authority_completes_the_receipt_path')\n\ncon = sqlite3.connect('file:/home/lars/.hermes/state.db?mode=ro', uri=True)\nmessages = []\nfor message_id in (100280, 100329):\n    row = con.execute('SELECT session_id,role,tool_name,content FROM messages WHERE id=?', (message_id,)).fetchone()\n    assert row[0] == '20261026_174058_da9db4'\n    messages.append({'message_id': message_id, 'session_id': row[0], 'role': row[1], 'tool': row[2], 'result': json.loads(row[3])})\ncon.close()\nfor relative in ['pyproject.toml', '.venv/lib/python3.13/site-packages/_pytest/main.py', '.venv/lib/python3.13/site-packages/_pytest/python.py', '.venv/lib/python3.13/site-packages/_pytest/pathlib.py']:\n    data = (ROOT / relative).read_bytes()\n    pins[relative] = {'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}\n\nresult = {\n    'ticket': 'CEX-002', 'review': 531,\n    'method': 'Read-only AST reconstruction of the acquisition-prefix definition order and parameter counts; no imported tests, collection or test execution.',\n    'classification': 'Strongly corroborated reconstruction, not recovered per-test runtime reports.',\n    'limitations': ['The stopped run did not preserve node IDs or tracebacks.', 'Uncommitted engine source at launch was not hash-pinned; old mtimes and matching launch dirty paths support continuity but are not historical hash proof.', 'The old mixed failure cache is corroborating evidence only.', 'No root cause or current pass/fail outcome is established for any of these tests.', 'The unexecuted remainder of the broad suite remains unknown.'],\n    'stopped_log': {'path': str(log_path), 'sha256': hashlib.sha256(log).hexdigest(), 'pytest_exit': 143, 'wrapper_exit': 0},\n    'parameter_count_sources': sizes, 'source_pins': pins, 'acquisition_file_spans': spans,\n    'skip_anchor': {'position_one_based': 1491, **rows[1490]}, 'failures': findings,\n    'failure_cache': {'path': str(cache_path.relative_to(ROOT)), 'sha256': hashlib.sha256(cache_bytes).hexdigest(), 'entries': len(cache)},\n    'runner_records': messages,\n    'installed_pytest_plugins_observed': ['anyio.pytest_plugin', '_hypothesis_pytestplugin'],\n    'reconstruction_command': 'python3 /tmp/cex002_triage531/reconstruct.py',\n    'reconstruction_source': Path(__file__).read_text(),\n}\n(OUT / 'evidence.json').write_text(json.dumps(result, indent=2) + '\\n')\nprint(json.dumps({'method': 'static reconstruction only', 'failures': len(findings), 'all_seven_in_uniswap_tests': True, 'skip_anchor_matches': True, 'test_executions': 0}))\n"
+}
