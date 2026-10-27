@@ -3,52 +3,49 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer — bounded final evidence and consolidated release report
+Next required actor: Lead Quantitative Finance Researcher/Engineer — attribute stopped-suite failures from retained evidence
 Next ticket: NONE
 Next ticket authorized: NONE
 
-## Current accepted state
+## Completed data work — do not repeat
 
-All 771 names are accounted for: 770 have dated contract coverage, including all 200
-closed or snapshot-missing names; GAIB is explicitly postponed, pending in the retained
-snapshot and has no bar partitions. Review529 adds confirmed-active BTC/ETH/BCH/XRP/ARB
-coverage without inventing exact launches. Its 782 episodes retain all 777 prior records
-unchanged. Earlier unconfirmed rows remain inspectable but are refused by native projection.
+Review530 accepts the final OI/funding evidence and completes the consolidated report.
+Six BTCUSDT partitions, nine authenticated raw ZIPs and twelve exact-decimal examples
+passed: OI stock/change preservation, null changes across gaps, and both funding signs.
+All eleven accepted products remain readable in Harmonic Trader; full consumer/storage/
+replay proofs are retained. No market files or source were changed for Review530.
 
-Companion: data/.cex002_contract_history/review529-20261027.json
-SHA256: 6ef47558eff2b3d3b30fbd8569dd96e0f7b7863bd8b310025cf641f7e72034a9
-Retrospective known_from: 2026-10-27T18:20:52Z; size 1,290,098 bytes.
-54 focused tests and scoped Ruff passed. Five real market files / 75,640 bytes verified
-one native and original-field callback per newly covered symbol, with earlier/crossing bars
-refused. GAIB remains excluded with explicit postponement evidence. All jobs are terminal.
-Source checks, warning/failed probes, exact commands and pins are recorded in Review529.
+Review529's companion covers 782 episodes across770 names, including every one of the
+200 closed/snapshot-missing names. GAIB is postponed/pending with no bars. Its path is
+`data/.cex002_contract_history/review529-20261027.json`, SHA256
+`6ef47558eff2b3d3b30fbd8569dd96e0f7b7863bd8b310025cf641f7e72034a9`.
+Historical fees, complete order constraints and source receipt times remain explicit gaps.
+Actual native callbacks passed; this is data delivery, not an order/fill simulation.
 
-## Next action — finish existing evidence, do not restart history recovery
+## One remaining original acceptance item
 
-Use the bounded OI source/notional and realized funding sign examples from Review525,
-then consolidate the accepted eleven-product, coverage, consumer, replay and quarantine
-records into an acceptance-item map. Review529 authorizes the reviewer to perform these
-small queries directly: at most three existing partitions per product and 12 examples;
-no broad-suite prerequisite. Preserve exact decimals, lineage and source identities.
+Final repository-wide pytest has no successful result. Its corrected-environment retry
+was stopped (pytest143, wrapper0); the retained log contains seven unnamed failures
+through51% progress and no tracebacks. Review530 embeds the entire small log durably.
+Current pytest caches mix prior runs and cannot identify those seven failures reliably.
+Do not dismiss them as DEX failures or call the full ticket accepted.
 
-Historical minimum-order thresholds can change without announcements. More notice crawling
-cannot prove a complete lifetime rulebook. Keep unknown dated constraints explicit; data
-callbacks do not certify executable order sizes, fills, margin or funding entitlement.
-Historical receipt times remain unknown and event-time playback is an explicit assumption.
-Do not silently carry current constraints backward or describe all trading rules as known.
+Next action: read-only attribution from retained run/session records and collection/
+configuration source. No broad suite or broad collection, no --last-failed on the mixed
+cache. Before any targeted execution, enumerate exact tests and a bounded command in
+reviewer authorization. No source correction until a named defect is established.
 
-The owner permits the reviewer to validate, generate companions and commit/push this repair;
-Hermes is optional. Independent senior authorship remains required for source changes.
-Do not resume the stopped broad suite, repeat full storage/readback/replay proofs, rewrite
-market files, launch a model/scored study, touch unrelated DEX work or start another ticket.
-HT-005 is accepted as a component; full CEX-002 acceptance remains unclaimed.
+The owner permits focused validation, evidence and Git publication under the repair
+override; Hermes is optional. Independent senior authorship applies to source changes.
+Do not restart data downloads, history recovery, economic examples, full storage/readback/
+replay proofs, model work or unrelated DEX work. HT-005 remains accepted; next ticket NONE.
 
 Governing documents:
 
+- research/sprint_004/530_CEX002_FINAL_DATA_RELEASE_REVIEW.md
 - research/sprint_004/529_CEX002_CONFIRMED_ACTIVE_HISTORY.md
-- research/sprint_004/cex002_confirmed_history_529.json
+- research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md
 - docs/adr/0042-confirmed-active-contract-boundaries.md
 - docs/adr/0041-cex002-dated-contract-companion.md
 - docs/adr/0040-cex002-accepted-proof-reuse.md
-- research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md
 - tickets/CEX-002.md

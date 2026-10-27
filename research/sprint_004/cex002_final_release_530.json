@@ -1,0 +1,2114 @@
+{
+  "ticket": "CEX-002",
+  "review": 530,
+  "disposition": "bounded_economic_evidence_accepted_full_ticket_not_accepted",
+  "execution_base_commit": "b22920c515d9a6e87956e060e368dba64623d1c4",
+  "consumer_commit": "ad33f1a4a3eeeb089bf0eebb51b2085e313adcf7",
+  "economic_evidence": {
+    "ticket": "CEX-002",
+    "review": 530,
+    "status": "PASS",
+    "command": ".venv/bin/python /tmp/cex002_closeout530/verify.py",
+    "selection": "BTCUSDT earliest, median-index and latest nonempty month in each accepted completion descriptor",
+    "partitions": [
+      {
+        "kind": "oi",
+        "symbol": "BTCUSDT",
+        "month": "2020-09",
+        "rows": 8636,
+        "partition": {
+          "lineage_path": ".lineage/BTCUSDT/2020-09/c978fb864fdf5730589dd2b4bd4620a7cbd79764871228e257aba86ea0f69469.json",
+          "lineage_sha256": "c978fb864fdf5730589dd2b4bd4620a7cbd79764871228e257aba86ea0f69469",
+          "native_symbol": "BTCUSDT",
+          "parquet_path": ".partitions/BTCUSDT/2020-09/af23f67045c9a58c136ad9e895184af5e16fa693d392c6d3921e9e83b87a5f2e.parquet",
+          "parquet_sha256": "af23f67045c9a58c136ad9e895184af5e16fa693d392c6d3921e9e83b87a5f2e",
+          "row_count": 8636,
+          "utc_month": "2020-09"
+        },
+        "schema": "raw_object_ref: int32 not null\nsource_row_ordinal: int64 not null\nvenue_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncreate_time: int64 not null\nmetric_symbol: dictionary<values=string, indices=int32, ordered=0> not null\nsum_open_interest: decimal128(38, 18) not null\nsum_open_interest_value: decimal128(38, 18) not null\ncount_toptrader_long_short_ratio: decimal128(38, 18)\nsum_toptrader_long_short_ratio: decimal128(38, 18)\ncount_long_short_ratio: decimal128(38, 18)\nsum_taker_long_short_vol_ratio: decimal128(38, 18)\nvenue: dictionary<values=string, indices=int32, ordered=0> not null\nnative_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncanonical_instrument_id: dictionary<values=string, indices=int32, ordered=0>\ncanonical_instrument_version_id: dictionary<values=string, indices=int32, ordered=0>\nreference_identity_state: dictionary<values=string, indices=int32, ordered=0> not null\nprevious_sum_open_interest: decimal128(38, 18)\nopen_interest_change: decimal128(38, 18)\nopen_interest_value_change: decimal128(38, 18)\nchange_interval_seconds: int64\ngap_break_status: dictionary<values=string, indices=int32, ordered=0> not null",
+        "gap_breaks_in_partition": 1
+      },
+      {
+        "kind": "oi",
+        "symbol": "BTCUSDT",
+        "month": "2023-09",
+        "rows": 8637,
+        "partition": {
+          "lineage_path": ".lineage/BTCUSDT/2023-09/cff7e07875405f8d2bd5ff405bd71bc343100e390da9451d98b54835e2649f66.json",
+          "lineage_sha256": "cff7e07875405f8d2bd5ff405bd71bc343100e390da9451d98b54835e2649f66",
+          "native_symbol": "BTCUSDT",
+          "parquet_path": ".partitions/BTCUSDT/2023-09/58a7e55c7b953e19ed2e0143bdc6ee59f6b6243323e4e82bdcadb0f828d0f365.parquet",
+          "parquet_sha256": "58a7e55c7b953e19ed2e0143bdc6ee59f6b6243323e4e82bdcadb0f828d0f365",
+          "row_count": 8637,
+          "utc_month": "2023-09"
+        },
+        "schema": "raw_object_ref: int32 not null\nsource_row_ordinal: int64 not null\nvenue_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncreate_time: int64 not null\nmetric_symbol: dictionary<values=string, indices=int32, ordered=0> not null\nsum_open_interest: decimal128(38, 18) not null\nsum_open_interest_value: decimal128(38, 18) not null\ncount_toptrader_long_short_ratio: decimal128(38, 18)\nsum_toptrader_long_short_ratio: decimal128(38, 18)\ncount_long_short_ratio: decimal128(38, 18)\nsum_taker_long_short_vol_ratio: decimal128(38, 18)\nvenue: dictionary<values=string, indices=int32, ordered=0> not null\nnative_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncanonical_instrument_id: dictionary<values=string, indices=int32, ordered=0>\ncanonical_instrument_version_id: dictionary<values=string, indices=int32, ordered=0>\nreference_identity_state: dictionary<values=string, indices=int32, ordered=0> not null\nprevious_sum_open_interest: decimal128(38, 18)\nopen_interest_change: decimal128(38, 18)\nopen_interest_value_change: decimal128(38, 18)\nchange_interval_seconds: int64\ngap_break_status: dictionary<values=string, indices=int32, ordered=0> not null",
+        "gap_breaks_in_partition": 1
+      },
+      {
+        "kind": "oi",
+        "symbol": "BTCUSDT",
+        "month": "2026-08",
+        "rows": 5181,
+        "partition": {
+          "lineage_path": ".lineage/BTCUSDT/2026-08/77ff3e54f65d956d4d2add9aa9134f33ca4a2f8c933cd345c4580b20a36f56f3.json",
+          "lineage_sha256": "77ff3e54f65d956d4d2add9aa9134f33ca4a2f8c933cd345c4580b20a36f56f3",
+          "native_symbol": "BTCUSDT",
+          "parquet_path": ".partitions/BTCUSDT/2026-08/fdb8297f1a3e8b68caf5d06e6a718462d1e886afcb5ac8641c61c49d551339ae.parquet",
+          "parquet_sha256": "fdb8297f1a3e8b68caf5d06e6a718462d1e886afcb5ac8641c61c49d551339ae",
+          "row_count": 5181,
+          "utc_month": "2026-08"
+        },
+        "schema": "raw_object_ref: int32 not null\nsource_row_ordinal: int64 not null\nvenue_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncreate_time: int64 not null\nmetric_symbol: dictionary<values=string, indices=int32, ordered=0> not null\nsum_open_interest: decimal128(38, 18) not null\nsum_open_interest_value: decimal128(38, 18) not null\ncount_toptrader_long_short_ratio: decimal128(38, 18)\nsum_toptrader_long_short_ratio: decimal128(38, 18)\ncount_long_short_ratio: decimal128(38, 18)\nsum_taker_long_short_vol_ratio: decimal128(38, 18)\nvenue: dictionary<values=string, indices=int32, ordered=0> not null\nnative_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncanonical_instrument_id: dictionary<values=string, indices=int32, ordered=0>\ncanonical_instrument_version_id: dictionary<values=string, indices=int32, ordered=0>\nreference_identity_state: dictionary<values=string, indices=int32, ordered=0> not null\nprevious_sum_open_interest: decimal128(38, 18)\nopen_interest_change: decimal128(38, 18)\nopen_interest_value_change: decimal128(38, 18)\nchange_interval_seconds: int64\ngap_break_status: dictionary<values=string, indices=int32, ordered=0> not null",
+        "gap_breaks_in_partition": 1
+      },
+      {
+        "kind": "funding",
+        "symbol": "BTCUSDT",
+        "month": "2020-01",
+        "rows": 93,
+        "partition": {
+          "collapsed_identical_row_count": 0,
+          "lineage_path": ".lineage/BTCUSDT/2020-01/61964d9c57e0d8052613b8d946de61a1623a755266ca035b437f2eae384dd2ee.json",
+          "lineage_sha256": "61964d9c57e0d8052613b8d946de61a1623a755266ca035b437f2eae384dd2ee",
+          "native_symbol": "BTCUSDT",
+          "parquet_path": ".partitions/BTCUSDT/2020-01/e6214c02c75c69f5aadf1ccdd6fc3b40ef202d571e49869086770981152f2b47.parquet",
+          "parquet_sha256": "e6214c02c75c69f5aadf1ccdd6fc3b40ef202d571e49869086770981152f2b47",
+          "physical_row_count": 93,
+          "row_count": 93,
+          "utc_month": "2020-01"
+        },
+        "schema": "raw_object_ref: int32 not null\nsource_row_ordinal: int64 not null\nvenue_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncalc_time: int64 not null\nfunding_interval_hours: int64 not null\nlast_funding_rate: decimal128(38, 18) not null\nvenue: dictionary<values=string, indices=int32, ordered=0> not null\nnative_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncanonical_instrument_id: dictionary<values=string, indices=int32, ordered=0>\ncanonical_instrument_version_id: dictionary<values=string, indices=int32, ordered=0>\nreference_identity_state: dictionary<values=string, indices=int32, ordered=0> not null\nlong_cashflow_rate: decimal128(38, 18) not null\nshort_cashflow_rate: decimal128(38, 18) not null\ncashflow_sign_convention: dictionary<values=string, indices=int32, ordered=0> not null",
+        "observed_signs": [
+          "negative",
+          "positive"
+        ]
+      },
+      {
+        "kind": "funding",
+        "symbol": "BTCUSDT",
+        "month": "2023-04",
+        "rows": 90,
+        "partition": {
+          "collapsed_identical_row_count": 0,
+          "lineage_path": ".lineage/BTCUSDT/2023-04/de0834f86d78ee156f6bb3d2b65a1d1e5decc52538dcc1e742ae059adfac723f.json",
+          "lineage_sha256": "de0834f86d78ee156f6bb3d2b65a1d1e5decc52538dcc1e742ae059adfac723f",
+          "native_symbol": "BTCUSDT",
+          "parquet_path": ".partitions/BTCUSDT/2023-04/0075cab01b382422645d29308af06244500310e141175b0eb4b65ace0851e66f.parquet",
+          "parquet_sha256": "0075cab01b382422645d29308af06244500310e141175b0eb4b65ace0851e66f",
+          "physical_row_count": 90,
+          "row_count": 90,
+          "utc_month": "2023-04"
+        },
+        "schema": "raw_object_ref: int32 not null\nsource_row_ordinal: int64 not null\nvenue_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncalc_time: int64 not null\nfunding_interval_hours: int64 not null\nlast_funding_rate: decimal128(38, 18) not null\nvenue: dictionary<values=string, indices=int32, ordered=0> not null\nnative_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncanonical_instrument_id: dictionary<values=string, indices=int32, ordered=0>\ncanonical_instrument_version_id: dictionary<values=string, indices=int32, ordered=0>\nreference_identity_state: dictionary<values=string, indices=int32, ordered=0> not null\nlong_cashflow_rate: decimal128(38, 18) not null\nshort_cashflow_rate: decimal128(38, 18) not null\ncashflow_sign_convention: dictionary<values=string, indices=int32, ordered=0> not null",
+        "observed_signs": [
+          "negative",
+          "positive"
+        ]
+      },
+      {
+        "kind": "funding",
+        "symbol": "BTCUSDT",
+        "month": "2026-07",
+        "rows": 93,
+        "partition": {
+          "collapsed_identical_row_count": 0,
+          "lineage_path": ".lineage/BTCUSDT/2026-07/2fdee26d80dc0d445b865c9dda4cf8e4d23d55cbd79a51ff43a049a241336482.json",
+          "lineage_sha256": "2fdee26d80dc0d445b865c9dda4cf8e4d23d55cbd79a51ff43a049a241336482",
+          "native_symbol": "BTCUSDT",
+          "parquet_path": ".partitions/BTCUSDT/2026-07/a08ecbcb21f141b81465d99b72afa071f497becc645eb4c872b873817086e585.parquet",
+          "parquet_sha256": "a08ecbcb21f141b81465d99b72afa071f497becc645eb4c872b873817086e585",
+          "physical_row_count": 93,
+          "row_count": 93,
+          "utc_month": "2026-07"
+        },
+        "schema": "raw_object_ref: int32 not null\nsource_row_ordinal: int64 not null\nvenue_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncalc_time: int64 not null\nfunding_interval_hours: int64 not null\nlast_funding_rate: decimal128(38, 18) not null\nvenue: dictionary<values=string, indices=int32, ordered=0> not null\nnative_symbol: dictionary<values=string, indices=int32, ordered=0> not null\ncanonical_instrument_id: dictionary<values=string, indices=int32, ordered=0>\ncanonical_instrument_version_id: dictionary<values=string, indices=int32, ordered=0>\nreference_identity_state: dictionary<values=string, indices=int32, ordered=0> not null\nlong_cashflow_rate: decimal128(38, 18) not null\nshort_cashflow_rate: decimal128(38, 18) not null\ncashflow_sign_convention: dictionary<values=string, indices=int32, ordered=0> not null",
+        "observed_signs": [
+          "negative",
+          "positive"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "kind": "oi_contiguous",
+        "symbol": "BTCUSDT",
+        "month": "2020-09",
+        "before_time": 1598918400000,
+        "after_time": 1598918700000,
+        "source_before": {
+          "source_row_ordinal": 0,
+          "raw_fields": {
+            "create_time": "2020-09-01 00:00:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "39080.23100000",
+            "sum_open_interest_value": "456144339.23360443",
+            "count_toptrader_long_short_ratio": "1.17547937",
+            "sum_toptrader_long_short_ratio": "1.23012681",
+            "count_long_short_ratio": "1.35731217",
+            "sum_taker_long_short_vol_ratio": "0.78373373"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-01.zip",
+            "source_sha256": "9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3",
+            "raw_path": "data/cex002_qualify/gate2/content/9a/9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3",
+            "zip_member": "BTCUSDT-metrics-2020-09-01.csv",
+            "uncompressed_bytes": 61235,
+            "sidecar_sha256": "fa3aa895c4483e47bf7904c712dbaa49e3996212fe7f279511b2317413048a94",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T09:50:00.295766+00:00"
+          }
+        },
+        "source_after": {
+          "source_row_ordinal": 2,
+          "raw_fields": {
+            "create_time": "2020-09-01 00:05:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "39106.41300000",
+            "sum_open_interest_value": "455693833.60853225",
+            "count_toptrader_long_short_ratio": "1.17905012",
+            "sum_toptrader_long_short_ratio": "1.22928510",
+            "count_long_short_ratio": "1.35924435",
+            "sum_taker_long_short_vol_ratio": "0.85063183"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-01.zip",
+            "source_sha256": "9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3",
+            "raw_path": "data/cex002_qualify/gate2/content/9a/9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3",
+            "zip_member": "BTCUSDT-metrics-2020-09-01.csv",
+            "uncompressed_bytes": 61235,
+            "sidecar_sha256": "fa3aa895c4483e47bf7904c712dbaa49e3996212fe7f279511b2317413048a94",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T09:50:00.295766+00:00"
+          }
+        },
+        "normalized_before": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1598918400000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "39080.231000000000000000",
+          "sum_open_interest_value": "456144339.233604430000000000",
+          "count_toptrader_long_short_ratio": "1.175479370000000000",
+          "sum_toptrader_long_short_ratio": "1.230126810000000000",
+          "count_long_short_ratio": "1.357312170000000000",
+          "sum_taker_long_short_vol_ratio": "0.783733730000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": null,
+          "open_interest_change": null,
+          "open_interest_value_change": null,
+          "change_interval_seconds": null,
+          "gap_break_status": "first_observation"
+        },
+        "normalized_after": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 2,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1598918700000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "39106.413000000000000000",
+          "sum_open_interest_value": "455693833.608532250000000000",
+          "count_toptrader_long_short_ratio": "1.179050120000000000",
+          "sum_toptrader_long_short_ratio": "1.229285100000000000",
+          "count_long_short_ratio": "1.359244350000000000",
+          "sum_taker_long_short_vol_ratio": "0.850631830000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": "39080.231000000000000000",
+          "open_interest_change": "26.182000000000000000",
+          "open_interest_value_change": "-450505.625072180000000000",
+          "change_interval_seconds": 300,
+          "gap_break_status": "contiguous"
+        },
+        "equations": {
+          "open_interest_change": {
+            "source_before": "39080.23100000",
+            "source_after": "39106.41300000",
+            "exact_fraction_difference": "13091/500",
+            "normalized_difference": "26.182000000000000000"
+          },
+          "open_interest_value_change": {
+            "source_before": "456144339.23360443",
+            "source_after": "455693833.60853225",
+            "exact_fraction_difference": "-22525281253609/50000000",
+            "normalized_difference": "-450505.625072180000000000"
+          }
+        },
+        "units": {
+          "sum_open_interest": "BTC base-asset quantity",
+          "sum_open_interest_value": "provider-reported USDT quote notional"
+        }
+      },
+      {
+        "kind": "oi_gap_break",
+        "month": "2020-09",
+        "previous_time": 1601205000000,
+        "time": 1601206500000,
+        "elapsed_seconds": 1500,
+        "raw": {
+          "source_row_ordinal": 270,
+          "raw_fields": {
+            "create_time": "2020-09-27 11:35:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "37232.36500000",
+            "sum_open_interest_value": "396577303.77503792",
+            "count_toptrader_long_short_ratio": "0.84792907",
+            "sum_toptrader_long_short_ratio": "1.13826893",
+            "count_long_short_ratio": "0.99687500",
+            "sum_taker_long_short_vol_ratio": "0E-8"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-27.zip",
+            "source_sha256": "bea48d30c207e561591e380e3bc8fec3fb2690762a4d246a360b878c97e2a0c7",
+            "raw_path": "data/cex002_qualify/gate2/content/be/bea48d30c207e561591e380e3bc8fec3fb2690762a4d246a360b878c97e2a0c7",
+            "zip_member": "BTCUSDT-metrics-2020-09-27.csv",
+            "uncompressed_bytes": 60335,
+            "sidecar_sha256": "c5532d064b5fb6ae39675696e1822f7f53eb0d3a96a8b35bc55a11231d2831b4",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T09:50:08.509356+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 26,
+          "source_row_ordinal": 270,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1601206500000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "37232.365000000000000000",
+          "sum_open_interest_value": "396577303.775037920000000000",
+          "count_toptrader_long_short_ratio": "0.847929070000000000",
+          "sum_toptrader_long_short_ratio": "1.138268930000000000",
+          "count_long_short_ratio": "0.996875000000000000",
+          "sum_taker_long_short_vol_ratio": "0E-18",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": null,
+          "open_interest_change": null,
+          "open_interest_value_change": null,
+          "change_interval_seconds": 1500,
+          "gap_break_status": "gap_break"
+        }
+      },
+      {
+        "kind": "oi_contiguous",
+        "symbol": "BTCUSDT",
+        "month": "2023-09",
+        "before_time": 1693526400000,
+        "after_time": 1693526700000,
+        "source_before": {
+          "source_row_ordinal": 0,
+          "raw_fields": {
+            "create_time": "2023-09-01 00:00:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "82466.00900000",
+            "sum_open_interest_value": "2138186927.95290000",
+            "count_toptrader_long_short_ratio": "2.22125897",
+            "sum_toptrader_long_short_ratio": "1.24761973",
+            "count_long_short_ratio": "2.24108212",
+            "sum_taker_long_short_vol_ratio": "1.04940279"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2023-09-01.zip",
+            "source_sha256": "4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54",
+            "raw_path": "data/cex002_qualify/gate2/content/4f/4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54",
+            "zip_member": "BTCUSDT-metrics-2023-09-01.csv",
+            "uncompressed_bytes": 30995,
+            "sidecar_sha256": "84de85ee79e72ed8d095cfb183cad9fb4f50707676cdb531b00103c9ef3a0fcf",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T09:55:05.161848+00:00"
+          }
+        },
+        "source_after": {
+          "source_row_ordinal": 1,
+          "raw_fields": {
+            "create_time": "2023-09-01 00:05:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "82712.89700000",
+            "sum_open_interest_value": "2146945582.27020000",
+            "count_toptrader_long_short_ratio": "2.21375358",
+            "sum_toptrader_long_short_ratio": "1.25114857",
+            "count_long_short_ratio": "2.24052175",
+            "sum_taker_long_short_vol_ratio": "2.64119405"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2023-09-01.zip",
+            "source_sha256": "4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54",
+            "raw_path": "data/cex002_qualify/gate2/content/4f/4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54",
+            "zip_member": "BTCUSDT-metrics-2023-09-01.csv",
+            "uncompressed_bytes": 30995,
+            "sidecar_sha256": "84de85ee79e72ed8d095cfb183cad9fb4f50707676cdb531b00103c9ef3a0fcf",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T09:55:05.161848+00:00"
+          }
+        },
+        "normalized_before": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1693526400000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "82466.009000000000000000",
+          "sum_open_interest_value": "2138186927.952900000000000000",
+          "count_toptrader_long_short_ratio": "2.221258970000000000",
+          "sum_toptrader_long_short_ratio": "1.247619730000000000",
+          "count_long_short_ratio": "2.241082120000000000",
+          "sum_taker_long_short_vol_ratio": "1.049402790000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": "82362.207000000000000000",
+          "open_interest_change": "103.802000000000000000",
+          "open_interest_value_change": "3207676.292209500000000000",
+          "change_interval_seconds": 300,
+          "gap_break_status": "contiguous"
+        },
+        "normalized_after": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1693526700000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "82712.897000000000000000",
+          "sum_open_interest_value": "2146945582.270200000000000000",
+          "count_toptrader_long_short_ratio": "2.213753580000000000",
+          "sum_toptrader_long_short_ratio": "1.251148570000000000",
+          "count_long_short_ratio": "2.240521750000000000",
+          "sum_taker_long_short_vol_ratio": "2.641194050000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": "82466.009000000000000000",
+          "open_interest_change": "246.888000000000000000",
+          "open_interest_value_change": "8758654.317300000000000000",
+          "change_interval_seconds": 300,
+          "gap_break_status": "contiguous"
+        },
+        "equations": {
+          "open_interest_change": {
+            "source_before": "82466.00900000",
+            "source_after": "82712.89700000",
+            "exact_fraction_difference": "30861/125",
+            "normalized_difference": "246.888000000000000000"
+          },
+          "open_interest_value_change": {
+            "source_before": "2138186927.95290000",
+            "source_after": "2146945582.27020000",
+            "exact_fraction_difference": "87586543173/10000",
+            "normalized_difference": "8758654.317300000000000000"
+          }
+        },
+        "units": {
+          "sum_open_interest": "BTC base-asset quantity",
+          "sum_open_interest_value": "provider-reported USDT quote notional"
+        }
+      },
+      {
+        "kind": "oi_gap_break",
+        "month": "2023-09",
+        "previous_time": 1694507700000,
+        "time": 1694508900000,
+        "elapsed_seconds": 1200,
+        "raw": {
+          "source_row_ordinal": 104,
+          "raw_fields": {
+            "create_time": "2023-09-12 08:55:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "89358.98900000",
+            "sum_open_interest_value": "2302485712.61948700",
+            "count_toptrader_long_short_ratio": "1.70823979",
+            "sum_toptrader_long_short_ratio": "1.06208564",
+            "count_long_short_ratio": "1.90178624",
+            "sum_taker_long_short_vol_ratio": "0.56119880"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2023-09-12.zip",
+            "source_sha256": "23067f398dbf0812035f2f06d9871c1aceed7eaa9165181279e75709e56c833d",
+            "raw_path": "data/cex002_qualify/gate2/content/23/23067f398dbf0812035f2f06d9871c1aceed7eaa9165181279e75709e56c833d",
+            "zip_member": "BTCUSDT-metrics-2023-09-12.csv",
+            "uncompressed_bytes": 30674,
+            "sidecar_sha256": "d5d17fb9c028d5d80adee7fd3ebd9b1a5818c4a2b93d9bf28cafeb4d281751ed",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T09:55:08.028542+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 11,
+          "source_row_ordinal": 104,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1694508900000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "89358.989000000000000000",
+          "sum_open_interest_value": "2302485712.619487000000000000",
+          "count_toptrader_long_short_ratio": "1.708239790000000000",
+          "sum_toptrader_long_short_ratio": "1.062085640000000000",
+          "count_long_short_ratio": "1.901786240000000000",
+          "sum_taker_long_short_vol_ratio": "0.561198800000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": null,
+          "open_interest_change": null,
+          "open_interest_value_change": null,
+          "change_interval_seconds": 1200,
+          "gap_break_status": "gap_break"
+        }
+      },
+      {
+        "kind": "oi_contiguous",
+        "symbol": "BTCUSDT",
+        "month": "2026-08",
+        "before_time": 1785542400000,
+        "after_time": 1785542700000,
+        "source_before": {
+          "source_row_ordinal": 0,
+          "raw_fields": {
+            "create_time": "2026-08-01 00:00:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "109489.8260000000000000",
+            "sum_open_interest_value": "6890085260.3540000000000000",
+            "count_toptrader_long_short_ratio": "2.36265734",
+            "sum_toptrader_long_short_ratio": "1.61198300",
+            "count_long_short_ratio": "2.20090658",
+            "sum_taker_long_short_vol_ratio": "1.79177500"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-08-01.zip",
+            "source_sha256": "1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec",
+            "raw_path": "data/cex002_qualify/gate2/content/1c/1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec",
+            "zip_member": "BTCUSDT-metrics-2026-08-01.csv",
+            "uncompressed_bytes": 35891,
+            "sidecar_sha256": "2a7319cdf4da19de1693fc8b529ea237f669b4fa2f1f136a50012227368f31f8",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T10:00:04.753787+00:00"
+          }
+        },
+        "source_after": {
+          "source_row_ordinal": 1,
+          "raw_fields": {
+            "create_time": "2026-08-01 00:05:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "109479.9130000000000000",
+            "sum_open_interest_value": "6889214072.1397540000000000",
+            "count_toptrader_long_short_ratio": "2.36213405",
+            "sum_toptrader_long_short_ratio": "1.61241100",
+            "count_long_short_ratio": "2.20111254",
+            "sum_taker_long_short_vol_ratio": "0.85816500"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-08-01.zip",
+            "source_sha256": "1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec",
+            "raw_path": "data/cex002_qualify/gate2/content/1c/1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec",
+            "zip_member": "BTCUSDT-metrics-2026-08-01.csv",
+            "uncompressed_bytes": 35891,
+            "sidecar_sha256": "2a7319cdf4da19de1693fc8b529ea237f669b4fa2f1f136a50012227368f31f8",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T10:00:04.753787+00:00"
+          }
+        },
+        "normalized_before": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1785542400000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "109489.826000000000000000",
+          "sum_open_interest_value": "6890085260.354000000000000000",
+          "count_toptrader_long_short_ratio": "2.362657340000000000",
+          "sum_toptrader_long_short_ratio": "1.611983000000000000",
+          "count_long_short_ratio": "2.200906580000000000",
+          "sum_taker_long_short_vol_ratio": "1.791775000000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": "109523.589000000000000000",
+          "open_interest_change": "-33.763000000000000000",
+          "open_interest_value_change": "5454360.531800000000000000",
+          "change_interval_seconds": 300,
+          "gap_break_status": "contiguous"
+        },
+        "normalized_after": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1785542700000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "109479.913000000000000000",
+          "sum_open_interest_value": "6889214072.139754000000000000",
+          "count_toptrader_long_short_ratio": "2.362134050000000000",
+          "sum_toptrader_long_short_ratio": "1.612411000000000000",
+          "count_long_short_ratio": "2.201112540000000000",
+          "sum_taker_long_short_vol_ratio": "0.858165000000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": "109489.826000000000000000",
+          "open_interest_change": "-9.913000000000000000",
+          "open_interest_value_change": "-871188.214246000000000000",
+          "change_interval_seconds": 300,
+          "gap_break_status": "contiguous"
+        },
+        "equations": {
+          "open_interest_change": {
+            "source_before": "109489.8260000000000000",
+            "source_after": "109479.9130000000000000",
+            "exact_fraction_difference": "-9913/1000",
+            "normalized_difference": "-9.913000000000000000"
+          },
+          "open_interest_value_change": {
+            "source_before": "6890085260.3540000000000000",
+            "source_after": "6889214072.1397540000000000",
+            "exact_fraction_difference": "-435594107123/500000",
+            "normalized_difference": "-871188.214246000000000000"
+          }
+        },
+        "units": {
+          "sum_open_interest": "BTC base-asset quantity",
+          "sum_open_interest_value": "provider-reported USDT quote notional"
+        }
+      },
+      {
+        "kind": "oi_gap_break",
+        "month": "2026-08",
+        "previous_time": 1786534800000,
+        "time": 1786536000000,
+        "elapsed_seconds": 1200,
+        "raw": {
+          "source_row_ordinal": 40,
+          "raw_fields": {
+            "create_time": "2026-08-12 12:00:00",
+            "symbol": "BTCUSDT",
+            "sum_open_interest": "107861.6520000000000000",
+            "sum_open_interest_value": "6929122036.7142330000000000",
+            "count_toptrader_long_short_ratio": "1.70692417",
+            "sum_toptrader_long_short_ratio": "1.61172900",
+            "count_long_short_ratio": "1.63779340",
+            "sum_taker_long_short_vol_ratio": "1.04691400"
+          },
+          "source": {
+            "source_key": "data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-08-12.zip",
+            "source_sha256": "be6a2e6fb8a31c7d5517a40a639681668bc1432808bf17cf53235d7e6e3e5515",
+            "raw_path": "data/cex002_qualify/gate2/content/be/be6a2e6fb8a31c7d5517a40a639681668bc1432808bf17cf53235d7e6e3e5515",
+            "zip_member": "BTCUSDT-metrics-2026-08-12.csv",
+            "uncompressed_bytes": 35519,
+            "sidecar_sha256": "7ffaa2639bcfbde391813be123edbefc6e6922afacbf97ba36a4f7098252c85f",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-29T10:00:07.160332+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 11,
+          "source_row_ordinal": 40,
+          "venue_symbol": "BTCUSDT",
+          "create_time": 1786536000000,
+          "metric_symbol": "BTCUSDT",
+          "sum_open_interest": "107861.652000000000000000",
+          "sum_open_interest_value": "6929122036.714233000000000000",
+          "count_toptrader_long_short_ratio": "1.706924170000000000",
+          "sum_toptrader_long_short_ratio": "1.611729000000000000",
+          "count_long_short_ratio": "1.637793400000000000",
+          "sum_taker_long_short_vol_ratio": "1.046914000000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "previous_sum_open_interest": null,
+          "open_interest_change": null,
+          "open_interest_value_change": null,
+          "change_interval_seconds": 1200,
+          "gap_break_status": "gap_break"
+        }
+      },
+      {
+        "kind": "funding_sign",
+        "month": "2020-01",
+        "sign": "negative",
+        "raw": {
+          "source_row_ordinal": 0,
+          "raw_fields": {
+            "calc_time": "1577836800000",
+            "funding_interval_hours": "8",
+            "last_funding_rate": "-0.00012359"
+          },
+          "source": {
+            "source_key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip",
+            "source_sha256": "7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+            "raw_path": "data/cex002_qualify/gate2/content/7f/7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+            "zip_member": "BTCUSDT-fundingRate-2020-01.csv",
+            "uncompressed_bytes": 2563,
+            "sidecar_sha256": "3274779c977a6d657722bac4cc9f965bb774c5ba38aad391eb47ef183ae46120",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-31T09:42:01.568464+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "calc_time": 1577836800000,
+          "funding_interval_hours": 8,
+          "last_funding_rate": "-0.000123590000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "long_cashflow_rate": "0.000123590000000000",
+          "short_cashflow_rate": "-0.000123590000000000",
+          "cashflow_sign_convention": "long_pays_short_when_rate_positive"
+        },
+        "equations": {
+          "long_equals_negative_source_rate": true,
+          "short_equals_source_rate": true,
+          "sum_fraction": "0"
+        },
+        "units": "dimensionless rate per reported settlement event; no position or payment entitlement inferred"
+      },
+      {
+        "kind": "funding_sign",
+        "month": "2020-01",
+        "sign": "positive",
+        "raw": {
+          "source_row_ordinal": 3,
+          "raw_fields": {
+            "calc_time": "1577923200002",
+            "funding_interval_hours": "8",
+            "last_funding_rate": "0.00003662"
+          },
+          "source": {
+            "source_key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip",
+            "source_sha256": "7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+            "raw_path": "data/cex002_qualify/gate2/content/7f/7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+            "zip_member": "BTCUSDT-fundingRate-2020-01.csv",
+            "uncompressed_bytes": 2563,
+            "sidecar_sha256": "3274779c977a6d657722bac4cc9f965bb774c5ba38aad391eb47ef183ae46120",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-31T09:42:01.568464+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 3,
+          "venue_symbol": "BTCUSDT",
+          "calc_time": 1577923200002,
+          "funding_interval_hours": 8,
+          "last_funding_rate": "0.000036620000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "long_cashflow_rate": "-0.000036620000000000",
+          "short_cashflow_rate": "0.000036620000000000",
+          "cashflow_sign_convention": "long_pays_short_when_rate_positive"
+        },
+        "equations": {
+          "long_equals_negative_source_rate": true,
+          "short_equals_source_rate": true,
+          "sum_fraction": "0"
+        },
+        "units": "dimensionless rate per reported settlement event; no position or payment entitlement inferred"
+      },
+      {
+        "kind": "funding_sign",
+        "month": "2023-04",
+        "sign": "negative",
+        "raw": {
+          "source_row_ordinal": 7,
+          "raw_fields": {
+            "calc_time": "1680508800013",
+            "funding_interval_hours": "8",
+            "last_funding_rate": "-0.00001240"
+          },
+          "source": {
+            "source_key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2023-04.zip",
+            "source_sha256": "2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+            "raw_path": "data/cex002_qualify/gate2/content/29/2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+            "zip_member": "BTCUSDT-fundingRate-2023-04.csv",
+            "uncompressed_bytes": 2485,
+            "sidecar_sha256": "6ea500c3718cc704661b54739c6325af6cf76f566363aa1d044731dcd8e9973e",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-31T09:42:12.614806+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 7,
+          "venue_symbol": "BTCUSDT",
+          "calc_time": 1680508800013,
+          "funding_interval_hours": 8,
+          "last_funding_rate": "-0.000012400000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "long_cashflow_rate": "0.000012400000000000",
+          "short_cashflow_rate": "-0.000012400000000000",
+          "cashflow_sign_convention": "long_pays_short_when_rate_positive"
+        },
+        "equations": {
+          "long_equals_negative_source_rate": true,
+          "short_equals_source_rate": true,
+          "sum_fraction": "0"
+        },
+        "units": "dimensionless rate per reported settlement event; no position or payment entitlement inferred"
+      },
+      {
+        "kind": "funding_sign",
+        "month": "2023-04",
+        "sign": "positive",
+        "raw": {
+          "source_row_ordinal": 0,
+          "raw_fields": {
+            "calc_time": "1680307200000",
+            "funding_interval_hours": "8",
+            "last_funding_rate": "0.00010000"
+          },
+          "source": {
+            "source_key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2023-04.zip",
+            "source_sha256": "2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+            "raw_path": "data/cex002_qualify/gate2/content/29/2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+            "zip_member": "BTCUSDT-fundingRate-2023-04.csv",
+            "uncompressed_bytes": 2485,
+            "sidecar_sha256": "6ea500c3718cc704661b54739c6325af6cf76f566363aa1d044731dcd8e9973e",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-31T09:42:12.614806+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "calc_time": 1680307200000,
+          "funding_interval_hours": 8,
+          "last_funding_rate": "0.000100000000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "long_cashflow_rate": "-0.000100000000000000",
+          "short_cashflow_rate": "0.000100000000000000",
+          "cashflow_sign_convention": "long_pays_short_when_rate_positive"
+        },
+        "equations": {
+          "long_equals_negative_source_rate": true,
+          "short_equals_source_rate": true,
+          "sum_fraction": "0"
+        },
+        "units": "dimensionless rate per reported settlement event; no position or payment entitlement inferred"
+      },
+      {
+        "kind": "funding_sign",
+        "month": "2026-07",
+        "sign": "negative",
+        "raw": {
+          "source_row_ordinal": 66,
+          "raw_fields": {
+            "calc_time": "1784764800000",
+            "funding_interval_hours": "8",
+            "last_funding_rate": "-0.00000343"
+          },
+          "source": {
+            "source_key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-07.zip",
+            "source_sha256": "e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+            "raw_path": "data/cex002_qualify/gate2/content/e3/e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+            "zip_member": "BTCUSDT-fundingRate-2026-07.csv",
+            "uncompressed_bytes": 2563,
+            "sidecar_sha256": "50e4e9f408bff433a4b2eb9bbc37ac816a1112dd6d851689ffd48f3014580ff6",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-31T09:42:23.459902+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 66,
+          "venue_symbol": "BTCUSDT",
+          "calc_time": 1784764800000,
+          "funding_interval_hours": 8,
+          "last_funding_rate": "-0.000003430000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "long_cashflow_rate": "0.000003430000000000",
+          "short_cashflow_rate": "-0.000003430000000000",
+          "cashflow_sign_convention": "long_pays_short_when_rate_positive"
+        },
+        "equations": {
+          "long_equals_negative_source_rate": true,
+          "short_equals_source_rate": true,
+          "sum_fraction": "0"
+        },
+        "units": "dimensionless rate per reported settlement event; no position or payment entitlement inferred"
+      },
+      {
+        "kind": "funding_sign",
+        "month": "2026-07",
+        "sign": "positive",
+        "raw": {
+          "source_row_ordinal": 0,
+          "raw_fields": {
+            "calc_time": "1782864000000",
+            "funding_interval_hours": "8",
+            "last_funding_rate": "0.00005532"
+          },
+          "source": {
+            "source_key": "data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-07.zip",
+            "source_sha256": "e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+            "raw_path": "data/cex002_qualify/gate2/content/e3/e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+            "zip_member": "BTCUSDT-fundingRate-2026-07.csv",
+            "uncompressed_bytes": 2563,
+            "sidecar_sha256": "50e4e9f408bff433a4b2eb9bbc37ac816a1112dd6d851689ffd48f3014580ff6",
+            "source_available_at": null,
+            "retrieval_time": "2026-08-31T09:42:23.459902+00:00"
+          }
+        },
+        "normalized": {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "calc_time": 1782864000000,
+          "funding_interval_hours": 8,
+          "last_funding_rate": "0.000055320000000000",
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created",
+          "long_cashflow_rate": "-0.000055320000000000",
+          "short_cashflow_rate": "0.000055320000000000",
+          "cashflow_sign_convention": "long_pays_short_when_rate_positive"
+        },
+        "equations": {
+          "long_equals_negative_source_rate": true,
+          "short_equals_source_rate": true,
+          "sum_fraction": "0"
+        },
+        "units": "dimensionless rate per reported settlement event; no position or payment entitlement inferred"
+      }
+    ],
+    "authenticated_files": [
+      {
+        "path": "data/.cex002_harmonic_bundle/.publication/5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d.json",
+        "sha256": "5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d",
+        "bytes": 7502
+      },
+      {
+        "path": "data/.cex002_harmonic_bundle/.manifests/f7e759ed20781ef74b001805a93753a59415709992a91ec5b8c8d1addaaec95b.json",
+        "sha256": "c828699f30544876e7f3369708b298e6b21b62289adff68bfee3cca8e9e538e6",
+        "bytes": 21288934
+      },
+      {
+        "path": "data/.cex002_harmonic_bundle/.manifests/fc70d0e896b6aff7c1ba9a2c8b03e4fbd08925f3b2eeb9dde1e2b7abe5034698.json",
+        "sha256": "45aa5e721f131b89147044ada90c2a538388407d32edfa9c3c30cacdb019c34a",
+        "bytes": 22581344
+      },
+      {
+        "path": "data/.cex002_open_interest_5m/.partitions/BTCUSDT/2020-09/af23f67045c9a58c136ad9e895184af5e16fa693d392c6d3921e9e83b87a5f2e.parquet",
+        "sha256": "af23f67045c9a58c136ad9e895184af5e16fa693d392c6d3921e9e83b87a5f2e",
+        "bytes": 816481
+      },
+      {
+        "path": "data/.cex002_open_interest_5m/.lineage/BTCUSDT/2020-09/c978fb864fdf5730589dd2b4bd4620a7cbd79764871228e257aba86ea0f69469.json",
+        "sha256": "c978fb864fdf5730589dd2b4bd4620a7cbd79764871228e257aba86ea0f69469",
+        "bytes": 2849978
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/9a/9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3",
+        "sha256": "9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3",
+        "bytes": 12191
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/fa/fa3aa895c4483e47bf7904c712dbaa49e3996212fe7f279511b2317413048a94",
+        "sha256": "fa3aa895c4483e47bf7904c712dbaa49e3996212fe7f279511b2317413048a94",
+        "bytes": 97
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/be/bea48d30c207e561591e380e3bc8fec3fb2690762a4d246a360b878c97e2a0c7",
+        "sha256": "bea48d30c207e561591e380e3bc8fec3fb2690762a4d246a360b878c97e2a0c7",
+        "bytes": 11870
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/c5/c5532d064b5fb6ae39675696e1822f7f53eb0d3a96a8b35bc55a11231d2831b4",
+        "sha256": "c5532d064b5fb6ae39675696e1822f7f53eb0d3a96a8b35bc55a11231d2831b4",
+        "bytes": 97
+      },
+      {
+        "path": "data/.cex002_open_interest_5m/.partitions/BTCUSDT/2023-09/58a7e55c7b953e19ed2e0143bdc6ee59f6b6243323e4e82bdcadb0f828d0f365.parquet",
+        "sha256": "58a7e55c7b953e19ed2e0143bdc6ee59f6b6243323e4e82bdcadb0f828d0f365",
+        "bytes": 824032
+      },
+      {
+        "path": "data/.cex002_open_interest_5m/.lineage/BTCUSDT/2023-09/cff7e07875405f8d2bd5ff405bd71bc343100e390da9451d98b54835e2649f66.json",
+        "sha256": "cff7e07875405f8d2bd5ff405bd71bc343100e390da9451d98b54835e2649f66",
+        "bytes": 11998
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/4f/4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54",
+        "sha256": "4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54",
+        "bytes": 11530
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/84/84de85ee79e72ed8d095cfb183cad9fb4f50707676cdb531b00103c9ef3a0fcf",
+        "sha256": "84de85ee79e72ed8d095cfb183cad9fb4f50707676cdb531b00103c9ef3a0fcf",
+        "bytes": 97
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/23/23067f398dbf0812035f2f06d9871c1aceed7eaa9165181279e75709e56c833d",
+        "sha256": "23067f398dbf0812035f2f06d9871c1aceed7eaa9165181279e75709e56c833d",
+        "bytes": 11556
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/d5/d5d17fb9c028d5d80adee7fd3ebd9b1a5818c4a2b93d9bf28cafeb4d281751ed",
+        "sha256": "d5d17fb9c028d5d80adee7fd3ebd9b1a5818c4a2b93d9bf28cafeb4d281751ed",
+        "bytes": 97
+      },
+      {
+        "path": "data/.cex002_open_interest_5m/.partitions/BTCUSDT/2026-08/fdb8297f1a3e8b68caf5d06e6a718462d1e886afcb5ac8641c61c49d551339ae.parquet",
+        "sha256": "fdb8297f1a3e8b68caf5d06e6a718462d1e886afcb5ac8641c61c49d551339ae",
+        "bytes": 491154
+      },
+      {
+        "path": "data/.cex002_open_interest_5m/.lineage/BTCUSDT/2026-08/77ff3e54f65d956d4d2add9aa9134f33ca4a2f8c933cd345c4580b20a36f56f3.json",
+        "sha256": "77ff3e54f65d956d4d2add9aa9134f33ca4a2f8c933cd345c4580b20a36f56f3",
+        "bytes": 7426
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/1c/1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec",
+        "sha256": "1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec",
+        "bytes": 11044
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/2a/2a7319cdf4da19de1693fc8b529ea237f669b4fa2f1f136a50012227368f31f8",
+        "sha256": "2a7319cdf4da19de1693fc8b529ea237f669b4fa2f1f136a50012227368f31f8",
+        "bytes": 97
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/be/be6a2e6fb8a31c7d5517a40a639681668bc1432808bf17cf53235d7e6e3e5515",
+        "sha256": "be6a2e6fb8a31c7d5517a40a639681668bc1432808bf17cf53235d7e6e3e5515",
+        "bytes": 11347
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/7f/7ffaa2639bcfbde391813be123edbefc6e6922afacbf97ba36a4f7098252c85f",
+        "sha256": "7ffaa2639bcfbde391813be123edbefc6e6922afacbf97ba36a4f7098252c85f",
+        "bytes": 97
+      },
+      {
+        "path": "data/.cex002_funding_realized/.partitions/BTCUSDT/2020-01/e6214c02c75c69f5aadf1ccdd6fc3b40ef202d571e49869086770981152f2b47.parquet",
+        "sha256": "e6214c02c75c69f5aadf1ccdd6fc3b40ef202d571e49869086770981152f2b47",
+        "bytes": 6077
+      },
+      {
+        "path": "data/.cex002_funding_realized/.lineage/BTCUSDT/2020-01/61964d9c57e0d8052613b8d946de61a1623a755266ca035b437f2eae384dd2ee.json",
+        "sha256": "61964d9c57e0d8052613b8d946de61a1623a755266ca035b437f2eae384dd2ee",
+        "bytes": 1312
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/7f/7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+        "sha256": "7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+        "bytes": 825
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/32/3274779c977a6d657722bac4cc9f965bb774c5ba38aad391eb47ef183ae46120",
+        "sha256": "3274779c977a6d657722bac4cc9f965bb774c5ba38aad391eb47ef183ae46120",
+        "bytes": 98
+      },
+      {
+        "path": "data/.cex002_funding_realized/.partitions/BTCUSDT/2023-04/0075cab01b382422645d29308af06244500310e141175b0eb4b65ace0851e66f.parquet",
+        "sha256": "0075cab01b382422645d29308af06244500310e141175b0eb4b65ace0851e66f",
+        "bytes": 6455
+      },
+      {
+        "path": "data/.cex002_funding_realized/.lineage/BTCUSDT/2023-04/de0834f86d78ee156f6bb3d2b65a1d1e5decc52538dcc1e742ae059adfac723f.json",
+        "sha256": "de0834f86d78ee156f6bb3d2b65a1d1e5decc52538dcc1e742ae059adfac723f",
+        "bytes": 1312
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/29/2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+        "sha256": "2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+        "bytes": 952
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/6e/6ea500c3718cc704661b54739c6325af6cf76f566363aa1d044731dcd8e9973e",
+        "sha256": "6ea500c3718cc704661b54739c6325af6cf76f566363aa1d044731dcd8e9973e",
+        "bytes": 98
+      },
+      {
+        "path": "data/.cex002_funding_realized/.partitions/BTCUSDT/2026-07/a08ecbcb21f141b81465d99b72afa071f497becc645eb4c872b873817086e585.parquet",
+        "sha256": "a08ecbcb21f141b81465d99b72afa071f497becc645eb4c872b873817086e585",
+        "bytes": 6414
+      },
+      {
+        "path": "data/.cex002_funding_realized/.lineage/BTCUSDT/2026-07/2fdee26d80dc0d445b865c9dda4cf8e4d23d55cbd79a51ff43a049a241336482.json",
+        "sha256": "2fdee26d80dc0d445b865c9dda4cf8e4d23d55cbd79a51ff43a049a241336482",
+        "bytes": 1312
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/e3/e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+        "sha256": "e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+        "bytes": 914
+      },
+      {
+        "path": "data/cex002_qualify/gate2/content/50/50e4e9f408bff433a4b2eb9bbc37ac816a1112dd6d851689ffd48f3014580ff6",
+        "sha256": "50e4e9f408bff433a4b2eb9bbc37ac816a1112dd6d851689ffd48f3014580ff6",
+        "bytes": 98
+      }
+    ],
+    "raw_zip_objects": 9,
+    "example_count": 12,
+    "scope": "six selected partitions, independent Fraction arithmetic, no normalizer arithmetic helpers",
+    "limitations": [
+      "OI notional preserves the provider-reported quote stock; this does not independently prove the venue valuation method.",
+      "Funding signs describe rates; no account position, payment entitlement or historical receipt time is inferred."
+    ]
+  },
+  "release_manifest_summary": {
+    "publication_sha256": "5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d",
+    "candidate_sha256": "8b46bebac377331a08ff1755f2a2c5362f47994939b61837542dfc9628bc9c34",
+    "proof_sha256": "3be8597604efc7353935d79fd663efd7ffa6083ede10f4807d458b9e76927c8d",
+    "nautilus_version": "2.0.0rc3",
+    "products": [
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_b452e9514e493a5fab256d79f15f73eeb7a2704fd46325199f3051b7cbd21a7c",
+        "dataset_type": "binance_usdm_perpetual_membership",
+        "manifest_bytes": 819034,
+        "manifest_file_sha256": "2debc046929bc558a4c5f60393c6a21d7c4fa691d95cfba1c47845e0c600e6d4",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/9755de3c811137215ff4639ab01a1f255807ea6db2bbe8f2cc0dcf30b01c1e50.json",
+        "manifest_sha256": "9755de3c811137215ff4639ab01a1f255807ea6db2bbe8f2cc0dcf30b01c1e50",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 1543,
+        "declared_rows": 771,
+        "declared_bytes": 6393517,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 330409
+          },
+          "lineage": {
+            "files": 771,
+            "rows": 0,
+            "bytes": 777292
+          },
+          "partition": {
+            "files": 771,
+            "rows": 771,
+            "bytes": 5285816
+          }
+        },
+        "schema_contract_sha256": [
+          "3b432f30e4dab9db9457aaecb36ecb21ac2a38bdf1761af3b388787acf94d687"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "01d054b34c3a92cc349f9484296031e8cbb67ae7e62eb0a8b38c6d3928d977a3",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 771,
+          "quality_gap_rows": 0,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_b2c4d1fdaee8a8e6ac520ef8959f6a0fa19d5cf127df322c8df8ff032d81f54f",
+        "dataset_type": "binance_usdm_bar_1h",
+        "manifest_bytes": 23429825,
+        "manifest_file_sha256": "0509daef005c1e69628a4cbedf26ca8eb2ba2cb83cdd3486c87af004fb1d7b0a",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/26cc2424ba1612c3657b6aef01d5b37b32c07291cebebd4b2a1401a3a0f8c9d4.json",
+        "manifest_sha256": "26cc2424ba1612c3657b6aef01d5b37b32c07291cebebd4b2a1401a3a0f8c9d4",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 45269,
+        "declared_rows": 16033623,
+        "declared_bytes": 1037394101,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 10558405
+          },
+          "lineage": {
+            "files": 22634,
+            "rows": 0,
+            "bytes": 28536582
+          },
+          "partition": {
+            "files": 22633,
+            "rows": 16033469,
+            "bytes": 998294075
+          },
+          "quality_gap": {
+            "files": 1,
+            "rows": 154,
+            "bytes": 5039
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "3a008ad739a0cc0c0c8146533d0f4b1cca3d19e784e4e8ed4d1119a0a7bdf706"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "3b803d3e84e5d0bf87064626cc0504e9ff92e225a53ba83cdd4e09c38a2e9fd7",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 22633,
+          "quality_gap_rows": 154,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_981249b1f68c7dd16de6767b5f0806a206769ffad77c2857b7a3d6b7fe89e938",
+        "dataset_type": "binance_usdm_trade_flow_1h",
+        "manifest_bytes": 24063824,
+        "manifest_file_sha256": "d57087de488e7c3277bfd0b7f4038610bf7edc859b8951851e047e1c1b80b2a8",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/3a47ed0a2d4344dbf7ff7dda69149d4d3a6696138eed8b8ad1e5e2ae13115772.json",
+        "manifest_sha256": "3a47ed0a2d4344dbf7ff7dda69149d4d3a6696138eed8b8ad1e5e2ae13115772",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 45269,
+        "declared_rows": 16033623,
+        "declared_bytes": 1613201079,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 10558419
+          },
+          "lineage": {
+            "files": 22634,
+            "rows": 0,
+            "bytes": 28868150
+          },
+          "partition": {
+            "files": 22633,
+            "rows": 16033442,
+            "bytes": 1573769340
+          },
+          "quality_gap": {
+            "files": 1,
+            "rows": 181,
+            "bytes": 5170
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "5c9a97c93090a2fda15ba9d1dceeb1338ab374b21f101db3568a980b2c4a8501"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "a165f9e57065514cadc95620c280a82dbad5032d17c19e1caf012c9d12a84d0a",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 22633,
+          "quality_gap_rows": 181,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_fcd0c228b6bc66df2f258e48bb2602d83d8c9a823ec2867e16d2a0591b0baa6c",
+        "dataset_type": "binance_usdm_open_interest_5m",
+        "manifest_bytes": 21288934,
+        "manifest_file_sha256": "c828699f30544876e7f3369708b298e6b21b62289adff68bfee3cca8e9e538e6",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/f7e759ed20781ef74b001805a93753a59415709992a91ec5b8c8d1addaaec95b.json",
+        "manifest_sha256": "f7e759ed20781ef74b001805a93753a59415709992a91ec5b8c8d1addaaec95b",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 39491,
+        "declared_rows": 160205946,
+        "declared_bytes": 15012407017,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 9231215
+          },
+          "lineage": {
+            "files": 19745,
+            "rows": 0,
+            "bytes": 254600393
+          },
+          "partition": {
+            "files": 19744,
+            "rows": 160148505,
+            "bytes": 14748166088
+          },
+          "quality_gap": {
+            "files": 1,
+            "rows": 57441,
+            "bytes": 409321
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "676ba18ff9913bfae19653c614945a9e68f7d3f7a087292b5b8a050208d523fa"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "bb089fc992326c66ddb65cea03dda92e8cd9fcf7cb7f373821f04a16db9168e4",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 19744,
+          "quality_gap_rows": 57441,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_bfb6848f0d29b471ad93276f5eb2ff130b8b40e5df86badc00a24ab93826c229",
+        "dataset_type": "binance_usdm_funding_realized",
+        "manifest_bytes": 22581344,
+        "manifest_file_sha256": "45aa5e721f131b89147044ada90c2a538388407d32edfa9c3c30cacdb019c34a",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/fc70d0e896b6aff7c1ba9a2c8b03e4fbd08925f3b2eeb9dde1e2b7abe5034698.json",
+        "manifest_sha256": "fc70d0e896b6aff7c1ba9a2c8b03e4fbd08925f3b2eeb9dde1e2b7abe5034698",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 42071,
+        "declared_rows": 2683024,
+        "declared_bytes": 172919483,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 11029183
+          },
+          "lineage": {
+            "files": 21035,
+            "rows": 0,
+            "bytes": 27750608
+          },
+          "partition": {
+            "files": 21035,
+            "rows": 2683024,
+            "bytes": 134139692
+          }
+        },
+        "schema_contract_sha256": [
+          "488871a7093542b26cde63f0790de487b9911d527c1a9b8ed8b11971be6aceda"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "57628164f19d182164b6058d9e51f794430cc918706c088f430e1c01d2898522",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 21035,
+          "quality_gap_rows": 0,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_bdd0015c37254cd36c474f6a29f75d53a8039696c422cd265b6c78e4ee1cd287",
+        "dataset_type": "binance_usdm_funding_indicative_1h",
+        "manifest_bytes": 27078785,
+        "manifest_file_sha256": "a6043d3aa14d5ca3997b981a1d3be36f97c376069cfcbfcb225450cfaae7898a",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/44f6480c52a4cadd1c7af8c68e3360b6c90e698a20979ec8793b92ee9057cafa.json",
+        "manifest_sha256": "44f6480c52a4cadd1c7af8c68e3360b6c90e698a20979ec8793b92ee9057cafa",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 45245,
+        "declared_rows": 15154971,
+        "declared_bytes": 694451696,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 14169339
+          },
+          "lineage": {
+            "files": 22622,
+            "rows": 0,
+            "bytes": 40755013
+          },
+          "partition": {
+            "files": 21507,
+            "rows": 15153756,
+            "bytes": 635438888
+          },
+          "quality_gap": {
+            "files": 1115,
+            "rows": 1215,
+            "bytes": 4088456
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "d28b924876f0177865b886489028867fb7b89c71c2f0e82a6a33e0e92c494e1f"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "360eb662ab89c47ca1f6db754b74f486a42de4aa116970221f0739268a51fba0",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 21507,
+          "quality_gap_rows": 1215,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_3438d3af2b29c0d3bf1977f3c1a12c2ff981545f81c2ee0f562bd32c67a09a87",
+        "dataset_type": "binance_usdm_mark_index_basis_1h",
+        "manifest_bytes": 30630101,
+        "manifest_file_sha256": "5336d0b72ccb04fda10a99823dbc668497cf49407947e35bf89e9704b3fd234e",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/7630578ddef4a5d7e190e31b28f978f2a3dc9933bbbf3755b047d59018f6e8f0.json",
+        "manifest_sha256": "7630578ddef4a5d7e190e31b28f978f2a3dc9933bbbf3755b047d59018f6e8f0",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 51345,
+        "declared_rows": 15130426,
+        "declared_bytes": 1776348809,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 15930704
+          },
+          "lineage": {
+            "files": 25672,
+            "rows": 0,
+            "bytes": 115729775
+          },
+          "partition": {
+            "files": 21491,
+            "rows": 15125823,
+            "bytes": 1629242989
+          },
+          "quality_gap": {
+            "files": 4181,
+            "rows": 4603,
+            "bytes": 15445341
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "34571062588d3aba51987d37ae2add6c7d9095ec303b70fdbaf4ca85c80d9b7b"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "b698c0543c281e3244e0c3358ea7ce1f347bc591b06a076058fed749d05584f0",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 21491,
+          "quality_gap_rows": 4603,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_3d0dd49ae601b52f435e389366dc3c84e7f67c602d5c0d86ef04fdb41d4037dd",
+        "dataset_type": "binance_usdm_liquidation_observed_daily",
+        "manifest_bytes": 21250406,
+        "manifest_file_sha256": "a1a66422e40f50a036463500cf59adcefaadae39269655ca3e782facdfc2511a",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/139b0c773ce3967b49b7c71095b2dbc42e92cc8b5fb49831c5ea2752850682e3.json",
+        "manifest_sha256": "139b0c773ce3967b49b7c71095b2dbc42e92cc8b5fb49831c5ea2752850682e3",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 37890,
+        "declared_rows": 484168,
+        "declared_bytes": 136197937,
+        "components": {
+          "coinalyze_symbol_unmapped": {
+            "files": 2,
+            "rows": 202,
+            "bytes": 5288
+          },
+          "comparison": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 28660
+          },
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 8799576
+          },
+          "lineage": {
+            "files": 16373,
+            "rows": 0,
+            "bytes": 24738294
+          },
+          "partition": {
+            "files": 16373,
+            "rows": 479340,
+            "bytes": 89862250
+          },
+          "all_input_missing": {
+            "files": 5140,
+            "rows": 4626,
+            "bytes": 12763869
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "470c143f2626a9e7db18708d6e243272c90b18baf0dd1c809d9baafb4aa5aa7b"
+        ],
+        "quality_summary": {
+          "authority_gap_rows": 202,
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "comparison_disposition": "pending_reviewer",
+          "comparison_entry_count": 18,
+          "comparison_sha256": "bd76dd2069e658ce11a00b7685e0008d4d5be0bec682acdf5640552a31af3391",
+          "completion_sha256": "dc4127dccad31477cb72ec6fdf076dbdbdef34a1212d4f090d5f421b96dc267f",
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "partition_count": 16373,
+          "quality_gap_rows": 4626,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "total_gap_table_rows": 4828,
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_8014c89843ac71148870b8834d1d88a2890fe87f62bf1049c68c42aa136e705a",
+        "dataset_type": "binance_usdm_cost_calibration",
+        "manifest_bytes": 4637419,
+        "manifest_file_sha256": "17932c0c0ba251e491529a3b54ec323597617dda2c2a80e1d9f5bb9545096e6b",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/b196179540f07a308db7188a224903a6b167435f6b67be856bea8855ea3c38c2.json",
+        "manifest_sha256": "b196179540f07a308db7188a224903a6b167435f6b67be856bea8855ea3c38c2",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 7732,
+        "declared_rows": 939131092,
+        "declared_bytes": 17943795556,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 2971837
+          },
+          "fee_authority_gap": {
+            "files": 1542,
+            "rows": 771,
+            "bytes": 3131018
+          },
+          "official_fee_schedule": {
+            "files": 2,
+            "rows": 0,
+            "bytes": 4137
+          },
+          "retained_book_depth": {
+            "files": 4452,
+            "rows": 57054229,
+            "bytes": 1459239167
+          },
+          "retained_book_ticker": {
+            "files": 1732,
+            "rows": 882076090,
+            "bytes": 16478266370
+          },
+          "scenario_policy": {
+            "files": 2,
+            "rows": 2,
+            "bytes": 4244
+          },
+          "frozen_source_gaps": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 178783
+          }
+        },
+        "schema_contract_sha256": [
+          "1cf6178fe7bfb9920f2b02c79e23622d5c801f017da59ba6bc1f058b6f99ebf4",
+          "484a30b1b1a3d4e8fcd86a31da8a3ea9def0caf75c79a3de5d91073b0f73f3a7",
+          "523b26281b5fe39efdee8ab2fe5188dcd13d9d9f2fff94ffe5faf21312c88d91",
+          "af5c200d843c2a7534752dbf5b3084f793c65107c009950478606c2fc9c31f0e",
+          "baae3ab4e66b85056140c840dcd5a61ad2679f2179b3aa0baf8e76ab619bd7f6"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "fa4eced65e03e548cf5bf6500a9674a192a70dde9edf12d49c1f8bd539ad6f9e",
+          "fee_authority_gap_reference": {
+            "copied": false,
+            "rows": 771
+          },
+          "fee_missing_is_zero": false,
+          "frozen_source_gaps": {
+            "bytes": 178783,
+            "copied": false,
+            "path": "data/.cex002_cost_calibration/.source-gaps/aace941a43e38c2f790fed4c383e08cbbd27d3f5f7215bc95b50bb134ae3519e.json",
+            "row_count": 494,
+            "sha256": "aace941a43e38c2f790fed4c383e08cbbd27d3f5f7215bc95b50bb134ae3519e"
+          },
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "missing_fee_is_zero": false,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "scenario_historical_observation": false,
+          "source_available_at": null,
+          "ticker_row_projection_disposition": {
+            "actual_rows": 882076090,
+            "excess_rows": 136532583,
+            "ordinary_sizing_check_passed": false,
+            "projected_rows": 745543507,
+            "status": "EXCEEDED_REVIEWED_EXACT_ARTIFACT_VARIANCE"
+          },
+          "utc_month_absent_token": "absent"
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_041104cd7efd60736c2bfebfd0233149a50640282a83802bbd687f041d254e72",
+        "dataset_type": "binance_usdm_coverage_gap",
+        "manifest_bytes": 52311439,
+        "manifest_file_sha256": "b385cdc64ab2c2001a494f9a3b5bb0f78c4318c0136a34541904ca2cba441ca6",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/8f8a33d9d5d79021a0f462e030174cc38bb778771006bd0ca1203df0fb5e684d.json",
+        "manifest_sha256": "8f8a33d9d5d79021a0f462e030174cc38bb778771006bd0ca1203df0fb5e684d",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 107590,
+        "declared_rows": 80279,
+        "declared_bytes": 543901501,
+        "components": {
+          "completion": {
+            "files": 1,
+            "rows": 0,
+            "bytes": 8727
+          },
+          "daily": {
+            "files": 64764,
+            "rows": 0,
+            "bytes": 339270409
+          },
+          "coverage_manifest": {
+            "files": 6,
+            "rows": 0,
+            "bytes": 21678175
+          },
+          "quality_gap": {
+            "files": 24930,
+            "rows": 68220,
+            "bytes": 70034571
+          },
+          "source_gap": {
+            "files": 9634,
+            "rows": 8317,
+            "bytes": 46085441
+          },
+          "summary": {
+            "files": 771,
+            "rows": 0,
+            "bytes": 54715085
+          },
+          "typed_gap_membership": {
+            "files": 7484,
+            "rows": 3742,
+            "bytes": 12109093
+          }
+        },
+        "schema_contract_sha256": [
+          "041eb67e69ecfe2ceba7d952e5d8a5395ff6137ae9bbac30c98254d0255f448b",
+          "92c75b9761bcd90ccc85b7dafc8c2739c88d8a9157de70fe714b6976acb39817",
+          "aaeddc6b5a599f28a009b410fc8e0519123089b3d70b3ebff6c856ef82ec1e85"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "canonical_instrument_ids": null,
+          "completion_sha256": "9e6e191b9ac1de05de4302e9e6dad64315f7e75d28ade638b977e28e68da1151",
+          "cost_normalization_source_gap_reference": {
+            "bytes": 178783,
+            "copied": false,
+            "rows": 494,
+            "sha256": "aace941a43e38c2f790fed4c383e08cbbd27d3f5f7215bc95b50bb134ae3519e"
+          },
+          "coverage_gap_rows": 8317,
+          "fee_authority_gap_reference": {
+            "copied": false,
+            "rows": 771
+          },
+          "fee_authority_gap_rows": 771,
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "native_symbol_absent_token": "absent",
+          "quality_gap_rows": 68220,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "typed_gap_membership_rows": 3742,
+          "utc_month_absent_token": "absent",
+          "visible_harmonic_bundle": false
+        }
+      },
+      {
+        "bookkeeping_created_at": "1970-01-01T00:00:00+00:00",
+        "dataset_id": "ds_07e037cd4e3a048b351d8cb6443c0720614356ac703e5283ba1ace88f66b5728",
+        "dataset_type": "binance_usdm_harmonic_bundle",
+        "manifest_bytes": 7404,
+        "manifest_file_sha256": "0883526cfbe75cef6767eed1002133844c47fc0eb711366a45967a47ecf03fab",
+        "manifest_relative_path": "data/.cex002_harmonic_bundle/.manifests/0f9e22e528310e524c391ddb1f992ae29335a082540c882cf16580878395649c.json",
+        "manifest_sha256": "0f9e22e528310e524c391ddb1f992ae29335a082540c882cf16580878395649c",
+        "publisher": "cryptofactors.catalog.dataset.cex002_reference_release",
+        "publisher_version": "1",
+        "declared_files": 1,
+        "declared_rows": 178946,
+        "declared_bytes": 13232150,
+        "components": {
+          "harmonic_bundle": {
+            "files": 1,
+            "rows": 178946,
+            "bytes": 13232150
+          }
+        },
+        "schema_contract_sha256": [
+          "d20b5856f255f7fa32c92006bc55e66b103db4877fc43e44d5c93bfaddd902e1"
+        ],
+        "quality_summary": {
+          "availability_semantics": "unknown_not_imputed",
+          "bundle_column_intersection": "five_product_observed_days",
+          "bundle_file_bytes": 13232150,
+          "bundle_file_sha256": "32029cf9cd182839719574f3963e2faa89935c682ed861712be5ef07c23a381c",
+          "canonical_instrument_ids": null,
+          "fee_missing_is_zero": false,
+          "funding_expected_count": null,
+          "intersections": {
+            "aligned_day_rows": 1971447,
+            "bundle_column_intersection": "five_product_observed_days",
+            "five_product_observed_day_count": 428090,
+            "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+            "full_cadence_day_count": 424431,
+            "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+          },
+          "liquidation_complete": false,
+          "quality_summary_carries_descriptor_hash": false,
+          "release_pins": {
+            "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+            "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+            "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+            "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+            "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+            "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+            "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+            "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+            "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+            "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+            "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+          },
+          "source_available_at": null,
+          "utc_month_absent_token": "absent"
+        }
+      }
+    ],
+    "candidate_authorities": {
+      "authenticated_files": {
+        "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+        "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+        "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+        "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+        "sizing_receipt_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+      },
+      "availability_semantics": "unknown_not_imputed",
+      "canonical_instrument_ids": null,
+      "configuration_sha256": "7f987254b967aae10c49be5a6a03d719cc5d9abe35580534773bfd39a876d639",
+      "fee_missing_is_zero": false,
+      "funding_expected_count": null,
+      "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+      "holdout_is_coverage_boundary": true,
+      "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+      "intersections": {
+        "aligned_day_rows": 1971447,
+        "bundle_column_intersection": "five_product_observed_days",
+        "five_product_observed_day_count": 428090,
+        "five_product_observed_day_sha256": "f0c0d7c21fc68d2d454b07ec969b6d794f380e22e751c643dee09184e3896665",
+        "full_cadence_day_count": 424431,
+        "full_cadence_day_sha256": "22219a5a243fcf1fda3ab5deacd99fbe72869375021d9d2f2a98868580e48fab"
+      },
+      "liquidation_complete": false,
+      "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+      "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+      "release_pins": {
+        "failed_reconciliation_report_sha256": "809d7d5338985fb0625a823ff8908eeab2c77e9406e5979d2fb8702cd17dfe10",
+        "holdout_boundary_id": "c842f813839e1dda375b351da0f693c54bcf932e33eb6e3394aba860c12346e2",
+        "holdout_sha256": "2030e20aa5bd73df8fdbb7467e928508103b2e23659b85527101ec8b8546cb85",
+        "holdout_utc": "2026-08-21T16:19:08.994166+00:00",
+        "qualification_cli_sha256": "473185ca946dcc37d506d8891e8f955708ff80c976a586967762c1294956d28f",
+        "qualification_code_sha256": "2f88ad6e7cfc531fefe3d9c7a9ddbc830741687e93c51450fc826062dffb2c74",
+        "qualification_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113",
+        "qualification_report_sha256": "f27b2ba7e6eff3a8b1385d985c49ee64ef60a394737b1246130d0f37b9015f09",
+        "reconciliation_completion_sha256": "e3c8f9f5ade1b92069b97e6b83931c345886d40901b85b1c4106604edd9b5e5c",
+        "reconciliation_report_sha256": "96ae8db169666598643ac4e2f9aa2136b77c0dbeeaa90d2a3e4e4de9e983c89c",
+        "sizing_sha256": "3995a5072a7d84baecae677ceff6e1c7af9dd076daadec04a31717ffc8f16589"
+      },
+      "resources": {
+        "bundle_file_bytes": 13232150,
+        "bundle_rows": 178946,
+        "catalog_commit_required": true,
+        "current_plus_future_provision_bytes": 25485593,
+        "harmonic_bundle_allocation_bytes": 24352003,
+        "measured_current_bundle_bytes": 1133590,
+        "metadata_remainder_bytes": 4985471619,
+        "operating_reserve_bytes": 29690701415,
+        "operating_reserve_spent": false,
+        "reconstructed_bundle_rows": 178946,
+        "release_metadata_pool_bytes": 5556368003,
+        "sizing_projected_bundle_rows": 150331,
+        "unused_coverage_reservation_bytes": 114144134,
+        "unused_coverage_reservation_reallocatable": false
+      },
+      "retained_unreferenced_kline_inventory": {
+        "binance_usdm_bar_1h": {
+          "inventory_sha256": "ede5099fad8fc6423b7ad4c93fa258ca39ecd5c1d68465e3e18bb2b5fe1bcefa",
+          "lineage_bytes": 24391097,
+          "lineage_count": 20335,
+          "parquet_bytes": 1339063,
+          "parquet_count": 31
+        },
+        "binance_usdm_trade_flow_1h": {
+          "inventory_sha256": "5e2ef7c41773517556d33c832ad6c7a97130a4f2c721083377c84e4605ccecdb",
+          "lineage_bytes": 24675787,
+          "lineage_count": 20335,
+          "parquet_bytes": 3553501,
+          "parquet_count": 47
+        }
+      },
+      "scenario_policy_sha256": "cf8abb868ebe989cda165873ad85a2aa07f7e6d0ec73584148d0d69d3103a6f1",
+      "sizing_cli_sha256": "36740c926c32e4973bb31dcb570d3c69b89f9f343d52eb8aed3d33d359d7b23c",
+      "sizing_code_sha256": "d4afaa6285733c10311560b9fd68b223ab31fa90b1293a71871ea262daa82f5b",
+      "source_available_at": null,
+      "source_manifest_detail_sha256": "64d0f74b8e4696c98d0f96423185fd961aba6c63348d12425e3ec364b888f113"
+    },
+    "declared_totals": {
+      "files": 423446,
+      "rows": 1165116869,
+      "bytes": 38950242846
+    },
+    "method": "Authenticated existing manifest metadata only; totals describe declared files. Fresh physical/value proofs were not rerun; accepted Records518/524 supply those checks."
+  },
+  "contract_history": {
+    "path": "data/.cex002_contract_history/review529-20261027.json",
+    "sha256": "6ef47558eff2b3d3b30fbd8569dd96e0f7b7863bd8b310025cf641f7e72034a9",
+    "bytes": 1290098,
+    "known_from": "2026-10-27T18:20:52Z",
+    "symbols_with_dated_coverage": 770,
+    "total_names": 771,
+    "episodes": 782,
+    "pending_name": "GAIBUSDT"
+  },
+  "commands": [
+    {
+      "command": ".venv/bin/python /tmp/cex002_closeout530/verify.py",
+      "exit_code": 0,
+      "elapsed_seconds": 0.864
+    },
+    {
+      "command": ".venv/bin/python /tmp/cex002_closeout530/summarize.py",
+      "exit_code": 0,
+      "mode": "authenticated_manifest_metadata_only"
+    }
+  ],
+  "stopped_suite": {
+    "command": ".venv/bin/python -m pytest tests/ -q --tb=short",
+    "pytest_exit_code": 143,
+    "wrapper_exit_code": 0,
+    "status": "INCOMPLETE_WITH_FAILURES",
+    "log_path": "/tmp/cex002_pytest_r_retry.aXQOHA",
+    "log_sha256": "448eb755a35accb45542c4075edc77e73247e839d0a150736a7b86ba4510ed90",
+    "log_text": "........................................................................ [  1%]\n........................................................................ [  3%]\n........................................................................ [  4%]\n........................................................................ [  6%]\n........................................................................ [  8%]\n........................................................................ [  9%]\n........................................................................ [ 11%]\n........................................................................ [ 13%]\n........................................................................ [ 14%]\n........................................................................ [ 16%]\n........................................................................ [ 18%]\n........................................................................ [ 19%]\n........................................................................ [ 21%]\n........................................................................ [ 23%]\n........................................................................ [ 24%]\n........................................................................ [ 26%]\n........................................................................ [ 28%]\n........................................................................ [ 29%]\n........................................................................ [ 31%]\n........................................................................ [ 33%]\n..................................................s..................... [ 34%]\n........................................................................ [ 36%]\n........................................................................ [ 38%]\n........................................................................ [ 39%]\n........................................................................ [ 41%]\n........................................................................ [ 43%]\n...............F........................................................ [ 44%]\n........................................................................ [ 46%]\n.........................................................F.FF........... [ 48%]\n..............F......................F.................................. [ 49%]\n...................................................F.................... [ 51%]\n.",
+    "failure_markers": 7,
+    "test_names_known": false,
+    "tracebacks_available": false,
+    "last_completed_progress_percent": 51,
+    "cache_nodeids_count": 4865,
+    "cache_lastfailed_count": 113,
+    "cache_caution": "Caches include prior runs and do not authenticate the identities of these seven failures."
+  },
+  "reproduction_inputs": {
+    "selected.json": {
+      "sha256": "082f995b886d90ca515da58ae6eeba5bb0425f1f346fe7931d23550b510a29c2",
+      "text": "[\n  {\n    \"kind\": \"oi\",\n    \"root\": \"data/.cex002_open_interest_5m\",\n    \"completion_sha256\": \"bb089fc992326c66ddb65cea03dda92e8cd9fcf7cb7f373821f04a16db9168e4\",\n    \"partition\": {\n      \"lineage_path\": \".lineage/BTCUSDT/2020-09/c978fb864fdf5730589dd2b4bd4620a7cbd79764871228e257aba86ea0f69469.json\",\n      \"lineage_sha256\": \"c978fb864fdf5730589dd2b4bd4620a7cbd79764871228e257aba86ea0f69469\",\n      \"native_symbol\": \"BTCUSDT\",\n      \"parquet_path\": \".partitions/BTCUSDT/2020-09/af23f67045c9a58c136ad9e895184af5e16fa693d392c6d3921e9e83b87a5f2e.parquet\",\n      \"parquet_sha256\": \"af23f67045c9a58c136ad9e895184af5e16fa693d392c6d3921e9e83b87a5f2e\",\n      \"row_count\": 8636,\n      \"utc_month\": \"2020-09\"\n    },\n    \"lineage_keys\": [\n      \"collapsed_identical_source_rows\",\n      \"coverage_gaps\",\n      \"document_type\",\n      \"native_symbol\",\n      \"parquet_name\",\n      \"parquet_sha256\",\n      \"raw_objects\",\n      \"required_product\",\n      \"row_count\",\n      \"schema_sha256\",\n      \"schema_version\",\n      \"utc_month\",\n      \"writer_identity\"\n    ],\n    \"first_raw\": {\n      \"authority\": \"accepted_generation_0_completion\",\n      \"byte_size\": 12191,\n      \"checksum_authority\": \"binance_checksum_sidecar\",\n      \"raw_object_ref\": 0,\n      \"retrieval_time\": \"2026-08-29T09:50:00.295766+00:00\",\n      \"source_available_at\": null,\n      \"source_key\": \"data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2020-09-01.zip\",\n      \"source_sha256\": \"9a9c0518bfb939032afe97a6b1708668ec833457743b1ba6ef448fb157722ae3\"\n    }\n  },\n  {\n    \"kind\": \"oi\",\n    \"root\": \"data/.cex002_open_interest_5m\",\n    \"completion_sha256\": \"bb089fc992326c66ddb65cea03dda92e8cd9fcf7cb7f373821f04a16db9168e4\",\n    \"partition\": {\n      \"lineage_path\": \".lineage/BTCUSDT/2023-09/cff7e07875405f8d2bd5ff405bd71bc343100e390da9451d98b54835e2649f66.json\",\n      \"lineage_sha256\": \"cff7e07875405f8d2bd5ff405bd71bc343100e390da9451d98b54835e2649f66\",\n      \"native_symbol\": \"BTCUSDT\",\n      \"parquet_path\": \".partitions/BTCUSDT/2023-09/58a7e55c7b953e19ed2e0143bdc6ee59f6b6243323e4e82bdcadb0f828d0f365.parquet\",\n      \"parquet_sha256\": \"58a7e55c7b953e19ed2e0143bdc6ee59f6b6243323e4e82bdcadb0f828d0f365\",\n      \"row_count\": 8637,\n      \"utc_month\": \"2023-09\"\n    },\n    \"lineage_keys\": [\n      \"coverage_gaps\",\n      \"document_type\",\n      \"native_symbol\",\n      \"parquet_name\",\n      \"parquet_sha256\",\n      \"raw_objects\",\n      \"required_product\",\n      \"row_count\",\n      \"schema_sha256\",\n      \"schema_version\",\n      \"utc_month\",\n      \"writer_identity\"\n    ],\n    \"first_raw\": {\n      \"authority\": \"accepted_generation_0_completion\",\n      \"byte_size\": 11530,\n      \"checksum_authority\": \"binance_checksum_sidecar\",\n      \"raw_object_ref\": 0,\n      \"retrieval_time\": \"2026-08-29T09:55:05.161848+00:00\",\n      \"source_available_at\": null,\n      \"source_key\": \"data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2023-09-01.zip\",\n      \"source_sha256\": \"4f728ad277ea5cce66d91e2df434f34f395ba3cf0d8ba197d1c58373b165ee54\"\n    }\n  },\n  {\n    \"kind\": \"oi\",\n    \"root\": \"data/.cex002_open_interest_5m\",\n    \"completion_sha256\": \"bb089fc992326c66ddb65cea03dda92e8cd9fcf7cb7f373821f04a16db9168e4\",\n    \"partition\": {\n      \"lineage_path\": \".lineage/BTCUSDT/2026-08/77ff3e54f65d956d4d2add9aa9134f33ca4a2f8c933cd345c4580b20a36f56f3.json\",\n      \"lineage_sha256\": \"77ff3e54f65d956d4d2add9aa9134f33ca4a2f8c933cd345c4580b20a36f56f3\",\n      \"native_symbol\": \"BTCUSDT\",\n      \"parquet_path\": \".partitions/BTCUSDT/2026-08/fdb8297f1a3e8b68caf5d06e6a718462d1e886afcb5ac8641c61c49d551339ae.parquet\",\n      \"parquet_sha256\": \"fdb8297f1a3e8b68caf5d06e6a718462d1e886afcb5ac8641c61c49d551339ae\",\n      \"row_count\": 5181,\n      \"utc_month\": \"2026-08\"\n    },\n    \"lineage_keys\": [\n      \"coverage_gaps\",\n      \"document_type\",\n      \"native_symbol\",\n      \"parquet_name\",\n      \"parquet_sha256\",\n      \"raw_objects\",\n      \"required_product\",\n      \"row_count\",\n      \"schema_sha256\",\n      \"schema_version\",\n      \"utc_month\",\n      \"writer_identity\"\n    ],\n    \"first_raw\": {\n      \"authority\": \"accepted_generation_0_completion\",\n      \"byte_size\": 11044,\n      \"checksum_authority\": \"binance_checksum_sidecar\",\n      \"raw_object_ref\": 0,\n      \"retrieval_time\": \"2026-08-29T10:00:04.753787+00:00\",\n      \"source_available_at\": null,\n      \"source_key\": \"data/futures/um/daily/metrics/BTCUSDT/BTCUSDT-metrics-2026-08-01.zip\",\n      \"source_sha256\": \"1c0c8730c891e922a8eb3e838fc6aec4880ed15da9780a7e68e59460a03d4eec\"\n    }\n  },\n  {\n    \"kind\": \"funding\",\n    \"root\": \"data/.cex002_funding_realized\",\n    \"completion_sha256\": \"57628164f19d182164b6058d9e51f794430cc918706c088f430e1c01d2898522\",\n    \"partition\": {\n      \"collapsed_identical_row_count\": 0,\n      \"lineage_path\": \".lineage/BTCUSDT/2020-01/61964d9c57e0d8052613b8d946de61a1623a755266ca035b437f2eae384dd2ee.json\",\n      \"lineage_sha256\": \"61964d9c57e0d8052613b8d946de61a1623a755266ca035b437f2eae384dd2ee\",\n      \"native_symbol\": \"BTCUSDT\",\n      \"parquet_path\": \".partitions/BTCUSDT/2020-01/e6214c02c75c69f5aadf1ccdd6fc3b40ef202d571e49869086770981152f2b47.parquet\",\n      \"parquet_sha256\": \"e6214c02c75c69f5aadf1ccdd6fc3b40ef202d571e49869086770981152f2b47\",\n      \"physical_row_count\": 93,\n      \"row_count\": 93,\n      \"utc_month\": \"2020-01\"\n    },\n    \"lineage_keys\": [\n      \"collapsed_identical_row_count\",\n      \"collapsed_identical_source_rows\",\n      \"document_type\",\n      \"native_symbol\",\n      \"parquet_path\",\n      \"parquet_sha256\",\n      \"physical_row_count\",\n      \"raw_objects\",\n      \"required_product\",\n      \"row_count\",\n      \"schema_sha256\",\n      \"schema_version\",\n      \"utc_month\",\n      \"writer_identity\"\n    ],\n    \"first_raw\": {\n      \"byte_size\": 825,\n      \"checksum_authority\": \"binance_checksum_sidecar\",\n      \"economic_period\": \"2020-01\",\n      \"family\": \"monthly/fundingRate\",\n      \"listed_bytes\": 825,\n      \"native_symbol\": \"BTCUSDT\",\n      \"raw_object_ref\": 0,\n      \"retrieval_time\": \"2026-08-31T09:42:01.568464+00:00\",\n      \"sidecar_key\": \"data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip.CHECKSUM\",\n      \"source_availability_state\": \"unknown_not_imputed\",\n      \"source_available_at\": null,\n      \"source_key\": \"data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip\",\n      \"source_sha256\": \"7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2\",\n      \"validation_state\": \"checksum_verified\"\n    }\n  },\n  {\n    \"kind\": \"funding\",\n    \"root\": \"data/.cex002_funding_realized\",\n    \"completion_sha256\": \"57628164f19d182164b6058d9e51f794430cc918706c088f430e1c01d2898522\",\n    \"partition\": {\n      \"collapsed_identical_row_count\": 0,\n      \"lineage_path\": \".lineage/BTCUSDT/2023-04/de0834f86d78ee156f6bb3d2b65a1d1e5decc52538dcc1e742ae059adfac723f.json\",\n      \"lineage_sha256\": \"de0834f86d78ee156f6bb3d2b65a1d1e5decc52538dcc1e742ae059adfac723f\",\n      \"native_symbol\": \"BTCUSDT\",\n      \"parquet_path\": \".partitions/BTCUSDT/2023-04/0075cab01b382422645d29308af06244500310e141175b0eb4b65ace0851e66f.parquet\",\n      \"parquet_sha256\": \"0075cab01b382422645d29308af06244500310e141175b0eb4b65ace0851e66f\",\n      \"physical_row_count\": 90,\n      \"row_count\": 90,\n      \"utc_month\": \"2023-04\"\n    },\n    \"lineage_keys\": [\n      \"collapsed_identical_row_count\",\n      \"collapsed_identical_source_rows\",\n      \"document_type\",\n      \"native_symbol\",\n      \"parquet_path\",\n      \"parquet_sha256\",\n      \"physical_row_count\",\n      \"raw_objects\",\n      \"required_product\",\n      \"row_count\",\n      \"schema_sha256\",\n      \"schema_version\",\n      \"utc_month\",\n      \"writer_identity\"\n    ],\n    \"first_raw\": {\n      \"byte_size\": 952,\n      \"checksum_authority\": \"binance_checksum_sidecar\",\n      \"economic_period\": \"2023-04\",\n      \"family\": \"monthly/fundingRate\",\n      \"listed_bytes\": 952,\n      \"native_symbol\": \"BTCUSDT\",\n      \"raw_object_ref\": 0,\n      \"retrieval_time\": \"2026-08-31T09:42:12.614806+00:00\",\n      \"sidecar_key\": \"data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2023-04.zip.CHECKSUM\",\n      \"source_availability_state\": \"unknown_not_imputed\",\n      \"source_available_at\": null,\n      \"source_key\": \"data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2023-04.zip\",\n      \"source_sha256\": \"2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf\",\n      \"validation_state\": \"checksum_verified\"\n    }\n  },\n  {\n    \"kind\": \"funding\",\n    \"root\": \"data/.cex002_funding_realized\",\n    \"completion_sha256\": \"57628164f19d182164b6058d9e51f794430cc918706c088f430e1c01d2898522\",\n    \"partition\": {\n      \"collapsed_identical_row_count\": 0,\n      \"lineage_path\": \".lineage/BTCUSDT/2026-07/2fdee26d80dc0d445b865c9dda4cf8e4d23d55cbd79a51ff43a049a241336482.json\",\n      \"lineage_sha256\": \"2fdee26d80dc0d445b865c9dda4cf8e4d23d55cbd79a51ff43a049a241336482\",\n      \"native_symbol\": \"BTCUSDT\",\n      \"parquet_path\": \".partitions/BTCUSDT/2026-07/a08ecbcb21f141b81465d99b72afa071f497becc645eb4c872b873817086e585.parquet\",\n      \"parquet_sha256\": \"a08ecbcb21f141b81465d99b72afa071f497becc645eb4c872b873817086e585\",\n      \"physical_row_count\": 93,\n      \"row_count\": 93,\n      \"utc_month\": \"2026-07\"\n    },\n    \"lineage_keys\": [\n      \"collapsed_identical_row_count\",\n      \"collapsed_identical_source_rows\",\n      \"document_type\",\n      \"native_symbol\",\n      \"parquet_path\",\n      \"parquet_sha256\",\n      \"physical_row_count\",\n      \"raw_objects\",\n      \"required_product\",\n      \"row_count\",\n      \"schema_sha256\",\n      \"schema_version\",\n      \"utc_month\",\n      \"writer_identity\"\n    ],\n    \"first_raw\": {\n      \"byte_size\": 914,\n      \"checksum_authority\": \"binance_checksum_sidecar\",\n      \"economic_period\": \"2026-07\",\n      \"family\": \"monthly/fundingRate\",\n      \"listed_bytes\": 914,\n      \"native_symbol\": \"BTCUSDT\",\n      \"raw_object_ref\": 0,\n      \"retrieval_time\": \"2026-08-31T09:42:23.459902+00:00\",\n      \"sidecar_key\": \"data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-07.zip.CHECKSUM\",\n      \"source_availability_state\": \"unknown_not_imputed\",\n      \"source_available_at\": null,\n      \"source_key\": \"data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-07.zip\",\n      \"source_sha256\": \"e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e\",\n      \"validation_state\": \"checksum_verified\"\n    }\n  }\n]\n"
+    },
+    "verify.py": {
+      "sha256": "dfcf9cc4260e5cfd21cd6126c724433ea32129cf54a2099781ceeee14ae3b2dd",
+      "text": "import csv,hashlib,io,json,sqlite3,zipfile\nfrom fractions import Fraction\nfrom datetime import datetime,timezone\nfrom pathlib import Path\nimport pyarrow.parquet as pq\nROOT=Path('/home/lars/Crypto_Multifactor_Bot');OUT=Path('/tmp/cex002_closeout530')\nselected=json.loads((OUT/'selected.json').read_text());pins=[];examples=[];summaries=[]\ndef verified(path,sha,size=None):\n p=ROOT/path;assert p.is_file() and not p.is_symlink(),p\n b=p.read_bytes();assert hashlib.sha256(b).hexdigest()==sha,p\n if size is not None:assert len(b)==size,(p,len(b),size)\n pins.append({'path':str(path),'sha256':sha,'bytes':len(b)});return b\npubsha='5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d';pub=json.loads(verified(Path('data/.cex002_harmonic_bundle/.publication')/(pubsha+'.json'),pubsha));manifest_files={}\nfor kind,product in [('oi','binance_usdm_open_interest_5m'),('funding','binance_usdm_funding_realized')]:\n entry=next(e for e in pub['datasets'] if e['dataset_type']==product);m=json.loads(verified(entry['manifest_relative_path'],entry['manifest_file_sha256'],entry['manifest_bytes']));manifest_files[kind]={f['relative_path']:f for f in m['files']}\ncon=sqlite3.connect(f'file:{ROOT}/data/cex002_qualify/gate2/state.sqlite?mode=ro',uri=True);con.row_factory=sqlite3.Row\nraw_cache={}\ndef source_rows(source):\n sha=source['source_sha256']\n if sha in raw_cache:return raw_cache[sha]\n matches=con.execute('SELECT * FROM completion WHERE content_sha256=?',(sha,)).fetchall();assert len(matches)==1\n c=dict(matches[0]);assert c['validation_state']=='checksum_verified';assert c['listed_bytes']==source['byte_size'];path=Path(c['content_path']);assert path==Path('data/cex002_qualify/gate2/content')/sha[:2]/sha\n b=verified(path,sha,source['byte_size']);side=verified(c['sidecar_path'],c['sidecar_sha256']);line=side.decode().strip().split();assert line[0]==sha and line[1].lstrip('*')==source['source_key'].split('/')[-1]\n with zipfile.ZipFile(io.BytesIO(b)) as z:\n  ns=z.namelist();expected=source['source_key'].rsplit('/',1)[-1][:-4]+'.csv';assert ns==[expected];info=z.getinfo(expected);assert info.file_size<=2*1024*1024\n  data=z.read(expected);assert len(data)==info.file_size\n rows=list(csv.DictReader(io.StringIO(data.decode('utf-8-sig'))));assert rows\n raw_cache[sha]=(rows,{'source_key':source['source_key'],'source_sha256':sha,'raw_path':str(path),'zip_member':expected,'uncompressed_bytes':len(data),'sidecar_sha256':c['sidecar_sha256'],'source_available_at':source['source_available_at'],'retrieval_time':source['retrieval_time']});return raw_cache[sha]\ndef raw_for(row,lineage,kind):\n source=next(s for s in lineage['raw_objects'] if s['raw_object_ref']==row['raw_object_ref']);rows,info=source_rows(source);ordinal=row['source_row_ordinal'];raw=rows[ordinal]\n if kind=='oi':\n  stamp=int(datetime.fromisoformat(raw['create_time']).replace(tzinfo=timezone.utc).timestamp()*1000);assert stamp==row['create_time'];assert raw['symbol']==row['native_symbol']\n  for field in ['sum_open_interest','sum_open_interest_value']:assert Fraction(raw[field])==Fraction(row[field]),field\n else:\n  assert int(raw['calc_time'])==row['calc_time'];assert int(raw['funding_interval_hours'])==row['funding_interval_hours'];assert Fraction(raw['last_funding_rate'])==Fraction(row['last_funding_rate'])\n return {'source_row_ordinal':ordinal,'raw_fields':raw,'source':info}\nfor item in selected:\n kind=item['kind'];root=Path(item['root']);p=item['partition'];m=manifest_files[kind]\n for path_key,sha_key in [('parquet_path','parquet_sha256'),('lineage_path','lineage_sha256')]:\n  path=root/p[path_key];entry=m[str(path)];assert entry['sha256']==p[sha_key];verified(path,p[sha_key],entry['bytes'])\n lineage=json.loads((ROOT/root/p['lineage_path']).read_text());assert lineage['parquet_sha256']==p['parquet_sha256'];pf=pq.ParquetFile(ROOT/root/p['parquet_path']);assert pf.metadata.num_rows==p['row_count'];rows=pf.read().to_pylist()\n summary={'kind':kind,'symbol':p['native_symbol'],'month':p['utc_month'],'rows':len(rows),'partition':p,'schema':str(pf.schema_arrow)}\n if kind=='oi':\n  for before,after in zip(rows,rows[1:]):\n   if after['create_time']-before['create_time']!=300000:continue\n   old=raw_for(before,lineage,kind);new=raw_for(after,lineage,kind)\n   assert after['change_interval_seconds']==300 and after['gap_break_status']=='contiguous'\n   assert Fraction(after['previous_sum_open_interest'])==Fraction(before['sum_open_interest'])\n   eq={}\n   for level,change in [('sum_open_interest','open_interest_change'),('sum_open_interest_value','open_interest_value_change')]:\n    difference=Fraction(new['raw_fields'][level])-Fraction(old['raw_fields'][level]);assert difference==Fraction(after[change]);eq[change]={'source_before':old['raw_fields'][level],'source_after':new['raw_fields'][level],'exact_fraction_difference':str(difference),'normalized_difference':str(after[change])}\n   examples.append({'kind':'oi_contiguous','symbol':p['native_symbol'],'month':p['utc_month'],'before_time':before['create_time'],'after_time':after['create_time'],'source_before':old,'source_after':new,'normalized_before':before,'normalized_after':after,'equations':eq,'units':{'sum_open_interest':'BTC base-asset quantity','sum_open_interest_value':'provider-reported USDT quote notional'}});break\n  else:raise AssertionError('No contiguous example')\n  gaps=[(i,row) for i,row in enumerate(rows) if i and row['create_time']-rows[i-1]['create_time']!=300000]\n  if gaps:\n   i,row=gaps[0];prev=rows[i-1];raw=raw_for(row,lineage,kind)\n   assert row['open_interest_change'] is None and row['open_interest_value_change'] is None and row['previous_sum_open_interest'] is None\n   examples.append({'kind':'oi_gap_break','month':p['utc_month'],'previous_time':prev['create_time'],'time':row['create_time'],'elapsed_seconds':(row['create_time']-prev['create_time'])//1000,'raw':raw,'normalized':row})\n  summary['gap_breaks_in_partition']=len(gaps)\n else:\n  signs={('negative' if Fraction(row['last_funding_rate'])<0 else 'positive' if Fraction(row['last_funding_rate'])>0 else 'zero') for row in rows};summary['observed_signs']=sorted(signs)\n  for sign in ['negative','positive']:\n   matched=next((row for row in rows if (Fraction(row['last_funding_rate'])<0 if sign=='negative' else Fraction(row['last_funding_rate'])>0)),None)\n   if matched is None:continue\n   raw=raw_for(matched,lineage,kind);rate=Fraction(raw['raw_fields']['last_funding_rate']);long=Fraction(matched['long_cashflow_rate']);short=Fraction(matched['short_cashflow_rate']);assert long==-rate and short==rate and long+short==0\n   examples.append({'kind':'funding_sign','month':p['utc_month'],'sign':sign,'raw':raw,'normalized':matched,'equations':{'long_equals_negative_source_rate':True,'short_equals_source_rate':True,'sum_fraction':str(long+short)},'units':'dimensionless rate per reported settlement event; no position or payment entitlement inferred'})\n summaries.append(summary)\nassert len(examples)<=12 and len(summaries)==6\nout={'ticket':'CEX-002','review':530,'status':'PASS','command':'.venv/bin/python /tmp/cex002_closeout530/verify.py','selection':'BTCUSDT earliest, median-index and latest nonempty month in each accepted completion descriptor','partitions':summaries,'examples':examples,'authenticated_files':list({p['path']:p for p in pins}.values()),'raw_zip_objects':len(raw_cache),'example_count':len(examples),'scope':'six selected partitions, independent Fraction arithmetic, no normalizer arithmetic helpers','limitations':['OI notional preserves the provider-reported quote stock; this does not independently prove the venue valuation method.','Funding signs describe rates; no account position, payment entitlement or historical receipt time is inferred.']}\n(OUT/'economic.json').write_text(json.dumps(out,indent=2,default=str)+'\\n');print(json.dumps({'status':'PASS','partitions':len(summaries),'examples':len(examples),'raw_zip_objects':len(raw_cache),'funding_signs':[s.get('observed_signs') for s in summaries if s['kind']=='funding'],'gap_counts':[s.get('gap_breaks_in_partition') for s in summaries if s['kind']=='oi']}))\n"
+    },
+    "summarize.py": {
+      "sha256": "6034a3895c7d2b4f178ff5027aa0560dcc5a812818fa82dbd1639a1c30461bf0",
+      "text": "import hashlib,json,collections\nfrom pathlib import Path\nr=Path('/home/lars/Crypto_Multifactor_Bot');out=Path('/tmp/cex002_closeout530')\ndef pinned(p,sha):\n b=(r/p).read_bytes();assert hashlib.sha256(b).hexdigest()==sha;return json.loads(b)\nsha='5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d';pub=pinned(f'data/.cex002_harmonic_bundle/.publication/{sha}.json',sha);csha=pub['prepared_sha256'];candidate=pinned(f'data/.cex002_harmonic_bundle/.prepared/{csha}.json',csha)\nproducts=[]\nfor e in pub['datasets']:\n m=pinned(e['manifest_relative_path'],e['manifest_file_sha256']);assert (r/e['manifest_relative_path']).stat().st_size==e['manifest_bytes'];files=m['files'];components=collections.defaultdict(lambda:{'files':0,'rows':0,'bytes':0})\n for f in files:\n  k=f['partition'].get('component') or f['partition'].get('role') or f['partition']['kind'];v=components[k];v['files']+=1;v['rows']+=f['rows'];v['bytes']+=f['bytes']\n q=m['quality_summary'];product={**e,'declared_files':len(files),'declared_rows':sum(f['rows'] for f in files),'declared_bytes':sum(f['bytes'] for f in files),'components':dict(components),'schema_contract_sha256':sorted(q['schema_registry']['contracts']),'quality_summary':{k:v for k,v in q.items() if k!='schema_registry'}};products.append(product)\n print(e['dataset_type'],product['declared_rows'],product['declared_files'],product['declared_bytes'],list(product['quality_summary'])[:8])\nsummary={'publication_sha256':sha,'candidate_sha256':csha,'proof_sha256':pub['proof_sha256'],'nautilus_version':pub['nautilus_version'],'products':products,'candidate_authorities':candidate['authorities'],'declared_totals':{'files':sum(p['declared_files'] for p in products),'rows':sum(p['declared_rows'] for p in products),'bytes':sum(p['declared_bytes'] for p in products)},'method':'Authenticated existing manifest metadata only; totals describe declared files. Fresh physical/value proofs were not rerun; accepted Records518/524 supply those checks.'}\nassert summary['declared_totals']=={'files':423446,'rows':1165116869,'bytes':38950242846}\n(out/'release_summary.json').write_text(json.dumps(summary,indent=2)+'\\n')\nprint(json.dumps(summary['declared_totals']))\n"
+    }
+  },
+  "diagnostic_probe_failures": [
+    "Initial SQLite probe used nonexistent raw_sha256; corrected to content_sha256 before the successful evidence command.",
+    "Initial guessed OI directory and funding module paths did not exist; actual paths were discovered before evidence execution.",
+    "Metadata display attempted uninstalled python; corrected to python3.",
+    "A guessed Review476 filename did not exist; resolved by repository file discovery."
+  ]
+}
