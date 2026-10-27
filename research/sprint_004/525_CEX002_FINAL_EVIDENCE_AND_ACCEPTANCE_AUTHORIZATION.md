@@ -205,3 +205,48 @@ The reviewer may stage/commit/push only those paths under AGENTS.md's governance
 publication exception. This publishes no developer source or implementation evidence
 in CMB, executes no CMB acceptance command and mutates no release data. No CMB next
 ticket, broad suite retry, acquisition or scored experiment is authorized.
+
+
+## Concrete historical-universe findings after HT-004
+
+The owner reiterates that "data" means usable survivorship-aware research inputs, not
+merely readable market files. The original requirement is unchanged. No source or data
+mutation was performed in this inspection.
+
+A read-only query of all 771 published membership rows establishes:
+- 698 rows use the retained exchangeInfo snapshot; 73 names are absent from that snapshot
+  and are retained through official realized-funding evidence, rather than dropped.
+- All 73 funding-only rows lack onboard_ms, delivery_ms, closed_observed_ms, base_asset,
+  quote_asset and margin_asset. Their status is explicitly funding_only_terms_unavailable.
+- The snapshot rows contain 570 TRADING, 127 SETTLING and one PENDING_TRADING contract.
+  These are snapshot statuses, not a historical sequence of statuses.
+- All 771 canonical instrument identifiers remain null. Native symbols exist, but the
+  release has not supplied the contract-version mappings required by the HT contract.
+
+The upstream membership acceptance established retention and faithful classification;
+it did not establish complete dated contract terms. Do not erase the 73 names, treat
+current status as historical status, or equate a first/last observed bar with an official
+listing/delisting announcement. Nor should missing exact publication timestamps alone be
+used to declare every historical series unusable: per-product timing rules still require
+an explicit assessment.
+
+A concrete recoverable example is AERGOUSDT. Official Binance notices establish:
+- Launch 2024-09-10 12:15 UTC, AERGO underlying, USDT settlement, launch tick0.0001:
+  https://www.binance.com/en/support/announcement/detail/de870af81e8d42cd903b84a97fa5bc91
+- New positions stop 2025-03-27 08:30 UTC, automatic settlement09:00 UTC:
+  https://www.binance.com/en/support/announcement/detail/db7ad1c7aa6248cda735102cdcdc4b8d
+- Relaunch 2025-04-16 11:00 UTC, AERGO underlying, USDT settlement, launch tick0.00001:
+  https://www.binance.com/en/support/announcement/detail/82f730b7ef444a38b323ab7a2e56b757
+- New non-reduce-only orders stop 2026-07-24 06:00 UTC, settlement06:30 UTC:
+  https://www.binance.com/en/support/announcement/detail/f0e3fc835b9545759e4279c64b200389
+
+These are official documented effective events, not proof that every intermediate
+contract specification remained unchanged. The displayed announcement publication times
+have not yet been assigned a verified timezone or treated as archived receipt timestamps.
+The current undated AERGOUSDT membership row does not represent these distinct episodes.
+
+Repair work must recover dated trading episodes and needed contract terms without
+rewriting market history, then apply them when selecting research observations. The
+existing reference models already express LIST/DELIST/SUSPEND/RESUME and dated instrument
+versions; do not build another generic reference framework. All published products,
+prior storage checks and explicit gaps remain intact. Full data readiness is not claimed.

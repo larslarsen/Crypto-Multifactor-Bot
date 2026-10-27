@@ -9,6 +9,16 @@ Next ticket authorized: NONE
 
 ## Current action
 
+The owner confirms that the deliverable must be survivorship-aware usable research data.
+Read-only inspection now establishes a concrete membership gap: all 771 historical names
+are retained, but73 names absent from the retained exchangeInfo snapshot lack listing/
+closing dates and base/quote/settlement terms. All771 canonical IDs remain null. Review525's
+latest section records exact fields and official AERGOUSDT launch/delist/relaunch notices.
+The 698 snapshot rows also must not be mistaken for a history of contract specifications.
+The next substantive repair is dated contract episodes/terms plus explicit per-product
+historical timing rules; no reduced universe, guessed dates, new reference framework,
+full-suite rerun or model work. This is an existing data-first requirement, not new scope.
+
 HT-004 data access is accepted and integrated in Harmonic Trader at 80490b6. The
 complete eleven-product reader uses existing Parquet in place. Eleven new targeted
 cases and ten existing integration cases passed; real native callbacks received all
