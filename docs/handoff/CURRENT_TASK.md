@@ -3,25 +3,33 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, integration and monitored known-release reconciliation
+Next required actor: Lead Quantitative Finance Researcher/Engineer, final closeout evidence assignment
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review522 accepts the frozen two-path reconciliation source after 25 focused cases
-passed (senior-authored feedback, exit0,3.77seconds). Hermes owns the complete final
-Review522 workflow: scoped lint/control/whitespace, exact-three-path integration with
-Record523, then ONE project-environment real reconciliation under a1800second deadline
-with append-only Record524 and exact-one-path terminal evidence publication. Stop on
-first failure, no retries. Reviewer actively monitors through terminal publication.
+COMPLETED: the known-release replay/readback check PASSED in773.097seconds (12m53s).
+Reviewer accepts integration9b24ceac34a40f2ee0aaf20d774a6e344b1ce1c1 and terminal
+Record524 publication/correction2f9f14485127f72ca0003fcc2331a2dbdb406dde under
+Review522/ADR0040. All423446 physical files, complete accepted catalog anchors and
+five-row quarantine matched. Identical replay rolled back; independent read-only
+snapshot passed. No logical-row/Nautilus rerun or catalog-row changes occurred.
 
-Reuse the accepted full consumer proof; freshly authenticate all423446 physical files,
-footers/schema and complete fixed catalog anchors. Prove identical rollback-only replay
-and independent read-only snapshot for the already admitted release. No logical-row
-or Nautilus rerun, original source/data mutation or cleanup. Original failed replay
-stays failed. Remaining economics/final acceptance are pending. CEX-002 IN_PROGRESS;
-next ticket and authorization NONE. Exact commands/pins are in Review522's final section.
+Tracking: launch2026-10-26T23:47:45Z; jobproc_8e5ec0014d2f exited0 (uptime774s),
+output capture0, deadline1800s not reached. Hermes session20261026_163106_0df3aa used
+Step3.7Flash for integration/execution after documented provider recovery. Hermes is
+stopped; no job remains running. Evidence:
+research/sprint_004/524_CEX002_KNOWN_RELEASE_REPLAY_READBACK_RECORD.md,
+SHA256dc3eec2f927cc9353dd9a5dc56e85abecc82254bcec4f3ddb2a9dfb79b5fcbd0.
+The first35462 raw bytes remain checksum-identical; model-history/query errata are
+explicitly appended. Do not repeat this successful check or the accepted full proof.
+
+Remaining fixed closeout: independent economic examples/reconciliation evidence,
+consolidated final release/coverage report and original full acceptance commands.
+Reviewer selects the bounded remaining assignment; no further source/run is assigned
+here. Preserve the original failed replay as failed. CEX-002 IN_PROGRESS; next ticket
+and authorization NONE. Full-ticket acceptance has not been granted.
 
 ## Accepted preparation
 
@@ -35,8 +43,8 @@ below the fixed remainder. Post-run free space is 147,669,061,632 bytes.
 
 Preparation remains accepted. Review 511 now governs checker validation/integration.
 Full-release consumer proof is accepted in Review517 and initial catalog admission
-in Review519. Replay/readback, remaining economic evidence and final acceptance remain pending. Preserve all accepted checks and data. GPT-6.1
-remains reviewer and does not author production or test source.
+in Review519. Known-release replay/readback is accepted in Review522. Remaining economic evidence and final acceptance remain pending. Preserve all accepted checks and data. The Lead
+retains review ownership and does not author production or test source.
 
 ## Completed terminal inspection and publication
 
@@ -330,8 +338,9 @@ accepted: 3,865 partitions, 939,130,319 book rows, 939,131,092 component rows an
 ordinary_sizing_check_passed=false remain explicit; byte bounds pass. Prior exact
 inventory/replay evidence is preserved.
 
-Batch D still owes remaining independent economic evidence, the pinned harmonic bundle/catalog,
-clean NautilusTrader readback, release replay and original final acceptance commands.
+Batch D still owes remaining independent economic evidence, the consolidated final
+release/coverage report and original final acceptance commands. Pinned bundle/catalog,
+full Nautilus consumer proof and known-release replay/readback are accepted.
 Accepted fee scenarios, unknown availability and observed/censored liquidation semantics
 remain unchanged. Holdout: 2026-08-21T16:19:08.994166+00:00. Reviewer acceptance is
 exclusive; no full-ticket acceptance, modeling or next ticket is authorized.

@@ -318,3 +318,74 @@ terminal result truthfully too; never label a launch or interrupted run PASS.
 No extra review handoff between these successful steps. Reviewer keeps active track
 through terminal result and evidence publication. Full-ticket economics/final suite
 and acceptance remain pending; CEX-002 IN_PROGRESS, next ticket/authorization NONE.
+
+
+## Reviewer terminal acceptance — 2026-10-27
+
+Accept source integration9b24ceac34a40f2ee0aaf20d774a6e344b1ce1c1 /Record523
+with the explicit narrative errata in Record524. The committed three-path set and
+both frozen source hashes match the accepted drop. Senior focused feedback25passed
+in3.77seconds and Hermes scoped Ruff/control/whitespace all passed. No test was
+repeated to recover executor availability. Historical21passed/2failed stays recorded.
+
+Accept the ONE real known-release reconciliation under ADR0040: launch2026-10-26
+23:47:45UTC, reported elapsed773.097seconds (12m53s), native process uptime774seconds,
+execution exit0 and output-capture exit0. Jobproc_8e5ec0014d2f is terminal/exited;
+Hermes is stopped for reviewer. There is no outstanding run or retry assignment.
+The1800second deadline was not reached. The exact project-environment CLI is in
+Record524; native capture used condensed shell chaining rather than the review block
+verbatim, with both actual terminal statuses0 and the complete output preserved.
+
+Final evidence publication: 2f9f14485127f72ca0003fcc2331a2dbdb406dde, following
+first correctioncf449175d045cb6ffc3cd177802cd7e1f6a5d32c and
+initial Record524 publication9d6ba2c50c9af18dddb5ddd06591fccb4777eeee. Final record:
+research/sprint_004/524_CEX002_KNOWN_RELEASE_REPLAY_READBACK_RECORD.md,
+39374bytes, SHA256dc3eec2f927cc9353dd9a5dc56e85abecc82254bcec4f3ddb2a9dfb79b5fcbd0.
+The original35462byte captured prefix retains SHA256
+3c8a5c67e5cc3be667864c60cbcc41868e69a99740464563c56c2b70f525d370 in both worktree
+and committed content. Reviewer independently inspected the raw final JSON, terminal
+status, source hashes, exact integration/publication paths and empty staging index;
+HEAD==origin/main at2f9f144 before this reviewer-only governance publication.
+
+Confirmed scope: accepted_proof_unchanged_bytes_and_catalog. All423446 files were
+freshly authenticated (178947 tables,244499 metadata references;38950242846 unique
+physical bytes),11 datasets,10 dataset dependency edges and0 raw edges. The historical
+1165116869-row full consumer/value evidence was reused; no new logical-row decoding
+or Nautilus run occurred. Candidate8b46beb… /publication5ea2227… /proof3be8597… /
+checkerac83cc2… and original source commit1f5629b… match their fixed authorities.
+All four complete catalog snapshots match the accepted anchors above, and five-row
+quarantine digestb4334b2… is unchanged. Identical replay rolled back; independent
+read-only catalog reconciliation passed. No release/catalog-row changes or repair.
+Observed free198410391552bytes preserves the29690701415byte operating reserve;
+reserved metadata3958751427 remains within4985471619bytes. No cleanup occurred.
+
+Executor attribution/record errata: the old LongCat free endpoint returnedHTTP404
+before any integration or real run. A fresh Hermes session20261026_163106_0df3aa used
+Laguna S2.1 for the successful integration checks, then hit upstreamHTTP429 capacity.
+Step3.7Flash continued that SAME saved session, integrated source and executed the
+real run. Record523 was not corrected before integration; its inaccurate model
+history and Record524's initial false session-history sentence are corrected by the
+appended Record524 correction. The initial working-tree diff labeled INDEX_EMPTY=3
+was the wrong query; the actual staged index was empty, subsequently checked with
+git diff --cached --name-only. The integration printed the exact expected staged set
+rather than asserting its equality automatically; reviewer independently verified
+that committed set. The terminal record publication used an exact-one-path assertion.
+These documentary/control-query limitations do not invalidate the observed source,
+actual executed checks or complete no-change real reconciliation. Do not rerun them.
+One record-only correction command failed shell parsing (exit2) before any append;
+the corrected append then passed. A late queued record-only instruction added the
+same correction a second time; no audit was repeated. Its final staged-index query
+misspelled --name-only as --name-name and printed Git usage; reviewer independently
+confirmed the actual index empty and HEAD==origin/main. All publication commits touch
+only Record524. The completed executor was closed with no child job to prevent further
+queued work. Original raw bytes were never changed.
+
+This satisfies the existing known admitted release replay/readback requirement under
+ADR0040. Preserve Record521's original capacity-failed replay as FAILED, the accepted
+initial admission and Record518's full consumer PASS. This is not a successful rerun
+of the old generic CLI, an initial-admission shortcut or full-ticket acceptance.
+Remaining CEX-002 work: independent economic examples/reconciliation evidence, the
+consolidated final release/coverage report and original full acceptance commands.
+No new source, data run, old verifier, cleanup or next ticket is authorized here.
+Next required actor is the Lead reviewer for that fixed closeout evidence assignment;
+CEX-002 remains IN_PROGRESS and next ticket/authorization remain NONE.
