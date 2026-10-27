@@ -3,25 +3,54 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes, Review525 final evidence and acceptance commands
+Next required actor: Lead Quantitative Finance Researcher/Engineer — preserve delivered consumer and resolve remaining historical timing/release questions
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Review525's final continuation assigns Hermes the pinned missing test dependency
-nautilus-trader2.0.0rc3 in project .venv, then the original full pytest command once.
-Initial attempt failed collection (missing package); Ruff/control/whitespace passed.
-Record526 at3047186 preserves failure and executor deviations. No test bodies ran.
-Rotate Hermes backend from Step to Laguna S2.1 free for repeated execution errors;
-use a fresh concise native session. Reviewer monitors the SAME job to terminal.
-On success finish the bounded OI/funding examples and consolidated report in Record526;
-on failure publish actual evidence and stop. No source fixes or release reruns.
-Governing workflow: research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md.
+HT-004 data access is accepted and integrated in Harmonic Trader at 80490b6. The
+complete eleven-product reader uses existing Parquet in place. Eleven new targeted
+cases and ten existing integration cases passed; real native callbacks received all
+nine temporal product/component families and 24 BTCUSDT native hourly bars. The
+earlier full-release storage proof and all source data remain preserved.
+Historical source publication time remains unknown: event-time playback is explicit
+and is not accepted as proof of decision-time availability. The owner emphasizes that
+important prior protections must not be silently discarded. No model or scored study
+is authorized, and unfinished CEX-002 gates remain unfinished.
 
-Review522's 773.097-second replay/readback and all accepted product/coverage/full
-consumer/admission evidence remain accepted. CEX-002 IN_PROGRESS; full-ticket
-acceptance pending; next ticket and authorization NONE.
+The owner subsequently instructed "Just fix it" and excluded new model work. The
+identified delivery gap is the missing Harmonic Trader reader, not missing source
+files. HT-004 in the independent Harmonic Trader repository now authorizes a direct
+read-only consumer for all eleven published products, native Nautilus delivery, and
+focused consumer tests. That consumer uses the existing accepted publication; it does
+not copy the release or import CMB source. CMB full-suite execution stays stopped.
+This is not acceptance of unfinished CEX-002 gates or authorization of another CMB
+acquisition/model ticket. Next CMB ticket remains NONE.
+
+### Stopped previous execution
+
+EXECUTION STOPPED at reviewer direction following the owner's explicit objections to
+scope, time, disk use and failure to deliver usable complete data to NautilusTrader.
+Review525's remaining execution authorization is withdrawn. Do not resume tests,
+economic checks, report expansion, installation, downloads, cleanup or source work
+from the earlier workflow. No smaller/sample delivery has been authorized; the owner
+explicitly rejects half measures. The substantive issue is complete usable data delivery,
+not satisfying this repository's remaining process in isolation.
+
+Stopped full-suite job: proc_6306587df26b, wrapper PID4188127, pytest PID4188203,
+Hermes session20261026_174058_da9db4. Started2026-10-27T00:59:24.466877917Z.
+Reviewer sent SIGTERM only to the verified pytest PID after matching argv, parent and
+no children. Partial log /tmp/cex002_pytest_r_retry.aXQOHA is preserved. The run had
+reported failures and was incomplete; do not call it PASS or a completed suite.
+The project environment now contains pinned Nautilus2.0.0rc3; dependency check passed.
+Prior lint/control/whitespace passed; original missing-package failure is in Record526.
+
+All accepted release data and prior evidence remain preserved. Review522's replay
+and the full-release consumer check stay accepted as checks, not as a completed usable
+catalog handoff to the owner. No data deletion or further acquisition is assigned.
+The reader now closes the data-access gap only. CEX-002
+remains IN_PROGRESS, acceptance pending, next ticket and authorization NONE.
 
 ## Accepted preparation
 

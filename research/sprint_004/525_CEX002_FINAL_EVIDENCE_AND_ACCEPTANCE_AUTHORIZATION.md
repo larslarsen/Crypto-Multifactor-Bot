@@ -170,3 +170,38 @@ On failure publish that result and stop. Preserve the initial failure. Exact pub
 set remains only Record526, with cached-index assertion, ordinary commit/push and
 HEAD/origin equality. No accepted data scans, source fixes or next ticket. Reviewer
 will assess the actual final result and retains monitoring responsibility.
+
+## Execution authorization withdrawn — owner challenges delivery direction
+
+The owner explicitly objects to further scope/time/disk expenditure without complete
+usable NautilusTrader data and rejects a smaller/sample substitute. Reviewer stops the
+broad suite and withdraws all remaining workflow execution. Preserve existing data and
+logs; no source, test retry, installation, report expansion, cleanup or acquisition.
+Native jobproc_6306587df26b was interrupted by reviewer SIGTERM to verified pytest
+PID4188203 (parent4188127, exact expected argv, no children). This supervision action
+executes no test or evidence calculation. Partial output at
+/tmp/cex002_pytest_r_retry.aXQOHA remains incomplete and contains failures; no PASS.
+Hermes automation is stopped. Pytest terminated at 2026-10-27T01:23:12.017055107Z
+with PYTEST_EXIT=143; the wrapper exit0 does not change the interrupted test result.
+Full-ticket acceptance is not granted. Existing
+accepted consumer/replay checks are not a claim of a finished usable catalog handoff.
+Reviewer retains delivery-scope reassessment; next ticket/authorization remain NONE.
+
+
+## Reviewer publication of the stopped workflow and delivered reader
+
+HT-004 is reviewed and integrated in the independent Harmonic Trader repository at
+80490b6. It provides complete read-only CEX access and tested native transport without
+a second full catalog. Unknown source publication times remain unresolved; explicit
+event-time playback is not proof of causal historical availability. The earlier full
+consumer proof, accepted source data and unfinished CEX-002 gates keep their status.
+
+This reviewer-authored governance publication is limited to these exact CMB paths:
+- docs/handoff/CURRENT_TASK.md
+- tickets/CEX-002.md
+- research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md
+
+The reviewer may stage/commit/push only those paths under AGENTS.md's governance
+publication exception. This publishes no developer source or implementation evidence
+in CMB, executes no CMB acceptance command and mutates no release data. No CMB next
+ticket, broad suite retry, acquisition or scored experiment is authorized.
