@@ -4,9 +4,9 @@
   "facts_file": "research/sprint_004/cex002_contract_notice_facts.json",
   "observed_at": "2026-10-27T04:46:55.749695+00:00",
   "scope": "Only the calendar month containing each recovered closure; only hourly bars and realized-funding source rows; only the 73 missing-snapshot names. No whole-history completeness claim.",
-  "interpretation": "Rows after announced boundaries are retained source observations. Their presence alone proves neither executable trades nor payable funding. FTTBUSD has unresolved conflicting/repeated closure notices.",
-  "selected_files": 145,
-  "selected_bytes": 2473703,
+  "interpretation": "Source rows after announced boundaries are retained observations, not proof of executable trades or payable funding. The FTTBUSD May 2022 proposal was cancelled and is excluded from the noncancelled boundary aggregate. All original query results remain preserved.",
+  "selected_files": 149,
+  "selected_bytes": 2543691,
   "results": [
     {
       "fact_id": "notice-002",
@@ -2185,7 +2185,10 @@
           "last_timestamp_ms": 1654012800000,
           "nonzero_rate_rows": 37
         }
-      }
+      },
+      "boundary_status": "cancelled_proposal_not_actual_closure",
+      "correction_source_url": "https://www.binance.com/en/support/announcement/detail/992804123d7f48d5a3824474097d46ec",
+      "interpretation": "Retain original query result. Subsequent research proves planned May settlement was cancelled; the later positive-trade bars do not establish an unexplained relaunch."
     },
     {
       "fact_id": "notice-056",
@@ -2740,6 +2743,82 @@
           "nonzero_rate_rows": 1
         }
       }
+    },
+    {
+      "fact_id": "notice-134",
+      "symbol": "ANCBUSD",
+      "announced_boundary": "2022-12-15T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 399,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ANCBUSD/2022-12/2d7ef618e5dec4281c434d0e972b3b1e16e4589f39069a18a0611bcadf9435cd.parquet",
+              "sha256": "2d7ef618e5dec4281c434d0e972b3b1e16e4589f39069a18a0611bcadf9435cd"
+            }
+          ],
+          "first_timestamp_ms": 1671094800000,
+          "last_timestamp_ms": 1672527600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 49,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ANCBUSD/2022-12/01b28b098e2d3b020a3dddd0fa4cb9f9c9261aa495571fee7cd160c64258c5e0.parquet",
+              "sha256": "01b28b098e2d3b020a3dddd0fa4cb9f9c9261aa495571fee7cd160c64258c5e0"
+            }
+          ],
+          "first_timestamp_ms": 1671120000010,
+          "last_timestamp_ms": 1672502400000,
+          "nonzero_rate_rows": 49
+        }
+      }
+    },
+    {
+      "fact_id": "notice-134",
+      "symbol": "AUCTIONBUSD",
+      "announced_boundary": "2022-12-15T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 399,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AUCTIONBUSD/2022-12/b2b9d3f48cfa58fd6320f48ab4f4cbdcf68e907ce0dd0bab53c209e41e40fe16.parquet",
+              "sha256": "b2b9d3f48cfa58fd6320f48ab4f4cbdcf68e907ce0dd0bab53c209e41e40fe16"
+            }
+          ],
+          "first_timestamp_ms": 1671094800000,
+          "last_timestamp_ms": 1672527600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 49,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AUCTIONBUSD/2022-12/0776ba7b3d0b698eebd3b8b4f2e9e23e95c24d8ded741a1a0373a72200fa940d.parquet",
+              "sha256": "0776ba7b3d0b698eebd3b8b4f2e9e23e95c24d8ded741a1a0373a72200fa940d"
+            }
+          ],
+          "first_timestamp_ms": 1671120000010,
+          "last_timestamp_ms": 1672502400000,
+          "nonzero_rate_rows": 49
+        }
+      }
     }
   ],
   "supplement_observed_at": "2026-10-27T04:54:55.111371+00:00",
@@ -2757,14 +2836,133 @@
     ],
     "interpretation": "An hourly bar beginning at settlement can contain a terminal observation. Positive volume is not proof of tradability for the full hour."
   },
-  "facts_sha256": "8461413161a7ced57ee14280b51aae65470ac6f1641d90973973f40aa4065b9d",
-  "facts_binding_note": "Digest binds the final reviewed facts attachment. Each saved query identifies the original fact_id and exact announced_boundary. The first 72 queries preceded addition of notices 072/073 and the recovery summary; their queried facts are unchanged.",
+  "facts_sha256": "61e2b99e955510111202db9af16dfadea81af1de32a0ee7f76ab45e6753ebb40",
+  "facts_binding_note": "Digest binds the expanded facts attachment including 12 snapshot episode reviews. Original query fact IDs and effective timestamps remain unchanged. The interpretation of notice-055 is corrected by the recovered cancellation. Only two new notice-134 closure-month queries were added; earlier market queries were not rerun.",
   "boundary_caveat": "These are comparisons to announced settlement START or stated trading cessation, not measured completion. Do not automatically discard funding immediately after that timestamp: LENDUSDT has an observation at boundary + 5 ms, which may be a terminal payment. Nor does a positive-volume boundary bar establish tradability for the full hour. No row has been adjudicated as valid cashflow or invalid source data by this count alone.",
   "summary": {
-    "boundary_queries": 73,
-    "distinct_symbols": 71,
-    "boundaries_with_bar_open_at_or_after": 71,
-    "boundaries_with_later_funding_timestamp": 65,
-    "selected_file_count_kind": "unique files across closure-month queries; the AERGO boundary-bar detail rereads one of those selected files"
+    "boundary_queries": 75,
+    "distinct_symbols": 73,
+    "boundaries_with_bar_open_at_or_after": 73,
+    "boundaries_with_later_funding_timestamp": 67,
+    "includes_cancelled_proposal_queries": 1,
+    "noncancelled_announced_boundaries": {
+      "boundary_queries": 74,
+      "distinct_symbols": 73,
+      "boundaries_with_bar_open_at_or_after": 72,
+      "boundaries_with_later_funding_timestamp": 66
+    },
+    "selected_file_count_kind": "unique files across closure-month queries; prior AERGO detail reread one selected file"
+  },
+  "final_two_closure_supplement": {
+    "observed_at": "2026-10-27T05:45:05.015365+00:00",
+    "selected_files": 4,
+    "selected_bytes": 69988
+  },
+  "snapshot_episode_screen": {
+    "ticket": "CEX-002",
+    "observed_at": "2026-10-27T05:34:22.533051+00:00",
+    "publication_sha256": "5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d",
+    "scope": "Read published membership and bar manifest only; compare earliest declared monthly bar partition against snapshot onboard month. No market-bar rows read, no date inferred from first bar. This screen cannot detect reuse inside the same calendar month.",
+    "snapshot_rows": 698,
+    "flagged_rows": 12,
+    "flags": [
+      {
+        "native_symbol": "AIAUSDT",
+        "snapshot_onboard_at": "2026-01-20T11:15:00+00:00",
+        "first_bar_partition_month": "2025-09",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/AIAUSDT/2025-09/197380a33e97de45e3774c84d5c7c7c943621d2b48d01a19dcdde01c639a77a1.parquet",
+        "first_partition_sha256": "197380a33e97de45e3774c84d5c7c7c943621d2b48d01a19dcdde01c639a77a1",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "BNXUSDT",
+        "snapshot_onboard_at": "2023-02-22T07:00:00+00:00",
+        "first_bar_partition_month": "2022-04",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/BNXUSDT/2022-04/bd5eb15137e9daec71ddac47dc2f707b473bdfaf55ea5b3a82e3fd3bed14b22a.parquet",
+        "first_partition_sha256": "bd5eb15137e9daec71ddac47dc2f707b473bdfaf55ea5b3a82e3fd3bed14b22a",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "CTKUSDT",
+        "snapshot_onboard_at": "2025-04-30T10:15:00+00:00",
+        "first_bar_partition_month": "2020-11",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/CTKUSDT/2020-11/b2f2d4b9592faface767298ab367454beacac3c8f8eb28c11570d069656a6f69.parquet",
+        "first_partition_sha256": "b2f2d4b9592faface767298ab367454beacac3c8f8eb28c11570d069656a6f69",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "CVCUSDT",
+        "snapshot_onboard_at": "2025-05-16T08:30:00+00:00",
+        "first_bar_partition_month": "2020-11",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/CVCUSDT/2020-11/ae480891428fc8f50f8ce8b5c9eed458fb81439551e43e784a1aa211c0e2b228.parquet",
+        "first_partition_sha256": "ae480891428fc8f50f8ce8b5c9eed458fb81439551e43e784a1aa211c0e2b228",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "CVXUSDT",
+        "snapshot_onboard_at": "2025-07-23T11:30:00+00:00",
+        "first_bar_partition_month": "2022-09",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/CVXUSDT/2022-09/9b82e505f3aeecb56a82ba087868cb6681990f815d15dcd31099648e62f87d63.parquet",
+        "first_partition_sha256": "9b82e505f3aeecb56a82ba087868cb6681990f815d15dcd31099648e62f87d63",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "ETHBTC",
+        "snapshot_onboard_at": "2023-05-25T00:00:00+00:00",
+        "first_bar_partition_month": "2023-04",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/ETHBTC/2023-04/3cc2eea142f5ad47040d2c5e589e34363d83d4e0bfb155fd9e0cc571237abce2.parquet",
+        "first_partition_sha256": "3cc2eea142f5ad47040d2c5e589e34363d83d4e0bfb155fd9e0cc571237abce2",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "ICPUSDT",
+        "snapshot_onboard_at": "2021-07-30T07:00:00+00:00",
+        "first_bar_partition_month": "2021-05",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/ICPUSDT/2021-05/7bc379a2c9c4d4c53a996125b6feea5eb812b20abdbf1c626293389bb91dad76.parquet",
+        "first_partition_sha256": "7bc379a2c9c4d4c53a996125b6feea5eb812b20abdbf1c626293389bb91dad76",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "LITUSDT",
+        "snapshot_onboard_at": "2025-12-23T17:30:00+00:00",
+        "first_bar_partition_month": "2021-02",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/LITUSDT/2021-02/98a93daa70d9de7b862735f47a3bf0e675135227d2759658a58c74b9e41d7307.parquet",
+        "first_partition_sha256": "98a93daa70d9de7b862735f47a3bf0e675135227d2759658a58c74b9e41d7307",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "MAVIAUSDT",
+        "snapshot_onboard_at": "2025-03-26T17:00:00+00:00",
+        "first_bar_partition_month": "2024-02",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/MAVIAUSDT/2024-02/e473010787637c200ba2b96afff05af991a158d395eba82223d6d6a08dbbb5bd.parquet",
+        "first_partition_sha256": "e473010787637c200ba2b96afff05af991a158d395eba82223d6d6a08dbbb5bd",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "PUMPUSDT",
+        "snapshot_onboard_at": "2025-07-10T07:30:00+00:00",
+        "first_bar_partition_month": "2025-04",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/PUMPUSDT/2025-04/8e10935b9345563b3bd7409f6a061f8300aa40f50040f03737e232fdc21f38cc.parquet",
+        "first_partition_sha256": "8e10935b9345563b3bd7409f6a061f8300aa40f50040f03737e232fdc21f38cc",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "SLPUSDT",
+        "snapshot_onboard_at": "2025-07-23T11:45:00+00:00",
+        "first_bar_partition_month": "2023-10",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/SLPUSDT/2023-10/812f7fbcdfceb4fbeeff26a2a3cabcd2e4a40b1c98706d3ba3ee7cfd8f444f64.parquet",
+        "first_partition_sha256": "812f7fbcdfceb4fbeeff26a2a3cabcd2e4a40b1c98706d3ba3ee7cfd8f444f64",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      },
+      {
+        "native_symbol": "TLMUSDT",
+        "snapshot_onboard_at": "2023-03-29T00:00:00+00:00",
+        "first_bar_partition_month": "2021-07",
+        "first_partition_path": "data/.cex002_bar_1h/.partitions/TLMUSDT/2021-07/39feb78fea420e0cc6809c3d932a179650741978066a502950ccdb8903915715.parquet",
+        "first_partition_sha256": "39feb78fea420e0cc6809c3d932a179650741978066a502950ccdb8903915715",
+        "snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b"
+      }
+    ],
+    "review_disposition": "All 12 flags classified in facts.snapshot_episode_reviews. Nine closure/relaunch histories, two different-underlying ticker reuses, and one launch/snapshot-onboard discrepancy. Remaining 686 snapshot rows are not thereby proved complete; same-month reuse is outside this screen."
   }
 }

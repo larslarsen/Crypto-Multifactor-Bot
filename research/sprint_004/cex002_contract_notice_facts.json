@@ -3,7 +3,7 @@
   "review": "research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md",
   "status": "reviewer_source_research_not_integrated",
   "scope": "Official Binance USD-M perpetual contract notices. Partial recovery; neither a complete lifecycle nor accepted executable contract specifications.",
-  "knowledge_time_rule": "Displayed publication headers have no verified timezone here. known_from remains null. Web retrieval now does not prove historical receipt. Effective UTC times are taken from explicit notice text.",
+  "knowledge_time_rule": "An explicit API publishDate is retained as source_publication_time where recovered; otherwise the displayed header has no independently verified timezone. Current article metadata does not prove the original revision or historic receipt. known_from remains null; effective UTC times come from explicit notice text.",
   "settlement_rule": "automatic_settlement is its announced start, followed by delisting after completion; it is not a measured delisting-completion timestamp.",
   "terms_rule": "Terms attached to a launch describe that launch only. No assertion that tick sizes, margin, fees or funding intervals remained unchanged.",
   "universe_rule": "All 73 missing-snapshot names stay listed below. Names from the 698 snapshot rows that share a notice are retained too. Absence of a notice does not prove absence of an event; a partial notice set does not prove continuous trading.",
@@ -1208,10 +1208,21 @@
       "events": [
         {
           "event": "automatic_settlement",
-          "effective_at": "2022-05-19T09:00:00Z"
+          "effective_at": "2022-05-19T09:00:00Z",
+          "event_status": "cancelled",
+          "executable_boundary": false
         }
       ],
-      "history_complete": false
+      "history_complete": false,
+      "announcement_status": "cancelled_before_scheduled_effective_time",
+      "superseded_by_source_url": "https://www.binance.com/en/support/announcement/detail/992804123d7f48d5a3824474097d46ec",
+      "correction_api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=992804123d7f48d5a3824474097d46ec",
+        "publishDate": 1652681469569,
+        "lastUpdateTime": 0,
+        "response_sha256": "e760781c15e51e8d650f9c06fbbdba84ee9fcd2a24a530c340d62fa4a8ba8665",
+        "local_response_saved_at": "2026-10-27T05:29:23.644814+00:00"
+      }
     },
     {
       "fact_id": "notice-056",
@@ -1550,6 +1561,1721 @@
       ],
       "history_complete": false,
       "retrieval_note": "Primary article body recovered through indexed Binance Support result; direct URL currently redirects to announcement index."
+    },
+    {
+      "fact_id": "notice-074",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/992804123d7f48d5a3824474097d46ec",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-16T06:11:09.569000Z",
+      "known_from": null,
+      "native_symbols": [
+        "NEARBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-17T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=992804123d7f48d5a3824474097d46ec",
+        "publishDate": 1652681469569,
+        "lastUpdateTime": 0,
+        "response_sha256": "e760781c15e51e8d650f9c06fbbdba84ee9fcd2a24a530c340d62fa4a8ba8665",
+        "local_response_saved_at": "2026-10-27T05:29:23.644814+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-075",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/992804123d7f48d5a3824474097d46ec",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-16T06:11:09.569000Z",
+      "known_from": null,
+      "native_symbols": [
+        "GMTBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-18T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=992804123d7f48d5a3824474097d46ec",
+        "publishDate": 1652681469569,
+        "lastUpdateTime": 0,
+        "response_sha256": "e760781c15e51e8d650f9c06fbbdba84ee9fcd2a24a530c340d62fa4a8ba8665",
+        "local_response_saved_at": "2026-10-27T05:29:23.644814+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-076",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/992804123d7f48d5a3824474097d46ec",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-16T06:11:09.569000Z",
+      "known_from": null,
+      "native_symbols": [
+        "APEBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-19T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=992804123d7f48d5a3824474097d46ec",
+        "publishDate": 1652681469569,
+        "lastUpdateTime": 0,
+        "response_sha256": "e760781c15e51e8d650f9c06fbbdba84ee9fcd2a24a530c340d62fa4a8ba8665",
+        "local_response_saved_at": "2026-10-27T05:29:23.644814+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-077",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/1856a69c25db4881a3fc6e214e8bb729",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-08-03T08:30:15.405000Z",
+      "known_from": null,
+      "native_symbols": [
+        "AUCTIONBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-08-05T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=1856a69c25db4881a3fc6e214e8bb729",
+        "publishDate": 1659515415405,
+        "lastUpdateTime": 0,
+        "response_sha256": "f43579643d11faab2c27a38d2b07330681188bbc420442eaa2f9215976c5b70b",
+        "local_response_saved_at": "2026-10-27T05:29:24.016803+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 AUCTION"
+      }
+    },
+    {
+      "fact_id": "notice-078",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/1856a69c25db4881a3fc6e214e8bb729",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-08-03T08:30:15.405000Z",
+      "known_from": null,
+      "native_symbols": [
+        "UNIBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-08-05T03:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=1856a69c25db4881a3fc6e214e8bb729",
+        "publishDate": 1659515415405,
+        "lastUpdateTime": 0,
+        "response_sha256": "f43579643d11faab2c27a38d2b07330681188bbc420442eaa2f9215976c5b70b",
+        "local_response_saved_at": "2026-10-27T05:29:24.016803+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 UNI"
+      }
+    },
+    {
+      "fact_id": "notice-079",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9dc7a5fc770846699cf2e78b59e13eaf",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-24T05:35:15.744000Z",
+      "known_from": null,
+      "native_symbols": [
+        "ANCBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-25T04:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=9dc7a5fc770846699cf2e78b59e13eaf",
+        "publishDate": 1653370515744,
+        "lastUpdateTime": 0,
+        "response_sha256": "e96b628fc04b9dbddb939731872fb6deed593dba23480be2a4ec5a25ecf852ce",
+        "local_response_saved_at": "2026-10-27T05:29:23.627776+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-080",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f97292b6e2a04138a8519b53d68bb44e",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-06-06T09:05:12.707000Z",
+      "known_from": null,
+      "native_symbols": [
+        "DOTBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-06-08T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f97292b6e2a04138a8519b53d68bb44e",
+        "publishDate": 1654506312707,
+        "lastUpdateTime": 0,
+        "response_sha256": "1b691181a46b5f6f1f96694ad6b0d480f5d5865b003555879090d24ef8222e8b",
+        "local_response_saved_at": "2026-10-27T05:29:26.283721+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 DOT"
+      }
+    },
+    {
+      "fact_id": "notice-081",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f97292b6e2a04138a8519b53d68bb44e",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-06-06T09:05:12.707000Z",
+      "known_from": null,
+      "native_symbols": [
+        "TLMBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-06-09T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f97292b6e2a04138a8519b53d68bb44e",
+        "publishDate": 1654506312707,
+        "lastUpdateTime": 0,
+        "response_sha256": "1b691181a46b5f6f1f96694ad6b0d480f5d5865b003555879090d24ef8222e8b",
+        "local_response_saved_at": "2026-10-27T05:29:26.283721+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.00001",
+        "face_value": "1 TLM"
+      }
+    },
+    {
+      "fact_id": "notice-082",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f97292b6e2a04138a8519b53d68bb44e",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-06-06T09:05:12.707000Z",
+      "known_from": null,
+      "native_symbols": [
+        "ICPBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-06-09T03:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f97292b6e2a04138a8519b53d68bb44e",
+        "publishDate": 1654506312707,
+        "lastUpdateTime": 0,
+        "response_sha256": "1b691181a46b5f6f1f96694ad6b0d480f5d5865b003555879090d24ef8222e8b",
+        "local_response_saved_at": "2026-10-27T05:29:26.283721+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 ICP"
+      }
+    },
+    {
+      "fact_id": "notice-083",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/02ab9e3023f9472b9090e43d80fedd81",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2023-01-17T10:00:11.412000Z",
+      "known_from": null,
+      "native_symbols": [
+        "AGIXBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-01-19T02:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=02ab9e3023f9472b9090e43d80fedd81",
+        "publishDate": 1673949611412,
+        "lastUpdateTime": 0,
+        "response_sha256": "5600324344837bbb59ad8a9f14d4009c5474c6157463513b73e48c092b981d3e",
+        "local_response_saved_at": "2026-10-27T05:30:32.577363+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.0001",
+        "face_value": "1 AGIX"
+      }
+    },
+    {
+      "fact_id": "notice-084",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/09231ee25f204de98513f9efe1ed9d38",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-27T03:35:11.770000Z",
+      "known_from": null,
+      "native_symbols": [
+        "ETCBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-28T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=09231ee25f204de98513f9efe1ed9d38",
+        "publishDate": 1658892911770,
+        "lastUpdateTime": 0,
+        "response_sha256": "13a33f478d9a83779272c108bf3e75e9a2a76edab4f60ddabc3ff6bc0a0bcc11",
+        "local_response_saved_at": "2026-10-27T05:30:37.626120+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 ETC"
+      }
+    },
+    {
+      "fact_id": "notice-085",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/148fb7ca409e43b3a7e8aa391e6302c9",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-02-19T12:43:22.008000Z",
+      "known_from": null,
+      "native_symbols": [
+        "DODOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-02-19T13:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=148fb7ca409e43b3a7e8aa391e6302c9",
+        "publishDate": 1613738602008,
+        "lastUpdateTime": 0,
+        "response_sha256": "eb0b23015f54be5acba7e937d5ee3a65e200a08ae49fedd95ea0d452023466d0",
+        "local_response_saved_at": "2026-10-27T05:30:45.885117+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-086",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/15b32fde9e0f457aa8ccc454f9450bdf",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-06-15T02:45:56.431000Z",
+      "known_from": null,
+      "native_symbols": [
+        "ETHBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-06-16T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=15b32fde9e0f457aa8ccc454f9450bdf",
+        "publishDate": 1623725156431,
+        "lastUpdateTime": 0,
+        "response_sha256": "d0d491f80849fc45d10984030353d67db86837a2106736a14e2fd121a5e3719b",
+        "local_response_saved_at": "2026-10-27T05:30:56.568075+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-087",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2806253154aa4c36bffdfe60c6afc85e",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-31T12:08:13.173000Z",
+      "known_from": null,
+      "native_symbols": [
+        "LUNA2BUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-06-01T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=2806253154aa4c36bffdfe60c6afc85e",
+        "publishDate": 1653998893173,
+        "lastUpdateTime": 0,
+        "response_sha256": "d765f3881caf6a75965edaff47b3e5bd7c890f4af61430a06ab1c0c28264c44d",
+        "local_response_saved_at": "2026-10-27T05:30:40.415838+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD",
+        "underlying": "Terra 2.0 (LUNA)"
+      }
+    },
+    {
+      "fact_id": "notice-088",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2dae21629d644e7695f9570769bbdd44",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2025-05-30T09:35:02.121000Z",
+      "known_from": null,
+      "native_symbols": [
+        "BDXNUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-06-03T10:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=2dae21629d644e7695f9570769bbdd44",
+        "publishDate": 1748597702121,
+        "lastUpdateTime": 0,
+        "response_sha256": "0a047e1a58457bf57fce4fb7153a361e6ab16ff61cd9051d8c51df478e139e69",
+        "local_response_saved_at": "2026-10-27T05:30:33.274702+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "USDT",
+        "underlying": "BDXN (Bondex)",
+        "tick_size": "0.00001",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "notice-089",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2dc59886f2a14a9280a56d1ddd272f3c",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2020-09-14T04:42:56.304000Z",
+      "known_from": null,
+      "native_symbols": [
+        "BTTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-15T07:00:00Z",
+          "event_status": "cancelled",
+          "executable_boundary": false
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=2dc59886f2a14a9280a56d1ddd272f3c",
+        "publishDate": 1600058576304,
+        "lastUpdateTime": 0,
+        "response_sha256": "66eb2222b66801361f6751ba2d9348a8f959734cf596f7ca9221b02eb34070b7",
+        "local_response_saved_at": "2026-10-27T05:30:49.390416+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "announcement_status": "cancelled_before_scheduled_effective_time",
+      "superseded_by_source_url": "https://www.binance.com/en/support/announcement/detail/6152c1a80ccd47d19ec0917cae8184b7",
+      "correction_api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=6152c1a80ccd47d19ec0917cae8184b7",
+        "publishDate": 1600142499991,
+        "lastUpdateTime": 0,
+        "response_sha256": "142190237ba86b50800b49f6b348bb1d60177a3108db5ce09999d771706caef7",
+        "local_response_saved_at": "2026-10-27T05:38:38.464817+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-090",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/54d8d3ad281140e09c38d27491c390a5",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-09-15T04:50:06.520000Z",
+      "known_from": null,
+      "native_symbols": [
+        "PHBBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-09-16T02:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=54d8d3ad281140e09c38d27491c390a5",
+        "publishDate": 1663217406520,
+        "lastUpdateTime": 0,
+        "response_sha256": "a90b293935d3e362dcfea1dd2000247a6c30b664b71fff935579bd5461da3ee7",
+        "local_response_saved_at": "2026-10-27T05:30:53.940791+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "underlying": "PHB",
+        "tick_size": "0.0001"
+      }
+    },
+    {
+      "fact_id": "notice-091",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/5657a61ede914fd1a76a7a67fee90f77",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2020-10-21T06:13:17.124000Z",
+      "known_from": null,
+      "native_symbols": [
+        "MATICUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-22T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=5657a61ede914fd1a76a7a67fee90f77",
+        "publishDate": 1603260797124,
+        "lastUpdateTime": 0,
+        "response_sha256": "1f227d1e0e344de26a45c7ffd6f0c04a9e15d522884089f12a52c6de2bef003e",
+        "local_response_saved_at": "2026-10-27T05:30:51.273347+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-092",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/645a4b2808bd497dbb28d433a3134a89",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-08-31T06:20:10.688000Z",
+      "known_from": null,
+      "native_symbols": [
+        "FOOTBALLUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-09-01T03:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=645a4b2808bd497dbb28d433a3134a89",
+        "publishDate": 1661926810688,
+        "lastUpdateTime": 0,
+        "response_sha256": "d649b2609006d34f34eb57a984bf262b0d4ce5602c5fb64af10485503be77740",
+        "local_response_saved_at": "2026-10-27T05:30:35.202309+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "USDT",
+        "underlying": "Binance Football Fan Token Index",
+        "tick_size": "0.01",
+        "index_base_level": "1000"
+      }
+    },
+    {
+      "fact_id": "notice-093",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/686612ddcd824cd493963371eac1a80b",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2024-04-24T03:00:28.256000Z",
+      "known_from": null,
+      "native_symbols": [
+        "MATICUSDC"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2024-04-25T07:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=686612ddcd824cd493963371eac1a80b",
+        "publishDate": 1713927628256,
+        "lastUpdateTime": 0,
+        "response_sha256": "f9e2c96c6257606df49d3020bbd6beab63bda477669b2ccb51952b8dab95b520",
+        "local_response_saved_at": "2026-10-27T05:30:54.605015+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "USDC",
+        "underlying": "Polygon (MATIC)",
+        "tick_size": "0.0001",
+        "funding_interval_hours": 8
+      }
+    },
+    {
+      "fact_id": "notice-094",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/721a24ce3a644ba69927261b80f06b26",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-09-13T06:45:05.982000Z",
+      "known_from": null,
+      "native_symbols": [
+        "AMBBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-09-14T12:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=721a24ce3a644ba69927261b80f06b26",
+        "publishDate": 1663051505982,
+        "lastUpdateTime": 0,
+        "response_sha256": "62d11b6ab25d79ff800c4029ebacd715ce77bb9ffe19fddfd6475398acc333f5",
+        "local_response_saved_at": "2026-10-27T05:30:53.942455+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "underlying": "AMB",
+        "tick_size": "0.00001"
+      }
+    },
+    {
+      "fact_id": "notice-095",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/88690547058045ba99a87aeff796f215",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-28T05:40:01.678000Z",
+      "known_from": null,
+      "native_symbols": [
+        "LDOBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-28T14:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=88690547058045ba99a87aeff796f215",
+        "publishDate": 1658986801678,
+        "lastUpdateTime": 0,
+        "response_sha256": "14d5642cb8d8bf199fc9bf940a8101044385dfc7da86f16c30a98487169c6981",
+        "local_response_saved_at": "2026-10-27T05:30:36.029990+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 LDO"
+      }
+    },
+    {
+      "fact_id": "notice-096",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/8b6376b0ce804eb79017f35cb2eb9ac1",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-03-07T05:55:41.556000Z",
+      "known_from": null,
+      "native_symbols": [
+        "ANCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-03-08T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=8b6376b0ce804eb79017f35cb2eb9ac1",
+        "publishDate": 1646632541556,
+        "lastUpdateTime": 0,
+        "response_sha256": "7959913bd6c3573060cebb9a57b47454877b68a7460d0d0f554ad70d8c724b49",
+        "local_response_saved_at": "2026-10-27T05:30:43.566351+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-097",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9381a09f6dae4899b8c00046a4afc08b",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-01-20T02:59:48.218000Z",
+      "known_from": null,
+      "native_symbols": [
+        "DOTECOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-20T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=9381a09f6dae4899b8c00046a4afc08b",
+        "publishDate": 1611111588218,
+        "lastUpdateTime": 0,
+        "response_sha256": "1ffdef2a57d9e4f763b1f50f30cd2bde06c99706ee1469d698c097f031bbbbd9",
+        "local_response_saved_at": "2026-10-27T05:30:47.028700+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT",
+        "underlying": "Polkadot Ecosystem composite index"
+      }
+    },
+    {
+      "fact_id": "notice-098",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9a55ed80fb3f4c72b257aaad09e697c0",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-12-24T03:31:04.860000Z",
+      "known_from": null,
+      "native_symbols": [
+        "ANTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-12-27T04:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=9a55ed80fb3f4c72b257aaad09e697c0",
+        "publishDate": 1640316664860,
+        "lastUpdateTime": 0,
+        "response_sha256": "3f14817bd092cabe69cdfe6f40da3551201f545dca3eeb1c9fc4f148d2797271",
+        "local_response_saved_at": "2026-10-27T05:30:44.730133+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-099",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/a6256d9c348c43b4a97fb51facd02d2d",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-30T09:52:47.107000Z",
+      "known_from": null,
+      "native_symbols": [
+        "1000LUNCBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-31T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=a6256d9c348c43b4a97fb51facd02d2d",
+        "publishDate": 1653904367107,
+        "lastUpdateTime": 0,
+        "response_sha256": "f4ca077f11c79d0ba246d02838d4fadcbb9f6b9439e44fa0c7dfe8849b54356a",
+        "local_response_saved_at": "2026-10-27T05:30:41.242968+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-100",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b132dae5b04341459d8209f29b90c202",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-03-03T02:40:58.645000Z",
+      "known_from": null,
+      "native_symbols": [
+        "BTCSTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-04T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=b132dae5b04341459d8209f29b90c202",
+        "publishDate": 1614739258645,
+        "lastUpdateTime": 0,
+        "response_sha256": "5feedc5f7587748f64f51734780e2466783bdf7c164a629d1ec31a480344e462",
+        "local_response_saved_at": "2026-10-27T05:30:47.045878+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-101",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bf17bdfafc2d4f12ad91011b4895bbd3",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-10-18T04:20:37.531000Z",
+      "known_from": null,
+      "native_symbols": [
+        "NUUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-10-21T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=bf17bdfafc2d4f12ad91011b4895bbd3",
+        "publishDate": 1634530837531,
+        "lastUpdateTime": 0,
+        "response_sha256": "12a1c1642d98834bcf1f134382680d575f1348529444e1407ff931b1b6682750",
+        "local_response_saved_at": "2026-10-27T05:30:44.716769+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-102",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c6c680eb50fb4dc9b565a8522c49ffa6",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2023-09-22T06:55:02.930000Z",
+      "known_from": null,
+      "native_symbols": [
+        "FRONTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-09-22T14:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=c6c680eb50fb4dc9b565a8522c49ffa6",
+        "publishDate": 1695365702930,
+        "lastUpdateTime": 0,
+        "response_sha256": "e5bfbc80340a171ea482cf88a973e5a8a8101f8d2ee89ffa26a8a0cdf0b8a72b",
+        "local_response_saved_at": "2026-10-27T05:30:35.481846+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "USDT",
+        "underlying": "FRONT",
+        "tick_size": "0.0001"
+      }
+    },
+    {
+      "fact_id": "notice-103",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c6f4b9ca32374bd488af6fc050205bca",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-13T03:02:47.159000Z",
+      "known_from": null,
+      "native_symbols": [
+        "AVAXBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-13T11:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=c6f4b9ca32374bd488af6fc050205bca",
+        "publishDate": 1652410967159,
+        "lastUpdateTime": 0,
+        "response_sha256": "1e3e4bfcb8ae34384af2b51b8aafcab7ed547f752b209e88d57cdb3fb156d6c6",
+        "local_response_saved_at": "2026-10-27T05:30:42.392200+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      }
+    },
+    {
+      "fact_id": "notice-104",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/cd1801311ead4829afe2ac29a8eceb49",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2020-09-28T04:09:43.094000Z",
+      "known_from": null,
+      "native_symbols": [
+        "HNTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-28T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=cd1801311ead4829afe2ac29a8eceb49",
+        "publishDate": 1601266183094,
+        "lastUpdateTime": 0,
+        "response_sha256": "65480b30aecc1745996752773b2e31d77fe1082f1230778db3bf786212fc39d6",
+        "local_response_saved_at": "2026-10-27T05:30:49.357650+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-105",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e0aa73262d384ed3a616a4a66f59c9b5",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2023-02-21T02:45:19.933000Z",
+      "known_from": null,
+      "native_symbols": [
+        "COCOSUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-02-21T14:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e0aa73262d384ed3a616a4a66f59c9b5",
+        "publishDate": 1676947519933,
+        "lastUpdateTime": 0,
+        "response_sha256": "30172feb0c1c02a48d2458035c96c282288182cfe40dc0f6f9056550d9e86af3",
+        "local_response_saved_at": "2026-10-27T05:30:32.634864+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "USDT",
+        "underlying": "COCOS",
+        "tick_size": "0.001"
+      }
+    },
+    {
+      "fact_id": "notice-106",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e1d9bbcd3e214208b39b5c2a8087dda7",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2020-10-10T07:04:40.796000Z",
+      "known_from": null,
+      "native_symbols": [
+        "TOMOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-12T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e1d9bbcd3e214208b39b5c2a8087dda7",
+        "publishDate": 1602313480796,
+        "lastUpdateTime": 0,
+        "response_sha256": "c2e212da8ae29c6e2831c8eb49c0af2a8d479c04a4b93a300a3544dde256418c",
+        "local_response_saved_at": "2026-10-27T05:30:48.719373+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-107",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e52228090e8d45228c303dc00845eb90",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-18T10:25:59.893000Z",
+      "known_from": null,
+      "native_symbols": [
+        "FILBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-20T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e52228090e8d45228c303dc00845eb90",
+        "publishDate": 1658139959893,
+        "lastUpdateTime": 0,
+        "response_sha256": "190ab150be49cd266ba68deaa999bc6e6baca91da974ccf45e037d7730f894b1",
+        "local_response_saved_at": "2026-10-27T05:30:37.768548+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 FIL"
+      }
+    },
+    {
+      "fact_id": "notice-108",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e52228090e8d45228c303dc00845eb90",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-18T10:25:59.893000Z",
+      "known_from": null,
+      "native_symbols": [
+        "1000SHIBBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-20T03:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e52228090e8d45228c303dc00845eb90",
+        "publishDate": 1658139959893,
+        "lastUpdateTime": 0,
+        "response_sha256": "190ab150be49cd266ba68deaa999bc6e6baca91da974ccf45e037d7730f894b1",
+        "local_response_saved_at": "2026-10-27T05:30:37.768548+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.00001",
+        "face_value": "1000 SHIB"
+      }
+    },
+    {
+      "fact_id": "notice-109",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e52228090e8d45228c303dc00845eb90",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-18T10:25:59.893000Z",
+      "known_from": null,
+      "native_symbols": [
+        "LEVERBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-20T03:15:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e52228090e8d45228c303dc00845eb90",
+        "publishDate": 1658139959893,
+        "lastUpdateTime": 0,
+        "response_sha256": "190ab150be49cd266ba68deaa999bc6e6baca91da974ccf45e037d7730f894b1",
+        "local_response_saved_at": "2026-10-27T05:30:37.768548+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.000001",
+        "face_value": "1 LEVER"
+      }
+    },
+    {
+      "fact_id": "notice-110",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ee776592d1714f4cb6a53db72350ac63",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-05-05T06:00:35.679000Z",
+      "known_from": null,
+      "native_symbols": [
+        "GALUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-05T14:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=ee776592d1714f4cb6a53db72350ac63",
+        "publishDate": 1651730435679,
+        "lastUpdateTime": 0,
+        "response_sha256": "4e9b580981cdff1b554532584b45e4a8741df0b785632ef6247369e1bb33601f",
+        "local_response_saved_at": "2026-10-27T05:30:42.401832+00:00"
+      },
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "notice-111",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f23822acd32f48c994c92ced49866043",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-06-28T04:30:07.721000Z",
+      "known_from": null,
+      "native_symbols": [
+        "WAVESBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-06-29T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f23822acd32f48c994c92ced49866043",
+        "publishDate": 1656390607721,
+        "lastUpdateTime": 0,
+        "response_sha256": "8028bef22ad8b6e28433fcaf3563cb41a0fe5fb0eb6c1ebb22903810a6444279",
+        "local_response_saved_at": "2026-10-27T05:30:40.074604+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 WAVES"
+      }
+    },
+    {
+      "fact_id": "notice-112",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f23822acd32f48c994c92ced49866043",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-06-28T04:30:07.721000Z",
+      "known_from": null,
+      "native_symbols": [
+        "LINKBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-06-30T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f23822acd32f48c994c92ced49866043",
+        "publishDate": 1656390607721,
+        "lastUpdateTime": 0,
+        "response_sha256": "8028bef22ad8b6e28433fcaf3563cb41a0fe5fb0eb6c1ebb22903810a6444279",
+        "local_response_saved_at": "2026-10-27T05:30:40.074604+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 LINK"
+      }
+    },
+    {
+      "fact_id": "notice-113",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f901708ba7e94a0ba34f193f0ebe88d2",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-05T06:15:02.382000Z",
+      "known_from": null,
+      "native_symbols": [
+        "SANDBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-07T02:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f901708ba7e94a0ba34f193f0ebe88d2",
+        "publishDate": 1657001702382,
+        "lastUpdateTime": 0,
+        "response_sha256": "8652f4c0bbdb46be8808ead1ea3a906ed0eed423227e9f31cbc16bac5f333418",
+        "local_response_saved_at": "2026-10-27T05:30:38.690530+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001",
+        "face_value": "1 SAND"
+      }
+    },
+    {
+      "fact_id": "notice-114",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f901708ba7e94a0ba34f193f0ebe88d2",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-07-05T06:15:02.382000Z",
+      "known_from": null,
+      "native_symbols": [
+        "LTCBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-07T03:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=f901708ba7e94a0ba34f193f0ebe88d2",
+        "publishDate": 1657001702382,
+        "lastUpdateTime": 0,
+        "response_sha256": "8652f4c0bbdb46be8808ead1ea3a906ed0eed423227e9f31cbc16bac5f333418",
+        "local_response_saved_at": "2026-10-27T05:30:38.690530+00:00"
+      },
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "tick_size": "0.01",
+        "face_value": "1 LTC"
+      }
+    },
+    {
+      "fact_id": "notice-115",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038540771",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2020-01-07T13:33:28Z",
+      "known_from": null,
+      "native_symbols": [
+        "EOSUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-08T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=360038540771",
+        "publishDate": 1578404008000,
+        "lastUpdateTime": 0,
+        "response_sha256": "2d433940901a1d66a194307b6fa465bbe9470ac59663170dd6ac2bec40274b9b",
+        "local_response_saved_at": "2026-10-27T05:30:51.658453+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-116",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d251b5929d1640aebdd80fae2e71a7a6",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2020-07-21T04:14:30.664000Z",
+      "known_from": null,
+      "native_symbols": [
+        "SXPUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-21T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=d251b5929d1640aebdd80fae2e71a7a6",
+        "publishDate": 1595304870664,
+        "lastUpdateTime": 0,
+        "response_sha256": "22eb9cc3c0c8f66a074029b920c8b5d2222ce27bb5212044f2cbf964746264d5",
+        "local_response_saved_at": "2026-10-27T05:30:51.657203+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-117",
+      "source_url": "https://www.binance.com/en-PH/support/announcement/detail/3d974ead7acf447bab862e795ee832bb",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2021-01-11 04:58",
+      "known_from": null,
+      "native_symbols": [
+        "BTCBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-12T07:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "quote_asset": "BUSD",
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-118",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ee59b5c8ddf84d6bbbde4ebff7bdfaa0",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2021-02-01 06:04",
+      "known_from": null,
+      "native_symbols": [
+        "BTSUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-02-01T07:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-119",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/14378198b6594dd4ae029ea3b56ed517",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2020-09-04 07:01",
+      "known_from": null,
+      "native_symbols": [
+        "SRMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-05T02:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-120",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/14378198b6594dd4ae029ea3b56ed517",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2020-09-04 07:01",
+      "known_from": null,
+      "native_symbols": [
+        "BZRXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-05T03:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-121",
+      "source_url": "https://www.binance.com/en-AU/support/announcement/detail/c381f2c5de7444e296d1f584d1c63711",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2020-09-02 03:00",
+      "known_from": null,
+      "native_symbols": [
+        "YFIIUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-03T07:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-122",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/93cbeb51eed54bb9a9da8f8b3dfa20a2",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-01-25T06:59:45.232000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "1000BTTCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-01-26T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=93cbeb51eed54bb9a9da8f8b3dfa20a2",
+        "publishDate": 1643093985232,
+        "lastUpdateTime": 0,
+        "response_sha256": "2111129e2e9bdd11f5e54b3da00543a25a5a5bc42579e711a3d363c019da4e72",
+        "local_response_saved_at": "2026-10-27T05:36:41.876230+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-123",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/546fd7422f2d4a7bb955fa8ce7c3c269",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-09-06T06:05:09.974000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "FTTBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-09-08T04:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=546fd7422f2d4a7bb955fa8ce7c3c269",
+        "publishDate": 1630908309974,
+        "lastUpdateTime": 0,
+        "response_sha256": "fd5e67793816f69696f1a21625fb5929a1dbcd4afced8126f05c07f5e4f19b1e",
+        "local_response_saved_at": "2026-10-27T05:36:41.882601+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-124",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e123a7a1f15e49119c6a72416604d279",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-09-01T09:19:50.305000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "SOLBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-09-03T04:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e123a7a1f15e49119c6a72416604d279",
+        "publishDate": 1630487990305,
+        "lastUpdateTime": 0,
+        "response_sha256": "f49eacbc95f9be7e91a69f21e12ef531421b480f395aad626035c61ba5f8ccbf",
+        "local_response_saved_at": "2026-10-27T05:36:41.913876+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-125",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/5908700f092e4807bd48c03a5bbe8258",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-07-27T04:23:04.143000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "BNBBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-07-28T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=5908700f092e4807bd48c03a5bbe8258",
+        "publishDate": 1627359784143,
+        "lastUpdateTime": 0,
+        "response_sha256": "c1cc3c6bd7741f4328127b34168f83bfa20c8e886ac16cbbc15d7219c091ff52",
+        "local_response_saved_at": "2026-10-27T05:36:44.184811+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-126",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/68214888e19c450b93488b4bd904c128",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-07-28T12:41:35.537000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "ADABUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-08-02T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=68214888e19c450b93488b4bd904c128",
+        "publishDate": 1627476095537,
+        "lastUpdateTime": 0,
+        "response_sha256": "9dd2d0844c2406f04a5d9b183c3b5856709b39ed328a042022f82191e0b913ed",
+        "local_response_saved_at": "2026-10-27T05:36:44.181523+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-127",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/68214888e19c450b93488b4bd904c128",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-07-28T12:41:35.537000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "XRPBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-08-09T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=68214888e19c450b93488b4bd904c128",
+        "publishDate": 1627476095537,
+        "lastUpdateTime": 0,
+        "response_sha256": "9dd2d0844c2406f04a5d9b183c3b5856709b39ed328a042022f82191e0b913ed",
+        "local_response_saved_at": "2026-10-27T05:36:44.181523+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-128",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/44c813ce61084f0aa42e6c74459e6720",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-08-13T12:00:21.452000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "DOGEBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-08-18T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=44c813ce61084f0aa42e6c74459e6720",
+        "publishDate": 1628856021452,
+        "lastUpdateTime": 0,
+        "response_sha256": "7bfd0bf1d0e1fb553b0f5f925f3de982d58c2b2a90fded53888c35a6ae1bb33f",
+        "local_response_saved_at": "2026-10-27T05:36:46.480429+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-129",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/3469ef45d0564f0d87de973d7f4f67a8",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-08-17T09:07:23.193000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "AUDIOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-08-19T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=3469ef45d0564f0d87de973d7f4f67a8",
+        "publishDate": 1629191243193,
+        "lastUpdateTime": 0,
+        "response_sha256": "284787d8b65665c90c095193ab88f1f6d128a0242146216edc71a734720f5d23",
+        "local_response_saved_at": "2026-10-27T05:36:44.183712+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-130",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/0c4b2fbe8a254d969c72bf57deff22c7",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-06-18T09:18:42.625000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "KEEPUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-06-22T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=0c4b2fbe8a254d969c72bf57deff22c7",
+        "publishDate": 1624007922625,
+        "lastUpdateTime": 0,
+        "response_sha256": "8b8292a0d205569bd10f5bfcd7ab0008db9e6594faf5dde566c98bc1abb310cb",
+        "local_response_saved_at": "2026-10-27T05:36:46.506709+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-131",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c83d9f0b88dd49f880b132e5102e0d03",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-01-28T06:29:05.812000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "LUNAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-28T07:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=c83d9f0b88dd49f880b132e5102e0d03",
+        "publishDate": 1611815345812,
+        "lastUpdateTime": 0,
+        "response_sha256": "fa4a191f6b2964f8dd2c32771e9bd49ba0ccc5590f252e518622095de970497d",
+        "local_response_saved_at": "2026-10-27T05:36:46.470708+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-132",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e72145ab9e1644ceac7518913b51fd44",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2021-04-06T04:27:45.955000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "BTTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-04-06T07:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "USDT"
+      },
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e72145ab9e1644ceac7518913b51fd44",
+        "publishDate": 1617683265955,
+        "lastUpdateTime": 0,
+        "response_sha256": "eb4eccaae596a7c629b4c2979899c8e6076d2eb5481ee5cfefa0d8852edd55db",
+        "local_response_saved_at": "2026-10-27T05:37:44.742095+00:00"
+      }
+    },
+    {
+      "fact_id": "notice-133",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d6b1ee2e3e724125acf0e2678fe2ec8c",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-12 13:48",
+      "known_from": null,
+      "native_symbols": [
+        "LUNABUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-12T15:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "margin_asset": "BUSD",
+        "tick_size": "0.00001"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-134",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7dcc170b060c4c6a8ade4ded423f726a",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "source_publication_time": "2022-12-13T06:27:29.285000+00:00",
+      "known_from": null,
+      "native_symbols": [
+        "ANCBUSD",
+        "AUCTIONBUSD"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-12-15T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "api_metadata": {
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=7dcc170b060c4c6a8ade4ded423f726a",
+        "publishDate": 1670912849285,
+        "lastUpdateTime": 0,
+        "response_sha256": "4c66a677e329b2d2c8435fae94ff27ac89c69030a6f7295df98f571b382032ec",
+        "local_response_saved_at": "2026-10-27T05:37:44.392673+00:00"
+      }
     }
   ],
   "reconciliation_notes": [
@@ -1565,11 +3291,12 @@
       "native_symbols": [
         "FTTBUSD"
       ],
-      "issue": "Two official settlement notices name 2022-05-19 and 2022-11-14. Relaunch, correction or symbol interpretation between them is unresolved. Do not join into one lifetime or discard either notice. May notice calls FTTBUSD USDT-margined; settlement asset must be independently established.",
+      "issue": "Resolved: the May 19, 2022 delisting plan was explicitly cancelled in the May 16 notice. Preserve notice-055 as a cancelled proposal; do not cut trading or funding there. The November notice remains a distinct settlement announcement. Cancellation does not itself establish complete earlier history.",
       "source_urls": [
         "https://www.binance.com/en/support/announcement/detail/7305d3e50f0647838078ded2be975d48",
         "https://www.binance.com/en/support/announcement/detail/3b4c7c08479b48d48189191e37a7adca"
-      ]
+      ],
+      "resolution_source_url": "https://www.binance.com/en/support/announcement/detail/992804123d7f48d5a3824474097d46ec"
     },
     {
       "native_symbols": [
@@ -1582,7 +3309,8 @@
         "ANCBUSD",
         "AUCTIONBUSD"
       ],
-      "issue": "Secondary reports suggest 2022-12-15 settlement, but no primary notice recovered yet. Not promoted to a source fact."
+      "issue": "Resolved primary authority: both contracts have announced automatic settlement at 2022-12-15 09:00 UTC, followed by delisting after completion.",
+      "resolution_source_url": "https://www.binance.com/en/support/announcement/detail/7dcc170b060c4c6a8ade4ded423f726a"
     },
     {
       "native_symbols": [
@@ -1590,80 +3318,1076 @@
         "AAVEUSDT"
       ],
       "issue": "The notice closes LEND futures on October 10 and launches AAVE futures October 16. October 4 concerns margin/savings/loans restrictions; October 12 concerns spot. The 100:1 token swap does not automatically carry a LEND futures position into AAVE."
+    },
+    {
+      "native_symbols": [
+        "BTTUSDT"
+      ],
+      "issue": "Resolved: the September 15, 2020 launch was explicitly cancelled for technical reasons. The April 6, 2021 07:00 UTC launch is separately announced. Do not create a trading episode from the cancelled 2020 proposal.",
+      "additional_source_url": "https://www.binance.com/en/blog/all/421499824684901926",
+      "resolution_source_url": "https://www.binance.com/en/support/announcement/detail/6152c1a80ccd47d19ec0917cae8184b7"
+    },
+    {
+      "native_symbols": [
+        "ADABUSD",
+        "XRPBUSD",
+        "DOGEBUSD"
+      ],
+      "issue": "Original launches on July 29, July 30 and August 2, 2021 at 03:30 UTC were postponed to August 2, August 9 and August 16 respectively. DOGEBUSD was postponed again to August 18 03:30 UTC. The notice events above retain only the last recovered schedule for each; no claim of trading on superseded dates. BNBBUSD July 28 is not postponed by these notices.",
+      "source_chain": [
+        "https://www.binance.com/en/support/announcement/detail/5908700f092e4807bd48c03a5bbe8258",
+        "https://www.binance.com/en/support/announcement/detail/68214888e19c450b93488b4bd904c128",
+        "https://www.binance.com/en/support/announcement/detail/44c813ce61084f0aa42e6c74459e6720"
+      ]
     }
   ],
   "recovery_summary": {
     "missing_snapshot_names": 73,
-    "names_with_launch_notice": 14,
-    "names_with_closing_notice": 71,
-    "names_with_both": 14,
-    "names_missing_launch_notice": [
-      "1000BTTCUSDT",
-      "1000LUNCBUSD",
-      "1000SHIBBUSD",
-      "ADABUSD",
-      "AGIXBUSD",
-      "AMBBUSD",
-      "ANCBUSD",
-      "ANCUSDT",
-      "ANTUSDT",
-      "APEBUSD",
-      "AUCTIONBUSD",
-      "AUDIOUSDT",
-      "AVAXBUSD",
-      "BDXNUSDT",
-      "BNBBUSD",
-      "BTCBUSD",
-      "BTCSTUSDT",
-      "BTSUSDT",
-      "BTTUSDT",
-      "BZRXUSDT",
-      "COCOSUSDT",
-      "DODOUSDT",
-      "DOGEBUSD",
-      "DOTBUSD",
-      "DOTECOUSDT",
-      "EOSUSDT",
-      "ETCBUSD",
-      "ETHBUSD",
-      "FILBUSD",
-      "FOOTBALLUSDT",
-      "FRONTUSDT",
-      "FTTBUSD",
-      "GALUSDT",
-      "GMTBUSD",
-      "HNTUSDT",
-      "ICPBUSD",
-      "KEEPUSDT",
-      "LDOBUSD",
-      "LEVERBUSD",
-      "LINKBUSD",
-      "LTCBUSD",
-      "LUNA2BUSD",
-      "LUNABUSD",
-      "LUNAUSDT",
-      "MATICUSDC",
-      "MATICUSDT",
-      "NEARBUSD",
-      "NUUSDT",
-      "PHBBUSD",
-      "SANDBUSD",
-      "SOLBUSD",
-      "SRMUSDT",
-      "SXPUSDT",
-      "TLMBUSD",
-      "TOMOUSDT",
-      "UNIBUSD",
-      "WAVESBUSD",
-      "XRPBUSD",
-      "YFIIUSDT"
-    ],
-    "names_missing_closing_notice": [
-      "ANCBUSD",
-      "AUCTIONBUSD"
-    ],
+    "names_with_launch_notice": 73,
+    "names_with_closing_notice": 73,
+    "names_with_both": 73,
+    "names_missing_launch_notice": [],
+    "names_missing_closing_notice": [],
     "complete_contract_histories": 0,
     "consumer_integrated": false,
-    "scope_caveat": "Notice coverage is not completeness or resolved authority. FTTBUSD closure conflict remains. Full dated terms and the 698 snapshot-name histories have not been reconstructed."
+    "scope_caveat": "All 73 missing-snapshot names have recovered launch and closure notices, including corrections. The 12 earlier-partition snapshot flags are classified: nine closure/relaunch histories, two different-underlying ticker reuses, one launch/onboard discrepancy. Neither scope establishes full lifetime terms, continuous tradability, or consumer integration."
+  },
+  "snapshot_episode_reviews": {
+    "scope": "The 12 snapshot symbols flagged by earlier monthly bar partitions. This does not assess all remaining snapshot symbols or establish complete specification histories. Scheduled settlement start is not measured settlement completion.",
+    "classified_symbols": 12,
+    "closure_and_relaunch_symbols": 9,
+    "different_underlying_reuse_symbols": 2,
+    "onboard_discrepancy_without_second_episode": 1,
+    "consumer_integrated": false,
+    "sources": {
+      "20eee4109e06448992f0557bf798bb36": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/20eee4109e06448992f0557bf798bb36",
+        "title": "Binance Futures Will Delist AIAUSDT USDⓈ-M Perpetual Contract (2025-12-11)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-12-11T11:43:46.582000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=20eee4109e06448992f0557bf798bb36",
+          "publishDate": 1765453426582,
+          "lastUpdateTime": 0,
+          "response_sha256": "564ebfb52c1190c3ebb4bc441ce82b5553ac7d6dd3bbfff50131c1c648c71589",
+          "local_response_saved_at": "2026-10-27T05:43:27.809886+00:00"
+        }
+      },
+      "27eac260521b4f40ab331e1a345887a7": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/27eac260521b4f40ab331e1a345887a7",
+        "title": "Binance Futures Will Delist USDⓈ-M MAVIAUSDT, OMGUSDT, and BONDUSDT Perpetual Contracts (2024-12-16)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2024-12-06T03:00:04.185000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=27eac260521b4f40ab331e1a345887a7",
+          "publishDate": 1733454004185,
+          "lastUpdateTime": 0,
+          "response_sha256": "70896fccdd3af89d21e5d255f6530d56993ec8f47c540d89e36cfd9e5292ab47",
+          "local_response_saved_at": "2026-10-27T05:43:32.324707+00:00"
+        }
+      },
+      "2a9feaa556f74dcdaa2192366f0e247c": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/2a9feaa556f74dcdaa2192366f0e247c",
+        "title": "Binance Will Support the Litentry (LIT) Token Swap and Rebranding to Heima (HEI)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-01-22T09:00:01.361000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=2a9feaa556f74dcdaa2192366f0e247c",
+          "publishDate": 1737536401361,
+          "lastUpdateTime": 0,
+          "response_sha256": "d744bd5011162c549c3b46a8f9ea3c8a0da9bc32b0feabd785a3bf783371847c",
+          "local_response_saved_at": "2026-10-27T05:44:28.696372+00:00"
+        }
+      },
+      "3188e26f14a1464b91487abad452c04f": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/3188e26f14a1464b91487abad452c04f",
+        "title": "Binance Futures Will Delist and Update the Leverage & Margin Tiers of CVCUSDT Perpetual Futures Contract",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2022-11-28T03:30:27.750000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=3188e26f14a1464b91487abad452c04f",
+          "publishDate": 1669606227750,
+          "lastUpdateTime": 0,
+          "response_sha256": "8b6ed2dc47903a80441972923caed476d7e3c99e413485de97667db8e8881112",
+          "local_response_saved_at": "2026-10-27T05:43:32.685769+00:00"
+        }
+      },
+      "31ec31401a8f43ae821f80351fa94857": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/31ec31401a8f43ae821f80351fa94857",
+        "title": "Binance Futures Will Launch USDⓈ-Margined SPORTFUNUSDT and AIAUSDT Perpetual Contracts (2026-01-16)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2026-01-16T12:17:58.954000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=31ec31401a8f43ae821f80351fa94857",
+          "publishDate": 1768565878954,
+          "lastUpdateTime": 0,
+          "response_sha256": "5e34ffe0feb6eaab39449c8a386441860403f0627c8d40dcdacb3d298812544b",
+          "local_response_saved_at": "2026-10-27T05:43:11.049934+00:00"
+        }
+      },
+      "38a74ee47cdc43ebbc672e1dc6968358": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/38a74ee47cdc43ebbc672e1dc6968358",
+        "title": "USDⓈ-Margined PUMPUSDT Perpetual Contract Will Be Renamed to USDⓈ-Margined PUMPBTCUSDT Perpetual Contract (2025-06-13)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-06-10T08:30:03.096000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=38a74ee47cdc43ebbc672e1dc6968358",
+          "publishDate": 1749544203096,
+          "lastUpdateTime": 0,
+          "response_sha256": "e7e87a7d9bb762ac08d7a40880fb4f9427156c63b5903c34f0581f415d2298bb",
+          "local_response_saved_at": "2026-10-27T05:43:37.733965+00:00"
+        }
+      },
+      "4a4bb43f865a4348828de4facfc9eee4": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/4a4bb43f865a4348828de4facfc9eee4",
+        "title": "Binance Futures Will Launch USDⓈ-Margined PUMPUSDT, STOUSDT and FHEUSDT Perpetual Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-04-12T12:55:08.737000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=4a4bb43f865a4348828de4facfc9eee4",
+          "publishDate": 1744462508737,
+          "lastUpdateTime": 0,
+          "response_sha256": "afeb15ef4a57e2255ea17f6b29d80afc6f34f51a6927109677f9f1b9043d5e89",
+          "local_response_saved_at": "2026-10-27T05:43:38.635992+00:00"
+        }
+      },
+      "4bc8b483d10d4619babb2015066b2d89": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/4bc8b483d10d4619babb2015066b2d89",
+        "title": "Binance Futures Will Launch USDⓈ-Margined PUMPUSDT Perpetual Contract Pre-Market Trading (2025-07-10)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-07-09T14:05:21.466000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=4bc8b483d10d4619babb2015066b2d89",
+          "publishDate": 1752069921466,
+          "lastUpdateTime": 0,
+          "response_sha256": "c5827607b64576776a8366d617ce4399a6c2e2c29f4fb4241689882182112ee3",
+          "local_response_saved_at": "2026-10-27T05:43:14.193093+00:00"
+        }
+      },
+      "4d23ada51a2e4fa182835c77d51ba1a9": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/4d23ada51a2e4fa182835c77d51ba1a9",
+        "title": "Binance Will Support the BinaryX (BNX) Token Swap and Redenomination Plan",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2023-02-10T04:30:03.357000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=4d23ada51a2e4fa182835c77d51ba1a9",
+          "publishDate": 1676003403357,
+          "lastUpdateTime": 0,
+          "response_sha256": "5ff348d5167d3c0b35696c6bfbdf36515615ded01d43cc6f494e2320ea377652",
+          "local_response_saved_at": "2026-10-27T05:44:27.869333+00:00"
+        }
+      },
+      "4e7c59d4078e4babbc191c80fe6698e7": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/4e7c59d4078e4babbc191c80fe6698e7",
+        "title": "Binance Futures Will Launch USDⓈ-Margined AIAUSDT Perpetual Contract (2026-01-20)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2026-01-20T10:26:30.062000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=4e7c59d4078e4babbc191c80fe6698e7",
+          "publishDate": 1768904790062,
+          "lastUpdateTime": 0,
+          "response_sha256": "1b20d5276776d380a80dc9fe8dd238110c24f7f31138e5162b9b6f56681ed080",
+          "local_response_saved_at": "2026-10-27T05:43:10.755925+00:00"
+        }
+      },
+      "521a6a71b21046f2b07b021edfd41b9f": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/521a6a71b21046f2b07b021edfd41b9f",
+        "title": "Binance Futures Will Launch USDⓈ-M MAVIA Perpetual Contract With Up to 50x Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2024-02-21T04:50:29.077000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=521a6a71b21046f2b07b021edfd41b9f",
+          "publishDate": 1708491029077,
+          "lastUpdateTime": 0,
+          "response_sha256": "9ecd1dbead579cfdd4d9e042bb4ee776cbca549a5994aebd06dc936d6decf8f6",
+          "local_response_saved_at": "2026-10-27T05:43:17.017139+00:00"
+        }
+      },
+      "5d8c7476197344d087b5af436bfc74ae": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/5d8c7476197344d087b5af436bfc74ae",
+        "title": "Binance Futures Will Launch USDⓈ-M SLP Perpetual Contract With Up to 50x Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2023-10-31T05:45:58.402000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=5d8c7476197344d087b5af436bfc74ae",
+          "publishDate": 1698731158402,
+          "lastUpdateTime": 0,
+          "response_sha256": "0cb04b59f17df466422ca6ce09754af5ca018d95a62bc0c1ed86978648b991f6",
+          "local_response_saved_at": "2026-10-27T05:43:19.855174+00:00"
+        }
+      },
+      "63155163bce541f5856d416efa71c6e8": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/63155163bce541f5856d416efa71c6e8",
+        "title": "Binance Futures Will Launch USDⓈ-Margined PUNDIXUSDT and CTKUSDT Perpetual Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-04-30T08:30:31.246000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=63155163bce541f5856d416efa71c6e8",
+          "publishDate": 1746001831246,
+          "lastUpdateTime": 0,
+          "response_sha256": "c092cd033183ca1b1f0fc246cb41eadd319823403eca735779703b8efff8aa06",
+          "local_response_saved_at": "2026-10-27T05:43:17.281558+00:00"
+        }
+      },
+      "6a33be00231c4539b3a4a625538e4d1e": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/6a33be00231c4539b3a4a625538e4d1e",
+        "title": "Binance Futures Will Launch USDⓈ-Margined LITUSDT Perpetual Contract Pre-Market Trading (2025-12-23)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-12-23T13:53:35.803000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=6a33be00231c4539b3a4a625538e4d1e",
+          "publishDate": 1766498015803,
+          "lastUpdateTime": 0,
+          "response_sha256": "7095cf819a0cb8084967c0c0032411ca69a199ab64309f3178be27ea780a9c9b",
+          "local_response_saved_at": "2026-10-27T05:43:11.229069+00:00"
+        }
+      },
+      "815acb27cc2146d2b3f2a4fe933f11d9": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/815acb27cc2146d2b3f2a4fe933f11d9",
+        "title": "Binance Futures Will Launch USDⓈ-Margined JELLYJELLYUSDT and MAVIAUSDT Perpetual Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-03-26T15:16:10.581000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=815acb27cc2146d2b3f2a4fe933f11d9",
+          "publishDate": 1743002170581,
+          "lastUpdateTime": 0,
+          "response_sha256": "81953e1cca3ea1485334bf6668a24757df01c86ceab571eb81d7c406ccfa9408",
+          "local_response_saved_at": "2026-10-27T05:43:14.011664+00:00"
+        }
+      },
+      "864b8bd112a44a8cae14db4dcea159a1": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/864b8bd112a44a8cae14db4dcea159a1",
+        "title": "Binance Futures Will Postpone the Launch of MAVIAUSDT Perpetual Contract",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-03-26T16:21:30.178000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=864b8bd112a44a8cae14db4dcea159a1",
+          "publishDate": 1743006090178,
+          "lastUpdateTime": 0,
+          "response_sha256": "f0f2dc50fb30107986071957f6bfa753da03e6a12a1123b263536a8467eb7b18",
+          "local_response_saved_at": "2026-10-27T05:43:39.599525+00:00"
+        }
+      },
+      "940d0e48493e4627889c3f46371df70b": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/940d0e48493e4627889c3f46371df70b",
+        "title": "Binance Futures to Relaunch USDⓈ-M BNX Perpetual Contracts with Up to 20X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2023-02-22T10:15:04.236000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=940d0e48493e4627889c3f46371df70b",
+          "publishDate": 1677060904236,
+          "lastUpdateTime": 0,
+          "response_sha256": "7c61ef35bbd87b3a5142e34930e9d2439ce08aaaa31a99d1562b50d7f986f5e6",
+          "local_response_saved_at": "2026-10-27T05:43:19.296603+00:00"
+        }
+      },
+      "96ac152ced224d7a92a10a11335f5212": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/96ac152ced224d7a92a10a11335f5212",
+        "title": "Binance Futures Will Convert USDⓈ-Margined LITUSDT Perpetual Contract Pre-Market Trading to Standard Perpetual Futures Contract (2026-01-15)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2026-01-15T15:01:50.442000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=96ac152ced224d7a92a10a11335f5212",
+          "publishDate": 1768489310442,
+          "lastUpdateTime": 0,
+          "response_sha256": "f17d91eb06bd76dc9794b27ef9a9015f6496c4ee5d2550d50ed1367823f95160",
+          "local_response_saved_at": "2026-10-27T05:43:35.612721+00:00"
+        }
+      },
+      "a060f642ff8d4f8e8091e34fba220e77": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/a060f642ff8d4f8e8091e34fba220e77",
+        "title": "Binance Futures Will Launch CVC USDT-Margined Perpetual Contract With Up to 50x Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2020-11-10T08:00:05.868000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=a060f642ff8d4f8e8091e34fba220e77",
+          "publishDate": 1604995205868,
+          "lastUpdateTime": 0,
+          "response_sha256": "94d0e28c04977fbfc26566a6920967662631bc0e80a22ad5762d4feecea47248",
+          "local_response_saved_at": "2026-10-27T05:43:26.260733+00:00"
+        }
+      },
+      "a176d4cfd4c74a7fb8238e63d71c062a": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/a176d4cfd4c74a7fb8238e63d71c062a",
+        "title": "Binance Futures Will Launch USDT-Margined ICP Perpetual Contracts with Up to 25X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2021-05-11T02:17:45.546000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=a176d4cfd4c74a7fb8238e63d71c062a",
+          "publishDate": 1620699465546,
+          "lastUpdateTime": 0,
+          "response_sha256": "cc51d398af120057412b2cafcf5d5847bf8098e1505e1ffec84c20f087a39311",
+          "local_response_saved_at": "2026-10-27T05:43:23.971343+00:00"
+        }
+      },
+      "a58cc13f78a34fbba11f00ff7144e9ee": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/a58cc13f78a34fbba11f00ff7144e9ee",
+        "title": "Binance Futures Will Delist and Update the Leverage & Margin Tiers of USDⓈ-M STPTUSDT, SNTUSDT, MBLUSDT, RADUSDT and CVXUSDT Perpetual Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2024-05-06T05:00:17.942000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=a58cc13f78a34fbba11f00ff7144e9ee",
+          "publishDate": 1714971617942,
+          "lastUpdateTime": 0,
+          "response_sha256": "ebe2ef077fe6995dc16366ecd8686a4616f53aa01f35760cb1cc088758e3e951",
+          "local_response_saved_at": "2026-10-27T05:43:30.088965+00:00"
+        }
+      },
+      "a9f0566c85b54e30a63f1092e45d61f7": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/a9f0566c85b54e30a63f1092e45d61f7",
+        "title": "Binance Futures Will Postpone the Launch of AIAUSDT Perpetual Contract",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2026-01-16T14:48:11.481000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=a9f0566c85b54e30a63f1092e45d61f7",
+          "publishDate": 1768574891481,
+          "lastUpdateTime": 1768587480000,
+          "response_sha256": "fa44e2a7f60a8e0158398f631408bed8b902284f420a814b25822e4ed63fe6f6",
+          "local_response_saved_at": "2026-10-27T05:43:35.190306+00:00"
+        }
+      },
+      "aadbfbfee34c404c896f93957a0c08c7": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/aadbfbfee34c404c896f93957a0c08c7",
+        "title": "DeAgent AI (AIA) Will Be Available on Binance Alpha and Binance Futures (2025-09-18)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-09-16T11:00:01.462000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=aadbfbfee34c404c896f93957a0c08c7",
+          "publishDate": 1758020401462,
+          "lastUpdateTime": 0,
+          "response_sha256": "55d00421e8d1156dd3dac3f032604cea5d2b649943903a7431a091fff32f54d7",
+          "local_response_saved_at": "2026-10-27T05:44:28.183715+00:00"
+        }
+      },
+      "adabdfbc53344094808a7bea464f101b": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/adabdfbc53344094808a7bea464f101b",
+        "title": "Binance Futures Will Launch USDⓈ-M ICP Perpetual Contracts with Up to 25X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2022-09-26T04:20:19.174000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=adabdfbc53344094808a7bea464f101b",
+          "publishDate": 1664166019174,
+          "lastUpdateTime": 0,
+          "response_sha256": "8bcde38bfc42b2965cd424ad86755dbb54d2481d65751a78fac94d3e5dcfd07e",
+          "local_response_saved_at": "2026-10-27T05:43:21.683854+00:00"
+        }
+      },
+      "af469aeeab074738bb4a276070a9d11b": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/af469aeeab074738bb4a276070a9d11b",
+        "title": "Binance Futures Will Delist TLM and ICP USDT-Margined Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2022-06-02T10:18:15.432000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=af469aeeab074738bb4a276070a9d11b",
+          "publishDate": 1654165095432,
+          "lastUpdateTime": 0,
+          "response_sha256": "2b306aa073e57ebc4f2b3365d21d1044fc5c850ff3b231f0f257d40aa0e47257",
+          "local_response_saved_at": "2026-10-27T05:43:35.102552+00:00"
+        }
+      },
+      "b7b3a116013145569a9850f197c8cbe4": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/b7b3a116013145569a9850f197c8cbe4",
+        "title": "Binance Futures Will Launch USDⓈ-Margined PENGUUSDC, CVXUSDT and SLPUSDT Perpetual Contracts (2025-07-23)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-07-23T06:00:02.225000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=b7b3a116013145569a9850f197c8cbe4",
+          "publishDate": 1753250402225,
+          "lastUpdateTime": 0,
+          "response_sha256": "000969b1ea57d5e4b5b6897fc78680901ba30bfd15a32630349bf9e504f6dfa4",
+          "local_response_saved_at": "2026-10-27T05:43:14.037303+00:00"
+        }
+      },
+      "ba576fbe12fa49b28fbee1b7e380e8b7": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/ba576fbe12fa49b28fbee1b7e380e8b7",
+        "title": "Binance Futures Will Launch BTC-Margined ETH Linear Perpetual Contract with Up to 75X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2023-04-25T08:55:28.988000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=ba576fbe12fa49b28fbee1b7e380e8b7",
+          "publishDate": 1682412928988,
+          "lastUpdateTime": 0,
+          "response_sha256": "4418db22b3a5e32749774aac990725e87357fd371b78d64fafa81bb6ead3f58e",
+          "local_response_saved_at": "2026-10-27T05:44:31.218480+00:00"
+        }
+      },
+      "bbe829426ad844b9b9dac62f878d1e67": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/bbe829426ad844b9b9dac62f878d1e67",
+        "title": "Binance Futures Will Launch USDⓈ-Margined CVCUSDT Perpetual Contract",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-05-16T06:36:15.939000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=bbe829426ad844b9b9dac62f878d1e67",
+          "publishDate": 1747377375939,
+          "lastUpdateTime": 0,
+          "response_sha256": "76f19f97a525bc6c1590fc31a64f28c8319667c05adf9a9b2aedd3e45d789f85",
+          "local_response_saved_at": "2026-10-27T05:43:16.923756+00:00"
+        }
+      },
+      "bd18df283ead40d09fd60c8eab984e41": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/bd18df283ead40d09fd60c8eab984e41",
+        "title": "Binance Futures Will Launch USDT-Margined AMB, LEVER and TLM Perpetual Contracts with Up to 20X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2023-03-29T11:00:03.472000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=bd18df283ead40d09fd60c8eab984e41",
+          "publishDate": 1680087603472,
+          "lastUpdateTime": 0,
+          "response_sha256": "b0e0ee3733b0ff3b628d9e8a15235a4800097603b25cef576121210085c4f7f2",
+          "local_response_saved_at": "2026-10-27T05:43:19.436837+00:00"
+        }
+      },
+      "cb525a5fbb954935afc77630fc5bd0cc": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/cb525a5fbb954935afc77630fc5bd0cc",
+        "title": "Binance Futures Will Delist and Update the Leverage & Margin Tiers of USDⓈ-M IDEXUSDT, SLPUSDT, GLMRUSDT, MDTUSDT and AUDIOUSDT Perpetual Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2024-05-08T05:00:26.574000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=cb525a5fbb954935afc77630fc5bd0cc",
+          "publishDate": 1715144426574,
+          "lastUpdateTime": 0,
+          "response_sha256": "38d931424d6f452d663527d9654a06e1590b8ae73b9ce1ea0b55df634e65c065",
+          "local_response_saved_at": "2026-10-27T05:43:29.914439+00:00"
+        }
+      },
+      "ce74360a3fd444b2b35da7186f8dd0ad": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/ce74360a3fd444b2b35da7186f8dd0ad",
+        "title": "Binance Futures Will Delist and Update the Leverage & Margin Tiers of USDⓈ-M ANTUSDT, DGBUSDT and CTKUSDT Perpetual Contracts",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2024-03-25T04:40:12.437000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=ce74360a3fd444b2b35da7186f8dd0ad",
+          "publishDate": 1711341612437,
+          "lastUpdateTime": 0,
+          "response_sha256": "6bb1e99a3d5ab01ef5bd33335cbc446d446cefd8149dc00bdbb7c607ab104626",
+          "local_response_saved_at": "2026-10-27T05:43:31.217540+00:00"
+        }
+      },
+      "d6c6c06ddb074c829d90155b0aba661b": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/d6c6c06ddb074c829d90155b0aba661b",
+        "title": "Binance Futures Will Launch USDⓈ-M LDO and CVX Perpetual Contracts with Up to 25X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2022-09-21T09:20:03.073000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=d6c6c06ddb074c829d90155b0aba661b",
+          "publishDate": 1663752003073,
+          "lastUpdateTime": 0,
+          "response_sha256": "12b8c6e9abd49509245ddf556d363931d2c124a777ba84fb608bc5f9e1687948",
+          "local_response_saved_at": "2026-10-27T05:43:21.694771+00:00"
+        }
+      },
+      "d7816a7045ba46cd9d7a5b7f9b135883": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/d7816a7045ba46cd9d7a5b7f9b135883",
+        "title": "Binance Futures Will Launch USDT-Margined TLM Perpetual Contracts with Up to 25X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2021-07-15T10:09:49.729000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=d7816a7045ba46cd9d7a5b7f9b135883",
+          "publishDate": 1626343789729,
+          "lastUpdateTime": 0,
+          "response_sha256": "4526e4a7100a7c1ee86627bc6a88eedab6bc8ee443257660b97e1508f3afa6a1",
+          "local_response_saved_at": "2026-10-27T05:43:39.796835+00:00"
+        }
+      },
+      "e15fac275e7a4e858dc4bb79ffc24c50": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/e15fac275e7a4e858dc4bb79ffc24c50",
+        "title": "Binance Futures Will Launch USDT-Margined BNX Perpetual Contracts with Up to 25X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2022-03-31T03:30:57.847000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e15fac275e7a4e858dc4bb79ffc24c50",
+          "publishDate": 1648697457847,
+          "lastUpdateTime": 0,
+          "response_sha256": "be17652905117fb1e3b53a4dc1053b2eb4f70ce662f5f26799e59bbf6e423a2a",
+          "local_response_saved_at": "2026-10-27T05:43:24.025160+00:00"
+        }
+      },
+      "e220b78bdf4848e3a61eb9fce99e2580": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/e220b78bdf4848e3a61eb9fce99e2580",
+        "title": "Binance Futures Will Convert USDⓈ-Margined PUMPUSDT Perpetual Contract Pre-Market Trading to Standard Perpetual Futures Contract (2025-07-14)",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2025-07-14T17:17:17.122000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e220b78bdf4848e3a61eb9fce99e2580",
+          "publishDate": 1752513437122,
+          "lastUpdateTime": 0,
+          "response_sha256": "81857b0b27bf6f82436c27832dd0061f4a7ced67022e227bea8b78a07e34757f",
+          "local_response_saved_at": "2026-10-27T05:43:37.501713+00:00"
+        }
+      },
+      "e42cfd99f32a4a9aa3c29c8a31ef4ddc": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/e42cfd99f32a4a9aa3c29c8a31ef4ddc",
+        "title": "Binance Futures Will Launch CTK USDT-Margined Perpetual Contract With Up to 50x Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2020-11-18T06:26:14.421000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=e42cfd99f32a4a9aa3c29c8a31ef4ddc",
+          "publishDate": 1605680774421,
+          "lastUpdateTime": 0,
+          "response_sha256": "ff70c7f22baf7ca580d9303cddb0ead87917d624c5c70a9e73b4e6e1a888c247",
+          "local_response_saved_at": "2026-10-27T05:43:26.253887+00:00"
+        }
+      },
+      "ff7f8d8788df4389aab5eb59a0f0a665": {
+        "source_url": "https://www.binance.com/en/support/announcement/detail/ff7f8d8788df4389aab5eb59a0f0a665",
+        "title": "Binance Futures Will Launch USDT-Margined LIT, UNFI Perpetual Contracts with Up to 25X Leverage",
+        "source_authority": "Binance Support",
+        "source_publication_time": "2021-02-18T03:53:35.247000+00:00",
+        "known_from": null,
+        "api_metadata": {
+          "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=ff7f8d8788df4389aab5eb59a0f0a665",
+          "publishDate": 1613620415247,
+          "lastUpdateTime": 0,
+          "response_sha256": "c3143ac4a39a9760e30ebcea5db5240f4d6edfa87c1ce0addc4931a712da8891",
+          "local_response_saved_at": "2026-10-27T05:43:25.071686+00:00"
+        }
+      }
+    },
+    "cases": [
+      {
+        "native_symbol": "AIAUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-09-18T08:30:00Z",
+              "source_code": "aadbfbfee34c404c896f93957a0c08c7"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2025-12-11T12:15:00Z",
+              "source_code": "20eee4109e06448992f0557bf798bb36"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "DeAgent AI",
+              "settlement_asset": "USDT",
+              "tick_size": "0.00001"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2026-01-20T11:15:00Z",
+              "source_code": "4e7c59d4078e4babbc191c80fe6698e7"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "DeAgentAI",
+              "settlement_asset": "USDT",
+              "tick_size": "0.00001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "The January 16 proposed relaunch was postponed. The January 20 notice explicitly retains the earlier chart with a suspension gap. Do not carry positions across the December settlement.",
+        "history_complete": false,
+        "additional_events": [
+          {
+            "event": "new_positions_stop",
+            "effective_at": "2025-12-11T11:45:00Z",
+            "source_code": "20eee4109e06448992f0557bf798bb36"
+          },
+          {
+            "event": "launch",
+            "effective_at": "2026-01-16T15:30:00Z",
+            "source_code": "31ec31401a8f43ae821f80351fa94857",
+            "event_status": "postponed",
+            "executable_boundary": false,
+            "superseded_by_source_code": "a9f0566c85b54e30a63f1092e45d61f7"
+          }
+        ]
+      },
+      {
+        "native_symbol": "BNXUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2022-04-01T03:30:00Z",
+              "source_code": "e15fac275e7a4e858dc4bb79ffc24c50"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2023-02-11T04:00:00Z",
+              "source_code": "4d23ada51a2e4fa182835c77d51ba1a9"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2023-02-22T14:45:00Z",
+              "source_code": "940d0e48493e4627889c3f46371df70b"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "BNX",
+              "settlement_asset": "USDT",
+              "tick_size": "0.001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Relaunch notice identifies the old contract as BNXUSDTSETTLED. The 07:00 snapshot onboard time is not the announced 14:45 trading start. Token redenomination is not automatic futures-position continuation.",
+        "history_complete": false,
+        "additional_events": [
+          {
+            "event": "close_only",
+            "effective_at": "2023-02-10T14:00:00Z",
+            "source_code": "4d23ada51a2e4fa182835c77d51ba1a9"
+          }
+        ]
+      },
+      {
+        "native_symbol": "CTKUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2020-11-19T07:00:00Z",
+              "source_code": "e42cfd99f32a4a9aa3c29c8a31ef4ddc"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2024-04-01T09:00:00Z",
+              "source_code": "ce74360a3fd444b2b35da7186f8dd0ad"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-04-30T10:15:00Z",
+              "source_code": "63155163bce541f5856d416efa71c6e8"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Shentu",
+              "settlement_asset": "USDT",
+              "tick_size": "0.0001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "CVCUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2020-11-11T07:00:00Z",
+              "source_code": "a060f642ff8d4f8e8091e34fba220e77"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2022-11-29T09:00:00Z",
+              "source_code": "3188e26f14a1464b91487abad452c04f"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-05-16T08:30:00Z",
+              "source_code": "bbe829426ad844b9b9dac62f878d1e67"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Civic",
+              "settlement_asset": "USDT",
+              "tick_size": "0.0001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "CVXUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2022-09-22T12:15:00Z",
+              "source_code": "d6c6c06ddb074c829d90155b0aba661b"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2024-05-14T09:00:00Z",
+              "source_code": "a58cc13f78a34fbba11f00ff7144e9ee"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-07-23T11:30:00Z",
+              "source_code": "b7b3a116013145569a9850f197c8cbe4"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Convex Finance",
+              "settlement_asset": "USDT",
+              "tick_size": "0.001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "ETHBTC",
+        "classification": "snapshot_onboard_disagrees_with_launch_notice",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2023-04-26T12:00:00Z",
+              "source_code": "ba576fbe12fa49b28fbee1b7e380e8b7"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "ETH",
+              "settlement_asset": "BTC",
+              "tick_size": "0.00001",
+              "payoff": "linear"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Snapshot onboard May 25, 2023 is not the announced April 26 launch. BTC settlement is explicit despite the exchange placing this linear contract in its USD-M category. No second episode is established by the snapshot discrepancy.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "ICPUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2021-05-11T03:00:00Z",
+              "source_code": "a176d4cfd4c74a7fb8238e63d71c062a"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2022-06-10T09:00:00Z",
+              "source_code": "af469aeeab074738bb4a276070a9d11b"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2022-09-27T02:30:00Z",
+              "source_code": "adabdfbc53344094808a7bea464f101b"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "ICP",
+              "settlement_asset": "USDT",
+              "tick_size": "0.001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure. Relaunch notice identifies the old contract as ICPUSDT_SETTLED. Snapshot onboard July 30, 2021 matches neither recovered launch.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "LITUSDT",
+        "classification": "ticker_reused_for_different_underlying",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2021-02-18T07:00:00Z",
+              "source_code": "ff7f8d8788df4389aab5eb59a0f0a665"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2025-01-31T09:00:00Z",
+              "source_code": "2a9feaa556f74dcdaa2192366f0e247c"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Litentry",
+              "underlying_source_code": "2a9feaa556f74dcdaa2192366f0e247c",
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-12-23T17:30:00Z",
+              "source_code": "6a33be00231c4539b3a4a625538e4d1e"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Lighter Protocol",
+              "settlement_asset": "USDT",
+              "market_regime": "pre_market"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Litentry and Lighter require different underlying and contract identities. The later pre-market conversion retains positions and is a terms transition, not a closure or launch of a new position book.",
+        "history_complete": false,
+        "additional_events": [
+          {
+            "event": "new_positions_stop",
+            "effective_at": "2025-01-31T08:30:00Z",
+            "source_code": "2a9feaa556f74dcdaa2192366f0e247c"
+          },
+          {
+            "event": "standard_perpetual_transition_start",
+            "effective_at": "2026-01-15T15:15:00Z",
+            "source_code": "96ac152ced224d7a92a10a11335f5212",
+            "maximum_transition_hours": 3,
+            "actual_transition_end": null,
+            "positions_retained": true
+          }
+        ]
+      },
+      {
+        "native_symbol": "MAVIAUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2024-02-21T10:00:00Z",
+              "source_code": "521a6a71b21046f2b07b021edfd41b9f"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2024-12-16T09:00:00Z",
+              "source_code": "27eac260521b4f40ab331e1a345887a7"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-03-26T17:00:00Z",
+              "source_code": "864b8bd112a44a8cae14db4dcea159a1"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Heroes of Mavia",
+              "settlement_asset": "USDT",
+              "tick_size": "0.0001",
+              "terms_source_code": "815acb27cc2146d2b3f2a4fe933f11d9"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure. Original March 26 16:15 proposal was postponed to 17:00; preserve terms source separately.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "PUMPUSDT",
+        "classification": "ticker_reused_for_different_underlying",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-04-12T14:30:00Z",
+              "source_code": "4a4bb43f865a4348828de4facfc9eee4"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2025-06-13T09:00:00Z",
+              "source_code": "38a74ee47cdc43ebbc672e1dc6968358"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "PumpBTC",
+              "contract_address": "0xB7C0007ab75350c582d5eAb1862b872B5cF53F0C",
+              "settlement_asset": "USDT",
+              "tick_size": "0.00001"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-07-10T07:30:00Z",
+              "source_code": "4bc8b483d10d4619babb2015066b2d89"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Pump.fun",
+              "settlement_asset": "USDT",
+              "market_regime": "pre_market"
+            }
+          }
+        ],
+        "reviewer_interpretation": "PumpBTC and Pump.fun require different identities. PumpBTC was settled before its PUMPBTCUSDT replacement; the rename does not carry an open futures position. Pump.fun pre-market conversion retains positions.",
+        "history_complete": false,
+        "additional_events": [
+          {
+            "event": "new_positions_stop",
+            "effective_at": "2025-06-13T08:30:00Z",
+            "source_code": "38a74ee47cdc43ebbc672e1dc6968358"
+          },
+          {
+            "event": "replacement_launch",
+            "effective_at": "2025-06-13T10:00:00Z",
+            "source_code": "38a74ee47cdc43ebbc672e1dc6968358",
+            "native_symbol": "PUMPBTCUSDT",
+            "underlying": "PumpBTC"
+          },
+          {
+            "event": "standard_perpetual_transition_start",
+            "effective_at": "2025-07-14T17:20:00Z",
+            "source_code": "e220b78bdf4848e3a61eb9fce99e2580",
+            "maximum_transition_hours": 1,
+            "actual_transition_end": null,
+            "positions_retained": true
+          }
+        ]
+      },
+      {
+        "native_symbol": "SLPUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2023-10-31T14:30:00Z",
+              "source_code": "5d8c7476197344d087b5af436bfc74ae"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2024-05-15T09:00:00Z",
+              "source_code": "cb525a5fbb954935afc77630fc5bd0cc"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2025-07-23T11:45:00Z",
+              "source_code": "b7b3a116013145569a9850f197c8cbe4"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "Smooth Love Potion",
+              "settlement_asset": "USDT",
+              "tick_size": "0.000001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure.",
+        "history_complete": false
+      },
+      {
+        "native_symbol": "TLMUSDT",
+        "classification": "closure_and_relaunch",
+        "episodes": [
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2021-07-16T03:30:00Z",
+              "source_code": "d7816a7045ba46cd9d7a5b7f9b135883"
+            },
+            "settlement_start": {
+              "event": "automatic_settlement",
+              "effective_at": "2022-06-09T09:00:00Z",
+              "source_code": "af469aeeab074738bb4a276070a9d11b"
+            },
+            "history_complete": false,
+            "terms_at_launch": {
+              "settlement_asset": "USDT"
+            }
+          },
+          {
+            "launch": {
+              "event": "launch",
+              "effective_at": "2023-03-30T12:30:00Z",
+              "source_code": "bd18df283ead40d09fd60c8eab984e41"
+            },
+            "settlement_start": null,
+            "history_complete": false,
+            "terms_at_launch": {
+              "underlying": "TLM",
+              "settlement_asset": "USDT",
+              "tick_size": "0.00001"
+            }
+          }
+        ],
+        "reviewer_interpretation": "Distinct futures episodes; do not carry positions or infer continuous trading through the closure. Snapshot onboard March 29, 2023 precedes the announced March 30 12:30 launch.",
+        "history_complete": false
+      }
+    ]
   }
 }

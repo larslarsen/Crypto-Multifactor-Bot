@@ -310,3 +310,103 @@ versions yet. Publication headers retain unknown timezone/knowledge time. The ne
 is the explicitly listed missing authority and its application through existing reference
 models and the delivered consumer, not another market-data conversion or broad test run.
 No production/test source, accepted release, or data catalog changed during this research.
+
+
+## Recovered notices and resolved snapshot episode discrepancies
+
+This section supersedes the missing-notice counts and unresolved FTT interpretation above.
+The exact reviewer publication set remains the same five paths enumerated above.
+
+The facts attachment now contains 134 notice groups. All 73 missing-snapshot names have
+recovered launch and closing notices. FTTBUSD's planned May 19, 2022 settlement was
+explicitly cancelled; later positive-volume bars therefore do not require an invented
+relaunch. BTTUSDT's September 2020 launch was cancelled and its April 2021 launch is a
+separate notice. ADA, XRP and DOGE BUSD launch postponements are retained, including the
+second DOGE postponement. ANCBUSD/AUCTIONBUSD close at the announced December 15, 2022
+09:00 UTC settlement start. Earlier unknowns are resolved only to these specific extents.
+
+Recovery used the public Binance CMS article list and detail APIs, retaining small raw
+responses in /tmp/cex002_notice_recovery. Listing, delisting and latest-news indexes were
+cached; no market-data acquisition was performed. API publishDate is retained as claimed
+source publication time, separately from response-file save time. Neither proves an
+original unmodified revision or historical receipt. Research known_from remains null.
+An initial episode-read call's session identifier was not retained by the orchestration;
+a second cache-reusing invocation completed and reported its terminal result. Some tail
+requests may overlap; do not claim exactly-once HTTP recovery. No market query was repeated
+by that invocation. Cached responses and extracted facts bind to their saved SHA256.
+
+The read-only monthly manifest screen examined all 698 snapshot rows and identified 12
+with bar partitions earlier than their snapshot onboard month. Primary notices classify
+all 12, using 37 linked source records in facts.snapshot_episode_reviews:
+
+| Symbol | Recovered distinction |
+| --- | --- |
+| AIAUSDT | September 2025 launch, December settlement, January 2026 relaunch after a postponed proposal |
+| BNXUSDT | April 2022 launch, February 2023 settlement and relaunch; old chart named BNXUSDTSETTLED |
+| CTKUSDT | November 2020 launch, April 2024 settlement, April 2025 relaunch |
+| CVCUSDT | November 2020 launch, November 2022 settlement, May 2025 relaunch |
+| CVXUSDT | September 2022 launch, May 2024 settlement, July 2025 relaunch |
+| ICPUSDT | May 2021 launch, June 2022 settlement, September 2022 relaunch; old contract named ICPUSDT_SETTLED |
+| MAVIAUSDT | February 2024 launch, December settlement, March 2025 relaunch postponed to 17:00 UTC |
+| SLPUSDT | October 2023 launch, May 2024 settlement, July 2025 relaunch |
+| TLMUSDT | July 2021 launch, June 2022 settlement, March 2023 relaunch |
+| LITUSDT | Earlier Litentry contract settled January 2025; December 2025 contract is Lighter Protocol |
+| PUMPUSDT | Earlier PumpBTC contract settled June 2025 before PUMPBTCUSDT replacement; July 2025 contract is Pump.fun |
+| ETHBTC | Official April 26, 2023 launch predates snapshot May 25 onboard; explicitly BTC-settled linear contract |
+
+BNX, ICP, TLM and ETHBTC demonstrate that snapshot onboard timestamps are not reliable
+substitutes for the announced trading start. The screen does not establish complete
+histories for the other 686 snapshot rows and cannot detect reuse within one month.
+The two pre-market conversions (Lighter and Pump.fun) explicitly retain positions; they
+are terms/regime transitions, unlike the automatic settlements that close positions.
+
+Only the two newly recovered closure months were queried: four files /69,988 bytes,
+appended to preserved earlier observations. Total unique selected market files are now
+149 /2,543,691 bytes. There are 75 saved queries across all 73 names, including one now
+cancelled FTT proposal. Excluding it yields 74 announced boundaries, 72 with bar opens
+at/after the boundary and 66 with later funding timestamps. ANCBUSD and AUCTIONBUSD each
+have 399 zero-trade bars and 49 nonzero funding-rate observations after settlement in
+December 2022. Neither observation supplies an executable price or payable cashflow.
+The original FTT query is retained with its corrected status, not silently erased.
+
+### Concrete consumer application decisions
+
+1. Keep the accepted market publication unchanged. Dated reference information accompanies
+   existing files; do not copy or normalize the billion-row release again. Preserve every
+   native name and all explicit gaps, including names absent from current snapshots.
+2. Resolve a native symbol by historical episode before constructing a Nautilus instrument.
+   LIT/PUMP underlying reuse needs different asset identities. Closure/relaunch needs
+   separate contract episodes even when the underlying stays the same. A token swap or
+   rename does not carry a futures position across an explicit automatic settlement.
+   Do not strip SETTLED suffixes to admit previously excluded alias files: ADR-0020 still
+   requires evidence of the actual non-overlapping interval and retained raw lineage.
+3. Use the existing reference model's dated instrument versions, aliases and listing
+   events. Snapshot fields retain their observation date; do not project a current tick
+   size, settlement currency or status backward over an older episode. Launch terms are
+   launch terms only. Missing historical specifications remain named gaps, not defaults.
+4. Preserve cancelled/postponed proposals as evidence, but never apply them as trading
+   boundaries. Apply only the corrected event. Separate new-position restrictions from
+   settlement and from reductions of existing positions. Automatic settlement start is
+   not a measured completion timestamp.
+5. A native hourly bar that straddles launch, restriction or settlement cannot establish
+   full-hour executable prices. Retain the original observation and its interval; identify
+   its boundary relationship for the consumer rather than granting full-hour eligibility
+   or deleting it. Zero-trade post-settlement bars must not create new trading eligibility.
+6. Realized-funding source rates are observations, not a portfolio's cashflow ledger.
+   Require contract episode and position eligibility before booking a payment. Preserve
+   possible terminal observations such as LEND's boundary +5ms separately from recurring
+   post-close rates; no blanket timestamp clip or automatic post-close payment is accepted.
+7. Keep effective time, claimed publication time and actual knowledge/receipt time separate.
+   REF-001 requires a non-null known_from: integration must use an evidenced research receipt
+   or explicitly selected retrospective knowledge date, never silently use the effective
+   date. Historical decision-time queries must not inherit today's recovered information.
+   Existing explicit event-time transport remains an assumption, not source-clock proof.
+
+These decisions bound the application of recovered facts; they do not accept a reference
+release or claim the consumer enforces them already. A source assignment must enumerate
+its paths and tests and preserve Hermes's CMB integration ownership. No developer was
+launched in this continuation. Source/test code, accepted data and catalog remain unchanged.
+The remaining work is applying these identities/restrictions, resolving required dated
+specifications and per-product availability, and reviewing the actual consumer behavior.
+The broad stopped suite and full storage proof are not to be rerun. CEX-002 remains
+IN_PROGRESS; reviewer remains the next required actor; next ticket and authorization NONE.

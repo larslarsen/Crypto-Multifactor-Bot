@@ -13,26 +13,34 @@ The deliverable remains survivorship-aware CEX data usable in NautilusTrader. Th
 works, but historical tradability is not repaired. All 771 names remain in the release;
 73 lack snapshot terms and all 771 canonical IDs remain null.
 
-Review525 now has two research attachments: `cex002_contract_notice_facts.json` and
-`cex002_contract_boundary_observations.json`, both in `research/sprint_004/`.
-For the 73 missing-snapshot names, official notices supply closing events for 71 and
-launch events for 14. This is not 71 completed histories. The remaining primary closure
-notices are ANCBUSD and AUCTIONBUSD; 59 launch notices remain missing, FTTBUSD has conflicting
-closures, and dated specifications remain incomplete. The 698 snapshot-name histories
-also remain to be assessed; a recent snapshot is not a contract's lifetime history.
+Review525 has two research attachments in research/sprint_004/:
+cex002_contract_notice_facts.json and cex002_contract_boundary_observations.json.
+All 73 missing-snapshot names now have recovered official launch and closing notices.
+FTTBUSD's May 2022 delisting and BTTUSDT's September 2020 launch were explicitly cancelled;
+ADA/XRP/DOGE launch postponements are preserved. These are recovered facts, not yet
+executable consumer rules or complete lifetime contract specifications.
 
-Read-only closure-month queries covered 73 announced boundaries for 71 names, reading
-145 selected market files / 2,473,703 bytes. Seventy-one boundaries have later-or-equal
-hourly bars and 65 have later funding timestamps. LEND has 528 zero-trade hourly bars
-starting at/after its announced settlement, but its one later funding timestamp is only
-five milliseconds later and could be terminal. These counts justify separating trading
-eligibility and settlement cashflows; they do not justify blanket row deletion.
+A read-only comparison of 698 snapshot rows with earliest declared monthly bar partitions
+flagged 12 names. All 12 now have a primary-source classification: nine closure/relaunch
+histories, two tickers reused for different underlying assets (LITUSDT and PUMPUSDT), and
+ETHBTC's snapshot onboard date contradicting its launch notice. BNX, ICP and TLM also have
+onboard times inconsistent with recovered launches. The other 686 rows are not proved
+complete by this monthly screen; it cannot detect same-month reuse.
 
-Next: recover the specifically enumerated missing notices and resolve contradictory
-events, then apply dated contract identities/terms and product timing rules through the
-existing reference layer and consumer. No research attachment is executable authority
-yet. No histories are marked complete and no release data or consumer source was changed.
-The stopped full-suite workflow below remains stopped. No next ticket is authorized.
+Closure-month queries now cover all 73 missing-snapshot names: 75 saved queries, including
+one cancelled FTT proposal, across 149 selected market files / 2,543,691 bytes. Excluding
+that cancelled proposal leaves 74 announced boundaries: 72 have hourly bars at/after the
+boundary and 66 have later funding timestamps. The two newly queried contracts, ANCBUSD
+and AUCTIONBUSD, each have 399 zero-trade bars and 49 later nonzero funding-rate rows in
+their closure month. Their presence does not prove executable trades or payable funding.
+Original observations are preserved; only four additional market files were read.
+
+Next: apply the reviewed dated identities and restrictions through the existing reference
+layer and consumer, with the specific rules in Review525's final section. Outstanding
+contract specifications and product timing must remain explicit; the current snapshot
+must not be backfilled over an older episode. No full-history completion, source acceptance,
+reference publication, data mutation or CMB acceptance execution is claimed. The stopped
+full-suite workflow stays stopped, and no next ticket is authorized.
 
 HT-004 data access is accepted and integrated in Harmonic Trader at 80490b6. The
 complete eleven-product reader uses existing Parquet in place. Eleven new targeted
