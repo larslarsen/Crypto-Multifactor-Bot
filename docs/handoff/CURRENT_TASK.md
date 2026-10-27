@@ -3,28 +3,33 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Jr Dev — Hermes — validate frozen compiler and generate the small dated-contract companion
+Next required actor: Lead Quantitative Finance Researcher/Engineer — remaining historical coverage and dated specifications
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-Active source assignment: Review525 final section / ADR-0041. Existing senior authors the
-small CMB dated-contract compiler and HT-005 consumer changes. No tests or integration by
-senior; reviewer inspects, Hermes validates CMB, HT reviewer validates its consumer.
-Accepted market files remain unchanged. No next CMB ticket is authorized.
+Dated contract companion and HT-005 consumer checks are accepted as a component.
+The owner authorized direct reviewer validation/integration; Hermes is optional for this
+repair. See AGENTS.md's owner override. Companion SHA67a648ecff6b6c7faa1f98fbd9457e5c5e69fe2a3e0aceb635ccb8fc69d93977
+supplies98 episodes for86 symbols in213,181 bytes. Native projection now separates reused
+tickers and refuses known closed/boundary-crossing bars when history is supplied.
+29 focused CMB cases passed across the initial and diagnostic-correction runs;16 HT cases,
+scoped lint/control and the bounded real consumer check passed. Full CEX-002 acceptance,
+complete historical terms and all771-name history coverage remain pending.
 
 
 The deliverable remains survivorship-aware CEX data usable in NautilusTrader. The reader
-works, but historical tradability is not repaired. All 771 names remain in the release;
-73 lack snapshot terms and all 771 canonical IDs remain null.
+works and now applies the recovered contract episodes when the pinned history is supplied.
+All771 names remain accessible. The original membership canonical IDs remain null; the
+companion supplies98 distinct dated instrument IDs across86 symbols without rewriting it.
 
 Review525 has two research attachments in research/sprint_004/:
 cex002_contract_notice_facts.json and cex002_contract_boundary_observations.json.
 All 73 missing-snapshot names now have recovered official launch and closing notices.
 FTTBUSD's May 2022 delisting and BTTUSDT's September 2020 launch were explicitly cancelled;
 ADA/XRP/DOGE launch postponements are preserved. These are recovered facts, not yet
-executable consumer rules or complete lifetime contract specifications.
+complete lifetime contract specifications. Their recovered schedules now drive the companion.
 
 A read-only comparison of 698 snapshot rows with earliest declared monthly bar partitions
 flagged 12 names. All 12 now have a primary-source classification: nine closure/relaunch
@@ -41,12 +46,10 @@ and AUCTIONBUSD, each have 399 zero-trade bars and 49 later nonzero funding-rate
 their closure month. Their presence does not prove executable trades or payable funding.
 Original observations are preserved; only four additional market files were read.
 
-Next: apply the reviewed dated identities and restrictions through the existing reference
-layer and consumer, with the specific rules in Review525's final section. Outstanding
-contract specifications and product timing must remain explicit; the current snapshot
-must not be backfilled over an older episode. No full-history completion, source acceptance,
-reference publication, data mutation or CMB acceptance execution is claimed. The stopped
-full-suite workflow stays stopped, and no next ticket is authorized.
+Next: resolve the remaining histories, dated specifications and product timing. The current
+snapshot must not be backfilled over an older episode. Review525/Record526 accept only the
+new compiler, pinned companion and checked consumer behavior. The original market release
+is unchanged. The stopped full suite stays stopped; no next ticket is authorized.
 
 HT-004 data access is accepted and integrated in Harmonic Trader at 80490b6. The
 complete eleven-product reader uses existing Parquet in place. Eleven new targeted

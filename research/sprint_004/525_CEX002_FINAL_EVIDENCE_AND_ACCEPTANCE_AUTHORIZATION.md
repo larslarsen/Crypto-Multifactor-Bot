@@ -565,3 +565,56 @@ two CMB source/test paths plus research/sprint_004/526_CEX002_FINAL_RELEASE_AND_
 assert the cached path set, commit/push and confirm HEAD/origin equality. The small data
 companion stays outside Git. This assigns no broad suite, market scan or catalog mutation.
 CEX-002 and HT-005 remain IN_PROGRESS pending real consumer review.
+
+
+### Diagnostic-only correction after first CMB test result
+
+Hermes's first pytest stopped with one failure: the symlink rejection diagnostic lacked
+the test's expected “non-symlink” wording. All other 28 cases passed, including 25 existing
+REF-001 cases. No Ruff/control/real compilation ran. Senior changed only that accurate
+diagnostic; compiler hash is now d6d2aeda086a8bf401d93851c3a6f0215eede95019fd47950de46eb599f05187.
+Test hash and all HT source remain unchanged. Reviewer inspected the one-line change.
+
+After Hermes finishes recording the failure, resume the same workflow with ONLY this
+failed test (preserve the other 28 passes):
+PYTHONPATH=src .venv/bin/python -m pytest tests/reference/test_cex002_contract_history.py::test_cli_authenticates_bounded_facts_and_prints_deterministic_document -q --tb=short
+
+On success continue the already assigned scoped Ruff, control, single small compilation,
+Record526 and exact three-path integration. Preserve the first failure. Hermes's initial
+Git probe exited129; its usage text does not establish an empty index. Correct that
+interpretation and prove the index with a successful git diff --cached --name-only before
+continuing. This is a failed read-only probe, not permission to infer success. Normal
+approvals and first-failure stop remain. No HT retest or other source change is assigned.
+
+
+### Owner override and accepted dated companion delivery
+
+The owner explicitly authorized the reviewer to run the remaining focused CMB checks,
+generate the companion and integrate this repair directly. Hermes was interrupted after
+its failed test, with no test/compilation still running. AGENTS.md now records this active
+repair exception so a future continuation does not recreate the handoff barrier.
+
+Reviewer accepts the corrected compiler, generated pinned companion and HT-005 consumer
+behavior described in Record526. The failed diagnostic case now passes; the other28
+passing CMB cases were preserved, scoped lint and control passed, and all16 HT cases plus
+its scoped lint passed. Six real market files/176,167 bytes prove separate LIT/PUMP
+identities, actual canonical Nautilus callbacks, rejection of a post-settlement ANCBUSD
+bar, and preserved annotated funding observations. No broad or complete-release rerun.
+
+Companion data/.cex002_contract_history/review525-20261027.json has SHA
+67a648ecff6b6c7faa1f98fbd9457e5c5e69fe2a3e0aceb635ccb8fc69d93977,
+213,181 bytes,98 episodes across86 symbols and13 unresolved entries. It supplements the
+unchanged market publication. These are reviewed schedules with incomplete terms, not a
+claim of continuous tradability or complete771-name histories. Unknown histories remain
+unknown in the reader and raw access stays available for all eleven products.
+
+Exact CMB integration paths under the owner override: AGENTS.md,
+docs/handoff/CURRENT_TASK.md, tickets/CEX-002.md, this Review525,
+research/sprint_004/526_CEX002_FINAL_RELEASE_AND_ACCEPTANCE_RECORD.md,
+src/cryptofactors/reference/cex002_contract_history.py,
+tests/reference/test_cex002_contract_history.py. The data companion is not staged.
+HT reviewer integrates its four frozen source/test paths and four enumerated governance/
+usage paths under HT-005. Preserve unrelated changes in both repositories.
+
+CEX-002 remains IN_PROGRESS. Next required actor is reviewer for the remaining historical
+specifications/coverage and product timing; no new model, broad suite or next ticket.

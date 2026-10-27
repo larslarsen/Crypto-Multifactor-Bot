@@ -12,6 +12,17 @@ This file governs how AI agents (and humans acting as agents) work in this repos
 - Do not hard-code secrets or network credentials.
 - Prefer deterministic, reviewable changes over clever one-liners.
 
+## Owner override — active CEX-002 data repair
+
+On 2026-10-26 Pacific, the owner explicitly authorized the reviewer to finish this repair
+without the mandatory Hermes handoff: “do what you need to do.” For this CEX-002 repair
+and its HT-005 consumer integration, the reviewer may execute focused validation, generate
+the small dated-contract companion, maintain implementation/evidence records, and stage,
+commit and push the reviewed changes. Hermes is optional for these actions. This overrides
+the exclusive Hermes ownership language below for this repair; do not ask again.
+Independent senior source authorship and reviewer inspection remain in place. No broad
+suite, market-data rewrite, strategy or unrelated DEX work is authorized by this override.
+
 ## Ticket Workflow
 
 1. Read the current task from `docs/handoff/CURRENT_TASK.md`.
