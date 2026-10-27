@@ -1,6 +1,6 @@
 # ADR 0041 — Dated contract records alongside existing market files
 
-Status: Accepted for implementation; no real companion accepted yet.
+Status: Accepted and implemented. Reviewed companions accepted as incomplete-history components in Reviews525 and527.
 Ticket: CEX-002. Governing assignment: final section of Review525.
 
 The immutable market publication remains unchanged. A small, separately pinned JSON

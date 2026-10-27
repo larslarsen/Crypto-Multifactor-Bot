@@ -9,20 +9,33 @@ Next ticket authorized: NONE
 
 ## Current action
 
-Dated contract companion and HT-005 consumer checks are accepted as a component.
-The owner authorized direct reviewer validation/integration; Hermes is optional for this
-repair. See AGENTS.md's owner override. Companion SHA67a648ecff6b6c7faa1f98fbd9457e5c5e69fe2a3e0aceb635ccb8fc69d93977
-supplies98 episodes for86 symbols in213,181 bytes. Native projection now separates reused
-tickers and refuses known closed/boundary-crossing bars when history is supplied.
-29 focused CMB cases passed across the initial and diagnostic-correction runs;16 HT cases,
-scoped lint/control and the bounded real consumer check passed. Full CEX-002 acceptance,
-complete historical terms and all771-name history coverage remain pending.
+The dated contract companion now contains 194 episodes across 182 symbols, adding 96
+symbols. Review527 accepts this expansion and its focused consumer checks as a component.
+All 98 prior episode records remain exactly unchanged. All 20 newly included SETTLING
+contracts have notice-backed closing dates. DOT/CHZ launch postponements and BLZ/OMG
+closure postponements are preserved and applied before compilation.
+
+Current companion: data/.cex002_contract_history/review527-20261027.json
+SHA256: 2f72426cc568d4d7a487d75537cd18cdefc1b29914f68d7aec0dad162e4530aa
+Retrospective known_from: 2026-10-27T07:21:19Z. Size: 348,938 bytes.
+The existing compiler and HT consumer passed the expansion checks. Six selected market
+files / 197,913 bytes established corrected boundaries and actual Nautilus callbacks.
+No production source or market files changed; no broad suite or full replay ran.
+
+589 of 771 symbols remain without compiled episodes; all lifetime specifications remain
+incomplete. The pending list, source comparisons and exact checks are in
+research/sprint_004/cex002_contract_history_expansion.json. Resume remaining notice recovery
+using cached responses and rate-aware requests: the four-worker public API batch was
+stopped after HTTP 429. General delisting/token-swap notices also contain futures closures.
+The owner-authorized reviewer can complete this repair directly; Hermes is optional.
+CEX-002 remains IN_PROGRESS, next ticket NONE. Full acceptance is not claimed.
+
 
 
 The deliverable remains survivorship-aware CEX data usable in NautilusTrader. The reader
 works and now applies the recovered contract episodes when the pinned history is supplied.
 All771 names remain accessible. The original membership canonical IDs remain null; the
-companion supplies98 distinct dated instrument IDs across86 symbols without rewriting it.
+companion supplies194 distinct dated instrument IDs across182 symbols without rewriting it.
 
 Review525 has two research attachments in research/sprint_004/:
 cex002_contract_notice_facts.json and cex002_contract_boundary_observations.json.

@@ -3276,6 +3276,2470 @@
         "response_sha256": "4c66a677e329b2d2c8435fae94ff27ac89c69030a6f7295df98f571b382032ec",
         "local_response_saved_at": "2026-10-27T05:37:44.392673+00:00"
       }
+    },
+    {
+      "fact_id": "expansion527-1000SHIBUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/fa934b93fea6494fb7361d45ca7cc98a",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "1000SHIBUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-05-10T13:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "007a721d6eb322d0132a1e59732066fca4cdf4be95fd0ae9faddd8490742002f",
+      "source_publication_ms": 1620640950570,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-1INCHUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/6a53785450ae4eb591450769891e29ed",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "1INCHUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-12-25T10:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "9eafa615c56a4e8fe8002c16eab9e75695e3520ccd261d7bef37eafe8ed99a6e",
+      "source_publication_ms": 1608886520247,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ADAUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039355391",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ADAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-31T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "a64c7055c120fce6c8c4ead9746fee895cd47bec475ef4f8a892213b97caa68f",
+      "source_publication_ms": 1580377094000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-ALGOUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/28212b4588f243bc8007adbf119ac7e7",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ALGOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-06-16T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "60e287fbcee07246bfd16bf2407e9a30bd1edbe95a23f9284e9b2bc2e0689c67",
+      "source_publication_ms": 1592208439000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-ALICEUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/09e302f8a778456aa42e0df634cc4e8f",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ALICEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-16T03:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8df1472661938076d2ee1e543e5848a28d2f7952e0dc3bcd2cc030b0c3083a4e",
+      "source_publication_ms": 1615860043475,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ALPHAUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bbbb985f9c68462790433b7d876504f4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ALPHAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-11-23T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "de2788aa125aa8a011111b63cd65d0d89948d6b9f62e58ed14a57203fe80774c",
+      "source_publication_ms": 1606100635023,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-AMBUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bd18df283ead40d09fd60c8eab984e41",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "AMBUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-03-30T12:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "b0e0ee3733b0ff3b628d9e8a15235a4800097603b25cef576121210085c4f7f2",
+      "source_publication_ms": 1680087603472,
+      "terms_at_launch": {
+        "underlying": "AMB",
+        "settlement_asset": "USDT",
+        "tick_size": "0.00001",
+        "funding_cap_text": "Clamp (Funding Rate, -0.75 * Maintenance Margin Ratio, 0.75 * Maintenance Margin Ratio)",
+        "maximum_leverage_text": "20x",
+        "trading_hours": "24/7"
+      }
+    },
+    {
+      "fact_id": "expansion527-ANKRUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/df96728782084fd2ab2ba51b6201b462",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ANKRUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-26T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "a013293757fba2c8a8b5a9ea6daae357cac3a3eb9d80d12ca2e903a2802b9756",
+      "source_publication_ms": 1611550798139,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ARPAUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bf17bdfafc2d4f12ad91011b4895bbd3",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ARPAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-10-19T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "12a1c1642d98834bcf1f134382680d575f1348529444e1407ff931b1b6682750",
+      "source_publication_ms": 1634530837531,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ATOMUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039562671",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ATOMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-07T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "64431f5e74d8d7736a7cbdca76f1e50153cf4517e1aba132c958de3293d5c6be",
+      "source_publication_ms": 1580974001000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-AVAXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/14040912781f429da8863a97ba1e4e3a",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "AVAXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-23T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "cc593e8f7dede6d5bad8b71120d64452435b7d749a90915b00e346c2f5103385",
+      "source_publication_ms": 1600759038909,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-AXSUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/31a0e30f88ca4c2bb661d9a27c70ebd7",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "AXSUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-11-20T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "2b2de528d3331ce0be66a7c2ca0b9966188645c57baa37a954aea3802c0a6986",
+      "source_publication_ms": 1605771787009,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-BAKEUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/a24db130a3bd48328bfbe7ad6e5e1a35",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BAKEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-05-19T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "fda6a7bb5bdb14d9acf952e6a265840423c9c021626de7d3eae7fc4a3754dacb",
+      "source_publication_ms": 1621317562543,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-BALUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b093a2d4c3d441d4aedd8c6289fbffe4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BALUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-01T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8ca624822f8266d19cfc3f25e5e58396634a234355cf15d686bf4a6856d64eeb",
+      "source_publication_ms": 1598933182241,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-BANDUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ea85b877da3f4bebaf17922f32f58dbc",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BANDUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-29T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "386084a6709062fe665ba0918fd3296a9c429e8891054d32965b1e9559afc6b2",
+      "source_publication_ms": 1595923208905,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-BATUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039719631",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BATUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-13T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "2f7ecf94517f376b4c889d4f24a565da0b25b9a84bdf0585cbd081052ba32b80",
+      "source_publication_ms": 1581498048000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-BELUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9527e4c19be34c0cb0237f58cde7af50",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BELUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-11-18T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "9e68e107af5c48291f51e1ebbffc5e227d4f09df894a6be0c7a8cd9ac70d872b",
+      "source_publication_ms": 1605583839972,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-BLZUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b27aa1a173554eb6885e99f9f9d0422e",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BLZUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-17T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8462ee19a5ca100b96f3bdf93aeee134e0ace6e3e5178a8bf723647952779526",
+      "source_publication_ms": 1600244353373,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-BNBUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039190692",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BNBUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-10T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "45ae5f04aade0fb9cd3e7abb737eb918721528fcdb004d855c0e925546256000",
+      "source_publication_ms": 1581072201000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-BOMEUSDC-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/686612ddcd824cd493963371eac1a80b",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BOMEUSDC"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2024-04-25T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "f9e2c96c6257606df49d3020bbd6beab63bda477669b2ccb51952b8dab95b520",
+      "source_publication_ms": 1713927628256,
+      "terms_at_launch": {
+        "underlying": "BOOK OF MEME (BOME)",
+        "settlement_asset": "USDC",
+        "tick_size": "0.000001",
+        "funding_cap_text": "+2.0000% / -2.0000%",
+        "maximum_leverage_text": "50x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-CHRUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/86f5ef4c343c4acda8358918e3f77698",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "CHRUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-12T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "11bd74e21d3ebd5f36d294857751414443d4467fabb931aff38d16f9816b7e23",
+      "source_publication_ms": 1615521115937,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-CHZUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e95ce5d56cfe4ef4acfb02a0769e6fd8",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "CHZUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-21T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "5d1b7237df0b028cbf047b35044dabc89ad6a052613794f63d6bf010203e36c8",
+      "source_publication_ms": 1611196604737,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-COMPUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9f245e5e19e8494bad7a3f49424943aa",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "COMPUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-06-30T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "422dad77cb5c9acd91e48a0852fdde620177d4942a9d3988c5aed2e5ae6cdb10",
+      "source_publication_ms": 1593420535000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-COTIUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/53c007d040594d55a8b2ccc57de8efa4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "COTIUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-10T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "121151aeda71c66227ce380b5d90128b793bed814d7ad3ab954eb399094107a0",
+      "source_publication_ms": 1615276082964,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-CRVUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b093a2d4c3d441d4aedd8c6289fbffe4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "CRVUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-01T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8ca624822f8266d19cfc3f25e5e58396634a234355cf15d686bf4a6856d64eeb",
+      "source_publication_ms": 1598933182241,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-DASHUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039045092",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DASHUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-04T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "b8b5a7984fd9ed545c1c93a2b9d393fc7fd6f65eec0781b0a731be8f3c98dab5",
+      "source_publication_ms": 1580722089000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-DEFIUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ebee6da5df3946519fdb9ab27706d1a4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DEFIUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-28T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "c2427f1f4642f632491c2866d89cbe028ee2ada96c4787f9446ce5d8c991b0b1",
+      "source_publication_ms": 1598448827824,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-DENTUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e50421e9fea947d6a5d4d3f923671a2d",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DENTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-24T04:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "ec82a2fd2e0855c23753dde1154ce1f589b87ba22805302e8cbe1414bba4be3d",
+      "source_publication_ms": 1616553690499,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-DGBUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c271315f57f54b08b6c81c6e81ba9ef8",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DGBUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-04-21T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "9acb559eb39745a3448ae8fc4acba78b5f6a8d63805a9cf06655aa66203baccd",
+      "source_publication_ms": 1618902204833,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-DOGEUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7777402b13574c41afe13b334d3e047e",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DOGEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-10T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "bbf8810b898dbec18b42dc9fbee7752173ad035f18bb396ef1d281f6bc672e38",
+      "source_publication_ms": 1594281625810,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-DOTUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ff90e1242b2546a1a46dd51d4b004927",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DOTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-20T07:00:00Z",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "superseded_by": "https://www.binance.com/en/support/announcement/detail/fdbcf19f900c4c45b1e836f5c8da2550"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "962bf551e025bf9e1c3f5ea940a023c2dae606c32120f9d0cf88a70656ba808c",
+      "source_publication_ms": 1597820405366,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-DOTUSDT-launch-correction",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/fdbcf19f900c4c45b1e836f5c8da2550",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DOTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-22T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "79bfbdac8ead05f78b93244b89e011ced7f0d8b0e89980a70bc06fab4e4f760b",
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-EGLDUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2dc59886f2a14a9280a56d1ddd272f3c",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "EGLDUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-14T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "66eb2222b66801361f6751ba2d9348a8f959734cf596f7ca9221b02eb34070b7",
+      "source_publication_ms": 1600058576304,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ENJUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/8cbcdaff69f54850a40d5d8b01fc3c92",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ENJUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-29T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "c98ff6c8a7d70074814911381c4c5201ed0cdb32ec4d49f4115622ede39bef99",
+      "source_publication_ms": 1601283879513,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ETCUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038833831",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ETCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-16T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "0752b844f49aefa204c758e660f663fc38b127f9be0fa070ec7749bdd0355ab9",
+      "source_publication_ms": 1579082604000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-FHEUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/4a4bb43f865a4348828de4facfc9eee4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "FHEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-04-12T15:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "afeb15ef4a57e2255ea17f6b29d80afc6f34f51a6927109677f9f1b9043d5e89",
+      "source_publication_ms": 1744462508737,
+      "terms_at_launch": {
+        "underlying": "FHE (Mind Network)",
+        "settlement_asset": "USDT",
+        "tick_size": "0.00001",
+        "funding_cap_text": "+2.00% / -2.00%",
+        "maximum_leverage_text": "20x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-FILUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2fb36350ef894faebb0059e4cf8ecea2",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "FILUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-16T06:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "31676fd2728900164f79b5671cb38b8f24007d98e8a05b4288e8c623f39e677a",
+      "source_publication_ms": 1602813601611,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-FLMUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/db52b02ccf0845dfb81ef44059310bb8",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "FLMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-29T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "81cd1e18db7d0828eef01d34ffed64b4c6031350fc2d40019cbdd89bed0b3490",
+      "source_publication_ms": 1601348403095,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-FTMUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/886d722f5f5449538336e21be599aa80",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "FTMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-24T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "481078bb6ab452284877bc0df1d07df47fa8a0c26221375013e525919cc452a9",
+      "source_publication_ms": 1600843256644,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-GRTUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ab9be538e1fe4d92b7126da19b37cb8b",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "GRTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-12-19T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "1b85ff87744add34e36116bf102820c6fa421a153dd7d4b0bca1fac98814c65f",
+      "source_publication_ms": 1608347405093,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-GTCUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c1a900363bd04ffd94032322f10de8ab",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "GTCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-06-11T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "39f148f094fbdc954fff59ce103efda6c59191ad25d57c1c2d871b1314f45297",
+      "source_publication_ms": 1623324690715,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ICXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2dc59886f2a14a9280a56d1ddd272f3c",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ICXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-15T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "66eb2222b66801361f6751ba2d9348a8f959734cf596f7ca9221b02eb34070b7",
+      "source_publication_ms": 1600058576304,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-IOSTUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039606612",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "IOSTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-21T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "d10b3f0e49e532fe81237c88fdfa67e9fa6d8c5dae818971c87f14a370accde4",
+      "source_publication_ms": 1582189431000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-JELLYJELLYUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/815acb27cc2146d2b3f2a4fe933f11d9",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "JELLYJELLYUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-03-26T16:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "81953e1cca3ea1485334bf6668a24757df01c86ceab571eb81d7c406ccfa9408",
+      "source_publication_ms": 1743002170581,
+      "terms_at_launch": {
+        "underlying": "JELLYJELLY (Jelly-My-Jelly)",
+        "settlement_asset": "USDT",
+        "tick_size": "0.00001",
+        "funding_cap_text": "+2.00% / -2.00%",
+        "maximum_leverage_text": "25x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-KAVAUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2acb4cae9d9b43e58f8a6719f93ec4c1",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "KAVAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-28T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "36a7e987237a91a16c8ecf25bf95c972323534cd5568553e707c8d12e2528117",
+      "source_publication_ms": 1595827609503,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-KNCUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/a6f4712fbf404bc995768730b7438646",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "KNCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-06-22T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "12e56cac49bc9a5a6c3ba03b1cebf148ee2f0149892f4b7e5f0c8511f90333eb",
+      "source_publication_ms": 1592795712000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-KSMUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/32fd012c4d174dc8b86ed89ac26b31d5",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "KSMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-14T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "f59b6fbd158b016f0494efc92878bb093fed0684419f5b1c6f2d7b692f7aa861",
+      "source_publication_ms": 1602561601741,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-LDOUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d6c6c06ddb074c829d90155b0aba661b",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LDOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-09-22T12:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "12b8c6e9abd49509245ddf556d363931d2c124a777ba84fb608bc5f9e1687948",
+      "source_publication_ms": 1663752003073,
+      "terms_at_launch": {
+        "underlying": "LDO",
+        "settlement_asset": "USDT",
+        "tick_size": "0.001",
+        "funding_cap_text": "Clamp (Funding Rate, -0.75 * Maintenance Margin Ratio, 0.75 * Maintenance Margin Ratio)",
+        "maximum_leverage_text": "25x",
+        "trading_hours": "24/7"
+      }
+    },
+    {
+      "fact_id": "expansion527-LEVERUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bd18df283ead40d09fd60c8eab984e41",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LEVERUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-03-30T12:15:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "b0e0ee3733b0ff3b628d9e8a15235a4800097603b25cef576121210085c4f7f2",
+      "source_publication_ms": 1680087603472,
+      "terms_at_launch": {
+        "underlying": "LEVER",
+        "settlement_asset": "USDT",
+        "tick_size": "0.000001",
+        "funding_cap_text": "Clamp (Funding Rate, -0.75 * Maintenance Margin Ratio, 0.75 * Maintenance Margin Ratio)",
+        "maximum_leverage_text": "20x",
+        "trading_hours": "24/7"
+      }
+    },
+    {
+      "fact_id": "expansion527-LINAUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/354bc5918cc345a2a4a7e2941912800c",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LINAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-19T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "362a82c0f41b6b6e2d7685ef36f8ad662d1f75840ee25dac75e281e5897c05e8",
+      "source_publication_ms": 1616126147043,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-LINKUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038885371",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LINKUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-17T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "f7274597c03334304cbe9c10c9116ae85ced5d6154806c9c4d328ac1b88500bd",
+      "source_publication_ms": 1579169113000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-LRCUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/78225be683864b8f97e5473ca2483018",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LRCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-19T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "b3ff83b9373b1dfbf43bf4ed90e9f2f55649525e1a5232e4c8333da89de42d8b",
+      "source_publication_ms": 1603076454782,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-LTCUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038585151",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LTCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-09T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "1212f5a59cf2637f5f4fbec0561fc890ab7bdc861b0fb042fdbd7ae0fea34a66",
+      "source_publication_ms": 1578474099000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-MKRUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f8ef944feed147b3b9e08e328ac09066",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "MKRUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-13T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "c8460303a96b0edd11911fda1a73995e0f466af7e160c9d09a6b8fa90f5ba248",
+      "source_publication_ms": 1597212794222,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-MTLUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2f2d58933d004b888d7cb9b5e6ed5abc",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "MTLUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-31T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "65243ebf852a4276ae95ef9f405db537688d2316cf3f63de1fced5443e2b29cb",
+      "source_publication_ms": 1617164142968,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-NEARUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/73d6baa32ff84af182f7997f7edcad81",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "NEARUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-15T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "ef21ee0c462d754aa1f85c7535eefa27f6aca1a8fc883550cb32b76739555813",
+      "source_publication_ms": 1602657490991,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-NEOUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039470132",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "NEOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-17T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "aeba48a7c45c0b17ab0178562f4213d37ad0b740661e4b9ef25d0ff114c9a745",
+      "source_publication_ms": 1581843564000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-NKNUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7f25c9f82b964cbc91e8b997cd5b8320",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "NKNUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-04-09T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "9faef8c168f511333e2d50d80c4ea5a8dc7caa9979b0c0a53023df4544d44247",
+      "source_publication_ms": 1617938818556,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-OCEANUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/047798bf9a7a48fe921ae3091049e539",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OCEANUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-11-03T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "df0a7c316f48ffe8aa728e7ede5b1f4c4bf85dc40d97f1ca604bbbd19f8ed051",
+      "source_publication_ms": 1604290737103,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-OGNUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/76d42ca8c52e4d8ab374dbcb64c44800",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OGNUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-04-01T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "df6409cea80b9f26195e8e7f19a6ee2c4b05738c06d63e9bbbfdd01692bfd045",
+      "source_publication_ms": 1617252390607,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-OMGUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c7ff131cce8e432087756a0370d082e8",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OMGUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-02T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "b7110dde26e83c28f0878ecf28dec245e731288276f591f64d1715d7e0168103",
+      "source_publication_ms": 1593587403000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-ONEUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/45cb73bba8254e52b9c0d7ad597d0402",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ONEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-03-18T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "18af3d22be318527dff7858f0bad44e36ca3347f5d55720b1cd3ca971e457e9c",
+      "source_publication_ms": 1615965562502,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ONTUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039232572",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ONTUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-11T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "2330e299ad78eb2a4087225fe1a909815dd659039273d153da6136842bf1d00e",
+      "source_publication_ms": 1581325348000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-PENGUUSDC-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b7b3a116013145569a9850f197c8cbe4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "PENGUUSDC"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-07-23T07:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "000969b1ea57d5e4b5b6897fc78680901ba30bfd15a32630349bf9e504f6dfa4",
+      "source_publication_ms": 1753250402225,
+      "terms_at_launch": {
+        "underlying": "Pudgy Penguins (PENGU)",
+        "settlement_asset": "USDC",
+        "tick_size": "0.000001",
+        "funding_cap_text": "+2.00% / -2.00%",
+        "maximum_leverage_text": "75x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-PUNDIXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/63155163bce541f5856d416efa71c6e8",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "PUNDIXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-04-30T10:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "c092cd033183ca1b1f0fc246cb41eadd319823403eca735779703b8efff8aa06",
+      "source_publication_ms": 1746001831246,
+      "terms_at_launch": {
+        "underlying": "PUNDIX (Pundi X)",
+        "settlement_asset": "USDT",
+        "tick_size": "0.0001",
+        "funding_cap_text": "+2.00% / -2.00%",
+        "maximum_leverage_text": "75x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-QTUMUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039972971",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "QTUMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-20T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "14dd932e282fd09fdd91a70a9b71a1eecb47417e29c676c7786ddb0604f13b83",
+      "source_publication_ms": 1582104660000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-RAYUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/3469ef45d0564f0d87de973d7f4f67a8",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RAYUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-08-20T03:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "284787d8b65665c90c095193ab88f1f6d128a0242146216edc71a734720f5d23",
+      "source_publication_ms": 1629191243193,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-RENUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/0cdf375d1e604a54ac75c995fa430816",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RENUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-13T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "6f92dbc8569bd282cd63462153893b4278ead7cae88654e5eae6592516a0a690",
+      "source_publication_ms": 1602475232716,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-RLCUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7efe93a63b364f039319fcf5313874e4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RLCUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-31T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8ba956e1724976c0d5e865953dd1be750303d7974f5ae64e034b64874a10b26c",
+      "source_publication_ms": 1596092406784,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-RSRUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/78225be683864b8f97e5473ca2483018",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RSRUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-19T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "b3ff83b9373b1dfbf43bf4ed90e9f2f55649525e1a5232e4c8333da89de42d8b",
+      "source_publication_ms": 1603076454782,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-RUNEUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/df4d988dd0db46db8420a96c2324ef95",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RUNEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-04T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "fb954902de008fb7aebe92eb0554faa691bfd89c981f80697d9933ed3c69d111",
+      "source_publication_ms": 1599102003482,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-RVNUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/02895f23b535433e8563175cfb64d1cd",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RVNUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-02-23T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "272acdb30a17a347ba42eac787134d00142ec28a166b85e527f83d5d211cd03c",
+      "source_publication_ms": 1613962969224,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-SANDUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/df96728782084fd2ab2ba51b6201b462",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SANDUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-25T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "a013293757fba2c8a8b5a9ea6daae357cac3a3eb9d80d12ca2e903a2802b9756",
+      "source_publication_ms": 1611550798139,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-SFPUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/02895f23b535433e8563175cfb64d1cd",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SFPUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-02-24T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "272acdb30a17a347ba42eac787134d00142ec28a166b85e527f83d5d211cd03c",
+      "source_publication_ms": 1613962969224,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-SKLUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/61a763cd2fba47e7b5fc912057fb58f9",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SKLUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-12-08T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "9054aea748c67cb55966a91344c5332856be7ec4a8b11c2b10fdb5adb77a0adb",
+      "source_publication_ms": 1607326051679,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-SNXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bd6b0718117c4c4bb2ea54886a83ffbd",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SNXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-14T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "900f04cdfd84805acf7aec5c1078283feb7c21e7d9e18b1a6c562e149760cbb4",
+      "source_publication_ms": 1597291207301,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-SOLUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2dc59886f2a14a9280a56d1ddd272f3c",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SOLUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-14T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "66eb2222b66801361f6751ba2d9348a8f959734cf596f7ca9221b02eb34070b7",
+      "source_publication_ms": 1600058576304,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-SPORTFUNUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/31ec31401a8f43ae821f80351fa94857",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SPORTFUNUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2026-01-16T13:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "5e34ffe0feb6eaab39449c8a386441860403f0627c8d40dcdacb3d298812544b",
+      "source_publication_ms": 1768565878954,
+      "terms_at_launch": {
+        "underlying": "Sport.Fun (SPORTFUN)",
+        "settlement_asset": "USDT",
+        "tick_size": "0.00001",
+        "funding_cap_text": "+2.00% / -2.00%",
+        "maximum_leverage_text": "20x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4,
+        "minimum_trade_amount_text": "1 SPORTFUN",
+        "minimum_notional_value_text": "5 USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-STORJUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/98a190573db84c0b99600d5ca0a4f369",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "STORJUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-16T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "63db457ce7216f777ac06d8a7b8298b8d9daab09431806ba4b84fcfc84986e79",
+      "source_publication_ms": 1600156333370,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-STOUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/4a4bb43f865a4348828de4facfc9eee4",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "STOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-04-12T14:45:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "afeb15ef4a57e2255ea17f6b29d80afc6f34f51a6927109677f9f1b9043d5e89",
+      "source_publication_ms": 1744462508737,
+      "terms_at_launch": {
+        "underlying": "STO (StakeStone)",
+        "settlement_asset": "USDT",
+        "tick_size": "0.00001",
+        "funding_cap_text": "+2.00% / -2.00%",
+        "maximum_leverage_text": "20x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-STXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e0aa73262d384ed3a616a4a66f59c9b5",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "STXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-02-21T14:30:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "30172feb0c1c02a48d2458035c96c282288182cfe40dc0f6f9056550d9e86af3",
+      "source_publication_ms": 1676947519933,
+      "terms_at_launch": {
+        "underlying": "STX",
+        "settlement_asset": "USDT",
+        "tick_size": "0.0001",
+        "funding_cap_text": "Clamp (Funding Rate, -0.75 * Maintenance Margin Ratio, 0.75 * Maintenance Margin Ratio)",
+        "maximum_leverage_text": "20x",
+        "trading_hours": "24/7"
+      }
+    },
+    {
+      "fact_id": "expansion527-SUSHIUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/df4d988dd0db46db8420a96c2324ef95",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "SUSHIUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-04T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "fb954902de008fb7aebe92eb0554faa691bfd89c981f80697d9933ed3c69d111",
+      "source_publication_ms": 1599102003482,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-THETAUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360043620252",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "THETAUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-05-27T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "d78aa29486c2ae88026615e11969bf386ea44f1ae38587a5e1db840bb8dae22e",
+      "source_publication_ms": 1590494174000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-TIAUSDC-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/686612ddcd824cd493963371eac1a80b",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "TIAUSDC"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2024-04-25T07:15:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "f9e2c96c6257606df49d3020bbd6beab63bda477669b2ccb51952b8dab95b520",
+      "source_publication_ms": 1713927628256,
+      "terms_at_launch": {
+        "underlying": "Celestia (TIA)",
+        "settlement_asset": "USDC",
+        "tick_size": "0.0001",
+        "funding_cap_text": "+2.0000% / -2.0000%",
+        "maximum_leverage_text": "50x",
+        "trading_hours": "24/7",
+        "funding_interval_hours": 4
+      }
+    },
+    {
+      "fact_id": "expansion527-TRBUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c381f2c5de7444e296d1f584d1c63711",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "TRBUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-03T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "94e0c582fe44991cf20c32f18493c65a9bfb9a460bf7664963437c3d8fefaea7",
+      "source_publication_ms": 1599015606114,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-TRXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038407872",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "TRXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-15T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "09213375178eb9c06feeb0372f160dbba853dd91df3614343c1c1cd5e4912f76",
+      "source_publication_ms": 1579009087000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-UNIUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/300bf39679ee4110b440ee79185bc898",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "UNIUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-09-18T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8582a355f3a0a41a2eb7dbb8fad400dc573c4d3676a39a50712cf01c1cc64b7a",
+      "source_publication_ms": 1600315201665,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-VETUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039757391",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "VETUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-14T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "ad0b56c0bfadb2fb123b77d5ba41df210dafaaff8045efed162e05b4cd78f724",
+      "source_publication_ms": 1581573695000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-WAVESUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/cf810a2217a64f53a4c7f60d867f7320",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "WAVESUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-12T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "4b87d9060101e9d04f7c53f6dc1af12263b5bc3cbccf5c3b50a052279f0d9869",
+      "source_publication_ms": 1597133466552,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-XLMUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038969011",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "XLMUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-01-20T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "7b631ec66214f34949707f0e70687a5198c4e0e89e0eec449693fadabee74b50",
+      "source_publication_ms": 1579424671000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-XMRUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039429631",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "XMRUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-03T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "0358e153c6c2d6f52221a10573a34fd1e3c064d1b875c66ec70980600f08c790",
+      "source_publication_ms": 1580631153000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-XTZUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039529911",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "XTZUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-06T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "8aae104810285ebec6f59783de3f00d648fbebad1e92fe029d72c1a76587ee2a",
+      "source_publication_ms": 1580897669000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-YFIUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/447c9b90862b4ac69d1b0b82a3040ebe",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "YFIUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-08-31T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "a1c6e3a0359e6380d5f4dfdaa247283a993d4ea2c6b43ddea40d4271911c2562",
+      "source_publication_ms": 1598843098142,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ZECUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360039081212",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ZECUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-02-05T08:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "cd26ccb70d615529ffd1c567b23b6d6dd07f256f66a992ff8f25f4533fd65afd",
+      "source_publication_ms": 1580800357000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-ZENUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/a785931ac2b9474189ccf9c25d86b137",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ZENUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-11-24T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "00773fd75d3dff48b4d99738be5ade6644557c4f4a1708b4f57d2cb75d2dc9c2",
+      "source_publication_ms": 1606186801289,
+      "terms_at_launch": {
+        "settlement_asset": "USDT"
+      }
+    },
+    {
+      "fact_id": "expansion527-ZILUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/cb824f4cc2684487ac66fdcdd7ab3232",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ZILUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-06-18T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "e08279bddb13e26fec7ba73a9ea81524bbbabe8f2bee905b3f5b1d4b7755623d",
+      "source_publication_ms": 1592374807000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-ZRXUSDT-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2218a0d29a414cd48dd3326567e9dbb5",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ZRXUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-06-24T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "source_response_sha256": "ea7a0ac935b9c9d3f46b178bf25dfc54b4c95dc967b114bf0b3286aff0a49c6b",
+      "source_publication_ms": 1592896033000,
+      "terms_at_launch": {}
+    },
+    {
+      "fact_id": "expansion527-ALPHAUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/10fd115c29244067bd4566a70f77e327",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "ALPHAUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-09-23T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-09-23T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-AMBUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f3cc64a8758d4bb394e0830e5b31da97",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "AMBUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-02-21T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-02-21T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-BAKEUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/82df1b55a0d84c288fa396d5a5cead48",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BAKEUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-10-03T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-10-03T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-BALUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/fac9c3e401da4cc8b604566fd261d70c",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BALUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-04-14T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-04-14T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-BLZUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b140faee7cf9482cb10257308abda245",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BLZUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-12-23T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-12-23T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-DEFIUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/21e399dcea734230a3c181daf5407b64",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DEFIUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-08-11T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-08-11T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-DENTUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d067b373496c44a4ab8d28f3e90b66ad",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "DENTUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2026-04-21T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2026-04-21T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-FLMUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/6392491d998b4cbaa6d4beee0fd898c6",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "FLMUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-11-21T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-11-21T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-FTMUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/aec6fcbc84b749eeab6690e6bcac2f3d",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "FTMUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-01-06T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-01-06T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-LEVERUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d5fc5fdda5c74e3e8780050ed0841267",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LEVERUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-09-03T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-09-03T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-LRCUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ddac99c0e5044c13a13c7c113e530e2b",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "LRCUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2026-03-24T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2026-03-24T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-MKRUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/bf29506a33a94c17a5d5a01e74e646d2",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "MKRUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-09-08T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-09-08T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-NKNUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/87a9bdf137f348668a85575ee02b8a27",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "NKNUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2026-02-06T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2026-02-06T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-OCEANUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e485541c370240adba3929fded74f269",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OCEANUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-06-25T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-06-25T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-OMGUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/1e43c128806544018d3cc537a8add3f6",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OMGUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-01-31T09:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "restriction_note": "The final postponement specifies settlement only; no replacement new-position cutoff is invented."
+    },
+    {
+      "fact_id": "expansion527-RENUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/131b75b63a71490393034f36de70c92c",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "RENUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-12-03T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-12-03T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-WAVESUSDT-closure",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f65faeeefe07417a8b6dd2900ba8da7e",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "WAVESUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-06-11T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-06-11T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-BLZUSDT-superseded-2022-08-25",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b312715afbff4d7493b77089967303b1",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "BLZUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-08-25T09:00:00Z",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "superseded_by": "https://www.binance.com/en/support/announcement/detail/ebe08acbf4384a6fa7439e1014d6c566"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-OMGUSDT-superseded-2024-12-16",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/27eac260521b4f40ab331e1a345887a7",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OMGUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-12-16T09:00:00Z",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "superseded_by": "https://www.binance.com/en/support/announcement/detail/eedac7aff5b849d58efda6c4b3cec01b"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-OMGUSDT-superseded-2024-12-30",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/eedac7aff5b849d58efda6c4b3cec01b",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "OMGUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-12-30T09:00:00Z",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "superseded_by": "https://www.binance.com/en/support/announcement/detail/1e43c128806544018d3cc537a8add3f6"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "expansion527-CHZUSDT-superseded-launch",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9c7f5112c725453b8e418d2395a89b5f",
+      "source_authority": "Binance Support",
+      "known_from": null,
+      "native_symbols": [
+        "CHZUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-12-29T07:00:00Z",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "superseded_by": "https://www.binance.com/en/support/announcement/detail/22c18c7f5bd4451193bdfb253672e44c"
+        }
+      ],
+      "history_complete": false
     }
   ],
   "reconciliation_notes": [
@@ -4389,5 +6853,15 @@
         "history_complete": false
       }
     ]
+  },
+  "expansion_527": {
+    "added_symbols": 96,
+    "history_complete": false,
+    "historical_terms_complete": false,
+    "record": "research/sprint_004/527_CEX002_CONTRACT_HISTORY_EXPANSION.md",
+    "restriction_uncertainty": [
+      "OMGUSDT final new-position cutoff not recovered; do not move the original cutoff to the new day by inference."
+    ],
+    "knowledge_time_rule": "Recovered retrospectively; publisher timestamps are not proof of historical receipt."
   }
 }
