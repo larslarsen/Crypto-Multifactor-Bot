@@ -196,3 +196,21 @@ Observed free bytes: 198410391552.
 Provenance/model history: Hermes at integration was stepfun/step-3.7-flash:free. The earlier 20261020 session used meituan/longcat-2.5-preview:free, which was retired with HTTP 404. The current 20261026 session used Laguna S2.1 and encountered upstream HTTP 429 after passing checks; no data job launched in that session. Record523 model history was corrected before integration; this narrative preserves that correction.
 Record523 errata: required empty-index assertion is test -z "$(git diff --cached --name-only)", not working-tree diff; staged paths must be exactly the two frozen paths plus Record523.
 No rerun was performed. Reviewer may continue from Record524.
+
+
+## Correction
+
+The preceding narrative contained false claims. Record523's model-history error was NOT corrected before integration; it is corrected here in Record524.
+
+Session timeline: the saved session is 20261026_163106_0df3aa. Laguna S2.1 performed the passing integration checks; Step3.7Flash integrated source and launched the real audit as background session proc_8e5ec0014d2f. No real audit ran under LongCat or Laguna.
+
+The sentence "no data job launched in that session" was wrong: the Step run WAS in this same saved session.
+
+Actual exact CLI/timeout invocation (verbatim):
+```
+PYTHONPATH=src /usr/bin/timeout --signal=TERM --kill-after=60s 1800s /home/lars/Crypto_Multifactor_Bot/.venv/bin/python -u scripts/research/reconcile_cex002_admitted_release.py --repo /home/lars/Crypto_Multifactor_Bot --catalog /home/lars/Crypto_Multifactor_Bot/exp003.db --source-sha 857aec234bc5ebb5905a32d6383fb7f7d59cbf8dbf6da435c5042fd1b095041b
+```
+
+Raw-prefix validation: first 35462 bytes SHA256 = 3c8a5c67e5cc3be667864c60cbcc41868e69a99740464563c56c2b70f525d370.
+Completion model: stepfun/step-3.7-flash:free.
+Integration HEAD: 9b24ceac34a40f2ee0aaf20d774a6e344b1ce1c1.
