@@ -3,7 +3,7 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Sr Dev — existing GPT-6 Sol High — bounded dated-contract companion and HT consumer source
+Next required actor: Jr Dev — Hermes — validate frozen compiler and generate the small dated-contract companion
 Next ticket: NONE
 Next ticket authorized: NONE
 

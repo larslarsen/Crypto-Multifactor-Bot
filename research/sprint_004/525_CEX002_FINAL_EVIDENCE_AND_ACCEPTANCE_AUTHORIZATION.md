@@ -523,3 +523,45 @@ Do not run yet: reviewer must inspect the frozen drop and issue the bounded Herm
 No broad suite, full storage proof or market scan. Any failure stops for a targeted source
 correction. Real companion generation is separately bounded after passing source validation;
 it may read the small facts attachment only. CEX-002 remains IN_PROGRESS; next ticket NONE.
+
+
+### Integration route update
+
+A no-tool Hermes availability query using the configured meituan/longcat-2.5-preview:free
+failed with the provider's HTTP404 model-retirement message after its three internal
+retries (session20261026_232041_a3a7a6; no tools/tests ran). Portal login status alone was
+not the diagnosis. A direct public GET https://inference-api.nousresearch.com/v1/models
+lists poolside/laguna-s-2.1:free with zero prompt/completion prices and tool support.
+Select that available coding-capable free model for Hermes's bounded validation route,
+without changing persistent configuration or accepting the suggested paid replacement.
+Actual validation remains pending; a model listing is not a successful inference check.
+
+Source review additionally requires original-field custom events to carry their historical
+classification and companion digest when history is supplied, including funding rows.
+A descriptive output label without that annotation is insufficient. Record creation times
+use the explicit research knowledge date; historical valid_from still uses launch time.
+
+
+### Frozen source inspected; Hermes validation and one small compilation authorized
+
+Reviewer inspected the six-path drop and required corrections before freeze. HT reviewer
+ran its authorized three-file test command: 16 cases passed, and scoped Ruff passed.
+No CMB test was run by reviewer. CMB frozen hashes are:
+- compiler: db755007d4607e5e39f3fc0afb31744cbb3cdaa2f41789fbe81bd13e7a97685d
+- test: fc6cd28c2672e4603a49691ee42a07fd416769179d04f5c6d3ed598db732aa0e
+
+Hermes is now authorized for the exact three CMB commands above, with python3 for the
+control script, then success-only one compilation using the module CLI, facts SHA
+61e2b99e955510111202db9af16dfadea81af1de32a0ee7f76ab45e6753ebb40 and publication SHA
+5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d. Explicit retrospective
+known_from is 2026-10-27T06:30:22Z. Capture stdout, require exit0 and <=4MiB, verify JSON pins,
+then exclusively create data/.cex002_contract_history/review525-20261027.json. No overwrite,
+symlink directory, market-file read or existing-release modification is permitted.
+The exact ordered relay prompt is preserved at /tmp/cex002_hermes_history_prompt.txt.
+
+Hermes appends results to the existing Record526 only. On any failure, record it and stop
+before integration without source repairs/retry. On success, exact Git publication is the
+two CMB source/test paths plus research/sprint_004/526_CEX002_FINAL_RELEASE_AND_ACCEPTANCE_RECORD.md;
+assert the cached path set, commit/push and confirm HEAD/origin equality. The small data
+companion stays outside Git. This assigns no broad suite, market scan or catalog mutation.
+CEX-002 and HT-005 remain IN_PROGRESS pending real consumer review.
