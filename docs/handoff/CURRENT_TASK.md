@@ -9,16 +9,19 @@ Next ticket authorized: NONE
 
 ## Current action
 
-Review525 assigns Hermes the original full pytest, Ruff, repository-control and
-whitespace commands, then bounded retained OI/funding economic examples and a
-consolidated final release report. Stop on first nonzero result and publish actual
-failure evidence; no source fixes or retries. Complete workflow and exact bounds:
-research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md.
-Record526 is the sole Hermes publication path. Direct native supervision continues.
+Review525's final continuation assigns Hermes the pinned missing test dependency
+nautilus-trader2.0.0rc3 in project .venv, then the original full pytest command once.
+Initial attempt failed collection (missing package); Ruff/control/whitespace passed.
+Record526 at3047186 preserves failure and executor deviations. No test bodies ran.
+Rotate Hermes backend from Step to Laguna S2.1 free for repeated execution errors;
+use a fresh concise native session. Reviewer monitors the SAME job to terminal.
+On success finish the bounded OI/funding examples and consolidated report in Record526;
+on failure publish actual evidence and stop. No source fixes or release reruns.
+Governing workflow: research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md.
 
 Review522's 773.097-second replay/readback and all accepted product/coverage/full
-consumer/admission evidence remain accepted. Do not repeat these runs. CEX-002
-IN_PROGRESS; full-ticket acceptance pending; next ticket and authorization NONE.
+consumer/admission evidence remain accepted. CEX-002 IN_PROGRESS; full-ticket
+acceptance pending; next ticket and authorization NONE.
 
 ## Accepted preparation
 

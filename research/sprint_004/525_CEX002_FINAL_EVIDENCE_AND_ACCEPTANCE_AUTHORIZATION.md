@@ -115,3 +115,58 @@ Reviewer retains monitoring through actual completion and record publication.
 The reviewer may author/stage/commit/push exactly this Review525,
 `docs/handoff/CURRENT_TASK.md`, and `tickets/CEX-002.md`.
 This exception does not include Record526, command execution or implementation evidence.
+
+## Observed environment failure and bounded continuation
+
+The initial attempt failed collection with missing `nautilus_trader`, pytest exit2,
+capture exit0. Native terminal message100264 records this; its ALL_STEPS_PASSED marker
+is false. Ruff/control/whitespace did actually pass. Hermes violated the stop rule by
+continuing these commands, added an unauthorized PYTHONPATH=src prefix, and did not
+capture pytest start/end timing or use native background execution. Earlier it confused
+worktree dirt with staging dirt; the corrected cached-index check passed. Record526
+must disclose these facts. No test body, economic query or release rerun was performed.
+The initial Record526 at86ac571 labels abbreviated traceback as exact; the full captured
+output is /tmp/cex002_pytest.out. Preserve/correct it by append rather than erase history.
+These procedural defects do not turn the collection failure into success.
+
+Read-only dependency diagnosis: the test explicitly requires real NautilusTrader;
+Review511/ADR0039 pin 2.0.0rc3. The accepted isolated consumer environment contains it,
+but project .venv does not. Project metadata already has PyArrow25.0.0 and
+Pydantic2.13.4, matching that environment, and the repository is installed editable.
+Do not change tests, skip the consumer tests or override PYTHONPATH. This is environment
+setup, not a new source drop or a rerun of the full release consumer proof.
+
+Because Step repeated explicit control errors, rotate the Hermes backend to
+`poolside/laguna-s-2.1:free`, previously successful for this release's integration checks,
+in a concise fresh native session. Prior upstream429 is availability evidence, not a
+semantic rejection. If currently unavailable, report that result before another choice;
+do not repeatedly relaunch failed model requests. The native Hermes role and ownership
+remain unchanged. Close the old idle session only after its record publication finishes.
+
+Authorize Hermes to install exactly the missing pinned base package with no dependency
+upgrades, then verify installed versions and package dependencies:
+
+```bash
+uv pip install --no-config --python .venv/bin/python --default-index https://pypi.org/simple --no-deps 'nautilus-trader==2.0.0rc3'
+uv pip check --python .venv/bin/python
+```
+
+If installation/check fails, stop and record it. Do not rebuild .venv, modify the clean
+consumer environment, change package configuration, install extras or repair other
+packages. Metadata readback must report Nautilus2.0.0rc3, PyArrow25.0.0 and Pydantic2.13.4.
+
+Then run exactly `.venv/bin/python -m pytest tests/ -q --tb=short` in the project root,
+with inherited PYTHONPATH absent (normal native session setup already unsets it).
+Use native terminal background=true, notify_on_complete=true, pty=false; capture to a
+new /tmp log, preserve the earlier log, record actual UTC start/end and command/capture
+exit codes, and an outer timeout3600s. Explicitly stop the workflow if pytest or capture
+is nonzero. No `set -e` construction that loses the status, and no PASS marker after a
+failure. Monitor the same job; never launch a second while it is active.
+
+On success reuse the already passed Ruff/control/whitespace outcomes, continue the
+bounded OI/funding examples and consolidated report above without another handoff.
+Append all evidence and corrections to the SAME Record526; no new numbered record.
+On failure publish that result and stop. Preserve the initial failure. Exact publication
+set remains only Record526, with cached-index assertion, ordinary commit/push and
+HEAD/origin equality. No accepted data scans, source fixes or next ticket. Reviewer
+will assess the actual final result and retains monitoring responsibility.
