@@ -1,0 +1,1669 @@
+{
+  "ticket": "CEX-002",
+  "review": "research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md",
+  "status": "reviewer_source_research_not_integrated",
+  "scope": "Official Binance USD-M perpetual contract notices. Partial recovery; neither a complete lifecycle nor accepted executable contract specifications.",
+  "knowledge_time_rule": "Displayed publication headers have no verified timezone here. known_from remains null. Web retrieval now does not prove historical receipt. Effective UTC times are taken from explicit notice text.",
+  "settlement_rule": "automatic_settlement is its announced start, followed by delisting after completion; it is not a measured delisting-completion timestamp.",
+  "terms_rule": "Terms attached to a launch describe that launch only. No assertion that tick sizes, margin, fees or funding intervals remained unchanged.",
+  "universe_rule": "All 73 missing-snapshot names stay listed below. Names from the 698 snapshot rows that share a notice are retained too. Absence of a notice does not prove absence of an event; a partial notice set does not prove continuous trading.",
+  "missing_snapshot_symbols": [
+    "1000BTTCUSDT",
+    "1000LUNCBUSD",
+    "1000SHIBBUSD",
+    "ADABUSD",
+    "AERGOUSDT",
+    "AGIXBUSD",
+    "AKROUSDT",
+    "AMBBUSD",
+    "ANCBUSD",
+    "ANCUSDT",
+    "ANTUSDT",
+    "APEBUSD",
+    "APTBUSD",
+    "AUCTIONBUSD",
+    "AUDIOUSDT",
+    "AVAXBUSD",
+    "BDXNUSDT",
+    "BLUEBIRDUSDT",
+    "BNBBUSD",
+    "BTCBUSD",
+    "BTCSTUSDT",
+    "BTSUSDT",
+    "BTTUSDT",
+    "BZRXUSDT",
+    "COCOSUSDT",
+    "CVXBUSD",
+    "DODOBUSD",
+    "DODOUSDT",
+    "DOGEBUSD",
+    "DOTBUSD",
+    "DOTECOUSDT",
+    "EOSUSDT",
+    "ETCBUSD",
+    "ETHBUSD",
+    "FILBUSD",
+    "FOOTBALLUSDT",
+    "FRONTUSDT",
+    "FTMBUSD",
+    "FTTBUSD",
+    "GALABUSD",
+    "GALBUSD",
+    "GALUSDT",
+    "GMTBUSD",
+    "HNTUSDT",
+    "ICPBUSD",
+    "KEEPUSDT",
+    "LDOBUSD",
+    "LENDUSDT",
+    "LEVERBUSD",
+    "LINKBUSD",
+    "LTCBUSD",
+    "LUNA2BUSD",
+    "LUNABUSD",
+    "LUNAUSDT",
+    "MATICBUSD",
+    "MATICUSDC",
+    "MATICUSDT",
+    "MBLUSDT",
+    "NEARBUSD",
+    "NUUSDT",
+    "PHBBUSD",
+    "RNDRUSDT",
+    "SANDBUSD",
+    "SOLBUSD",
+    "SRMUSDT",
+    "SXPUSDT",
+    "TLMBUSD",
+    "TOMOUSDT",
+    "TRXBUSD",
+    "UNIBUSD",
+    "WAVESBUSD",
+    "XRPBUSD",
+    "YFIIUSDT"
+  ],
+  "notices": [
+    {
+      "fact_id": "notice-001",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/de870af81e8d42cd903b84a97fa5bc91",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2024-09-10 10:15",
+      "known_from": null,
+      "native_symbols": [
+        "AERGOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2024-09-10T12:15:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "underlying": "AERGO",
+        "settlement_asset": "USDT",
+        "tick_size": "0.0001",
+        "funding_interval_hours": 4
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-002",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/db7ad1c7aa6248cda735102cdcdc4b8d",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2025-03-21 05:50",
+      "known_from": null,
+      "native_symbols": [
+        "AERGOUSDT",
+        "COMBOUSDT",
+        "LINAUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-03-27T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-03-27T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-003",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/82f730b7ef444a38b323ab7a2e56b757",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2025-04-16 07:47",
+      "known_from": null,
+      "native_symbols": [
+        "AERGOUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2025-04-16T11:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "underlying": "AERGO",
+        "settlement_asset": "USDT",
+        "tick_size": "0.00001",
+        "funding_interval_hours": 4
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-004",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f0e3fc835b9545759e4279c64b200389",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2026-07-21 14:15",
+      "known_from": null,
+      "native_symbols": [
+        "AERGOUSDT"
+      ],
+      "events": [
+        {
+          "event": "non_reduce_only_orders_stop",
+          "effective_at": "2026-07-24T06:00:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2026-07-24T06:30:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-005",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/0e84e685101d457a95cbe5c550b6e891",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-06-01 09:15",
+      "known_from": null,
+      "native_symbols": [
+        "1000LUNCBUSD"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-06-08T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-006",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d980d81501594f80b2903cdfe29f1166",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-11-24 08:25",
+      "known_from": null,
+      "native_symbols": [
+        "BNBBUSD",
+        "XRPBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-12-08T05:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-12-08T06:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-007",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d980d81501594f80b2903cdfe29f1166",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-11-24 08:25",
+      "known_from": null,
+      "native_symbols": [
+        "BTCBUSD",
+        "ETHBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-12-11T05:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-12-11T06:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-008",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f662330259c44f869ea1dd618925677e",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-08-17 10:05",
+      "known_from": null,
+      "native_symbols": [
+        "LTCBUSD",
+        "DOGEBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-08-24T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-08-24T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-009",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/575835ebb33346b28cf1dd78a8a50aaa",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-05-12 06:55",
+      "known_from": null,
+      "native_symbols": [
+        "APEBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-05-16T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-05-16T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-010",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/51ac7ced06274cd08710b38289e2ea43",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-05-25 09:45",
+      "known_from": null,
+      "native_symbols": [
+        "1000SHIBBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-06-01T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-06-01T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-011",
+      "source_url": "https://www.binance.com/en-NG/square/post/942831",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "ADABUSD",
+        "MATICBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-08-17T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-08-17T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-012",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/72ae35cffb8842d5acb8ff22c70f8dd3",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-04-28 10:45",
+      "known_from": null,
+      "native_symbols": [
+        "FILBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-05-02T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-05-02T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-013",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/4536c9819c5d498a975ae40fcd6ecac4",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-05-05 01:50",
+      "known_from": null,
+      "native_symbols": [
+        "DOTBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-05-09T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-05-09T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-014",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/10d9ee3c69584398894526c5dba9e3a6",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-04-14 10:01",
+      "known_from": null,
+      "native_symbols": [
+        "GMTBUSD",
+        "NEARBUSD",
+        "AVAXBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-04-18T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-04-18T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-015",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/3e64fa6aa26c40e0be51e0f8c3a1d9b1",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-07-11 10:45",
+      "known_from": null,
+      "native_symbols": [
+        "AGIXBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-07-20T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-07-20T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-016",
+      "source_url": "https://www.binance.com/en/square/post/367845",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "AMBBUSD",
+        "LEVERBUSD",
+        "TLMBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-04-04T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-04-04T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-017",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/210bc4358f4b4a689d9fae1a1e2cec0f",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-10-24 03:37",
+      "known_from": null,
+      "native_symbols": [
+        "APTBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-10-25T02:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "underlying": "APT",
+        "settlement_asset": "BUSD",
+        "tick_size": "0.001"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-018",
+      "source_url": "https://www.binance.com/en/square/post/325941",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "ICPBUSD",
+        "LUNA2BUSD"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-03-22T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-019",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/6a6de383727f4659a3050f7982e1620f",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "MATICUSDT",
+        "MATICUSDC"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-09-04T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-09-04T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-020",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/499af13827e04741999c15f9139ff3de",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-02-02 04:50",
+      "known_from": null,
+      "native_symbols": [
+        "RNDRUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-02-03T02:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "underlying": "RNDR",
+        "settlement_asset": "USDT",
+        "tick_size": "0.0001"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-021",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d1f2ae8d99b24439a7a900caa9bb6b3b",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "RNDRUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-07-16T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-07-16T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-022",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ce74360a3fd444b2b35da7186f8dd0ad",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2024-03-25 04:40",
+      "known_from": null,
+      "native_symbols": [
+        "ANTUSDT",
+        "DGBUSDT",
+        "CTKUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-04-01T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-04-01T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-023",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f1a8aa29692b4442a8f18be2076e14a0",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-03-17 07:01",
+      "known_from": null,
+      "native_symbols": [
+        "HNTUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-03-20T08:00:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-03-20T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-024",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/6971c0a0c4fe43ef9969c1d6252dea74",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-11-02 03:25",
+      "known_from": null,
+      "native_symbols": [
+        "BLUEBIRDUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-11-02T12:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "underlying": "Binance Bluebird Index",
+        "settlement_asset": "USDT",
+        "tick_size": "0.001",
+        "index_base_level": "10"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-025",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9a6676662bd5417c92267953f3819dd0",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-11-14 07:00",
+      "known_from": null,
+      "native_symbols": [
+        "SRMUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-11-15T04:30:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-026",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9a6676662bd5417c92267953f3819dd0",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-11-14 07:00",
+      "known_from": null,
+      "native_symbols": [
+        "RAYUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-11-15T04:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-027",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/673183dd8eea4e3cba1596dcec7565d1",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2024-03-19 05:05",
+      "known_from": null,
+      "native_symbols": [
+        "FOOTBALLUSDT",
+        "BLUEBIRDUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-03-26T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-028",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/c476d5a0f48b4f64bd8886ac4d4e5d73",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2021-01-19 02:42",
+      "known_from": null,
+      "native_symbols": [
+        "AKROUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2021-01-19T07:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "collateral_asset": "USDT"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-029",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/3ab5488a00e04d4fb338c77ea28326a8",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2024-08-19 11:00",
+      "known_from": null,
+      "native_symbols": [
+        "FRONTUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-08-23T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-08-23T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-030",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/27449abd481b473493b9c058350b4e2e",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2024-07-05 02:00",
+      "known_from": null,
+      "native_symbols": [
+        "GALUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-07-11T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-07-11T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-031",
+      "source_url": "https://www.binance.com/en/square/post/7809671247033",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "MDTUSDT",
+        "AUDIOUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-05-16T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-05-16T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-032",
+      "source_url": "https://www.binance.com/en/square/post/7809671247033",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "IDEXUSDT",
+        "SLPUSDT",
+        "GLMRUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2024-05-15T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-05-15T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-033",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/4baf8d70485c46e38637bd063c58c4d8",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-04-04 05:21",
+      "known_from": null,
+      "native_symbols": [
+        "1000BTTCUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-04-11T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-034",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/4baf8d70485c46e38637bd063c58c4d8",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-04-04 05:21",
+      "known_from": null,
+      "native_symbols": [
+        "YFIIUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-04-12T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-035",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/185001cde1614f0e8987c4d39aca8639",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-26 08:58",
+      "known_from": null,
+      "native_symbols": [
+        "AKROUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-05-27T07:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-036",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d1cb959677034c45b5149f1d998ae2b1",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-18 10:59",
+      "known_from": null,
+      "native_symbols": [
+        "DODOUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-05-27T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-037",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/dff27dc6bcbb432c902bcbea5e24ddfa",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "BZRXUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2021-12-19T02:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-038",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/0bfb6cfd10aa4d26926260c0159ef58d",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-13 02:27",
+      "known_from": null,
+      "native_symbols": [
+        "ANCUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-05-13T04:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-039",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/f6ebc17e4dbd451b873d9ef25c801237",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2026-03-13 14:14",
+      "known_from": null,
+      "native_symbols": [
+        "BDXNUSDT",
+        "VFYUSDT",
+        "1000WHYUSDT"
+      ],
+      "events": [
+        {
+          "event": "non_reduce_only_orders_stop",
+          "effective_at": "2026-03-17T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2026-03-17T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-040",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/b2871bc40ea84e639c2d63b048403b69",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "DOTECOUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2021-02-19T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-041",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/084acdd39aae4b1b8660fc3b9ab7efef",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-04-21 10:00",
+      "known_from": null,
+      "native_symbols": [
+        "ETCBUSD"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-04-25T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-042",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/584d65bfa49f4f5894d2416e76214dc5",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-07-27 09:45",
+      "known_from": null,
+      "native_symbols": [
+        "APTBUSD",
+        "FTMBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-08-03T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-08-03T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-043",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/63f3038beda94f3e9a05652f55c4fb75",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-08-03 09:30",
+      "known_from": null,
+      "native_symbols": [
+        "TRXBUSD",
+        "DODOBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-08-10T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-08-10T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-044",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/217d0ff70eac403480b5137e2a90b424",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-07-20 08:00",
+      "known_from": null,
+      "native_symbols": [
+        "LDOBUSD",
+        "GALABUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-07-27T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-07-27T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-045",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/edab50e09da64814970d9fb86a740617",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-03-13 06:15",
+      "known_from": null,
+      "native_symbols": [
+        "CVXBUSD",
+        "GALBUSD",
+        "WAVESBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-03-15T08:00:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-03-15T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-046",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/e7d6bc2aa47c42a28d2e023a7ceb7234",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-05-19 04:30",
+      "known_from": null,
+      "native_symbols": [
+        "LINKBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-05-23T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-05-23T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-047",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/1312cb51a4714dc2aa7e0416f31fe420",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-07-12 03:05",
+      "known_from": null,
+      "native_symbols": [
+        "MATICBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-13T02:45:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "face_value": "1 MATIC",
+        "tick_size": "0.0001"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-048",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/1312cb51a4714dc2aa7e0416f31fe420",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-07-12 03:05",
+      "known_from": null,
+      "native_symbols": [
+        "CVXBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-07-13T03:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "settlement_asset": "BUSD",
+        "face_value": "1 CVX",
+        "tick_size": "0.001"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-049",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7c6445a5529a410982291d04f1304f93",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-20 05:01",
+      "known_from": null,
+      "native_symbols": [
+        "GALBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-24T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "collateral_asset": "BUSD"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-050",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7c6445a5529a410982291d04f1304f93",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-20 05:01",
+      "known_from": null,
+      "native_symbols": [
+        "FTMBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-24T04:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "collateral_asset": "BUSD"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-051",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7c6445a5529a410982291d04f1304f93",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-20 05:01",
+      "known_from": null,
+      "native_symbols": [
+        "DODOBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-25T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "collateral_asset": "BUSD"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-052",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7c6445a5529a410982291d04f1304f93",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-20 05:01",
+      "known_from": null,
+      "native_symbols": [
+        "GALABUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-26T03:30:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "collateral_asset": "BUSD"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-053",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7c6445a5529a410982291d04f1304f93",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-20 05:01",
+      "known_from": null,
+      "native_symbols": [
+        "TRXBUSD"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2022-05-26T04:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "collateral_asset": "BUSD"
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-054",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/9453bc521ae34d2e8ea22e15c5635a29",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-04-06 10:15",
+      "known_from": null,
+      "native_symbols": [
+        "PHBBUSD",
+        "SANDBUSD",
+        "UNIBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-04-11T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-04-11T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-055",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/7305d3e50f0647838078ded2be975d48",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-09 04:25",
+      "known_from": null,
+      "native_symbols": [
+        "FTTBUSD"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-05-19T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-056",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/3b4c7c08479b48d48189191e37a7adca",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-11-13 09:47",
+      "known_from": null,
+      "native_symbols": [
+        "FTTBUSD"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-11-14T04:30:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-057",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/3b4c7c08479b48d48189191e37a7adca",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-11-13 09:47",
+      "known_from": null,
+      "native_symbols": [
+        "FTTUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-11-14T04:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-058",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/514e0ba636e843bda47d5d740b7dadf4",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "LUNABUSD"
+      ],
+      "events": [
+        {
+          "event": "trading_ceases",
+          "effective_at": "2022-05-13T01:30:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-059",
+      "source_url": "https://www.binance.com/en/square/post/1004349",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "SOLBUSD"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-08-28T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-08-28T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-060",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2722e6da4f5141dd9b2fb07b5b1f3f75",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "BTTUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-01-14T02:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-061",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/397ee0ebe14e493bb939868e924635f3",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "LENDUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-07-23T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-062",
+      "source_url": "https://www.binance.bh/en-NZ/support/announcement/detail/90498d8e2fec42468ec3d659bdfbb78b",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-08-09 02:59",
+      "known_from": null,
+      "native_symbols": [
+        "BTSUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-08-18T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-063",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/96698a6a80f64cb1ae27f813032bfaa9",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-02-09 10:26",
+      "known_from": null,
+      "native_symbols": [
+        "NUUSDT",
+        "KEEPUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-02-15T02:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-064",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/d7e84d0cbade4525bd55e61e7ee0f83a",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-11-14 10:04",
+      "known_from": null,
+      "native_symbols": [
+        "MBLUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2023-11-14T15:00:00Z"
+        }
+      ],
+      "terms_at_launch": {
+        "underlying": "MBL",
+        "settlement_asset": "USDT",
+        "tick_size": "0.000001",
+        "funding_interval_hours": 4
+      },
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-065",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/746056ce732d43dda12c1e5ae1b7a059",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2025-12-01 08:14",
+      "known_from": null,
+      "native_symbols": [
+        "SXPUSDT",
+        "MILKUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-12-05T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-12-05T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-066",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/45852dc155b641bc9e1c23bc41d8ded6",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-05-18 04:55",
+      "known_from": null,
+      "native_symbols": [
+        "COCOSUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-05-25T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-05-25T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-067",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/034eee2293964e26b915b1ec5c42972a",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2023-11-06 09:30",
+      "known_from": null,
+      "native_symbols": [
+        "TOMOUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2023-11-14T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2023-11-14T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-068",
+      "source_url": "https://www.binance.com/az-AZ/support/announcement/detail/2c08ba9e1a1b409fb6a4a2cb2f5ed58b",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2021-03-11 09:52",
+      "known_from": null,
+      "native_symbols": [
+        "BTCSTUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2021-03-12T02:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-069",
+      "source_url": "https://www.binance.com/en-IN/support/announcement/detail/1e89a9ca957c4b0ca7502e60b993e201",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "EOSUSDT"
+      ],
+      "events": [
+        {
+          "event": "new_positions_stop",
+          "effective_at": "2025-05-21T08:30:00Z"
+        },
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2025-05-21T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-070",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/ef3ce76d5c2d45ee9b6dc3f281cde744",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2022-05-12 14:59",
+      "known_from": null,
+      "native_symbols": [
+        "LUNAUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2022-05-12T15:30:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-071",
+      "source_url": "https://www.binance.com/en/square/post/7721197257169",
+      "source_authority": "Binance Announcement verified official account",
+      "displayed_publication_time": null,
+      "known_from": null,
+      "native_symbols": [
+        "STPTUSDT",
+        "SNTUSDT",
+        "MBLUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2024-05-13T09:00:00Z"
+        }
+      ],
+      "history_complete": false
+    },
+    {
+      "fact_id": "notice-072",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/17595222999545348c8acdd5dc41c00a",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2020-10-03 10:59",
+      "known_from": null,
+      "native_symbols": [
+        "LENDUSDT"
+      ],
+      "events": [
+        {
+          "event": "automatic_settlement",
+          "effective_at": "2020-10-10T00:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "retrieval_note": "Primary article body recovered through indexed Binance Support result; direct URL currently redirects to announcement index."
+    },
+    {
+      "fact_id": "notice-073",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/17595222999545348c8acdd5dc41c00a",
+      "source_authority": "Binance Support",
+      "displayed_publication_time": "2020-10-03 10:59",
+      "known_from": null,
+      "native_symbols": [
+        "AAVEUSDT"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "effective_at": "2020-10-16T07:00:00Z"
+        }
+      ],
+      "history_complete": false,
+      "retrieval_note": "Primary article body recovered through indexed Binance Support result; direct URL currently redirects to announcement index."
+    }
+  ],
+  "reconciliation_notes": [
+    {
+      "native_symbols": [
+        "AKROUSDT"
+      ],
+      "issue": "Original settlement was announced for 2022-05-26T09:00:00Z; later official notice postpones to 2022-05-27T07:00:00Z. Original is superseded, not another realized closure.",
+      "original_source_url": "https://www.binance.com/fr/support/announcement/detail/d1cb959677034c45b5149f1d998ae2b1",
+      "replacement_source_url": "https://www.binance.com/en/support/announcement/detail/185001cde1614f0e8987c4d39aca8639"
+    },
+    {
+      "native_symbols": [
+        "FTTBUSD"
+      ],
+      "issue": "Two official settlement notices name 2022-05-19 and 2022-11-14. Relaunch, correction or symbol interpretation between them is unresolved. Do not join into one lifetime or discard either notice. May notice calls FTTBUSD USDT-margined; settlement asset must be independently established.",
+      "source_urls": [
+        "https://www.binance.com/en/support/announcement/detail/7305d3e50f0647838078ded2be975d48",
+        "https://www.binance.com/en/support/announcement/detail/3b4c7c08479b48d48189191e37a7adca"
+      ]
+    },
+    {
+      "native_symbols": [
+        "LUNABUSD"
+      ],
+      "issue": "The notice also changes a SPOT tick size. That tick size is not a perpetual-contract term. Only the expressly identified BUSD perpetual trading-cessation event is extracted."
+    },
+    {
+      "native_symbols": [
+        "ANCBUSD",
+        "AUCTIONBUSD"
+      ],
+      "issue": "Secondary reports suggest 2022-12-15 settlement, but no primary notice recovered yet. Not promoted to a source fact."
+    },
+    {
+      "native_symbols": [
+        "LENDUSDT",
+        "AAVEUSDT"
+      ],
+      "issue": "The notice closes LEND futures on October 10 and launches AAVE futures October 16. October 4 concerns margin/savings/loans restrictions; October 12 concerns spot. The 100:1 token swap does not automatically carry a LEND futures position into AAVE."
+    }
+  ],
+  "recovery_summary": {
+    "missing_snapshot_names": 73,
+    "names_with_launch_notice": 14,
+    "names_with_closing_notice": 71,
+    "names_with_both": 14,
+    "names_missing_launch_notice": [
+      "1000BTTCUSDT",
+      "1000LUNCBUSD",
+      "1000SHIBBUSD",
+      "ADABUSD",
+      "AGIXBUSD",
+      "AMBBUSD",
+      "ANCBUSD",
+      "ANCUSDT",
+      "ANTUSDT",
+      "APEBUSD",
+      "AUCTIONBUSD",
+      "AUDIOUSDT",
+      "AVAXBUSD",
+      "BDXNUSDT",
+      "BNBBUSD",
+      "BTCBUSD",
+      "BTCSTUSDT",
+      "BTSUSDT",
+      "BTTUSDT",
+      "BZRXUSDT",
+      "COCOSUSDT",
+      "DODOUSDT",
+      "DOGEBUSD",
+      "DOTBUSD",
+      "DOTECOUSDT",
+      "EOSUSDT",
+      "ETCBUSD",
+      "ETHBUSD",
+      "FILBUSD",
+      "FOOTBALLUSDT",
+      "FRONTUSDT",
+      "FTTBUSD",
+      "GALUSDT",
+      "GMTBUSD",
+      "HNTUSDT",
+      "ICPBUSD",
+      "KEEPUSDT",
+      "LDOBUSD",
+      "LEVERBUSD",
+      "LINKBUSD",
+      "LTCBUSD",
+      "LUNA2BUSD",
+      "LUNABUSD",
+      "LUNAUSDT",
+      "MATICUSDC",
+      "MATICUSDT",
+      "NEARBUSD",
+      "NUUSDT",
+      "PHBBUSD",
+      "SANDBUSD",
+      "SOLBUSD",
+      "SRMUSDT",
+      "SXPUSDT",
+      "TLMBUSD",
+      "TOMOUSDT",
+      "UNIBUSD",
+      "WAVESBUSD",
+      "XRPBUSD",
+      "YFIIUSDT"
+    ],
+    "names_missing_closing_notice": [
+      "ANCBUSD",
+      "AUCTIONBUSD"
+    ],
+    "complete_contract_histories": 0,
+    "consumer_integrated": false,
+    "scope_caveat": "Notice coverage is not completeness or resolved authority. FTTBUSD closure conflict remains. Full dated terms and the 698 snapshot-name histories have not been reconstructed."
+  }
+}

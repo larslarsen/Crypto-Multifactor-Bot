@@ -250,3 +250,63 @@ rewriting market history, then apply them when selecting research observations. 
 existing reference models already express LIST/DELIST/SUSPEND/RESUME and dated instrument
 versions; do not build another generic reference framework. All published products,
 prior storage checks and explicit gaps remain intact. Full data readiness is not claimed.
+
+## Dated notice recovery — current CEX-002 assignment
+
+The owner's continued instruction authorizes recovery of the missing historical contract
+facts. The previous execution withdrawal applies to the superseded full-suite workflow,
+not to this substantive repair. Reviewer research now records official notice facts in
+`research/sprint_004/cex002_contract_notice_facts.json`. This exact additional path is
+authorized for reviewer research publication alongside the three governance paths above.
+It is a source-research attachment, not an integrated reference release or implementation
+evidence. It retains all 73 missing-snapshot names and marks every history incomplete.
+
+Record launches, restrictions on new positions/orders, and scheduled automatic settlement
+separately. Preserve postponements and superseded announcements; do not apply the first
+announced date after a correction. Launch terms apply at launch only. A spot token swap
+does not establish automatic continuation of a futures position into its successor.
+No release files are rewritten and no broad test or market-data download is authorized.
+The remaining work is completion/reconciliation of the dated facts and their integration
+into historical instrument selection, plus the already identified product timing rules.
+
+### Recovered authority and closure-month observations
+
+The reviewer research publication additionally includes the exact path
+`research/sprint_004/cex002_contract_boundary_observations.json`. Together with the facts
+attachment and the three previously enumerated governance paths, these are the only five
+paths authorized for this reviewer publication. Neither JSON is an accepted release,
+developer implementation record, or acceptance result.
+
+The facts attachment contains 73 event groups with official source links. Among the 73
+missing-snapshot names, 71 have a closing notice and 14 have a launch notice. Zero histories
+are complete. ANCBUSD and AUCTIONBUSD still lack recovered primary closing notices; the
+59 missing launch names are enumerated in the attachment. FTTBUSD's May and November 2022
+closing notices conflict with positive-volume bars after the May date; do not infer either
+continuous trading or an unannounced relaunch. The 698 snapshot names are not covered by
+this recovery count and still need dated-history assessment.
+
+The read-only observations cover 73 closure boundaries for 71 names, using 145 distinct
+selected market files totaling 2,473,703 bytes (reader manifest metadata is additional).
+Each result identifies its fact, boundary, file path and SHA256; the final facts attachment
+is also SHA256-bound. The original 72 queries were not rerun when the LEND closure query
+was added. AERGO's boundary-bar detail rereads one already selected file.
+
+Seventy-one boundaries have hourly bars whose open is at/after the announced boundary;
+65 have realized-funding source timestamps strictly after it. These are scope-limited
+counts, not proof of payment, execution, or whole-history completeness. Concrete examples:
+
+- AERGO March2025: 111 hourly bars at/after settlement; only the boundary bar has positive
+  volume (50 trades). The other 110 have zero trades. There are 27 later funding rows.
+- FTTBUSD November2022: 403 later hourly bars, all zero trade count and zero volume.
+  Its May2022 boundary instead has 303 later positive-trade bars, so the conflict matters.
+- LEND October2020: 528 hourly bars at/after settlement, all zero trade count and volume;
+  the one funding observation after settlement is only five milliseconds later. It may
+  represent a terminal payment; a naive strict timestamp cutoff could remove it wrongly.
+
+Reviewer decision: preserve raw rows, distinguish execution eligibility from final
+settlement/cashflow treatment, and resolve repeated symbols as separate dated episodes.
+Do not turn these partial research facts into automatic filters or complete reference
+versions yet. Publication headers retain unknown timezone/knowledge time. The next work
+is the explicitly listed missing authority and its application through existing reference
+models and the delivered consumer, not another market-data conversion or broad test run.
+No production/test source, accepted release, or data catalog changed during this research.

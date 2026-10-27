@@ -3,21 +3,36 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer — preserve delivered consumer and resolve remaining historical timing/release questions
+Next required actor: Lead Quantitative Finance Researcher/Engineer — finish dated contract authority and define its consumer application
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
 
-The owner confirms that the deliverable must be survivorship-aware usable research data.
-Read-only inspection now establishes a concrete membership gap: all 771 historical names
-are retained, but73 names absent from the retained exchangeInfo snapshot lack listing/
-closing dates and base/quote/settlement terms. All771 canonical IDs remain null. Review525's
-latest section records exact fields and official AERGOUSDT launch/delist/relaunch notices.
-The 698 snapshot rows also must not be mistaken for a history of contract specifications.
-The next substantive repair is dated contract episodes/terms plus explicit per-product
-historical timing rules; no reduced universe, guessed dates, new reference framework,
-full-suite rerun or model work. This is an existing data-first requirement, not new scope.
+The deliverable remains survivorship-aware CEX data usable in NautilusTrader. The reader
+works, but historical tradability is not repaired. All 771 names remain in the release;
+73 lack snapshot terms and all 771 canonical IDs remain null.
+
+Review525 now has two research attachments: `cex002_contract_notice_facts.json` and
+`cex002_contract_boundary_observations.json`, both in `research/sprint_004/`.
+For the 73 missing-snapshot names, official notices supply closing events for 71 and
+launch events for 14. This is not 71 completed histories. The remaining primary closure
+notices are ANCBUSD and AUCTIONBUSD; 59 launch notices remain missing, FTTBUSD has conflicting
+closures, and dated specifications remain incomplete. The 698 snapshot-name histories
+also remain to be assessed; a recent snapshot is not a contract's lifetime history.
+
+Read-only closure-month queries covered 73 announced boundaries for 71 names, reading
+145 selected market files / 2,473,703 bytes. Seventy-one boundaries have later-or-equal
+hourly bars and 65 have later funding timestamps. LEND has 528 zero-trade hourly bars
+starting at/after its announced settlement, but its one later funding timestamp is only
+five milliseconds later and could be terminal. These counts justify separating trading
+eligibility and settlement cashflows; they do not justify blanket row deletion.
+
+Next: recover the specifically enumerated missing notices and resolve contradictory
+events, then apply dated contract identities/terms and product timing rules through the
+existing reference layer and consumer. No research attachment is executable authority
+yet. No histories are marked complete and no release data or consumer source was changed.
+The stopped full-suite workflow below remains stopped. No next ticket is authorized.
 
 HT-004 data access is accepted and integrated in Harmonic Trader at 80490b6. The
 complete eleven-product reader uses existing Parquet in place. Eleven new targeted

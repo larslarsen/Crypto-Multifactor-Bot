@@ -1,0 +1,2770 @@
+{
+  "ticket": "CEX-002",
+  "status": "reviewer_read_only_research_not_acceptance",
+  "facts_file": "research/sprint_004/cex002_contract_notice_facts.json",
+  "observed_at": "2026-10-27T04:46:55.749695+00:00",
+  "scope": "Only the calendar month containing each recovered closure; only hourly bars and realized-funding source rows; only the 73 missing-snapshot names. No whole-history completeness claim.",
+  "interpretation": "Rows after announced boundaries are retained source observations. Their presence alone proves neither executable trades nor payable funding. FTTBUSD has unresolved conflicting/repeated closure notices.",
+  "selected_files": 145,
+  "selected_bytes": 2473703,
+  "results": [
+    {
+      "fact_id": "notice-002",
+      "symbol": "AERGOUSDT",
+      "announced_boundary": "2025-03-27T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 111,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AERGOUSDT/2025-03/11fd210ea3192632f182112484d397ba3b6f8bc3e799451cee4e4cbdde48c15d.parquet",
+              "sha256": "11fd210ea3192632f182112484d397ba3b6f8bc3e799451cee4e4cbdde48c15d"
+            }
+          ],
+          "first_timestamp_ms": 1743066000000,
+          "last_timestamp_ms": 1743462000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 186,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 27,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AERGOUSDT/2025-03/14135ebdd627f0dba44772c0c5efdd428b2774be69f820487b987d20b6aded52.parquet",
+              "sha256": "14135ebdd627f0dba44772c0c5efdd428b2774be69f820487b987d20b6aded52"
+            }
+          ],
+          "first_timestamp_ms": 1743076800000,
+          "last_timestamp_ms": 1743451200000,
+          "nonzero_rate_rows": 27
+        }
+      }
+    },
+    {
+      "fact_id": "notice-004",
+      "symbol": "AERGOUSDT",
+      "announced_boundary": "2026-07-24T06:30:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 552,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AERGOUSDT/2026-07/e9cc4e182fdc364da7471db30a8866d07115d0c5836cecaf81f7a1ac2304b3e6.parquet",
+              "sha256": "e9cc4e182fdc364da7471db30a8866d07115d0c5836cecaf81f7a1ac2304b3e6"
+            }
+          ]
+        },
+        "binance_usdm_funding_realized": {
+          "selection_gap": "no declared files match the selection"
+        }
+      }
+    },
+    {
+      "fact_id": "notice-005",
+      "symbol": "1000LUNCBUSD",
+      "announced_boundary": "2023-06-08T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 543,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/1000LUNCBUSD/2023-06/765ab6b45f0768f59e95ebedb71777c5cd3d399bf44cd881987f57271cde8100.parquet",
+              "sha256": "765ab6b45f0768f59e95ebedb71777c5cd3d399bf44cd881987f57271cde8100"
+            }
+          ],
+          "first_timestamp_ms": 1686214800000,
+          "last_timestamp_ms": 1688166000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 67,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/1000LUNCBUSD/2023-06/d6886019dd3a611af52478ea5be9d13aae7d7e9b9f971c53d4b278f0e6ba5b33.parquet",
+              "sha256": "d6886019dd3a611af52478ea5be9d13aae7d7e9b9f971c53d4b278f0e6ba5b33"
+            }
+          ],
+          "first_timestamp_ms": 1686240000000,
+          "last_timestamp_ms": 1688140800001,
+          "nonzero_rate_rows": 67
+        }
+      }
+    },
+    {
+      "fact_id": "notice-006",
+      "symbol": "BNBBUSD",
+      "announced_boundary": "2023-12-08T06:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 442,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 268,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BNBBUSD/2023-12/047da57ba19f90d77c85285760d308dacbc1cc66e37a5bc3fab48add7bef9def.parquet",
+              "sha256": "047da57ba19f90d77c85285760d308dacbc1cc66e37a5bc3fab48add7bef9def"
+            }
+          ],
+          "first_timestamp_ms": 1702015200000,
+          "last_timestamp_ms": 1702976400000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 56,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 34,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BNBBUSD/2023-12/3aca3de7ad8dd9ea476dd959b51cd6f861a251f79880b7315e4b3fb70fec26cf.parquet",
+              "sha256": "3aca3de7ad8dd9ea476dd959b51cd6f861a251f79880b7315e4b3fb70fec26cf"
+            }
+          ],
+          "first_timestamp_ms": 1702022400000,
+          "last_timestamp_ms": 1702972800000,
+          "nonzero_rate_rows": 1
+        }
+      }
+    },
+    {
+      "fact_id": "notice-006",
+      "symbol": "XRPBUSD",
+      "announced_boundary": "2023-12-08T06:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 442,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 268,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/XRPBUSD/2023-12/d51df20f20f2d308040a20b5848130ca13b56f09e7ca152a442972acc711bfad.parquet",
+              "sha256": "d51df20f20f2d308040a20b5848130ca13b56f09e7ca152a442972acc711bfad"
+            }
+          ],
+          "first_timestamp_ms": 1702015200000,
+          "last_timestamp_ms": 1702976400000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 56,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 34,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/XRPBUSD/2023-12/6902e6734494d5981b1bdf3c2a08e0a4a27e2256f2fc765356fbdf68a778df40.parquet",
+              "sha256": "6902e6734494d5981b1bdf3c2a08e0a4a27e2256f2fc765356fbdf68a778df40"
+            }
+          ],
+          "first_timestamp_ms": 1702022400000,
+          "last_timestamp_ms": 1702972800000,
+          "nonzero_rate_rows": 34
+        }
+      }
+    },
+    {
+      "fact_id": "notice-007",
+      "symbol": "BTCBUSD",
+      "announced_boundary": "2023-12-11T06:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 442,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 196,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BTCBUSD/2023-12/553e4b0a4e32e0ca7b38fba67605368221e6d94a7ee827aa758b2fa5a6951d0c.parquet",
+              "sha256": "553e4b0a4e32e0ca7b38fba67605368221e6d94a7ee827aa758b2fa5a6951d0c"
+            }
+          ],
+          "first_timestamp_ms": 1702274400000,
+          "last_timestamp_ms": 1702976400000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 56,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 25,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BTCBUSD/2023-12/da96c2dbc2823d93b9ad84e986ed5e55ed71a9ac82de1aa0462c8e2b6c35a695.parquet",
+              "sha256": "da96c2dbc2823d93b9ad84e986ed5e55ed71a9ac82de1aa0462c8e2b6c35a695"
+            }
+          ],
+          "first_timestamp_ms": 1702281600000,
+          "last_timestamp_ms": 1702972800000,
+          "nonzero_rate_rows": 25
+        }
+      }
+    },
+    {
+      "fact_id": "notice-007",
+      "symbol": "ETHBUSD",
+      "announced_boundary": "2023-12-11T06:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 442,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 196,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ETHBUSD/2023-12/732869c9e4fc304b86a348ab791d13f5ff1aa5c65266574a69a91aaa7de9246d.parquet",
+              "sha256": "732869c9e4fc304b86a348ab791d13f5ff1aa5c65266574a69a91aaa7de9246d"
+            }
+          ],
+          "first_timestamp_ms": 1702274400000,
+          "last_timestamp_ms": 1702976400000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 56,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 25,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ETHBUSD/2023-12/adfc4dfb27c3512b63a444de88240a39be810fd8df03a594088b4e60b510871e.parquet",
+              "sha256": "adfc4dfb27c3512b63a444de88240a39be810fd8df03a594088b4e60b510871e"
+            }
+          ],
+          "first_timestamp_ms": 1702281600000,
+          "last_timestamp_ms": 1702972800000,
+          "nonzero_rate_rows": 25
+        }
+      }
+    },
+    {
+      "fact_id": "notice-008",
+      "symbol": "LTCBUSD",
+      "announced_boundary": "2023-08-24T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 183,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LTCBUSD/2023-08/56e0790b66a6b7bb93eef3527e022d6cd2b293fb986e618ea7edb5337f791ff2.parquet",
+              "sha256": "56e0790b66a6b7bb93eef3527e022d6cd2b293fb986e618ea7edb5337f791ff2"
+            }
+          ],
+          "first_timestamp_ms": 1692867600000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 22,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LTCBUSD/2023-08/3ff7b6eb6db3bae453fcea1962d753c10fb759084bf60a47461a3869b55b91f2.parquet",
+              "sha256": "3ff7b6eb6db3bae453fcea1962d753c10fb759084bf60a47461a3869b55b91f2"
+            }
+          ],
+          "first_timestamp_ms": 1692892800000,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 22
+        }
+      }
+    },
+    {
+      "fact_id": "notice-008",
+      "symbol": "DOGEBUSD",
+      "announced_boundary": "2023-08-24T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 183,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/DOGEBUSD/2023-08/2eba5b976d1bb26d0f65d48f2d39108916c22df46b0903a21aecf26054a43b82.parquet",
+              "sha256": "2eba5b976d1bb26d0f65d48f2d39108916c22df46b0903a21aecf26054a43b82"
+            }
+          ],
+          "first_timestamp_ms": 1692867600000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 22,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/DOGEBUSD/2023-08/680f1bbc0c5724e9325e4b435250dffb9013f5d78fe4ab727d39f2494fdd5c0a.parquet",
+              "sha256": "680f1bbc0c5724e9325e4b435250dffb9013f5d78fe4ab727d39f2494fdd5c0a"
+            }
+          ],
+          "first_timestamp_ms": 1692892800000,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 22
+        }
+      }
+    },
+    {
+      "fact_id": "notice-009",
+      "symbol": "APEBUSD",
+      "announced_boundary": "2023-05-16T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 375,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/APEBUSD/2023-05/983f6cfcb8b0cf0bfea7e39d96b7fdab3e4cfeaff26c2de70e1dc52f1e176a56.parquet",
+              "sha256": "983f6cfcb8b0cf0bfea7e39d96b7fdab3e4cfeaff26c2de70e1dc52f1e176a56"
+            }
+          ],
+          "first_timestamp_ms": 1684227600000,
+          "last_timestamp_ms": 1685574000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 46,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/APEBUSD/2023-05/757cb2cec473c35afb2bc7c17b9a4db94601f20a2525963f8609cb81fe95c33b.parquet",
+              "sha256": "757cb2cec473c35afb2bc7c17b9a4db94601f20a2525963f8609cb81fe95c33b"
+            }
+          ],
+          "first_timestamp_ms": 1684252800000,
+          "last_timestamp_ms": 1685548800000,
+          "nonzero_rate_rows": 46
+        }
+      }
+    },
+    {
+      "fact_id": "notice-010",
+      "symbol": "1000SHIBBUSD",
+      "announced_boundary": "2023-06-01T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 711,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/1000SHIBBUSD/2023-06/77bad2aed8d832d25698683b815c5efe47a973db29cc7a7aad4f7c1ab8c04919.parquet",
+              "sha256": "77bad2aed8d832d25698683b815c5efe47a973db29cc7a7aad4f7c1ab8c04919"
+            }
+          ],
+          "first_timestamp_ms": 1685610000000,
+          "last_timestamp_ms": 1688166000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 88,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/1000SHIBBUSD/2023-06/e237e9fe26c42be9252d6a9eb9f58e71626454dc804e3c8c9c31ef979da009d4.parquet",
+              "sha256": "e237e9fe26c42be9252d6a9eb9f58e71626454dc804e3c8c9c31ef979da009d4"
+            }
+          ],
+          "first_timestamp_ms": 1685635200000,
+          "last_timestamp_ms": 1688140800001,
+          "nonzero_rate_rows": 88
+        }
+      }
+    },
+    {
+      "fact_id": "notice-011",
+      "symbol": "ADABUSD",
+      "announced_boundary": "2023-08-17T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 351,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ADABUSD/2023-08/bba3d3e63284177becc57aba18885736328756ac38461b026ade9d2ef1f2571b.parquet",
+              "sha256": "bba3d3e63284177becc57aba18885736328756ac38461b026ade9d2ef1f2571b"
+            }
+          ],
+          "first_timestamp_ms": 1692262800000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 43,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ADABUSD/2023-08/1459e13d7ca8ad9a0a2790907883de216c29dea14a4727a0d6d684358ca10da0.parquet",
+              "sha256": "1459e13d7ca8ad9a0a2790907883de216c29dea14a4727a0d6d684358ca10da0"
+            }
+          ],
+          "first_timestamp_ms": 1692288000000,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 43
+        }
+      }
+    },
+    {
+      "fact_id": "notice-011",
+      "symbol": "MATICBUSD",
+      "announced_boundary": "2023-08-17T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 351,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/MATICBUSD/2023-08/7b58f308fbc2e7494d0274972c1c08041ae6b5253921c8441d7b2a0aa688de59.parquet",
+              "sha256": "7b58f308fbc2e7494d0274972c1c08041ae6b5253921c8441d7b2a0aa688de59"
+            }
+          ],
+          "first_timestamp_ms": 1692262800000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 43,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/MATICBUSD/2023-08/ef34c67859ed022f72c59241bc4d4a3fe9548744c16590f6b108715e77cadd32.parquet",
+              "sha256": "ef34c67859ed022f72c59241bc4d4a3fe9548744c16590f6b108715e77cadd32"
+            }
+          ],
+          "first_timestamp_ms": 1692288000000,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 43
+        }
+      }
+    },
+    {
+      "fact_id": "notice-012",
+      "symbol": "FILBUSD",
+      "announced_boundary": "2023-05-02T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 711,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/FILBUSD/2023-05/e60888ba0b5fb052ddd06bfd241e264b5c09f7b30ec54357f393d6591aa13afb.parquet",
+              "sha256": "e60888ba0b5fb052ddd06bfd241e264b5c09f7b30ec54357f393d6591aa13afb"
+            }
+          ],
+          "first_timestamp_ms": 1683018000000,
+          "last_timestamp_ms": 1685574000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 88,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/FILBUSD/2023-05/39f73bc88fc521e1d030b9a1a22eb1697ea229793f0c0766132d5d1cae4db59b.parquet",
+              "sha256": "39f73bc88fc521e1d030b9a1a22eb1697ea229793f0c0766132d5d1cae4db59b"
+            }
+          ],
+          "first_timestamp_ms": 1683043200000,
+          "last_timestamp_ms": 1685548800000,
+          "nonzero_rate_rows": 88
+        }
+      }
+    },
+    {
+      "fact_id": "notice-013",
+      "symbol": "DOTBUSD",
+      "announced_boundary": "2023-05-09T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 543,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/DOTBUSD/2023-05/660df6f18235a04a619531c064369afcb060bedae4328584496a6e2a48e92842.parquet",
+              "sha256": "660df6f18235a04a619531c064369afcb060bedae4328584496a6e2a48e92842"
+            }
+          ],
+          "first_timestamp_ms": 1683622800000,
+          "last_timestamp_ms": 1685574000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 67,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/DOTBUSD/2023-05/ea0be50ed8f61b94e591a35e7a2ca8695f1ef3e4658ed3d75bd4f68e808c9811.parquet",
+              "sha256": "ea0be50ed8f61b94e591a35e7a2ca8695f1ef3e4658ed3d75bd4f68e808c9811"
+            }
+          ],
+          "first_timestamp_ms": 1683648000000,
+          "last_timestamp_ms": 1685548800000,
+          "nonzero_rate_rows": 67
+        }
+      }
+    },
+    {
+      "fact_id": "notice-014",
+      "symbol": "GMTBUSD",
+      "announced_boundary": "2023-04-18T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 303,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/GMTBUSD/2023-04/51987c9cf15ecede0195d53667d8b8b67ca885cfeba449e731a4eca600581c2b.parquet",
+              "sha256": "51987c9cf15ecede0195d53667d8b8b67ca885cfeba449e731a4eca600581c2b"
+            }
+          ],
+          "first_timestamp_ms": 1681808400000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 37,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/GMTBUSD/2023-04/0866de56924ee4d7c958c4adf92597cf3caee5d3fa972e36f09f6e8f1bf071fd.parquet",
+              "sha256": "0866de56924ee4d7c958c4adf92597cf3caee5d3fa972e36f09f6e8f1bf071fd"
+            }
+          ],
+          "first_timestamp_ms": 1681833600000,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 37
+        }
+      }
+    },
+    {
+      "fact_id": "notice-014",
+      "symbol": "NEARBUSD",
+      "announced_boundary": "2023-04-18T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 303,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/NEARBUSD/2023-04/2bd355d0fa35c00555561d2fec30bdc2afdfaaf3ab9e5217c449425ef2bb46c6.parquet",
+              "sha256": "2bd355d0fa35c00555561d2fec30bdc2afdfaaf3ab9e5217c449425ef2bb46c6"
+            }
+          ],
+          "first_timestamp_ms": 1681808400000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 37,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/NEARBUSD/2023-04/07688a7f3eb14103f3cf487f79dd0ef002274dcbdc7d359eeb18d0524f36b82a.parquet",
+              "sha256": "07688a7f3eb14103f3cf487f79dd0ef002274dcbdc7d359eeb18d0524f36b82a"
+            }
+          ],
+          "first_timestamp_ms": 1681833600000,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 37
+        }
+      }
+    },
+    {
+      "fact_id": "notice-014",
+      "symbol": "AVAXBUSD",
+      "announced_boundary": "2023-04-18T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 303,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AVAXBUSD/2023-04/4301826df9e108a97419dc29fdf298275b0be2ccc6fefb7ab0841419cc003b10.parquet",
+              "sha256": "4301826df9e108a97419dc29fdf298275b0be2ccc6fefb7ab0841419cc003b10"
+            }
+          ],
+          "first_timestamp_ms": 1681808400000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 37,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AVAXBUSD/2023-04/6e444921767d20c49fa4dbe99e9a002d2480baa0f47d5168d515ae30a26da7d3.parquet",
+              "sha256": "6e444921767d20c49fa4dbe99e9a002d2480baa0f47d5168d515ae30a26da7d3"
+            }
+          ],
+          "first_timestamp_ms": 1681833600000,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 37
+        }
+      }
+    },
+    {
+      "fact_id": "notice-015",
+      "symbol": "AGIXBUSD",
+      "announced_boundary": "2023-07-20T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 279,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AGIXBUSD/2023-07/cd2ba8236bd6bf9f264e245887124bd6e2e5e38c636917af87eca4cddce5ea82.parquet",
+              "sha256": "cd2ba8236bd6bf9f264e245887124bd6e2e5e38c636917af87eca4cddce5ea82"
+            }
+          ],
+          "first_timestamp_ms": 1689843600000,
+          "last_timestamp_ms": 1690844400000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 34,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AGIXBUSD/2023-07/e7d5cfe0466502da8f617303973cbf456dbd896d8d089fb8feab386cae629a3b.parquet",
+              "sha256": "e7d5cfe0466502da8f617303973cbf456dbd896d8d089fb8feab386cae629a3b"
+            }
+          ],
+          "first_timestamp_ms": 1689868800000,
+          "last_timestamp_ms": 1690819200001,
+          "nonzero_rate_rows": 34
+        }
+      }
+    },
+    {
+      "fact_id": "notice-016",
+      "symbol": "AMBBUSD",
+      "announced_boundary": "2023-04-04T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 639,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AMBBUSD/2023-04/b42800fad4838e97342b38e89e6840c3fa85702258f9fcf4599b2e99f79d013a.parquet",
+              "sha256": "b42800fad4838e97342b38e89e6840c3fa85702258f9fcf4599b2e99f79d013a"
+            }
+          ],
+          "first_timestamp_ms": 1680598800000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 79,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AMBBUSD/2023-04/32f0f26e870a48142da388ba9a35766d916c7974bd34df602cc4680bf4fc69b6.parquet",
+              "sha256": "32f0f26e870a48142da388ba9a35766d916c7974bd34df602cc4680bf4fc69b6"
+            }
+          ],
+          "first_timestamp_ms": 1680624000008,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 79
+        }
+      }
+    },
+    {
+      "fact_id": "notice-016",
+      "symbol": "LEVERBUSD",
+      "announced_boundary": "2023-04-04T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 639,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LEVERBUSD/2023-04/247c9db2ecddb373d460649154815d150cb2d876748e796ae696f328d52626a7.parquet",
+              "sha256": "247c9db2ecddb373d460649154815d150cb2d876748e796ae696f328d52626a7"
+            }
+          ],
+          "first_timestamp_ms": 1680598800000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 79,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LEVERBUSD/2023-04/bc24556f3ac1e5e6ec8de9b37717f22fd006d331efa3158467ef7fce888bc24c.parquet",
+              "sha256": "bc24556f3ac1e5e6ec8de9b37717f22fd006d331efa3158467ef7fce888bc24c"
+            }
+          ],
+          "first_timestamp_ms": 1680624000008,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 79
+        }
+      }
+    },
+    {
+      "fact_id": "notice-016",
+      "symbol": "TLMBUSD",
+      "announced_boundary": "2023-04-04T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 639,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/TLMBUSD/2023-04/8f49c793c1b653e130dab27a432e58dd6d62c3c89b35433b82ed11320ab79f67.parquet",
+              "sha256": "8f49c793c1b653e130dab27a432e58dd6d62c3c89b35433b82ed11320ab79f67"
+            }
+          ],
+          "first_timestamp_ms": 1680598800000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 79,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/TLMBUSD/2023-04/dd6725c609e7a189f4653fce30ca98bf8970ee941c72cc9e94cd25242fd93e11.parquet",
+              "sha256": "dd6725c609e7a189f4653fce30ca98bf8970ee941c72cc9e94cd25242fd93e11"
+            }
+          ],
+          "first_timestamp_ms": 1680624000008,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 79
+        }
+      }
+    },
+    {
+      "fact_id": "notice-018",
+      "symbol": "ICPBUSD",
+      "announced_boundary": "2023-03-22T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 514,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ICPBUSD/2023-03/695e4ad97e13eb6eae00ea01c85066db056cab9ba501613274e46250308464bc.parquet",
+              "sha256": "695e4ad97e13eb6eae00ea01c85066db056cab9ba501613274e46250308464bc"
+            }
+          ],
+          "first_timestamp_ms": 1679475600000,
+          "last_timestamp_ms": 1679475600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 28,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ICPBUSD/2023-03/9a780618ba38c91118b4afcdac8d7f759a4fd4e9de755d9f512272115dde1e2b.parquet",
+              "sha256": "9a780618ba38c91118b4afcdac8d7f759a4fd4e9de755d9f512272115dde1e2b"
+            }
+          ],
+          "first_timestamp_ms": 1679500800000,
+          "last_timestamp_ms": 1680278400011,
+          "nonzero_rate_rows": 28
+        }
+      }
+    },
+    {
+      "fact_id": "notice-018",
+      "symbol": "LUNA2BUSD",
+      "announced_boundary": "2023-03-22T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 514,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LUNA2BUSD/2023-03/5ff337d5facecac6031b3fd829c088a3a99c8ac05f4eee944debd7354ac601d1.parquet",
+              "sha256": "5ff337d5facecac6031b3fd829c088a3a99c8ac05f4eee944debd7354ac601d1"
+            }
+          ],
+          "first_timestamp_ms": 1679475600000,
+          "last_timestamp_ms": 1679475600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 28,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LUNA2BUSD/2023-03/6d43439fcfb4793703c26d79f1b45cd1be294f1f67637b7f6aa347d4a47ea7d9.parquet",
+              "sha256": "6d43439fcfb4793703c26d79f1b45cd1be294f1f67637b7f6aa347d4a47ea7d9"
+            }
+          ],
+          "first_timestamp_ms": 1679500800000,
+          "last_timestamp_ms": 1680278400011,
+          "nonzero_rate_rows": 28
+        }
+      }
+    },
+    {
+      "fact_id": "notice-019",
+      "symbol": "MATICUSDT",
+      "announced_boundary": "2024-09-04T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 250,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 169,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/MATICUSDT/2024-09/948a96578fffb9e99af07c0522b2eb7f7bacab4fbeba890f3042b951419daef6.parquet",
+              "sha256": "948a96578fffb9e99af07c0522b2eb7f7bacab4fbeba890f3042b951419daef6"
+            }
+          ],
+          "first_timestamp_ms": 1725440400000,
+          "last_timestamp_ms": 1726045200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 79,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/MATICUSDT/2024-09/78eb9d3719ee19956c0790a03cb7fcb3c754f172191db57bfb0a8b2fbf95ebd7.parquet",
+              "sha256": "78eb9d3719ee19956c0790a03cb7fcb3c754f172191db57bfb0a8b2fbf95ebd7"
+            }
+          ],
+          "first_timestamp_ms": 1725465600000,
+          "last_timestamp_ms": 1727712000000,
+          "nonzero_rate_rows": 79
+        }
+      }
+    },
+    {
+      "fact_id": "notice-019",
+      "symbol": "MATICUSDC",
+      "announced_boundary": "2024-09-04T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 250,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 169,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/MATICUSDC/2024-09/b7c594d1a6a3cf8da76d2b8ac0c3d05853da9e7c6d08bad522c17f4e997ae8a5.parquet",
+              "sha256": "b7c594d1a6a3cf8da76d2b8ac0c3d05853da9e7c6d08bad522c17f4e997ae8a5"
+            }
+          ],
+          "first_timestamp_ms": 1725440400000,
+          "last_timestamp_ms": 1726045200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 79,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/MATICUSDC/2024-09/495b390918f2b0bcfdd8fa65904a32acec0d206f4e11b821386e56ce160adf3a.parquet",
+              "sha256": "495b390918f2b0bcfdd8fa65904a32acec0d206f4e11b821386e56ce160adf3a"
+            }
+          ],
+          "first_timestamp_ms": 1725465600000,
+          "last_timestamp_ms": 1727712000000,
+          "nonzero_rate_rows": 79
+        }
+      }
+    },
+    {
+      "fact_id": "notice-021",
+      "symbol": "RNDRUSDT",
+      "announced_boundary": "2024-07-16T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 703,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 334,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/RNDRUSDT/2024-07/4a1ceee30e0028ca28854c7833c9864235627c18fe3ef706cabde84b4109388e.parquet",
+              "sha256": "4a1ceee30e0028ca28854c7833c9864235627c18fe3ef706cabde84b4109388e"
+            }
+          ],
+          "first_timestamp_ms": 1721120400000,
+          "last_timestamp_ms": 1722319200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 46,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/RNDRUSDT/2024-07/f6a09b2e29756877209940724080eb89bd72c98dde5c88ecf5adfced8eacd69e.parquet",
+              "sha256": "f6a09b2e29756877209940724080eb89bd72c98dde5c88ecf5adfced8eacd69e"
+            }
+          ],
+          "first_timestamp_ms": 1721145600000,
+          "last_timestamp_ms": 1722441600000,
+          "nonzero_rate_rows": 46
+        }
+      }
+    },
+    {
+      "fact_id": "notice-022",
+      "symbol": "ANTUSDT",
+      "announced_boundary": "2024-04-01T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 711,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ANTUSDT/2024-04/2ffe7f059a7bd7ab99a12faf3a2a333defddab3aba5b6ec0fb3d330d97d8650c.parquet",
+              "sha256": "2ffe7f059a7bd7ab99a12faf3a2a333defddab3aba5b6ec0fb3d330d97d8650c"
+            }
+          ],
+          "first_timestamp_ms": 1711962000000,
+          "last_timestamp_ms": 1714518000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 88,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ANTUSDT/2024-04/6d029d2d10f74f26ddd02051daff846e5f42f860162b16721bf5abc479cb4316.parquet",
+              "sha256": "6d029d2d10f74f26ddd02051daff846e5f42f860162b16721bf5abc479cb4316"
+            }
+          ],
+          "first_timestamp_ms": 1711987200000,
+          "last_timestamp_ms": 1714492800000,
+          "nonzero_rate_rows": 88
+        }
+      }
+    },
+    {
+      "fact_id": "notice-023",
+      "symbol": "HNTUSDT",
+      "announced_boundary": "2023-03-20T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 279,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/HNTUSDT/2023-03/c1ba0f288fe729ee11fad9fc991859021b9cd9986672a2298dcf777e5dcc391b.parquet",
+              "sha256": "c1ba0f288fe729ee11fad9fc991859021b9cd9986672a2298dcf777e5dcc391b"
+            }
+          ],
+          "first_timestamp_ms": 1679302800000,
+          "last_timestamp_ms": 1680303600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 34,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/HNTUSDT/2023-03/9a653c60a06cd04cf2214f3ec48c0a980fddcc9bd29e10f59955bca676e8df43.parquet",
+              "sha256": "9a653c60a06cd04cf2214f3ec48c0a980fddcc9bd29e10f59955bca676e8df43"
+            }
+          ],
+          "first_timestamp_ms": 1679328000015,
+          "last_timestamp_ms": 1680278400011,
+          "nonzero_rate_rows": 34
+        }
+      }
+    },
+    {
+      "fact_id": "notice-025",
+      "symbol": "SRMUSDT",
+      "announced_boundary": "2022-11-15T04:30:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 379,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/SRMUSDT/2022-11/dad5242721953ace4cdaa7f1fa24e00ca016a1292b67fa62315adc864de29677.parquet",
+              "sha256": "dad5242721953ace4cdaa7f1fa24e00ca016a1292b67fa62315adc864de29677"
+            }
+          ],
+          "first_timestamp_ms": 1668488400000,
+          "last_timestamp_ms": 1669849200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 47,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/SRMUSDT/2022-11/1dc246bd68d3a565b97455c872c527d14be6ed31983c928948b1f91a1bda053a.parquet",
+              "sha256": "1dc246bd68d3a565b97455c872c527d14be6ed31983c928948b1f91a1bda053a"
+            }
+          ],
+          "first_timestamp_ms": 1668499200009,
+          "last_timestamp_ms": 1669824000015,
+          "nonzero_rate_rows": 47
+        }
+      }
+    },
+    {
+      "fact_id": "notice-027",
+      "symbol": "FOOTBALLUSDT",
+      "announced_boundary": "2024-03-26T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 135,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/FOOTBALLUSDT/2024-03/dddac30df0c7e34c8e521389f8d238a2cc7c15f010fff5697c94d0935c33e972.parquet",
+              "sha256": "dddac30df0c7e34c8e521389f8d238a2cc7c15f010fff5697c94d0935c33e972"
+            }
+          ],
+          "first_timestamp_ms": 1711443600000,
+          "last_timestamp_ms": 1711926000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 16,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/FOOTBALLUSDT/2024-03/c4a318bc5534cbcb432b35f03d1bf01ddcbf6b20796756fb098f17ad24ca375c.parquet",
+              "sha256": "c4a318bc5534cbcb432b35f03d1bf01ddcbf6b20796756fb098f17ad24ca375c"
+            }
+          ],
+          "first_timestamp_ms": 1711468800000,
+          "last_timestamp_ms": 1711900800001,
+          "nonzero_rate_rows": 16
+        }
+      }
+    },
+    {
+      "fact_id": "notice-027",
+      "symbol": "BLUEBIRDUSDT",
+      "announced_boundary": "2024-03-26T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 135,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BLUEBIRDUSDT/2024-03/40a940f61b75931ea3d522b54385816872f46e284b392d70b822cf40a744d2fd.parquet",
+              "sha256": "40a940f61b75931ea3d522b54385816872f46e284b392d70b822cf40a744d2fd"
+            }
+          ],
+          "first_timestamp_ms": 1711443600000,
+          "last_timestamp_ms": 1711926000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 16,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BLUEBIRDUSDT/2024-03/09216a46fb73cad0ca0769222b4245a158d803ab4f40050735da0611d58b5985.parquet",
+              "sha256": "09216a46fb73cad0ca0769222b4245a158d803ab4f40050735da0611d58b5985"
+            }
+          ],
+          "first_timestamp_ms": 1711468800000,
+          "last_timestamp_ms": 1711900800001,
+          "nonzero_rate_rows": 16
+        }
+      }
+    },
+    {
+      "fact_id": "notice-029",
+      "symbol": "FRONTUSDT",
+      "announced_boundary": "2024-08-23T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 207,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/FRONTUSDT/2024-08/7ea7bb4691b8af28cadb0e2f426070e7c6fda45f3cce2e95c0f4af035efde9a3.parquet",
+              "sha256": "7ea7bb4691b8af28cadb0e2f426070e7c6fda45f3cce2e95c0f4af035efde9a3"
+            }
+          ],
+          "first_timestamp_ms": 1724403600000,
+          "last_timestamp_ms": 1725145200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 25,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/FRONTUSDT/2024-08/bb486f4a52ea6ab5e8a7c3d58e4c040a20dbf3676cbb022fe2ed1c5b120ab430.parquet",
+              "sha256": "bb486f4a52ea6ab5e8a7c3d58e4c040a20dbf3676cbb022fe2ed1c5b120ab430"
+            }
+          ],
+          "first_timestamp_ms": 1724428800000,
+          "last_timestamp_ms": 1725120000000,
+          "nonzero_rate_rows": 25
+        }
+      }
+    },
+    {
+      "fact_id": "notice-030",
+      "symbol": "GALUSDT",
+      "announced_boundary": "2024-07-11T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 703,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 454,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/GALUSDT/2024-07/a51f5f7e59d3866b725194bb3c62b577f3f795e9a6888a54e7c9260f17bcc641.parquet",
+              "sha256": "a51f5f7e59d3866b725194bb3c62b577f3f795e9a6888a54e7c9260f17bcc641"
+            }
+          ],
+          "first_timestamp_ms": 1720688400000,
+          "last_timestamp_ms": 1722319200000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 61,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/GALUSDT/2024-07/4ca81b3f5da5da8e87e8b18488d8243c1c13c66625a74f6fd213d9c511d3e0ec.parquet",
+              "sha256": "4ca81b3f5da5da8e87e8b18488d8243c1c13c66625a74f6fd213d9c511d3e0ec"
+            }
+          ],
+          "first_timestamp_ms": 1720713600004,
+          "last_timestamp_ms": 1722441600000,
+          "nonzero_rate_rows": 61
+        }
+      }
+    },
+    {
+      "fact_id": "notice-031",
+      "symbol": "AUDIOUSDT",
+      "announced_boundary": "2024-05-16T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 656,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 287,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AUDIOUSDT/2024-05/2afcf5296efc2873caab8cb1db9f4b38ef9b453cb270154b4520392f326b41ac.parquet",
+              "sha256": "2afcf5296efc2873caab8cb1db9f4b38ef9b453cb270154b4520392f326b41ac"
+            }
+          ],
+          "first_timestamp_ms": 1715850000000,
+          "last_timestamp_ms": 1716879600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 46,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AUDIOUSDT/2024-05/d2264002513fd806eed43e97fe85c8c28641d55957c9095e36ee254b523f049e.parquet",
+              "sha256": "d2264002513fd806eed43e97fe85c8c28641d55957c9095e36ee254b523f049e"
+            }
+          ],
+          "first_timestamp_ms": 1715875200000,
+          "last_timestamp_ms": 1717171200000,
+          "nonzero_rate_rows": 46
+        }
+      }
+    },
+    {
+      "fact_id": "notice-033",
+      "symbol": "1000BTTCUSDT",
+      "announced_boundary": "2022-04-11T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 250,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/1000BTTCUSDT/2022-04/1b3cf427ea37939dd3a9d80b1eb98543d15048b86bf0cf51b08da10ac6e9fcc3.parquet",
+              "sha256": "1b3cf427ea37939dd3a9d80b1eb98543d15048b86bf0cf51b08da10ac6e9fcc3"
+            }
+          ],
+          "first_timestamp_ms": 1649667600000,
+          "last_timestamp_ms": 1649667600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 41,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 9,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/1000BTTCUSDT/2022-04/e57b716e2d77ce46900e1662a50af2f56abee361f391efcee40eb94852af7ec1.parquet",
+              "sha256": "e57b716e2d77ce46900e1662a50af2f56abee361f391efcee40eb94852af7ec1"
+            }
+          ],
+          "first_timestamp_ms": 1649692800009,
+          "last_timestamp_ms": 1649923200000,
+          "nonzero_rate_rows": 9
+        }
+      }
+    },
+    {
+      "fact_id": "notice-034",
+      "symbol": "YFIIUSDT",
+      "announced_boundary": "2022-04-12T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 226,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/YFIIUSDT/2022-04/d265781c47234fd9e37c5f99bd234e0c575363bd61c4f41387808c90e5eea693.parquet",
+              "sha256": "d265781c47234fd9e37c5f99bd234e0c575363bd61c4f41387808c90e5eea693"
+            }
+          ],
+          "first_timestamp_ms": 1649754000000,
+          "last_timestamp_ms": 1649754000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 41,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 6,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/YFIIUSDT/2022-04/4f39fee57ce56d3d3b7536a46229607e9139c39aae81b1b635f64e4b1630ceef.parquet",
+              "sha256": "4f39fee57ce56d3d3b7536a46229607e9139c39aae81b1b635f64e4b1630ceef"
+            }
+          ],
+          "first_timestamp_ms": 1649779200013,
+          "last_timestamp_ms": 1649923200000,
+          "nonzero_rate_rows": 6
+        }
+      }
+    },
+    {
+      "fact_id": "notice-035",
+      "symbol": "AKROUSDT",
+      "announced_boundary": "2022-05-27T07:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 634,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 3,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/AKROUSDT/2022-05/7157033a2713a5679011fb9ba04ce96a63b7bf3d8134b1fd8c2c846721de5305.parquet",
+              "sha256": "7157033a2713a5679011fb9ba04ce96a63b7bf3d8134b1fd8c2c846721de5305"
+            }
+          ],
+          "first_timestamp_ms": 1653634800000,
+          "last_timestamp_ms": 1653642000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 80,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/AKROUSDT/2022-05/8b6fc8f9f182c14be112dc8fa846cc5f02725c0ad07dedada9dc6e0ea39665b0.parquet",
+              "sha256": "8b6fc8f9f182c14be112dc8fa846cc5f02725c0ad07dedada9dc6e0ea39665b0"
+            }
+          ],
+          "first_timestamp_ms": 1653638400008,
+          "last_timestamp_ms": 1653638400008,
+          "nonzero_rate_rows": 1
+        }
+      }
+    },
+    {
+      "fact_id": "notice-036",
+      "symbol": "DODOUSDT",
+      "announced_boundary": "2022-05-27T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 634,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/DODOUSDT/2022-05/b6b00ea4406b44cd241dc03490259e878b273a0417ce1fb1ab12f96cc7fcb840.parquet",
+              "sha256": "b6b00ea4406b44cd241dc03490259e878b273a0417ce1fb1ab12f96cc7fcb840"
+            }
+          ],
+          "first_timestamp_ms": 1653642000000,
+          "last_timestamp_ms": 1653642000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 80,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/DODOUSDT/2022-05/318c774fe9d2ce730c9310ec11a5e1902cd974140b9e33eefd02808e9fdf4e44.parquet",
+              "sha256": "318c774fe9d2ce730c9310ec11a5e1902cd974140b9e33eefd02808e9fdf4e44"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-037",
+      "symbol": "BZRXUSDT",
+      "announced_boundary": "2021-12-19T02:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 435,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BZRXUSDT/2021-12/657932592a6c3ca154dc7eb7bc668dd8fc4bc798adfdb0c5794a1b93cc0dbcc5.parquet",
+              "sha256": "657932592a6c3ca154dc7eb7bc668dd8fc4bc798adfdb0c5794a1b93cc0dbcc5"
+            }
+          ],
+          "first_timestamp_ms": 1639879200000,
+          "last_timestamp_ms": 1639879200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 88,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 33,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BZRXUSDT/2021-12/188945cfe83024194b03abf3bd14b9c710a0e8a4547a9199447b6175b661d6c0.parquet",
+              "sha256": "188945cfe83024194b03abf3bd14b9c710a0e8a4547a9199447b6175b661d6c0"
+            }
+          ],
+          "first_timestamp_ms": 1639900800000,
+          "last_timestamp_ms": 1640822400003,
+          "nonzero_rate_rows": 33
+        }
+      }
+    },
+    {
+      "fact_id": "notice-038",
+      "symbol": "ANCUSDT",
+      "announced_boundary": "2022-05-13T04:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 295,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 3,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ANCUSDT/2022-05/2337228c90362358e2887e73c84afcd5d825c46f3e44ada9ca05a1e190764cec.parquet",
+              "sha256": "2337228c90362358e2887e73c84afcd5d825c46f3e44ada9ca05a1e190764cec"
+            }
+          ],
+          "first_timestamp_ms": 1652414400000,
+          "last_timestamp_ms": 1652421600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 37,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ANCUSDT/2022-05/554e04085eea71b36a01cad40dde713faa1050c20f6826cc4d5732b20ca4fc6b.parquet",
+              "sha256": "554e04085eea71b36a01cad40dde713faa1050c20f6826cc4d5732b20ca4fc6b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-039",
+      "symbol": "BDXNUSDT",
+      "announced_boundary": "2026-03-17T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 351,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BDXNUSDT/2026-03/ed0c1253f396e82826569ae3ff5e139f267126bf438c242de0382b87f3e1e071.parquet",
+              "sha256": "ed0c1253f396e82826569ae3ff5e139f267126bf438c242de0382b87f3e1e071"
+            }
+          ],
+          "first_timestamp_ms": 1773738000000,
+          "last_timestamp_ms": 1774998000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 99,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BDXNUSDT/2026-03/1bf85afee630bbf6efb0e89119f3324ce8ef7f3c73383067be92d22a25f10c9c.parquet",
+              "sha256": "1bf85afee630bbf6efb0e89119f3324ce8ef7f3c73383067be92d22a25f10c9c"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-040",
+      "symbol": "DOTECOUSDT",
+      "announced_boundary": "2021-02-19T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 442,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/DOTECOUSDT/2021-02/4e8d67c46005aa09d5fa39e327c6770bb79b0256cca1e0f1b7c5a7cb6520f12a.parquet",
+              "sha256": "4e8d67c46005aa09d5fa39e327c6770bb79b0256cca1e0f1b7c5a7cb6520f12a"
+            }
+          ],
+          "first_timestamp_ms": 1613725200000,
+          "last_timestamp_ms": 1613725200000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 84,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 28,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/DOTECOUSDT/2021-02/dd919deab4b43839cb2baec1d7c43f7f1a7ee49ea19a42c81c4219dd04f94b2c.parquet",
+              "sha256": "dd919deab4b43839cb2baec1d7c43f7f1a7ee49ea19a42c81c4219dd04f94b2c"
+            }
+          ],
+          "first_timestamp_ms": 1613750400008,
+          "last_timestamp_ms": 1614528000000,
+          "nonzero_rate_rows": 28
+        }
+      }
+    },
+    {
+      "fact_id": "notice-041",
+      "symbol": "ETCBUSD",
+      "announced_boundary": "2023-04-25T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 135,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/ETCBUSD/2023-04/2657776f9cec92c1c2de48de1af149730dfbf9ea58cdfdb3eb2a7aa9b4d1212d.parquet",
+              "sha256": "2657776f9cec92c1c2de48de1af149730dfbf9ea58cdfdb3eb2a7aa9b4d1212d"
+            }
+          ],
+          "first_timestamp_ms": 1682413200000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 16,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/ETCBUSD/2023-04/57ac972416f8b29872115379f5babb71d021ce182fe137f90786f0f4651dd452.parquet",
+              "sha256": "57ac972416f8b29872115379f5babb71d021ce182fe137f90786f0f4651dd452"
+            }
+          ],
+          "first_timestamp_ms": 1682438400015,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 16
+        }
+      }
+    },
+    {
+      "fact_id": "notice-042",
+      "symbol": "APTBUSD",
+      "announced_boundary": "2023-08-03T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 687,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/APTBUSD/2023-08/1f835f7b3e250c9230d837f26f3a3b7e635659c25d37937ab021a261d6edbc54.parquet",
+              "sha256": "1f835f7b3e250c9230d837f26f3a3b7e635659c25d37937ab021a261d6edbc54"
+            }
+          ],
+          "first_timestamp_ms": 1691053200000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 85,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/APTBUSD/2023-08/aa8d53389f48e0537b5f1e05cc9e792a0ad5d3ceba5b1657d6fc17afd062f498.parquet",
+              "sha256": "aa8d53389f48e0537b5f1e05cc9e792a0ad5d3ceba5b1657d6fc17afd062f498"
+            }
+          ],
+          "first_timestamp_ms": 1691078400001,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 85
+        }
+      }
+    },
+    {
+      "fact_id": "notice-042",
+      "symbol": "FTMBUSD",
+      "announced_boundary": "2023-08-03T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 687,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/FTMBUSD/2023-08/a8dfc7bf0bf80231af1c9f2e040f8ab96970e44f497a1d71cc4d0249fed5fea3.parquet",
+              "sha256": "a8dfc7bf0bf80231af1c9f2e040f8ab96970e44f497a1d71cc4d0249fed5fea3"
+            }
+          ],
+          "first_timestamp_ms": 1691053200000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 85,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/FTMBUSD/2023-08/a3acf72e716d3f39f1b854d87dcfe3690001d145beeb5f1a090f54a0c823fe91.parquet",
+              "sha256": "a3acf72e716d3f39f1b854d87dcfe3690001d145beeb5f1a090f54a0c823fe91"
+            }
+          ],
+          "first_timestamp_ms": 1691078400001,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 85
+        }
+      }
+    },
+    {
+      "fact_id": "notice-043",
+      "symbol": "TRXBUSD",
+      "announced_boundary": "2023-08-10T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 519,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/TRXBUSD/2023-08/41c59d345bd7704bf527522634331c7d8714820c10e0800da72d4af3417f189b.parquet",
+              "sha256": "41c59d345bd7704bf527522634331c7d8714820c10e0800da72d4af3417f189b"
+            }
+          ],
+          "first_timestamp_ms": 1691658000000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 64,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/TRXBUSD/2023-08/3e5168beeb452e3669ed8dd5fc3962affb47cae79240df21fa5f9a1c60ca1983.parquet",
+              "sha256": "3e5168beeb452e3669ed8dd5fc3962affb47cae79240df21fa5f9a1c60ca1983"
+            }
+          ],
+          "first_timestamp_ms": 1691683200000,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 64
+        }
+      }
+    },
+    {
+      "fact_id": "notice-043",
+      "symbol": "DODOBUSD",
+      "announced_boundary": "2023-08-10T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 519,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/DODOBUSD/2023-08/49f3c36477af791232f5705176550989f44a977d6ce802d9619d3786a5440290.parquet",
+              "sha256": "49f3c36477af791232f5705176550989f44a977d6ce802d9619d3786a5440290"
+            }
+          ],
+          "first_timestamp_ms": 1691658000000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 64,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/DODOBUSD/2023-08/7eda998b76c4f9e78795ffe954a57fa46f13efe243b8ed8a4e7394b32796f700.parquet",
+              "sha256": "7eda998b76c4f9e78795ffe954a57fa46f13efe243b8ed8a4e7394b32796f700"
+            }
+          ],
+          "first_timestamp_ms": 1691683200000,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 64
+        }
+      }
+    },
+    {
+      "fact_id": "notice-044",
+      "symbol": "LDOBUSD",
+      "announced_boundary": "2023-07-27T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 111,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LDOBUSD/2023-07/eb9c23e04e6d3a9f455612d04973183e0feb2ec9b14aba8173942e7dcafd5e19.parquet",
+              "sha256": "eb9c23e04e6d3a9f455612d04973183e0feb2ec9b14aba8173942e7dcafd5e19"
+            }
+          ],
+          "first_timestamp_ms": 1690448400000,
+          "last_timestamp_ms": 1690844400000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 13,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LDOBUSD/2023-07/94b51616e1bc5e465d069c62c1814d8f6b369ce550e47d3fd5b52e4b19edb34f.parquet",
+              "sha256": "94b51616e1bc5e465d069c62c1814d8f6b369ce550e47d3fd5b52e4b19edb34f"
+            }
+          ],
+          "first_timestamp_ms": 1690473600001,
+          "last_timestamp_ms": 1690819200001,
+          "nonzero_rate_rows": 13
+        }
+      }
+    },
+    {
+      "fact_id": "notice-044",
+      "symbol": "GALABUSD",
+      "announced_boundary": "2023-07-27T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 111,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/GALABUSD/2023-07/0ce1373f274a842168a3a985f344e321f1aacb587110db41ead0ef99e2ea6060.parquet",
+              "sha256": "0ce1373f274a842168a3a985f344e321f1aacb587110db41ead0ef99e2ea6060"
+            }
+          ],
+          "first_timestamp_ms": 1690448400000,
+          "last_timestamp_ms": 1690844400000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 13,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/GALABUSD/2023-07/cb402105b9d7cf9c8418148f2d2409f477aea05134a16b3db48b97dab359b667.parquet",
+              "sha256": "cb402105b9d7cf9c8418148f2d2409f477aea05134a16b3db48b97dab359b667"
+            }
+          ],
+          "first_timestamp_ms": 1690473600001,
+          "last_timestamp_ms": 1690819200001,
+          "nonzero_rate_rows": 13
+        }
+      }
+    },
+    {
+      "fact_id": "notice-045",
+      "symbol": "CVXBUSD",
+      "announced_boundary": "2023-03-15T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 399,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/CVXBUSD/2023-03/ba8d75b4248175c2359ce8b81d6970cb2d79b09d7ffdb0c93a2afc38a0cf4f5b.parquet",
+              "sha256": "ba8d75b4248175c2359ce8b81d6970cb2d79b09d7ffdb0c93a2afc38a0cf4f5b"
+            }
+          ],
+          "first_timestamp_ms": 1678870800000,
+          "last_timestamp_ms": 1680303600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 49,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/CVXBUSD/2023-03/26d4ef7d3c5d386291c811c82201a5d97073ef81db1a69ed8d22e565ed1caa17.parquet",
+              "sha256": "26d4ef7d3c5d386291c811c82201a5d97073ef81db1a69ed8d22e565ed1caa17"
+            }
+          ],
+          "first_timestamp_ms": 1678896000012,
+          "last_timestamp_ms": 1680278400011,
+          "nonzero_rate_rows": 49
+        }
+      }
+    },
+    {
+      "fact_id": "notice-045",
+      "symbol": "GALBUSD",
+      "announced_boundary": "2023-03-15T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 399,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/GALBUSD/2023-03/b15d244280781c74c2d28958d7e95e5ddb75f86f9c397835e64b8f0d03ddad6e.parquet",
+              "sha256": "b15d244280781c74c2d28958d7e95e5ddb75f86f9c397835e64b8f0d03ddad6e"
+            }
+          ],
+          "first_timestamp_ms": 1678870800000,
+          "last_timestamp_ms": 1680303600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 49,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/GALBUSD/2023-03/cfedfe819af3dac56354e6136c3bada8abe246a2554aba88995de79aa940df24.parquet",
+              "sha256": "cfedfe819af3dac56354e6136c3bada8abe246a2554aba88995de79aa940df24"
+            }
+          ],
+          "first_timestamp_ms": 1678896000012,
+          "last_timestamp_ms": 1680278400011,
+          "nonzero_rate_rows": 49
+        }
+      }
+    },
+    {
+      "fact_id": "notice-045",
+      "symbol": "WAVESBUSD",
+      "announced_boundary": "2023-03-15T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 399,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/WAVESBUSD/2023-03/7afb384323d1d4ca87b5cd560cb79518269a396ebc530d4350be1999f991e68e.parquet",
+              "sha256": "7afb384323d1d4ca87b5cd560cb79518269a396ebc530d4350be1999f991e68e"
+            }
+          ],
+          "first_timestamp_ms": 1678870800000,
+          "last_timestamp_ms": 1680303600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 49,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/WAVESBUSD/2023-03/fac761566cdba0247f5a8d2038191d4057395df315a70cfcc025ae4586e030d0.parquet",
+              "sha256": "fac761566cdba0247f5a8d2038191d4057395df315a70cfcc025ae4586e030d0"
+            }
+          ],
+          "first_timestamp_ms": 1678896000012,
+          "last_timestamp_ms": 1680278400011,
+          "nonzero_rate_rows": 49
+        }
+      }
+    },
+    {
+      "fact_id": "notice-046",
+      "symbol": "LINKBUSD",
+      "announced_boundary": "2023-05-23T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 207,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LINKBUSD/2023-05/ce36d71f113f3457f1d6b753c55bcc34f127774bab46ab547025e7a5d683e5a9.parquet",
+              "sha256": "ce36d71f113f3457f1d6b753c55bcc34f127774bab46ab547025e7a5d683e5a9"
+            }
+          ],
+          "first_timestamp_ms": 1684832400000,
+          "last_timestamp_ms": 1685574000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 25,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LINKBUSD/2023-05/89dc9dae3803216fe83d545caca4cf06cac8491aeaf3523dea726cb967c843c6.parquet",
+              "sha256": "89dc9dae3803216fe83d545caca4cf06cac8491aeaf3523dea726cb967c843c6"
+            }
+          ],
+          "first_timestamp_ms": 1684857600008,
+          "last_timestamp_ms": 1685548800000,
+          "nonzero_rate_rows": 25
+        }
+      }
+    },
+    {
+      "fact_id": "notice-054",
+      "symbol": "PHBBUSD",
+      "announced_boundary": "2023-04-11T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 471,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/PHBBUSD/2023-04/4911e3dc36fc8e1817699cb1b65e82ae8b1498f2c84bda20806b6809389560cd.parquet",
+              "sha256": "4911e3dc36fc8e1817699cb1b65e82ae8b1498f2c84bda20806b6809389560cd"
+            }
+          ],
+          "first_timestamp_ms": 1681203600000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 58,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/PHBBUSD/2023-04/1151555bdd5ee2156ea2c185638f105f39acfbee826f50068bf0ee480f4d05e3.parquet",
+              "sha256": "1151555bdd5ee2156ea2c185638f105f39acfbee826f50068bf0ee480f4d05e3"
+            }
+          ],
+          "first_timestamp_ms": 1681228800016,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 58
+        }
+      }
+    },
+    {
+      "fact_id": "notice-054",
+      "symbol": "SANDBUSD",
+      "announced_boundary": "2023-04-11T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 471,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/SANDBUSD/2023-04/0e0f82dcb5bce7126ed5e0f19ea89d044683024ddbbae5fb9322c7ebdb091880.parquet",
+              "sha256": "0e0f82dcb5bce7126ed5e0f19ea89d044683024ddbbae5fb9322c7ebdb091880"
+            }
+          ],
+          "first_timestamp_ms": 1681203600000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 58,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/SANDBUSD/2023-04/041fbe38a392aafa2deaada846ee039ee7333477c347eedf78243c79fdb9f1ca.parquet",
+              "sha256": "041fbe38a392aafa2deaada846ee039ee7333477c347eedf78243c79fdb9f1ca"
+            }
+          ],
+          "first_timestamp_ms": 1681228800016,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 58
+        }
+      }
+    },
+    {
+      "fact_id": "notice-054",
+      "symbol": "UNIBUSD",
+      "announced_boundary": "2023-04-11T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 471,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/UNIBUSD/2023-04/eb0ae5a76bbeca56b22411fdaf263309d219dab49b9f527cc480143e785100b0.parquet",
+              "sha256": "eb0ae5a76bbeca56b22411fdaf263309d219dab49b9f527cc480143e785100b0"
+            }
+          ],
+          "first_timestamp_ms": 1681203600000,
+          "last_timestamp_ms": 1682895600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 58,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/UNIBUSD/2023-04/b6e1c980df68200c568b5a36255def0d3d4e25d2ca93e79666ccb0e0aaf72cfa.parquet",
+              "sha256": "b6e1c980df68200c568b5a36255def0d3d4e25d2ca93e79666ccb0e0aaf72cfa"
+            }
+          ],
+          "first_timestamp_ms": 1681228800016,
+          "last_timestamp_ms": 1682870400010,
+          "nonzero_rate_rows": 58
+        }
+      }
+    },
+    {
+      "fact_id": "notice-055",
+      "symbol": "FTTBUSD",
+      "announced_boundary": "2022-05-19T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 303,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/FTTBUSD/2022-05/ef9c791e37fdec040fb1718008e5a05a22e7a305d02cdd97de5187770cdc76c8.parquet",
+              "sha256": "ef9c791e37fdec040fb1718008e5a05a22e7a305d02cdd97de5187770cdc76c8"
+            }
+          ],
+          "first_timestamp_ms": 1652950800000,
+          "last_timestamp_ms": 1654038000000,
+          "positive_volume_rows": 303,
+          "positive_trade_count_rows": 303
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 37,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/FTTBUSD/2022-05/2d1b93ef7e34258c42ed52c26423fa73852e349d9da5af718ada6e638a63fc76.parquet",
+              "sha256": "2d1b93ef7e34258c42ed52c26423fa73852e349d9da5af718ada6e638a63fc76"
+            }
+          ],
+          "first_timestamp_ms": 1652976000015,
+          "last_timestamp_ms": 1654012800000,
+          "nonzero_rate_rows": 37
+        }
+      }
+    },
+    {
+      "fact_id": "notice-056",
+      "symbol": "FTTBUSD",
+      "announced_boundary": "2022-11-14T04:30:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 403,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/FTTBUSD/2022-11/3e4d0cbb56f7ee5c0cc4d2af9ec79092f04bc7310e807ad67c76772ee7ab056d.parquet",
+              "sha256": "3e4d0cbb56f7ee5c0cc4d2af9ec79092f04bc7310e807ad67c76772ee7ab056d"
+            }
+          ],
+          "first_timestamp_ms": 1668402000000,
+          "last_timestamp_ms": 1669849200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 126,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 50,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/FTTBUSD/2022-11/cf59478a05a00a556f109920c44fd807ea6b57a9db7bafd084bcbadba77fdc9d.parquet",
+              "sha256": "cf59478a05a00a556f109920c44fd807ea6b57a9db7bafd084bcbadba77fdc9d"
+            }
+          ],
+          "first_timestamp_ms": 1668412800000,
+          "last_timestamp_ms": 1669824000015,
+          "nonzero_rate_rows": 50
+        }
+      }
+    },
+    {
+      "fact_id": "notice-058",
+      "symbol": "LUNABUSD",
+      "announced_boundary": "2022-05-13T01:30:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 11,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LUNABUSD/2022-05/2b3bfcb1e467bdd1972253bc4f8eebde917cf788751b3f25ebf128827cbe2ad7.parquet",
+              "sha256": "2b3bfcb1e467bdd1972253bc4f8eebde917cf788751b3f25ebf128827cbe2ad7"
+            }
+          ]
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 2,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LUNABUSD/2022-05/bdc7cb1b9c0e708b44e45eb54744400c67aaeee97e804bb3a5f359e221dba8e6.parquet",
+              "sha256": "bdc7cb1b9c0e708b44e45eb54744400c67aaeee97e804bb3a5f359e221dba8e6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-059",
+      "symbol": "SOLBUSD",
+      "announced_boundary": "2023-08-28T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 87,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/SOLBUSD/2023-08/db0fa271dac91200cbd74336aba1eea3dfc538867114fcb2bd4b671e13cf8586.parquet",
+              "sha256": "db0fa271dac91200cbd74336aba1eea3dfc538867114fcb2bd4b671e13cf8586"
+            }
+          ],
+          "first_timestamp_ms": 1693213200000,
+          "last_timestamp_ms": 1693522800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 10,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/SOLBUSD/2023-08/2fa26c3df09e8592fb617ff141b0a5ee3ef5d68ad91077ac675b0bde9466a14c.parquet",
+              "sha256": "2fa26c3df09e8592fb617ff141b0a5ee3ef5d68ad91077ac675b0bde9466a14c"
+            }
+          ],
+          "first_timestamp_ms": 1693238400001,
+          "last_timestamp_ms": 1693497600000,
+          "nonzero_rate_rows": 10
+        }
+      }
+    },
+    {
+      "fact_id": "notice-060",
+      "symbol": "BTTUSDT",
+      "announced_boundary": "2022-01-14T02:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 612,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 298,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BTTUSDT/2022-01/d2089bc4c6728f73d2549bcae00d88bfbe4420861af0286d91efaf235e5a67d5.parquet",
+              "sha256": "d2089bc4c6728f73d2549bcae00d88bfbe4420861af0286d91efaf235e5a67d5"
+            }
+          ],
+          "first_timestamp_ms": 1642125600000,
+          "last_timestamp_ms": 1643194800000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 83,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 43,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BTTUSDT/2022-01/a776f39f6b72e8668a87ee6ae96031c2abe6db8e4ba1e9158cff2d114a4d4308.parquet",
+              "sha256": "a776f39f6b72e8668a87ee6ae96031c2abe6db8e4ba1e9158cff2d114a4d4308"
+            }
+          ],
+          "first_timestamp_ms": 1642147200006,
+          "last_timestamp_ms": 1643356800000,
+          "nonzero_rate_rows": 43
+        }
+      }
+    },
+    {
+      "fact_id": "notice-062",
+      "symbol": "BTSUSDT",
+      "announced_boundary": "2022-08-18T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 327,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BTSUSDT/2022-08/a75e7a0c76ed42baca0c42deca3b489a3f88d1787d49d1a21e90adb202a7dfe9.parquet",
+              "sha256": "a75e7a0c76ed42baca0c42deca3b489a3f88d1787d49d1a21e90adb202a7dfe9"
+            }
+          ],
+          "first_timestamp_ms": 1660813200000,
+          "last_timestamp_ms": 1661986800000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 40,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BTSUSDT/2022-08/747c50b9eb5076f95c075b19e57a44924229f5955e63dba206438131c55b4879.parquet",
+              "sha256": "747c50b9eb5076f95c075b19e57a44924229f5955e63dba206438131c55b4879"
+            }
+          ],
+          "first_timestamp_ms": 1660838400013,
+          "last_timestamp_ms": 1661961600013,
+          "nonzero_rate_rows": 40
+        }
+      }
+    },
+    {
+      "fact_id": "notice-063",
+      "symbol": "NUUSDT",
+      "announced_boundary": "2022-02-15T02:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 339,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/NUUSDT/2022-02/05c349fd8566deaf23aada02e161f2038294bdd710805793bbc51e4b2d9f2461.parquet",
+              "sha256": "05c349fd8566deaf23aada02e161f2038294bdd710805793bbc51e4b2d9f2461"
+            }
+          ],
+          "first_timestamp_ms": 1644890400000,
+          "last_timestamp_ms": 1644890400000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 43,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/NUUSDT/2022-02/4486ab21c2e4768881ee58ac5c84c351684c304848dd00f2bd9d79886f863e1e.parquet",
+              "sha256": "4486ab21c2e4768881ee58ac5c84c351684c304848dd00f2bd9d79886f863e1e"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-063",
+      "symbol": "KEEPUSDT",
+      "announced_boundary": "2022-02-15T02:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 339,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/KEEPUSDT/2022-02/b27c0374bba65d36dac58d46ebb36688b38d56c35909481c9a237384deae6001.parquet",
+              "sha256": "b27c0374bba65d36dac58d46ebb36688b38d56c35909481c9a237384deae6001"
+            }
+          ],
+          "first_timestamp_ms": 1644890400000,
+          "last_timestamp_ms": 1644890400000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 43,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/KEEPUSDT/2022-02/68eeaef0192bdee876aa740ea26edbdad84af2e807e75b72a3017af9e2efdfa5.parquet",
+              "sha256": "68eeaef0192bdee876aa740ea26edbdad84af2e807e75b72a3017af9e2efdfa5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-065",
+      "symbol": "SXPUSDT",
+      "announced_boundary": "2025-12-05T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 639,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/SXPUSDT/2025-12/47a306a19c02f69c98ef2d153ab62ad1d089cd5beae2ea66c6444de18292be79.parquet",
+              "sha256": "47a306a19c02f69c98ef2d153ab62ad1d089cd5beae2ea66c6444de18292be79"
+            }
+          ],
+          "first_timestamp_ms": 1764925200000,
+          "last_timestamp_ms": 1767222000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 14,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 0,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/SXPUSDT/2025-12/9c65551474d87277d076dd98a0686c2443340e1d5c639e3adad668976fe18956.parquet",
+              "sha256": "9c65551474d87277d076dd98a0686c2443340e1d5c639e3adad668976fe18956"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fact_id": "notice-066",
+      "symbol": "COCOSUSDT",
+      "announced_boundary": "2023-05-25T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 159,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/COCOSUSDT/2023-05/75e638bde9b50177c84b07d8604337d3706625036c9ab0630b74d5176eb58b6e.parquet",
+              "sha256": "75e638bde9b50177c84b07d8604337d3706625036c9ab0630b74d5176eb58b6e"
+            }
+          ],
+          "first_timestamp_ms": 1685005200000,
+          "last_timestamp_ms": 1685574000000,
+          "positive_volume_rows": 1,
+          "positive_trade_count_rows": 1
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 19,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/COCOSUSDT/2023-05/957805b8bcd01393fd6a50bc7a59c5073d0d38a55b4fa8e9229f4d6dcdd44702.parquet",
+              "sha256": "957805b8bcd01393fd6a50bc7a59c5073d0d38a55b4fa8e9229f4d6dcdd44702"
+            }
+          ],
+          "first_timestamp_ms": 1685030400016,
+          "last_timestamp_ms": 1685548800000,
+          "nonzero_rate_rows": 19
+        }
+      }
+    },
+    {
+      "fact_id": "notice-067",
+      "symbol": "TOMOUSDT",
+      "announced_boundary": "2023-11-14T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 720,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 399,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/TOMOUSDT/2023-11/c2d16e67d74462e0a1c699968ac952bd03ff1dcc93b0c7b3861cc9d5d4a1ca6b.parquet",
+              "sha256": "c2d16e67d74462e0a1c699968ac952bd03ff1dcc93b0c7b3861cc9d5d4a1ca6b"
+            }
+          ],
+          "first_timestamp_ms": 1699952400000,
+          "last_timestamp_ms": 1701385200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 90,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 49,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/TOMOUSDT/2023-11/3c455d0b39a8729a0804fac9170d7288c7686e35d5b08942788fb38fdf9ff2ab.parquet",
+              "sha256": "3c455d0b39a8729a0804fac9170d7288c7686e35d5b08942788fb38fdf9ff2ab"
+            }
+          ],
+          "first_timestamp_ms": 1699977600001,
+          "last_timestamp_ms": 1701360000000,
+          "nonzero_rate_rows": 49
+        }
+      }
+    },
+    {
+      "fact_id": "notice-068",
+      "symbol": "BTCSTUSDT",
+      "announced_boundary": "2021-03-12T02:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 665,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 478,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/BTCSTUSDT/2021-03/10f9e23f94ff3a0ba9f0d38dad26b4a84db37b52fac90b76f6dc840737f61d8f.parquet",
+              "sha256": "10f9e23f94ff3a0ba9f0d38dad26b4a84db37b52fac90b76f6dc840737f61d8f"
+            }
+          ],
+          "first_timestamp_ms": 1615514400000,
+          "last_timestamp_ms": 1617231600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 83,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 59,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/BTCSTUSDT/2021-03/795b21ca2c5bcc06c7f60bfec721018e6045237c40bff20630ec84cb05cea842.parquet",
+              "sha256": "795b21ca2c5bcc06c7f60bfec721018e6045237c40bff20630ec84cb05cea842"
+            }
+          ],
+          "first_timestamp_ms": 1615536000005,
+          "last_timestamp_ms": 1617206400000,
+          "nonzero_rate_rows": 59
+        }
+      }
+    },
+    {
+      "fact_id": "notice-069",
+      "symbol": "EOSUSDT",
+      "announced_boundary": "2025-05-21T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 490,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/EOSUSDT/2025-05/6795ccb5ce485aa1d2ab82cee1d5f7ff943cbc063c75b36e5d9d5dd0f6feb89b.parquet",
+              "sha256": "6795ccb5ce485aa1d2ab82cee1d5f7ff943cbc063c75b36e5d9d5dd0f6feb89b"
+            }
+          ],
+          "first_timestamp_ms": 1747818000000,
+          "last_timestamp_ms": 1747818000000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 93,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 31,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/EOSUSDT/2025-05/4ee6e780bb6b09ae3db21cedb61e1c0a5beeb505172550b40c4d7a52b678a7e2.parquet",
+              "sha256": "4ee6e780bb6b09ae3db21cedb61e1c0a5beeb505172550b40c4d7a52b678a7e2"
+            }
+          ],
+          "first_timestamp_ms": 1747843200004,
+          "last_timestamp_ms": 1748707200000,
+          "nonzero_rate_rows": 31
+        }
+      }
+    },
+    {
+      "fact_id": "notice-070",
+      "symbol": "LUNAUSDT",
+      "announced_boundary": "2022-05-12T15:30:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 295,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 15,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LUNAUSDT/2022-05/14605329f9b16b76401481cfc418f9f4521f688ca983fb32d7aedc7b9670e2cf.parquet",
+              "sha256": "14605329f9b16b76401481cfc418f9f4521f688ca983fb32d7aedc7b9670e2cf"
+            }
+          ],
+          "first_timestamp_ms": 1652371200000,
+          "last_timestamp_ms": 1652421600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 37,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 2,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LUNAUSDT/2022-05/6445ccb37206bf72f5adf07bbc527fe5ec3d6623f79a9388168da7eb521e6986.parquet",
+              "sha256": "6445ccb37206bf72f5adf07bbc527fe5ec3d6623f79a9388168da7eb521e6986"
+            }
+          ],
+          "first_timestamp_ms": 1652371200007,
+          "last_timestamp_ms": 1652400000014,
+          "nonzero_rate_rows": 2
+        }
+      }
+    },
+    {
+      "fact_id": "notice-071",
+      "symbol": "MBLUSDT",
+      "announced_boundary": "2024-05-13T09:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 656,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 359,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/MBLUSDT/2024-05/a07b77228f72b3f30bf7756478cefb4014f32b8c859ece9bf9c42caf9ed91515.parquet",
+              "sha256": "a07b77228f72b3f30bf7756478cefb4014f32b8c859ece9bf9c42caf9ed91515"
+            }
+          ],
+          "first_timestamp_ms": 1715590800000,
+          "last_timestamp_ms": 1716879600000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 186,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 111,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/MBLUSDT/2024-05/a50480e5cd4e5d1fa5e316049f6361b3d935fdd07610eca5c4a0dd9d0cdb3d97.parquet",
+              "sha256": "a50480e5cd4e5d1fa5e316049f6361b3d935fdd07610eca5c4a0dd9d0cdb3d97"
+            }
+          ],
+          "first_timestamp_ms": 1715601600000,
+          "last_timestamp_ms": 1717185600000,
+          "nonzero_rate_rows": 111
+        }
+      }
+    },
+    {
+      "fact_id": "notice-072",
+      "symbol": "LENDUSDT",
+      "announced_boundary": "2020-10-10T00:00:00Z",
+      "products": {
+        "binance_usdm_bar_1h": {
+          "month_rows": 744,
+          "boundary_equal_rows": 1,
+          "after_boundary_rows": 528,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_bar_1h/.partitions/LENDUSDT/2020-10/290bafa4e02a7e988f30cf7553cb4cf4b0d251a18d1d4b53ff97f93d792374a0.parquet",
+              "sha256": "290bafa4e02a7e988f30cf7553cb4cf4b0d251a18d1d4b53ff97f93d792374a0"
+            }
+          ],
+          "first_timestamp_ms": 1602288000000,
+          "last_timestamp_ms": 1604185200000,
+          "positive_volume_rows": 0,
+          "positive_trade_count_rows": 0
+        },
+        "binance_usdm_funding_realized": {
+          "month_rows": 28,
+          "boundary_equal_rows": 0,
+          "after_boundary_rows": 1,
+          "timestamp_rule": "bar open >= boundary; funding calc_time > boundary",
+          "files": [
+            {
+              "path": "data/.cex002_funding_realized/.partitions/LENDUSDT/2020-10/e5308ecd206ee4d82d8b10b52f4a3b0b94aa71eedac528a669dee2a39fb1ee2c.parquet",
+              "sha256": "e5308ecd206ee4d82d8b10b52f4a3b0b94aa71eedac528a669dee2a39fb1ee2c"
+            }
+          ],
+          "first_timestamp_ms": 1602288000005,
+          "last_timestamp_ms": 1602288000005,
+          "nonzero_rate_rows": 1
+        }
+      }
+    }
+  ],
+  "supplement_observed_at": "2026-10-27T04:54:55.111371+00:00",
+  "supplement_note": "Added only notice-072 LENDUSDT closure-month query. Earlier 72 queries were not repeated. Notice IDs and their queried effective dates are unchanged.",
+  "boundary_bar_detail": {
+    "symbol": "AERGOUSDT",
+    "month": "2025-03",
+    "positive_rows_at_or_after_boundary": [
+      {
+        "open_time": "1743066000000",
+        "close_time": "1743069599999",
+        "volume": "67122.000000000000000000",
+        "trade_count": "50"
+      }
+    ],
+    "interpretation": "An hourly bar beginning at settlement can contain a terminal observation. Positive volume is not proof of tradability for the full hour."
+  },
+  "facts_sha256": "8461413161a7ced57ee14280b51aae65470ac6f1641d90973973f40aa4065b9d",
+  "facts_binding_note": "Digest binds the final reviewed facts attachment. Each saved query identifies the original fact_id and exact announced_boundary. The first 72 queries preceded addition of notices 072/073 and the recovery summary; their queried facts are unchanged.",
+  "boundary_caveat": "These are comparisons to announced settlement START or stated trading cessation, not measured completion. Do not automatically discard funding immediately after that timestamp: LENDUSDT has an observation at boundary + 5 ms, which may be a terminal payment. Nor does a positive-volume boundary bar establish tradability for the full hour. No row has been adjudicated as valid cashflow or invalid source data by this count alone.",
+  "summary": {
+    "boundary_queries": 73,
+    "distinct_symbols": 71,
+    "boundaries_with_bar_open_at_or_after": 71,
+    "boundaries_with_later_funding_timestamp": 65,
+    "selected_file_count_kind": "unique files across closure-month queries; the AERGO boundary-bar detail rereads one of those selected files"
+  }
+}
