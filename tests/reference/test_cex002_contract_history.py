@@ -164,3 +164,104 @@ def test_cli_authenticates_bounded_facts_and_prints_deterministic_document(
     alias.symlink_to(path)
     with pytest.raises(ValueError, match="non-symlink"):
         main(["--facts", str(alias), *args[2:]])
+
+
+def test_confirmed_active_is_evidence_only_and_preserves_exact_launch_records() -> None:
+    facts = _facts()
+    original = _compile(facts)
+    assert original.document["schema_version"] == 1
+    facts["notices"].append(_notice("btc-confirmation", "BTCUSDT", [
+        _event("confirmed_active", "2019-09-09T00:00:00Z", basis="notice confirms trading")]))
+    compiled = _compile(facts)
+    assert compiled.document["schema_version"] == 2
+    assert [item for item in compiled.document["episodes"]
+            if item["native_symbol"] != "BTCUSDT"] == original.document["episodes"]
+    for records, old_records in ((compiled.versions, original.versions),
+                                 (compiled.aliases, original.aliases),
+                                 (compiled.listing_events, original.listing_events)):
+        assert all(record in records for record in old_records)
+    episode = next(item for item in compiled.document["episodes"] if item["native_symbol"] == "BTCUSDT")
+    confirmed_at = datetime(2019, 9, 9, tzinfo=timezone.utc)
+    assert episode["launch_ms"] is None
+    assert episode["coverage_start_ms"] == int(confirmed_at.timestamp() * 1000)
+    assert episode["start_kind"] == "confirmed_active" and episode["launch_terms"] == {}
+    assert episode["events"][0]["event"] == "confirmed_active"
+    version = next(item for item in compiled.versions
+                   if item.instrument_id == episode["instrument_id"])
+    alias = next(item for item in compiled.aliases if item.target_id == episode["instrument_id"])
+    assert version.contract_spec == {"scope": "confirmed_active_evidence_only",
+                                     "historical_terms_complete": False, "launch_terms": {}}
+    assert version.window.valid_from == alias.window.valid_from == confirmed_at
+    assert version.window.known_from == alias.window.known_from == KNOWN
+    assert not version.window.active_at(decision_time=confirmed_at,
+        knowledge_time=datetime(2026, 10, 26, tzinfo=timezone.utc))
+    assert "confirmed_active" in alias.evidence and "launch" not in alias.evidence
+    assert not any(item.instrument_id == episode["instrument_id"] for item in compiled.listing_events)
+    exact = _compile({"notices": [_notice("btc-confirmation", "BTCUSDT", [
+        _event("launch", "2019-09-09T00:00:00Z")])]}).document["episodes"][0]
+    assert all(episode[field] != exact[field]
+               for field in ("asset_id", "instrument_id", "instrument_version_id"))
+
+
+def test_confirmed_closures_restrictions_and_subsequent_launch_use_coverage_start() -> None:
+    compiled = _compile({"notices": [_notice("btc-schedules", "BTCUSDT", [
+        _event("confirmed_active", "2019-09-09T00:00:00Z"),
+        _event("new_positions_stop", "2020-01-01T08:30:00Z"),
+        _event("automatic_settlement", "2020-01-01T09:00:00Z"),
+        _event("launch", "2020-01-01T09:00:00Z"),
+    ])]})
+    first, second = compiled.document["episodes"]
+    assert first["coverage_start_ms"] < first["new_positions_stop_ms"] < first["execution_end_ms"]
+    assert second["launch_ms"] == first["execution_end_ms"]
+    assert compiled.versions[0].window.valid_to == compiled.versions[1].window.valid_from
+    assert [event.event_type for event in compiled.listing_events] == [
+        ListingEventType.SUSPEND, ListingEventType.LIST]
+
+
+@pytest.mark.parametrize("first,second,second_time", [
+    ("confirmed_active", "launch", "2020-01-01T00:00:00Z"),
+    ("launch", "confirmed_active", "2020-01-01T00:00:00Z"),
+    ("confirmed_active", "launch", "2020-01-02T00:00:00Z"),
+    ("launch", "confirmed_active", "2020-01-02T00:00:00Z"),
+    ("confirmed_active", "confirmed_active", "2020-01-02T00:00:00Z"),
+])
+def test_confirmed_overlap_requires_explicit_reconciliation(first, second, second_time) -> None:
+    with pytest.raises(ValueError, match="overlapping launches"):
+        _compile({"notices": [_notice("one", "BTCUSDT", [
+            _event(first, "2020-01-01T00:00:00Z")]), _notice("two", "BTCUSDT", [
+                _event(second, second_time)])]})
+
+
+@pytest.mark.parametrize("terms", [{"tick_size": "0.01"}, ["USDT"], "USDT"])
+def test_confirmed_active_rejects_launch_terms(terms) -> None:
+    notice = _notice("btc", "BTCUSDT", [_event("confirmed_active", "2020-01-01T00:00:00Z")])
+    notice["terms_at_launch"] = terms
+    with pytest.raises(ValueError, match="cannot carry launch terms"):
+        _compile({"notices": [notice]})
+
+
+def test_unresolved_postponement_is_retained_without_an_episode() -> None:
+    evidence = _event("launch", "2025-11-20T12:00:00Z", event_status="postponed",
+                      executable_boundary=False, source_url="https://example.test/gaib-postponed")
+    unresolved = {"native_symbol": "GAIBUSDT", "reasons": ["launch_postponed_indefinitely"],
+                  "events": [evidence]}
+    facts = {"notices": [_notice("gaib", "GAIBUSDT", [evidence])],
+             "unresolved_contracts": [unresolved]}
+    compiled = _compile(facts)
+    assert compiled.document["schema_version"] == 2
+    assert compiled.document["unresolved_symbols"] == [unresolved]
+    assert compiled.document["episodes"] == []
+    assert not (compiled.assets or compiled.instruments or compiled.versions
+                or compiled.aliases or compiled.listing_events)
+    assert _compile({"notices": [], "unresolved_contracts": []}).document["schema_version"] == 1
+
+
+@pytest.mark.parametrize("unresolved", [
+    None, {}, [None], [{"native_symbol": "GAIBUSDT", "reasons": [], "events": []}],
+    [{"native_symbol": "GAIBUSDT", "reasons": ["pending"], "events": [None]}],
+    [{"native_symbol": "GAIBUSDT", "reasons": ["pending"], "events": [{}]}],
+    [{"native_symbol": "GAIBUSDT", "reasons": ["pending"], "events": []}] * 2,
+])
+def test_unresolved_contracts_must_be_well_formed(unresolved) -> None:
+    with pytest.raises(ValueError, match="unresolved contract"):
+        _compile({"notices": [], "unresolved_contracts": unresolved})

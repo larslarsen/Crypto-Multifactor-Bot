@@ -28,7 +28,9 @@ MAX_FACTS_BYTES = 4 * 1024 * 1024
 _CLOSURES = frozenset({"automatic_settlement", "trading_ceases"})
 _RESTRICTIONS = frozenset({"new_positions_stop", "non_reduce_only_orders_stop", "close_only"})
 _TRANSITIONS = frozenset({"standard_perpetual_transition_start"})
-_EVENTS = _CLOSURES | _RESTRICTIONS | _TRANSITIONS | {"launch", "replacement_launch"}
+_EVENTS = _CLOSURES | _RESTRICTIONS | _TRANSITIONS | {
+    "launch", "replacement_launch", "confirmed_active",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +63,11 @@ def _dt(value: int) -> datetime:
     return datetime.fromtimestamp(value / 1000, timezone.utc)
 
 
+def _coverage_start(episode: Mapping[str, Any]) -> int:
+    return (episode["coverage_start_ms"] if episode["launch_ms"] is None
+            else episode["launch_ms"])
+
+
 def _source_url(code: str | None, sources: Mapping[str, Any]) -> str | None:
     if code is None:
         return None
@@ -89,6 +96,24 @@ def compile_contract_history(
     launch_terms: dict[tuple[str, int], dict[str, Any]] = {}
     unresolved: dict[str, set[str]] = {}
     unresolved_events: dict[str, list[dict[str, Any]]] = {}
+    unresolved_contracts = facts.get("unresolved_contracts", [])
+    _require(type(unresolved_contracts) is list, "unresolved contracts must be a list")
+    unresolved_seen: set[str] = set()
+    for item in unresolved_contracts:
+        _require(type(item) is dict, "unresolved contract is malformed")
+        symbol = item.get("native_symbol")
+        reasons = item.get("reasons")
+        evidence = item.get("events")
+        _require(type(symbol) is str and bool(symbol) and symbol not in unresolved_seen
+                 and type(reasons) is list and bool(reasons)
+                 and all(type(reason) is str and bool(reason) for reason in reasons)
+                 and type(evidence) is list
+                 and all(type(event) is dict and type(event.get("event")) is str
+                         and bool(event["event"]) for event in evidence),
+                 "unresolved contract evidence is malformed/duplicated")
+        unresolved_seen.add(symbol)
+        unresolved[symbol] = set(reasons)
+        unresolved_events[symbol] = list(evidence)
 
     def add(symbol: str, raw: Mapping[str, Any], *, source_url: str | None,
             source_ref: str, terms: Mapping[str, Any] | None = None) -> None:
@@ -98,6 +123,10 @@ def compile_contract_history(
         if raw.get("event_status") in {"cancelled", "postponed"} or raw.get("executable_boundary") is False:
             return
         _require(kind in _EVENTS, f"unknown execution event: {kind}")
+        if kind == "confirmed_active":
+            _require((terms is None or isinstance(terms, Mapping) and not terms)
+                     and not raw.get("terms_at_launch"),
+                     f"confirmed-active evidence cannot carry launch terms: {symbol}")
         when = _ms(raw.get("effective_at"))
         key = (symbol, kind, when)
         event = events.setdefault(key, {"native_symbol": symbol, "event": kind,
@@ -181,7 +210,8 @@ def compile_contract_history(
     episodes: list[dict[str, Any]] = []
     for symbol, ordered in sorted(by_symbol.items()):
         priority = {**{kind: 0 for kind in _CLOSURES}, "launch": 1,
-                    "replacement_launch": 1, **{kind: 2 for kind in _RESTRICTIONS},
+                    "replacement_launch": 1, "confirmed_active": 1,
+                    **{kind: 2 for kind in _RESTRICTIONS},
                     **{kind: 3 for kind in _TRANSITIONS}}
         ordered.sort(key=lambda item: (item["effective_ms"], priority[item["event"]], item["event"]))
         active: dict[str, Any] | None = None
@@ -198,13 +228,17 @@ def compile_contract_history(
                 else:
                     unresolved.setdefault(symbol, set()).add("replacement_without_recovered_episode")
                     unresolved_events.setdefault(symbol, []).append(event)
-            elif kind in {"launch", "replacement_launch"}:
+            elif kind in {"launch", "replacement_launch", "confirmed_active"}:
                 if active is not None:
                     raise ValueError(f"overlapping launches for {symbol}")
-                urls = event["launch_source_urls"]
+                confirmed = kind == "confirmed_active"
+                urls = event["source_urls"] if confirmed else event["launch_source_urls"]
                 _require(bool(urls), f"launch lacks documented source: {symbol}")
-                identity = {"venue": "BINANCE", "native_symbol": symbol,
-                            "launch_ms": when, "launch_source_url": urls[0]}
+                identity = ({"venue": "BINANCE", "native_symbol": symbol,
+                             "start_kind": "confirmed_active", "coverage_start_ms": when,
+                             "confirmation_source_url": urls[0]} if confirmed else
+                            {"venue": "BINANCE", "native_symbol": symbol,
+                             "launch_ms": when, "launch_source_url": urls[0]})
                 asset_id = ReferenceStore.asset_id_for(
                     asset_class=AssetClass.DERIVATIVE_UNDERLIER,
                     identity_key=json.dumps(identity, sort_keys=True, separators=(",", ":")),
@@ -218,12 +252,14 @@ def compile_contract_history(
                           "instrument_id": instrument_id, "instrument_version_id": fingerprint(
                               "iv", {"instrument_id": instrument_id, "version_seq": 1,
                                      "valid_from": dt_to_iso(_dt(when))}),
-                          "launch_ms": when, "execution_end_ms": None,
+                          "launch_ms": None if confirmed else when, "execution_end_ms": None,
                           "new_positions_stop_ms": None, "source_urls": list(event["source_urls"]),
-                          "launch_terms": launch_terms.get((symbol, when), {}),
+                          "launch_terms": {} if confirmed else launch_terms.get((symbol, when), {}),
                           "historical_terms_complete": False, "events": [event],
                           "pre_market_events": [], "related_events": [],
                           "history_complete": False}
+                if confirmed:
+                    active.update(coverage_start_ms=when, start_kind="confirmed_active")
                 episodes.append(active)
                 if symbol in unresolved:
                     unresolved[symbol].discard("snapshot_not_full_history")
@@ -233,13 +269,13 @@ def compile_contract_history(
                 unresolved.setdefault(symbol, set()).add("event_without_recovered_launch")
                 unresolved_events.setdefault(symbol, []).append(event)
             elif kind in _CLOSURES:
-                _require(when > active["launch_ms"], f"closure precedes launch for {symbol}")
+                _require(when > _coverage_start(active), f"closure precedes episode start for {symbol}")
                 active["execution_end_ms"] = when
                 active["events"].append(event)
                 active["source_urls"] = sorted(set(active["source_urls"]) | set(event["source_urls"]))
                 active = None
             elif kind in _RESTRICTIONS:
-                _require(when > active["launch_ms"], f"restriction precedes launch for {symbol}")
+                _require(when > _coverage_start(active), f"restriction precedes episode start for {symbol}")
                 prior = active["new_positions_stop_ms"]
                 active["new_positions_stop_ms"] = when if prior is None else min(prior, when)
                 active["events"].append(event)
@@ -248,9 +284,10 @@ def compile_contract_history(
                 active["pre_market_events"].append(event)
                 active["source_urls"] = sorted(set(active["source_urls"]) | set(event["source_urls"]))
 
-    episodes.sort(key=lambda item: (item["native_symbol"], item["launch_ms"]))
+    episodes.sort(key=lambda item: (item["native_symbol"], _coverage_start(item)))
     for episode in episodes:
-        launch = episode["launch_ms"]
+        launch = _coverage_start(episode)
+        confirmed = episode["launch_ms"] is None
         end = episode["execution_end_ms"]
         restriction = episode["new_positions_stop_ms"]
         _require(end is None or launch < end, "episode end precedes launch")
@@ -261,16 +298,20 @@ def compile_contract_history(
                       f"{episode['native_symbol']} venue contract episode", known)
         instrument = Instrument(episode["instrument_id"], asset.asset_id, venue_id,
                                 InstrumentType.PERPETUAL, known)
-        spec = {"scope": "launch_terms_only", "historical_terms_complete": False,
+        spec = {"scope": "confirmed_active_evidence_only" if confirmed else "launch_terms_only",
+                "historical_terms_complete": False,
                 "launch_terms": episode["launch_terms"]}
         version = InstrumentVersion(episode["instrument_version_id"], instrument.instrument_id,
                                     1, spec, window, evidence={"events": episode["events"]})
-        alias = AliasRecord(fingerprint("als", {"native_symbol": episode["native_symbol"],
-                                                   "instrument_id": instrument.instrument_id,
-                                                   "launch_ms": launch}),
+        alias_identity = {"native_symbol": episode["native_symbol"],
+                          "instrument_id": instrument.instrument_id}
+        alias_identity.update({"start_kind": "confirmed_active", "coverage_start_ms": launch}
+                              if confirmed else {"launch_ms": launch})
+        alias = AliasRecord(fingerprint("als", alias_identity),
                             episode["native_symbol"], normalize_alias(episode["native_symbol"]),
                             TargetKind.INSTRUMENT, instrument.instrument_id, window,
-                            venue_id=venue_id, evidence={"launch": episode["events"][0]},
+                            venue_id=venue_id, evidence={
+                                "confirmed_active" if confirmed else "launch": episode["events"][0]},
                             is_primary=True)
         assets.append(asset)
         instruments.append(instrument)
@@ -288,7 +329,8 @@ def compile_contract_history(
                  BiTemporalWindow(_dt(event["effective_ms"]), known),
                  evidence={"schedule_kind": kind, "announced_execution_end_not_completion": kind in _CLOSURES,
                            "source_refs": event["source_refs"], "source_urls": event["source_urls"]}))
-    document = {"document_type": "cex002_contract_history", "schema_version": 1,
+    schema = 2 if unresolved_contracts or any(item["launch_ms"] is None for item in episodes) else 1
+    document = {"document_type": "cex002_contract_history", "schema_version": schema,
                 "publication_sha256": publication_sha256, "facts_sha256": facts_sha256,
                 "known_from": dt_to_iso(known), "history_complete": False,
                 "episodes": episodes,

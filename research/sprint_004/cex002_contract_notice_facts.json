@@ -23627,6 +23627,148 @@
         }
       ],
       "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-BTCUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360033314152",
+      "source_code": "360033314152",
+      "source_raw_sha256": "7c5795c764f4f4bdbe89662140aba4d9e43eb17add72dd440ddc383e462fafa6",
+      "title": "Binance Futures Official Launch",
+      "native_symbols": [
+        "BTCUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2019-09-13T04:00:00Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "announced_public_access_after_prior_beta",
+          "source_claim": "Public Futures access starts at this time; earlier beta trading means this is not the first trade or initial launch."
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-ETHUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360036964392",
+      "source_code": "360036964392",
+      "source_raw_sha256": "01b93a6d0b5ef35b1868ba2021de8de92b8e5344d5a427ab077bf5b6edd01193",
+      "title": "Binance Futures Launches ETH/USDT Perpetual Contract - Up to 50x Leverage",
+      "native_symbols": [
+        "ETHUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2019-11-29T00:29:52Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "publisher_timestamp_of_already_launched_notice",
+          "source_claim": "The notice states this perpetual contract has already launched. The publisher timestamp bounds confirmation, not the first trade.",
+          "publisher_timestamp_ms": 1574987392000
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-BCHUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360037742632",
+      "source_code": "360037742632",
+      "source_raw_sha256": "efcff3714743951a3a578a17d7321b9e6965f3c1a872914d0c1d7ca1a373aa6a",
+      "title": "Binance Futures Launches BCH/USDT Perpetual Contract With Up to 75x Leverage",
+      "native_symbols": [
+        "BCHUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2019-12-19T13:09:03Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "publisher_timestamp_of_already_launched_notice",
+          "source_claim": "The notice states this perpetual contract has already launched. The publisher timestamp bounds confirmation, not the first trade.",
+          "publisher_timestamp_ms": 1576760943000
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-XRPUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038497311",
+      "source_code": "360038497311",
+      "source_raw_sha256": "fad5c39a36d07a11fc90de31e7bf4c28c91a22c7b5821d514e0936bf80e2c91a",
+      "title": "Binance Futures Launches XRP/USDT Perpetual Contract With Up to 75x Leverage",
+      "native_symbols": [
+        "XRPUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2020-01-06T11:42:09Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "publisher_timestamp_of_already_launched_notice",
+          "source_claim": "The notice states this perpetual contract has already launched. The publisher timestamp bounds confirmation, not the first trade.",
+          "publisher_timestamp_ms": 1578310929000
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-ARBUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2698359b2ceb45ff94365f060d616b88",
+      "source_code": "2698359b2ceb45ff94365f060d616b88",
+      "source_raw_sha256": "db44f9e56a71893444ed92957bdb6d34e4bd9939d28c87e9eeaa4b4f797e6f42",
+      "title": "Binance Futures Will Launch USDⓈ-M ARB Perpetual Contract with Up to 50x Leverage",
+      "native_symbols": [
+        "ARBUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2023-03-23T16:00:00Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "positive_trade_observation_before_bar_end",
+          "source_claim": "The notice names the contract but gives only an approximate launch. The pinned exchange bar proves trades occurred before this boundary.",
+          "market_observation": {
+            "publication_sha256": "5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d",
+            "file": {
+              "path": "data/.cex002_bar_1h/.partitions/ARBUSDT/2023-03/70e7f2c39ef97ff6c510f50ddadf8f5466fccbbbf1280dd7659f933eefd78a4b.parquet",
+              "sha256": "70e7f2c39ef97ff6c510f50ddadf8f5466fccbbbf1280dd7659f933eefd78a4b",
+              "bytes": 18337
+            },
+            "fields": {
+              "raw_object_ref": 0,
+              "source_row_ordinal": 0,
+              "venue_symbol": "ARBUSDT",
+              "open_time": 1679583600000,
+              "close_time": 1679587199999,
+              "open": "1.352500000000000000",
+              "high": "1.447900000000000000",
+              "low": "1.236100000000000000",
+              "close": "1.325500000000000000",
+              "volume": "191274266.700000000000000000",
+              "quote_volume": "259586005.855960000000000000",
+              "trade_count": 493373,
+              "source_reserved": 0,
+              "venue": "BINANCE_USDM",
+              "native_symbol": "ARBUSDT",
+              "canonical_instrument_id": null,
+              "canonical_instrument_version_id": null,
+              "reference_identity_state": "reference_identity_not_yet_created"
+            },
+            "assertion": "Trading occurred within this interval; its opening timestamp is not asserted to be a launch."
+          }
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
     }
   ],
   "reconciliation_notes": [
@@ -24754,6 +24896,49 @@
   "expansion_528": {
     "record": "research/sprint_004/528_CEX002_REMAINING_CONTRACT_NOTICES.md",
     "added_symbols": 583,
+    "history_complete": false,
+    "historical_terms_complete": false
+  },
+  "unresolved_contracts": [
+    {
+      "native_symbol": "GAIBUSDT",
+      "reasons": [
+        "launch_postponed_until_further_notice",
+        "retained_snapshot_pending_trading"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "effective_at": "2025-11-20T09:00:00Z",
+          "source_url": "https://www.binance.com/en/support/announcement/detail/fc28a90a1526430887c9887505861316",
+          "source_raw_sha256": "0fd1ad4d69143bf0531fc06a174c39171485d4e676b69dcb89cd907a66eb34d3",
+          "publisher_timestamp_ms": 1763627402981,
+          "source_claim": "The proposed launch is postponed with no replacement time stated.",
+          "original_proposal_url": "https://www.binance.com/en/support/announcement/detail/beabc4c45419425fa32a0b44a1bcfab8"
+        }
+      ]
+    }
+  ],
+  "expansion_529": {
+    "confirmed_active_symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BCHUSDT",
+      "XRPUSDT",
+      "ARBUSDT"
+    ],
+    "exact_launch_times_not_recovered": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BCHUSDT",
+      "XRPUSDT",
+      "ARBUSDT"
+    ],
+    "postponed_without_episode": [
+      "GAIBUSDT"
+    ],
     "history_complete": false,
     "historical_terms_complete": false
   }

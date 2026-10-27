@@ -1,0 +1,783 @@
+{
+  "ticket": "CEX-002",
+  "review": 529,
+  "prior_facts_sha256": "eb00c02acf071f2bcb2e63ae071d26546c77a18507f4b4bae6c8d1549f8e94fc",
+  "facts_sha256": "bfcd796895520c15260c26190aec0b504645608e710b61ae903be26a3f269f88",
+  "confirmed_active_facts": [
+    {
+      "fact_id": "review529-confirmed-BTCUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360033314152",
+      "source_code": "360033314152",
+      "source_raw_sha256": "7c5795c764f4f4bdbe89662140aba4d9e43eb17add72dd440ddc383e462fafa6",
+      "title": "Binance Futures Official Launch",
+      "native_symbols": [
+        "BTCUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2019-09-13T04:00:00Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "announced_public_access_after_prior_beta",
+          "source_claim": "Public Futures access starts at this time; earlier beta trading means this is not the first trade or initial launch."
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-ETHUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360036964392",
+      "source_code": "360036964392",
+      "source_raw_sha256": "01b93a6d0b5ef35b1868ba2021de8de92b8e5344d5a427ab077bf5b6edd01193",
+      "title": "Binance Futures Launches ETH/USDT Perpetual Contract - Up to 50x Leverage",
+      "native_symbols": [
+        "ETHUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2019-11-29T00:29:52Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "publisher_timestamp_of_already_launched_notice",
+          "source_claim": "The notice states this perpetual contract has already launched. The publisher timestamp bounds confirmation, not the first trade.",
+          "publisher_timestamp_ms": 1574987392000
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-BCHUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360037742632",
+      "source_code": "360037742632",
+      "source_raw_sha256": "efcff3714743951a3a578a17d7321b9e6965f3c1a872914d0c1d7ca1a373aa6a",
+      "title": "Binance Futures Launches BCH/USDT Perpetual Contract With Up to 75x Leverage",
+      "native_symbols": [
+        "BCHUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2019-12-19T13:09:03Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "publisher_timestamp_of_already_launched_notice",
+          "source_claim": "The notice states this perpetual contract has already launched. The publisher timestamp bounds confirmation, not the first trade.",
+          "publisher_timestamp_ms": 1576760943000
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-XRPUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/360038497311",
+      "source_code": "360038497311",
+      "source_raw_sha256": "fad5c39a36d07a11fc90de31e7bf4c28c91a22c7b5821d514e0936bf80e2c91a",
+      "title": "Binance Futures Launches XRP/USDT Perpetual Contract With Up to 75x Leverage",
+      "native_symbols": [
+        "XRPUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2020-01-06T11:42:09Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "publisher_timestamp_of_already_launched_notice",
+          "source_claim": "The notice states this perpetual contract has already launched. The publisher timestamp bounds confirmation, not the first trade.",
+          "publisher_timestamp_ms": 1578310929000
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    },
+    {
+      "fact_id": "review529-confirmed-ARBUSDT",
+      "source_url": "https://www.binance.com/en/support/announcement/detail/2698359b2ceb45ff94365f060d616b88",
+      "source_code": "2698359b2ceb45ff94365f060d616b88",
+      "source_raw_sha256": "db44f9e56a71893444ed92957bdb6d34e4bd9939d28c87e9eeaa4b4f797e6f42",
+      "title": "Binance Futures Will Launch USD\u24c8-M ARB Perpetual Contract with Up to 50x Leverage",
+      "native_symbols": [
+        "ARBUSDT"
+      ],
+      "events": [
+        {
+          "event": "confirmed_active",
+          "effective_at": "2023-03-23T16:00:00Z",
+          "exact_launch_time_known": false,
+          "continuity_after_confirmation": "reviewed_evidence_assumption_not_observed_continuous_tradability",
+          "confirmation_basis": "positive_trade_observation_before_bar_end",
+          "source_claim": "The notice names the contract but gives only an approximate launch. The pinned exchange bar proves trades occurred before this boundary.",
+          "market_observation": {
+            "publication_sha256": "5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d",
+            "file": {
+              "path": "data/.cex002_bar_1h/.partitions/ARBUSDT/2023-03/70e7f2c39ef97ff6c510f50ddadf8f5466fccbbbf1280dd7659f933eefd78a4b.parquet",
+              "sha256": "70e7f2c39ef97ff6c510f50ddadf8f5466fccbbbf1280dd7659f933eefd78a4b",
+              "bytes": 18337
+            },
+            "fields": {
+              "raw_object_ref": 0,
+              "source_row_ordinal": 0,
+              "venue_symbol": "ARBUSDT",
+              "open_time": 1679583600000,
+              "close_time": 1679587199999,
+              "open": "1.352500000000000000",
+              "high": "1.447900000000000000",
+              "low": "1.236100000000000000",
+              "close": "1.325500000000000000",
+              "volume": "191274266.700000000000000000",
+              "quote_volume": "259586005.855960000000000000",
+              "trade_count": 493373,
+              "source_reserved": 0,
+              "venue": "BINANCE_USDM",
+              "native_symbol": "ARBUSDT",
+              "canonical_instrument_id": null,
+              "canonical_instrument_version_id": null,
+              "reference_identity_state": "reference_identity_not_yet_created"
+            },
+            "assertion": "Trading occurred within this interval; its opening timestamp is not asserted to be a launch."
+          }
+        }
+      ],
+      "terms_at_launch": {},
+      "history_complete": false
+    }
+  ],
+  "unresolved_contracts": [
+    {
+      "native_symbol": "GAIBUSDT",
+      "reasons": [
+        "launch_postponed_until_further_notice",
+        "retained_snapshot_pending_trading"
+      ],
+      "events": [
+        {
+          "event": "launch",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "effective_at": "2025-11-20T09:00:00Z",
+          "source_url": "https://www.binance.com/en/support/announcement/detail/fc28a90a1526430887c9887505861316",
+          "source_raw_sha256": "0fd1ad4d69143bf0531fc06a174c39171485d4e676b69dcb89cd907a66eb34d3",
+          "publisher_timestamp_ms": 1763627402981,
+          "source_claim": "The proposed launch is postponed with no replacement time stated.",
+          "original_proposal_url": "https://www.binance.com/en/support/announcement/detail/beabc4c45419425fa32a0b44a1bcfab8"
+        }
+      ]
+    }
+  ],
+  "gaib_membership": {
+    "venue": "BINANCE_USDM",
+    "native_symbol": "GAIBUSDT",
+    "canonical_instrument_id": null,
+    "canonical_instrument_version_id": null,
+    "reference_identity_state": "reference_identity_not_yet_created",
+    "membership_class": "confirmed_perpetual",
+    "contract_type": "PERPETUAL",
+    "contract_metadata_state": "exchange_info_terms_available",
+    "contract_evidence_class": "authenticated_current_exchange_info",
+    "contract_evidence_source": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "contract_status": "PENDING_TRADING",
+    "underlying_type": "COIN",
+    "base_asset": "GAIB",
+    "quote_asset": "USDT",
+    "margin_asset": "USDT",
+    "pair": "GAIBUSDT",
+    "in_archive": true,
+    "in_current_exchange": true,
+    "onboard_ms": 1763629200000,
+    "delivery_ms": 4133404800000,
+    "closed_observed_ms": null,
+    "semantics_state": "supported",
+    "contract_snapshot_sha256": "9add90a7aadbde25ebd6304cd58898ddb0acffdffcee347b193523283d6d3f6b",
+    "evidence_records": 1
+  },
+  "selected_market_evidence": [
+    {
+      "symbol": "BTCUSDT",
+      "month": "2019-12",
+      "files": [
+        {
+          "path": "data/.cex002_bar_1h/.partitions/BTCUSDT/2019-12/081d43ac854639e818fc07297c70323eea579c17e70ab53ff2ed4d8503c1ca12.parquet",
+          "sha256": "081d43ac854639e818fc07297c70323eea579c17e70ab53ff2ed4d8503c1ca12",
+          "bytes": 6682
+        }
+      ],
+      "rows": 24,
+      "first_rows": [
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BTCUSDT",
+          "open_time": 1577750400000,
+          "close_time": 1577753999999,
+          "open": "7240.800000000000000000",
+          "high": "7250.000000000000000000",
+          "low": "7190.000000000000000000",
+          "close": "7246.970000000000000000",
+          "volume": "6603.434000000000000000",
+          "quote_volume": "47661736.628260000000000000",
+          "trade_count": 12050,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        },
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "BTCUSDT",
+          "open_time": 1577754000000,
+          "close_time": 1577757599999,
+          "open": "7247.350000000000000000",
+          "high": "7264.990000000000000000",
+          "low": "7237.530000000000000000",
+          "close": "7260.230000000000000000",
+          "volume": "2689.985000000000000000",
+          "quote_volume": "19503224.228330000000000000",
+          "trade_count": 4763,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BTCUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "month": "2019-12",
+      "files": [
+        {
+          "path": "data/.cex002_bar_1h/.partitions/ETHUSDT/2019-12/02a11a6ded01e72d0aaa84bf594a7b94fe8a83db88107eced7b403a0bc6d6e8e.parquet",
+          "sha256": "02a11a6ded01e72d0aaa84bf594a7b94fe8a83db88107eced7b403a0bc6d6e8e",
+          "bytes": 6605
+        }
+      ],
+      "rows": 24,
+      "first_rows": [
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "ETHUSDT",
+          "open_time": 1577750400000,
+          "close_time": 1577753999999,
+          "open": "131.530000000000000000",
+          "high": "131.560000000000000000",
+          "low": "130.660000000000000000",
+          "close": "131.470000000000000000",
+          "volume": "28387.283000000000000000",
+          "quote_volume": "3723181.031710000000000000",
+          "trade_count": 2377,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "ETHUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        },
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "ETHUSDT",
+          "open_time": 1577754000000,
+          "close_time": 1577757599999,
+          "open": "131.470000000000000000",
+          "high": "131.830000000000000000",
+          "low": "131.230000000000000000",
+          "close": "131.810000000000000000",
+          "volume": "15232.736000000000000000",
+          "quote_volume": "2003761.263940000000000000",
+          "trade_count": 1168,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "ETHUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        }
+      ]
+    },
+    {
+      "symbol": "BCHUSDT",
+      "month": "2019-12",
+      "files": [
+        {
+          "path": "data/.cex002_bar_1h/.partitions/BCHUSDT/2019-12/b9fb8fb4207b988846a14d158bc75cd2651dbc81d675799af65ec7385fac81c1.parquet",
+          "sha256": "b9fb8fb4207b988846a14d158bc75cd2651dbc81d675799af65ec7385fac81c1",
+          "bytes": 6613
+        }
+      ],
+      "rows": 24,
+      "first_rows": [
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "BCHUSDT",
+          "open_time": 1577750400000,
+          "close_time": 1577753999999,
+          "open": "208.450000000000000000",
+          "high": "209.940000000000000000",
+          "low": "207.250000000000000000",
+          "close": "209.860000000000000000",
+          "volume": "9994.915000000000000000",
+          "quote_volume": "2087402.390910000000000000",
+          "trade_count": 1571,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BCHUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        },
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "BCHUSDT",
+          "open_time": 1577754000000,
+          "close_time": 1577757599999,
+          "open": "209.890000000000000000",
+          "high": "211.100000000000000000",
+          "low": "209.380000000000000000",
+          "close": "210.320000000000000000",
+          "volume": "10470.028000000000000000",
+          "quote_volume": "2200308.840920000000000000",
+          "trade_count": 1574,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "BCHUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        }
+      ]
+    },
+    {
+      "symbol": "XRPUSDT",
+      "month": "2020-01",
+      "files": [
+        {
+          "path": "data/.cex002_bar_1h/.partitions/XRPUSDT/2020-01/6e6b16cf04beb223d348b7e450efb70c5be73535675d1539d1dcabfe49c3769f.parquet",
+          "sha256": "6e6b16cf04beb223d348b7e450efb70c5be73535675d1539d1dcabfe49c3769f",
+          "bytes": 37403
+        }
+      ],
+      "rows": 616,
+      "first_rows": [
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "XRPUSDT",
+          "open_time": 1578297600000,
+          "close_time": 1578301199999,
+          "open": "0.197000000000000000",
+          "high": "0.204100000000000000",
+          "low": "0.197000000000000000",
+          "close": "0.204100000000000000",
+          "volume": "6306.400000000000000000",
+          "quote_volume": "1243.656220000000000000",
+          "trade_count": 4,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "XRPUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        },
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "XRPUSDT",
+          "open_time": 1578301200000,
+          "close_time": 1578304799999,
+          "open": "0.201300000000000000",
+          "high": "0.222200000000000000",
+          "low": "0.200400000000000000",
+          "close": "0.212700000000000000",
+          "volume": "6676329.300000000000000000",
+          "quote_volume": "1388223.659410000000000000",
+          "trade_count": 1406,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "XRPUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        }
+      ]
+    },
+    {
+      "symbol": "ARBUSDT",
+      "month": "2023-03",
+      "files": [
+        {
+          "path": "data/.cex002_bar_1h/.partitions/ARBUSDT/2023-03/70e7f2c39ef97ff6c510f50ddadf8f5466fccbbbf1280dd7659f933eefd78a4b.parquet",
+          "sha256": "70e7f2c39ef97ff6c510f50ddadf8f5466fccbbbf1280dd7659f933eefd78a4b",
+          "bytes": 18337
+        }
+      ],
+      "rows": 201,
+      "first_rows": [
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 0,
+          "venue_symbol": "ARBUSDT",
+          "open_time": 1679583600000,
+          "close_time": 1679587199999,
+          "open": "1.352500000000000000",
+          "high": "1.447900000000000000",
+          "low": "1.236100000000000000",
+          "close": "1.325500000000000000",
+          "volume": "191274266.700000000000000000",
+          "quote_volume": "259586005.855960000000000000",
+          "trade_count": 493373,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "ARBUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        },
+        {
+          "raw_object_ref": 0,
+          "source_row_ordinal": 1,
+          "venue_symbol": "ARBUSDT",
+          "open_time": 1679587200000,
+          "close_time": 1679590799999,
+          "open": "1.325600000000000000",
+          "high": "1.358500000000000000",
+          "low": "1.213100000000000000",
+          "close": "1.304300000000000000",
+          "volume": "220164583.600000000000000000",
+          "quote_volume": "280680645.808550000000000000",
+          "trade_count": 493911,
+          "source_reserved": 0,
+          "venue": "BINANCE_USDM",
+          "native_symbol": "ARBUSDT",
+          "canonical_instrument_id": null,
+          "canonical_instrument_version_id": null,
+          "reference_identity_state": "reference_identity_not_yet_created"
+        }
+      ]
+    }
+  ],
+  "diagnostic_probes": [
+    {
+      "exit_code": 1,
+      "error": "no declared files match the selection",
+      "reason": "Probed pre-release BTC/ETH months; no market files read."
+    },
+    {
+      "exit_code": 1,
+      "error": "Cex002ReleaseReader has no attribute files",
+      "reason": "Metadata-only inspection used wrong attribute; corrected to public select API."
+    }
+  ],
+  "historical_terms_recovery_limits": {
+    "status": "public_notices_do_not_establish_complete_lifetime_rules",
+    "source_urls": [
+      "https://www.binance.com/en/support/announcement/detail/76719bbaeeb847bbac4daa2906fcdcc0",
+      "https://www.binance.com/en/support/faq/detail/360033161972",
+      "https://www.binance.com/en/support/faq/detail/360033162192"
+    ],
+    "findings": [
+      "The 2021 minimum-notional announcement establishes a $1 threshold from 2021-01-25 07:00 UTC and exempts reduce-only orders. It explicitly permits subsequent changes without announcements.",
+      "The present contract FAQ also permits unannounced minimum-order threshold changes; current API values are not historical versions.",
+      "Public notices can recover some dated changes but cannot by themselves prove that every past order constraint is known. Historical snapshots or explicit execution assumptions are needed where the archive is incomplete."
+    ],
+    "decision": "Do not claim that further announcement crawling alone will produce complete historical exchange rules. Preserve missing values, enumerate remaining acceptance items, and distinguish data transport from executable order simulation."
+  },
+  "status": "ACCEPTED_COMPONENT_CEX002_IN_PROGRESS",
+  "compilation": {
+    "command": [
+      "/home/lars/Crypto_Multifactor_Bot/.venv/bin/python",
+      "-m",
+      "cryptofactors.reference.cex002_contract_history",
+      "--facts",
+      "/tmp/cex002_notice_recovery/facts529.json",
+      "--facts-sha",
+      "bfcd796895520c15260c26190aec0b504645608e710b61ae903be26a3f269f88",
+      "--publication-sha",
+      "5ea22270b71064c94c4f6dc60f3f045219742a3130cfdb1293b6cbe47a99a30d",
+      "--known-from",
+      "2026-10-27T18:20:52Z"
+    ],
+    "cwd": "/home/lars/Crypto_Multifactor_Bot",
+    "environment": {
+      "PYTHONPATH": "src"
+    },
+    "exit_code": 0,
+    "known_from": "2026-10-27T18:20:52Z",
+    "companion_path": "data/.cex002_contract_history/review529-20261027.json",
+    "companion_sha256": "6ef47558eff2b3d3b30fbd8569dd96e0f7b7863bd8b310025cf641f7e72034a9",
+    "companion_bytes": 1290098,
+    "facts_sha256": "bfcd796895520c15260c26190aec0b504645608e710b61ae903be26a3f269f88",
+    "episodes": 782,
+    "symbols": 770,
+    "prior_777_episode_records_unchanged": true,
+    "confirmed_active_episodes": 5,
+    "exact_launch_episodes": 777,
+    "postponed_without_episode": [
+      "GAIBUSDT"
+    ]
+  },
+  "consumer": {
+    "companion_sha256": "6ef47558eff2b3d3b30fbd8569dd96e0f7b7863bd8b310025cf641f7e72034a9",
+    "schema_version": 2,
+    "selected_market_files": 5,
+    "selected_market_bytes": 75640,
+    "results": [
+      {
+        "symbol": "BTCUSDT",
+        "month": "2019-12",
+        "coverage_start_ms": 1568347200000,
+        "launch_ms": null,
+        "rows": 24,
+        "classifications": {
+          "within_known_episode": 24
+        },
+        "delivered_open_time": 1577750400000,
+        "native_callbacks": 1,
+        "original_field_callbacks": 1,
+        "original_fields_unchanged": true,
+        "earlier_bars_refused": [],
+        "boundary_checks": "before/at/crossing/knowledge passed"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "month": "2019-12",
+        "coverage_start_ms": 1574987392000,
+        "launch_ms": null,
+        "rows": 24,
+        "classifications": {
+          "within_known_episode": 24
+        },
+        "delivered_open_time": 1577750400000,
+        "native_callbacks": 1,
+        "original_field_callbacks": 1,
+        "original_fields_unchanged": true,
+        "earlier_bars_refused": [],
+        "boundary_checks": "before/at/crossing/knowledge passed"
+      },
+      {
+        "symbol": "BCHUSDT",
+        "month": "2019-12",
+        "coverage_start_ms": 1576760943000,
+        "launch_ms": null,
+        "rows": 24,
+        "classifications": {
+          "within_known_episode": 24
+        },
+        "delivered_open_time": 1577750400000,
+        "native_callbacks": 1,
+        "original_field_callbacks": 1,
+        "original_fields_unchanged": true,
+        "earlier_bars_refused": [],
+        "boundary_checks": "before/at/crossing/knowledge passed"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "month": "2020-01",
+        "coverage_start_ms": 1578310929000,
+        "launch_ms": null,
+        "rows": 616,
+        "classifications": {
+          "before_confirmed_active": 3,
+          "crosses_boundary": 1,
+          "within_known_episode": 612
+        },
+        "delivered_open_time": 1578312000000,
+        "native_callbacks": 1,
+        "original_field_callbacks": 1,
+        "original_fields_unchanged": true,
+        "earlier_bars_refused": [
+          {
+            "open_time": 1578297600000,
+            "reason": "before_confirmed_active"
+          },
+          {
+            "open_time": 1578301200000,
+            "reason": "before_confirmed_active"
+          },
+          {
+            "open_time": 1578304800000,
+            "reason": "before_confirmed_active"
+          },
+          {
+            "open_time": 1578308400000,
+            "reason": "crosses_boundary"
+          }
+        ],
+        "boundary_checks": "before/at/crossing/knowledge passed"
+      },
+      {
+        "symbol": "ARBUSDT",
+        "month": "2023-03",
+        "coverage_start_ms": 1679587200000,
+        "launch_ms": null,
+        "rows": 201,
+        "classifications": {
+          "before_confirmed_active": 1,
+          "within_known_episode": 200
+        },
+        "delivered_open_time": 1679587200000,
+        "native_callbacks": 1,
+        "original_field_callbacks": 1,
+        "original_fields_unchanged": true,
+        "earlier_bars_refused": [
+          {
+            "open_time": 1679583600000,
+            "reason": "before_confirmed_active"
+          }
+        ],
+        "boundary_checks": "before/at/crossing/knowledge passed"
+      }
+    ],
+    "gaib_postponement_retained": {
+      "events": [
+        {
+          "effective_at": "2025-11-20T09:00:00Z",
+          "event": "launch",
+          "event_status": "postponed",
+          "executable_boundary": false,
+          "original_proposal_url": "https://www.binance.com/en/support/announcement/detail/beabc4c45419425fa32a0b44a1bcfab8",
+          "publisher_timestamp_ms": 1763627402981,
+          "source_claim": "The proposed launch is postponed with no replacement time stated.",
+          "source_raw_sha256": "0fd1ad4d69143bf0531fc06a174c39171485d4e676b69dcb89cd907a66eb34d3",
+          "source_url": "https://www.binance.com/en/support/announcement/detail/fc28a90a1526430887c9887505861316"
+        }
+      ],
+      "native_symbol": "GAIBUSDT",
+      "reasons": [
+        "launch_postponed_until_further_notice",
+        "retained_snapshot_pending_trading"
+      ]
+    },
+    "gaib_bar_files": 0,
+    "gaib_unknown_refused": true,
+    "history_complete": false,
+    "historical_terms_complete": false
+  },
+  "source_sha256": {
+    "src/cryptofactors/reference/cex002_contract_history.py": "73f6ab8308d58509bd94929bd428d50b5c95bee1ecf3a0e2a1f3b49aea45b143",
+    "tests/reference/test_cex002_contract_history.py": "288537e36f58f019ddd0fb36f93498ac439c8f93f8afaa64d75901a3558dd7fa",
+    "/home/lars/Harmonic_Trader/src/harmonic_trader/data/cex002_history.py": "e57476b2e180de3c6deea90ed712cd7e56ec234ee9a16db52e4c18765a848392",
+    "/home/lars/Harmonic_Trader/tests/test_cex002_history.py": "308509aeace74bbdccdc82588c6370770869dc75280cb62ec3f8657f120e180c"
+  },
+  "checks": {
+    "checks": [
+      {
+        "status": "fulfilled",
+        "value": {
+          "label": "cmb_pytest",
+          "args": {
+            "cmd": "PYTHONPATH=src .venv/bin/python -m pytest tests/reference/test_cex002_contract_history.py -q --tb=short",
+            "login": false,
+            "max_output_tokens": 2500,
+            "yield_time_ms": 1000
+          },
+          "result": {
+            "chunk_id": "c7e3a6",
+            "wall_time_seconds": 0.600293308,
+            "exit_code": 0,
+            "original_token_count": 20,
+            "output": "......................                                                   [100%]\n"
+          }
+        }
+      },
+      {
+        "status": "fulfilled",
+        "value": {
+          "label": "ht_pytest",
+          "args": {
+            "cmd": "PYTHONPATH=src .venv/bin/python -m pytest tests/test_cex002_history.py -q --tb=short",
+            "workdir": "/home/lars/Harmonic_Trader",
+            "login": false,
+            "max_output_tokens": 2500,
+            "yield_time_ms": 1000
+          },
+          "result": {
+            "chunk_id": "347c06",
+            "wall_time_seconds": 1.001306886,
+            "session_id": 2099,
+            "original_token_count": 5,
+            "output": ".................."
+          }
+        }
+      },
+      {
+        "status": "fulfilled",
+        "value": {
+          "label": "cmb_ruff",
+          "args": {
+            "cmd": ".venv/bin/python -m ruff check src/cryptofactors/reference/cex002_contract_history.py tests/reference/test_cex002_contract_history.py",
+            "login": false,
+            "max_output_tokens": 1500
+          },
+          "result": {
+            "chunk_id": "5e3c93",
+            "wall_time_seconds": 0.009882476,
+            "exit_code": 0,
+            "original_token_count": 5,
+            "output": "All checks passed!\n"
+          }
+        }
+      },
+      {
+        "status": "fulfilled",
+        "value": {
+          "label": "ht_ruff",
+          "args": {
+            "cmd": ".venv/bin/python -m ruff check src/harmonic_trader/data/cex002_history.py tests/test_cex002_history.py",
+            "workdir": "/home/lars/Harmonic_Trader",
+            "login": false,
+            "max_output_tokens": 1500
+          },
+          "result": {
+            "chunk_id": "0b90a6",
+            "wall_time_seconds": 0,
+            "exit_code": 2,
+            "original_token_count": 42,
+            "output": "ruff failed\n  Cause: Failed to create temporary file\n  Cause: Read-only file system (os error 30) at path \"/home/lars/Harmonic_Trader/.ruff_cache/0.15.22/.tmpzWWDXA\"\n"
+          }
+        }
+      }
+    ],
+    "ht_pytest_final": {
+      "chunk_id": "53c6e5",
+      "wall_time_seconds": 8.59e-06,
+      "exit_code": 0,
+      "original_token_count": 160,
+      "output": "..............                                         [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.13/site-packages/_pytest/cacheprovider.py:469\n  /home/lars/Harmonic_Trader/.venv/lib/python3.13/site-packages/_pytest/cacheprovider.py:469: PytestCacheWarning: cache could not write path /home/lars/Harmonic_Trader/.pytest_cache/v/cache/nodeids: [Errno 30] Read-only file system: '/home/lars/Harmonic_Trader/.pytest_cache/v/cache/nodeids'\n    config.cache.set(\"cache/nodeids\", sorted(self.cached_nodeids))\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n"
+    },
+    "ht_ruff_retry": {
+      "chunk_id": "920283",
+      "wall_time_seconds": 1.073e-05,
+      "exit_code": 0,
+      "original_token_count": 5,
+      "output": "All checks passed!\n"
+    }
+  },
+  "consumer_command": {
+    "command": "PYTHONPATH=src .venv/bin/python /tmp/cex002_notice_recovery/check_consumer529.py > /tmp/cex002_notice_recovery/consumer529.log 2>&1",
+    "cwd": "/home/lars/Harmonic_Trader",
+    "exit_code": 0,
+    "session_id": 26720
+  },
+  "repo_control": {
+    "command": "python3 scripts/check_repo_control.py",
+    "exit_code": 0,
+    "output": "Repo control check: PASS"
+  },
+  "remaining_work": [
+    "Complete the outstanding bounded OI source/notional and funding sign examples and consolidate existing release evidence; do not rerun already accepted full proofs.",
+    "Treat missing historical order constraints as explicit data gaps. Announcement crawling cannot prove a complete rulebook because some changes were unannounced. No exact order-simulation claim is accepted.",
+    "Historical receipt times remain unknown; existing event-time playback and reviewed-contract evidence assumptions stay explicit."
+  ]
+}

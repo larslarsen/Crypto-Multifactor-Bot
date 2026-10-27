@@ -3,52 +3,52 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer — remaining historical coverage and dated specifications
+Next required actor: Lead Quantitative Finance Researcher/Engineer — bounded final evidence and consolidated release report
 Next ticket: NONE
 Next ticket authorized: NONE
 
-## Current action
+## Current accepted state
 
-The dated companion now contains 777 episodes across 765 symbols, adding
-583 symbols in Review528. 193 prior episode records remain exactly unchanged; BNX's missing final closure is corrected without changing its identity or launch terms.
-All 127 SETTLING snapshot symbols and all 73 names absent from the snapshot now have
-recovered launch and closing schedules. These are reviewed schedules, not complete
-lifetime specifications or a claim of continuous tradability.
+All 771 names are accounted for: 770 have dated contract coverage, including all 200
+closed or snapshot-missing names; GAIB is explicitly postponed, pending in the retained
+snapshot and has no bar partitions. Review529 adds confirmed-active BTC/ETH/BCH/XRP/ARB
+coverage without inventing exact launches. Its 782 episodes retain all 777 prior records
+unchanged. Earlier unconfirmed rows remain inspectable but are refused by native projection.
 
-Current companion: data/.cex002_contract_history/review528-20261027.json
-SHA256: 7db1339fa6ac9bc1d8a49e96e658f8448d9312f3732f8f529372203c4e3e40f4
-Retrospective known_from: 2026-10-27T17:39:13Z. Size: 1,278,107 bytes.
-The existing compiler and HT reader passed; 6 selected market files / 166,747
-bytes verified actual callbacks, corrected launches, closing/order restrictions, and
-unchanged funding fields without payment entitlement. No production source, market data,
-broad suite or full replay changed or ran. All notice recovery jobs exited 0.
+Companion: data/.cex002_contract_history/review529-20261027.json
+SHA256: 6ef47558eff2b3d3b30fbd8569dd96e0f7b7863bd8b310025cf641f7e72034a9
+Retrospective known_from: 2026-10-27T18:20:52Z; size 1,290,098 bytes.
+54 focused tests and scoped Ruff passed. Five real market files / 75,640 bytes verified
+one native and original-field callback per newly covered symbol, with earlier/crossing bars
+refused. GAIB remains excluded with explicit postponement evidence. All jobs are terminal.
+Source checks, warning/failed probes, exact commands and pins are recorded in Review529.
 
-6 symbols remain without episodes: ARBUSDT, BCHUSDT, BTCUSDT, ETHUSDT, GAIBUSDT, XRPUSDT.
-Evidence, exact commands, file pins and remaining work:
-research/sprint_004/cex002_contract_history_expansion_528.json and
-research/sprint_004/528_CEX002_REMAINING_CONTRACT_NOTICES.md.
+## Next action — finish existing evidence, do not restart history recovery
 
-## Continue from here
+Use the bounded OI source/notional and realized funding sign examples from Review525,
+then consolidate the accepted eleven-product, coverage, consumer, replay and quarantine
+records into an acceptance-item map. Review529 authorizes the reviewer to perform these
+small queries directly: at most three existing partitions per product and 12 examples;
+no broad-suite prerequisite. Preserve exact decimals, lineage and source identities.
 
-Resolve the explicitly listed remaining launch-time uncertainties and dated specifications.
-Reuse cached notices under /tmp/cex002_notice_recovery and the accepted facts; do not
-restart completed download batches. Launch-only terms do not establish later tick sizes,
-funding intervals, quantity limits or pre-market transition timing. Historical receipt
-times remain unknown; event-time playback is an explicit assumption.
+Historical minimum-order thresholds can change without announcements. More notice crawling
+cannot prove a complete lifetime rulebook. Keep unknown dated constraints explicit; data
+callbacks do not certify executable order sizes, fills, margin or funding entitlement.
+Historical receipt times remain unknown and event-time playback is an explicit assumption.
+Do not silently carry current constraints backward or describe all trading rules as known.
 
-The owner-authorized reviewer may finish this CEX repair directly; Hermes is optional.
-Independent senior source authorship remains required if a source change is needed.
-Preserve the complete eleven-product release and accepted full storage/consumer proofs.
-Do not resume the stopped broad suite, repeat the full replay, rewrite market files,
-start a strategy/scored study, touch unrelated DEX work or authorize another ticket.
-HT-005's reader is accepted as a component; full CEX-002 acceptance is not claimed.
+The owner permits the reviewer to validate, generate companions and commit/push this repair;
+Hermes is optional. Independent senior authorship remains required for source changes.
+Do not resume the stopped broad suite, repeat full storage/readback/replay proofs, rewrite
+market files, launch a model/scored study, touch unrelated DEX work or start another ticket.
+HT-005 is accepted as a component; full CEX-002 acceptance remains unclaimed.
 
 Governing documents:
 
-- research/sprint_004/528_CEX002_REMAINING_CONTRACT_NOTICES.md
-- research/sprint_004/527_CEX002_CONTRACT_HISTORY_EXPANSION.md
-- research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md
+- research/sprint_004/529_CEX002_CONFIRMED_ACTIVE_HISTORY.md
+- research/sprint_004/cex002_confirmed_history_529.json
+- docs/adr/0042-confirmed-active-contract-boundaries.md
 - docs/adr/0041-cex002-dated-contract-companion.md
 - docs/adr/0040-cex002-accepted-proof-reuse.md
-- research/sprint_004/474_CEX002_FIXED_CLOSEOUT_AND_PRICE_STATE_SOURCE_AUTHORIZATION.md
+- research/sprint_004/525_CEX002_FINAL_EVIDENCE_AND_ACCEPTANCE_AUTHORIZATION.md
 - tickets/CEX-002.md
