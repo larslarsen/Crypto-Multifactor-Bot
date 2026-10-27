@@ -410,3 +410,116 @@ The remaining work is applying these identities/restrictions, resolving required
 specifications and per-product availability, and reviewing the actual consumer behavior.
 The broad stopped suite and full storage proof are not to be rerun. CEX-002 remains
 IN_PROGRESS; reviewer remains the next required actor; next ticket and authorization NONE.
+
+
+## Dated contract companion — bounded source authorization
+
+The owner's continued instruction authorizes implementation of the application decisions.
+ADR-0041 defines a small reference companion without changing accepted market files.
+The reviewer selects the existing GPT-6 Sol High senior (bundle_correction_sol): it authored
+accepted HT-004 and the corrected CEX release work. One senior only; GPT-6.1 is not selected
+as developer. Direct bounded delegation continues the owner's established permission.
+
+Exact CMB senior-owned paths:
+- src/cryptofactors/reference/cex002_contract_history.py
+- tests/reference/test_cex002_contract_history.py
+
+Exact HT senior-owned paths in /tmp/harmonic_cex002_delivery, under HT-005:
+- src/harmonic_trader/data/cex002_history.py
+- src/harmonic_trader/integration/cex002_data.py
+- src/harmonic_trader/cex002.py
+- tests/test_cex002_history.py
+
+Author source/tests only. No tests, API probes, Git, packages, real data, database writes,
+research/governance edits or publication by senior. Return frozen hashes and stop for review.
+CMB integration and checks belong to Hermes. HT checks and integration belong to its reviewer.
+
+### Frozen implementation contract
+
+CMB module: pure compile function accepting the facts mapping, exact facts SHA256, market
+publication SHA256 and explicit timezone-aware known_from. A small module CLI accepts
+--facts, --facts-sha, --publication-sha and --known-from, authenticates a regular non-symlink
+facts file bounded to 4MiB and prints deterministic JSON to stdout. No network, market files,
+SQLite writes, implicit clock or output-file mutation. Expose the existing REF-001 typed
+Asset, Instrument, InstrumentVersion, AliasRecord and ListingEvent objects in the compile
+result as well as a JSON-serializable document; use existing identity helpers/fingerprint.
+
+Document: document_type=cex002_contract_history, schema_version=1, publication_sha256,
+facts_sha256, known_from, history_complete=false, episodes and unresolved_symbols. Each
+sorted episode has native_symbol, asset_id, instrument_id, instrument_version_id,
+launch_ms, execution_end_ms (nullable), new_positions_stop_ms (nullable), source_urls,
+launch_terms, historical_terms_complete=false. Preserve restriction event kind and all
+source references in evidence; include pre-market regime/transition events separately.
+IDs use venue, native symbol, explicit launch timestamp and documented launch source as
+identity material, never native symbol alone or global facts digest. Added unrelated facts
+must not change an existing episode ID. Use DERIVATIVE_UNDERLIER for the conservative asset
+identity as specified in ADR-0041. Version contract_spec labels launch_terms only; it must
+not imply those terms persisted through the episode.
+
+Expand grouped notices by their native_symbols. Read both notices and snapshot_episode_reviews
+cases. Merge identical symbol/event/time facts with their evidence; do not duplicate the
+same closure from both sections. Ignore cancelled/postponed events and any event with
+executable_boundary=false. Unknown event types that affect execution must raise, not silently
+vanish. Associate each restriction/closure with its chronologically preceding launch; reject
+conflicting overlapping launches or impossible ordering rather than guessing. Sources without
+a recovered launch remain unresolved, with explicit reason; do not drop them. Repeated launch
+and closure pairs become separate instruments. Explicit snapshot case terms supplement the
+matching launch only. Non-execution pre-market transition facts must survive in evidence and
+must not split a position book. Never consume a future fact by silently assigning its effective
+time to known_from. All original histories remain incomplete.
+
+Harmonic consumer: ContractHistory loads a regular non-symlink companion bounded to 4MiB,
+requires caller-supplied SHA256 and matching publication SHA, validates types/intervals/unique
+IDs and rejects overlapping episodes. No CMB imports. Expose classify(symbol,start_ms,end_ms,
+knowledge_time) with an explicit half-open observation interval. Knowledge earlier than the
+companion date returns unknown, not a current reconstruction. Classifications distinguish
+within_known_episode, before_known_launch, between_episodes, at_or_after_execution_end,
+new_positions_restricted, crosses_boundary, unknown_symbol and unknown_at_knowledge_time.
+These describe the recovered schedule, not certified trade availability. Return episode IDs,
+evidence and incomplete-history flag; do not infer a terminal payment from a rate timestamp.
+
+Expose annotate_row/iter_history_rows using original ReleasedRow without mutating its fields.
+Bars/flow/price-state use [open_time,close_time+1); point observations use [t,t+1ms); liquidation
+uses the original UTC-day interval. Metadata/gaps remain accessible with no invented market
+interval. Resolve symbol from the documented row field when partition-native_symbol is null;
+validate conflicts with a non-null partition symbol. Funding annotation always says payment
+eligibility is not established, preserving even a boundary+5ms observation.
+
+Add optional history and explicit knowledge_time/reference_policy parameters to native_bar
+and deliver_to_nautilus. With history, require reference_policy=reviewed_notices_assumption,
+a matching publication binding, and classify the FULL bar interval as within_known_episode;
+otherwise raise a specific Cex002ReaderError. Use the companion canonical instrument ID as
+Nautilus Symbol under BINANCE, so successive contracts cannot share a BarType. Preserve raw
+venue_symbol in original-field custom events. Mixed-episode batches must not lose callbacks:
+either subscribe to every distinct BarType or reject before engine creation with a clear
+single-episode requirement. Never silently drop rows or book funding. Without history retain
+HT-004 explicit event-time-only behavior and label it unqualified.
+
+CLI rows/nautilus accept --history PATH --history-sha SHA --knowledge-time UTC and, for
+history-aware native projection, --reference-policy reviewed_notices_assumption. Require
+complete option combinations. Rows print reference classification alongside original fields;
+Nautilus output identifies qualification and companion digest. Existing all-product inventory
+and raw access remain unchanged. No strategy, orders or execution-model claim.
+
+Synthetic tests must cover actual cancellations (FTT/BTT patterns), closure/relaunch and
+LIT/PUMP identity separation, unrelated-fact identity stability, restriction vs settlement,
+whole-bar crossing and exact boundaries, terminal funding observation preservation, knowledge
+cutoff, source/payload digest and publication mismatch, malformed/overlapping episodes, and
+real Nautilus canonical BarType creation/delivery. Do not use a fake Nautilus module.
+
+### Publication and validation ownership
+
+Reviewer governance publication is now exactly CURRENT_TASK.md, tickets/CEX-002.md, this
+Review525 and docs/adr/0041-cex002-dated-contract-companion.md (paths relative to repo, with
+CURRENT_TASK under docs/handoff and Review525 under research/sprint_004). Existing research
+attachments are read-only for this drop. HT reviewer publishes its own HT-005 governance.
+
+After source inspection, Hermes may be assigned these exact CMB checks once:
+PYTHONPATH=src .venv/bin/python -m pytest tests/reference/test_cex002_contract_history.py tests/reference/test_ref_store.py -q --tb=short
+.venv/bin/python -m ruff check src/cryptofactors/reference/cex002_contract_history.py tests/reference/test_cex002_contract_history.py
+python scripts/check_repo_control.py
+
+Do not run yet: reviewer must inspect the frozen drop and issue the bounded Hermes prompt.
+No broad suite, full storage proof or market scan. Any failure stops for a targeted source
+correction. Real companion generation is separately bounded after passing source validation;
+it may read the small facts attachment only. CEX-002 remains IN_PROGRESS; next ticket NONE.

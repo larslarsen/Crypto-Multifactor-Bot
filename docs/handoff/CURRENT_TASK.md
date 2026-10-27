@@ -3,11 +3,17 @@
 Ticket: CEX-002
 State: IN_PROGRESS
 Final reviewer: Lead Quantitative Finance Researcher/Engineer
-Next required actor: Lead Quantitative Finance Researcher/Engineer — finish dated contract authority and define its consumer application
+Next required actor: Sr Dev — existing GPT-6 Sol High — bounded dated-contract companion and HT consumer source
 Next ticket: NONE
 Next ticket authorized: NONE
 
 ## Current action
+
+Active source assignment: Review525 final section / ADR-0041. Existing senior authors the
+small CMB dated-contract compiler and HT-005 consumer changes. No tests or integration by
+senior; reviewer inspects, Hermes validates CMB, HT reviewer validates its consumer.
+Accepted market files remain unchanged. No next CMB ticket is authorized.
+
 
 The deliverable remains survivorship-aware CEX data usable in NautilusTrader. The reader
 works, but historical tradability is not repaired. All 771 names remain in the release;
@@ -400,6 +406,8 @@ remain unchanged. Holdout: 2026-08-21T16:19:08.994166+00:00. Reviewer acceptance
 exclusive; no full-ticket acceptance, modeling or next ticket is authorized.
 
 Governing documents:
+
+- docs/adr/0041-cex002-dated-contract-companion.md
 
 - research/sprint_004/522_CEX002_KNOWN_RELEASE_RECONCILIATION_SOURCE_AUTHORIZATION.md
 - docs/adr/0040-cex002-accepted-proof-reuse.md
